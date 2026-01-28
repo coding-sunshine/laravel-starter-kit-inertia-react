@@ -1,0 +1,548 @@
+{
+    "version": "1.0.0",
+    "lastGenerated": "2026-01-28",
+    "actions": {
+        "CreateUser": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usedBy": [
+                    "UserController",
+                    "UserEmailResetNotificationController",
+                    "UserEmailVerificationNotificationController",
+                    "UserPasswordController"
+                ],
+                "usesModels": [
+                    "User"
+                ],
+                "relatedRoutes": [
+                    "user.destroy",
+                    "password.edit",
+                    "password.update",
+                    "register",
+                    "register.store",
+                    "password.reset",
+                    "password.store",
+                    "password.request",
+                    "password.email",
+                    "verification.notice",
+                    "verification.send"
+                ]
+            }
+        },
+        "CreateUserEmailResetNotification": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usedBy": [
+                    "UserEmailResetNotificationController"
+                ],
+                "usesModels": [],
+                "relatedRoutes": [
+                    "password.request",
+                    "password.email"
+                ]
+            }
+        },
+        "CreateUserEmailVerificationNotification": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usedBy": [
+                    "UserEmailVerificationNotificationController"
+                ],
+                "usesModels": [
+                    "User"
+                ],
+                "relatedRoutes": [
+                    "verification.notice",
+                    "verification.send"
+                ]
+            }
+        },
+        "CreateUserPassword": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usedBy": [
+                    "UserPasswordController"
+                ],
+                "usesModels": [
+                    "User"
+                ],
+                "relatedRoutes": [
+                    "password.edit",
+                    "password.update",
+                    "password.reset",
+                    "password.store"
+                ]
+            }
+        },
+        "DeleteUser": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usedBy": [
+                    "UserController"
+                ],
+                "usesModels": [
+                    "User"
+                ],
+                "relatedRoutes": [
+                    "user.destroy",
+                    "register",
+                    "register.store"
+                ]
+            }
+        },
+        "UpdateUser": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usedBy": [
+                    "UserPasswordController",
+                    "UserProfileController"
+                ],
+                "usesModels": [
+                    "User"
+                ],
+                "relatedRoutes": [
+                    "user-profile.edit",
+                    "user-profile.update",
+                    "password.edit",
+                    "password.update",
+                    "password.reset",
+                    "password.store"
+                ]
+            }
+        },
+        "UpdateUserPassword": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usedBy": [
+                    "UserPasswordController"
+                ],
+                "usesModels": [
+                    "User"
+                ],
+                "relatedRoutes": [
+                    "password.edit",
+                    "password.update",
+                    "password.reset",
+                    "password.store"
+                ]
+            }
+        }
+    },
+    "controllers": {
+        "SessionController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [
+                    "CreateSessionRequest"
+                ],
+                "relatedRoutes": [
+                    "login",
+                    "login.store",
+                    "logout"
+                ],
+                "rendersPages": [
+                    "session/create"
+                ]
+            }
+        },
+        "UserController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [
+                    "CreateUser",
+                    "DeleteUser"
+                ],
+                "usesFormRequests": [
+                    "CreateUserRequest",
+                    "DeleteUserRequest"
+                ],
+                "relatedRoutes": [
+                    "user.destroy",
+                    "register",
+                    "register.store"
+                ],
+                "rendersPages": [
+                    "user/create"
+                ]
+            }
+        },
+        "UserEmailResetNotificationController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [
+                    "CreateUserEmailResetNotification"
+                ],
+                "usesFormRequests": [
+                    "CreateUserEmailResetNotificationRequest"
+                ],
+                "relatedRoutes": [
+                    "password.request",
+                    "password.email"
+                ],
+                "rendersPages": [
+                    "user-email-reset-notification/create"
+                ]
+            }
+        },
+        "UserEmailVerificationController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "verification.verify"
+                ],
+                "rendersPages": []
+            }
+        },
+        "UserEmailVerificationNotificationController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [
+                    "CreateUserEmailVerificationNotification"
+                ],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "verification.notice",
+                    "verification.send"
+                ],
+                "rendersPages": [
+                    "user-email-verification-notification/create"
+                ]
+            }
+        },
+        "UserPasswordController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [
+                    "CreateUserPassword",
+                    "UpdateUserPassword"
+                ],
+                "usesFormRequests": [
+                    "CreateUserPasswordRequest",
+                    "UpdateUserPasswordRequest"
+                ],
+                "relatedRoutes": [
+                    "password.edit",
+                    "password.update",
+                    "password.reset",
+                    "password.store"
+                ],
+                "rendersPages": [
+                    "user-password/create",
+                    "user-password/edit"
+                ]
+            }
+        },
+        "UserProfileController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [
+                    "UpdateUser"
+                ],
+                "usesFormRequests": [
+                    "UpdateUserRequest"
+                ],
+                "relatedRoutes": [
+                    "user-profile.edit",
+                    "user-profile.update"
+                ],
+                "rendersPages": [
+                    "user-profile/edit"
+                ]
+            }
+        },
+        "UserTwoFactorAuthenticationController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [
+                    "ShowUserTwoFactorAuthenticationRequest"
+                ],
+                "relatedRoutes": [
+                    "two-factor.show"
+                ],
+                "rendersPages": [
+                    "user-two-factor-authentication/show"
+                ]
+            }
+        }
+    },
+    "pages": {
+        "appearance/update": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": [
+                    "login",
+                    "login.store",
+                    "logout",
+                    "password.confirm",
+                    "password.confirmation",
+                    "password.confirm.store",
+                    "two-factor.login",
+                    "two-factor.login.store",
+                    "two-factor.enable",
+                    "two-factor.confirm",
+                    "two-factor.disable",
+                    "two-factor.qr-code",
+                    "two-factor.secret-key",
+                    "two-factor.recovery-codes",
+                    "two-factor.regenerate-recovery-codes",
+                    "user.destroy",
+                    "user-profile.edit",
+                    "user-profile.update",
+                    "password.edit",
+                    "password.update",
+                    "two-factor.show",
+                    "register",
+                    "register.store",
+                    "password.reset",
+                    "password.store",
+                    "password.request",
+                    "password.email",
+                    "verification.notice",
+                    "verification.send",
+                    "verification.verify"
+                ]
+            }
+        },
+        "dashboard": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": [
+                    "login",
+                    "login.store",
+                    "logout",
+                    "password.confirm",
+                    "password.confirmation",
+                    "password.confirm.store",
+                    "two-factor.login",
+                    "two-factor.login.store",
+                    "two-factor.enable",
+                    "two-factor.confirm",
+                    "two-factor.disable",
+                    "two-factor.qr-code",
+                    "two-factor.secret-key",
+                    "two-factor.recovery-codes",
+                    "two-factor.regenerate-recovery-codes",
+                    "user.destroy",
+                    "user-profile.edit",
+                    "user-profile.update",
+                    "password.edit",
+                    "password.update",
+                    "two-factor.show",
+                    "register",
+                    "register.store",
+                    "password.reset",
+                    "password.store",
+                    "password.request",
+                    "password.email",
+                    "verification.notice",
+                    "verification.send",
+                    "verification.verify"
+                ]
+            }
+        },
+        "session/create": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "SessionController"
+                ],
+                "relatedRoutes": [
+                    "login",
+                    "login.store",
+                    "logout"
+                ]
+            }
+        },
+        "user-email-reset-notification/create": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "UserEmailResetNotificationController"
+                ],
+                "relatedRoutes": [
+                    "password.request",
+                    "password.email"
+                ]
+            }
+        },
+        "user-email-verification-notification/create": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "UserEmailVerificationNotificationController"
+                ],
+                "relatedRoutes": [
+                    "verification.notice",
+                    "verification.send"
+                ]
+            }
+        },
+        "user-password-confirmation/create": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": []
+            }
+        },
+        "user-password/create": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "UserPasswordController"
+                ],
+                "relatedRoutes": [
+                    "password.edit",
+                    "password.update",
+                    "password.reset",
+                    "password.store"
+                ]
+            }
+        },
+        "user-password/edit": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "UserPasswordController"
+                ],
+                "relatedRoutes": [
+                    "password.edit",
+                    "password.update",
+                    "password.reset",
+                    "password.store"
+                ]
+            }
+        },
+        "user-profile/edit": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "UserProfileController"
+                ],
+                "relatedRoutes": [
+                    "user-profile.edit",
+                    "user-profile.update"
+                ]
+            }
+        },
+        "user-two-factor-authentication-challenge/show": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": []
+            }
+        },
+        "user-two-factor-authentication/show": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "UserTwoFactorAuthenticationController"
+                ],
+                "relatedRoutes": [
+                    "two-factor.show"
+                ]
+            }
+        },
+        "user/create": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "UserController"
+                ],
+                "relatedRoutes": [
+                    "user.destroy",
+                    "register",
+                    "register.store"
+                ]
+            }
+        },
+        "welcome": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": [
+                    "login",
+                    "login.store",
+                    "logout",
+                    "password.confirm",
+                    "password.confirmation",
+                    "password.confirm.store",
+                    "two-factor.login",
+                    "two-factor.login.store",
+                    "two-factor.enable",
+                    "two-factor.confirm",
+                    "two-factor.disable",
+                    "two-factor.qr-code",
+                    "two-factor.secret-key",
+                    "two-factor.recovery-codes",
+                    "two-factor.regenerate-recovery-codes",
+                    "user.destroy",
+                    "user-profile.edit",
+                    "user-profile.update",
+                    "password.edit",
+                    "password.update",
+                    "two-factor.show",
+                    "register",
+                    "register.store",
+                    "password.reset",
+                    "password.store",
+                    "password.request",
+                    "password.email",
+                    "verification.notice",
+                    "verification.send",
+                    "verification.verify"
+                ]
+            }
+        }
+    },
+    "routes": {
+        "lastUpdated": null,
+        "path": "docs/developer/api-reference/routes.md"
+    }
+}

@@ -14,12 +14,13 @@ All Actions:
 
 | Action | Purpose | Documented |
 |--------|---------|------------|
-| CreateUser | Creates a new user account | ❌ |
-| UpdateUser | Updates user information | ❌ |
-| DeleteUser | Deletes a user account | ❌ |
-| CreateUserPassword | Creates/resets user password | ❌ |
-| UpdateUserPassword | Updates user password | ❌ |
-| CreateUserEmailResetNotification | Sends password reset email | ❌ |
-| CreateUserEmailVerificationNotification | Sends email verification | ❌ |
+| CreateUser | N/A | ❌ |
+| CreateUserEmailResetNotification | N/A | ❌ |
+| CreateUserEmailVerificationNotification | N/A | ❌ |
+| CreateUserPassword | N/A | ❌ |
+| DeleteUser | N/A | ❌ |
+| UpdateUser | N/A | ❌ |
+| UpdateUserPassword | N/A | ❌ |
+
 
 > **Note**: Individual action documentation will be added here as they are documented.

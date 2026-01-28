@@ -31,6 +31,7 @@ Modern PHP has evolved into a mature, type-safe language, yet many Laravel proje
 - **Just Better Laravel Defaults**: Thanks to **[Essentials](https://github.com/nunomaduro/essentials)** / strict models, auto eager loading, immutable dates, and more...
 - **AI Guidelines**: Integrated AI Guidelines to assist in maintaining code quality and consistency
 - **Full Testing Suite**: More than 150 tests with 100% code coverage using Pest
+- **Automated Seeder System**: Comprehensive seeder automation with category-based organization, JSON support, and relationship-aware generation
 - 
 This isn't just another Laravel boilerplate—it's a statement that PHP applications can and should be built with the same rigor as strongly-typed languages like Rust or TypeScript.
 
@@ -81,6 +82,7 @@ You should see 100% test coverage and all quality checks passing.
 
 ### Development
 - `composer dev` - Starts Laravel server, queue worker, log monitoring, and Vite dev server concurrently
+- `php artisan seed:environment` - Seed database with environment-aware seeders
 
 ### Code Quality
 - `composer lint` - Runs Rector (refactoring), Pint (PHP formatting), and Prettier (JS/TS formatting)
@@ -94,6 +96,104 @@ You should see 100% test coverage and all quality checks passing.
 
 ### Maintenance
 - `composer update:requirements` - Updates all PHP and NPM dependencies to latest versions
+
+### Database Seeding
+
+This starter kit includes a **comprehensive automated seeder system** that ensures all models have corresponding seeders:
+
+- `php artisan make:model:full {name}` - Create model with factory, seeder, and JSON data
+- `php artisan seed:environment` - Run environment-aware seeders
+- `php artisan seeders:list` - List all available seeders
+- `php artisan seeders:sync` - Sync seeders with models
+- `php artisan models:audit` - Audit models for missing factories/seeders
+
+#### Quick Start
+
+Create a new model with full setup:
+```bash
+php artisan make:model:full Post --category=development --all
+```
+
+Seed the database:
+```bash
+php artisan seed:environment
+```
+
+Use in tests:
+```php
+seedFor(Post::class, 5); // Auto-seeds with relationships
+```
+
+#### Features
+
+- **Category-based organization**: Essential, Development, Production seeders
+- **JSON data support**: Maintainable seed data in JSON files
+- **Environment-aware**: Automatically runs appropriate seeders
+- **Relationship-aware**: Auto-detects and seeds relationships
+- **Git hooks**: Pre-commit validation for new models
+- **Full automation**: Commands to create, audit, and sync seeders
+
+See [Seeder Documentation](./docs/developer/backend/database/seeders.md) for complete details.
+
+### Documentation
+
+This starter kit includes **automated documentation management** to ensure all code is properly documented:
+
+- `composer docs:check` - Check if all Actions, Controllers, and Pages are documented
+- `composer docs:sync` - Sync the documentation manifest with the current codebase
+- `composer docs:generate` - Auto-generate documentation stubs for undocumented items
+- `php artisan docs:sync` - Same as above (Artisan command)
+- `php artisan docs:sync --check` - Check-only mode (returns exit code 1 if undocumented items found)
+- `php artisan docs:sync --generate` - Generate documentation stubs automatically
+- `php artisan docs:sync --generate --ai` - Generate rich AI prompts for full documentation generation (saved under `docs/.ai-prompts/`)
+- `php artisan docs:review` - Review documentation quality and detect mismatches with the current code
+- `php artisan docs:api` - Regenerate API reference under `docs/developer/api-reference/routes.md`
+
+#### How It Works
+
+The documentation system automatically:
+
+1. **Scans your codebase** for Actions, Controllers, and Pages
+2. **Extracts structure & docs** using PHP reflection and PHPDoc/TSDoc (methods, parameters, return types, props)
+3. **Discovers relationships** between Actions, Controllers, Routes, Models, and Pages and stores them in the manifest
+4. **Tracks documentation status** in `docs/.manifest.json`
+5. **Enforces documentation** via:
+   - Pre-commit Git hook (blocks commits if documentation is missing)
+   - CI/CD checks (fails builds if undocumented items are detected)
+   - AI guidelines (requires documentation before marking tasks complete)
+6. **Auto-syncs** manifest when you run `composer install` or `composer update`
+7. **Auto-updates index files** (Actions/Controllers/Pages READMEs) with documentation status tables
+
+#### Documentation Structure
+
+- **User Guide**: `docs/user-guide/` - End-user facing documentation
+- **Developer Guide**: `docs/developer/` - Technical documentation for developers
+- **Templates**: `docs/.templates/` - Documentation templates for consistent structure
+- **Manifest**: `docs/.manifest.json` - Tracks what's documented vs. what exists
+- **AI Prompts**: `docs/.ai-prompts/` - Generated prompts for AI agents to produce full documentation
+- **API Reference**: `docs/developer/api-reference/routes.md` - Markdown API reference generated from routes/controllers
+
+#### Quick Start
+
+Check documentation status:
+```bash
+composer docs:check
+```
+
+Generate documentation stubs for undocumented items:
+```bash
+composer docs:generate
+```
+
+#### Automation Features
+
+- **Pre-commit Hook**: Automatically checks documentation before allowing commits
+- **CI/CD Integration**: GitHub Actions verifies documentation in all pull requests
+- **AI Integration**: Laravel Boost guidelines automatically require documentation for new code
+- **Auto-sync**: Manifest automatically syncs when dependencies are installed or updated
+- **Template-based**: Consistent documentation structure using templates in `docs/.templates/`
+
+The system will automatically prompt you (or AI agents) to document new features when they're created. Documentation is **mandatory** - commits and CI builds will fail if documentation is missing.
 
 ## License
 

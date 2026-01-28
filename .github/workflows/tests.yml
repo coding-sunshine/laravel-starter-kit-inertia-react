@@ -96,6 +96,10 @@ jobs:
       - name: Create Cache Directories
         run: mkdir -p /tmp/rector /tmp/phpstan
 
+      - name: Check Documentation
+        run: php artisan docs:sync --check
+        continue-on-error: false
+
       - name: Tests
         run: composer test
 
