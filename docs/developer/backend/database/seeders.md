@@ -1,0 +1,483 @@
+# Database Seeders
+
+The application uses a comprehensive, automated seeder system that ensures all models have corresponding seeders with proper organization, maintainability, and testing support.
+
+## Overview
+
+The seeder system provides:
+
+- **Category-based organization**: Essential, Development, and Production seeders
+- **JSON data support**: Maintainable seed data stored in JSON files
+- **Hybrid seeding**: Combine JSON files with Factory states
+- **Environment-aware**: Automatically runs appropriate seeders based on environment
+- **Dependency management**: Seeders declare dependencies and run in correct order
+- **Full automation**: Commands to create, audit, and sync seeders
+
+## Directory Structure
+
+```
+database/
+├── seeders/
+│   ├── DatabaseSeeder.php          # Orchestrator
+│   ├── Concerns/
+│   │   └── LoadsJsonData.php       # JSON loading trait
+│   ├── Essential/                   # Always runs
+│   ├── Development/                 # Local/testing only
+│   ├── Production/                  # Production only
+│   ├── data/                        # JSON seed data
+│   │   └── users.json
+│   └── manifest.json                # Seeder metadata
+└── factories/
+    └── UserFactory.php              # With admin() and demo() states
+```
+
+## Seeder Categories
+
+### Essential
+Seeders that must run in all environments (roles, settings, required lookup data).
+
+**Location**: `database/seeders/Essential/`
+
+**When it runs**: Always, in every environment
+
+### Development
+Seeders for local development and testing (fake users, dummy content, test scenarios).
+
+**Location**: `database/seeders/Development/`
+
+**When it runs**: Local and testing environments only
+
+### Production
+Seeders for production-specific data (demo accounts, showcase data).
+
+**Location**: `database/seeders/Production/`
+
+**When it runs**: Production environment only
+
+## Creating Seeders
+
+### Using the Full Model Generator
+
+The recommended way to create a new model with all components:
+
+```bash
+php artisan make:model:full Post --category=development --all
+```
+
+This creates:
+- Model + Migration
+- Factory
+- Seeder (in specified category)
+- JSON data file stub
+- Updates manifest.json
+- Analyzes relationships and includes them in seeder
+
+**Options:**
+- `--category=development` - Seeder category (essential, development, production)
+- `--all` - Generate everything (migration, factory, seeder, controller, policy, requests)
+
+### Manual Seeder Creation
+
+If you need to create a seeder manually:
+
+1. Create the seeder file in the appropriate category directory:
+   ```bash
+   php artisan make:seeder Development/PostSeeder
+   ```
+
+2. Move it to the category directory if needed:
+   ```bash
+   mv database/seeders/PostSeeder.php database/seeders/Development/
+   ```
+
+3. Update the namespace:
+   ```php
+   namespace Database\Seeders\Development;
+   ```
+
+4. Use the `LoadsJsonData` trait:
+   ```php
+   use Database\Seeders\Concerns\LoadsJsonData;
+   
+   final class PostSeeder extends Seeder
+   {
+       use LoadsJsonData;
+       // ...
+   }
+   ```
+
+## Seeder Patterns
+
+### Basic Seeder Structure
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace Database\Seeders\Development;
+
+use App\Models\Post;
+use Database\Seeders\Concerns\LoadsJsonData;
+use Illuminate\Database\Seeder;
+
+final class PostSeeder extends Seeder
+{
+    use LoadsJsonData;
+
+    public function run(): void
+    {
+        $this->seedRelationships();
+        $this->seedFromJson();
+        $this->seedFromFactory();
+    }
+
+    private function seedRelationships(): void
+    {
+        // Ensure parent models exist
+        if (\App\Models\User::query()->count() === 0) {
+            \App\Models\User::factory()->count(5)->create();
+        }
+    }
+
+    private function seedFromJson(): void
+    {
+        try {
+            $data = $this->loadJson('posts.json');
+            // Process JSON data
+        } catch (\RuntimeException $e) {
+            // Skip if JSON doesn't exist
+        }
+    }
+
+    private function seedFromFactory(): void
+    {
+        Post::factory()->count(10)->create();
+    }
+}
+```
+
+### JSON Data Format
+
+Store seed data in `database/seeders/data/`:
+
+```json
+{
+  "posts": [
+    {
+      "title": "Example Post",
+      "content": "Post content",
+      "_factory_state": "published"
+    }
+  ]
+}
+```
+
+The `_factory_state` key applies a factory state method if it exists.
+
+### Factory States
+
+Use factory states for different scenarios:
+
+```php
+// In UserFactory
+public function admin(): self
+{
+    return $this->state(fn (array $attributes): array => [
+        'name' => fake()->name().' (Admin)',
+        'email' => 'admin@'.fake()->domainName(),
+    ]);
+}
+
+// In seeder
+User::factory()->admin()->count(2)->create();
+```
+
+## Running Seeders
+
+### Environment-Aware Seeding
+
+```bash
+php artisan seed:environment
+```
+
+Automatically runs:
+- Essential seeders (always)
+- Development seeders (in local/testing)
+- Production seeders (in production)
+
+### Specific Category
+
+```bash
+php artisan seed:environment --category=development
+```
+
+### Specific Seeders
+
+```bash
+php artisan seed:environment --only=UsersSeeder,PostsSeeder
+```
+
+### Skip Seeders
+
+```bash
+php artisan seed:environment --skip=UsersSeeder
+```
+
+### Fresh Migration
+
+```bash
+php artisan seed:environment --fresh
+```
+
+### Production
+
+```bash
+php artisan seed:environment --force
+```
+
+## Automation Commands
+
+### List All Seeders
+
+```bash
+php artisan seeders:list
+```
+
+Options:
+- `--category=development` - Filter by category
+- `--json` - Output as JSON
+
+### Sync Seeders with Models
+
+```bash
+php artisan seeders:sync
+```
+
+Options:
+- `--update` - Update existing seeders to new patterns
+- `--dry-run` - Preview changes without applying
+
+### Audit Models
+
+```bash
+php artisan models:audit
+```
+
+Shows which models are missing factories or seeders.
+
+Options:
+- `--generate` - Auto-generate missing components
+- `--category=development` - Default category for generated seeders
+
+## Testing with Seeders
+
+### Auto-Seeding Helper
+
+Use the `seedFor()` helper in tests:
+
+```php
+it('can list posts', function () {
+    seedFor(Post::class, 5); // Auto-seeds Post + User (author)
+    
+    $response = $this->get('/posts');
+    $response->assertOk();
+});
+```
+
+### Seed Multiple Models
+
+```php
+$results = seedMany([
+    'users' => ['class' => User::class, 'count' => 2],
+    'posts' => ['class' => Post::class, 'count' => 5],
+]);
+```
+
+The helper automatically:
+- Seeds parent relationships (belongsTo)
+- Checks for factories
+- Creates required data
+
+## Dependency Management
+
+Seeders can declare dependencies:
+
+```php
+final class PostSeeder extends Seeder
+{
+    /**
+     * @var array<string>
+     */
+    public array $dependencies = ['UsersSeeder'];
+    
+    // ...
+}
+```
+
+The orchestrator automatically resolves and runs dependencies in the correct order.
+
+## Manifest File
+
+The `database/seeders/manifest.json` file tracks all seeders with metadata:
+
+```json
+{
+  "seeders": [
+    {
+      "name": "UsersSeeder",
+      "category": "development",
+      "description": "Seeds development users",
+      "dependencies": [],
+      "data_files": ["users.json"]
+    }
+  ]
+}
+```
+
+## Git Pre-Commit Hook
+
+A pre-commit hook validates that new models have corresponding seeders:
+
+**Location**: `.git/hooks/pre-commit`
+
+The hook:
+- Detects new model files
+- Checks for corresponding seeders
+- Blocks commit if missing (with helpful error message)
+- Can be bypassed with `--no-verify` if needed
+
+## Best Practices
+
+1. **Use `make:model:full`** instead of `make:model` for new models
+2. **Run `models:audit`** periodically to check for missing components
+3. **Use factory states** for different scenarios (admin, demo, etc.)
+4. **Store seed data in JSON** for maintainability
+5. **Use `seedFor()` in tests** instead of manual factory calls
+6. **Let the pre-commit hook** catch missing seeders automatically
+7. **Keep seeders idempotent** - safe to run multiple times
+8. **Use `updateOrCreate()`** or `firstOrCreate()` in seeders
+
+## Relationship Handling
+
+The system automatically:
+- Analyzes migration files for foreign keys
+- Detects belongsTo relationships
+- Generates code to seed parent models first
+- Handles relationship dependencies
+
+When creating a model with `make:model:full`, relationships are automatically detected and included in the seeder.
+
+## Troubleshooting
+
+### Seeder Not Found
+
+If a seeder isn't being discovered:
+1. Check it's in the correct category directory
+2. Verify the namespace matches the directory structure
+3. Ensure the class extends `Seeder`
+4. Check the file isn't in `.gitignore`
+
+### JSON File Not Loading
+
+If JSON data isn't loading:
+1. Verify the file exists in `database/seeders/data/`
+2. Check JSON syntax is valid
+3. Ensure the key matches the model name (plural, snake_case)
+4. The seeder will skip silently if JSON doesn't exist (by design)
+
+### Dependencies Not Resolving
+
+If dependencies aren't running in order:
+1. Check the `$dependencies` property is correctly declared
+2. Verify dependency names match seeder class names (short name)
+3. Ensure dependencies are in discoverable categories
+
+## Advanced Features
+
+### Seed Specs
+
+Seed specs are canonical JSON descriptions of how models should be seeded. They live in `database/seeders/specs/` and are automatically synced with model/migration changes.
+
+**Sync specs:**
+```bash
+php artisan seeds:spec-sync
+```
+
+**Regenerate from specs:**
+```bash
+php artisan seeds:regenerate
+```
+
+### AI-Assisted Generation
+
+Generate realistic seed data using AI (offline, curated):
+
+```bash
+php artisan seeds:generate-ai --model=Post --scenario=basic_demo
+```
+
+### Test Scenarios
+
+Use named scenarios in tests:
+
+```php
+seedScenario('user_with_orders');
+```
+
+**Analyze test coverage:**
+```bash
+php artisan seeds:test-coverage
+```
+
+### Real Data Profiling
+
+Profile production/staging to learn patterns:
+
+```bash
+php artisan seeds:profile --connection=staging
+```
+
+Generate synthetic replicas:
+
+```bash
+php artisan seeds:replica --profile=profiles/production.json
+```
+
+### Observability
+
+View seeding metrics:
+
+```bash
+php artisan seeds:metrics --latest
+```
+
+Use strict/lenient modes:
+
+```bash
+php artisan seed:environment --strict  # Fail on errors
+php artisan seed:environment --lenient  # Continue on warnings
+```
+
+### AI Review
+
+Review seeders and specs:
+
+```bash
+php artisan seeds:review --model=Post
+```
+
+Generate specs from prose:
+
+```bash
+php artisan seeds:from-prose "A Project has many Tasks" --model=Project
+```
+
+See [Advanced Features](./advanced-features.md) for complete details.
+
+## Related Documentation
+
+- [Factory States](./factories.md) - Factory patterns and states
+- [Testing](../testing/README.md) - Testing with seeders
+- [Models](../models/README.md) - Model patterns
+- [Advanced Features](./advanced-features.md) - Advanced automation features

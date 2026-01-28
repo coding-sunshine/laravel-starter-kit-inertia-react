@@ -1,0 +1,12 @@
+{
+  "user_with_orders": {
+    "description": "User with multiple orders",
+    "models": [
+      {
+        "class": "App\\Models\\User",
+        "count": 1,
+        "state": null
+      }
+    ]
+  }
+}

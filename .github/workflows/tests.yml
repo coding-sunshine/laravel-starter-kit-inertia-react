@@ -100,6 +100,14 @@ jobs:
         run: php artisan docs:sync --check
         continue-on-error: false
 
+      - name: Check Seed Specs
+        run: php artisan seeds:spec-sync --check
+        continue-on-error: false
+
+      - name: Audit Models
+        run: php artisan models:audit --check-specs --fail-on-missing
+        continue-on-error: false
+
       - name: Tests
         run: composer test
 

@@ -1,0 +1,25 @@
+{
+  "seeders": [
+    {
+      "name": "UsersSeeder",
+      "category": "development",
+      "description": "Seeds development users including admins and regular users",
+      "dependencies": [],
+      "data_files": ["users.json"]
+    }
+  ],
+  "categories": {
+    "essential": {
+      "description": "Seeders that must run in all environments",
+      "environment": "all"
+    },
+    "development": {
+      "description": "Seeders for local development and testing",
+      "environment": ["local", "testing"]
+    },
+    "production": {
+      "description": "Seeders for production demo data",
+      "environment": ["production"]
+    }
+  }
+}

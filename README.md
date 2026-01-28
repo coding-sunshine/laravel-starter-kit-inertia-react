@@ -132,8 +132,14 @@ seedFor(Post::class, 5); // Auto-seeds with relationships
 - **Relationship-aware**: Auto-detects and seeds relationships
 - **Git hooks**: Pre-commit validation for new models
 - **Full automation**: Commands to create, audit, and sync seeders
+- **Seed Specs**: Canonical descriptions that auto-sync with schema changes
+- **AI-Assisted**: Offline AI generation of realistic seed data
+- **Test Scenarios**: Named scenarios for consistent test data
+- **Real Data Profiling**: Learn from production patterns
+- **Observability**: Metrics, logs, and strict/lenient modes
+- **AI Review**: Automated review of seeders and specs
 
-See [Seeder Documentation](./docs/developer/backend/database/seeders.md) for complete details.
+See [Seeder Documentation](./docs/developer/backend/database/seeders.md) and [Advanced Features](./docs/developer/backend/database/advanced-features.md) for complete details.
 
 ### Documentation
 

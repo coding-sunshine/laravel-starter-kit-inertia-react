@@ -47,4 +47,20 @@ final class UserFactory extends Factory
             'two_factor_confirmed_at' => null,
         ]);
     }
+
+    public function admin(): self
+    {
+        return $this->state(fn (array $attributes): array => [
+            'name' => fake()->name().' (Admin)',
+            'email' => 'admin@'.fake()->domainName(),
+        ]);
+    }
+
+    public function demo(): self
+    {
+        return $this->state(fn (array $attributes): array => [
+            'name' => 'Demo User',
+            'email' => 'demo@'.fake()->domainName(),
+        ]);
+    }
 }

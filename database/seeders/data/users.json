@@ -1,0 +1,13 @@
+{
+  "users": [
+    {
+      "name": "Demo Admin",
+      "email": "admin@example.com",
+      "_factory_state": "admin"
+    },
+    {
+      "name": "Test User",
+      "email": "test@example.com"
+    }
+  ]
+}

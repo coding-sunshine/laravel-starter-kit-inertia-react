@@ -1,0 +1,203 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Console\Commands;
+
+use App\Services\ModelRegistry;
+use Exception;
+use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+
+final class SeedsProfileCommand extends Command
+{
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
+    protected $signature = 'seeds:profile
+                            {--connection= : Database connection to profile}
+                            {--output= : Output file path (default: database/seeders/profiles/production.json)}
+                            {--safe : Only profile if connection is not production}';
+
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = 'Profile production/staging database to generate seed profiles (read-only)';
+
+    /**
+     * Execute the console command.
+     */
+    public function handle(ModelRegistry $registry): int
+    {
+        $connection = $this->option('connection') ?? config('database.default');
+        $output = $this->option('output') ?? database_path('seeders/profiles/production.json');
+        $safe = $this->option('safe');
+
+        if ($safe && app()->environment('production')) {
+            $this->error('Cannot profile production database in safe mode.');
+
+            return self::FAILURE;
+        }
+
+        $this->info("Profiling database connection: {$connection}");
+        $this->warn('This is a READ-ONLY operation. No data will be modified.');
+        $this->newLine();
+
+        $models = $registry->getAllModels();
+        $profiles = [];
+
+        foreach ($models as $modelClass) {
+            $modelName = class_basename($modelClass);
+
+            try {
+                $model = new $modelClass;
+                $table = $model->getTable();
+
+                if (! Schema::connection($connection)->hasTable($table)) {
+                    continue;
+                }
+
+                $this->line("Profiling {$modelName}...");
+
+                $profile = $this->profileModel($modelClass, $connection);
+                $profiles[$modelName] = $profile;
+            } catch (Exception $e) {
+                $this->warn("  {$modelName}: Error - {$e->getMessage()}");
+            }
+        }
+
+        // Save profiles
+        $outputDir = dirname($output);
+
+        if (! is_dir($outputDir)) {
+            mkdir($outputDir, 0755, true);
+        }
+
+        file_put_contents($output, json_encode($profiles, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+
+        $this->newLine();
+        $this->info("Profiles saved to: {$output}");
+
+        return self::SUCCESS;
+    }
+
+    /**
+     * Profile a single model.
+     *
+     * @return array<string, mixed>
+     */
+    private function profileModel(string $modelClass, string $connection): array
+    {
+        $model = new $modelClass;
+        $table = $model->getTable();
+
+        $totalCount = DB::connection($connection)->table($table)->count();
+
+        if ($totalCount === 0) {
+            return [
+                'total_count' => 0,
+                'cardinalities' => [],
+                'distributions' => [],
+            ];
+        }
+
+        $profile = [
+            'total_count' => $totalCount,
+            'cardinalities' => $this->calculateCardinalities($modelClass, $connection),
+            'distributions' => $this->calculateDistributions($table, $connection),
+        ];
+
+        return $profile;
+    }
+
+    /**
+     * Calculate relationship cardinalities.
+     *
+     * @return array<string, mixed>
+     */
+    private function calculateCardinalities(string $modelClass, string $connection): array
+    {
+        // This would analyze relationships and calculate avg/min/max children per parent
+        // For now, return empty - can be enhanced based on actual relationships
+        return [];
+    }
+
+    /**
+     * Calculate value distributions.
+     *
+     * @return array<string, mixed>
+     */
+    private function calculateDistributions(string $table, string $connection): array
+    {
+        $distributions = [];
+        $columns = Schema::connection($connection)->getColumnListing($table);
+
+        foreach ($columns as $column) {
+            $type = Schema::connection($connection)->getColumnType($table, $column);
+
+            if ($type === 'string' || $type === 'text') {
+                // Sample string lengths
+                $lengths = DB::connection($connection)
+                    ->table($table)
+                    ->selectRaw("LENGTH({$column}) as len")
+                    ->whereNotNull($column)
+                    ->limit(1000)
+                    ->pluck('len')
+                    ->toArray();
+
+                if (! empty($lengths)) {
+                    $distributions[$column] = [
+                        'type' => 'string',
+                        'avg_length' => round(array_sum($lengths) / count($lengths), 2),
+                        'min_length' => min($lengths),
+                        'max_length' => max($lengths),
+                    ];
+                }
+            } elseif ($type === 'integer' || $type === 'bigint') {
+                // Sample numeric ranges
+                $stats = DB::connection($connection)
+                    ->table($table)
+                    ->selectRaw("MIN({$column}) as min_val, MAX({$column}) as max_val, AVG({$column}) as avg_val")
+                    ->whereNotNull($column)
+                    ->first();
+
+                if ($stats && $stats->min_val !== null) {
+                    $distributions[$column] = [
+                        'type' => 'numeric',
+                        'min' => $stats->min_val,
+                        'max' => $stats->max_val,
+                        'avg' => round((float) $stats->avg_val, 2),
+                    ];
+                }
+            } elseif ($type === 'boolean') {
+                // Count true/false distribution
+                $trueCount = DB::connection($connection)
+                    ->table($table)
+                    ->where($column, true)
+                    ->count();
+
+                $falseCount = DB::connection($connection)
+                    ->table($table)
+                    ->where($column, false)
+                    ->count();
+
+                $total = $trueCount + $falseCount;
+
+                if ($total > 0) {
+                    $distributions[$column] = [
+                        'type' => 'boolean',
+                        'true_percentage' => round(($trueCount / $total) * 100, 2),
+                        'false_percentage' => round(($falseCount / $total) * 100, 2),
+                    ];
+                }
+            }
+        }
+
+        return $distributions;
+    }
+}

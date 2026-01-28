@@ -60,13 +60,15 @@
         ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
-            "@php artisan package:discover --ansi"
+            "@php artisan package:discover --ansi",
+            "@php artisan docs:sync || true"
         ],
         "post-update-cmd": [
             "@php artisan vendor:publish --tag=laravel-assets --ansi --force",
             "@php artisan clear",
             "@update:requirements",
-            "@php artisan boost:update --ansi || true"
+            "@php artisan boost:update --ansi || true",
+            "@php artisan docs:sync || true"
         ],
         "post-root-package-install": [
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\""
@@ -101,7 +103,10 @@
             "@test:unit",
             "@test:lint",
             "@test:types"
-        ]
+        ],
+        "docs:check": "php artisan docs:sync --check",
+        "docs:sync": "php artisan docs:sync",
+        "docs:generate": "php artisan docs:sync --generate"
     },
     "extra": {
         "laravel": {
