@@ -7,6 +7,7 @@ namespace Database\Seeders\Development;
 use App\Models\User;
 use Database\Seeders\Concerns\LoadsJsonData;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 use RuntimeException;
 
 final class UsersSeeder extends Seeder
@@ -50,6 +51,16 @@ final class UsersSeeder extends Seeder
 
                 // Use idempotent updateOrCreate for users (email is unique)
                 if (isset($userData['email']) && ! empty($userData['email'])) {
+                    // Ensure password is set (required field)
+                    if (! isset($userData['password'])) {
+                        $userData['password'] = Hash::make('password');
+                    }
+
+                    // Mark email as verified so seeded users can log in immediately
+                    if (! isset($userData['email_verified_at'])) {
+                        $userData['email_verified_at'] = now();
+                    }
+
                     User::query()->updateOrCreate(
                         ['email' => $userData['email']],
                         $userData

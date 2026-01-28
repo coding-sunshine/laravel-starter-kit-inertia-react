@@ -79,7 +79,7 @@ final class DatabaseSeeder extends Seeder
             $this->command?->warn('Strict mode enabled - will fail on any errors');
         }
 
-        $this->newLine();
+        $this->command?->newLine();
 
         foreach ($seeders as $seeder) {
             $shortName = class_basename($seeder);
@@ -106,7 +106,7 @@ final class DatabaseSeeder extends Seeder
         $duration = round(microtime(true) - $startTime, 2);
         $summary = $this->metrics->getSummary();
 
-        $this->newLine();
+        $this->command?->newLine();
         $this->command?->info('Seeding completed.');
         $this->command?->line("Duration: {$duration}s");
         $this->command?->line("Records created: {$summary['total_records']}");
