@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Services\ModelRegistry;
+use App\Services\PrismService;
 use App\Services\SeedSpecGenerator;
 use Exception;
 use Illuminate\Console\Command;
@@ -33,7 +34,7 @@ final class SeedsReviewCommand extends Command
     /**
      * Execute the console command.
      */
-    public function handle(SeedSpecGenerator $specGenerator, ModelRegistry $registry): int
+    public function handle(SeedSpecGenerator $specGenerator, ModelRegistry $registry, PrismService $prismService): int
     {
         $specificModel = $this->option('model');
         $dryRun = $this->option('dry-run');
@@ -96,10 +97,22 @@ final class SeedsReviewCommand extends Command
                     $this->line('  '.str_repeat('-', 60));
                     $this->newLine();
                 } else {
-                    $review = $this->callAIReview($prompt, $provider);
+                    $prismProvider = $this->getPrismProvider($provider);
+                    $useAI = $prismService->isAvailable($prismProvider);
 
-                    if ($review !== null) {
-                        $this->displayReview($modelName, $review);
+                    if ($useAI) {
+                        $this->line("  {$modelName}: Using AI review");
+                        $review = $this->callAIReview($prompt, $provider, $prismService);
+
+                        if ($review !== null) {
+                            $this->displayReview($modelName, $review);
+                        } else {
+                            $this->warn("  {$modelName}: AI review failed, performing basic validation");
+                            $this->performBasicValidation($modelName, $spec, $seederInfo);
+                        }
+                    } else {
+                        $this->line("  {$modelName}: AI not available, performing basic validation");
+                        $this->performBasicValidation($modelName, $spec, $seederInfo);
                     }
                 }
             } catch (Exception $e) {
@@ -139,53 +152,73 @@ final class SeedsReviewCommand extends Command
     }
 
     /**
+     * Get Prism provider from string.
+     */
+    private function getPrismProvider(string $provider): Provider
+    {
+        return match ($provider) {
+            'openrouter' => Provider::OpenRouter,
+            'openai' => Provider::OpenAI,
+            'anthropic' => Provider::Anthropic,
+            default => Provider::OpenRouter,
+        };
+    }
+
+    /**
      * Call AI for review.
      *
      * @return array<string, mixed>|null
      */
-    private function callAIReview(string $prompt, string $provider): ?array
+    private function callAIReview(string $prompt, string $provider, PrismService $prismService): ?array
     {
         try {
-            // Map provider string to Prism Provider enum
-            $prismProvider = match ($provider) {
-                'openrouter', 'openrouter' => Provider::OpenRouter,
-                'openai' => Provider::OpenAI,
-                'anthropic' => Provider::Anthropic,
-                default => Provider::OpenRouter, // Default to OpenRouter
-            };
+            $prismProvider = $this->getPrismProvider($provider);
 
-            // Use a model that supports structured output
-            $model = match ($prismProvider) {
-                Provider::OpenRouter => 'openai/gpt-4o-mini', // OpenRouter model
-                Provider::OpenAI => 'gpt-4o-mini',
-                Provider::Anthropic => 'claude-3-5-sonnet-20241022',
-                default => 'openai/gpt-4o-mini',
-            };
+            // Use model from config based on provider
+            $model = $prismService->defaultModelForProvider($prismProvider);
 
-            $response = Prism::text()
-                ->using($prismProvider, $model)
-                ->withPrompt($prompt)
-                ->asText();
+            // Define schema for review response
+            $schema = [
+                'type' => 'object',
+                'properties' => [
+                    'issues' => [
+                        'type' => 'array',
+                        'items' => ['type' => 'string'],
+                    ],
+                    'suggestions' => [
+                        'type' => 'array',
+                        'items' => ['type' => 'string'],
+                    ],
+                ],
+                'required' => ['issues', 'suggestions'],
+            ];
 
-            $text = $response->text;
+            try {
+                $prismService = app(PrismService::class);
+                $jsonData = $prismService->generateStructured($prompt, $schema, $model);
+            } catch (Exception $e) {
+                // Fallback to text parsing
+                $response = Prism::text()
+                    ->using($prismProvider, $model)
+                    ->withPrompt($prompt)
+                    ->asText();
 
-            // Try to parse JSON from the response
-            $jsonData = json_decode($text, true);
+                $text = $response->text;
+                $jsonData = json_decode($text, true);
 
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                // If not valid JSON, try to extract JSON from markdown code blocks
-                if (preg_match('/```(?:json)?\s*(\{.*?\})\s*```/s', $text, $matches)) {
-                    $jsonData = json_decode($matches[1], true);
-                } elseif (preg_match('/\{.*\}/s', $text, $matches)) {
-                    $jsonData = json_decode($matches[0], true);
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    if (preg_match('/```(?:json)?\s*(\{.*?\})\s*```/s', $text, $matches)) {
+                        $jsonData = json_decode($matches[1], true);
+                    } elseif (preg_match('/\{.*\}/s', $text, $matches)) {
+                        $jsonData = json_decode($matches[0], true);
+                    }
                 }
-            }
 
-            if ($jsonData === null || json_last_error() !== JSON_ERROR_NONE) {
-                $this->error('Failed to parse JSON from AI response: '.json_last_error_msg());
-                $this->line('Raw response: '.mb_substr($text, 0, 200));
+                if ($jsonData === null || json_last_error() !== JSON_ERROR_NONE) {
+                    $this->warn('Failed to parse JSON from AI response: '.json_last_error_msg());
 
-                return null;
+                    return null;
+                }
             }
 
             // Ensure required structure
@@ -227,6 +260,44 @@ final class SeedsReviewCommand extends Command
             foreach ($suggestions as $suggestion) {
                 $this->line("      - {$suggestion}");
             }
+        }
+    }
+
+    /**
+     * Perform basic validation when AI is not available.
+     *
+     * @param  array<string, mixed>  $spec
+     * @param  array<string, mixed>  $seederInfo
+     */
+    private function performBasicValidation(string $modelName, array $spec, array $seederInfo): void
+    {
+        $issues = [];
+        $suggestions = [];
+
+        // Check if spec has fields
+        if (empty($spec['fields'] ?? [])) {
+            $issues[] = 'No fields defined in spec';
+        }
+
+        // Check if relationships are documented
+        $relationships = $spec['relationships'] ?? [];
+        if (! empty($relationships)) {
+            $suggestions[] = 'Consider verifying relationship seeding in seeder';
+        }
+
+        // Check value hints
+        $valueHints = $spec['value_hints'] ?? [];
+        if (empty($valueHints)) {
+            $suggestions[] = 'Add value hints for better seed data generation';
+        }
+
+        if (! empty($issues) || ! empty($suggestions)) {
+            $this->displayReview($modelName, [
+                'issues' => $issues,
+                'suggestions' => $suggestions,
+            ]);
+        } else {
+            $this->info("  {$modelName}: Basic validation passed");
         }
     }
 }

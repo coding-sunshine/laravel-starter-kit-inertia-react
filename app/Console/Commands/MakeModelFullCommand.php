@@ -31,7 +31,8 @@ final class MakeModelFullCommand extends Command
                             {--api : Indicates if the generated controller should be an API resource controller}
                             {--requests : Create Form Request classes for the model}
                             {--policy : Create a new policy for the model}
-                            {--all : Generate a migration, factory, seeder, and resource controller}';
+                            {--all : Generate a migration, factory, seeder, and resource controller}
+                            {--no-ai : Skip AI generation even if available}';
 
     /**
      * The console command description.
@@ -64,11 +65,14 @@ final class MakeModelFullCommand extends Command
             $this->createSeeder($name, $category);
         }
 
+        // Generate seed spec first (needed for JSON generation)
+        $this->generateSeedSpec($name);
+
         // Create JSON data file
         $this->createJsonDataFile($name);
 
-        // Generate seed spec
-        $this->generateSeedSpec($name);
+        // Auto-generate JSON if missing/empty (smart generation)
+        $this->autoGenerateJsonIfNeeded($name);
 
         // Update manifest
         $this->updateManifest($name, $category);
@@ -157,11 +161,42 @@ final class MakeModelFullCommand extends Command
         $namespace = "Database\\Seeders\\{$category->value}";
         $jsonFileName = Str::snake(Str::plural($modelName)).'.json';
 
-        // Analyze relationships
-        $analyzer = new RelationshipAnalyzer();
-        $migrationPath = $analyzer->getLatestMigrationForModel($modelName);
-        $relationships = $migrationPath ? $analyzer->analyzeMigration($migrationPath) : [];
-        $relationshipCode = $analyzer->generateRelationshipSeederCode($relationships, $modelName);
+        // Analyze relationships using enhanced analyzer
+        $enhancedAnalyzer = app(EnhancedRelationshipAnalyzer::class);
+        $modelClass = "App\\Models\\{$modelName}";
+
+        // Try enhanced analyzer first (uses model reflection)
+        $relationships = class_exists($modelClass)
+            ? $enhancedAnalyzer->analyzeModel($modelClass)
+            : [];
+
+        // Fallback to migration-based analysis if model doesn't exist yet
+        if (empty($relationships)) {
+            $analyzer = new RelationshipAnalyzer();
+            $migrationPath = $analyzer->getLatestMigrationForModel($modelName);
+            $migrationRelationships = $migrationPath ? $analyzer->analyzeMigration($migrationPath) : [];
+
+            // Convert migration relationships format to enhanced format
+            foreach ($migrationRelationships as $key => $rel) {
+                $relationships[$key] = [
+                    'type' => $rel['type'],
+                    'model' => $rel['model'] ?? null,
+                    'foreignKey' => null,
+                    'localKey' => null,
+                    'pivotTable' => null,
+                ];
+            }
+        }
+
+        // Get seed spec for AI generation
+        $specGenerator = app(SeedSpecGenerator::class);
+        $spec = class_exists($modelClass)
+            ? $specGenerator->loadSpec($modelClass) ?? $specGenerator->generateSpec($modelClass)
+            : ['fields' => [], 'relationships' => [], 'value_hints' => []];
+
+        // Generate seeder code using AI or traditional method
+        $aiGenerator = app(AISeederCodeGenerator::class);
+        $seederMethods = $aiGenerator->generateSeederCode($modelName, $spec, $relationships, $category->value);
 
         $content = <<<PHP
 <?php
@@ -179,7 +214,7 @@ final class {$seederName} extends Seeder
     use LoadsJsonData;
 
     /**
-     * Run the database seeds.
+     * Run the database seeds (idempotent).
      */
     public function run(): void
     {
@@ -187,45 +222,7 @@ final class {$seederName} extends Seeder
         \$this->seedFromJson();
         \$this->seedFromFactory();
     }
-{$relationshipCode}
-    /**
-     * Seed from JSON data file.
-     */
-    private function seedFromJson(): void
-    {
-        try {
-            \$data = \$this->loadJson('{$jsonFileName}');
-
-            if (! isset(\$data['{$this->getJsonKey($modelName)}']) || ! is_array(\$data['{$this->getJsonKey($modelName)}'])) {
-                return;
-            }
-
-            foreach (\$data['{$this->getJsonKey($modelName)}'] as \$itemData) {
-                \$factoryState = \$itemData['_factory_state'] ?? null;
-                unset(\$itemData['_factory_state']);
-
-                \$factory = {$modelName}::factory();
-
-                if (\$factoryState !== null && method_exists(\$factory, \$factoryState)) {
-                    \$factory = \$factory->{\$factoryState}();
-                }
-
-                \$factory->create(\$itemData);
-            }
-        } catch (\RuntimeException \$e) {
-            // JSON file doesn't exist or is invalid - skip silently
-        }
-    }
-
-    /**
-     * Seed using factory.
-     */
-    private function seedFromFactory(): void
-    {
-        {$modelName}::factory()
-            ->count(10)
-            ->create();
-    }
+{$seederMethods}
 }
 
 PHP;
@@ -375,6 +372,140 @@ PHP;
             $this->info('✓ Seed spec created');
         } catch (Exception $e) {
             $this->warn("Could not generate seed spec: {$e->getMessage()}");
+        }
+    }
+
+    /**
+     * Smart JSON generation - auto-generate if missing/empty and AI available.
+     */
+    private function autoGenerateJsonIfNeeded(string $name): void
+    {
+        if ($this->option('no-ai')) {
+            return;
+        }
+
+        $jsonKey = $this->getJsonKey($name);
+        $jsonPath = database_path("seeders/data/{$jsonKey}.json");
+
+        // Check if JSON file exists and has data
+        $hasData = false;
+        if (File::exists($jsonPath)) {
+            $content = File::get($jsonPath);
+            $data = json_decode($content, true) ?? [];
+            $hasData = ! empty($data[$jsonKey] ?? []);
+        }
+
+        // Skip if JSON already has data
+        if ($hasData) {
+            return;
+        }
+
+        $modelClass = "App\\Models\\{$name}";
+
+        if (! class_exists($modelClass)) {
+            return;
+        }
+
+        try {
+            $specGenerator = app(SeedSpecGenerator::class);
+            $spec = $specGenerator->loadSpec($modelClass);
+
+            if ($spec === null) {
+                return;
+            }
+
+            $prismService = app(PrismService::class);
+            $aiAvailable = $prismService->isAvailable();
+
+            if ($aiAvailable && config('seeding.auto_generate_json', true)) {
+                $this->line('  Auto-generating JSON with AI...');
+                $this->generateJsonWithAI($name, $spec, $prismService);
+            } elseif (config('seeding.auto_generate_json', true)) {
+                $this->line('  Auto-generating JSON with Faker...');
+                $this->generateJsonWithFaker($name, $spec);
+            }
+        } catch (Exception $e) {
+            // Silently fail - JSON generation is optional
+        }
+    }
+
+    /**
+     * Generate JSON using AI.
+     *
+     * @param  array<string, mixed>  $spec
+     */
+    private function generateJsonWithAI(string $name, array $spec, PrismService $prismService): void
+    {
+        try {
+            $aiGenerator = app(AISeedGenerator::class);
+            $profile = $aiGenerator->loadProfile("App\\Models\\{$name}");
+
+            if ($profile === null) {
+                $profile = $aiGenerator->generateProfile("App\\Models\\{$name}", $spec);
+                $aiGenerator->saveProfile("App\\Models\\{$name}", $profile);
+            }
+
+            $prompt = $aiGenerator->buildPrompt($spec, $profile, 'basic_demo');
+
+            $prismProvider = $prismService->defaultProvider();
+            $model = $prismService->defaultModel();
+
+            $response = \Prism\Prism\Facades\Prism::text()
+                ->using($prismProvider, $model)
+                ->withPrompt($prompt)
+                ->asText();
+
+            $text = $response->text;
+            $jsonData = json_decode($text, true);
+
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                // Try to extract JSON from markdown
+                if (preg_match('/```(?:json)?\s*(\[.*?\])/s', $text, $matches)) {
+                    $jsonData = json_decode($matches[1], true);
+                }
+            }
+
+            if ($jsonData !== null && is_array($jsonData)) {
+                $jsonKey = $this->getJsonKey($name);
+                $data = [
+                    $jsonKey => is_array($jsonData[0] ?? null) ? $jsonData : [$jsonData],
+                    '_source' => 'ai',
+                    '_auto_generated' => true,
+                    '_generated_at' => now()->toIso8601String(),
+                ];
+
+                File::put(database_path("seeders/data/{$jsonKey}.json"), json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+                $this->info('  ✓ JSON auto-generated with AI');
+            }
+        } catch (Exception $e) {
+            // Fallback to Faker
+            $this->generateJsonWithFaker($name, $spec);
+        }
+    }
+
+    /**
+     * Generate JSON using Faker.
+     *
+     * @param  array<string, mixed>  $spec
+     */
+    private function generateJsonWithFaker(string $name, array $spec): void
+    {
+        try {
+            $traditionalGenerator = app(TraditionalSeedGenerator::class);
+            $jsonData = $traditionalGenerator->generate($spec, 3);
+
+            $jsonKey = $this->getJsonKey($name);
+            $data = [
+                $jsonKey => $jsonData,
+                '_source' => 'traditional',
+                '_auto_generated' => true,
+                '_generated_at' => now()->toIso8601String(),
+            ];
+
+            File::put(database_path("seeders/data/{$jsonKey}.json"), json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+            $this->info('  ✓ JSON auto-generated with Faker');
+        } catch (Exception $e) {
+            // Silently fail
         }
     }
 }

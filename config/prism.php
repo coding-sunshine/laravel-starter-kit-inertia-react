@@ -11,7 +11,15 @@ return [
     'request_timeout' => env('PRISM_REQUEST_TIMEOUT', 30), // The timeout for requests in seconds.
     'defaults' => [
         'provider' => env('PRISM_DEFAULT_PROVIDER', 'openrouter'),
-        'model' => env('PRISM_DEFAULT_MODEL', 'openai/gpt-4o-mini'),
+        // Using DeepSeek R1 0528 (free) - best free thinking model with performance on par with OpenAI o1
+        // Alternative free options: deepseek/deepseek-r1:free, tng/deepseek-r1t2-chimera:free
+        'model' => env('PRISM_DEFAULT_MODEL', 'deepseek/deepseek-r1-0528:free'),
+        // Provider-specific model defaults (used when provider doesn't match default)
+        'models' => [
+            'openrouter' => env('PRISM_DEFAULT_MODEL', 'deepseek/deepseek-r1-0528:free'),
+            'openai' => env('PRISM_OPENAI_DEFAULT_MODEL', 'gpt-4o-mini'),
+            'anthropic' => env('PRISM_ANTHROPIC_DEFAULT_MODEL', 'claude-3-5-sonnet-20241022'),
+        ],
     ],
     'providers' => [
         'openai' => [

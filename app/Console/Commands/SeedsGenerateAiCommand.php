@@ -6,7 +6,9 @@ namespace App\Console\Commands;
 
 use App\Services\AISeedGenerator;
 use App\Services\ModelRegistry;
+use App\Services\PrismService;
 use App\Services\SeedSpecGenerator;
+use App\Services\TraditionalSeedGenerator;
 use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
@@ -41,7 +43,9 @@ final class SeedsGenerateAiCommand extends Command
     public function handle(
         SeedSpecGenerator $specGenerator,
         AISeedGenerator $aiGenerator,
-        ModelRegistry $registry
+        ModelRegistry $registry,
+        PrismService $prismService,
+        TraditionalSeedGenerator $traditionalGenerator
     ): int {
         $specificModel = $this->option('model');
         $scenario = $this->option('scenario');
@@ -97,13 +101,32 @@ final class SeedsGenerateAiCommand extends Command
                     $this->line('  '.str_repeat('-', 60));
                     $this->newLine();
                 } else {
-                    $jsonData = $this->callAI($prompt, $provider, $apiKey);
+                    // Check if AI is available
+                    $prismProvider = $this->getPrismProvider($provider);
+                    $useAI = $prismService->isAvailable($prismProvider);
 
-                    if ($jsonData !== null) {
-                        $this->saveGeneratedJson($modelName, $jsonData, $scenario);
-                        $this->info("  {$modelName}: Generated JSON data");
+                    if ($useAI) {
+                        $this->line("  {$modelName}: Using AI generation");
+                        $jsonData = $this->callAI($prompt, $provider, $apiKey, $prismService);
+
+                        if ($jsonData !== null) {
+                            $this->saveGeneratedJson($modelName, $jsonData, $scenario, 'ai');
+                            $this->info("  {$modelName}: Generated JSON data with AI");
+                        } else {
+                            $this->warn("  {$modelName}: AI generation failed, falling back to traditional method");
+                            $jsonData = $this->fallbackToTraditional($spec, $traditionalGenerator);
+                            if ($jsonData !== null) {
+                                $this->saveGeneratedJson($modelName, $jsonData, $scenario, 'traditional');
+                                $this->info("  {$modelName}: Generated JSON data with Faker");
+                            }
+                        }
                     } else {
-                        $this->error("  {$modelName}: Failed to generate data");
+                        $this->line("  {$modelName}: AI not available, using traditional Faker generation");
+                        $jsonData = $this->fallbackToTraditional($spec, $traditionalGenerator);
+                        if ($jsonData !== null) {
+                            $this->saveGeneratedJson($modelName, $jsonData, $scenario, 'traditional');
+                            $this->info("  {$modelName}: Generated JSON data with Faker");
+                        }
                     }
                 }
             } catch (Exception $e) {
@@ -123,53 +146,72 @@ final class SeedsGenerateAiCommand extends Command
     }
 
     /**
+     * Get Prism provider from string.
+     */
+    private function getPrismProvider(string $provider): Provider
+    {
+        return match ($provider) {
+            'openrouter' => Provider::OpenRouter,
+            'openai' => Provider::OpenAI,
+            'anthropic' => Provider::Anthropic,
+            default => Provider::OpenRouter,
+        };
+    }
+
+    /**
      * Call AI provider to generate data.
      *
      * @return array<int, array<string, mixed>>|null
      */
-    private function callAI(string $prompt, string $provider, ?string $apiKey): ?array
+    private function callAI(string $prompt, string $provider, ?string $apiKey, PrismService $prismService): ?array
     {
         try {
-            // Map provider string to Prism Provider enum
-            $prismProvider = match ($provider) {
-                'openrouter', 'openrouter' => Provider::OpenRouter,
-                'openai' => Provider::OpenAI,
-                'anthropic' => Provider::Anthropic,
-                default => Provider::OpenRouter, // Default to OpenRouter
-            };
+            $prismProvider = $this->getPrismProvider($provider);
 
-            // Use a model that supports structured output
-            $model = match ($prismProvider) {
-                Provider::OpenRouter => 'openai/gpt-4o-mini', // OpenRouter model
-                Provider::OpenAI => 'gpt-4o-mini',
-                Provider::Anthropic => 'claude-3-5-sonnet-20241022',
-                default => 'openai/gpt-4o-mini',
-            };
+            // Use model from config based on provider
+            $model = $prismService->defaultModelForProvider($prismProvider);
 
-            $response = Prism::text()
-                ->using($prismProvider, $model)
-                ->withPrompt($prompt)
-                ->asText();
+            // Define JSON schema for structured output
+            $schema = [
+                'type' => 'array',
+                'items' => [
+                    'type' => 'object',
+                    'additionalProperties' => true,
+                ],
+            ];
 
-            $text = $response->text;
+            try {
+                // Try structured output first (more reliable)
+                $jsonData = $prismService->generateStructured($prompt, $schema, $model);
 
-            // Try to parse JSON from the response
-            $jsonData = json_decode($text, true);
-
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                // If not valid JSON, try to extract JSON from markdown code blocks
-                if (preg_match('/```(?:json)?\s*(\{.*?\})\s*```/s', $text, $matches)) {
-                    $jsonData = json_decode($matches[1], true);
-                } elseif (preg_match('/\{.*\}/s', $text, $matches)) {
-                    $jsonData = json_decode($matches[0], true);
+                if (! is_array($jsonData)) {
+                    throw new Exception('Structured output did not return array');
                 }
-            }
+            } catch (Exception $e) {
+                // Fallback to text output with parsing
+                $this->line('  Using text output (structured not available)');
+                $response = Prism::text()
+                    ->using($prismProvider, $model)
+                    ->withPrompt($prompt)
+                    ->asText();
 
-            if ($jsonData === null || json_last_error() !== JSON_ERROR_NONE) {
-                $this->error('Failed to parse JSON from AI response: '.json_last_error_msg());
-                $this->line('Raw response: '.mb_substr($text, 0, 200));
+                $text = $response->text;
+                $jsonData = json_decode($text, true);
 
-                return null;
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    // Try to extract JSON from markdown code blocks
+                    if (preg_match('/```(?:json)?\s*(\[.*?\])/s', $text, $matches)) {
+                        $jsonData = json_decode($matches[1], true);
+                    } elseif (preg_match('/\[.*\]/s', $text, $matches)) {
+                        $jsonData = json_decode($matches[0], true);
+                    }
+                }
+
+                if ($jsonData === null || json_last_error() !== JSON_ERROR_NONE) {
+                    $this->warn('Failed to parse JSON from AI response: '.json_last_error_msg());
+
+                    return null;
+                }
             }
 
             // Ensure we return an array of records
@@ -195,11 +237,28 @@ final class SeedsGenerateAiCommand extends Command
     }
 
     /**
+     * Fallback to traditional Faker generation.
+     *
+     * @param  array<string, mixed>  $spec
+     * @return array<int, array<string, mixed>>|null
+     */
+    private function fallbackToTraditional(array $spec, TraditionalSeedGenerator $generator): ?array
+    {
+        try {
+            return $generator->generate($spec, 5);
+        } catch (Exception $e) {
+            $this->error('Traditional generation failed: '.$e->getMessage());
+
+            return null;
+        }
+    }
+
+    /**
      * Save generated JSON data.
      *
      * @param  array<int, array<string, mixed>>  $jsonData
      */
-    private function saveGeneratedJson(string $modelName, array $jsonData, string $scenario): void
+    private function saveGeneratedJson(string $modelName, array $jsonData, string $scenario, string $source = 'ai'): void
     {
         $jsonKey = Str::snake(Str::plural($modelName));
         $jsonPath = database_path("seeders/data/{$jsonKey}.json");
@@ -217,8 +276,9 @@ final class SeedsGenerateAiCommand extends Command
         }
 
         $existingData['_scenarios'][$scenario] = $jsonData;
-        $existingData['_source'] = 'ai';
+        $existingData['_source'] = $source;
         $existingData['_generated_at'] = now()->toIso8601String();
+        $existingData['_auto_generated'] = true;
 
         // Also update main data if scenario is basic_demo
         if ($scenario === 'basic_demo') {

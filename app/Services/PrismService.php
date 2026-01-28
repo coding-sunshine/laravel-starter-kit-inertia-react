@@ -34,7 +34,38 @@ final readonly class PrismService
      */
     public function defaultModel(): string
     {
-        return config('prism.defaults.model', 'openai/gpt-4o-mini');
+        return config('prism.defaults.model', 'deepseek/deepseek-r1-0528:free');
+    }
+
+    /**
+     * Get the default model for a specific provider.
+     */
+    public function defaultModelForProvider(Provider $provider): string
+    {
+        $providerName = mb_strtolower($provider->value);
+
+        return config("prism.defaults.models.{$providerName}", $this->defaultModel());
+    }
+
+    /**
+     * Check if AI is available and configured.
+     */
+    public function isAvailable(?Provider $provider = null): bool
+    {
+        $providerToCheck = $provider ?? $this->defaultProvider();
+
+        return match ($providerToCheck) {
+            Provider::OpenRouter => ! empty(config('prism.providers.openrouter.api_key')),
+            Provider::OpenAI => ! empty(config('prism.providers.openai.api_key')),
+            Provider::Anthropic => ! empty(config('prism.providers.anthropic.api_key')),
+            Provider::Ollama => true, // Ollama doesn't require API key
+            Provider::Mistral => ! empty(config('prism.providers.mistral.api_key')),
+            Provider::Groq => ! empty(config('prism.providers.groq.api_key')),
+            Provider::XAI => ! empty(config('prism.providers.xai.api_key')),
+            Provider::Gemini => ! empty(config('prism.providers.gemini.api_key')),
+            Provider::DeepSeek => ! empty(config('prism.providers.deepseek.api_key')),
+            default => false,
+        };
     }
 
     /**

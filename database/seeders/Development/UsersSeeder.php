@@ -14,16 +14,26 @@ final class UsersSeeder extends Seeder
     use LoadsJsonData;
 
     /**
-     * Run the database seeds.
+     * Run the database seeds (idempotent).
      */
     public function run(): void
     {
+        $this->seedRelationships();
         $this->seedFromJson();
         $this->seedFromFactory();
     }
 
     /**
-     * Seed users from JSON data file.
+     * Seed relationships (idempotent).
+     */
+    private function seedRelationships(): void
+    {
+        // User model has no belongsTo relationships that need seeding
+        // If relationships are added in the future, they will be auto-detected
+    }
+
+    /**
+     * Seed users from JSON data file (idempotent).
      */
     private function seedFromJson(): void
     {
@@ -38,13 +48,20 @@ final class UsersSeeder extends Seeder
                 $factoryState = $userData['_factory_state'] ?? null;
                 unset($userData['_factory_state']);
 
-                $factory = User::factory();
-
-                if ($factoryState !== null && method_exists($factory, $factoryState)) {
-                    $factory = $factory->{$factoryState}();
+                // Use idempotent updateOrCreate for users (email is unique)
+                if (isset($userData['email']) && ! empty($userData['email'])) {
+                    User::query()->updateOrCreate(
+                        ['email' => $userData['email']],
+                        $userData
+                    );
+                } else {
+                    // Fallback to factory if no email
+                    $factory = User::factory();
+                    if ($factoryState !== null && method_exists($factory, $factoryState)) {
+                        $factory = $factory->{$factoryState}();
+                    }
+                    $factory->create($userData);
                 }
-
-                $factory->create($userData);
             }
         } catch (RuntimeException $e) {
             // JSON file doesn't exist or is invalid - skip silently
@@ -53,7 +70,7 @@ final class UsersSeeder extends Seeder
     }
 
     /**
-     * Seed users using factory states.
+     * Seed users using factory states (idempotent - safe to run multiple times).
      */
     private function seedFromFactory(): void
     {

@@ -68,13 +68,22 @@ This creates:
 - Model + Migration
 - Factory
 - Seeder (in specified category)
-- JSON data file stub
+- JSON data file stub (or auto-generated with AI/Faker)
+- Seed spec (canonical description)
 - Updates manifest.json
 - Analyzes relationships and includes them in seeder
 
 **Options:**
 - `--category=development` - Seeder category (essential, development, production)
 - `--all` - Generate everything (migration, factory, seeder, controller, policy, requests)
+- `--no-ai` - Skip AI generation even if available (use Faker instead)
+
+**Smart Auto-Generation:**
+- If JSON file is missing/empty, automatically generates it
+- Uses AI if available and configured (OpenRouter, OpenAI, Anthropic)
+- Falls back to Faker if AI is unavailable
+- Can be disabled with `--no-ai` flag
+- Controlled by `config/seeding.php` → `auto_generate_json`
 
 ### Manual Seeder Creation
 
@@ -337,15 +346,31 @@ The `database/seeders/manifest.json` file tracks all seeders with metadata:
 
 ## Git Pre-Commit Hook
 
-A pre-commit hook validates that new models have corresponding seeders:
+A pre-commit hook validates that new models have corresponding seeders and seed specs:
 
 **Location**: `.git/hooks/pre-commit`
 
 The hook:
 - Detects new model files
 - Checks for corresponding seeders
+- Checks for seed specs
+- **Interactive prompts**: Offers to auto-generate missing components
+- **Auto-fix capability**: Can automatically run `make:model:full` and `seeds:spec-sync`
 - Blocks commit if missing (with helpful error message)
 - Can be bypassed with `--no-verify` if needed
+
+**Interactive Mode:**
+When missing components are detected:
+1. Shows list of missing seeders/specs
+2. Prompts: "Auto-generate missing components? [Y/n]"
+3. If Yes: Automatically generates and continues
+4. If No: Blocks commit with instructions
+
+**Non-Interactive Mode:**
+Set `GIT_SEEDER_AUTO_FIX=1` environment variable for CI/CD:
+```bash
+GIT_SEEDER_AUTO_FIX=1 git commit -m "Add new model"
+```
 
 ## Best Practices
 
@@ -394,6 +419,56 @@ If dependencies aren't running in order:
 3. Ensure dependencies are in discoverable categories
 
 ## Advanced Features
+
+### Enhanced Relationship Detection
+
+The system now uses **model reflection** to detect ALL relationships:
+- Reads actual Eloquent relationship methods
+- Extracts foreign keys, pivot tables, and relationship details
+- Supports all relationship types (belongsTo, hasMany, belongsToMany, morphTo, etc.)
+- More accurate than migration-based detection
+
+**Automatic**: Works automatically when creating models with `make:model:full`
+
+### AI-Powered Seeder Generation
+
+Seeders are now generated using **AI** (with Faker fallback):
+- Understands model context, relationships, and fields
+- Generates intelligent seeding logic
+- Creates idempotent code automatically
+- Detects unique fields for updateOrCreate patterns
+
+**Automatic**: Happens automatically when creating models
+
+### Auto-Regeneration on Changes
+
+When you modify models or migrations:
+- **MigrationListener** detects relationship changes
+- Automatically regenerates seeder code
+- Preserves your custom code in protected regions
+- Runs silently after migrations
+
+**Configuration:**
+```php
+// config/seeding.php
+'auto_regenerate_seeders' => true, // Auto-regenerate when relationships change
+```
+
+### Idempotency by Default
+
+All generated seeders are **idempotent**:
+- JSON seeding uses `updateOrCreate()` when unique fields exist
+- Safe to run multiple times
+- No duplicate records
+
+**Example:**
+```php
+// Auto-generated code
+User::query()->updateOrCreate(
+    ['email' => $userData['email']],
+    $userData
+);
+```
 
 ### Seed Specs
 

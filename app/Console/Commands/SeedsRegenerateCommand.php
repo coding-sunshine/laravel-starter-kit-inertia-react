@@ -219,30 +219,36 @@ final class SeedsRegenerateCommand extends Command
     }
 
     /**
-     * Generate seeder code from spec.
+     * Generate seeder code from spec using AI or traditional method.
      */
     private function generateSeederCode(string $modelName, array $spec, string $category): string
     {
-        $relationships = $spec['relationships'] ?? [];
-        $code = '';
+        $modelClass = "App\\Models\\{$modelName}";
 
-        // Generate relationship seeding
-        if (! empty($relationships)) {
-            $code .= "        // Seed relationships\n";
+        // Use enhanced analyzer to get full relationship details
+        $enhancedAnalyzer = app(EnhancedRelationshipAnalyzer::class);
+        $relationships = class_exists($modelClass)
+            ? $enhancedAnalyzer->analyzeModel($modelClass)
+            : [];
 
-            foreach ($relationships as $relName => $relSpec) {
-                if ($relSpec['type'] === 'belongsTo' && isset($relSpec['model'])) {
-                    $relatedModel = $relSpec['model'];
-                    $code .= "        if (\\App\\Models\\{$relatedModel}::query()->count() === 0) {\n";
-                    $code .= "            \\App\\Models\\{$relatedModel}::factory()->count(5)->create();\n";
-                    $code .= "        }\n";
-                }
+        // Convert spec relationships format if needed
+        if (empty($relationships)) {
+            $specRelationships = $spec['relationships'] ?? [];
+            foreach ($specRelationships as $relName => $relSpec) {
+                $relationships[$relName] = [
+                    'type' => $relSpec['type'] ?? 'belongsTo',
+                    'model' => $relSpec['model'] ?? null,
+                    'foreignKey' => null,
+                    'localKey' => null,
+                    'pivotTable' => null,
+                ];
             }
-
-            $code .= "\n";
         }
 
-        return $code;
+        // Use AI generator for intelligent code generation
+        $aiGenerator = app(AISeederCodeGenerator::class);
+
+        return $aiGenerator->generateSeederCode($modelName, $spec, $relationships, $category);
     }
 
     /**

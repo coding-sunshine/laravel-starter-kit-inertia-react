@@ -38,7 +38,7 @@ final class SeedsSpecSyncCommand extends Command
         $force = $this->option('force');
 
         $models = $specificModel
-            ? [app_path("Models/{$specificModel}.php")]
+            ? ["App\\Models\\{$specificModel}"]
             : $registry->getAllModels();
 
         if (empty($models)) {

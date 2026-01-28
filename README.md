@@ -134,11 +134,19 @@ seedFor(Post::class, 5); // Auto-seeds with relationships
 - **Git hooks**: Pre-commit validation for new models
 - **Full automation**: Commands to create, audit, and sync seeders
 - **Seed Specs**: Canonical descriptions that auto-sync with schema changes
-- **AI-Assisted**: Offline AI generation of realistic seed data
+- **AI-Assisted**: Offline AI generation of realistic seed data (with graceful fallback)
+- **AI-Powered Seeders**: Intelligent seeder code generation using AI + model context
+- **Enhanced Relationships**: Full relationship detection using model reflection
+- **Auto-Regeneration**: Seeders auto-update when relationships change
+- **Auto-Generation**: Smart JSON generation when creating models (AI or Faker)
+- **Migration Listener**: Auto-syncs specs and regenerates seeders after migrations
+- **Idempotent by Default**: All seeders use updateOrCreate/firstOrCreate patterns
+- **Interactive Pre-Commit**: Prompts to auto-fix missing components
 - **Test Scenarios**: Named scenarios for consistent test data
 - **Real Data Profiling**: Learn from production patterns
 - **Observability**: Metrics, logs, and strict/lenient modes
 - **AI Review**: Automated review of seeders and specs
+- **Structured Output**: Reliable JSON generation using Prism
 
 See [Seeder Documentation](./docs/developer/backend/database/seeders.md) and [Advanced Features](./docs/developer/backend/database/advanced-features.md) for complete details.
 

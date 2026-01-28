@@ -56,7 +56,8 @@ final class PrismValidate extends Command
         }
 
         if (! $defaultModel) {
-            $warnings[] = 'No default model configured. Using "openai/gpt-4o-mini" as fallback.';
+            $fallbackModel = config('prism.defaults.model', 'deepseek/deepseek-r1-0528:free');
+            $warnings[] = "No default model configured. Using \"{$fallbackModel}\" as fallback.";
         } else {
             $this->info("  ✓ Default model: {$defaultModel}");
         }

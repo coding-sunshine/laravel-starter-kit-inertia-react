@@ -1,0 +1,93 @@
+{
+    "model": "User",
+    "table": "users",
+    "fields": {
+        "id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "name": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "email": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "email_verified_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        },
+        "password": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "two_factor_secret": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "two_factor_recovery_codes": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "two_factor_confirmed_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        },
+        "remember_token": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": [],
+    "value_hints": {
+        "email_verified_at": {
+            "type": "email",
+            "example": "user@example.com"
+        },
+        "password": {
+            "type": "password",
+            "example": "password"
+        },
+        "two_factor_confirmed_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        },
+        "created_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        },
+        "updated_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        },
+        "name": {
+            "type": "name",
+            "example": "John Doe"
+        },
+        "email": {
+            "type": "email",
+            "example": "user@example.com"
+        }
+    },
+    "scenarios": []
+}

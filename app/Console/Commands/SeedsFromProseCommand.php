@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Services\PrismService;
 use App\Services\SeedSpecGenerator;
 use Exception;
 use Illuminate\Console\Command;
@@ -34,7 +35,7 @@ final class SeedsFromProseCommand extends Command
     /**
      * Execute the console command.
      */
-    public function handle(SeedSpecGenerator $specGenerator): int
+    public function handle(SeedSpecGenerator $specGenerator, PrismService $prismService): int
     {
         $description = $this->argument('description');
         $modelName = $this->option('model');
@@ -60,7 +61,16 @@ final class SeedsFromProseCommand extends Command
             $this->newLine();
             $this->info('Dry run complete. Run without --dry-run to generate spec.');
         } else {
-            $spec = $this->callAIForSpec($prompt, $provider, $modelName);
+            $prismProvider = $this->getPrismProvider($provider);
+            $useAI = $prismService->isAvailable($prismProvider);
+
+            if ($useAI) {
+                $this->line('Using AI to generate spec from description');
+                $spec = $this->callAIForSpec($prompt, $provider, $modelName, $prismService);
+            } else {
+                $this->warn('AI not available - generating basic spec structure');
+                $spec = $this->generateBasicSpec($modelName, $description);
+            }
 
             if ($spec !== null) {
                 $modelClass = "App\\Models\\{$modelName}";
@@ -98,61 +108,114 @@ final class SeedsFromProseCommand extends Command
     }
 
     /**
+     * Get Prism provider from string.
+     */
+    private function getPrismProvider(string $provider): Provider
+    {
+        return match ($provider) {
+            'openrouter' => Provider::OpenRouter,
+            'openai' => Provider::OpenAI,
+            'anthropic' => Provider::Anthropic,
+            default => Provider::OpenRouter,
+        };
+    }
+
+    /**
+     * Generate basic spec structure when AI is not available.
+     *
+     * @return array<string, mixed>
+     */
+    private function generateBasicSpec(string $modelName, string $description): array
+    {
+        return [
+            'model' => $modelName,
+            'table' => Str::snake(Str::plural($modelName)),
+            'fields' => [],
+            'relationships' => [],
+            'value_hints' => [],
+            'scenarios' => ['basic_demo'],
+            '_note' => "Basic spec generated from description: {$description}. Run seeds:spec-sync to populate from actual model/migration.",
+        ];
+    }
+
+    /**
      * Call AI to generate spec from prose.
      *
      * @return array<string, mixed>|null
      */
-    private function callAIForSpec(string $prompt, string $provider, string $modelName): ?array
+    private function callAIForSpec(string $prompt, string $provider, string $modelName, PrismService $prismService): ?array
     {
         try {
-            // Map provider string to Prism Provider enum
-            $prismProvider = match ($provider) {
-                'openrouter', 'openrouter' => Provider::OpenRouter,
-                'openai' => Provider::OpenAI,
-                'anthropic' => Provider::Anthropic,
-                default => Provider::OpenRouter, // Default to OpenRouter
-            };
+            $prismProvider = $this->getPrismProvider($provider);
 
-            // Use a model that supports structured output
-            $model = match ($prismProvider) {
-                Provider::OpenRouter => 'openai/gpt-4o-mini', // OpenRouter model
-                Provider::OpenAI => 'gpt-4o-mini',
-                Provider::Anthropic => 'claude-3-5-sonnet-20241022',
-                default => 'openai/gpt-4o-mini',
-            };
+            // Use model from config based on provider
+            $model = $prismService->defaultModelForProvider($prismProvider);
 
-            $response = Prism::text()
-                ->using($prismProvider, $model)
-                ->withPrompt($prompt)
-                ->asText();
+            // Define schema for seed spec
+            $schema = [
+                'type' => 'object',
+                'properties' => [
+                    'model' => ['type' => 'string'],
+                    'table' => ['type' => 'string'],
+                    'fields' => [
+                        'type' => 'object',
+                        'additionalProperties' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'type' => ['type' => 'string'],
+                                'nullable' => ['type' => 'boolean'],
+                                'default' => [],
+                            ],
+                        ],
+                    ],
+                    'relationships' => [
+                        'type' => 'object',
+                        'additionalProperties' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'type' => ['type' => 'string'],
+                                'model' => ['type' => 'string'],
+                            ],
+                        ],
+                    ],
+                    'value_hints' => [
+                        'type' => 'object',
+                        'additionalProperties' => true,
+                    ],
+                    'scenarios' => [
+                        'type' => 'array',
+                        'items' => ['type' => 'string'],
+                    ],
+                ],
+                'required' => ['model', 'table', 'fields', 'relationships'],
+            ];
 
-            $text = $response->text;
+            try {
+                $jsonData = $prismService->generateStructured($prompt, $schema, $model);
+            } catch (Exception $e) {
+                // Fallback to text parsing
+                $this->line('  Using text output (structured not available)');
+                $response = Prism::text()
+                    ->using($prismProvider, $model)
+                    ->withPrompt($prompt)
+                    ->asText();
 
-            // Try to parse JSON from the response
-            $jsonData = json_decode($text, true);
+                $text = $response->text;
+                $jsonData = json_decode($text, true);
 
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                // If not valid JSON, try to extract JSON from markdown code blocks
-                if (preg_match('/```(?:json)?\s*(\{.*?\})\s*```/s', $text, $matches)) {
-                    $jsonData = json_decode($matches[1], true);
-                } elseif (preg_match('/\{.*\}/s', $text, $matches)) {
-                    $jsonData = json_decode($matches[0], true);
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    if (preg_match('/```(?:json)?\s*(\{.*?\})\s*```/s', $text, $matches)) {
+                        $jsonData = json_decode($matches[1], true);
+                    } elseif (preg_match('/\{.*\}/s', $text, $matches)) {
+                        $jsonData = json_decode($matches[0], true);
+                    }
                 }
-            }
 
-            if ($jsonData === null || json_last_error() !== JSON_ERROR_NONE) {
-                $this->error('Failed to parse JSON from AI response: '.json_last_error_msg());
-                $this->line('Raw response: '.mb_substr($text, 0, 200));
+                if ($jsonData === null || json_last_error() !== JSON_ERROR_NONE) {
+                    $this->warn('Failed to parse JSON from AI response: '.json_last_error_msg());
 
-                // Return a basic structure as fallback
-                return [
-                    'model' => $modelName,
-                    'table' => Str::snake(Str::plural($modelName)),
-                    'fields' => [],
-                    'relationships' => [],
-                    'value_hints' => [],
-                    'scenarios' => ['basic_demo'],
-                ];
+                    return $this->generateBasicSpec($modelName, '');
+                }
             }
 
             // Ensure required fields are present
@@ -161,17 +224,10 @@ final class SeedsFromProseCommand extends Command
 
             return $jsonData;
         } catch (Exception $e) {
-            $this->error('AI call failed: '.$e->getMessage());
+            $this->warn('AI call failed: '.$e->getMessage());
+            $this->info('Falling back to basic spec structure');
 
-            // Return a basic structure as fallback
-            return [
-                'model' => $modelName,
-                'table' => Str::snake(Str::plural($modelName)),
-                'fields' => [],
-                'relationships' => [],
-                'value_hints' => [],
-                'scenarios' => ['basic_demo'],
-            ];
+            return $this->generateBasicSpec($modelName, '');
         }
     }
 }

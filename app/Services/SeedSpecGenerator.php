@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use ReflectionClass;
+use ReflectionNamedType;
 
 final class SeedSpecGenerator
 {
@@ -217,9 +218,12 @@ final class SeedSpecGenerator
             $type = $this->inferRelationshipType($returnTypeName, $methodName);
 
             if ($type !== null) {
+                // Try to extract related model from return type
+                $relatedModel = $this->extractRelatedModelFromReturnType($returnType, $methodName);
+
                 $relationships[$methodName] = [
                     'type' => $type,
-                    'model' => null, // Will be inferred from return type if possible
+                    'model' => $relatedModel,
                 ];
             }
         }
@@ -266,6 +270,26 @@ final class SeedSpecGenerator
         }
 
         return null;
+    }
+
+    /**
+     * Extract related model name from return type.
+     */
+    private function extractRelatedModelFromReturnType(ReflectionNamedType $returnType, string $methodName): ?string
+    {
+        // For now, infer from method name
+        // Enhanced analyzer will get actual model from relationship instance
+        $name = $methodName;
+
+        if (Str::startsWith($name, 'belongsTo')) {
+            $name = Str::after($name, 'belongsTo');
+        } elseif (Str::startsWith($name, 'hasMany')) {
+            $name = Str::after($name, 'hasMany');
+        } elseif (Str::startsWith($name, 'hasOne')) {
+            $name = Str::after($name, 'hasOne');
+        }
+
+        return Str::studly(Str::singular($name));
     }
 
     /**

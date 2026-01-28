@@ -51,3 +51,11 @@ test('ai helper function returns PrismService instance', function () {
 
     expect($service)->toBeInstanceOf(PrismService::class);
 });
+
+test('prism service can get default model for provider', function () {
+    $service = new PrismService;
+    $model = $service->defaultModelForProvider(Provider::OpenRouter);
+
+    expect($model)->toBeString();
+    expect($model)->not->toBeEmpty();
+});

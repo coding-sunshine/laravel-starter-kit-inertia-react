@@ -26,9 +26,28 @@ OPENROUTER_URL=https://openrouter.ai/api/v1
 OPENROUTER_SITE_HTTP_REFERER="${APP_URL}"
 OPENROUTER_SITE_X_TITLE="${APP_NAME}"
 
+# Default provider and model (used when no provider is specified)
 PRISM_DEFAULT_PROVIDER=openrouter
-PRISM_DEFAULT_MODEL=openai/gpt-4o-mini
+# Best free thinking model: DeepSeek R1 0528 (performance on par with OpenAI o1)
+# Alternatives: deepseek/deepseek-r1:free, tng/deepseek-r1t2-chimera:free
+PRISM_DEFAULT_MODEL=deepseek/deepseek-r1-0528:free
+
+# Provider-specific model defaults (optional - falls back to PRISM_DEFAULT_MODEL)
+PRISM_OPENAI_DEFAULT_MODEL=gpt-4o-mini
+PRISM_ANTHROPIC_DEFAULT_MODEL=claude-3-5-sonnet-20241022
 ```
+
+### Configuration Structure
+
+The configuration supports:
+- **Default Provider**: Used when no provider is explicitly specified
+- **Default Model**: Used for the default provider and as fallback for other providers
+- **Provider-Specific Models**: Override the default model for specific providers
+
+All model selection is centralized in configuration - no hardcoded strings in the codebase. This makes it easy to:
+- Change models globally by updating `PRISM_DEFAULT_MODEL`
+- Use different models per provider via provider-specific environment variables
+- Maintain consistency across all commands and services
 
 ## Usage
 
@@ -52,10 +71,17 @@ use App\Services\PrismService;
 
 $prism = new PrismService;
 
-// Simple text generation
+// Simple text generation (uses default model from config)
 $response = $prism->generate('Explain Laravel in one sentence');
 
 echo $response->text;
+
+// Get default provider and model from config
+$provider = $prism->defaultProvider();
+$model = $prism->defaultModel();
+
+// Get provider-specific default model
+$openaiModel = $prism->defaultModelForProvider(Provider::OpenAI);
 ```
 
 ### Direct Prism Usage
@@ -64,10 +90,20 @@ You can also use Prism directly for more advanced features:
 
 ```php
 use Prism\Prism\Enums\Provider;
-use Prism\Prism\Prism;
+use Prism\Prism\Facades\Prism;
+use App\Services\PrismService;
 
+$prism = new PrismService;
+
+// Use default model from config
 $response = Prism::text()
-    ->using(Provider::OpenRouter, 'openai/gpt-4o-mini')
+    ->using($prism->defaultProvider(), $prism->defaultModel())
+    ->withPrompt('Hello, how are you?')
+    ->asText();
+
+// Or specify a model explicitly
+$response = Prism::text()
+    ->using(Provider::OpenRouter, 'deepseek/deepseek-r1-0528:free')
     ->withPrompt('Hello, how are you?')
     ->asText();
 
@@ -76,7 +112,7 @@ echo $response->text;
 
 ### Using Different Providers
 
-Prism supports multiple providers. You can use any provider configured in `config/prism.php`:
+Prism supports multiple providers. You can use any provider configured in `config/prism.php`. The service automatically uses provider-specific model defaults from configuration:
 
 ```php
 use App\Services\PrismService;
@@ -84,26 +120,41 @@ use Prism\Prism\Enums\Provider;
 
 $prism = new PrismService;
 
-// Use OpenAI directly
-$response = $prism->using(Provider::OpenAI, 'gpt-4o-mini')
+// Use OpenAI with default model from config (PRISM_OPENAI_DEFAULT_MODEL)
+$response = $prism->using(Provider::OpenAI, $prism->defaultModelForProvider(Provider::OpenAI))
     ->withPrompt('Your prompt here')
     ->asText();
 
-// Use Anthropic
-$response = $prism->using(Provider::Anthropic, 'claude-3-5-sonnet-20241022')
+// Use Anthropic with default model from config (PRISM_ANTHROPIC_DEFAULT_MODEL)
+$response = $prism->using(Provider::Anthropic, $prism->defaultModelForProvider(Provider::Anthropic))
+    ->withPrompt('Your prompt here')
+    ->asText();
+
+// Or specify a model explicitly
+$response = $prism->using(Provider::OpenAI, 'gpt-4o')
     ->withPrompt('Your prompt here')
     ->asText();
 ```
+
+> **Note:** All seed commands and services use `defaultModelForProvider()` to automatically select the correct model based on the provider, ensuring consistency across the application.
 
 ### Available Models
 
 OpenRouter supports many models from different providers. Use the OpenRouter model format:
 
+**Free Thinking Models (Best Performance):**
+- `deepseek/deepseek-r1-0528:free` - **Default** - Performance on par with OpenAI o1, 671B parameters, 164K context
+- `deepseek/deepseek-r1:free` - Original DeepSeek R1, 671B parameters, open-source reasoning
+- `tngtech/deepseek-r1t2-chimera:free` - 20% faster than R1, 164K context (if available as free tier)
+
+**Paid Models:**
 - `openai/gpt-4o-mini`
 - `openai/gpt-4o`
 - `anthropic/claude-3-5-sonnet`
 - `google/gemini-pro`
 - And many more at [openrouter.ai/models](https://openrouter.ai/models)
+
+> **Note:** The starter kit defaults to `deepseek/deepseek-r1-0528:free`, which offers excellent reasoning capabilities at no cost. This model performs comparably to OpenAI o1 and is ideal for development and production use.
 
 ### Using MCP Tools
 
@@ -214,12 +265,21 @@ Relay is configured in `config/relay.php`. You can define MCP servers that provi
 You can use MCP tools in your Prism requests:
 
 ```php
+use App\Services\PrismService;
 use Prism\Prism\Enums\Provider;
 use Prism\Prism\Facades\Prism;
 use Prism\Relay\Facades\Relay;
 
+$prism = new PrismService;
+
+// Using PrismService (uses default model from config)
+$response = $prism->withTools('puppeteer')
+    ->withPrompt('Find information about Laravel on the web')
+    ->asText();
+
+// Or using Prism directly with config-based model
 $response = Prism::text()
-    ->using(Provider::OpenRouter, 'openai/gpt-4o-mini')
+    ->using($prism->defaultProvider(), $prism->defaultModel())
     ->withPrompt('Find information about Laravel on the web')
     ->withTools(Relay::tools('puppeteer'))
     ->asText();
@@ -327,10 +387,18 @@ php artisan prism:validate
 
 This command checks:
 - Default provider and model configuration
+- Provider-specific model defaults
 - OpenRouter API key and URL
 - MCP server configurations
 - Tool availability from MCP servers
 
 Use this command to troubleshoot configuration issues or verify your setup before using Prism in production.
+
+### Configuration Best Practices
+
+1. **Centralize Model Selection**: Always use `PrismService` methods (`defaultModel()`, `defaultModelForProvider()`) instead of hardcoding model names
+2. **Use Environment Variables**: Configure models via `.env` for easy environment-specific changes
+3. **Provider-Specific Defaults**: Set `PRISM_OPENAI_DEFAULT_MODEL` and `PRISM_ANTHROPIC_DEFAULT_MODEL` if you frequently use those providers
+4. **Validate Configuration**: Run `php artisan prism:validate` after changing configuration
 
 For more information, see the [Prism PHP documentation](https://prismphp.com/).
