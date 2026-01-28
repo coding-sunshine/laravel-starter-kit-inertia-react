@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Services\SeedSpecGenerator;
+use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Str;
+use Prism\Prism\Enums\Provider;
+use Prism\Prism\Facades\Prism;
 
 final class SeedsFromProseCommand extends Command
 {
@@ -101,18 +104,74 @@ final class SeedsFromProseCommand extends Command
      */
     private function callAIForSpec(string $prompt, string $provider, string $modelName): ?array
     {
-        // Placeholder - actual AI integration would go here
-        $this->warn('AI integration not configured. This is a placeholder implementation.');
-        $this->info('To implement: Add your AI provider SDK and configure API keys.');
+        try {
+            // Map provider string to Prism Provider enum
+            $prismProvider = match ($provider) {
+                'openrouter', 'openrouter' => Provider::OpenRouter,
+                'openai' => Provider::OpenAI,
+                'anthropic' => Provider::Anthropic,
+                default => Provider::OpenRouter, // Default to OpenRouter
+            };
 
-        // Return a basic structure as example
-        return [
-            'model' => $modelName,
-            'table' => Str::snake(Str::plural($modelName)),
-            'fields' => [],
-            'relationships' => [],
-            'value_hints' => [],
-            'scenarios' => ['basic_demo'],
-        ];
+            // Use a model that supports structured output
+            $model = match ($prismProvider) {
+                Provider::OpenRouter => 'openai/gpt-4o-mini', // OpenRouter model
+                Provider::OpenAI => 'gpt-4o-mini',
+                Provider::Anthropic => 'claude-3-5-sonnet-20241022',
+                default => 'openai/gpt-4o-mini',
+            };
+
+            $response = Prism::text()
+                ->using($prismProvider, $model)
+                ->withPrompt($prompt)
+                ->asText();
+
+            $text = $response->text;
+
+            // Try to parse JSON from the response
+            $jsonData = json_decode($text, true);
+
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                // If not valid JSON, try to extract JSON from markdown code blocks
+                if (preg_match('/```(?:json)?\s*(\{.*?\})\s*```/s', $text, $matches)) {
+                    $jsonData = json_decode($matches[1], true);
+                } elseif (preg_match('/\{.*\}/s', $text, $matches)) {
+                    $jsonData = json_decode($matches[0], true);
+                }
+            }
+
+            if ($jsonData === null || json_last_error() !== JSON_ERROR_NONE) {
+                $this->error('Failed to parse JSON from AI response: '.json_last_error_msg());
+                $this->line('Raw response: '.mb_substr($text, 0, 200));
+
+                // Return a basic structure as fallback
+                return [
+                    'model' => $modelName,
+                    'table' => Str::snake(Str::plural($modelName)),
+                    'fields' => [],
+                    'relationships' => [],
+                    'value_hints' => [],
+                    'scenarios' => ['basic_demo'],
+                ];
+            }
+
+            // Ensure required fields are present
+            $jsonData['model'] = $jsonData['model'] ?? $modelName;
+            $jsonData['table'] = $jsonData['table'] ?? Str::snake(Str::plural($modelName));
+
+            return $jsonData;
+        } catch (Exception $e) {
+            $this->error('AI call failed: '.$e->getMessage());
+
+            // Return a basic structure as fallback
+            return [
+                'model' => $modelName,
+                'table' => Str::snake(Str::plural($modelName)),
+                'fields' => [],
+                'relationships' => [],
+                'value_hints' => [],
+                'scenarios' => ['basic_demo'],
+            ];
+        }
     }
 }

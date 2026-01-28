@@ -8,6 +8,8 @@ use App\Services\ModelRegistry;
 use App\Services\SeedSpecGenerator;
 use Exception;
 use Illuminate\Console\Command;
+use Prism\Prism\Enums\Provider;
+use Prism\Prism\Facades\Prism;
 
 final class SeedsReviewCommand extends Command
 {
@@ -143,11 +145,59 @@ final class SeedsReviewCommand extends Command
      */
     private function callAIReview(string $prompt, string $provider): ?array
     {
-        // Placeholder - actual AI integration would go here
-        $this->warn('AI review integration not configured. This is a placeholder implementation.');
-        $this->info('To implement: Add your AI provider SDK and configure API keys.');
+        try {
+            // Map provider string to Prism Provider enum
+            $prismProvider = match ($provider) {
+                'openrouter', 'openrouter' => Provider::OpenRouter,
+                'openai' => Provider::OpenAI,
+                'anthropic' => Provider::Anthropic,
+                default => Provider::OpenRouter, // Default to OpenRouter
+            };
 
-        return null;
+            // Use a model that supports structured output
+            $model = match ($prismProvider) {
+                Provider::OpenRouter => 'openai/gpt-4o-mini', // OpenRouter model
+                Provider::OpenAI => 'gpt-4o-mini',
+                Provider::Anthropic => 'claude-3-5-sonnet-20241022',
+                default => 'openai/gpt-4o-mini',
+            };
+
+            $response = Prism::text()
+                ->using($prismProvider, $model)
+                ->withPrompt($prompt)
+                ->asText();
+
+            $text = $response->text;
+
+            // Try to parse JSON from the response
+            $jsonData = json_decode($text, true);
+
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                // If not valid JSON, try to extract JSON from markdown code blocks
+                if (preg_match('/```(?:json)?\s*(\{.*?\})\s*```/s', $text, $matches)) {
+                    $jsonData = json_decode($matches[1], true);
+                } elseif (preg_match('/\{.*\}/s', $text, $matches)) {
+                    $jsonData = json_decode($matches[0], true);
+                }
+            }
+
+            if ($jsonData === null || json_last_error() !== JSON_ERROR_NONE) {
+                $this->error('Failed to parse JSON from AI response: '.json_last_error_msg());
+                $this->line('Raw response: '.mb_substr($text, 0, 200));
+
+                return null;
+            }
+
+            // Ensure required structure
+            return [
+                'issues' => $jsonData['issues'] ?? [],
+                'suggestions' => $jsonData['suggestions'] ?? [],
+            ];
+        } catch (Exception $e) {
+            $this->error('AI call failed: '.$e->getMessage());
+
+            return null;
+        }
     }
 
     /**
