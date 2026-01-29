@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Str;
 
 final class SchemaWatcher
@@ -26,10 +27,10 @@ final class SchemaWatcher
         $changed = [];
 
         if ($since !== null) {
-            // Use git to detect changed files
-            $output = shell_exec("git diff --name-only {$since} -- database/migrations/ 2>/dev/null");
+            $result = Process::run(['git', 'diff', '--name-only', $since, '--', 'database/migrations/']);
+            $output = $result->output();
 
-            if ($output) {
+            if ($output !== '') {
                 $changedFiles = array_filter(explode("\n", mb_trim($output)));
 
                 foreach ($changedFiles as $file) {
@@ -64,9 +65,10 @@ final class SchemaWatcher
         $changed = [];
 
         if ($since !== null) {
-            $output = shell_exec("git diff --name-only {$since} -- app/Models/ 2>/dev/null");
+            $result = Process::run(['git', 'diff', '--name-only', $since, '--', 'app/Models/']);
+            $output = $result->output();
 
-            if ($output) {
+            if ($output !== '') {
                 $changedFiles = array_filter(explode("\n", mb_trim($output)));
 
                 foreach ($changedFiles as $file) {

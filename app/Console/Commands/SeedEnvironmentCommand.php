@@ -78,7 +78,7 @@ final class SeedEnvironmentCommand extends Command
 
         return match ($category) {
             'essential' => [SeederCategory::Essential],
-            'development' => [SeederCategory::Development],
+            'development' => [SeederCategory::Essential, SeederCategory::Development],
             'production' => [SeederCategory::Production],
             default => null,
         };

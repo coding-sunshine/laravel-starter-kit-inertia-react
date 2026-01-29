@@ -58,7 +58,16 @@
             "default": null
         }
     },
-    "relationships": [],
+    "relationships": {
+        "roles": {
+            "type": "belongsTo",
+            "model": "Role"
+        },
+        "permissions": {
+            "type": "belongsTo",
+            "model": "Permission"
+        }
+    },
     "value_hints": {
         "email_verified_at": {
             "type": "email",

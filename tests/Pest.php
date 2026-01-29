@@ -2,8 +2,11 @@
 
 declare(strict_types=1);
 
+use App\Models\User;
 use App\Testing\SeedHelper;
+use Database\Seeders\Essential\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Sleep;
@@ -55,6 +58,23 @@ function seedMany(array $models): array
 function seedScenario(string $scenarioName): array
 {
     return SeedHelper::seedScenario($scenarioName);
+}
+
+/**
+ * Seed roles/permissions, create an admin or super-admin user, and act as that user.
+ * Use in Filament feature tests when you need an authenticated panel user.
+ */
+function actsAsFilamentAdmin(TestCase $test, string $role = 'admin'): User
+{
+    $test->seed(RolesAndPermissionsSeeder::class);
+    $user = User::factory()->withoutTwoFactor()->create([
+        'email' => $role.'@filament-test.example',
+        'password' => Hash::make('password'),
+    ]);
+    $user->assignRole($role);
+    $test->actingAs($user);
+
+    return $user;
 }
 
 function something(): void

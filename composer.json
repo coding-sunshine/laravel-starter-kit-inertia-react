@@ -3,12 +3,14 @@
     "name": "nunomaduro/laravel-starter-kit-inertia-react",
     "type": "project",
     "description": "The skeleton application for the Laravel framework.",
-    "keywords": [
-        "laravel",
-        "framework"
-    ],
+    "keywords": ["laravel", "framework"],
     "license": "MIT",
     "repositories": [
+        {
+            "name": "filament",
+            "type": "composer",
+            "url": "https://packages.filamentphp.com/composer"
+        },
         {
             "type": "path",
             "url": "../laravel-architect",
@@ -19,6 +21,7 @@
     ],
     "require": {
         "php": "^8.4.0",
+        "filament/filament": "^5.1.1",
         "inertiajs/inertia-laravel": "^2.0.19",
         "laravel/fortify": "^1.34.0",
         "laravel/framework": "^12.49.0",
@@ -26,12 +29,14 @@
         "laravel/wayfinder": "^0.1.13",
         "nunomaduro/essentials": "^1.0.1",
         "prism-php/prism": "^0.99.19",
-        "prism-php/relay": "^1.6"
+        "prism-php/relay": "^1.6",
+        "spatie/laravel-permission": "^6.24"
     },
     "require-dev": {
         "coding-sunshine/laravel-architect": "dev-main",
         "driftingly/rector-laravel": "^2.1.9",
         "fakerphp/faker": "^1.24.1",
+        "filament/blueprint": "^2.1",
         "larastan/larastan": "^3.9.1",
         "laravel/boost": "^2.0.4",
         "laravel/pail": "^1.2.4",
@@ -69,6 +74,12 @@
             "bun install",
             "bun run build"
         ],
+        "setup-blueprint": "bash scripts/setup-filament-blueprint.sh",
+        "optimize-production": [
+            "@php artisan config:cache",
+            "@php artisan route:cache",
+            "@php artisan filament:cache-components"
+        ],
         "dev": [
             "Composer\\Config::disableProcessTimeout",
             "bunx concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74\" \"php artisan serve\" \"php artisan queue:listen --tries=1\" \"php artisan pail --timeout=0\" \"bun run dev\" --names=server,queue,logs,vite --kill-others"
@@ -76,7 +87,8 @@
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
             "@php artisan package:discover --ansi",
-            "@php artisan docs:sync || true"
+            "@php artisan docs:sync || true",
+            "@php artisan filament:upgrade"
         ],
         "post-update-cmd": [
             "@php artisan vendor:publish --tag=laravel-assets --ansi --force",

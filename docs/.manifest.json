@@ -1,10 +1,10 @@
 {
     "version": "1.0.0",
-    "lastGenerated": "2026-01-28",
+    "lastGenerated": "2026-01-29",
     "actions": {
         "CreateUser": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./CreateUser.md",
             "relationships": {
                 "usedBy": [
                     "UserController",
@@ -16,6 +16,7 @@
                     "User"
                 ],
                 "relatedRoutes": [
+                    "filament.admin.resources.users.create",
                     "user.destroy",
                     "password.edit",
                     "password.update",
@@ -31,8 +32,8 @@
             }
         },
         "CreateUserEmailResetNotification": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./CreateUserEmailResetNotification.md",
             "relationships": {
                 "usedBy": [
                     "UserEmailResetNotificationController"
@@ -45,8 +46,8 @@
             }
         },
         "CreateUserEmailVerificationNotification": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./CreateUserEmailVerificationNotification.md",
             "relationships": {
                 "usedBy": [
                     "UserEmailVerificationNotificationController"
@@ -61,8 +62,8 @@
             }
         },
         "CreateUserPassword": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./CreateUserPassword.md",
             "relationships": {
                 "usedBy": [
                     "UserPasswordController"
@@ -79,8 +80,8 @@
             }
         },
         "DeleteUser": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./DeleteUser.md",
             "relationships": {
                 "usedBy": [
                     "UserController"
@@ -96,8 +97,8 @@
             }
         },
         "UpdateUser": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./UpdateUser.md",
             "relationships": {
                 "usedBy": [
                     "UserPasswordController",
@@ -117,8 +118,8 @@
             }
         },
         "UpdateUserPassword": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./UpdateUserPassword.md",
             "relationships": {
                 "usedBy": [
                     "UserPasswordController"
@@ -137,8 +138,8 @@
     },
     "controllers": {
         "SessionController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./SessionController.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [
@@ -155,8 +156,8 @@
             }
         },
         "UserController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./UserController.md",
             "relationships": {
                 "usesActions": [
                     "CreateUser",
@@ -177,8 +178,8 @@
             }
         },
         "UserEmailResetNotificationController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./UserEmailResetNotificationController.md",
             "relationships": {
                 "usesActions": [
                     "CreateUserEmailResetNotification"
@@ -196,8 +197,8 @@
             }
         },
         "UserEmailVerificationController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./UserEmailVerificationController.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
@@ -208,8 +209,8 @@
             }
         },
         "UserEmailVerificationNotificationController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./UserEmailVerificationNotificationController.md",
             "relationships": {
                 "usesActions": [
                     "CreateUserEmailVerificationNotification"
@@ -225,8 +226,8 @@
             }
         },
         "UserPasswordController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./UserPasswordController.md",
             "relationships": {
                 "usesActions": [
                     "CreateUserPassword",
@@ -249,8 +250,8 @@
             }
         },
         "UserProfileController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./UserProfileController.md",
             "relationships": {
                 "usesActions": [
                     "UpdateUser"
@@ -268,8 +269,8 @@
             }
         },
         "UserTwoFactorAuthenticationController": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "./UserTwoFactorAuthenticationController.md",
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [
@@ -286,12 +287,21 @@
     },
     "pages": {
         "appearance/update": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./appearance-update.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
+                    "filament.exports.download",
+                    "filament.imports.failed-rows.download",
+                    "filament.admin.auth.login",
+                    "filament.admin.auth.logout",
+                    "filament.admin.pages.dashboard",
+                    "filament.admin.resources.users.index",
+                    "filament.admin.resources.users.create",
+                    "filament.admin.resources.users.view",
+                    "filament.admin.resources.users.edit",
                     "login",
                     "login.store",
                     "logout",
@@ -307,6 +317,8 @@
                     "two-factor.secret-key",
                     "two-factor.recovery-codes",
                     "two-factor.regenerate-recovery-codes",
+                    "livewire.upload-file",
+                    "livewire.preview-file",
                     "user.destroy",
                     "user-profile.edit",
                     "user-profile.update",
@@ -321,17 +333,27 @@
                     "password.email",
                     "verification.notice",
                     "verification.send",
-                    "verification.verify"
+                    "verification.verify",
+                    "livewire.update"
                 ]
             }
         },
         "dashboard": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./dashboard.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
+                    "filament.exports.download",
+                    "filament.imports.failed-rows.download",
+                    "filament.admin.auth.login",
+                    "filament.admin.auth.logout",
+                    "filament.admin.pages.dashboard",
+                    "filament.admin.resources.users.index",
+                    "filament.admin.resources.users.create",
+                    "filament.admin.resources.users.view",
+                    "filament.admin.resources.users.edit",
                     "login",
                     "login.store",
                     "logout",
@@ -347,6 +369,8 @@
                     "two-factor.secret-key",
                     "two-factor.recovery-codes",
                     "two-factor.regenerate-recovery-codes",
+                    "livewire.upload-file",
+                    "livewire.preview-file",
                     "user.destroy",
                     "user-profile.edit",
                     "user-profile.update",
@@ -361,14 +385,15 @@
                     "password.email",
                     "verification.notice",
                     "verification.send",
-                    "verification.verify"
+                    "verification.verify",
+                    "livewire.update"
                 ]
             }
         },
         "session/create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./session-create.md",
             "relationships": {
                 "renderedBy": [
                     "SessionController"
@@ -381,9 +406,9 @@
             }
         },
         "user-email-reset-notification/create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./user-email-reset-notification-create.md",
             "relationships": {
                 "renderedBy": [
                     "UserEmailResetNotificationController"
@@ -395,9 +420,9 @@
             }
         },
         "user-email-verification-notification/create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./user-email-verification-notification-create.md",
             "relationships": {
                 "renderedBy": [
                     "UserEmailVerificationNotificationController"
@@ -409,18 +434,18 @@
             }
         },
         "user-password-confirmation/create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./user-password-confirmation-create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": []
             }
         },
         "user-password/create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./user-password-create.md",
             "relationships": {
                 "renderedBy": [
                     "UserPasswordController"
@@ -434,9 +459,9 @@
             }
         },
         "user-password/edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./user-password-edit.md",
             "relationships": {
                 "renderedBy": [
                     "UserPasswordController"
@@ -450,9 +475,9 @@
             }
         },
         "user-profile/edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./user-profile-edit.md",
             "relationships": {
                 "renderedBy": [
                     "UserProfileController"
@@ -464,18 +489,18 @@
             }
         },
         "user-two-factor-authentication-challenge/show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./user-two-factor-authentication-challenge-show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": []
             }
         },
         "user-two-factor-authentication/show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./user-two-factor-authentication-show.md",
             "relationships": {
                 "renderedBy": [
                     "UserTwoFactorAuthenticationController"
@@ -486,9 +511,9 @@
             }
         },
         "user/create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./user-create.md",
             "relationships": {
                 "renderedBy": [
                     "UserController"
@@ -501,12 +526,21 @@
             }
         },
         "welcome": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./welcome.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
+                    "filament.exports.download",
+                    "filament.imports.failed-rows.download",
+                    "filament.admin.auth.login",
+                    "filament.admin.auth.logout",
+                    "filament.admin.pages.dashboard",
+                    "filament.admin.resources.users.index",
+                    "filament.admin.resources.users.create",
+                    "filament.admin.resources.users.view",
+                    "filament.admin.resources.users.edit",
                     "login",
                     "login.store",
                     "logout",
@@ -522,6 +556,8 @@
                     "two-factor.secret-key",
                     "two-factor.recovery-codes",
                     "two-factor.regenerate-recovery-codes",
+                    "livewire.upload-file",
+                    "livewire.preview-file",
                     "user.destroy",
                     "user-profile.edit",
                     "user-profile.update",
@@ -536,7 +572,8 @@
                     "password.email",
                     "verification.notice",
                     "verification.send",
-                    "verification.verify"
+                    "verification.verify",
+                    "livewire.update"
                 ]
             }
         }

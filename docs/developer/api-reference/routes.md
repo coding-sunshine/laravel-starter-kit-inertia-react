@@ -2,7 +2,11 @@
 
 This document lists all available routes in the application.
 
-**Last Updated**: 2026-01-28 10:14:00
+**Last Updated**: 2026-01-29
+
+## Filament Admin Panel
+
+Filament registers the admin panel and auth routes under `/admin` (e.g. `GET /admin`, `GET /admin/login`, `POST /admin/logout`). See [Filament Admin Panel](../backend/filament.md) for details.
 
 ## Closure
 

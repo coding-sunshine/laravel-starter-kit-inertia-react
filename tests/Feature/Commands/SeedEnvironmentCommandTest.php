@@ -26,10 +26,13 @@ it('requires force flag in production', function (): void {
 });
 
 it('can run with fresh option', function (): void {
+    if (config('database.default') === 'sqlite' && config('database.connections.sqlite.database') === ':memory:') {
+        $this->markTestSkipped('SQLite :memory: cannot VACUUM inside a transaction (RefreshDatabase).');
+    }
+
     User::factory()->create();
 
     Artisan::call('seed:environment', ['--fresh' => true]);
 
-    // Fresh should reset and reseed
     expect(User::query()->count())->toBeGreaterThan(0);
 });

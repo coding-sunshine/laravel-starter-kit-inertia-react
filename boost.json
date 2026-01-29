@@ -4,13 +4,18 @@
         "cursor",
         "gemini",
         "junie",
-        "opencode"
+        "opencode",
+        "copilot"
     ],
     "guidelines": true,
     "herd_mcp": true,
     "mcp": true,
     "packages": [
-        "laravel/fortify"
+        "filament/filament",
+        "laravel/fortify",
+        "spatie/laravel-permission",
+        "prism-php/prism",
+        "filament/blueprint"
     ],
     "sail": false,
     "skills": [
@@ -18,6 +23,7 @@
         "pest-testing",
         "inertia-react-development",
         "tailwindcss-development",
-        "developing-with-fortify"
+        "developing-with-fortify",
+        "developing-with-prism"
     ]
 }

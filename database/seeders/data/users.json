@@ -3,11 +3,13 @@
     {
       "name": "Demo Admin",
       "email": "admin@example.com",
+      "role": "super-admin",
       "_factory_state": "admin"
     },
     {
       "name": "Test User",
-      "email": "test@example.com"
+      "email": "test@example.com",
+      "role": "user"
     }
   ]
 }

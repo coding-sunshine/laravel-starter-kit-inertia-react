@@ -14,6 +14,8 @@ final class UsersSeeder extends Seeder
 {
     use LoadsJsonData;
 
+    protected array $dependencies = ['RolesAndPermissionsSeeder'];
+
     /**
      * Run the database seeds (idempotent).
      */
@@ -47,24 +49,29 @@ final class UsersSeeder extends Seeder
 
             foreach ($data['users'] as $userData) {
                 $factoryState = $userData['_factory_state'] ?? null;
-                unset($userData['_factory_state']);
+                $role = $userData['role'] ?? null;
+                $roles = $userData['roles'] ?? [];
+                unset($userData['_factory_state'], $userData['role'], $userData['roles']);
 
-                // Use idempotent updateOrCreate for users (email is unique)
                 if (isset($userData['email']) && ! empty($userData['email'])) {
-                    // Ensure password is set (required field)
                     if (! isset($userData['password'])) {
                         $userData['password'] = Hash::make('password');
                     }
 
-                    // Mark email as verified so seeded users can log in immediately
                     if (! isset($userData['email_verified_at'])) {
                         $userData['email_verified_at'] = now();
                     }
 
-                    User::query()->updateOrCreate(
+                    $user = User::query()->updateOrCreate(
                         ['email' => $userData['email']],
                         $userData
                     );
+
+                    if ($role !== null) {
+                        $user->syncRoles([$role]);
+                    } elseif ($roles !== []) {
+                        $user->syncRoles($roles);
+                    }
                 } else {
                     // Fallback to factory if no email
                     $factory = User::factory();
@@ -85,18 +92,19 @@ final class UsersSeeder extends Seeder
      */
     private function seedFromFactory(): void
     {
-        // Create admin users
-        User::factory()
+        $adminUsers = User::factory()
             ->admin()
             ->count(2)
             ->create();
 
-        // Create regular users
+        foreach ($adminUsers as $u) {
+            $u->assignRole('admin');
+        }
+
         User::factory()
             ->count(5)
             ->create();
 
-        // Create unverified users
         User::factory()
             ->unverified()
             ->count(2)

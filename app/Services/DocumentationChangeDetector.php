@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Process;
 
 final readonly class DocumentationChangeDetector
 {
@@ -268,16 +268,15 @@ final readonly class DocumentationChangeDetector
      */
     private function getStagedFiles(): array
     {
-        $output = [];
-        $exitCode = 0;
+        $result = Process::run(['git', 'diff', '--cached', '--name-only', '--diff-filter=ACMR']);
 
-        exec('git diff --cached --name-only --diff-filter=ACMR', $output, $exitCode);
-
-        if ($exitCode !== 0) {
+        if (! $result->successful()) {
             return [];
         }
 
-        return array_filter($output);
+        $lines = array_map('trim', explode("\n", $result->output()));
+
+        return array_values(array_filter($lines));
     }
 
     /**
@@ -285,15 +284,12 @@ final readonly class DocumentationChangeDetector
      */
     private function getFileDiff(string $filePath): string
     {
-        $output = [];
-        $exitCode = 0;
+        $result = Process::run(['git', 'diff', '--cached', '--', $filePath]);
 
-        exec("git diff --cached -- {$filePath}", $output, $exitCode);
-
-        if ($exitCode !== 0) {
+        if (! $result->successful()) {
             return '';
         }
 
-        return implode("\n", $output);
+        return $result->output();
     }
 }

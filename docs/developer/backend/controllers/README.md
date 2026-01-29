@@ -14,14 +14,13 @@ All Controllers:
 
 | Controller | Purpose | Documented |
 |------------|---------|------------|
-| SessionController | N/A | ❌ |
-| UserController | N/A | ❌ |
-| UserEmailResetNotificationController | N/A | ❌ |
-| UserEmailVerificationController | N/A | ❌ |
-| UserEmailVerificationNotificationController | N/A | ❌ |
-| UserPasswordController | N/A | ❌ |
-| UserProfileController | N/A | ❌ |
-| UserTwoFactorAuthenticationController | N/A | ❌ |
+| [SessionController](./SessionController.md) | Login, logout, 2FA redirect | ✅ |
+| [UserController](./UserController.md) | Registration, account deletion | ✅ |
+| [UserEmailResetNotificationController](./UserEmailResetNotificationController.md) | Forgot-password form, send reset link | ✅ |
+| [UserEmailVerificationController](./UserEmailVerificationController.md) | Verification link handler | ✅ |
+| [UserEmailVerificationNotificationController](./UserEmailVerificationNotificationController.md) | Verification notice, resend verification | ✅ |
+| [UserPasswordController](./UserPasswordController.md) | Forgot-password reset, change password | ✅ |
+| [UserProfileController](./UserProfileController.md) | Profile edit, update | ✅ |
+| [UserTwoFactorAuthenticationController](./UserTwoFactorAuthenticationController.md) | 2FA settings page | ✅ |
 
 
-> **Note**: Individual controller documentation will be added here as they are documented.

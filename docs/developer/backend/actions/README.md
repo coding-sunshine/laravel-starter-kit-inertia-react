@@ -14,13 +14,12 @@ All Actions:
 
 | Action | Purpose | Documented |
 |--------|---------|------------|
-| CreateUser | N/A | ❌ |
-| CreateUserEmailResetNotification | N/A | ❌ |
-| CreateUserEmailVerificationNotification | N/A | ❌ |
-| CreateUserPassword | N/A | ❌ |
-| DeleteUser | N/A | ❌ |
-| UpdateUser | N/A | ❌ |
-| UpdateUserPassword | N/A | ❌ |
+| [CreateUser](./CreateUser.md) | Create user, fire `Registered` | ✅ |
+| [CreateUserEmailResetNotification](./CreateUserEmailResetNotification.md) | Send password-reset link | ✅ |
+| [CreateUserEmailVerificationNotification](./CreateUserEmailVerificationNotification.md) | Send verification email | ✅ |
+| [CreateUserPassword](./CreateUserPassword.md) | Reset password via token | ✅ |
+| [DeleteUser](./DeleteUser.md) | Delete user | ✅ |
+| [UpdateUser](./UpdateUser.md) | Update user attributes; handle email change | ✅ |
+| [UpdateUserPassword](./UpdateUserPassword.md) | Update authenticated user password | ✅ |
 
 
-> **Note**: Individual action documentation will be added here as they are documented.

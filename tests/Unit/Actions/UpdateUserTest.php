@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Notification;
 
 it('may update a user', function (): void {
     Notification::fake();
-    $user = User::factory()->create([
+    $user = User::factory()->unverified()->create([
         'name' => 'Old Name',
         'email' => 'old@email.com',
     ]);

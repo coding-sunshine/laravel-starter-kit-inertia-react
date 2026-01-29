@@ -1,10 +1,17 @@
 {
   "seeders": [
     {
+      "name": "RolesAndPermissionsSeeder",
+      "category": "essential",
+      "description": "Seeds roles and permissions for Spatie",
+      "dependencies": [],
+      "data_files": []
+    },
+    {
       "name": "UsersSeeder",
       "category": "development",
       "description": "Seeds development users including admins and regular users",
-      "dependencies": [],
+      "dependencies": ["RolesAndPermissionsSeeder"],
       "data_files": ["users.json"]
     }
   ],
