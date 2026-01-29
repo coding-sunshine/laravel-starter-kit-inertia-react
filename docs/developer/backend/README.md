@@ -9,9 +9,11 @@ Backend components, services, and patterns for developers.
 - [Database](./database/README.md) - Database patterns, seeders, and factories
 - [Filament Admin Panel](./filament.md) - Filament panel at `/admin`
 - [Prism AI Integration](./prism.md) - AI integration with Prism and OpenRouter
+- [Scramble OpenAPI Docs](./scramble.md) - OpenAPI/Swagger docs at `/docs/api`
 
 ## Quick Links
 
 - [Actions Documentation](./actions/README.md) - All Action classes
 - [Seeder System](./database/seeders.md) - Automated seeder system
 - [Prism AI Integration](./prism.md) - AI-powered features with Prism
+- [Scramble OpenAPI Docs](./scramble.md) - API documentation at `/docs/api`

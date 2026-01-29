@@ -4,6 +4,9 @@ This section documents all routes and endpoints available in the application.
 
 ## Routes
 
-Routes are defined in `routes/web.php`. For the complete list of routes, see [Routes Documentation](./routes.md).
+- **Web**: `routes/web.php`
+- **API**: `routes/api.php` (prefixed with `/api`; documented by [Scramble](../backend/scramble.md) at `/docs/api`)
 
-> **Note**: Route documentation will be generated automatically when routes are added or modified.
+For the complete list of routes, see [Routes Documentation](./routes.md).
+
+> **Note**: Route documentation is regenerated with `php artisan docs:api` when routes are added or modified.

@@ -336,6 +336,18 @@
                     "verification.verify",
                     "architect.studio",
                     "architect.studio.validate",
+                    "architect.api.context",
+                    "architect.api.draft.get",
+                    "architect.api.draft.put",
+                    "architect.api.validate",
+                    "architect.api.plan",
+                    "architect.api.build",
+                    "architect.api.draft-from-ai",
+                    "architect.api.starters",
+                    "architect.api.starters.get",
+                    "architect.api.import",
+                    "architect.api.status",
+                    "architect.api.explain",
                     "livewire.update"
                 ]
             }
@@ -390,6 +402,18 @@
                     "verification.verify",
                     "architect.studio",
                     "architect.studio.validate",
+                    "architect.api.context",
+                    "architect.api.draft.get",
+                    "architect.api.draft.put",
+                    "architect.api.validate",
+                    "architect.api.plan",
+                    "architect.api.build",
+                    "architect.api.draft-from-ai",
+                    "architect.api.starters",
+                    "architect.api.starters.get",
+                    "architect.api.import",
+                    "architect.api.status",
+                    "architect.api.explain",
                     "livewire.update"
                 ]
             }
@@ -579,6 +603,18 @@
                     "verification.verify",
                     "architect.studio",
                     "architect.studio.validate",
+                    "architect.api.context",
+                    "architect.api.draft.get",
+                    "architect.api.draft.put",
+                    "architect.api.validate",
+                    "architect.api.plan",
+                    "architect.api.build",
+                    "architect.api.draft-from-ai",
+                    "architect.api.starters",
+                    "architect.api.starters.get",
+                    "architect.api.import",
+                    "architect.api.status",
+                    "architect.api.explain",
                     "livewire.update"
                 ]
             }

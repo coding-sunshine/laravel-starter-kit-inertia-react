@@ -2,22 +2,35 @@
 
 This document lists all available routes in the application.
 
-**Last Updated**: 2026-01-29
-
-## Filament Admin Panel
-
-Filament registers the admin panel and auth routes under `/admin` (e.g. `GET /admin`, `GET /admin/login`, `POST /admin/logout`). See [Filament Admin Panel](../backend/filament.md) for details.
+**Last Updated**: 2026-01-29 10:05:37
 
 ## Closure
 
 | Method | URI | Route Name | Middleware |
 |--------|-----|------------|------------|
+| GET | `filament/exports/{export}/download` | filament.exports.download | filament.actions |
+| GET | `filament/imports/{import}/failed-rows/download` | filament.imports.failed-rows.download | filament.actions |
+| GET | `admin/login` | filament.admin.auth.login | panel:admin, Illuminate\Cookie\Middleware\EncryptCookies, Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse |
+| POST | `admin/logout` | filament.admin.auth.logout | panel:admin, Illuminate\Cookie\Middleware\EncryptCookies, Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse |
+| GET | `admin` | filament.admin.pages.dashboard | panel:admin, Illuminate\Cookie\Middleware\EncryptCookies, Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse |
+| GET | `admin/users` | filament.admin.resources.users.index | panel:admin, Illuminate\Cookie\Middleware\EncryptCookies, Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse |
+| GET | `admin/users/create` | filament.admin.resources.users.create | panel:admin, Illuminate\Cookie\Middleware\EncryptCookies, Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse |
+| GET | `admin/users/{record}` | filament.admin.resources.users.view | panel:admin, Illuminate\Cookie\Middleware\EncryptCookies, Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse |
+| GET | `admin/users/{record}/edit` | filament.admin.resources.users.edit | panel:admin, Illuminate\Cookie\Middleware\EncryptCookies, Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse |
 | POST | `_boost/browser-logs` | boost.browser-logs | - |
+| GET | `livewire-f0cf3e9a/js/{component}.js` | - | - |
+| GET | `livewire-f0cf3e9a/css/{component}.css` | - | - |
+| GET | `livewire-f0cf3e9a/css/{component}.global.css` | - | - |
+| GET | `api` | - | api |
+| GET | `favicon.ico` | favicon | web |
 | GET | `/` | home | web |
 | GET | `dashboard` | dashboard | web, auth, verified |
 | GET, POST, PUT, PATCH, DELETE | `settings` | - | web, auth |
 | GET | `settings/appearance` | appearance.edit | web, auth |
 | GET | `storage/{path}` | storage.local | - |
+| GET | `architect` | architect.studio | web |
+| GET | `docs/api` | scramble.docs.ui | web, Dedoc\Scramble\Http\Middleware\RestrictedDocsAccess |
+| GET | `docs/api.json` | scramble.docs.document | web, Dedoc\Scramble\Http\Middleware\RestrictedDocsAccess |
 
 
 ## SessionController
@@ -306,6 +319,85 @@ Filament registers the admin panel and auth routes under `/admin` (e.g. `GET /ad
 - `generate`: `Laravel\Fortify\Actions\GenerateNewRecoveryCodes`
 
 
+## FrontendAssets
+
+**Controller**: `Livewire\Mechanisms\FrontendAssets\FrontendAssets`
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| GET | `livewire-f0cf3e9a/livewire.js` | - | - |
+| GET | `livewire-f0cf3e9a/livewire.min.js.map` | - | - |
+| GET | `livewire-f0cf3e9a/livewire.csp.min.js.map` | - | - |
+
+### returnJavaScriptAsFile
+
+**Route**: ``
+
+**URI**: `livewire-f0cf3e9a/livewire.js`
+
+**Methods**: GET
+
+### maps
+
+**Route**: ``
+
+**URI**: `livewire-f0cf3e9a/livewire.min.js.map`
+
+**Methods**: GET
+
+### cspMaps
+
+**Route**: ``
+
+**URI**: `livewire-f0cf3e9a/livewire.csp.min.js.map`
+
+**Methods**: GET
+
+
+## FileUploadController
+
+**Controller**: `Livewire\Features\SupportFileUploads\FileUploadController`
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| POST | `livewire-f0cf3e9a/upload-file` | livewire.upload-file | web, throttle:60,1 |
+
+### handle
+
+**Route**: `livewire.upload-file`
+
+**URI**: `livewire-f0cf3e9a/upload-file`
+
+**Methods**: POST
+
+**Middleware**: web, throttle:60,1
+
+
+## FilePreviewController
+
+**Controller**: `Livewire\Features\SupportFileUploads\FilePreviewController`
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| GET | `livewire-f0cf3e9a/preview-file/{filename}` | livewire.preview-file | web |
+
+### handle
+
+**Route**: `livewire.preview-file`
+
+**URI**: `livewire-f0cf3e9a/preview-file/{filename}`
+
+**Methods**: GET
+
+**Parameters**:
+- `filename`
+
+**Middleware**: web
+
+**Method Parameters**:
+- `filename`: `mixed`
+
+
 ## UserController
 
 **Controller**: `App\Http\Controllers\UserController`
@@ -584,5 +676,226 @@ Filament registers the admin panel and auth routes under `/admin` (e.g. `GET /ad
 **Method Parameters**:
 - `request`: `Illuminate\Foundation\Auth\EmailVerificationRequest`
 - `user`: `App\Models\User`
+
+
+## ArchitectStudioController
+
+**Controller**: `\CodingSunshine\Architect\Http\Controllers\ArchitectStudioController`
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| POST | `architect/validate` | architect.studio.validate | web |
+
+### validate
+
+**Route**: `architect.studio.validate`
+
+**URI**: `architect/validate`
+
+**Methods**: POST
+
+**Middleware**: web
+
+**Method Parameters**:
+- `request`: `Illuminate\Http\Request`
+- `parser`: `CodingSunshine\Architect\Services\DraftParser`
+
+
+## ArchitectApiController
+
+**Controller**: `\CodingSunshine\Architect\Http\Controllers\ArchitectApiController`
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| GET | `architect/api/context` | architect.api.context | web |
+| GET | `architect/api/draft` | architect.api.draft.get | web |
+| PUT | `architect/api/draft` | architect.api.draft.put | web |
+| POST | `architect/api/validate` | architect.api.validate | web |
+| POST | `architect/api/plan` | architect.api.plan | web |
+| POST | `architect/api/build` | architect.api.build | web |
+| POST | `architect/api/draft-from-ai` | architect.api.draft-from-ai | web |
+| GET | `architect/api/starters` | architect.api.starters | web |
+| GET | `architect/api/starters/{name}` | architect.api.starters.get | web |
+| POST | `architect/api/import` | architect.api.import | web |
+| GET | `architect/api/status` | architect.api.status | web |
+| GET | `architect/api/explain` | architect.api.explain | web |
+
+### context
+
+**Route**: `architect.api.context`
+
+**URI**: `architect/api/context`
+
+**Methods**: GET
+
+**Middleware**: web
+
+**Method Parameters**:
+- `context`: `CodingSunshine\Architect\Services\StudioContextService`
+
+### getDraft
+
+**Route**: `architect.api.draft.get`
+
+**URI**: `architect/api/draft`
+
+**Methods**: GET
+
+**Middleware**: web
+
+### putDraft
+
+**Route**: `architect.api.draft.put`
+
+**URI**: `architect/api/draft`
+
+**Methods**: PUT
+
+**Middleware**: web
+
+**Method Parameters**:
+- `request`: `Illuminate\Http\Request`
+
+### validateDraft
+
+**Route**: `architect.api.validate`
+
+**URI**: `architect/api/validate`
+
+**Methods**: POST
+
+**Middleware**: web
+
+**Method Parameters**:
+- `request`: `Illuminate\Http\Request`
+- `parser`: `CodingSunshine\Architect\Services\DraftParser`
+- `validator`: `CodingSunshine\Architect\Schema\SchemaValidator`
+
+### plan
+
+**Route**: `architect.api.plan`
+
+**URI**: `architect/api/plan`
+
+**Methods**: POST
+
+**Middleware**: web
+
+**Method Parameters**:
+- `parser`: `CodingSunshine\Architect\Services\DraftParser`
+- `planner`: `CodingSunshine\Architect\Services\BuildPlanner`
+
+### build
+
+**Route**: `architect.api.build`
+
+**URI**: `architect/api/build`
+
+**Methods**: POST
+
+**Middleware**: web
+
+**Method Parameters**:
+- `request`: `Illuminate\Http\Request`
+- `orchestrator`: `CodingSunshine\Architect\Services\BuildOrchestrator`
+
+### draftFromAi
+
+**Route**: `architect.api.draft-from-ai`
+
+**URI**: `architect/api/draft-from-ai`
+
+**Methods**: POST
+
+**Middleware**: web
+
+**Method Parameters**:
+- `request`: `Illuminate\Http\Request`
+- `generator`: `CodingSunshine\Architect\Services\DraftGenerator`
+
+### starters
+
+**Route**: `architect.api.starters`
+
+**URI**: `architect/api/starters`
+
+**Methods**: GET
+
+**Middleware**: web
+
+### getStarter
+
+**Route**: `architect.api.starters.get`
+
+**URI**: `architect/api/starters/{name}`
+
+**Methods**: GET
+
+**Parameters**:
+- `name`
+
+**Middleware**: web
+
+**Method Parameters**:
+- `name`: `string`
+
+### import
+
+**Route**: `architect.api.import`
+
+**URI**: `architect/api/import`
+
+**Methods**: POST
+
+**Middleware**: web
+
+**Method Parameters**:
+- `request`: `Illuminate\Http\Request`
+- `import`: `CodingSunshine\Architect\Services\ImportService`
+
+### status
+
+**Route**: `architect.api.status`
+
+**URI**: `architect/api/status`
+
+**Methods**: GET
+
+**Middleware**: web
+
+**Method Parameters**:
+- `state`: `CodingSunshine\Architect\Services\StateManager`
+
+### explain
+
+**Route**: `architect.api.explain`
+
+**URI**: `architect/api/explain`
+
+**Methods**: GET
+
+**Middleware**: web
+
+**Method Parameters**:
+- `parser`: `CodingSunshine\Architect\Services\DraftParser`
+
+
+## HandleRequests
+
+**Controller**: `Livewire\Mechanisms\HandleRequests\HandleRequests`
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| POST | `livewire-f0cf3e9a/update` | livewire.update | web |
+
+### handleUpdate
+
+**Route**: `livewire.update`
+
+**URI**: `livewire-f0cf3e9a/update`
+
+**Methods**: POST
+
+**Middleware**: web
 
 
