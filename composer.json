@@ -8,6 +8,15 @@
         "framework"
     ],
     "license": "MIT",
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../laravel-architect",
+            "options": {
+                "symlink": true
+            }
+        }
+    ],
     "require": {
         "php": "^8.4.0",
         "inertiajs/inertia-laravel": "^2.0.19",
@@ -20,6 +29,7 @@
         "prism-php/relay": "^1.6"
     },
     "require-dev": {
+        "coding-sunshine/laravel-architect": "dev-main",
         "driftingly/rector-laravel": "^2.1.9",
         "fakerphp/faker": "^1.24.1",
         "larastan/larastan": "^3.9.1",
