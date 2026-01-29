@@ -10,6 +10,6 @@ if (! function_exists('ai')) {
      */
     function ai(): PrismService
     {
-        return new PrismService;
+        return app(PrismService::class);
     }
 }

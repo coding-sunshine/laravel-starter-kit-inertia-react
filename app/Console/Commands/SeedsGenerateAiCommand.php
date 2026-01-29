@@ -14,7 +14,6 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use Prism\Prism\Enums\Provider;
-use Prism\Prism\Facades\Prism;
 
 final class SeedsGenerateAiCommand extends Command
 {
@@ -190,8 +189,7 @@ final class SeedsGenerateAiCommand extends Command
             } catch (Exception $e) {
                 // Fallback to text output with parsing
                 $this->line('  Using text output (structured not available)');
-                $response = Prism::text()
-                    ->using($prismProvider, $model)
+                $response = $prismService->using($prismProvider, $model)
                     ->withPrompt($prompt)
                     ->asText();
 

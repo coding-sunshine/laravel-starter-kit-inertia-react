@@ -10,7 +10,6 @@ use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Str;
 use Prism\Prism\Enums\Provider;
-use Prism\Prism\Facades\Prism;
 
 final class SeedsFromProseCommand extends Command
 {
@@ -195,8 +194,7 @@ final class SeedsFromProseCommand extends Command
             } catch (Exception $e) {
                 // Fallback to text parsing
                 $this->line('  Using text output (structured not available)');
-                $response = Prism::text()
-                    ->using($prismProvider, $model)
+                $response = $prismService->using($prismProvider, $model)
                     ->withPrompt($prompt)
                     ->asText();
 

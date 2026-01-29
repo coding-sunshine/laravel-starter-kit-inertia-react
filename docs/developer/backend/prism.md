@@ -62,14 +62,35 @@ $response = ai()->generate('Explain Laravel in one sentence');
 echo $response->text;
 ```
 
+### Checking Availability
+
+Before calling AI in production or in optional features, check that the provider is configured so the app can degrade gracefully if keys are missing or wrong:
+
+```php
+use Prism\Prism\Enums\Provider;
+
+// Check default provider (from config)
+if (ai()->isAvailable()) {
+    $response = ai()->generate('Your prompt');
+    echo $response->text;
+}
+
+// Check a specific provider
+if (ai()->isAvailable(Provider::OpenRouter)) {
+    // Use OpenRouter
+}
+```
+
+Use this pattern for optional AI features (e.g. AI-generated seed data) so the app still works when `OPENROUTER_API_KEY` is not set.
+
 ### Using the PrismService
 
-You can also use the `PrismService` class directly:
+You can also use the `PrismService` class directly (resolved from the container):
 
 ```php
 use App\Services\PrismService;
 
-$prism = new PrismService;
+$prism = app(PrismService::class);
 
 // Simple text generation (uses default model from config)
 $response = $prism->generate('Explain Laravel in one sentence');
@@ -93,7 +114,7 @@ use Prism\Prism\Enums\Provider;
 use Prism\Prism\Facades\Prism;
 use App\Services\PrismService;
 
-$prism = new PrismService;
+$prism = app(PrismService::class);
 
 // Use default model from config
 $response = Prism::text()
@@ -118,7 +139,7 @@ Prism supports multiple providers. You can use any provider configured in `confi
 use App\Services\PrismService;
 use Prism\Prism\Enums\Provider;
 
-$prism = new PrismService;
+$prism = app(PrismService::class);
 
 // Use OpenAI with default model from config (PRISM_OPENAI_DEFAULT_MODEL)
 $response = $prism->using(Provider::OpenAI, $prism->defaultModelForProvider(Provider::OpenAI))
@@ -163,7 +184,7 @@ You can easily use MCP tools with the service:
 ```php
 use App\Services\PrismService;
 
-$prism = new PrismService;
+$prism = app(PrismService::class);
 
 // Use tools from a single MCP server
 $response = $prism->withTools('puppeteer')
@@ -183,7 +204,7 @@ Generate strongly-typed responses:
 ```php
 use App\Services\PrismService;
 
-$prism = new PrismService;
+$prism = app(PrismService::class);
 
 // Define schema as array
 $schema = [
@@ -211,7 +232,7 @@ Stream responses in real-time:
 ```php
 use App\Services\PrismService;
 
-$prism = new PrismService;
+$prism = app(PrismService::class);
 
 $prism->text()
     ->withPrompt('Write a long story about Laravel')
@@ -270,7 +291,7 @@ use Prism\Prism\Enums\Provider;
 use Prism\Prism\Facades\Prism;
 use Prism\Relay\Facades\Relay;
 
-$prism = new PrismService;
+$prism = app(PrismService::class);
 
 // Using PrismService (uses default model from config)
 $response = $prism->withTools('puppeteer')
@@ -320,7 +341,7 @@ use Prism\Relay\Exceptions\RelayException;
 use Prism\Relay\Exceptions\ServerConfigurationException;
 use Prism\Relay\Exceptions\ToolCallException;
 
-$prism = new PrismService;
+$prism = app(PrismService::class);
 
 try {
     $response = $prism->generate('Your prompt here');
@@ -400,5 +421,6 @@ Use this command to troubleshoot configuration issues or verify your setup befor
 2. **Use Environment Variables**: Configure models via `.env` for easy environment-specific changes
 3. **Provider-Specific Defaults**: Set `PRISM_OPENAI_DEFAULT_MODEL` and `PRISM_ANTHROPIC_DEFAULT_MODEL` if you frequently use those providers
 4. **Validate Configuration**: Run `php artisan prism:validate` after changing configuration
+5. **Check Availability**: For optional AI features, call `ai()->isAvailable()` (or `isAvailable($provider)`) before using AI so the app degrades gracefully when keys are missing
 
 For more information, see the [Prism PHP documentation](https://prismphp.com/).

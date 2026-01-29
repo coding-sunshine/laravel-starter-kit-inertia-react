@@ -10,7 +10,6 @@ use App\Services\SeedSpecGenerator;
 use Exception;
 use Illuminate\Console\Command;
 use Prism\Prism\Enums\Provider;
-use Prism\Prism\Facades\Prism;
 
 final class SeedsReviewCommand extends Command
 {
@@ -194,12 +193,10 @@ final class SeedsReviewCommand extends Command
             ];
 
             try {
-                $prismService = app(PrismService::class);
                 $jsonData = $prismService->generateStructured($prompt, $schema, $model);
             } catch (Exception $e) {
                 // Fallback to text parsing
-                $response = Prism::text()
-                    ->using($prismProvider, $model)
+                $response = $prismService->using($prismProvider, $model)
                     ->withPrompt($prompt)
                     ->asText();
 

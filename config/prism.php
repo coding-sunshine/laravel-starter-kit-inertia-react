@@ -19,6 +19,8 @@ return [
             'openrouter' => env('PRISM_DEFAULT_MODEL', 'deepseek/deepseek-r1-0528:free'),
             'openai' => env('PRISM_OPENAI_DEFAULT_MODEL', 'gpt-4o-mini'),
             'anthropic' => env('PRISM_ANTHROPIC_DEFAULT_MODEL', 'claude-3-5-sonnet-20241022'),
+            'ollama' => env('PRISM_OLLAMA_DEFAULT_MODEL', 'llama3.2'),
+            'mistral' => env('PRISM_MISTRAL_DEFAULT_MODEL', 'mistral-small-latest'),
         ],
     ],
     'providers' => [

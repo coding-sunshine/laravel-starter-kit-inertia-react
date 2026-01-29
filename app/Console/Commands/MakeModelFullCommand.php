@@ -447,14 +447,7 @@ PHP;
 
             $prompt = $aiGenerator->buildPrompt($spec, $profile, 'basic_demo');
 
-            $prismProvider = $prismService->defaultProvider();
-            $model = $prismService->defaultModel();
-
-            $response = \Prism\Prism\Facades\Prism::text()
-                ->using($prismProvider, $model)
-                ->withPrompt($prompt)
-                ->asText();
-
+            $response = $prismService->generate($prompt);
             $text = $response->text;
             $jsonData = json_decode($text, true);
 
