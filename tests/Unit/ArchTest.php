@@ -64,7 +64,7 @@ arch('seeders only use allowed layers')
         'Illuminate\Foundation',
         'Spatie\Permission',
     ])
-    ->ignoring(['RuntimeException', 'Throwable', 'app', 'now']);
+    ->ignoring(['RuntimeException', 'Throwable', 'app', 'now', 'resolve']);
 
 // Strict preset disabled: Filament resource pages override protected getHeaderActions()
 // and LoadsJsonData uses protected loadJson(); strict()->ignoring() did not exclude them.

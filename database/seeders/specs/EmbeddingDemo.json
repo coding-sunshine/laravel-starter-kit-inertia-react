@@ -1,0 +1,34 @@
+{
+    "model": "EmbeddingDemo",
+    "table": "embedding_demos",
+    "fields": {
+        "id": {
+            "type": "int8",
+            "nullable": true,
+            "default": null
+        },
+        "content": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "embedding": {
+            "type": "vector",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": [],
+    "value_hints": [],
+    "scenarios": []
+}
