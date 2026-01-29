@@ -134,7 +134,7 @@ final readonly class AISeederCodeGenerator
 
         // Generate relationship code using enhanced analyzer
         $enhancedAnalyzer = resolve(EnhancedRelationshipAnalyzer::class);
-        $relationshipCode = $enhancedAnalyzer->generateRelationshipSeederCode($relationships, $modelName);
+        $relationshipCode = $enhancedAnalyzer->generateRelationshipSeederCode($relationships);
 
         // Determine unique identifier field
         $fields = $spec['fields'] ?? [];

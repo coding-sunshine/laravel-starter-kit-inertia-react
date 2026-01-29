@@ -832,7 +832,10 @@ final class SyncDocumentationManifest extends Command
 
         foreach ($lines as $line) {
             $line = mb_trim($line);
-            if ($line === '' || $line === '0') {
+            if ($line === '') {
+                continue;
+            }
+            if ($line === '0') {
                 continue;
             }
             if (str_starts_with($line, '//')) {

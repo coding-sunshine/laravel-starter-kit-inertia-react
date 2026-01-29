@@ -174,7 +174,7 @@ final class SeedSpecGenerator
             // Check for enum values (only if we have column info and Doctrine DBAL is available)
             if (isset($columnInfo) && $type === 'string' && method_exists($columnInfo, 'getType')) {
                 $doctrineType = $columnInfo->getType();
-                if (get_class($doctrineType) === 'Doctrine\DBAL\Types\EnumType') {
+                if ($doctrineType::class === 'Doctrine\DBAL\Types\EnumType') {
                     $fields[$column]['enum'] = $doctrineType->getSQLDeclaration([], Schema::getConnection()->getDoctrineSchemaManager());
                 }
             }
