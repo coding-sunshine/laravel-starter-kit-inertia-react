@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Services\DocumentationCrossReference;
+use App\Services\DocumentationPrismGenerator;
 use App\Services\DocumentationPromptGenerator;
 use App\Services\DocumentationTemplateSelector;
 use Illuminate\Console\Command;
@@ -25,7 +26,8 @@ final class SyncDocumentationManifest extends Command
     protected $signature = 'docs:sync
                             {--check : Only check for undocumented items, do not update manifest}
                             {--generate : Generate documentation stubs for undocumented items}
-                            {--ai : Use AI to generate full documentation instead of stubs}';
+                            {--ai : Use AI (Prism) to generate full documentation}
+                            {--auto : Call Prism to generate and write docs (requires --ai); without --auto only writes prompts to docs/.ai-prompts/}';
 
     /**
      * The console command description.
@@ -37,7 +39,8 @@ final class SyncDocumentationManifest extends Command
     public function __construct(
         private readonly DocumentationCrossReference $crossReference,
         private readonly DocumentationTemplateSelector $templateSelector,
-        private readonly DocumentationPromptGenerator $promptGenerator
+        private readonly DocumentationPromptGenerator $promptGenerator,
+        private readonly DocumentationPrismGenerator $prismGenerator
     ) {
         parent::__construct();
     }
@@ -193,14 +196,22 @@ final class SyncDocumentationManifest extends Command
 
             if ($this->option('generate')) {
                 if ($this->option('ai')) {
-                    $this->generateWithAI($undocumented, $actions, $controllers, $pages, $actionRelationships, $controllerRelationships, $pageRelationships);
+                    $usePrism = $this->option('auto') && $this->prismGenerator->isAvailable();
+                    if ($usePrism) {
+                        $this->generateWithPrism($undocumented, $actions, $controllers, $pages, $actionRelationships, $controllerRelationships, $pageRelationships, $manifest, $manifestPath);
+                    } else {
+                        $this->generateWithAI($undocumented, $actions, $controllers, $pages, $actionRelationships, $controllerRelationships, $pageRelationships);
+                        if ($this->option('auto') && ! $this->prismGenerator->isAvailable()) {
+                            $this->warn('Prism/OpenRouter not configured. Set OPENROUTER_API_KEY for --auto. Prompts written to docs/.ai-prompts/');
+                        }
+                    }
                 } else {
                     $this->generateStubs($undocumented);
                 }
             } else {
                 $this->warn('Run with --generate to create documentation stubs for undocumented items.');
                 if ($this->option('ai')) {
-                    $this->warn('Use --generate --ai to generate full AI-powered documentation.');
+                    $this->warn('Use --generate --ai to generate prompts; add --auto to call Prism and write docs.');
                 }
             }
         }
@@ -1073,6 +1084,99 @@ final class SyncDocumentationManifest extends Command
         }
 
         File::put($indexPath, $content);
+    }
+
+    /**
+     * Generate documentation using Prism (OpenRouter) and update manifest.
+     *
+     * @param  array<string, array<string>>  $undocumented
+     * @param  array<string, mixed>  $actions
+     * @param  array<string, mixed>  $controllers
+     * @param  array<string, mixed>  $pages
+     * @param  array<string, mixed>  $actionRelationships
+     * @param  array<string, mixed>  $controllerRelationships
+     * @param  array<string, mixed>  $pageRelationships
+     * @param  array<string, mixed>  $manifest
+     */
+    private function generateWithPrism(
+        array $undocumented,
+        array $actions,
+        array $controllers,
+        array $pages,
+        array $actionRelationships,
+        array $controllerRelationships,
+        array $pageRelationships,
+        array &$manifest,
+        string $manifestPath
+    ): void {
+        $this->info('Generating documentation with Prism (OpenRouter)...');
+
+        foreach ($undocumented['actions'] as $actionName) {
+            if (! isset($actions[$actionName])) {
+                continue;
+            }
+
+            $written = $this->prismGenerator->generateActionDoc(
+                $actionName,
+                $actions[$actionName],
+                $actionRelationships[$actionName] ?? []
+            );
+
+            if ($written !== null) {
+                $relativePath = str_replace(base_path().'/', '', $written);
+                $manifest['actions'][$actionName]['documented'] = true;
+                $manifest['actions'][$actionName]['path'] = $relativePath;
+                $this->line("  ✓ Generated: {$relativePath}");
+            } else {
+                $this->warn("  ✗ Failed: {$actionName}");
+            }
+        }
+
+        foreach ($undocumented['controllers'] as $controllerName) {
+            if (! isset($controllers[$controllerName])) {
+                continue;
+            }
+
+            $written = $this->prismGenerator->generateControllerDoc(
+                $controllerName,
+                $controllers[$controllerName],
+                $controllerRelationships[$controllerName] ?? []
+            );
+
+            if ($written !== null) {
+                $relativePath = str_replace(base_path().'/', '', $written);
+                $manifest['controllers'][$controllerName]['documented'] = true;
+                $manifest['controllers'][$controllerName]['path'] = $relativePath;
+                $this->line("  ✓ Generated: {$relativePath}");
+            } else {
+                $this->warn("  ✗ Failed: {$controllerName}");
+            }
+        }
+
+        foreach ($undocumented['pages'] as $pagePath) {
+            if (! isset($pages[$pagePath])) {
+                continue;
+            }
+
+            $written = $this->prismGenerator->generatePageDoc(
+                $pagePath,
+                $pages[$pagePath],
+                $pageRelationships[$pagePath] ?? []
+            );
+
+            if ($written !== null) {
+                $relativePath = str_replace(base_path().'/', '', $written);
+                $manifest['pages'][$pagePath]['documented'] = true;
+                $manifest['pages'][$pagePath]['developerGuide'] = $relativePath;
+                $this->line("  ✓ Generated: {$relativePath}");
+            } else {
+                $this->warn("  ✗ Failed: {$pagePath}");
+            }
+        }
+
+        File::put($manifestPath, json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."\n");
+        $this->updateIndexFiles($manifest);
+        $this->info('Documentation generated with Prism.');
     }
 
     /**

@@ -334,6 +334,8 @@
                     "verification.notice",
                     "verification.send",
                     "verification.verify",
+                    "architect.studio",
+                    "architect.studio.validate",
                     "livewire.update"
                 ]
             }
@@ -386,6 +388,8 @@
                     "verification.notice",
                     "verification.send",
                     "verification.verify",
+                    "architect.studio",
+                    "architect.studio.validate",
                     "livewire.update"
                 ]
             }
@@ -573,6 +577,8 @@
                     "verification.notice",
                     "verification.send",
                     "verification.verify",
+                    "architect.studio",
+                    "architect.studio.validate",
                     "livewire.update"
                 ]
             }
