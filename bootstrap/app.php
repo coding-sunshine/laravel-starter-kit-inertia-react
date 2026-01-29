@@ -20,13 +20,13 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
         $middleware->web(
-            prepend: [
-                ServeFavicon::class,
-            ],
             append: [
                 HandleAppearance::class,
                 HandleInertiaRequests::class,
                 AddLinkHeadersForPreloadedAssets::class,
+            ],
+            prepend: [
+                ServeFavicon::class,
             ],
         );
     })

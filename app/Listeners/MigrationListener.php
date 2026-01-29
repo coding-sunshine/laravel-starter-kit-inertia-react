@@ -10,7 +10,6 @@ use App\Services\ModelRegistry;
 use App\Services\SchemaWatcher;
 use App\Services\SeedSpecGenerator;
 use Exception;
-use Illuminate\Database\Events\MigrationsEnded;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 
@@ -19,15 +18,14 @@ final class MigrationListener
     /**
      * Handle the event.
      */
-    public function handle(MigrationsEnded $event): void
+    public function handle(): void
     {
         // Only auto-sync if enabled in config
         if (! config('seeding.auto_sync_after_migrations', true)) {
             return;
         }
-
         try {
-            $schemaWatcher = app(SchemaWatcher::class);
+            $schemaWatcher = resolve(SchemaWatcher::class);
             $affectedModels = $schemaWatcher->getAffectedModels();
 
             if (empty($affectedModels)) {
@@ -35,7 +33,7 @@ final class MigrationListener
             }
 
             // Run spec sync silently for affected models
-            $specGenerator = app(SeedSpecGenerator::class);
+            $specGenerator = resolve(SeedSpecGenerator::class);
 
             foreach ($affectedModels as $modelClass) {
                 try {
@@ -63,11 +61,11 @@ final class MigrationListener
                             }
                         }
                     }
-                } catch (Exception $e) {
+                } catch (Exception) {
                     // Silently continue - don't break migrations
                 }
             }
-        } catch (Exception $e) {
+        } catch (Exception) {
             // Silently fail - don't break migrations
         }
     }
@@ -85,7 +83,7 @@ final class MigrationListener
 
         try {
             $modelName = class_basename($modelClass);
-            $registry = app(ModelRegistry::class);
+            $registry = resolve(ModelRegistry::class);
             $seederInfo = $registry->hasSeeder($modelClass);
 
             if (! $seederInfo['exists']) {
@@ -100,11 +98,11 @@ final class MigrationListener
             }
 
             // Analyze relationships
-            $enhancedAnalyzer = app(EnhancedRelationshipAnalyzer::class);
+            $enhancedAnalyzer = resolve(EnhancedRelationshipAnalyzer::class);
             $relationships = $enhancedAnalyzer->analyzeModel($modelClass);
 
             // Generate new seeder code
-            $aiGenerator = app(AISeederCodeGenerator::class);
+            $aiGenerator = resolve(AISeederCodeGenerator::class);
             $seederMethods = $aiGenerator->generateSeederCode($modelName, $spec, $relationships, $category);
 
             // Read existing seeder
@@ -115,21 +113,18 @@ final class MigrationListener
                 // Update only generated section
                 $beforeGenerated = Str::before($content, '// GENERATED START');
                 $afterGenerated = Str::after($content, '// GENERATED END');
-
                 $newContent = $beforeGenerated."// GENERATED START\n{$seederMethods}\n    // GENERATED END".$afterGenerated;
-            } else {
+            } elseif (preg_match('/(.*public function run\(\): void.*?\{.*?\n\s+\$this->seedRelationships\(\);\s+\$this->seedFromJson\(\);\s+\$this->seedFromFactory\(\);\s+\}\s+)(.*)(\})/s', $content, $matches)) {
                 // No protected regions - update entire seeder methods
                 // Extract class structure
-                if (preg_match('/(.*public function run\(\): void.*?\{.*?\n\s+\$this->seedRelationships\(\);\s+\$this->seedFromJson\(\);\s+\$this->seedFromFactory\(\);\s+\}\s+)(.*)(\})/s', $content, $matches)) {
-                    $newContent = $matches[1].$seederMethods.$matches[3];
-                } else {
-                    // Fallback: append methods
-                    $newContent = Str::beforeLast($content, '}')."\n{$seederMethods}\n}";
-                }
+                $newContent = $matches[1].$seederMethods.$matches[3];
+            } else {
+                // Fallback: append methods
+                $newContent = Str::beforeLast($content, '}')."\n{$seederMethods}\n}";
             }
 
             File::put($seederPath, $newContent);
-        } catch (Exception $e) {
+        } catch (Exception) {
             // Silently fail - don't break migrations
         }
     }

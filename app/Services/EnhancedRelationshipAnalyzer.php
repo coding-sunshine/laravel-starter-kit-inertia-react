@@ -33,7 +33,7 @@ final class EnhancedRelationshipAnalyzer
         $relationships = [];
 
         foreach ($reflection->getMethods() as $method) {
-            if (! $this->isRelationshipMethod($method, $reflection)) {
+            if (! $this->isRelationshipMethod($method)) {
                 continue;
             }
 
@@ -52,9 +52,9 @@ final class EnhancedRelationshipAnalyzer
      *
      * @param  array<string, array{type: string, model: string|null, foreignKey: string|null, localKey: string|null, pivotTable: string|null}>  $relationships
      */
-    public function generateRelationshipSeederCode(array $relationships, string $modelName): string
+    public function generateRelationshipSeederCode(array $relationships): string
     {
-        if (empty($relationships)) {
+        if ($relationships === []) {
             return '';
         }
 
@@ -85,24 +85,22 @@ final class EnhancedRelationshipAnalyzer
         }
 
         // Note about hasMany relationships (seeded after main model)
-        if (! empty($hasMany)) {
+        if ($hasMany !== []) {
             $code .= "        // Note: hasMany relationships are seeded after main model creation\n";
         }
 
         // Note about belongsToMany relationships
-        if (! empty($belongsToMany)) {
+        if ($belongsToMany !== []) {
             $code .= "        // Note: belongsToMany relationships require pivot table seeding\n";
         }
 
-        $code .= "    }\n";
-
-        return $code;
+        return $code."    }\n";
     }
 
     /**
      * Check if method is a relationship method.
      */
-    private function isRelationshipMethod(ReflectionMethod $method, ReflectionClass $reflection): bool
+    private function isRelationshipMethod(ReflectionMethod $method): bool
     {
         // Skip non-public methods
         if (! $method->isPublic()) {
@@ -162,7 +160,7 @@ final class EnhancedRelationshipAnalyzer
                 return null;
             }
 
-            $relatedModel = get_class($relationship->getRelated());
+            $relatedModel = $relationship->getRelated()::class;
             $relatedModelName = class_basename($relatedModel);
 
             $details = [
@@ -190,9 +188,9 @@ final class EnhancedRelationshipAnalyzer
             }
 
             return $details;
-        } catch (Exception $e) {
+        } catch (Exception) {
             // Fallback: infer from method name and type
-            $relatedModel = $this->inferRelatedModel($methodName, $type);
+            $relatedModel = $this->inferRelatedModel($methodName);
 
             return [
                 'type' => $type,
@@ -268,7 +266,7 @@ final class EnhancedRelationshipAnalyzer
     /**
      * Infer related model name from method name.
      */
-    private function inferRelatedModel(string $methodName, string $type): ?string
+    private function inferRelatedModel(string $methodName): ?string
     {
         // Remove common prefixes
         $name = $methodName;

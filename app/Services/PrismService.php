@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use Prism\Prism\Contracts\Schema;
 use Prism\Prism\Enums\Provider;
 use Prism\Prism\Facades\Prism;
+use Prism\Prism\Schema\RawSchema;
 use Prism\Prism\Structured\PendingRequest as StructuredPendingRequest;
 use Prism\Prism\Text\PendingRequest;
-use Prism\Prism\Text\TextResponse;
+use Prism\Prism\Text\Response as TextResponse;
 use Prism\Relay\Facades\Relay;
 
 /**
@@ -105,14 +107,22 @@ final readonly class PrismService
      * Generate structured output from a prompt.
      *
      * @param  string  $prompt  The prompt to send
-     * @param  string|object  $schema  The schema for structured output
+     * @param  string|object|array<string, mixed>  $schema  The schema for structured output (object implementing Schema, or JSON schema array)
      * @param  string|null  $model  The model to use (defaults to config)
      */
-    public function generateStructured(string $prompt, string|object $schema, ?string $model = null): mixed
+    public function generateStructured(string $prompt, string|object|array $schema, ?string $model = null): mixed
     {
+        $schemaInstance = match (true) {
+            is_array($schema) => new RawSchema('schema', $schema),
+            is_string($schema) => new RawSchema('schema', json_decode($schema, true) ?? []),
+            default => $schema,
+        };
+
+        assert($schemaInstance instanceof Schema);
+
         return $this->structured($model)
             ->withPrompt($prompt)
-            ->withSchema($schema)
+            ->withSchema($schemaInstance)
             ->asStructured();
     }
 

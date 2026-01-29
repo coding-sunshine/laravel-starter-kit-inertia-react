@@ -18,7 +18,7 @@ it('can seed specific category', function (): void {
 });
 
 it('requires force flag in production', function (): void {
-    app()->detectEnvironment(fn () => 'production');
+    app()->detectEnvironment(fn (): string => 'production');
 
     $exitCode = Artisan::call('seed:environment');
 

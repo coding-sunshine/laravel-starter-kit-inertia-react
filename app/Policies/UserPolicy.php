@@ -16,7 +16,7 @@ final class UserPolicy
         return $user->can('view users');
     }
 
-    public function view(User $user, User $model): bool
+    public function view(User $user): bool
     {
         return $user->can('view users');
     }
@@ -26,22 +26,22 @@ final class UserPolicy
         return $user->can('create users');
     }
 
-    public function update(User $user, User $model): bool
+    public function update(User $user): bool
     {
         return $user->can('edit users');
     }
 
-    public function delete(User $user, User $model): bool
+    public function delete(User $user): bool
     {
         return $user->can('delete users');
     }
 
-    public function restore(User $user, User $model): bool
+    public function restore(User $user): bool
     {
         return $user->can('edit users');
     }
 
-    public function forceDelete(User $user, User $model): bool
+    public function forceDelete(User $user): bool
     {
         return $user->can('delete users');
     }

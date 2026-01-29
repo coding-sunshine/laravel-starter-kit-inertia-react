@@ -79,7 +79,7 @@ final class SyncDocumentationManifest extends Command
         ];
 
         // Sync Actions (now returns array with details)
-        foreach ($actions as $actionName => $actionInfo) {
+        foreach (array_keys($actions) as $actionName) {
             if (! isset($manifest['actions'][$actionName])) {
                 $manifest['actions'][$actionName] = [
                     'documented' => false,
@@ -110,7 +110,7 @@ final class SyncDocumentationManifest extends Command
         }
 
         // Sync Controllers (now returns array with details)
-        foreach ($controllers as $controllerName => $controllerInfo) {
+        foreach (array_keys($controllers) as $controllerName) {
             if (! isset($manifest['controllers'][$controllerName])) {
                 $manifest['controllers'][$controllerName] = [
                     'documented' => false,
@@ -143,7 +143,7 @@ final class SyncDocumentationManifest extends Command
         }
 
         // Sync Pages (now returns array with details)
-        foreach ($pages as $pagePath => $pageInfo) {
+        foreach (array_keys($pages) as $pagePath) {
             if (! isset($manifest['pages'][$pagePath])) {
                 $manifest['pages'][$pagePath] = [
                     'documented' => false,
@@ -191,7 +191,7 @@ final class SyncDocumentationManifest extends Command
         // Auto-update index files
         $this->updateIndexFiles($manifest);
 
-        if (! empty($undocumented['actions']) || ! empty($undocumented['controllers']) || ! empty($undocumented['pages'])) {
+        if (isset($undocumented['actions']) && $undocumented['actions'] !== [] || isset($undocumented['controllers']) && $undocumented['controllers'] !== [] || isset($undocumented['pages']) && $undocumented['pages'] !== []) {
             $this->displayUndocumented($undocumented);
 
             if ($this->option('generate')) {
@@ -276,7 +276,7 @@ final class SyncDocumentationManifest extends Command
                 }
 
                 $actions[$shortClassName] = $actionInfo;
-            } catch (ReflectionException $e) {
+            } catch (ReflectionException) {
                 // Skip if reflection fails
                 $actions[$shortClassName] = ['name' => $shortClassName, 'filePath' => $filePath];
             }
@@ -336,7 +336,7 @@ final class SyncDocumentationManifest extends Command
                     'phpDoc' => $phpDoc,
                     'methods' => $methods,
                 ];
-            } catch (ReflectionException $e) {
+            } catch (ReflectionException) {
                 // Skip if reflection fails
                 $controllers[$className] = ['name' => $className, 'filePath' => $filePath];
             }
@@ -532,7 +532,7 @@ final class SyncDocumentationManifest extends Command
 
         try {
             $reflection = new ReflectionClass($className);
-        } catch (ReflectionException $e) {
+        } catch (ReflectionException) {
             return [];
         }
 
@@ -616,7 +616,7 @@ final class SyncDocumentationManifest extends Command
      */
     private function parseDocBlock(string $docBlock): array
     {
-        if (empty($docBlock)) {
+        if ($docBlock === '' || $docBlock === '0') {
             return [];
         }
 
@@ -630,7 +630,7 @@ final class SyncDocumentationManifest extends Command
 
         // Remove /** and */
         $docBlock = preg_replace('/^\/\*\*|\*\/$/', '', $docBlock);
-        $lines = explode("\n", $docBlock);
+        $lines = explode("\n", (string) $docBlock);
 
         $description = [];
         $inDescription = true;
@@ -717,7 +717,7 @@ final class SyncDocumentationManifest extends Command
             if ($param->isDefaultValueAvailable()) {
                 try {
                     $paramInfo['default'] = $param->getDefaultValue();
-                } catch (ReflectionException $e) {
+                } catch (ReflectionException) {
                     $paramInfo['default'] = null;
                 }
             }
@@ -807,15 +807,17 @@ final class SyncDocumentationManifest extends Command
         foreach ($lines as $line) {
             $line = mb_trim($line);
             $line = preg_replace('/^\/\*\*|\*\/$|\*\s*/', '', $line);
-
-            if (empty($line) || str_starts_with($line, '@')) {
+            if (empty($line)) {
+                continue;
+            }
+            if (str_starts_with((string) $line, '@')) {
                 continue;
             }
 
             $description[] = $line;
         }
 
-        return ! empty($description) ? mb_trim(implode(' ', $description)) : null;
+        return $description === [] ? null : mb_trim(implode(' ', $description));
     }
 
     /**
@@ -830,7 +832,10 @@ final class SyncDocumentationManifest extends Command
 
         foreach ($lines as $line) {
             $line = mb_trim($line);
-            if (empty($line) || str_starts_with($line, '//')) {
+            if ($line === '' || $line === '0') {
+                continue;
+            }
+            if (str_starts_with($line, '//')) {
                 continue;
             }
 
@@ -893,14 +898,12 @@ final class SyncDocumentationManifest extends Command
      */
     private function extractFormRequestClasses(string $methodBody): array
     {
-        $requests = [];
-
         // Match Form Request type hints: FormRequestClass $request
         if (preg_match_all('/([A-Z]\w+Request)\s+\$request/', $methodBody, $matches)) {
-            $requests = array_unique($matches[1]);
+            return array_unique($matches[1]);
         }
 
-        return $requests;
+        return [];
     }
 
     /**
@@ -961,8 +964,8 @@ final class SyncDocumentationManifest extends Command
                 $purpose = $actionInfo['parsed']['description'];
             }
 
-            if (mb_strlen($purpose) > 60) {
-                $purpose = mb_substr($purpose, 0, 57).'...';
+            if (mb_strlen((string) $purpose) > 60) {
+                $purpose = mb_substr((string) $purpose, 0, 57).'...';
             }
 
             $status = $documented ? '✅' : '❌';
@@ -1021,8 +1024,8 @@ final class SyncDocumentationManifest extends Command
                 $purpose = $controllerInfo['parsed']['description'];
             }
 
-            if (mb_strlen($purpose) > 60) {
-                $purpose = mb_substr($purpose, 0, 57).'...';
+            if (mb_strlen((string) $purpose) > 60) {
+                $purpose = mb_substr((string) $purpose, 0, 57).'...';
             }
 
             $status = $documented ? '✅' : '❌';
@@ -1067,7 +1070,7 @@ final class SyncDocumentationManifest extends Command
 
             // Get route from relationships
             $routes = $pageInfo['relationships']['relatedRoutes'] ?? [];
-            $routeDisplay = ! empty($routes) ? implode(', ', array_slice($routes, 0, 2)) : 'N/A';
+            $routeDisplay = empty($routes) ? 'N/A' : implode(', ', array_slice($routes, 0, 2));
 
             $status = $documented ? '✅' : '❌';
             $link = $developerGuide ? "[{$pagePath}]({$developerGuide})" : $pagePath;

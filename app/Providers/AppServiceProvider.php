@@ -15,14 +15,12 @@ final class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->app->singleton(PrismService::class, fn () => new PrismService);
+        $this->app->singleton(PrismService::class, fn (): PrismService => new PrismService);
     }
 
     public function boot(): void
     {
-        Gate::before(function ($user, $ability): ?bool {
-            return $user?->hasRole('super-admin') ? true : null;
-        });
+        Gate::before(fn ($user, $ability): ?bool => $user?->hasRole('super-admin') ? true : null);
 
         if (config('seeding.auto_sync_after_migrations', true)) {
             Event::listen(MigrationsEnded::class, MigrationListener::class);

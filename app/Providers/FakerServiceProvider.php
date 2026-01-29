@@ -22,11 +22,9 @@ final class FakerServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        $this->app->extend(Generator::class, function (Generator $faker): Generator {
+        $this->app->extend(Generator::class,
             // Add custom Faker providers here
             // Example: $faker->addProvider(new CustomProvider($faker));
-
-            return $faker;
-        });
+            fn (Generator $faker): Generator => $faker);
     }
 }

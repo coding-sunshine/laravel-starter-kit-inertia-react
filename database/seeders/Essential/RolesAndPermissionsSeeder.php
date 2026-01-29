@@ -11,11 +11,11 @@ use Spatie\Permission\PermissionRegistrar;
 
 final class RolesAndPermissionsSeeder extends Seeder
 {
-    private const GUARD = 'web';
+    private const string GUARD = 'web';
 
     public function run(): void
     {
-        app(PermissionRegistrar::class)->forgetCachedPermissions();
+        resolve(PermissionRegistrar::class)->forgetCachedPermissions();
 
         $permissions = [
             'access admin panel',
@@ -26,14 +26,14 @@ final class RolesAndPermissionsSeeder extends Seeder
         ];
 
         foreach ($permissions as $name) {
-            Permission::firstOrCreate(['name' => $name, 'guard_name' => self::GUARD]);
+            Permission::query()->firstOrCreate(['name' => $name, 'guard_name' => self::GUARD]);
         }
 
-        Role::firstOrCreate(['name' => 'super-admin', 'guard_name' => self::GUARD]);
+        Role::query()->firstOrCreate(['name' => 'super-admin', 'guard_name' => self::GUARD]);
 
-        $admin = Role::firstOrCreate(['name' => 'admin', 'guard_name' => self::GUARD]);
+        $admin = Role::query()->firstOrCreate(['name' => 'admin', 'guard_name' => self::GUARD]);
 
-        Role::firstOrCreate(['name' => 'user', 'guard_name' => self::GUARD]);
+        Role::query()->firstOrCreate(['name' => 'user', 'guard_name' => self::GUARD]);
 
         $admin->givePermissionTo([
             'access admin panel',
@@ -43,6 +43,6 @@ final class RolesAndPermissionsSeeder extends Seeder
             'delete users',
         ]);
 
-        app(PermissionRegistrar::class)->forgetCachedPermissions();
+        resolve(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 }

@@ -76,15 +76,12 @@ final class RelationshipAnalyzer
         foreach ($files as $file) {
             $filename = $file->getFilename();
 
-            if (Str::contains($filename, "create_{$tableName}_table") || Str::contains($filename, "create_{$tableName}s_table")) {
-                // Extract timestamp
-                if (preg_match('/^(\d{4}_\d{2}_\d{2}_\d{6})/', $filename, $matches)) {
-                    $timestamp = str_replace('_', '', $matches[1]);
-
-                    if ($timestamp > $latestTimestamp) {
-                        $latestTimestamp = $timestamp;
-                        $latest = $file->getPathname();
-                    }
+            // Extract timestamp
+            if ((Str::contains($filename, "create_{$tableName}_table") || Str::contains($filename, "create_{$tableName}s_table")) && preg_match('/^(\d{4}_\d{2}_\d{2}_\d{6})/', $filename, $matches)) {
+                $timestamp = str_replace('_', '', $matches[1]);
+                if ($timestamp > $latestTimestamp) {
+                    $latestTimestamp = $timestamp;
+                    $latest = $file->getPathname();
                 }
             }
         }
@@ -97,9 +94,9 @@ final class RelationshipAnalyzer
      *
      * @param  array<string, array{type: string, model: string}>  $relationships
      */
-    public function generateRelationshipSeederCode(array $relationships, string $modelName): string
+    public function generateRelationshipSeederCode(array $relationships): string
     {
-        if (empty($relationships)) {
+        if ($relationships === []) {
             return '';
         }
 
@@ -115,8 +112,6 @@ final class RelationshipAnalyzer
             }
         }
 
-        $code .= "    }\n";
-
-        return $code;
+        return $code."    }\n";
     }
 }

@@ -71,7 +71,7 @@ final class PrismExample extends Command
             if ($provider) {
                 $request = $prism->using(Provider::from($provider), $model ?? $prism->defaultModel());
             } elseif ($tools) {
-                $serverList = array_map('trim', explode(',', $tools));
+                $serverList = array_map(trim(...), explode(',', $tools));
                 $request = $prism->withTools($serverList, $model);
             } else {
                 $request = $prism->text($model);
@@ -83,9 +83,7 @@ final class PrismExample extends Command
                 $this->info('Streaming response:');
                 $this->newLine();
 
-                $request->asStream(function (string $chunk): void {
-                    $this->output->write($chunk);
-                });
+                $request->asStream();
 
                 $this->newLine(2);
 

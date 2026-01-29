@@ -159,10 +159,10 @@ final class MakeModelFullCommand extends Command
         $seederPath = database_path("seeders/{$category->value}/{$seederName}.php");
         $modelClass = "App\\Models\\{$modelName}";
         $namespace = "Database\\Seeders\\{$category->value}";
-        $jsonFileName = Str::snake(Str::plural($modelName)).'.json';
+        Str::snake(Str::plural($modelName));
 
         // Analyze relationships using enhanced analyzer
-        $enhancedAnalyzer = app(EnhancedRelationshipAnalyzer::class);
+        $enhancedAnalyzer = resolve(EnhancedRelationshipAnalyzer::class);
         $modelClass = "App\\Models\\{$modelName}";
 
         // Try enhanced analyzer first (uses model reflection)
@@ -189,13 +189,13 @@ final class MakeModelFullCommand extends Command
         }
 
         // Get seed spec for AI generation
-        $specGenerator = app(SeedSpecGenerator::class);
+        $specGenerator = resolve(SeedSpecGenerator::class);
         $spec = class_exists($modelClass)
             ? $specGenerator->loadSpec($modelClass) ?? $specGenerator->generateSpec($modelClass)
             : ['fields' => [], 'relationships' => [], 'value_hints' => []];
 
         // Generate seeder code using AI or traditional method
-        $aiGenerator = app(AISeederCodeGenerator::class);
+        $aiGenerator = resolve(AISeederCodeGenerator::class);
         $seederMethods = $aiGenerator->generateSeederCode($modelName, $spec, $relationships, $category->value);
 
         $content = <<<PHP
@@ -366,7 +366,7 @@ PHP;
         }
 
         try {
-            $generator = app(SeedSpecGenerator::class);
+            $generator = resolve(SeedSpecGenerator::class);
             $spec = $generator->generateSpec($modelClass);
             $generator->saveSpec($modelClass, $spec);
             $this->info('✓ Seed spec created');
@@ -407,14 +407,14 @@ PHP;
         }
 
         try {
-            $specGenerator = app(SeedSpecGenerator::class);
+            $specGenerator = resolve(SeedSpecGenerator::class);
             $spec = $specGenerator->loadSpec($modelClass);
 
             if ($spec === null) {
                 return;
             }
 
-            $prismService = app(PrismService::class);
+            $prismService = resolve(PrismService::class);
             $aiAvailable = $prismService->isAvailable();
 
             if ($aiAvailable && config('seeding.auto_generate_json', true)) {
@@ -424,7 +424,7 @@ PHP;
                 $this->line('  Auto-generating JSON with Faker...');
                 $this->generateJsonWithFaker($name, $spec);
             }
-        } catch (Exception $e) {
+        } catch (Exception) {
             // Silently fail - JSON generation is optional
         }
     }
@@ -437,7 +437,7 @@ PHP;
     private function generateJsonWithAI(string $name, array $spec, PrismService $prismService): void
     {
         try {
-            $aiGenerator = app(AISeedGenerator::class);
+            $aiGenerator = resolve(AISeedGenerator::class);
             $profile = $aiGenerator->loadProfile("App\\Models\\{$name}");
 
             if ($profile === null) {
@@ -463,7 +463,7 @@ PHP;
             } else {
                 $this->generateJsonWithFaker($name, $spec);
             }
-        } catch (Exception $e) {
+        } catch (Exception) {
             $this->generateJsonWithFaker($name, $spec);
         }
     }
@@ -486,20 +486,18 @@ PHP;
         try {
             $jsonData = $prismService->generateStructured($prompt, $schema, $model);
 
-            if (! is_array($jsonData)) {
-                throw new Exception('Structured output did not return array');
-            }
+            throw_unless(is_array($jsonData), Exception::class, 'Structured output did not return array');
 
             return $this->normalizeJsonRecords($jsonData);
         } catch (Exception) {
             $response = $prismService->generate($prompt, $model);
             $text = $response->text;
-            $jsonData = json_decode($text, true);
+            $jsonData = json_decode((string) $text, true);
 
             if (json_last_error() !== JSON_ERROR_NONE) {
-                if (preg_match('/```(?:json)?\s*(\[.*?\])/s', $text, $matches)) {
+                if (preg_match('/```(?:json)?\s*(\[.*?\])/s', (string) $text, $matches)) {
                     $jsonData = json_decode($matches[1], true);
-                } elseif (preg_match('/\[.*\]/s', $text, $matches)) {
+                } elseif (preg_match('/\[.*\]/s', (string) $text, $matches)) {
                     $jsonData = json_decode($matches[0], true);
                 }
             }
@@ -528,7 +526,7 @@ PHP;
             return $jsonData;
         }
 
-        if (is_array($jsonData) && ! isset($jsonData[0])) {
+        if (! isset($jsonData[0])) {
             return [$jsonData];
         }
 
@@ -543,7 +541,7 @@ PHP;
     private function generateJsonWithFaker(string $name, array $spec): void
     {
         try {
-            $traditionalGenerator = app(TraditionalSeedGenerator::class);
+            $traditionalGenerator = resolve(TraditionalSeedGenerator::class);
             $jsonData = $traditionalGenerator->generate($spec, 3);
 
             $jsonKey = $this->getJsonKey($name);
@@ -556,7 +554,7 @@ PHP;
 
             File::put(database_path("seeders/data/{$jsonKey}.json"), json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
             $this->info('  ✓ JSON auto-generated with Faker');
-        } catch (Exception $e) {
+        } catch (Exception) {
             // Silently fail
         }
     }

@@ -41,7 +41,7 @@ final class SeedsSpecSyncCommand extends Command
             ? ["App\\Models\\{$specificModel}"]
             : $registry->getAllModels();
 
-        if (empty($models)) {
+        if ($models === []) {
             $this->info('No models found.');
 
             return self::SUCCESS;
@@ -95,19 +95,17 @@ final class SeedsSpecSyncCommand extends Command
                             if (! empty($diff['added_relationships'])) {
                                 $this->line('    Added relationships: '.implode(', ', array_keys($diff['added_relationships'])));
                             }
+                        } elseif ($hasApprovalNeeded && ! $force) {
+                            $this->error("  {$modelName}: Cannot update - approval needed. Use --force to override.");
                         } else {
-                            if ($hasApprovalNeeded && ! $force) {
-                                $this->error("  {$modelName}: Cannot update - approval needed. Use --force to override.");
-                            } else {
-                                // Auto-update safe changes
-                                $updatedSpec = $oldSpec;
-                                $updatedSpec['fields'] = $newSpec['fields'];
-                                $updatedSpec['relationships'] = $newSpec['relationships'];
-                                $updatedSpec['value_hints'] = array_merge($oldSpec['value_hints'] ?? [], $newSpec['value_hints']);
+                            // Auto-update safe changes
+                            $updatedSpec = $oldSpec;
+                            $updatedSpec['fields'] = $newSpec['fields'];
+                            $updatedSpec['relationships'] = $newSpec['relationships'];
+                            $updatedSpec['value_hints'] = array_merge($oldSpec['value_hints'] ?? [], $newSpec['value_hints']);
 
-                                $generator->saveSpec($modelClass, $updatedSpec);
-                                $this->info("  {$modelName}: Updated spec");
-                            }
+                            $generator->saveSpec($modelClass, $updatedSpec);
+                            $this->info("  {$modelName}: Updated spec");
                         }
                     } else {
                         $this->line("  {$modelName}: Up to date");

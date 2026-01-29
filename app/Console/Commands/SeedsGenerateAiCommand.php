@@ -49,14 +49,14 @@ final class SeedsGenerateAiCommand extends Command
         $specificModel = $this->option('model');
         $scenario = $this->option('scenario');
         $provider = $this->option('provider') ?? 'local';
-        $apiKey = $this->option('api-key');
+        $this->option('api-key');
         $dryRun = $this->option('dry-run');
 
         $models = $specificModel
             ? ["App\\Models\\{$specificModel}"]
             : $registry->getAllModels();
 
-        if (empty($models)) {
+        if ($models === []) {
             $this->info('No models found.');
 
             return self::SUCCESS;
@@ -106,7 +106,7 @@ final class SeedsGenerateAiCommand extends Command
 
                     if ($useAI) {
                         $this->line("  {$modelName}: Using AI generation");
-                        $jsonData = $this->callAI($prompt, $provider, $apiKey, $prismService);
+                        $jsonData = $this->callAI($prompt, $provider, $prismService);
 
                         if ($jsonData !== null) {
                             $this->saveGeneratedJson($modelName, $jsonData, $scenario, 'ai');
@@ -162,7 +162,7 @@ final class SeedsGenerateAiCommand extends Command
      *
      * @return array<int, array<string, mixed>>|null
      */
-    private function callAI(string $prompt, string $provider, ?string $apiKey, PrismService $prismService): ?array
+    private function callAI(string $prompt, string $provider, PrismService $prismService): ?array
     {
         try {
             $prismProvider = $this->getPrismProvider($provider);
@@ -183,9 +183,7 @@ final class SeedsGenerateAiCommand extends Command
                 // Try structured output first (more reliable)
                 $jsonData = $prismService->generateStructured($prompt, $schema, $model);
 
-                if (! is_array($jsonData)) {
-                    throw new Exception('Structured output did not return array');
-                }
+                throw_unless(is_array($jsonData), Exception::class, 'Structured output did not return array');
             } catch (Exception $e) {
                 // Fallback to text output with parsing
                 $this->line('  Using text output (structured not available)');

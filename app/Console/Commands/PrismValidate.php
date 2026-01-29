@@ -50,7 +50,7 @@ final class PrismValidate extends Command
             try {
                 Provider::from($defaultProvider);
                 $this->info("  ✓ Default provider: {$defaultProvider}");
-            } catch (ValueError $e) {
+            } catch (ValueError) {
                 $errors[] = "Invalid default provider: {$defaultProvider}";
             }
         }
@@ -105,7 +105,7 @@ final class PrismValidate extends Command
         // Display results
         $this->newLine();
 
-        if (! empty($warnings)) {
+        if ($warnings !== []) {
             $this->warn('Warnings:');
             foreach ($warnings as $warning) {
                 $this->line("  ⚠ {$warning}");
@@ -113,7 +113,7 @@ final class PrismValidate extends Command
             $this->newLine();
         }
 
-        if (! empty($errors)) {
+        if ($errors !== []) {
             $this->error('Errors found:');
             foreach ($errors as $error) {
                 $this->line("  ✗ {$error}");

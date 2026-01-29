@@ -10,7 +10,6 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use ReflectionClass;
-use ReflectionNamedType;
 
 final class SeedSpecGenerator
 {
@@ -21,24 +20,20 @@ final class SeedSpecGenerator
      */
     public function generateSpec(string $modelClass): array
     {
-        if (! class_exists($modelClass)) {
-            throw new InvalidArgumentException("Model class {$modelClass} does not exist");
-        }
+        throw_unless(class_exists($modelClass), InvalidArgumentException::class, "Model class {$modelClass} does not exist");
 
         $model = new $modelClass;
         $table = $model->getTable();
         $reflection = new ReflectionClass($modelClass);
 
-        $spec = [
+        return [
             'model' => class_basename($modelClass),
             'table' => $table,
-            'fields' => $this->extractFields($table, $reflection),
+            'fields' => $this->extractFields($table),
             'relationships' => $this->extractRelationships($reflection),
             'value_hints' => $this->generateValueHints($table, $reflection),
             'scenarios' => [],
         ];
-
-        return $spec;
     }
 
     /**
@@ -148,7 +143,7 @@ final class SeedSpecGenerator
      *
      * @return array<string, array{type: string, nullable: bool, default: mixed}>
      */
-    private function extractFields(string $table, ReflectionClass $reflection): array
+    private function extractFields(string $table): array
     {
         if (! Schema::hasTable($table)) {
             return [];
@@ -164,7 +159,7 @@ final class SeedSpecGenerator
                 $columnInfo = Schema::getConnection()->getDoctrineColumn($table, $column);
                 $nullable = ! $columnInfo->getNotnull();
                 $default = $columnInfo->getDefault();
-            } catch (Exception $e) {
+            } catch (Exception) {
                 // Fallback for SQLite or other drivers that don't support Doctrine introspection
                 $nullable = true; // Default to nullable if we can't determine
                 $default = null;
@@ -176,10 +171,10 @@ final class SeedSpecGenerator
                 'default' => $default,
             ];
 
-            // Check for enum values (only if we have column info)
+            // Check for enum values (only if we have column info and Doctrine DBAL is available)
             if (isset($columnInfo) && $type === 'string' && method_exists($columnInfo, 'getType')) {
                 $doctrineType = $columnInfo->getType();
-                if ($doctrineType instanceof \Doctrine\DBAL\Types\EnumType) {
+                if (get_class($doctrineType) === 'Doctrine\DBAL\Types\EnumType') {
                     $fields[$column]['enum'] = $doctrineType->getSQLDeclaration([], Schema::getConnection()->getDoctrineSchemaManager());
                 }
             }
@@ -219,7 +214,7 @@ final class SeedSpecGenerator
 
             if ($type !== null) {
                 // Try to extract related model from return type
-                $relatedModel = $this->extractRelatedModelFromReturnType($returnType, $methodName);
+                $relatedModel = $this->extractRelatedModelFromReturnType($methodName);
 
                 $relationships[$methodName] = [
                     'type' => $type,
@@ -275,7 +270,7 @@ final class SeedSpecGenerator
     /**
      * Extract related model name from return type.
      */
-    private function extractRelatedModelFromReturnType(ReflectionNamedType $returnType, string $methodName): ?string
+    private function extractRelatedModelFromReturnType(string $methodName): ?string
     {
         // For now, infer from method name
         // Enhanced analyzer will get actual model from relationship instance
@@ -319,7 +314,7 @@ final class SeedSpecGenerator
                             $hints[$field] = ['type' => 'boolean', 'example' => true];
                         }
                     }
-                } catch (Exception $e) {
+                } catch (Exception) {
                     // Ignore if we can't invoke
                 }
             }

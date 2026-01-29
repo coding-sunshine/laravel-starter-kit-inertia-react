@@ -37,8 +37,10 @@ final class ModelRegistry
             }
 
             $reflection = new ReflectionClass($className);
-
-            if ($reflection->isAbstract() || $reflection->isInterface()) {
+            if ($reflection->isAbstract()) {
+                continue;
+            }
+            if ($reflection->isInterface()) {
                 continue;
             }
 

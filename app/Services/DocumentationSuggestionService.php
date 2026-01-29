@@ -24,19 +24,12 @@ final readonly class DocumentationSuggestionService
             'relatedDocs' => [],
         ];
 
-        switch ($componentType) {
-            case 'action':
-                $suggestions = array_merge($suggestions, $this->suggestActionDocumentation($componentInfo));
-                break;
-            case 'controller':
-                $suggestions = array_merge($suggestions, $this->suggestControllerDocumentation($componentInfo));
-                break;
-            case 'page':
-                $suggestions = array_merge($suggestions, $this->suggestPageDocumentation($componentInfo));
-                break;
-        }
-
-        return $suggestions;
+        return match ($componentType) {
+            'action' => array_merge($suggestions, $this->suggestActionDocumentation($componentInfo)),
+            'controller' => array_merge($suggestions, $this->suggestControllerDocumentation($componentInfo)),
+            'page' => array_merge($suggestions, $this->suggestPageDocumentation($componentInfo)),
+            default => $suggestions,
+        };
     }
 
     /**
@@ -69,9 +62,7 @@ final readonly class DocumentationSuggestionService
             $prompt .= '- Related documentation: '.implode(', ', $suggestions['relatedDocs'])."\n";
         }
 
-        $prompt .= "\nProvide specific suggestions for improving documentation for this component.";
-
-        return $prompt;
+        return $prompt."\nProvide specific suggestions for improving documentation for this component.";
     }
 
     /**
@@ -191,9 +182,9 @@ final readonly class DocumentationSuggestionService
         // Check route names for user-facing patterns
         $routes = $relationships['relatedRoutes'] ?? [];
         foreach ($routes as $route) {
-            if (str_contains($route, 'settings') ||
-                str_contains($route, 'profile') ||
-                str_contains($route, 'dashboard')) {
+            if (str_contains((string) $route, 'settings') ||
+                str_contains((string) $route, 'profile') ||
+                str_contains((string) $route, 'dashboard')) {
                 return true;
             }
         }

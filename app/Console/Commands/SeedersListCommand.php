@@ -70,7 +70,7 @@ final class SeedersListCommand extends Command
             return self::SUCCESS;
         }
 
-        if (empty($seeders)) {
+        if ($seeders === []) {
             $this->info('No seeders found.');
 
             return self::SUCCESS;

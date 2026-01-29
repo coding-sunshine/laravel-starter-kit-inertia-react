@@ -64,7 +64,7 @@ final readonly class DocumentationCrossReference
     {
         $relationships = [];
 
-        foreach ($pages as $pagePath => $pageInfo) {
+        foreach (array_keys($pages) as $pagePath) {
             $relationships[$pagePath] = [
                 'renderedBy' => $this->findControllersRenderingPage($pagePath),
                 'relatedRoutes' => $this->findRoutesForPage($pagePath),
@@ -106,7 +106,7 @@ final readonly class DocumentationCrossReference
                     $shortName = $file->getFilenameWithoutExtension();
                     $controllers[] = $shortName;
                 }
-            } catch (ReflectionException $e) {
+            } catch (ReflectionException) {
                 // Skip if reflection fails
             }
         }
@@ -127,7 +127,7 @@ final readonly class DocumentationCrossReference
         if (isset($actionInfo['handleMethod']['parameters'])) {
             foreach ($actionInfo['handleMethod']['parameters'] as $param) {
                 $type = $param['type'] ?? null;
-                if ($type !== null && str_contains($type, '\\Models\\')) {
+                if ($type !== null && str_contains((string) $type, '\\Models\\')) {
                     $modelName = class_basename($type);
                     $models[] = $modelName;
                 }
@@ -174,7 +174,7 @@ final readonly class DocumentationCrossReference
                                 $routes[] = $routeName;
                             }
                         }
-                    } catch (ReflectionException $e) {
+                    } catch (ReflectionException) {
                         // Skip if reflection fails
                     }
                 }
@@ -354,7 +354,7 @@ final readonly class DocumentationCrossReference
                                 $routes[] = $routeName;
                             }
                         }
-                    } catch (ReflectionException $e) {
+                    } catch (ReflectionException) {
                         // Skip if reflection fails
                     }
                 }

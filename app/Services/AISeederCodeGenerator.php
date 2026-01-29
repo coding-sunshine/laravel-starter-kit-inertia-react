@@ -7,10 +7,10 @@ namespace App\Services;
 use Exception;
 use Illuminate\Support\Str;
 
-final class AISeederCodeGenerator
+final readonly class AISeederCodeGenerator
 {
     public function __construct(
-        private readonly PrismService $prismService
+        private PrismService $prismService
     ) {}
 
     /**
@@ -23,21 +23,21 @@ final class AISeederCodeGenerator
     {
         // Check if AI is available
         if (! $this->prismService->isAvailable()) {
-            return $this->generateTraditionalSeederCode($modelName, $spec, $relationships, $category);
+            return $this->generateTraditionalSeederCode($modelName, $spec, $relationships);
         }
 
         try {
             $prompt = $this->buildSeederPrompt($modelName, $spec, $relationships, $category);
-            $code = $this->callAIForSeederCode($prompt, $modelName);
+            $code = $this->callAIForSeederCode($prompt);
 
             if ($code !== null) {
                 return $code;
             }
-        } catch (Exception $e) {
+        } catch (Exception) {
             // Fallback to traditional generation
         }
 
-        return $this->generateTraditionalSeederCode($modelName, $spec, $relationships, $category);
+        return $this->generateTraditionalSeederCode($modelName, $spec, $relationships);
     }
 
     /**
@@ -49,7 +49,6 @@ final class AISeederCodeGenerator
     private function buildSeederPrompt(string $modelName, array $spec, array $relationships, string $category): string
     {
         $fields = $spec['fields'] ?? [];
-        $valueHints = $spec['value_hints'] ?? [];
 
         $prompt = "Generate a Laravel seeder class for model: {$modelName}\n\n";
         $prompt .= "Category: {$category}\n\n";
@@ -70,7 +69,7 @@ final class AISeederCodeGenerator
             $prompt .= "\n";
         }
 
-        if (! empty($relationships)) {
+        if ($relationships !== []) {
             $prompt .= "\nRelationships:\n";
             foreach ($relationships as $relName => $rel) {
                 $prompt .= "  - {$relName}: {$rel['type']}";
@@ -89,15 +88,13 @@ final class AISeederCodeGenerator
         $prompt .= "5. Generate realistic seed data\n";
         $prompt .= "6. Follow Laravel best practices\n\n";
 
-        $prompt .= 'Generate ONLY the seeder class code (PHP), no explanations.';
-
-        return $prompt;
+        return $prompt.'Generate ONLY the seeder class code (PHP), no explanations.';
     }
 
     /**
      * Call AI to generate seeder code.
      */
-    private function callAIForSeederCode(string $prompt, string $modelName): ?string
+    private function callAIForSeederCode(string $prompt): ?string
     {
         try {
             $response = $this->prismService->generate($prompt);
@@ -119,7 +116,7 @@ final class AISeederCodeGenerator
             }
 
             return null;
-        } catch (Exception $e) {
+        } catch (Exception) {
             return null;
         }
     }
@@ -130,13 +127,13 @@ final class AISeederCodeGenerator
      * @param  array<string, mixed>  $spec
      * @param  array<string, array{type: string, model: string|null}>  $relationships
      */
-    private function generateTraditionalSeederCode(string $modelName, array $spec, array $relationships, string $category): string
+    private function generateTraditionalSeederCode(string $modelName, array $spec, array $relationships): string
     {
         $jsonKey = Str::snake(Str::plural($modelName));
         $jsonFileName = "{$jsonKey}.json";
 
         // Generate relationship code using enhanced analyzer
-        $enhancedAnalyzer = app(EnhancedRelationshipAnalyzer::class);
+        $enhancedAnalyzer = resolve(EnhancedRelationshipAnalyzer::class);
         $relationshipCode = $enhancedAnalyzer->generateRelationshipSeederCode($relationships, $modelName);
 
         // Determine unique identifier field

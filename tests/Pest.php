@@ -26,7 +26,10 @@ pest()->extend(TestCase::class)
     })
     ->in('Browser', 'Feature', 'Unit');
 
-expect()->extend('toBeOne', fn () => $this->toBe(1));
+expect()->extend('toBeOne', function (): mixed {
+    /** @var Pest\Expectation $this */
+    return $this->toBe(1);
+});
 
 /**
  * Seed a model and its relationships for testing.

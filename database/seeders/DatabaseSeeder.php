@@ -15,32 +15,6 @@ use ReflectionClass;
 final class DatabaseSeeder extends Seeder
 {
     /**
-     * Categories to run based on environment.
-     *
-     * @var array<SeederCategory>|null
-     */
-    private ?array $categories = null;
-
-    /**
-     * Specific seeders to run (by class name).
-     *
-     * @var array<string>|null
-     */
-    private ?array $only = null;
-
-    /**
-     * Seeders to skip (by class name).
-     *
-     * @var array<string>|null
-     */
-    private ?array $skip = null;
-
-    /**
-     * Strict mode - fail on errors.
-     */
-    private bool $strict = false;
-
-    /**
      * Metrics tracker.
      */
     private ?SeedingMetrics $metrics = null;
@@ -52,12 +26,20 @@ final class DatabaseSeeder extends Seeder
      * @param  array<string>|null  $only
      * @param  array<string>|null  $skip
      */
-    public function __construct(?array $categories = null, ?array $only = null, ?array $skip = null, bool $strict = false)
+    public function __construct(/**
+     * Categories to run based on environment.
+     */
+        private readonly ?array $categories = null, /**
+     * Specific seeders to run (by class name).
+     */
+        private readonly ?array $only = null, /**
+     * Seeders to skip (by class name).
+     */
+        private readonly ?array $skip = null, /**
+     * Strict mode - fail on errors.
+     */
+        private readonly bool $strict = false)
     {
-        $this->categories = $categories;
-        $this->only = $only;
-        $this->skip = $skip;
-        $this->strict = $strict;
         $this->metrics = new SeedingMetrics;
     }
 
@@ -67,7 +49,7 @@ final class DatabaseSeeder extends Seeder
         $categories = $this->categories ?? $this->getDefaultCategories();
         $seeders = $this->discoverSeeders($categories);
 
-        if (empty($seeders)) {
+        if ($seeders === []) {
             $this->command?->info('No seeders found to run.');
 
             return;
@@ -181,8 +163,10 @@ final class DatabaseSeeder extends Seeder
                 }
 
                 $reflection = new ReflectionClass($className);
-
-                if ($reflection->isAbstract() || $reflection->isInterface()) {
+                if ($reflection->isAbstract()) {
+                    continue;
+                }
+                if ($reflection->isInterface()) {
                     continue;
                 }
 
@@ -292,7 +276,6 @@ final class DatabaseSeeder extends Seeder
         }
 
         $property = $reflection->getProperty('dependencies');
-        $property->setAccessible(true);
 
         $dependencies = $property->getValue(new $seeder);
 

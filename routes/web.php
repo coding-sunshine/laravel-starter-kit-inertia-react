@@ -10,13 +10,13 @@ use App\Http\Controllers\UserEmailVerificationNotificationController;
 use App\Http\Controllers\UserPasswordController;
 use App\Http\Controllers\UserProfileController;
 use App\Http\Controllers\UserTwoFactorAuthenticationController;
-use Illuminate\Contracts\Support\Responsable;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
-Route::get('/favicon.ico', function (): BinaryFileResponse|Responsable {
+Route::get('/favicon.ico', function (): BinaryFileResponse|RedirectResponse {
     $path = public_path('favicon.ico');
 
     if (File::exists($path)) {

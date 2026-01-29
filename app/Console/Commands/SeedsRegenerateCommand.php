@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Services\AISeederCodeGenerator;
+use App\Services\EnhancedRelationshipAnalyzer;
 use App\Services\ModelRegistry;
 use App\Services\SeedSpecGenerator;
 use Exception;
@@ -43,7 +45,7 @@ final class SeedsRegenerateCommand extends Command
             ? ["App\\Models\\{$specificModel}"]
             : $registry->getAllModels();
 
-        if (empty($models)) {
+        if ($models === []) {
             $this->info('No models found.');
 
             return self::SUCCESS;
@@ -66,7 +68,7 @@ final class SeedsRegenerateCommand extends Command
 
             try {
                 // Regenerate JSON file
-                $jsonChanges = $this->regenerateJson($modelName, $spec, $checkMode, $force);
+                $jsonChanges = $this->regenerateJson($modelName, $spec, $checkMode);
 
                 // Regenerate seeder skeleton
                 $seederChanges = $this->regenerateSeeder($modelName, $spec, $checkMode, $force);
@@ -97,7 +99,7 @@ final class SeedsRegenerateCommand extends Command
     /**
      * Regenerate JSON file from spec.
      */
-    private function regenerateJson(string $modelName, array $spec, bool $checkMode, bool $force): bool
+    private function regenerateJson(string $modelName, array $spec, bool $checkMode): bool
     {
         $jsonKey = Str::snake(Str::plural($modelName));
         $jsonPath = database_path("seeders/data/{$jsonKey}.json");
@@ -116,7 +118,7 @@ final class SeedsRegenerateCommand extends Command
         ];
 
         // Preserve existing entries if they exist
-        if (isset($existingData[$jsonKey]) && is_array($existingData[$jsonKey]) && ! empty($existingData[$jsonKey])) {
+        if (isset($existingData[$jsonKey]) && is_array($existingData[$jsonKey]) && (isset($existingData[$jsonKey]) && $existingData[$jsonKey] !== [])) {
             // Keep existing data but ensure all fields are present
             foreach ($existingData[$jsonKey] as $entry) {
                 $updatedEntry = $entry;
@@ -226,7 +228,7 @@ final class SeedsRegenerateCommand extends Command
         $modelClass = "App\\Models\\{$modelName}";
 
         // Use enhanced analyzer to get full relationship details
-        $enhancedAnalyzer = app(EnhancedRelationshipAnalyzer::class);
+        $enhancedAnalyzer = resolve(EnhancedRelationshipAnalyzer::class);
         $relationships = class_exists($modelClass)
             ? $enhancedAnalyzer->analyzeModel($modelClass)
             : [];
@@ -246,7 +248,7 @@ final class SeedsRegenerateCommand extends Command
         }
 
         // Use AI generator for intelligent code generation
-        $aiGenerator = app(AISeederCodeGenerator::class);
+        $aiGenerator = resolve(AISeederCodeGenerator::class);
 
         return $aiGenerator->generateSeederCode($modelName, $spec, $relationships, $category);
     }

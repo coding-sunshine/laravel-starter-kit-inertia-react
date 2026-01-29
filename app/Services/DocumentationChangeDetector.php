@@ -87,11 +87,7 @@ final readonly class DocumentationChangeDetector
         }
 
         // Check routes
-        if ($changes['routes']) {
-            return true;
-        }
-
-        return false;
+        return (bool) $changes['routes'];
     }
 
     /**
@@ -118,7 +114,7 @@ final readonly class DocumentationChangeDetector
                 $actionSummary[] = 'dependencies';
             }
 
-            if (! empty($actionSummary)) {
+            if ($actionSummary !== []) {
                 $summary[] = "Action {$actionName}: ".implode(', ', $actionSummary).' changed';
             }
         }
@@ -135,7 +131,7 @@ final readonly class DocumentationChangeDetector
                 $controllerSummary[] = 'form requests';
             }
 
-            if (! empty($controllerSummary)) {
+            if ($controllerSummary !== []) {
                 $summary[] = "Controller {$controllerName}: ".implode(', ', $controllerSummary).' changed';
             }
         }
@@ -149,7 +145,7 @@ final readonly class DocumentationChangeDetector
                 $pageSummary[] = 'component';
             }
 
-            if (! empty($pageSummary)) {
+            if ($pageSummary !== []) {
                 $summary[] = "Page {$pagePath}: ".implode(', ', $pageSummary).' changed';
             }
         }
@@ -274,7 +270,7 @@ final readonly class DocumentationChangeDetector
             return [];
         }
 
-        $lines = array_map('trim', explode("\n", $result->output()));
+        $lines = array_map(trim(...), explode("\n", $result->output()));
 
         return array_values(array_filter($lines));
     }

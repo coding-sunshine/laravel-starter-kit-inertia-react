@@ -106,13 +106,11 @@ final class SeedsProfileCommand extends Command
             ];
         }
 
-        $profile = [
+        return [
             'total_count' => $totalCount,
-            'cardinalities' => $this->calculateCardinalities($modelClass, $connection),
+            'cardinalities' => $this->calculateCardinalities(),
             'distributions' => $this->calculateDistributions($table, $connection),
         ];
-
-        return $profile;
     }
 
     /**
@@ -120,7 +118,7 @@ final class SeedsProfileCommand extends Command
      *
      * @return array<string, mixed>
      */
-    private function calculateCardinalities(string $modelClass, string $connection): array
+    private function calculateCardinalities(): array
     {
         // This would analyze relationships and calculate avg/min/max children per parent
         // For now, return empty - can be enhanced based on actual relationships

@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
 use ReflectionClass;
 use ReflectionException;
+use ReflectionType;
 
 final class GenerateApiDocumentation extends Command
 {
@@ -136,7 +137,7 @@ final class GenerateApiDocumentation extends Command
                 $methods = implode(', ', $route['methods']);
                 $uri = $route['uri'];
                 $name = $route['name'] ?? '-';
-                $middleware = ! empty($route['middleware']) ? implode(', ', array_slice($route['middleware'], 0, 3)) : '-';
+                $middleware = empty($route['middleware']) ? '-' : implode(', ', array_slice($route['middleware'], 0, 3));
 
                 $content .= "| {$methods} | `{$uri}` | {$name} | {$middleware} |\n";
             }
@@ -206,7 +207,7 @@ final class GenerateApiDocumentation extends Command
                 }
 
                 foreach ($route['methods'] as $method) {
-                    $methodLower = mb_strtolower($method);
+                    $methodLower = mb_strtolower((string) $method);
 
                     $openApi['paths'][$path][$methodLower] = [
                         'summary' => $route['name'] ?? $path,
@@ -262,7 +263,7 @@ final class GenerateApiDocumentation extends Command
             $parameters = [];
 
             foreach ($method->getParameters() as $param) {
-                $type = $param->getType() ? (string) $param->getType() : 'mixed';
+                $type = $param->getType() instanceof ReflectionType ? (string) $param->getType() : 'mixed';
 
                 $parameters[] = [
                     'name' => $param->getName(),
@@ -272,7 +273,7 @@ final class GenerateApiDocumentation extends Command
             }
 
             return $parameters;
-        } catch (ReflectionException $e) {
+        } catch (ReflectionException) {
             return [];
         }
     }
@@ -284,12 +285,10 @@ final class GenerateApiDocumentation extends Command
      */
     private function extractUriParameters(string $uri): array
     {
-        $parameters = [];
-
         if (preg_match_all('/\{(\w+)\}/', $uri, $matches)) {
-            $parameters = $matches[1];
+            return $matches[1];
         }
 
-        return $parameters;
+        return [];
     }
 }

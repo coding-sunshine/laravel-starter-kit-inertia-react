@@ -24,27 +24,19 @@ final class SeedHelper
      */
     public static function seedFor(string $modelClass, int $count = 1)
     {
-        if (! class_exists($modelClass)) {
-            throw new InvalidArgumentException("Model class {$modelClass} does not exist");
-        }
+        throw_unless(class_exists($modelClass), InvalidArgumentException::class, "Model class {$modelClass} does not exist");
 
-        if (! is_subclass_of($modelClass, Model::class)) {
-            throw new InvalidArgumentException("{$modelClass} is not an Eloquent model");
-        }
+        throw_unless(is_subclass_of($modelClass, Model::class), InvalidArgumentException::class, "{$modelClass} is not an Eloquent model");
 
         $model = new $modelClass;
         $table = $model->getTable();
 
-        if (! Schema::hasTable($table)) {
-            throw new RuntimeException("Table {$table} does not exist. Run migrations first.");
-        }
+        throw_unless(Schema::hasTable($table), RuntimeException::class, "Table {$table} does not exist. Run migrations first.");
 
         // Check if model has factory
         $factoryClass = 'Database\\Factories\\'.class_basename($modelClass).'Factory';
 
-        if (! class_exists($factoryClass)) {
-            throw new RuntimeException("Factory {$factoryClass} does not exist. Create it first.");
-        }
+        throw_unless(class_exists($factoryClass), RuntimeException::class, "Factory {$factoryClass} does not exist. Create it first.");
 
         // Seed parent relationships first
         self::seedRelationships($modelClass);
@@ -86,7 +78,7 @@ final class SeedHelper
      */
     public static function seedScenario(string $scenarioName): array
     {
-        if (self::$scenarioManager === null) {
+        if (! self::$scenarioManager instanceof SeedScenarioManager) {
             self::$scenarioManager = new SeedScenarioManager;
         }
 
@@ -98,7 +90,7 @@ final class SeedHelper
      */
     public static function getScenarioManager(): SeedScenarioManager
     {
-        if (self::$scenarioManager === null) {
+        if (! self::$scenarioManager instanceof SeedScenarioManager) {
             self::$scenarioManager = new SeedScenarioManager;
         }
 
@@ -142,7 +134,7 @@ final class SeedHelper
                         self::seedFor($relatedModel::class, 1);
                     }
                 }
-            } catch (Exception $e) {
+            } catch (Exception) {
                 // Skip if relationship can't be resolved
                 continue;
             }

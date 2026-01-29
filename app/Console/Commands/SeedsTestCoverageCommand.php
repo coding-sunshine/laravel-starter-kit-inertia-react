@@ -137,11 +137,11 @@ final class SeedsTestCoverageCommand extends Command
 
         $this->newLine();
         $this->line('Defined scenarios:');
-        foreach ($scenarios as $name => $scenario) {
+        foreach (array_keys($scenarios) as $name) {
             $this->line("  - {$name}");
         }
 
-        if (! empty($report['missing_scenarios'])) {
+        if (isset($report['missing_scenarios']) && $report['missing_scenarios'] !== []) {
             $this->newLine();
             $this->warn('Missing scenarios:');
             foreach ($report['missing_scenarios'] as $missing) {

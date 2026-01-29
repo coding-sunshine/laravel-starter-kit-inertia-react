@@ -37,7 +37,7 @@ final class ModelsAuditCommand extends Command
         $checkSpecs = $this->option('check-specs');
         $failOnMissing = $this->option('fail-on-missing');
 
-        if (empty($report)) {
+        if ($report === []) {
             $this->info('No models found.');
 
             return self::SUCCESS;
@@ -88,7 +88,7 @@ final class ModelsAuditCommand extends Command
 
         $this->table($headers, $rows);
 
-        if (! empty($missing)) {
+        if ($missing !== []) {
             $this->newLine();
             $this->warn(sprintf('Found %d model(s) with missing components:', count($missing)));
 

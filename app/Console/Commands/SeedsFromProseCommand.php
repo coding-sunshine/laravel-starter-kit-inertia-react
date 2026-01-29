@@ -101,9 +101,8 @@ final class SeedsFromProseCommand extends Command
         $prompt .= "- relationships: array of relationship definitions (type, model)\n";
         $prompt .= "- value_hints: array of example values\n";
         $prompt .= "- scenarios: array of scenario names\n\n";
-        $prompt .= 'Return only valid JSON matching the seed spec format.';
 
-        return $prompt;
+        return $prompt.'Return only valid JSON matching the seed spec format.';
     }
 
     /**
@@ -217,8 +216,8 @@ final class SeedsFromProseCommand extends Command
             }
 
             // Ensure required fields are present
-            $jsonData['model'] = $jsonData['model'] ?? $modelName;
-            $jsonData['table'] = $jsonData['table'] ?? Str::snake(Str::plural($modelName));
+            $jsonData['model'] ??= $modelName;
+            $jsonData['table'] ??= Str::snake(Str::plural($modelName));
 
             return $jsonData;
         } catch (Exception $e) {

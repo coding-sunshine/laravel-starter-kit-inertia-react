@@ -45,7 +45,7 @@ final class SeedsMetricsCommand extends Command
 
             rsort($files);
 
-            if (empty($files)) {
+            if ($files === []) {
                 $this->error('No metrics files found.');
 
                 return self::FAILURE;

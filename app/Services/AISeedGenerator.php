@@ -74,9 +74,7 @@ final class AISeedGenerator
             }
         }
 
-        $prompt .= "\nGenerate 5-10 example records as JSON array. Return only valid JSON.";
-
-        return $prompt;
+        return $prompt."\nGenerate 5-10 example records as JSON array. Return only valid JSON.";
     }
 
     /**
@@ -139,7 +137,7 @@ final class AISeedGenerator
                 }
             }
 
-            if (! empty($relDescs)) {
+            if ($relDescs !== []) {
                 $desc .= ' that '.implode(', ', $relDescs);
             }
         }

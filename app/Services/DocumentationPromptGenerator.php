@@ -62,7 +62,7 @@ final readonly class DocumentationPromptGenerator
         }
 
         // Add relationships
-        if (! empty($relationships)) {
+        if ($relationships !== []) {
             $prompt .= "## Relationships\n\n";
             if (! empty($relationships['usedBy'])) {
                 $prompt .= 'Used by Controllers: '.implode(', ', $relationships['usedBy'])."\n";
@@ -81,9 +81,8 @@ final readonly class DocumentationPromptGenerator
 
         $prompt .= 'Generate complete documentation following the template structure. ';
         $prompt .= 'Fill in all placeholders with accurate information from the code context. ';
-        $prompt .= 'Include usage examples, parameter descriptions, and related component links.';
 
-        return $prompt;
+        return $prompt.'Include usage examples, parameter descriptions, and related component links.';
     }
 
     /**
@@ -118,7 +117,7 @@ final readonly class DocumentationPromptGenerator
         }
 
         // Add relationships
-        if (! empty($relationships)) {
+        if ($relationships !== []) {
             $prompt .= "## Relationships\n\n";
             if (! empty($relationships['usesActions'])) {
                 $prompt .= 'Uses Actions: '.implode(', ', $relationships['usesActions'])."\n";
@@ -138,9 +137,7 @@ final readonly class DocumentationPromptGenerator
         $prompt .= "## Template Structure\n\n";
         $prompt .= "```markdown\n{$template}\n```\n\n";
 
-        $prompt .= 'Generate complete documentation following the template structure.';
-
-        return $prompt;
+        return $prompt.'Generate complete documentation following the template structure.';
     }
 
     /**
@@ -175,7 +172,7 @@ final readonly class DocumentationPromptGenerator
         }
 
         // Add relationships
-        if (! empty($relationships)) {
+        if ($relationships !== []) {
             $prompt .= "## Relationships\n\n";
             if (! empty($relationships['renderedBy'])) {
                 $prompt .= 'Rendered by Controllers: '.implode(', ', $relationships['renderedBy'])."\n";
@@ -189,9 +186,7 @@ final readonly class DocumentationPromptGenerator
         $prompt .= "## Template Structure\n\n";
         $prompt .= "```markdown\n{$template}\n```\n\n";
 
-        $prompt .= 'Generate complete documentation following the template structure.';
-
-        return $prompt;
+        return $prompt.'Generate complete documentation following the template structure.';
     }
 
     /**
@@ -217,7 +212,7 @@ final readonly class DocumentationPromptGenerator
             $method = $actionInfo['handleMethod'];
             $prompt .= 'handle() returns: '.($method['returnType'] ?? 'mixed').'. ';
             if (! empty($method['parameters'])) {
-                $params = array_map(fn ($p) => ($p['type'] ?? 'mixed').' $'.$p['name'], $method['parameters']);
+                $params = array_map(fn (array $p): string => ($p['type'] ?? 'mixed').' $'.$p['name'], $method['parameters']);
                 $prompt .= 'Parameters: '.implode(', ', $params).".\n\n";
             } else {
                 $prompt .= "\n\n";
@@ -225,10 +220,10 @@ final readonly class DocumentationPromptGenerator
         }
 
         if (! empty($actionInfo['dependencies'])) {
-            $prompt .= 'Constructor: '.implode(', ', array_map(fn ($d) => $d['type'].' $'.$d['name'], $actionInfo['dependencies'])).".\n\n";
+            $prompt .= 'Constructor: '.implode(', ', array_map(fn (array $d): string => $d['type'].' $'.$d['name'], $actionInfo['dependencies'])).".\n\n";
         }
 
-        if (! empty($relationships)) {
+        if ($relationships !== []) {
             $parts = [];
             if (! empty($relationships['usedBy'])) {
                 $parts[] = 'Used by: '.implode(', ', $relationships['usedBy']);
@@ -244,9 +239,7 @@ final readonly class DocumentationPromptGenerator
             }
         }
 
-        $prompt .= "Output only valid markdown that fills this template (replace placeholders, no code blocks around the doc):\n\n{$template}";
-
-        return $prompt;
+        return $prompt."Output only valid markdown that fills this template (replace placeholders, no code blocks around the doc):\n\n{$template}";
     }
 
     /**
@@ -273,7 +266,7 @@ final readonly class DocumentationPromptGenerator
             $prompt .= implode('; ', $methodList).".\n\n";
         }
 
-        if (! empty($relationships)) {
+        if ($relationships !== []) {
             $parts = [];
             if (! empty($relationships['usesActions'])) {
                 $parts[] = 'Actions: '.implode(', ', $relationships['usesActions']);
@@ -292,9 +285,7 @@ final readonly class DocumentationPromptGenerator
             }
         }
 
-        $prompt .= "Output only valid markdown that fills this template (replace placeholders, no code blocks around the doc):\n\n{$template}";
-
-        return $prompt;
+        return $prompt."Output only valid markdown that fills this template (replace placeholders, no code blocks around the doc):\n\n{$template}";
     }
 
     /**
@@ -314,11 +305,11 @@ final readonly class DocumentationPromptGenerator
 
         if (! empty($pageInfo['tsDoc']['props'])) {
             $prompt .= 'Props: ';
-            $propList = array_map(fn ($p) => $p['name'].': '.$p['type'], $pageInfo['tsDoc']['props']);
+            $propList = array_map(fn (array $p): string => $p['name'].': '.$p['type'], $pageInfo['tsDoc']['props']);
             $prompt .= implode(', ', $propList).".\n\n";
         }
 
-        if (! empty($relationships)) {
+        if ($relationships !== []) {
             $parts = [];
             if (! empty($relationships['renderedBy'])) {
                 $parts[] = 'Rendered by: '.implode(', ', $relationships['renderedBy']);
@@ -331,8 +322,6 @@ final readonly class DocumentationPromptGenerator
             }
         }
 
-        $prompt .= "Output only valid markdown that fills this template (replace placeholders, no code blocks around the doc):\n\n{$template}";
-
-        return $prompt;
+        return $prompt."Output only valid markdown that fills this template (replace placeholders, no code blocks around the doc):\n\n{$template}";
     }
 }

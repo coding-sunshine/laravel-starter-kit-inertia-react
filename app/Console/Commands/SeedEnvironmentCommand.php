@@ -97,7 +97,7 @@ final class SeedEnvironmentCommand extends Command
             return null;
         }
 
-        return array_map('trim', explode(',', $only));
+        return array_map(trim(...), explode(',', $only));
     }
 
     /**
@@ -113,6 +113,6 @@ final class SeedEnvironmentCommand extends Command
             return null;
         }
 
-        return array_map('trim', explode(',', $skip));
+        return array_map(trim(...), explode(',', $skip));
     }
 }

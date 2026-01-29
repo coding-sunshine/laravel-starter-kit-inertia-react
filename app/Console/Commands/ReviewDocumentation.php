@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\File;
 use ReflectionClass;
 use ReflectionException;
 use ReflectionMethod;
+use ReflectionType;
 
 final class ReviewDocumentation extends Command
 {
@@ -62,7 +63,7 @@ final class ReviewDocumentation extends Command
             $issues = array_merge($issues, $this->reviewPages($manifest['pages'] ?? []));
         }
 
-        if (empty($issues)) {
+        if ($issues === []) {
             $this->info('✓ All documentation is up to date and complete!');
 
             return self::SUCCESS;
@@ -208,7 +209,7 @@ final class ReviewDocumentation extends Command
             }
 
             $method = $reflection->getMethod('handle');
-            $returnType = $method->getReturnType() ? (string) $method->getReturnType() : 'mixed';
+            $returnType = $method->getReturnType() instanceof ReflectionType ? (string) $method->getReturnType() : 'mixed';
 
             $docContent = File::get($docPath);
 
@@ -224,7 +225,7 @@ final class ReviewDocumentation extends Command
             if ($docParamCount < $paramCount) {
                 $issues[] = "Action {$actionName}: Missing parameter documentation ({$paramCount} params, {$docParamCount} documented)";
             }
-        } catch (ReflectionException $e) {
+        } catch (ReflectionException) {
             $issues[] = "Action {$actionName}: Could not verify signature";
         }
 
@@ -258,7 +259,7 @@ final class ReviewDocumentation extends Command
             if ($docMethodCount < $methodCount) {
                 $issues[] = "Controller {$controllerName}: Missing method documentation ({$methodCount} methods, {$docMethodCount} documented)";
             }
-        } catch (ReflectionException $e) {
+        } catch (ReflectionException) {
             $issues[] = "Controller {$controllerName}: Could not verify methods";
         }
 

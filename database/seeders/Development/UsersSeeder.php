@@ -14,7 +14,7 @@ final class UsersSeeder extends Seeder
 {
     use LoadsJsonData;
 
-    protected array $dependencies = ['RolesAndPermissionsSeeder'];
+    private array $dependencies = ['RolesAndPermissionsSeeder'];
 
     /**
      * Run the database seeds (idempotent).
@@ -81,7 +81,7 @@ final class UsersSeeder extends Seeder
                     $factory->create($userData);
                 }
             }
-        } catch (RuntimeException $e) {
+        } catch (RuntimeException) {
             // JSON file doesn't exist or is invalid - skip silently
             // This allows seeders to work with or without JSON files
         }

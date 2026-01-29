@@ -43,7 +43,7 @@ final class SeedsReviewCommand extends Command
             ? ["App\\Models\\{$specificModel}"]
             : $registry->getAllModels();
 
-        if (empty($models)) {
+        if ($models === []) {
             $this->info('No models found.');
 
             return self::SUCCESS;
@@ -107,11 +107,11 @@ final class SeedsReviewCommand extends Command
                             $this->displayReview($modelName, $review);
                         } else {
                             $this->warn("  {$modelName}: AI review failed, performing basic validation");
-                            $this->performBasicValidation($modelName, $spec, $seederInfo);
+                            $this->performBasicValidation($modelName, $spec);
                         }
                     } else {
                         $this->line("  {$modelName}: AI not available, performing basic validation");
-                        $this->performBasicValidation($modelName, $spec, $seederInfo);
+                        $this->performBasicValidation($modelName, $spec);
                     }
                 }
             } catch (Exception $e) {
@@ -119,7 +119,7 @@ final class SeedsReviewCommand extends Command
             }
         }
 
-        if (! empty($issues)) {
+        if ($issues !== []) {
             $this->newLine();
             $this->warn('Issues found:');
 
@@ -145,9 +145,8 @@ final class SeedsReviewCommand extends Command
         $prompt .= "2. Is the seeding logic idempotent (safe to run multiple times)?\n";
         $prompt .= "3. Are the example values in JSON realistic?\n";
         $prompt .= "4. Are there any potential issues or improvements?\n\n";
-        $prompt .= 'Return a JSON object with: {issues: [], suggestions: []}';
 
-        return $prompt;
+        return $prompt.'Return a JSON object with: {issues: [], suggestions: []}';
     }
 
     /**
@@ -264,9 +263,8 @@ final class SeedsReviewCommand extends Command
      * Perform basic validation when AI is not available.
      *
      * @param  array<string, mixed>  $spec
-     * @param  array<string, mixed>  $seederInfo
      */
-    private function performBasicValidation(string $modelName, array $spec, array $seederInfo): void
+    private function performBasicValidation(string $modelName, array $spec): void
     {
         $issues = [];
         $suggestions = [];
@@ -288,7 +286,7 @@ final class SeedsReviewCommand extends Command
             $suggestions[] = 'Add value hints for better seed data generation';
         }
 
-        if (! empty($issues) || ! empty($suggestions)) {
+        if ($issues !== [] || $suggestions !== []) {
             $this->displayReview($modelName, [
                 'issues' => $issues,
                 'suggestions' => $suggestions,
