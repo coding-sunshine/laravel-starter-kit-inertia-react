@@ -92,7 +92,8 @@ final class ReviewDocumentation extends Command
             }
 
             $docPath = $actionInfo['path'] ?? null;
-            if ($docPath === null || ! File::exists(base_path($docPath))) {
+            $resolvedDocPath = $docPath !== null ? $this->resolveDocPath($docPath, 'action') : null;
+            if ($docPath === null || $resolvedDocPath === null || ! File::exists($resolvedDocPath)) {
                 $issues[] = "Action {$actionName}: Documentation file not found";
 
                 continue;
@@ -107,7 +108,7 @@ final class ReviewDocumentation extends Command
             }
 
             // Verify method signatures match
-            $issues = array_merge($issues, $this->verifyActionSignature($actionName, $codePath, $docPath));
+            $issues = array_merge($issues, $this->verifyActionSignature($actionName, $codePath, $resolvedDocPath));
         }
 
         return $issues;
@@ -129,7 +130,8 @@ final class ReviewDocumentation extends Command
             }
 
             $docPath = $controllerInfo['path'] ?? null;
-            if ($docPath === null || ! File::exists(base_path($docPath))) {
+            $resolvedDocPath = $docPath !== null ? $this->resolveDocPath($docPath, 'controller') : null;
+            if ($docPath === null || $resolvedDocPath === null || ! File::exists($resolvedDocPath)) {
                 $issues[] = "Controller {$controllerName}: Documentation file not found";
 
                 continue;
@@ -144,7 +146,7 @@ final class ReviewDocumentation extends Command
             }
 
             // Verify methods match
-            $issues = array_merge($issues, $this->verifyControllerMethods($controllerName, $codePath, $docPath));
+            $issues = array_merge($issues, $this->verifyControllerMethods($controllerName, $codePath, $resolvedDocPath));
         }
 
         return $issues;
@@ -166,7 +168,8 @@ final class ReviewDocumentation extends Command
             }
 
             $docPath = $pageInfo['developerGuide'] ?? null;
-            if ($docPath === null || ! File::exists(base_path($docPath))) {
+            $resolvedDocPath = $docPath !== null ? $this->resolveDocPath($docPath, 'page') : null;
+            if ($docPath === null || $resolvedDocPath === null || ! File::exists($resolvedDocPath)) {
                 $issues[] = "Page {$pagePath}: Documentation file not found";
 
                 continue;
@@ -207,7 +210,7 @@ final class ReviewDocumentation extends Command
             $method = $reflection->getMethod('handle');
             $returnType = $method->getReturnType() ? (string) $method->getReturnType() : 'mixed';
 
-            $docContent = File::get(base_path($docPath));
+            $docContent = File::get($docPath);
 
             // Check if return type is documented
             if (! str_contains($docContent, $returnType) && $returnType !== 'mixed') {
@@ -247,7 +250,7 @@ final class ReviewDocumentation extends Command
             $publicMethods = $reflection->getMethods(ReflectionMethod::IS_PUBLIC);
             $methodCount = count($publicMethods);
 
-            $docContent = File::get(base_path($docPath));
+            $docContent = File::get($docPath);
 
             // Count methods in documentation
             $docMethodCount = mb_substr_count($docContent, '| Method |');
@@ -260,6 +263,33 @@ final class ReviewDocumentation extends Command
         }
 
         return $issues;
+    }
+
+    /**
+     * Resolve manifest doc path (section-relative or project-relative) to absolute path.
+     *
+     * @param  'action'|'controller'|'page'  $type
+     */
+    private function resolveDocPath(string $path, string $type): ?string
+    {
+        $path = mb_ltrim($path, './');
+
+        if (str_starts_with($path, 'docs/')) {
+            return base_path($path);
+        }
+
+        $sectionBase = match ($type) {
+            'action' => 'docs/developer/backend/actions',
+            'controller' => 'docs/developer/backend/controllers',
+            'page' => 'docs/developer/frontend/pages',
+            default => null,
+        };
+
+        if ($sectionBase === null) {
+            return null;
+        }
+
+        return base_path($sectionBase.'/'.$path);
     }
 
     /**
