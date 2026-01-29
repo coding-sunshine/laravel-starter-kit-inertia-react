@@ -430,7 +430,7 @@ PHP;
     }
 
     /**
-     * Generate JSON using AI.
+     * Generate JSON using AI (structured output first, then text fallback).
      *
      * @param  array<string, mixed>  $spec
      */
@@ -446,22 +446,13 @@ PHP;
             }
 
             $prompt = $aiGenerator->buildPrompt($spec, $profile, 'basic_demo');
+            $model = $prismService->defaultModel();
+            $records = $this->generateSeedJsonViaPrism($prompt, $model, $prismService);
 
-            $response = $prismService->generate($prompt);
-            $text = $response->text;
-            $jsonData = json_decode($text, true);
-
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                // Try to extract JSON from markdown
-                if (preg_match('/```(?:json)?\s*(\[.*?\])/s', $text, $matches)) {
-                    $jsonData = json_decode($matches[1], true);
-                }
-            }
-
-            if ($jsonData !== null && is_array($jsonData)) {
+            if ($records !== null && $records !== []) {
                 $jsonKey = $this->getJsonKey($name);
                 $data = [
-                    $jsonKey => is_array($jsonData[0] ?? null) ? $jsonData : [$jsonData],
+                    $jsonKey => $records,
                     '_source' => 'ai',
                     '_auto_generated' => true,
                     '_generated_at' => now()->toIso8601String(),
@@ -469,11 +460,79 @@ PHP;
 
                 File::put(database_path("seeders/data/{$jsonKey}.json"), json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
                 $this->info('  ✓ JSON auto-generated with AI');
+            } else {
+                $this->generateJsonWithFaker($name, $spec);
             }
         } catch (Exception $e) {
-            // Fallback to Faker
             $this->generateJsonWithFaker($name, $spec);
         }
+    }
+
+    /**
+     * Call Prism: structured output first, then text + parse fallback.
+     *
+     * @return array<int, array<string, mixed>>|null
+     */
+    private function generateSeedJsonViaPrism(string $prompt, string $model, PrismService $prismService): ?array
+    {
+        $schema = [
+            'type' => 'array',
+            'items' => [
+                'type' => 'object',
+                'additionalProperties' => true,
+            ],
+        ];
+
+        try {
+            $jsonData = $prismService->generateStructured($prompt, $schema, $model);
+
+            if (! is_array($jsonData)) {
+                throw new Exception('Structured output did not return array');
+            }
+
+            return $this->normalizeJsonRecords($jsonData);
+        } catch (Exception) {
+            $response = $prismService->generate($prompt, $model);
+            $text = $response->text;
+            $jsonData = json_decode($text, true);
+
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                if (preg_match('/```(?:json)?\s*(\[.*?\])/s', $text, $matches)) {
+                    $jsonData = json_decode($matches[1], true);
+                } elseif (preg_match('/\[.*\]/s', $text, $matches)) {
+                    $jsonData = json_decode($matches[0], true);
+                }
+            }
+
+            if ($jsonData === null || json_last_error() !== JSON_ERROR_NONE) {
+                return null;
+            }
+
+            return $this->normalizeJsonRecords($jsonData);
+        }
+    }
+
+    /**
+     * Normalize AI JSON response to array of record arrays.
+     *
+     * @param  array<int, array<string, mixed>>|array<string, mixed>  $jsonData
+     * @return array<int, array<string, mixed>>
+     */
+    private function normalizeJsonRecords(array $jsonData): array
+    {
+        if (isset($jsonData['data']) && is_array($jsonData['data'])) {
+            return $jsonData['data'];
+        }
+
+        if (isset($jsonData[0]) && is_array($jsonData[0])) {
+            return $jsonData;
+        }
+
+        if (is_array($jsonData) && ! isset($jsonData[0])) {
+            return [$jsonData];
+        }
+
+        return [];
     }
 
     /**

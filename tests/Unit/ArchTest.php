@@ -33,6 +33,39 @@ arch('Filament does not use Controllers or Actions')
     ->expect('App\Filament')
     ->not->toUse(['App\Http\Controllers', 'App\Actions']);
 
+// Seeding: seeders in categories must extend base Seeder.
+arch('seeders in Essential extend base seeder')
+    ->expect('Database\Seeders\Essential')
+    ->toExtend('Illuminate\Database\Seeder');
+
+arch('seeders in Development extend base seeder')
+    ->expect('Database\Seeders\Development')
+    ->toExtend('Illuminate\Database\Seeder');
+
+arch('seeders in Production extend base seeder')
+    ->expect('Database\Seeders\Production')
+    ->toExtend('Illuminate\Database\Seeder');
+
+// Seeding: category seeders must not use Controllers or HTTP layer.
+arch('seeders do not use Controllers')
+    ->expect(['Database\Seeders\Essential', 'Database\Seeders\Development', 'Database\Seeders\Production'])
+    ->not->toUse('App\Http\Controllers');
+
+// Seeding: category seeders may only use allowed layers (Models, Seeders, Illuminate, Spatie).
+arch('seeders only use allowed layers')
+    ->expect(['Database\Seeders\Essential', 'Database\Seeders\Development', 'Database\Seeders\Production'])
+    ->toOnlyUse([
+        'App\Models',
+        'Database\Seeders',
+        'Database\Factories',
+        'Illuminate\Database',
+        'Illuminate\Support',
+        'Illuminate\Contracts',
+        'Illuminate\Foundation',
+        'Spatie\Permission',
+    ])
+    ->ignoring(['RuntimeException', 'Throwable', 'app', 'now']);
+
 // Strict preset disabled: Filament resource pages override protected getHeaderActions()
 // and LoadsJsonData uses protected loadJson(); strict()->ignoring() did not exclude them.
 // arch()->preset()->strict();
