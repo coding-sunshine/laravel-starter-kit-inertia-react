@@ -10,19 +10,12 @@
             "name": "filament",
             "type": "composer",
             "url": "https://packages.filamentphp.com/composer"
-        },
-        {
-            "type": "path",
-            "url": "../laravel-architect",
-            "options": {
-                "symlink": true
-            }
         }
     ],
     "require": {
         "php": "^8.4.0",
         "dedoc/scramble": "^0.13.11",
-        "filament/filament": "^5.1.1",
+        "filament/filament": "^5.1.3",
         "inertiajs/inertia-laravel": "^2.0.19",
         "laravel/fortify": "^1.34.0",
         "laravel/framework": "^12.49.0",
@@ -35,12 +28,11 @@
         "spatie/laravel-permission": "^6.24"
     },
     "require-dev": {
-        "coding-sunshine/laravel-architect": "dev-main",
         "driftingly/rector-laravel": "^2.1.9",
         "fakerphp/faker": "^1.24.1",
         "filament/blueprint": "^2.1",
-        "larastan/larastan": "^3.9.1",
-        "laravel/boost": "^2.0.4",
+        "larastan/larastan": "^3.9.2",
+        "laravel/boost": "^2.0.5",
         "laravel/pail": "^1.2.4",
         "laravel/pint": "^1.27.0",
         "mockery/mockery": "^1.6.12",
