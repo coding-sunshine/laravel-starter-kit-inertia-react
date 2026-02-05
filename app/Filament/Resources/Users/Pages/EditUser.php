@@ -8,6 +8,8 @@ use App\Filament\Resources\Users\UserResource;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\ViewAction;
 use Filament\Resources\Pages\EditRecord;
+use Illuminate\Validation\ValidationException;
+use Spatie\Permission\Models\Role;
 
 final class EditUser extends EditRecord
 {
@@ -19,5 +21,32 @@ final class EditUser extends EditRecord
             ViewAction::make(),
             DeleteAction::make(),
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        $user = $this->getRecord();
+        if (! $user->isLastSuperAdmin() || ! $user->hasRole('super-admin')) {
+            return $data;
+        }
+
+        $superAdminRole = Role::query()->where('name', 'super-admin')->first();
+        if ($superAdminRole === null) {
+            return $data;
+        }
+
+        $newRoleIds = $data['roles'] ?? [];
+        $hasSuperAdmin = is_array($newRoleIds) && in_array($superAdminRole->getKey(), $newRoleIds, true);
+        if (! $hasSuperAdmin) {
+            throw ValidationException::withMessages([
+                'roles' => ['Cannot remove the super-admin role from the last super-admin user.'],
+            ]);
+        }
+
+        return $data;
     }
 }

@@ -55,3 +55,32 @@ it('super-admin role has bypass-permissions', function (): void {
     expect($superAdmin)->not->toBeNull();
     expect($superAdmin->hasPermissionTo('bypass-permissions'))->toBeTrue();
 });
+
+it('permission:health exits 0 when super-admin role exists', function (): void {
+    $exit = Artisan::call('permission:health');
+
+    expect($exit)->toBe(0);
+});
+
+it('last super-admin cannot be deleted', function (): void {
+    /** @var TestCase $this */
+    $superAdminUser = User::factory()->withoutTwoFactor()->create();
+    $superAdminUser->assignRole('super-admin');
+
+    $admin = User::factory()->withoutTwoFactor()->create();
+    $admin->assignRole('admin');
+
+    expect(Gate::forUser($admin)->denies('delete', $superAdminUser))->toBeTrue();
+});
+
+it('create user assigns default role when role exists', function (): void {
+    $action = resolve(App\Actions\CreateUser::class);
+    $email = 'defaultrole-'.uniqid('', true).'@example.com';
+
+    $user = $action->handle([
+        'name' => 'New User',
+        'email' => $email,
+    ], 'password');
+
+    expect($user->hasRole('user'))->toBeTrue();
+});

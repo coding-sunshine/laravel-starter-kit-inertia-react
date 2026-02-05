@@ -21,6 +21,7 @@ All application routes must have a name so that `permission:sync-routes` can cre
 - **`config/permission.php`** (Spatie) plus:
   - **`route_based_enforcement`** – When `true`, `AutoPermissionMiddleware` runs on web routes and requires a permission matching the route name for named app routes not in the skip list. Set via `PERMISSION_ROUTE_BASED_ENFORCEMENT` (default: `false`).
   - **`route_skip_patterns`** – Route name patterns to skip (e.g. `login`, `password.*`, `dashboard`, `filament.*`). Use `*` for wildcard.
+  - **`default_role`** – Role name assigned to newly registered or Filament-created users when no role is set. Set via `PERMISSION_DEFAULT_ROLE` (default: `user`). Set to `null` to disable. The role must exist (e.g. seeded).
   - **`permission_categories_enabled`** – When `true`, `RolesAndPermissionsSeeder` uses `config/permission_categories.php` and `PermissionCategoryResolver` to assign permissions to roles by category/wildcard. Set via `PERMISSION_CATEGORIES_ENABLED` (default: `false`).
 - **`config/permission_categories.php`** – Optional. Defines categories (patterns + roles) and per-role strategy (`bypass`, `categories`, `explicit`). Used only when `permission_categories_enabled` is true.
 
@@ -54,7 +55,16 @@ All application routes must have a name so that `permission:sync-routes` can cre
 
 - **Implementation**: In `AppServiceProvider::boot()`, `Gate::before` checks if the user has the `bypass-permissions` permission (via direct assignment or through a role). If so, it returns `true` for all abilities **except** when the ability is `delete` or `forceDelete` and the first argument is an `App\Models\User` (then it returns `null` so `UserPolicy` runs).
 - **Safety**: User delete/forceDelete always goes through `UserPolicy`, so you can enforce rules (e.g. cannot delete self, or require an extra permission) there.
+- **Last super-admin protection**: The last user with the `super-admin` role cannot be deleted (`UserPolicy::delete` / `forceDelete` deny), and in Filament the last super-admin cannot have the super-admin role removed (validation error). This avoids locking the application out of admin access.
 - **Seeder**: `RolesAndPermissionsSeeder` creates the `bypass-permissions` permission and assigns it to the `super-admin` role.
+
+## Default role for new users
+
+- When a user is created (registration via `CreateUser` action or Filament **Users** create), they are assigned the role in `config('permission.default_role')` (default: `user`) if that role exists and no role was explicitly set. Set `PERMISSION_DEFAULT_ROLE=null` or empty to disable.
+
+## Sanctum API tokens with permission abilities
+
+- Use `$user->createTokenWithPermissionAbilities('token-name')` to create a personal access token whose abilities match the user’s permissions. Users with `bypass-permissions` get `['*']`; others get their permission names. Check in API with `$request->user()->tokenCan('permission.name')`.
 
 ## Artisan commands
 
@@ -62,6 +72,7 @@ All application routes must have a name so that `permission:sync-routes` can cre
 |--------|-------------|
 | `permission:sync-routes` | Create/update permissions from named routes. Options: `--dry-run`, `--prune`, `--silent`. |
 | `permission:check-routes` | List application routes that have no name; exit 1 when `require_named_routes` is true or `--strict`. Use in CI to enforce named routes. |
+| `permission:health` | Check RBAC health: super-admin role exists, optionally warn on users with no roles or empty default role. Exit 1 on critical failure; use `--strict` to exit 1 on warnings too. |
 
 ## Middleware aliases
 
@@ -74,7 +85,7 @@ All application routes must have a name so that `permission:sync-routes` can cre
 
 ## Filament management UI
 
-- **Roles** (`/admin/roles`): List, create, edit, view roles; assign permissions via checkbox list. `App\Filament\Resources\Roles\RoleResource`.
+- **Roles** (`/admin/roles`): List, create, edit, view roles; assign permissions via checkbox list. **Duplicate** table action creates a new role with the same permissions (name: "Copy of …"). `App\Filament\Resources\Roles\RoleResource`.
 - **Permissions** (`/admin/permissions`): List and view permissions; **Sync from routes** header action runs `permission:sync-routes`. No create/edit (permissions come from sync or seeders). `App\Filament\Resources\Permissions\PermissionResource`.
 - **Users**: User form and infolist include role assignment (multi-select and badges). Users table shows a Roles column.
 

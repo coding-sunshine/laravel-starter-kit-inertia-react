@@ -31,8 +31,12 @@ final class UserPolicy
         return $user->can('edit users');
     }
 
-    public function delete(User $user): bool
+    public function delete(User $user, User $model): bool
     {
+        if ($model->isLastSuperAdmin()) {
+            return false;
+        }
+
         return $user->can('delete users');
     }
 
@@ -41,8 +45,12 @@ final class UserPolicy
         return $user->can('edit users');
     }
 
-    public function forceDelete(User $user): bool
+    public function forceDelete(User $user, User $model): bool
     {
+        if ($model->isLastSuperAdmin()) {
+            return false;
+        }
+
         return $user->can('delete users');
     }
 }

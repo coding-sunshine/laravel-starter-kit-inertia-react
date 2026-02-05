@@ -40,7 +40,7 @@ Seeders that must run in all environments (roles, settings, required lookup data
 
 **When it runs**: Always, in every environment
 
-**RolesAndPermissionsSeeder** creates core permissions (`bypass-permissions`, `access admin panel`, `view users`, etc.), roles (`super-admin`, `admin`, `user`), assigns `bypass-permissions` to `super-admin`, and assigns admin permissions to `admin`. When `permission.permission_categories_enabled` is true, it uses `PermissionCategoryResolver` and `config/permission_categories.php` to assign permissions by category/wildcard. See [Permissions and RBAC](../permissions.md).
+**RolesAndPermissionsSeeder** creates core permissions (`bypass-permissions`, `access admin panel`, `view users`, etc.), roles (`super-admin`, `admin`, `user`), assigns `bypass-permissions` to `super-admin`, and assigns admin permissions to `admin`. The `user` role is left with no permissions (authenticated routes like dashboard/settings are in `route_skip_patterns`). When `permission.route_based_enforcement` is true, it runs `permission:sync-routes` so route-named permissions exist after seeding. When `permission.permission_categories_enabled` is true, it uses `PermissionCategoryResolver` and `config/permission_categories.php` to assign permissions by category/wildcard. See [Permissions and RBAC](../permissions.md).
 
 ### Development
 Seeders for local development and testing (fake users, dummy content, test scenarios).

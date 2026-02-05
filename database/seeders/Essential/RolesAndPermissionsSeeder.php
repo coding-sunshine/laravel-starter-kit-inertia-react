@@ -6,6 +6,7 @@ namespace Database\Seeders\Essential;
 
 use App\Services\PermissionCategoryResolver;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Artisan;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
@@ -35,6 +36,7 @@ final class RolesAndPermissionsSeeder extends Seeder
         $superAdmin->givePermissionTo('bypass-permissions');
 
         $admin = Role::query()->firstOrCreate(['name' => 'admin', 'guard_name' => self::GUARD]);
+        // "user" role is created with no permissions; authenticated routes (dashboard, settings, etc.) are in route_skip_patterns
         Role::query()->firstOrCreate(['name' => 'user', 'guard_name' => self::GUARD]);
 
         if (config('permission.permission_categories_enabled', false)) {
@@ -59,6 +61,10 @@ final class RolesAndPermissionsSeeder extends Seeder
                 'edit users',
                 'delete users',
             ]);
+        }
+
+        if (config('permission.route_based_enforcement', false)) {
+            Artisan::call('permission:sync-routes', ['--silent' => true]);
         }
 
         resolve(PermissionRegistrar::class)->forgetCachedPermissions();

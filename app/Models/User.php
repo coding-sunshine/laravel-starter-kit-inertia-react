@@ -6,6 +6,7 @@ namespace App\Models;
 
 use Carbon\CarbonInterface;
 use Database\Factories\UserFactory;
+use DateTimeInterface;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -14,6 +15,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Sanctum\HasApiTokens;
+use Laravel\Sanctum\NewAccessToken;
 use Spatie\Permission\Traits\HasRoles;
 
 /**
@@ -52,6 +54,19 @@ final class User extends Authenticatable implements FilamentUser, MustVerifyEmai
     }
 
     /**
+     * Create a personal access token with abilities derived from the user's permissions.
+     * Users with bypass-permissions get ['*']; others get their permission names.
+     */
+    public function createTokenWithPermissionAbilities(string $name, ?DateTimeInterface $expiresAt = null): NewAccessToken
+    {
+        $abilities = $this->can('bypass-permissions')
+            ? ['*']
+            : $this->getAllPermissions()->pluck('name')->all();
+
+        return $this->createToken($name, $abilities, $expiresAt);
+    }
+
+    /**
      * @return array<string, string>
      */
     public function casts(): array
@@ -69,5 +84,23 @@ final class User extends Authenticatable implements FilamentUser, MustVerifyEmai
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Whether this user is the only one with the super-admin role (cannot remove or delete).
+     */
+    public function isLastSuperAdmin(): bool
+    {
+        $superAdminRole = \Spatie\Permission\Models\Role::query()
+            ->where('name', 'super-admin')
+            ->first();
+
+        if ($superAdminRole === null) {
+            return false;
+        }
+
+        $userIdsWithSuperAdmin = $superAdminRole->users()->pluck('id')->all();
+
+        return count($userIdsWithSuperAdmin) === 1 && in_array($this->getKey(), $userIdsWithSuperAdmin, true);
     }
 }

@@ -192,6 +192,12 @@ return [
      */
     'require_named_routes' => env('PERMISSION_REQUIRE_NAMED_ROUTES', true),
 
+    /*
+     * Default role assigned to newly registered or created users when no role is set.
+     * Set to null to skip automatic assignment. The role must exist (e.g. seeded).
+     */
+    'default_role' => env('PERMISSION_DEFAULT_ROLE', 'user'),
+
     /**
      * Route name patterns to skip for automatic permission checking.
      * Use '*' for wildcard (e.g. 'password.*' matches password.request, password.reset).
