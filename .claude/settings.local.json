@@ -1,6 +1,19 @@
 {
+  "permissions": {
+    "allow": [
+      "mcp__laravel-boost__application-info",
+      "Bash(ls:*)",
+      "Bash(wc:*)",
+      "Bash(du:*)",
+      "Bash(xargs cat:*)",
+      "Bash(xargs:*)",
+      "mcp__firecrawl__firecrawl_scrape",
+      "mcp__firecrawl__firecrawl_search",
+      "mcp__firecrawl__firecrawl_map"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "laravel-boost"
-  ],
-  "enableAllProjectMcpServers": true
+  ]
 }

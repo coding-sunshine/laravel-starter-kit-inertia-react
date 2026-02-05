@@ -13,7 +13,6 @@
     "packages": [
         "filament/filament",
         "laravel/fortify",
-        "spatie/laravel-permission",
         "prism-php/prism",
         "filament/blueprint"
     ],

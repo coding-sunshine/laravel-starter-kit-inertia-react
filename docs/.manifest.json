@@ -1,6 +1,6 @@
 {
     "version": "1.0.0",
-    "lastGenerated": "2026-02-02",
+    "lastGenerated": "2026-02-05",
     "actions": {
         "CreateUser": {
             "documented": true,
@@ -317,6 +317,7 @@
                     "two-factor.secret-key",
                     "two-factor.recovery-codes",
                     "two-factor.regenerate-recovery-codes",
+                    "default.livewire.update",
                     "livewire.upload-file",
                     "livewire.preview-file",
                     "user.destroy",
@@ -333,8 +334,7 @@
                     "password.email",
                     "verification.notice",
                     "verification.send",
-                    "verification.verify",
-                    "livewire.update"
+                    "verification.verify"
                 ]
             }
         },
@@ -369,6 +369,7 @@
                     "two-factor.secret-key",
                     "two-factor.recovery-codes",
                     "two-factor.regenerate-recovery-codes",
+                    "default.livewire.update",
                     "livewire.upload-file",
                     "livewire.preview-file",
                     "user.destroy",
@@ -385,8 +386,7 @@
                     "password.email",
                     "verification.notice",
                     "verification.send",
-                    "verification.verify",
-                    "livewire.update"
+                    "verification.verify"
                 ]
             }
         },
@@ -556,6 +556,7 @@
                     "two-factor.secret-key",
                     "two-factor.recovery-codes",
                     "two-factor.regenerate-recovery-codes",
+                    "default.livewire.update",
                     "livewire.upload-file",
                     "livewire.preview-file",
                     "user.destroy",
@@ -572,8 +573,7 @@
                     "password.email",
                     "verification.notice",
                     "verification.send",
-                    "verification.verify",
-                    "livewire.update"
+                    "verification.verify"
                 ]
             }
         }
