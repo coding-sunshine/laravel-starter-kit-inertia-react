@@ -100,6 +100,19 @@ jobs:
         run: php artisan docs:sync --check
         continue-on-error: false
 
+      - name: Check API routes doc
+        run: |
+          php artisan docs:api
+          git diff --exit-code docs/developer/api-reference/routes.md || (echo "::error::docs/developer/api-reference/routes.md is stale. Run: php artisan docs:api" && exit 1)
+
+      - name: Check route names
+        run: php artisan permission:check-routes
+        continue-on-error: false
+
+      - name: Check permission sync
+        run: php artisan permission:sync-routes --dry-run --silent
+        continue-on-error: false
+
       - name: Check Seed Specs
         run: php artisan seeds:spec-sync --check
         continue-on-error: false

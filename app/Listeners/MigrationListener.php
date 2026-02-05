@@ -10,6 +10,7 @@ use App\Services\ModelRegistry;
 use App\Services\SchemaWatcher;
 use App\Services\SeedSpecGenerator;
 use Exception;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 
@@ -20,6 +21,8 @@ final class MigrationListener
      */
     public function handle(): void
     {
+        $this->syncRoutePermissionsWhenEnabled();
+
         // Only auto-sync if enabled in config
         if (! config('seeding.auto_sync_after_migrations', true)) {
             return;
@@ -65,6 +68,23 @@ final class MigrationListener
                     // Silently continue - don't break migrations
                 }
             }
+        } catch (Exception) {
+            // Silently fail - don't break migrations
+        }
+    }
+
+    /**
+     * When route-based permission enforcement is enabled, sync permissions from routes
+     * so new routes get corresponding permissions without a manual step.
+     */
+    private function syncRoutePermissionsWhenEnabled(): void
+    {
+        if (! config('permission.route_based_enforcement', false)) {
+            return;
+        }
+
+        try {
+            Artisan::call('permission:sync-routes', ['--silent' => true]);
         } catch (Exception) {
             // Silently fail - don't break migrations
         }

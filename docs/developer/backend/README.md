@@ -8,6 +8,7 @@ Backend components, services, and patterns for developers.
 - [Controllers](./controllers/README.md) - Controller documentation
 - [Database](./database/README.md) - Database patterns, seeders, and factories
 - [Filament Admin Panel](./filament.md) - Filament panel at `/admin`
+- [Permissions and RBAC](./permissions.md) - Route-based permissions, permission categories, role hierarchy
 - [Prism AI Integration](./prism.md) - AI integration with Prism and OpenRouter
 - [PostgreSQL + pgvector](./pgvector.md) - Vector embeddings with pgvector (optional)
 - [Scramble OpenAPI Docs](./scramble.md) - OpenAPI/Swagger docs at `/docs/api`

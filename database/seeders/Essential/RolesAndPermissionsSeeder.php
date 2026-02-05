@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Seeders\Essential;
 
+use App\Services\PermissionCategoryResolver;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -17,7 +18,8 @@ final class RolesAndPermissionsSeeder extends Seeder
     {
         resolve(PermissionRegistrar::class)->forgetCachedPermissions();
 
-        $permissions = [
+        $corePermissions = [
+            'bypass-permissions',
             'access admin panel',
             'view users',
             'create users',
@@ -25,23 +27,39 @@ final class RolesAndPermissionsSeeder extends Seeder
             'delete users',
         ];
 
-        foreach ($permissions as $name) {
+        foreach ($corePermissions as $name) {
             Permission::query()->firstOrCreate(['name' => $name, 'guard_name' => self::GUARD]);
         }
 
-        Role::query()->firstOrCreate(['name' => 'super-admin', 'guard_name' => self::GUARD]);
+        $superAdmin = Role::query()->firstOrCreate(['name' => 'super-admin', 'guard_name' => self::GUARD]);
+        $superAdmin->givePermissionTo('bypass-permissions');
 
         $admin = Role::query()->firstOrCreate(['name' => 'admin', 'guard_name' => self::GUARD]);
-
         Role::query()->firstOrCreate(['name' => 'user', 'guard_name' => self::GUARD]);
 
-        $admin->givePermissionTo([
-            'access admin panel',
-            'view users',
-            'create users',
-            'edit users',
-            'delete users',
-        ]);
+        if (config('permission.permission_categories_enabled', false)) {
+            $resolver = app(PermissionCategoryResolver::class);
+            $adminPerms = $resolver->getPermissionsForRole('admin');
+            if ($adminPerms !== []) {
+                $admin->syncPermissions($adminPerms);
+            } else {
+                $admin->syncPermissions([
+                    'access admin panel',
+                    'view users',
+                    'create users',
+                    'edit users',
+                    'delete users',
+                ]);
+            }
+        } else {
+            $admin->syncPermissions([
+                'access admin panel',
+                'view users',
+                'create users',
+                'edit users',
+                'delete users',
+            ]);
+        }
 
         resolve(PermissionRegistrar::class)->forgetCachedPermissions();
     }

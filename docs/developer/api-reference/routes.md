@@ -2,7 +2,7 @@
 
 This document lists all available routes in the application.
 
-**Last Updated**: 2026-01-29 10:05:37
+**Last Updated**: 2026-02-05 14:03:38
 
 ## Closure
 
@@ -13,6 +13,12 @@ This document lists all available routes in the application.
 | GET | `admin/login` | filament.admin.auth.login | panel:admin, Illuminate\Cookie\Middleware\EncryptCookies, Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse |
 | POST | `admin/logout` | filament.admin.auth.logout | panel:admin, Illuminate\Cookie\Middleware\EncryptCookies, Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse |
 | GET | `admin` | filament.admin.pages.dashboard | panel:admin, Illuminate\Cookie\Middleware\EncryptCookies, Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse |
+| GET | `admin/permissions` | filament.admin.resources.permissions.index | panel:admin, Illuminate\Cookie\Middleware\EncryptCookies, Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse |
+| GET | `admin/permissions/{record}` | filament.admin.resources.permissions.view | panel:admin, Illuminate\Cookie\Middleware\EncryptCookies, Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse |
+| GET | `admin/roles` | filament.admin.resources.roles.index | panel:admin, Illuminate\Cookie\Middleware\EncryptCookies, Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse |
+| GET | `admin/roles/create` | filament.admin.resources.roles.create | panel:admin, Illuminate\Cookie\Middleware\EncryptCookies, Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse |
+| GET | `admin/roles/{record}` | filament.admin.resources.roles.view | panel:admin, Illuminate\Cookie\Middleware\EncryptCookies, Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse |
+| GET | `admin/roles/{record}/edit` | filament.admin.resources.roles.edit | panel:admin, Illuminate\Cookie\Middleware\EncryptCookies, Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse |
 | GET | `admin/users` | filament.admin.resources.users.index | panel:admin, Illuminate\Cookie\Middleware\EncryptCookies, Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse |
 | GET | `admin/users/create` | filament.admin.resources.users.create | panel:admin, Illuminate\Cookie\Middleware\EncryptCookies, Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse |
 | GET | `admin/users/{record}` | filament.admin.resources.users.view | panel:admin, Illuminate\Cookie\Middleware\EncryptCookies, Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse |
@@ -316,6 +322,47 @@ This document lists all available routes in the application.
 **Method Parameters**:
 - `request`: `Illuminate\Http\Request`
 - `generate`: `Laravel\Fortify\Actions\GenerateNewRecoveryCodes`
+
+
+## CsrfCookieController
+
+**Controller**: `Laravel\Sanctum\Http\Controllers\CsrfCookieController`
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| GET | `sanctum/csrf-cookie` | sanctum.csrf-cookie | web |
+
+### show
+
+**Route**: `sanctum.csrf-cookie`
+
+**URI**: `sanctum/csrf-cookie`
+
+**Methods**: GET
+
+**Middleware**: web
+
+**Method Parameters**:
+- `request`: `Illuminate\Http\Request`
+
+
+## HandleRequests
+
+**Controller**: `Livewire\Mechanisms\HandleRequests\HandleRequests`
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| POST | `livewire-f0cf3e9a/update` | default.livewire.update | web |
+
+### handleUpdate
+
+**Route**: `default.livewire.update`
+
+**URI**: `livewire-f0cf3e9a/update`
+
+**Methods**: POST
+
+**Middleware**: web
 
 
 ## FrontendAssets
@@ -675,24 +722,5 @@ This document lists all available routes in the application.
 **Method Parameters**:
 - `request`: `Illuminate\Foundation\Auth\EmailVerificationRequest`
 - `user`: `App\Models\User`
-
-
-## HandleRequests
-
-**Controller**: `Livewire\Mechanisms\HandleRequests\HandleRequests`
-
-| Method | URI | Route Name | Middleware |
-|--------|-----|------------|------------|
-| POST | `livewire-f0cf3e9a/update` | livewire.update | web |
-
-### handleUpdate
-
-**Route**: `livewire.update`
-
-**URI**: `livewire-f0cf3e9a/update`
-
-**Methods**: POST
-
-**Middleware**: web
 
 

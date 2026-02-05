@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Middleware\AutoPermissionMiddleware;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\ServeFavicon;
@@ -9,6 +10,9 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
+use Spatie\Permission\Middleware\PermissionMiddleware;
+use Spatie\Permission\Middleware\RoleMiddleware;
+use Spatie\Permission\Middleware\RoleOrPermissionMiddleware;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -20,12 +24,25 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
         $middleware->statefulApi();
 
+        $middleware->alias([
+            'permission' => PermissionMiddleware::class,
+            'role' => RoleMiddleware::class,
+            'role_or_permission' => RoleOrPermissionMiddleware::class,
+            'auto.permission' => AutoPermissionMiddleware::class,
+        ]);
+
+        $webAppend = [
+            HandleAppearance::class,
+            HandleInertiaRequests::class,
+            AddLinkHeadersForPreloadedAssets::class,
+        ];
+
+        if (config('permission.route_based_enforcement', false)) {
+            $webAppend[] = AutoPermissionMiddleware::class;
+        }
+
         $middleware->web(
-            append: [
-                HandleAppearance::class,
-                HandleInertiaRequests::class,
-                AddLinkHeadersForPreloadedAssets::class,
-            ],
+            append: $webAppend,
             prepend: [
                 ServeFavicon::class,
             ],

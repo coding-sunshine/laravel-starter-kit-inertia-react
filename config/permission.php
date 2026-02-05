@@ -176,6 +176,62 @@ return [
      */
     // 'wildcard_permission' => Spatie\Permission\WildcardPermission::class,
 
+    /*
+     * Route-based permissions (dynamic RBAC)
+     *
+     * When route_based_enforcement is true, AutoPermissionMiddleware runs on web routes
+     * and requires the user to have a permission matching the route name for named
+     * application routes that are not in skip_patterns and do not already have
+     * explicit permission/role middleware.
+     */
+    'route_based_enforcement' => env('PERMISSION_ROUTE_BASED_ENFORCEMENT', false),
+
+    /*
+     * Require all application routes to have a name (for permission:sync-routes and CI).
+     * When true, permission:check-routes fails if any app route is unnamed.
+     */
+    'require_named_routes' => env('PERMISSION_REQUIRE_NAMED_ROUTES', true),
+
+    /**
+     * Route name patterns to skip for automatic permission checking.
+     * Use '*' for wildcard (e.g. 'password.*' matches password.request, password.reset).
+     */
+    'route_skip_patterns' => [
+        'api',
+        'login',
+        'login.store',
+        'logout',
+        'register',
+        'register.store',
+        'password.*',
+        'verification.*',
+        'home',
+        'favicon',
+        'dashboard',
+        'up',
+        'settings',
+        'user-profile.edit',
+        'user-profile.update',
+        'password.edit',
+        'password.update',
+        'appearance.edit',
+        'two-factor.*',
+        'user.destroy',
+        'filament.*',
+        'storage.*',
+        'boost.*',
+        'scramble.*',
+    ],
+
+    /*
+     * Permission categories (wildcard grouping for role assignment)
+     *
+     * Optional. When permission_categories is set, RolesAndPermissionsSeeder can assign
+     * permissions to roles by pattern (e.g. "users.*") instead of listing each permission.
+     * See config/permission_categories.php and docs/developer/backend/permissions.md.
+     */
+    'permission_categories_enabled' => env('PERMISSION_CATEGORIES_ENABLED', false),
+
     /* Cache-specific settings */
 
     'cache' => [

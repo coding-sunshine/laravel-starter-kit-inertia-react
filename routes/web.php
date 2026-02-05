@@ -37,7 +37,7 @@ Route::middleware('auth')->group(function (): void {
     Route::delete('user', [UserController::class, 'destroy'])->name('user.destroy');
 
     // User Profile...
-    Route::redirect('settings', '/settings/profile');
+    Route::redirect('settings', '/settings/profile')->name('settings');
     Route::get('settings/profile', [UserProfileController::class, 'edit'])->name('user-profile.edit');
     Route::patch('settings/profile', [UserProfileController::class, 'update'])->name('user-profile.update');
 
