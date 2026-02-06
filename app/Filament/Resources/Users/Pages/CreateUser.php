@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Users\Pages;
 
 use App\Filament\Resources\Users\UserResource;
+use App\Services\ActivityLogRbac;
 use Filament\Resources\Pages\CreateRecord;
 use Spatie\Permission\Models\Role;
 
@@ -30,5 +31,14 @@ final class CreateUser extends CreateRecord
         }
 
         return $data;
+    }
+
+    protected function afterCreate(): void
+    {
+        $this->record->load('roles');
+        app(ActivityLogRbac::class)->logRolesAssigned(
+            $this->record,
+            ActivityLogRbac::roleNamesFrom($this->record)
+        );
     }
 }

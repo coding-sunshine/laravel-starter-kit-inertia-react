@@ -56,8 +56,6 @@ When completing work involving these paths, documentation updates are **MANDATOR
 | `routes/web.php` (new route) | Update route reference | `list-routes` |
 | `config/fortify.php` (feature toggle) | Update auth docs | `application-info` |
 | `database/migrations/*` (new) | Update schema docs | `database-schema` |
-| `app/Http/Middleware/*.php` (new) | Update developer docs (e.g. permissions.md) | `list-routes` |
-| `app/Console/Commands/*.php` (new) | Update developer docs (e.g. permissions.md, README) | `application-info` |
 
 ## Using Boost Tools for Documentation
 
@@ -326,16 +324,6 @@ This project has domain-specific skills available. You MUST activate the relevan
 
 - Stick to existing directory structure; don't create new base folders without approval.
 - Do not change the application's dependencies without approval.
-
-## Permissions and RBAC
-
-- The app uses **Spatie Laravel Permission** with optional route-based permissions, permission categories, and super-admin bypass. See `docs/developer/backend/permissions.md`.
-- **Roles**: `super-admin` (has `bypass-permissions`), `admin`, `user`. Seeded in `RolesAndPermissionsSeeder`.
-- **Route-based permissions**: When `PERMISSION_ROUTE_BASED_ENFORCEMENT` is true, `AutoPermissionMiddleware` requires a permission matching the route name for named app routes not in `config('permission.route_skip_patterns')`. New routes should be named; add skip patterns in config if a route must be accessible without a matching permission.
-- **Syncing permissions from routes**: Run `php artisan permission:sync-routes` (optionally `--prune`). Document new routes in API reference; if route-based enforcement is used, consider whether the route should be in the skip list.
-- **Super-admin bypass**: `Gate::before` grants all abilities to users with `bypass-permissions` except User model `delete`/`forceDelete` (handled by `UserPolicy`). Do not grant `bypass-permissions` to non–super-admin roles without explicit need.
-- **Permission categories**: Optional. When `PERMISSION_CATEGORIES_ENABLED` is true, role assignment uses `config/permission_categories.php` and `PermissionCategoryResolver`. When adding new permission patterns or roles, update that config and the seeder if applicable.
-- **Middleware aliases**: `permission`, `role`, `role_or_permission`, `auto.permission`. Use explicit `permission:` or `role:` middleware when a route needs a specific check and should be skipped by auto.permission.
 
 ## Frontend Bundling
 

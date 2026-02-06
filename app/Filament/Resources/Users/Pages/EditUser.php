@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Users\Pages;
 
 use App\Filament\Resources\Users\UserResource;
+use App\Services\ActivityLogRbac;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\ViewAction;
 use Filament\Resources\Pages\EditRecord;
@@ -14,6 +15,11 @@ use Spatie\Permission\Models\Role;
 final class EditUser extends EditRecord
 {
     protected static string $resource = UserResource::class;
+
+    /**
+     * @var array<int, string>
+     */
+    private array $previousRoleNames = [];
 
     protected function getHeaderActions(): array
     {
@@ -48,5 +54,20 @@ final class EditUser extends EditRecord
         }
 
         return $data;
+    }
+
+    protected function beforeSave(): void
+    {
+        $this->previousRoleNames = ActivityLogRbac::roleNamesFrom($this->record);
+    }
+
+    protected function afterSave(): void
+    {
+        $this->record->load('roles');
+        app(ActivityLogRbac::class)->logRolesUpdated(
+            $this->record,
+            $this->previousRoleNames,
+            ActivityLogRbac::roleNamesFrom($this->record)
+        );
     }
 }

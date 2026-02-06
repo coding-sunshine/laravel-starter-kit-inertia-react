@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use AlizHarb\ActivityLog\Http\Middleware\ActivityLogContextMiddleware;
 use App\Http\Middleware\AutoPermissionMiddleware;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
@@ -32,6 +33,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $webAppend = [
+            ActivityLogContextMiddleware::class,
             HandleAppearance::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,

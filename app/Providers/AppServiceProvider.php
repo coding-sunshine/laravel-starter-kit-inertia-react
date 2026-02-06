@@ -6,12 +6,19 @@ namespace App\Providers;
 
 use App\Listeners\MigrationListener;
 use App\Models\User;
+use App\Observers\ActivityLogObserver;
+use App\Observers\PermissionActivityObserver;
+use App\Observers\RoleActivityObserver;
 use App\Services\PrismService;
 use Illuminate\Database\Events\MigrationsEnded;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
+use Spatie\Activitylog\ActivitylogServiceProvider;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 final class AppServiceProvider extends ServiceProvider
 {
@@ -22,6 +29,8 @@ final class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        $this->registerActivityLogTaps();
+
         Gate::before(function ($user, string $ability, array $arguments): ?bool {
             if (! $user) {
                 return null;
@@ -69,5 +78,16 @@ final class AppServiceProvider extends ServiceProvider
         $model = $arguments[0] ?? null;
 
         return $model instanceof User;
+    }
+
+    private function registerActivityLogTaps(): void
+    {
+        if (Schema::hasTable(config('activitylog.table_name', 'activity_log'))) {
+            $activityModel = ActivitylogServiceProvider::determineActivityModel();
+            $activityModel::observe(ActivityLogObserver::class);
+        }
+
+        Role::observe(RoleActivityObserver::class);
+        Permission::observe(PermissionActivityObserver::class);
     }
 }

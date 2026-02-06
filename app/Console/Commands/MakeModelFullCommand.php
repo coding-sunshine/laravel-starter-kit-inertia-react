@@ -109,7 +109,80 @@ final class MakeModelFullCommand extends Command
         }
 
         Artisan::call('make:model', array_merge(['name' => $name], $options));
+        $this->injectActivityLogToModel($name);
         $this->info('✓ Model created');
+    }
+
+    private function injectActivityLogToModel(string $name): void
+    {
+        $path = app_path('Models/'.$name.'.php');
+
+        if (! File::exists($path)) {
+            return;
+        }
+
+        $content = File::get($path);
+
+        if (Str::contains($content, 'LogsActivity') || Str::contains($content, 'activitylog')) {
+            return;
+        }
+
+        $content = $this->injectActivityLogUseStatements($content);
+        $content = $this->injectActivityLogTrait($content);
+        $content = $this->injectActivityLogMethod($content);
+
+        File::put($path, $content);
+    }
+
+    private function injectActivityLogUseStatements(string $content): string
+    {
+        $useLines = "use Spatie\\Activitylog\\LogOptions;\nuse Spatie\\Activitylog\\Traits\\LogsActivity;\n";
+
+        return preg_replace(
+            '/(use Illuminate\\\\Database\\\\Eloquent\\\\Model;)\n/',
+            "$1\n\n".$useLines,
+            $content,
+            1
+        );
+    }
+
+    private function injectActivityLogTrait(string $content): string
+    {
+        return preg_replace(
+            '/\n\{\n(\s+)/',
+            "\n{\n    use LogsActivity;\n\n$1",
+            $content,
+            1
+        );
+    }
+
+    private function injectActivityLogMethod(string $content): string
+    {
+        $sensitive = config('activitylog.sensitive_attributes', [
+            'password', 'remember_token', 'two_factor_secret', 'two_factor_recovery_codes', 'embedding', 'api_token',
+        ]);
+        $exceptList = implode(', ', array_map(
+            fn (string $attr): string => "'".$attr."'",
+            $sensitive
+        ));
+        $method = <<<PHP
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnlyDirty()
+            ->logAll()
+            ->logExcept([{$exceptList}]);
+    }
+}
+PHP;
+
+        return preg_replace(
+            '/\n}(\s*)$/',
+            $method.'$1',
+            $content,
+            1
+        );
     }
 
     /**

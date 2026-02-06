@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Roles\Tables;
 
 use App\Filament\Resources\Roles\RoleResource;
+use App\Services\ActivityLogRbac;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -55,7 +56,9 @@ final class RolesTable
                             'name' => $name,
                             'guard_name' => $record->guard_name,
                         ]);
-                        $newRole->syncPermissions($record->permissions->pluck('name')->all());
+                        $permissionNames = $record->permissions->pluck('name')->all();
+                        $newRole->syncPermissions($permissionNames);
+                        app(ActivityLogRbac::class)->logPermissionsAssigned($newRole, $permissionNames);
                         Notification::make()
                             ->title('Role duplicated')
                             ->body("Created \"{$name}\" with same permissions.")

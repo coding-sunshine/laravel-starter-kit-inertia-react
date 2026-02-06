@@ -16,6 +16,8 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Sanctum\HasApiTokens;
 use Laravel\Sanctum\NewAccessToken;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Permission\Traits\HasRoles;
 
 /**
@@ -36,7 +38,7 @@ final class User extends Authenticatable implements FilamentUser, MustVerifyEmai
     /**
      * @use HasFactory<UserFactory>
      */
-    use HasApiTokens, HasFactory, HasRoles, Notifiable, TwoFactorAuthenticatable;
+    use HasApiTokens, HasFactory, HasRoles, LogsActivity, Notifiable, TwoFactorAuthenticatable;
 
     /**
      * @var list<string>
@@ -47,6 +49,13 @@ final class User extends Authenticatable implements FilamentUser, MustVerifyEmai
         'two_factor_secret',
         'two_factor_recovery_codes',
     ];
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnlyDirty()
+            ->logOnly(['name', 'email', 'email_verified_at', 'two_factor_confirmed_at']);
+    }
 
     public function canAccessPanel(Panel $panel): bool
     {

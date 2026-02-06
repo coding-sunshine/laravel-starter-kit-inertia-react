@@ -5,6 +5,7 @@ Backend components, services, and patterns for developers.
 ## Contents
 
 - [Actions](./actions/README.md) - Action classes and patterns
+- [Activity Log](./activity-log.md) - Spatie and Filament activity logging
 - [Controllers](./controllers/README.md) - Controller documentation
 - [Database](./database/README.md) - Database patterns, seeders, and factories
 - [Filament Admin Panel](./filament.md) - Filament panel at `/admin`
@@ -16,6 +17,7 @@ Backend components, services, and patterns for developers.
 ## Quick Links
 
 - [Actions Documentation](./actions/README.md) - All Action classes
+- [Activity Log](./activity-log.md) - User and model activity logging
 - [Seeder System](./database/seeders.md) - Automated seeder system
 - [Prism AI Integration](./prism.md) - AI-powered features with Prism
 - [PostgreSQL + pgvector](./pgvector.md) - Vector embeddings (optional)

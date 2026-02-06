@@ -19,6 +19,10 @@ All Actions:
 | [CreateUserEmailVerificationNotification](./CreateUserEmailVerificationNotification.md) | N/A | ✅ |
 | [CreateUserPassword](./CreateUserPassword.md) | N/A | ✅ |
 | [DeleteUser](./DeleteUser.md) | N/A | ✅ |
+| [LoggingConfirmTwoFactorAuthentication](./LoggingConfirmTwoFactorAuthentication.md) | Logs 2FA confirm activity | ✅ |
+| [LoggingDisableTwoFactorAuthentication](./LoggingDisableTwoFactorAuthentication.md) | Logs 2FA disable activity | ✅ |
+| [LoggingEnableTwoFactorAuthentication](./LoggingEnableTwoFactorAuthentication.md) | Logs 2FA enable activity | ✅ |
+| [LoggingGenerateNewRecoveryCodes](./LoggingGenerateNewRecoveryCodes.md) | Logs recovery codes regenerated | ✅ |
 | [UpdateUser](./UpdateUser.md) | N/A | ✅ |
 | [UpdateUserPassword](./UpdateUserPassword.md) | N/A | ✅ |
 

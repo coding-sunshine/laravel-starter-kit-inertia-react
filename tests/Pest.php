@@ -84,3 +84,28 @@ function something(): void
 {
     // ..
 }
+
+/**
+ * Assert that an activity was logged with the given description and optional subject.
+ *
+ * @param  class-string<Illuminate\Database\Eloquent\Model>|null  $subjectType
+ */
+function assertActivityLogged(string $description, ?string $subjectType = null, ?int $subjectId = null): void
+{
+    $query = Spatie\Activitylog\Models\Activity::query()
+        ->where('description', $description)
+        ->latest();
+
+    if ($subjectType !== null) {
+        $query->where('subject_type', $subjectType);
+    }
+    if ($subjectId !== null) {
+        $query->where('subject_id', $subjectId);
+    }
+
+    $activity = $query->first();
+    PHPUnit\Framework\Assert::assertNotNull(
+        $activity,
+        "Expected activity '{$description}' to be logged."
+    );
+}

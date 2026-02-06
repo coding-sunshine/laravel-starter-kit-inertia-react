@@ -134,6 +134,42 @@
                     "password.store"
                 ]
             }
+        },
+        "LoggingEnableTwoFactorAuthentication": {
+            "documented": true,
+            "path": "./LoggingEnableTwoFactorAuthentication.md",
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [],
+                "relatedRoutes": ["two-factor.enable"]
+            }
+        },
+        "LoggingDisableTwoFactorAuthentication": {
+            "documented": true,
+            "path": "./LoggingDisableTwoFactorAuthentication.md",
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [],
+                "relatedRoutes": ["two-factor.disable"]
+            }
+        },
+        "LoggingConfirmTwoFactorAuthentication": {
+            "documented": true,
+            "path": "./LoggingConfirmTwoFactorAuthentication.md",
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [],
+                "relatedRoutes": ["two-factor.confirm"]
+            }
+        },
+        "LoggingGenerateNewRecoveryCodes": {
+            "documented": true,
+            "path": "./LoggingGenerateNewRecoveryCodes.md",
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [],
+                "relatedRoutes": ["two-factor.regenerate-recovery-codes"]
+            }
         }
     },
     "controllers": {
@@ -298,6 +334,9 @@
                     "filament.admin.auth.login",
                     "filament.admin.auth.logout",
                     "filament.admin.pages.dashboard",
+                    "filament.admin.pages.user-activities-page",
+                    "filament.admin.resources.activity-logs.index",
+                    "filament.admin.resources.activity-logs.view",
                     "filament.admin.resources.permissions.index",
                     "filament.admin.resources.permissions.view",
                     "filament.admin.resources.roles.index",
@@ -358,6 +397,9 @@
                     "filament.admin.auth.login",
                     "filament.admin.auth.logout",
                     "filament.admin.pages.dashboard",
+                    "filament.admin.pages.user-activities-page",
+                    "filament.admin.resources.activity-logs.index",
+                    "filament.admin.resources.activity-logs.view",
                     "filament.admin.resources.permissions.index",
                     "filament.admin.resources.permissions.view",
                     "filament.admin.resources.roles.index",
@@ -553,6 +595,9 @@
                     "filament.admin.auth.login",
                     "filament.admin.auth.logout",
                     "filament.admin.pages.dashboard",
+                    "filament.admin.pages.user-activities-page",
+                    "filament.admin.resources.activity-logs.index",
+                    "filament.admin.resources.activity-logs.view",
                     "filament.admin.resources.permissions.index",
                     "filament.admin.resources.permissions.view",
                     "filament.admin.resources.roles.index",

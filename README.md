@@ -34,7 +34,8 @@ Modern PHP has evolved into a mature, type-safe language, yet many Laravel proje
 - **Optional: PostgreSQL + pgvector**: Vector embeddings for semantic search and RAG when using PostgreSQL
 - **Full Testing Suite**: More than 150 tests with 100% code coverage using Pest
 - **Automated Seeder System**: Comprehensive seeder automation with category-based organization, JSON support, and relationship-aware generation
-- 
+- **Activity Logging**: [Spatie Laravel Activity Log](https://spatie.be/docs/laravel-activitylog/v4/introduction) and [Filament Activity Log](https://filamentphp.com/plugins/alizharb-activity-log) for user and model changes, including 2FA and role/permission changes, with IP and user agent; new models from `make:model:full` get activity logging by default
+-
 This isn't just another Laravel boilerplate—it's a statement that PHP applications can and should be built with the same rigor as strongly-typed languages like Rust or TypeScript.
 
 ## Getting Started

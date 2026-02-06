@@ -4,24 +4,56 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Actions\Fortify\LoggingConfirmTwoFactorAuthentication;
+use App\Actions\Fortify\LoggingDisableTwoFactorAuthentication;
+use App\Actions\Fortify\LoggingEnableTwoFactorAuthentication;
+use App\Actions\Fortify\LoggingGenerateNewRecoveryCodes;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Inertia\Inertia;
+use Laravel\Fortify\Actions\ConfirmTwoFactorAuthentication;
+use Laravel\Fortify\Actions\DisableTwoFactorAuthentication;
+use Laravel\Fortify\Actions\EnableTwoFactorAuthentication;
+use Laravel\Fortify\Actions\GenerateNewRecoveryCodes;
+use Laravel\Fortify\Contracts\TwoFactorAuthenticationProvider;
 use Laravel\Fortify\Fortify;
 
 final class FortifyServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        //
+        $this->registerTwoFactorActivityLogging();
     }
 
     public function boot(): void
     {
         $this->bootFortifyDefaults();
         $this->bootRateLimitingDefaults();
+    }
+
+    private function registerTwoFactorActivityLogging(): void
+    {
+        $this->app->bind(EnableTwoFactorAuthentication::class, function ($app): LoggingEnableTwoFactorAuthentication {
+            return new LoggingEnableTwoFactorAuthentication(
+                new EnableTwoFactorAuthentication($app->make(TwoFactorAuthenticationProvider::class))
+            );
+        });
+
+        $this->app->bind(DisableTwoFactorAuthentication::class, function (): LoggingDisableTwoFactorAuthentication {
+            return new LoggingDisableTwoFactorAuthentication(new DisableTwoFactorAuthentication);
+        });
+
+        $this->app->bind(ConfirmTwoFactorAuthentication::class, function ($app): LoggingConfirmTwoFactorAuthentication {
+            return new LoggingConfirmTwoFactorAuthentication(
+                new ConfirmTwoFactorAuthentication($app->make(TwoFactorAuthenticationProvider::class))
+            );
+        });
+
+        $this->app->bind(GenerateNewRecoveryCodes::class, function (): LoggingGenerateNewRecoveryCodes {
+            return new LoggingGenerateNewRecoveryCodes(new GenerateNewRecoveryCodes);
+        });
     }
 
     private function bootFortifyDefaults(): void
