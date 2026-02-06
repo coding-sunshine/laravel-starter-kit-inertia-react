@@ -298,6 +298,7 @@ This application is a Laravel application and its main Laravel ecosystems packag
 - @laravel/vite-plugin-wayfinder (WAYFINDER) - v0
 - eslint (ESLINT) - v9
 - prettier (PRETTIER) - v3
+- spatie/laravel-medialibrary (MEDIALIBRARY) - v11
 
 ## Skills Activation
 
@@ -571,6 +572,7 @@ Wayfinder generates TypeScript functions for Laravel routes. Import from `@/acti
 ## Filament
 
 - Filament is used by this application. Follow existing conventions for how and where it's implemented.
+- **User avatar** is backed by Spatie Media Library: `User` has `avatar` and `avatar_profile` (conversions). Shown in Users table/infolist via `ImageColumn`/`ImageEntry`. The Filament Spatie Media Library plugin is not yet v5-compatible; see `docs/developer/backend/media-library.md` and `.cursor/rules/media-library.mdc`.
 - Filament is a Server-Driven UI (SDUI) framework for Laravel that lets you define user interfaces in PHP using structured configuration objects. Built on Livewire, Alpine.js, and Tailwind CSS.
 - Use the `search-docs` tool for official documentation on Artisan commands, code examples, testing, relationships, and idiomatic practices.
 

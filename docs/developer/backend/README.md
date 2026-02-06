@@ -9,6 +9,7 @@ Backend components, services, and patterns for developers.
 - [Controllers](./controllers/README.md) - Controller documentation
 - [Database](./database/README.md) - Database patterns, seeders, and factories
 - [Filament Admin Panel](./filament.md) - Filament panel at `/admin`
+- [Media Library (User avatar)](./media-library.md) - Spatie Media Library and user avatar (conversions, profile)
 - [Permissions and RBAC](./permissions.md) - Route-based permissions, permission categories, role hierarchy
 - [Prism AI Integration](./prism.md) - AI integration with Prism and OpenRouter
 - [Laravel AI SDK](./ai-sdk.md) - Agents, embeddings, images, and when to use vs Prism

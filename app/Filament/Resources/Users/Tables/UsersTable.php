@@ -8,6 +8,7 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use STS\FilamentImpersonate\Actions\Impersonate;
@@ -22,6 +23,10 @@ final class UsersTable
             ->paginationPageOptions([10, 25, 50])
             ->searchDebounce('300ms')
             ->columns([
+                ImageColumn::make('avatar')
+                    ->label('')
+                    ->circular()
+                    ->defaultImageUrl(fn ($record) => 'https://ui-avatars.com/api/?name='.urlencode($record->name).'&size=48'),
                 TextColumn::make('name')
                     ->searchable(),
                 TextColumn::make('email')

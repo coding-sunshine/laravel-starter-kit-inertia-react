@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Users\Schemas;
 
+use Filament\Infolists\Components\ImageEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Schema;
 
@@ -13,6 +14,10 @@ final class UserInfolist
     {
         return $schema
             ->components([
+                ImageEntry::make('avatar')
+                    ->label('Photo')
+                    ->circular()
+                    ->defaultImageUrl(fn ($record) => 'https://ui-avatars.com/api/?name='.urlencode($record->name).'&size=192'),
                 TextEntry::make('name'),
                 TextEntry::make('email')
                     ->label('Email address'),

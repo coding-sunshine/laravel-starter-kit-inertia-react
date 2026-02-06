@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\File;
 
 final class UpdateUserRequest extends FormRequest
 {
@@ -29,6 +30,13 @@ final class UpdateUserRequest extends FormRequest
                 'email',
                 'max:255',
                 Rule::unique(User::class)->ignore($user->id),
+            ],
+
+            'avatar' => [
+                'nullable',
+                File::image()
+                    ->max(2 * 1024)
+                    ->dimensions(Rule::dimensions()->maxWidth(2000)->maxHeight(2000)),
             ],
         ];
     }

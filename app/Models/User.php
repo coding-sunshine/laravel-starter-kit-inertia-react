@@ -19,12 +19,18 @@ use Laravel\Sanctum\HasApiTokens;
 use Laravel\Sanctum\NewAccessToken;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Image\Enums\Fit;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Spatie\Permission\Traits\HasRoles;
 
 /**
  * @property-read int $id
  * @property-read string $name
  * @property-read string $email
+ * @property-read string|null $avatar
+ * @property-read string|null $avatar_profile
  * @property-read CarbonInterface|null $email_verified_at
  * @property-read string $password
  * @property-read string|null $remember_token
@@ -34,12 +40,20 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read CarbonInterface $created_at
  * @property-read CarbonInterface $updated_at
  */
-final class User extends Authenticatable implements FilamentUser, MustVerifyEmail
+final class User extends Authenticatable implements FilamentUser, HasMedia, MustVerifyEmail
 {
     /**
      * @use HasFactory<UserFactory>
      */
-    use HasApiTokens, HasFactory, HasRoles, ImpersonateTrait, LogsActivity, Notifiable, TwoFactorAuthenticatable;
+    use HasApiTokens, HasFactory, HasRoles, ImpersonateTrait, InteractsWithMedia, LogsActivity, Notifiable, TwoFactorAuthenticatable;
+
+    /**
+     * @var list<string>
+     */
+    protected $appends = [
+        'avatar',
+        'avatar_profile',
+    ];
 
     /**
      * @var list<string>
@@ -50,6 +64,45 @@ final class User extends Authenticatable implements FilamentUser, MustVerifyEmai
         'two_factor_secret',
         'two_factor_recovery_codes',
     ];
+
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('avatar')
+            ->singleFile();
+    }
+
+    public function registerMediaConversions(?Media $media = null): void
+    {
+        $this->addMediaConversion('thumb')
+            ->performOnCollections('avatar')
+            ->fit(Fit::Crop, 48, 48)
+            ->nonQueued();
+
+        $this->addMediaConversion('profile')
+            ->performOnCollections('avatar')
+            ->fit(Fit::Crop, 192, 192)
+            ->nonQueued();
+    }
+
+    /**
+     * Avatar URL (thumb conversion) for nav/header, or null when no avatar.
+     */
+    public function getAvatarAttribute(): ?string
+    {
+        $url = $this->getFirstMediaUrl('avatar', 'thumb');
+
+        return $url !== '' ? $url : null;
+    }
+
+    /**
+     * Avatar URL (profile conversion) for profile/settings preview, or null when no avatar.
+     */
+    public function getAvatarProfileAttribute(): ?string
+    {
+        $url = $this->getFirstMediaUrl('avatar', 'profile');
+
+        return $url !== '' ? $url : null;
+    }
 
     public function getActivitylogOptions(): LogOptions
     {

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
 
 it('renders profile edit page', function (): void {
     $user = User::factory()->create();
@@ -144,4 +145,24 @@ it('allows keeping same email', function (): void {
 
     $response->assertRedirectToRoute('user-profile.edit')
         ->assertSessionDoesntHaveErrors();
+});
+
+it('may update avatar', function (): void {
+    $user = User::factory()->create();
+
+    $file = UploadedFile::fake()->image('avatar.jpg', 100, 100);
+
+    $response = $this->actingAs($user)
+        ->fromRoute('user-profile.edit')
+        ->patch(route('user-profile.update'), [
+            'name' => $user->name,
+            'email' => $user->email,
+            'avatar' => $file,
+        ]);
+
+    $response->assertRedirectToRoute('user-profile.edit');
+
+    $user->refresh();
+    expect($user->getMedia('avatar'))->toHaveCount(1)
+        ->and($user->avatar)->not->toBeNull();
 });

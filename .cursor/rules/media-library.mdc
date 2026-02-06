@@ -1,0 +1,11 @@
+---
+description: Spatie Media Library and User avatar (conversions, profile, Filament)
+globs: app/Models/User.php, app/Actions/UpdateUser.php, app/Http/Requests/UpdateUserRequest.php, resources/js/pages/user-profile/edit.tsx, app/Filament/Resources/Users/**/*
+---
+# Spatie Media Library & User avatar
+
+- **Package**: [spatie/laravel-medialibrary](https://spatie.be/docs/laravel-medialibrary/v11/introduction) v11. User avatars are stored in the `avatar` media collection with conversions `thumb` (48×48) and `profile` (192×192).
+- **User model**: Implements `HasMedia`, `InteractsWithMedia`; has `registerMediaCollections()` (single-file `avatar`) and `registerMediaConversions()` (thumb, profile). Appended attributes: `avatar`, `avatar_profile` (URLs or null).
+- **Profile**: Profile settings page allows uploading an avatar (optional image, max 2 MB). `UpdateUserRequest` validates `avatar`; `UpdateUser` excludes `avatar` from `$user->update()` and handles the file via `clearMediaCollection('avatar')` and `addMediaFromRequest('avatar')->toMediaCollection('avatar')`.
+- **Frontend**: Shared `auth.user.avatar` and `auth.user.avatar_profile` for display; profile edit form uses `encType="multipart/form-data"`, `method="post"`, and hidden `_method` = `patch` for file upload with Laravel.
+- **Filament**: Users table and infolist show avatar via `ImageColumn` / `ImageEntry` using the `avatar` attribute. The Filament Spatie Media Library plugin is not yet v5-compatible; when it is, it can be used for admin avatar management. See `docs/developer/backend/media-library.md`.

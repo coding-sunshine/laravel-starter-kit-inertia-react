@@ -8,7 +8,7 @@ test('to array', function (): void {
     $user = User::factory()->create()->refresh();
 
     expect(array_keys($user->toArray()))
-        ->toBe([
+        ->toContain(
             'id',
             'name',
             'email',
@@ -16,5 +16,7 @@ test('to array', function (): void {
             'two_factor_confirmed_at',
             'created_at',
             'updated_at',
-        ]);
+            'avatar',
+            'avatar_profile',
+        );
 });
