@@ -22,4 +22,6 @@ enum ActivityType: string
     case RoleUpdated = 'role_updated';
     case PermissionCreated = 'permission_created';
     case PermissionUpdated = 'permission_updated';
+    case ImpersonationStarted = 'impersonation_started';
+    case ImpersonationEnded = 'impersonation_ended';
 }

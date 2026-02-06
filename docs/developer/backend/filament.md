@@ -43,6 +43,18 @@ Use **policies** and **permissions** for authorization. Prefer `$user->can(...)`
 - **Table defaults**: Default sort, per-page options, search debounce — e.g. `UsersTable` (`defaultSort`, `paginationPageOptions`, `searchDebounce`).
 - **Database notifications**: `databaseNotifications()` on panel; `notifications` table required (`php artisan notifications:table` + migrate).
 
+## User impersonation
+
+**Package**: `stechstudio/filament-impersonate` (uses `lab404/laravel-impersonate`).
+
+- **Who can impersonate**: Only users with the **super-admin** role (`User::canImpersonate()`).
+- **Who can be impersonated**: Any user except **super-admin** (`User::canBeImpersonated()`).
+- **Where**: Impersonate action is on the Users table (row action) and on the Edit User page (header action). After impersonating, the admin is redirected to `/dashboard` as that user.
+- **Banner**: When impersonating, a banner is shown (Filament panel and main app via `<x-impersonate::banner />` in `resources/views/app.blade.php`) with a “Leave” link that returns to the admin panel.
+- **Activity log**: Start and end of impersonation are logged with causer = impersonator (super-admin), subject = impersonated user, and properties `impersonator_name`, `impersonated_name`, `impersonator_id`, `impersonated_id` (see `App\Enums\ActivityType::ImpersonationStarted`, `ImpersonationEnded` and `App\Listeners\LogImpersonationEvents`).
+- **Policy**: `UserPolicy::viewAny()` returns `true` when `app('impersonate')->isImpersonating()` to avoid 403s on the users list during impersonation.
+- **Routes**: `Route::impersonate()` in `routes/web.php` (auth) registers `impersonate` (take) and `impersonate.leave`; the package also registers `filament-impersonate.leave` for the banner.
+
 ## Testing
 
 Use the `actsAsFilamentAdmin(TestCase $test, string $role = 'admin'): User` helper in Pest feature tests when you need an authenticated admin or super-admin. It seeds `RolesAndPermissionsSeeder`, creates a user with the given role, calls `$this->actingAs($user)`, and returns the user. Example:

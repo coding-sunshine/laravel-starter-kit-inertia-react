@@ -2,7 +2,7 @@
 
 This document lists all available routes in the application.
 
-**Last Updated**: 2026-02-05 14:03:38
+**Last Updated**: 2026-02-06 15:13:05
 
 ## Closure
 
@@ -10,28 +10,32 @@ This document lists all available routes in the application.
 |--------|-----|------------|------------|
 | GET | `filament/exports/{export}/download` | filament.exports.download | filament.actions |
 | GET | `filament/imports/{import}/failed-rows/download` | filament.imports.failed-rows.download | filament.actions |
-| GET | `admin/login` | filament.admin.auth.login | panel:admin, Illuminate\Cookie\Middleware\EncryptCookies, Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse |
-| POST | `admin/logout` | filament.admin.auth.logout | panel:admin, Illuminate\Cookie\Middleware\EncryptCookies, Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse |
-| GET | `admin` | filament.admin.pages.dashboard | panel:admin, Illuminate\Cookie\Middleware\EncryptCookies, Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse |
-| GET | `admin/permissions` | filament.admin.resources.permissions.index | panel:admin, Illuminate\Cookie\Middleware\EncryptCookies, Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse |
-| GET | `admin/permissions/{record}` | filament.admin.resources.permissions.view | panel:admin, Illuminate\Cookie\Middleware\EncryptCookies, Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse |
-| GET | `admin/roles` | filament.admin.resources.roles.index | panel:admin, Illuminate\Cookie\Middleware\EncryptCookies, Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse |
-| GET | `admin/roles/create` | filament.admin.resources.roles.create | panel:admin, Illuminate\Cookie\Middleware\EncryptCookies, Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse |
-| GET | `admin/roles/{record}` | filament.admin.resources.roles.view | panel:admin, Illuminate\Cookie\Middleware\EncryptCookies, Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse |
-| GET | `admin/roles/{record}/edit` | filament.admin.resources.roles.edit | panel:admin, Illuminate\Cookie\Middleware\EncryptCookies, Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse |
-| GET | `admin/users` | filament.admin.resources.users.index | panel:admin, Illuminate\Cookie\Middleware\EncryptCookies, Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse |
-| GET | `admin/users/create` | filament.admin.resources.users.create | panel:admin, Illuminate\Cookie\Middleware\EncryptCookies, Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse |
-| GET | `admin/users/{record}` | filament.admin.resources.users.view | panel:admin, Illuminate\Cookie\Middleware\EncryptCookies, Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse |
-| GET | `admin/users/{record}/edit` | filament.admin.resources.users.edit | panel:admin, Illuminate\Cookie\Middleware\EncryptCookies, Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse |
+| GET | `admin/login` | filament.admin.auth.login | panel:admin, AlizHarb\ActivityLog\Http\Middleware\ActivityLogContextMiddleware, Illuminate\Cookie\Middleware\EncryptCookies |
+| POST | `admin/logout` | filament.admin.auth.logout | panel:admin, AlizHarb\ActivityLog\Http\Middleware\ActivityLogContextMiddleware, Illuminate\Cookie\Middleware\EncryptCookies |
+| GET | `admin` | filament.admin.pages.dashboard | panel:admin, AlizHarb\ActivityLog\Http\Middleware\ActivityLogContextMiddleware, Illuminate\Cookie\Middleware\EncryptCookies |
+| GET | `admin/user-activities-page` | filament.admin.pages.user-activities-page | panel:admin, AlizHarb\ActivityLog\Http\Middleware\ActivityLogContextMiddleware, Illuminate\Cookie\Middleware\EncryptCookies |
+| GET | `admin/activity-logs` | filament.admin.resources.activity-logs.index | panel:admin, AlizHarb\ActivityLog\Http\Middleware\ActivityLogContextMiddleware, Illuminate\Cookie\Middleware\EncryptCookies |
+| GET | `admin/activity-logs/{record}` | filament.admin.resources.activity-logs.view | panel:admin, AlizHarb\ActivityLog\Http\Middleware\ActivityLogContextMiddleware, Illuminate\Cookie\Middleware\EncryptCookies |
+| GET | `admin/permissions` | filament.admin.resources.permissions.index | panel:admin, AlizHarb\ActivityLog\Http\Middleware\ActivityLogContextMiddleware, Illuminate\Cookie\Middleware\EncryptCookies |
+| GET | `admin/permissions/{record}` | filament.admin.resources.permissions.view | panel:admin, AlizHarb\ActivityLog\Http\Middleware\ActivityLogContextMiddleware, Illuminate\Cookie\Middleware\EncryptCookies |
+| GET | `admin/roles` | filament.admin.resources.roles.index | panel:admin, AlizHarb\ActivityLog\Http\Middleware\ActivityLogContextMiddleware, Illuminate\Cookie\Middleware\EncryptCookies |
+| GET | `admin/roles/create` | filament.admin.resources.roles.create | panel:admin, AlizHarb\ActivityLog\Http\Middleware\ActivityLogContextMiddleware, Illuminate\Cookie\Middleware\EncryptCookies |
+| GET | `admin/roles/{record}` | filament.admin.resources.roles.view | panel:admin, AlizHarb\ActivityLog\Http\Middleware\ActivityLogContextMiddleware, Illuminate\Cookie\Middleware\EncryptCookies |
+| GET | `admin/roles/{record}/edit` | filament.admin.resources.roles.edit | panel:admin, AlizHarb\ActivityLog\Http\Middleware\ActivityLogContextMiddleware, Illuminate\Cookie\Middleware\EncryptCookies |
+| GET | `admin/users` | filament.admin.resources.users.index | panel:admin, AlizHarb\ActivityLog\Http\Middleware\ActivityLogContextMiddleware, Illuminate\Cookie\Middleware\EncryptCookies |
+| GET | `admin/users/create` | filament.admin.resources.users.create | panel:admin, AlizHarb\ActivityLog\Http\Middleware\ActivityLogContextMiddleware, Illuminate\Cookie\Middleware\EncryptCookies |
+| GET | `admin/users/{record}` | filament.admin.resources.users.view | panel:admin, AlizHarb\ActivityLog\Http\Middleware\ActivityLogContextMiddleware, Illuminate\Cookie\Middleware\EncryptCookies |
+| GET | `admin/users/{record}/edit` | filament.admin.resources.users.edit | panel:admin, AlizHarb\ActivityLog\Http\Middleware\ActivityLogContextMiddleware, Illuminate\Cookie\Middleware\EncryptCookies |
 | POST | `_boost/browser-logs` | boost.browser-logs | - |
 | GET | `livewire-f0cf3e9a/js/{component}.js` | - | - |
 | GET | `livewire-f0cf3e9a/css/{component}.css` | - | - |
 | GET | `livewire-f0cf3e9a/css/{component}.global.css` | - | - |
-| GET | `api` | - | api |
+| GET | `filament-impersonate/leave` | filament-impersonate.leave | web |
+| GET | `api` | api | api |
 | GET | `favicon.ico` | favicon | web |
 | GET | `/` | home | web |
 | GET | `dashboard` | dashboard | web, auth, verified |
-| GET, POST, PUT, PATCH, DELETE | `settings` | - | web, auth |
+| GET, POST, PUT, PATCH, DELETE | `settings` | settings | web, auth |
 | GET | `settings/appearance` | appearance.edit | web, auth |
 | GET | `storage/{path}` | storage.local | - |
 | GET | `docs/api` | scramble.docs.ui | web, Dedoc\Scramble\Http\Middleware\RestrictedDocsAccess |
@@ -442,6 +446,44 @@ This document lists all available routes in the application.
 
 **Method Parameters**:
 - `filename`: `mixed`
+
+
+## ImpersonateController
+
+**Controller**: `\Lab404\Impersonate\Controllers\ImpersonateController`
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| GET | `impersonate/take/{id}/{guardName?}` | impersonate | web, auth, auth:web |
+| GET | `impersonate/leave` | impersonate.leave | web, auth |
+
+### take
+
+**Route**: `impersonate`
+
+**URI**: `impersonate/take/{id}/{guardName?}`
+
+**Methods**: GET
+
+**Parameters**:
+- `id`
+
+**Middleware**: web, auth, auth:web
+
+**Method Parameters**:
+- `request`: `Illuminate\Http\Request`
+- `id`: `mixed`
+- `guardName`: `mixed`
+
+### leave
+
+**Route**: `impersonate.leave`
+
+**URI**: `impersonate/leave`
+
+**Methods**: GET
+
+**Middleware**: web, auth
 
 
 ## UserController

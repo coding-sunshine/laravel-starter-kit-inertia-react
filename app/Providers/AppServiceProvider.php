@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Listeners\LogImpersonationEvents;
 use App\Listeners\MigrationListener;
 use App\Models\User;
 use App\Observers\ActivityLogObserver;
@@ -16,6 +17,8 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
+use Lab404\Impersonate\Events\LeaveImpersonation;
+use Lab404\Impersonate\Events\TakeImpersonation;
 use Spatie\Activitylog\ActivitylogServiceProvider;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -25,6 +28,8 @@ final class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(PrismService::class, fn (): PrismService => new PrismService);
+
+        config(['filament-impersonate.redirect_to' => '/dashboard']);
     }
 
     public function boot(): void
@@ -48,6 +53,9 @@ final class AppServiceProvider extends ServiceProvider
         if (config('seeding.auto_sync_after_migrations', true)) {
             Event::listen(MigrationsEnded::class, MigrationListener::class);
         }
+
+        Event::listen(TakeImpersonation::class, [LogImpersonationEvents::class, 'handleTakeImpersonation']);
+        Event::listen(LeaveImpersonation::class, [LogImpersonationEvents::class, 'handleLeaveImpersonation']);
     }
 
     private function userHasBypassPermissions(object $user): bool

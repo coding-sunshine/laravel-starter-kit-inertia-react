@@ -16,4 +16,8 @@ If you have access to the admin panel, you can manage **roles** and **permission
 
 When creating or editing a user in **Users** (`/admin/users`), use the **Roles** field to assign one or more roles. The user’s access is determined by the combined permissions of their roles.
 
+## User impersonation (super-admin only)
+
+Users with the **super-admin** role can **impersonate** other users (except other super-admins) from the admin panel: open **Users** → click the impersonate action on a user row or on the Edit User page. You are then signed in as that user and redirected to the main app; a banner at the top lets you **Leave** and return to the admin panel. All impersonation start and stop events are recorded in the activity log (who impersonated whom).
+
 For more technical details (route-based permissions, permission categories, super-admin bypass), see the [developer documentation](../developer/backend/permissions.md).

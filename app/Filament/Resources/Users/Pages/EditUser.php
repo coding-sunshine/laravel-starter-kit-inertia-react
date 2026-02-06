@@ -11,6 +11,7 @@ use Filament\Actions\ViewAction;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Role;
+use STS\FilamentImpersonate\Actions\Impersonate;
 
 final class EditUser extends EditRecord
 {
@@ -25,6 +26,7 @@ final class EditUser extends EditRecord
     {
         return [
             ViewAction::make(),
+            Impersonate::make()->record($this->getRecord()),
             DeleteAction::make(),
         ];
     }

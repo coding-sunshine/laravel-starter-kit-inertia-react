@@ -1,0 +1,91 @@
+<?php
+
+declare(strict_types=1);
+
+use App\Enums\ActivityType;
+use App\Models\User;
+use Database\Seeders\Essential\RolesAndPermissionsSeeder;
+use Lab404\Impersonate\Services\ImpersonateManager;
+use Spatie\Activitylog\Models\Activity;
+
+beforeEach(function (): void {
+    $this->seed(RolesAndPermissionsSeeder::class);
+});
+
+test('only super-admin can impersonate', function (): void {
+    $superAdmin = User::factory()->withoutTwoFactor()->create();
+    $superAdmin->assignRole('super-admin');
+
+    $admin = User::factory()->withoutTwoFactor()->create();
+    $admin->assignRole('admin');
+
+    $user = User::factory()->withoutTwoFactor()->create();
+    $user->assignRole('user');
+
+    expect($superAdmin->canImpersonate())->toBeTrue()
+        ->and($admin->canImpersonate())->toBeFalse()
+        ->and($user->canImpersonate())->toBeFalse();
+});
+
+test('super-admin cannot be impersonated', function (): void {
+    $superAdmin = User::factory()->withoutTwoFactor()->create();
+    $superAdmin->assignRole('super-admin');
+
+    $user = User::factory()->withoutTwoFactor()->create();
+    $user->assignRole('user');
+
+    expect($superAdmin->canBeImpersonated())->toBeFalse()
+        ->and($user->canBeImpersonated())->toBeTrue();
+});
+
+test('taking impersonation logs activity with impersonator as causer', function (): void {
+    $superAdmin = User::factory()->withoutTwoFactor()->create(['name' => 'Super Admin']);
+    $superAdmin->assignRole('super-admin');
+
+    $target = User::factory()->withoutTwoFactor()->create(['name' => 'Target User']);
+    $target->assignRole('user');
+
+    $this->actingAs($superAdmin);
+
+    app(ImpersonateManager::class)->take($superAdmin, $target, 'web');
+
+    $activity = Activity::query()
+        ->where('description', ActivityType::ImpersonationStarted->value)
+        ->where('causer_id', $superAdmin->getKey())
+        ->where('causer_type', User::class)
+        ->where('subject_id', $target->getKey())
+        ->where('subject_type', User::class)
+        ->latest()
+        ->first();
+
+    expect($activity)->not->toBeNull()
+        ->and($activity->properties->get('impersonator_name'))->toBe('Super Admin')
+        ->and($activity->properties->get('impersonated_name'))->toBe('Target User');
+});
+
+test('leaving impersonation logs activity with impersonator as causer', function (): void {
+    $superAdmin = User::factory()->withoutTwoFactor()->create(['name' => 'Super Admin']);
+    $superAdmin->assignRole('super-admin');
+
+    $target = User::factory()->withoutTwoFactor()->create(['name' => 'Target User']);
+    $target->assignRole('user');
+
+    $this->actingAs($superAdmin);
+    app(ImpersonateManager::class)->take($superAdmin, $target, 'web');
+
+    $this->actingAs($target);
+    app(ImpersonateManager::class)->leave();
+
+    $activity = Activity::query()
+        ->where('description', ActivityType::ImpersonationEnded->value)
+        ->where('causer_id', $superAdmin->getKey())
+        ->where('causer_type', User::class)
+        ->where('subject_id', $target->getKey())
+        ->where('subject_type', User::class)
+        ->latest()
+        ->first();
+
+    expect($activity)->not->toBeNull()
+        ->and($activity->properties->get('impersonator_name'))->toBe('Super Admin')
+        ->and($activity->properties->get('impersonated_name'))->toBe('Target User');
+});

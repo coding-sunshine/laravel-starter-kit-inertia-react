@@ -13,6 +13,7 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Lab404\Impersonate\Models\Impersonate as ImpersonateTrait;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Sanctum\HasApiTokens;
 use Laravel\Sanctum\NewAccessToken;
@@ -38,7 +39,7 @@ final class User extends Authenticatable implements FilamentUser, MustVerifyEmai
     /**
      * @use HasFactory<UserFactory>
      */
-    use HasApiTokens, HasFactory, HasRoles, LogsActivity, Notifiable, TwoFactorAuthenticatable;
+    use HasApiTokens, HasFactory, HasRoles, ImpersonateTrait, LogsActivity, Notifiable, TwoFactorAuthenticatable;
 
     /**
      * @var list<string>
@@ -93,6 +94,22 @@ final class User extends Authenticatable implements FilamentUser, MustVerifyEmai
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Only super-admins may impersonate other users.
+     */
+    public function canImpersonate(): bool
+    {
+        return $this->hasRole('super-admin');
+    }
+
+    /**
+     * Super-admins cannot be impersonated.
+     */
+    public function canBeImpersonated(): bool
+    {
+        return ! $this->hasRole('super-admin');
     }
 
     /**

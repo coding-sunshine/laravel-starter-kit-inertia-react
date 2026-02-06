@@ -715,7 +715,6 @@ Authenticate before testing panel functionality. Filament uses Livewire, so use 
 
 - Prism is a Laravel package for integrating Large Language Models (LLMs) into applications with a fluent, expressive and eloquent API.
 - IMPORTANT: Activate `developing-with-prism` skill when working with Prism features.
-- **Prism vs Laravel AI SDK:** Use **Prism** for OpenRouter, ai(), PrismService, seed/docs commands, MCP/Relay. Use **Laravel AI SDK** for agents, embeddings, images/TTS/STT, provider tools, RAG. See docs/developer/backend/ai-sdk.md.
 
 === filament/blueprint rules ===
 

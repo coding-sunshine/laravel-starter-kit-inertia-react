@@ -17,6 +17,7 @@
         "alizharb/filament-activity-log": "^1.3",
         "dedoc/scramble": "^0.13.12",
         "filament/filament": "^5.2.0",
+        "stechstudio/filament-impersonate": "^4.1",
         "inertiajs/inertia-laravel": "^2.0.19",
         "laravel/ai": "^0.1.2",
         "laravel/fortify": "^1.34.1",

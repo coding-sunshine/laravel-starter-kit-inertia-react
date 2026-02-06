@@ -571,6 +571,7 @@ Wayfinder generates TypeScript functions for Laravel routes. Import from `@/acti
 ## Filament
 
 - Filament is used by this application. Follow existing conventions for how and where it's implemented.
+- **User impersonation** is implemented via `stechstudio/filament-impersonate`: only super-admin can impersonate; super-admins cannot be impersonated; start/stop are logged (causer = impersonator). See `docs/developer/backend/filament.md` and `docs/developer/backend/activity-log.md`.
 - Filament is a Server-Driven UI (SDUI) framework for Laravel that lets you define user interfaces in PHP using structured configuration objects. Built on Livewire, Alpine.js, and Tailwind CSS.
 - Use the `search-docs` tool for official documentation on Artisan commands, code examples, testing, relationships, and idiomatic practices.
 
@@ -715,13 +716,6 @@ Authenticate before testing panel functionality. Filament uses Livewire, so use 
 
 - Prism is a Laravel package for integrating Large Language Models (LLMs) into applications with a fluent, expressive and eloquent API.
 - IMPORTANT: Activate `developing-with-prism` skill when working with Prism features.
-
-### Prism vs Laravel AI SDK – when to use which
-
-This project has **both** Prism (OpenRouter, `ai()` helper, `PrismService`) and the **Laravel AI SDK** (`laravel/ai`). Do not mix them in the same flow; choose one per feature.
-
-- **Use Prism** for: OpenRouter or ad-hoc model calls, existing seed/docs/LLM commands, MCP/Relay tool calling, `ai()` and `PrismService`. Config: `config/prism.php`, `.env` OpenRouter/Prism vars.
-- **Use Laravel AI SDK** for: **agents** (make:agent, instructions, conversation storage), **embeddings** (Embeddings::for(), Str::toEmbeddings()), **images / TTS / STT**, provider tools (WebSearch, WebFetch, FileSearch), **RAG** (SimilaritySearch tool). Config: `config/ai.php`, `.env` provider keys (OPENAI_API_KEY, etc.). See `docs/developer/backend/ai-sdk.md`.
 
 === filament/blueprint rules ===
 
