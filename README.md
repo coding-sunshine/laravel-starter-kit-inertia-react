@@ -30,7 +30,7 @@ Modern PHP has evolved into a mature, type-safe language, yet many Laravel proje
 - **Automated Code Quality**: Pre-configured tools ensure consistent, pristine code across your entire team
 - **Just Better Laravel Defaults**: Thanks to **[Essentials](https://github.com/nunomaduro/essentials)** / strict models, auto eager loading, immutable dates, and more...
 - **AI Guidelines**: Integrated AI Guidelines to assist in maintaining code quality and consistency
-- **AI Integration**: Prism PHP with OpenRouter support for AI-powered features (text generation, structured output, tool calling, and more)
+- **AI Integration**: Prism PHP (OpenRouter, `ai()` helper) for text, structured output, and MCP/Relay; Laravel AI SDK for agents, embeddings, images, and provider tools. See `docs/developer/backend/prism.md` and `docs/developer/backend/ai-sdk.md`.
 - **Optional: PostgreSQL + pgvector**: Vector embeddings for semantic search and RAG when using PostgreSQL
 - **Full Testing Suite**: More than 150 tests with 100% code coverage using Pest
 - **Automated Seeder System**: Comprehensive seeder automation with category-based organization, JSON support, and relationship-aware generation

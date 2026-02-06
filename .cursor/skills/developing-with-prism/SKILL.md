@@ -7,6 +7,8 @@ description: Guide for developing with Prism PHP package - a Laravel package for
 
 Prism is a Laravel package for integrating Large Language Models (LLMs) into applications with a fluent, expressive and eloquent API.
 
+**When to use Prism vs Laravel AI SDK:** In this project, use **Prism** for OpenRouter, the `ai()` helper, `PrismService`, and existing commands (seeds, docs). Use the **Laravel AI SDK** for agents (make:agent), embeddings (Embeddings::for()), images/TTS/STT, and provider tools (WebSearch, etc.). See `docs/developer/backend/ai-sdk.md`.
+
 ## Basic Usage Examples
 
 ### Text Generation

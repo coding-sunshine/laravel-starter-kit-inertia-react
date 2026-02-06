@@ -55,7 +55,6 @@ When completing work involving these paths, documentation updates are **MANDATOR
 | `resources/js/pages/**/*.tsx` (new) | Document page | `application-info`, `list-routes` |
 | `routes/web.php` (new route) | Update route reference | `list-routes` |
 | `config/fortify.php` (feature toggle) | Update auth docs | `application-info` |
-| `config/permission.php` (feature toggle / skip list) | Update permissions docs | `list-routes` |
 | `database/migrations/*` (new) | Update schema docs | `database-schema` |
 
 ## Using Boost Tools for Documentation
@@ -326,15 +325,6 @@ This project has domain-specific skills available. You MUST activate the relevan
 - Stick to existing directory structure; don't create new base folders without approval.
 - Do not change the application's dependencies without approval.
 
-## Permissions and RBAC
-
-- **Docs**: Full reference is **docs/developer/backend/permissions.md**.
-- **Routes**: Name all application routes (dot notation, e.g. `users.index`). Run `permission:sync-routes` after `route:cache` on deploy. Keep `route_skip_patterns` in `config/permission.php` in sync with public/auth routes (Filament is already skipped).
-- **Commands**: `permission:check-routes` (CI), `permission:sync-routes`, `permission:health` (super-admin check; optional warnings).
-- **Config**: `default_role` for new users; optional `default_role_permissions` for the default role when seeding.
-- **Frontend**: Inertia shared data includes `auth.permissions`, `auth.roles`, `auth.can_bypass`. Use `useCan(permission)` or `<Can permission="…">` for permission-based UI; permission name = route name when using route-based permissions.
-- **Filament**: Duplicate role action available; last super-admin cannot be demoted or deleted.
-
 ## Frontend Bundling
 
 - If the user doesn't see a frontend change reflected in the UI, it could mean they need to run `npm run build`, `npm run dev`, or `composer run dev`. Ask them.
@@ -472,16 +462,6 @@ protected function isAccessible(User $user, ?string $path = null): bool
 ### Model Creation
 
 - When creating new models, create useful factories and seeders for them too. Ask the user if they need any other things, using `list-artisan-commands` to check the available options to `php artisan make:model`.
-- New Eloquent models should use `Spatie\Activitylog\Traits\LogsActivity` and implement `getActivitylogOptions()` (returning `LogOptions::defaults()->logOnlyDirty()->logOnly([...])` or `->logAll()->logExcept([...])`). Do not log attributes in `config('activitylog.sensitive_attributes')`. Prefer `make:model:full` so activity logging is added automatically. For custom activity events use `App\Enums\ActivityType` and add new cases when introducing new event types; in tests use `assertActivityLogged($description, $subjectType, $subjectId)`.
-
-### Activity logging (new modules)
-
-When implementing a **new module** (new model, new Action with important state changes, or new Filament resource), activity logging must be consistent and auditable. Full steps: **docs/developer/backend/activity-log.md** § “Implementing activity logging in new modules”.
-
-- **New model**: Prefer `php artisan make:model:full {Name}`. Otherwise add `LogsActivity` and `getActivitylogOptions()` with `logExcept(config('activitylog.sensitive_attributes'))`. Add any new sensitive attribute to that config.
-- **New auditable event** (e.g. in an Action): Add a case to `App\Enums\ActivityType`, log with `activity()->performedOn($subject)->withProperties([...])->log(ActivityType::X->value)` (and `->causedBy($user)` when applicable), and test with `assertActivityLogged(ActivityType::X->value, SubjectModel::class, $id)`.
-- **Filament RBAC** (user/role/permission changes): Use `App\Services\ActivityLogRbac` only; do not introduce new ad-hoc activity strings for roles/permissions.
-- **Other Filament state changes**: Add an `ActivityType` case and log as above in the resource’s `afterCreate`/`afterSave` or in the table action.
 
 ### APIs & Eloquent Resources
 
@@ -735,6 +715,13 @@ Authenticate before testing panel functionality. Filament uses Livewire, so use 
 
 - Prism is a Laravel package for integrating Large Language Models (LLMs) into applications with a fluent, expressive and eloquent API.
 - IMPORTANT: Activate `developing-with-prism` skill when working with Prism features.
+
+### Prism vs Laravel AI SDK – when to use which
+
+This project has **both** Prism (OpenRouter, `ai()` helper, `PrismService`) and the **Laravel AI SDK** (`laravel/ai`). Do not mix them in the same flow; choose one per feature.
+
+- **Use Prism** for: OpenRouter or ad-hoc model calls, existing seed/docs/LLM commands, MCP/Relay tool calling, `ai()` and `PrismService`. Config: `config/prism.php`, `.env` OpenRouter/Prism vars.
+- **Use Laravel AI SDK** for: **agents** (make:agent, instructions, conversation storage), **embeddings** (Embeddings::for(), Str::toEmbeddings()), **images / TTS / STT**, provider tools (WebSearch, WebFetch, FileSearch), **RAG** (SimilaritySearch tool). Config: `config/ai.php`, `.env` provider keys (OPENAI_API_KEY, etc.). See `docs/developer/backend/ai-sdk.md`.
 
 === filament/blueprint rules ===
 

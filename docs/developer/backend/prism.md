@@ -1,6 +1,6 @@
 # Prism AI Integration
 
-This starter kit includes [Prism PHP](https://prismphp.com/) configured with OpenRouter for AI-powered features, along with [Prism Relay](https://github.com/prism-php/relay) for MCP (Model Context Protocol) server integration.
+This starter kit includes [Prism PHP](https://prismphp.com/) configured with OpenRouter for AI-powered features, along with [Prism Relay](https://github.com/prism-php/relay) for MCP (Model Context Protocol) server integration. The project also includes the [Laravel AI SDK](./ai-sdk.md); see that doc for **when to use Prism vs Laravel AI** (e.g. agents and embeddings use the SDK; OpenRouter and existing seed/docs commands use Prism).
 
 ## Overview
 

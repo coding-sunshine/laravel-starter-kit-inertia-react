@@ -14,4 +14,5 @@ This documentation is for developers working on or extending this application.
 - [Actions Documentation](./backend/actions/README.md) - All Action classes
 - [Seeder System](./backend/database/seeders.md) - Automated seeder system
 - [Prism AI Integration](./backend/prism.md) - AI-powered features with Prism
+- [Laravel AI SDK](./backend/ai-sdk.md) - Agents, embeddings, images; when to use vs Prism
 - [API Reference](./api-reference/README.md) - Routes and endpoints
