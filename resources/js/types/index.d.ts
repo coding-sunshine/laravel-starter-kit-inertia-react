@@ -3,6 +3,12 @@ import { LucideIcon } from 'lucide-react';
 
 export interface Auth {
     user: User;
+    /** Permission names for the current user (empty when guest). Use with useCan() or <Can>. */
+    permissions: string[];
+    /** Role names for the current user (empty when guest). */
+    roles: string[];
+    /** True when user has bypass-permissions (e.g. super-admin). useCan() treats as allowed for any permission. */
+    can_bypass: boolean;
 }
 
 export interface BreadcrumbItem {

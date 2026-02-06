@@ -58,6 +58,7 @@ When completing work involving these paths, documentation updates are **MANDATOR
 | `resources/js/pages/**/*.tsx` (new) | Document page | `application-info`, `list-routes` |
 | `routes/web.php` (new route) | Update route reference | `list-routes` |
 | `config/fortify.php` (feature toggle) | Update auth docs | `application-info` |
+| `config/permission.php` (feature toggle / skip list) | Update permissions docs | `list-routes` |
 | `database/migrations/*` (new) | Update schema docs | `database-schema` |
 
 ## Using Boost Tools for Documentation
@@ -327,6 +328,15 @@ This project has domain-specific skills available. You MUST activate the relevan
 
 - Stick to existing directory structure; don't create new base folders without approval.
 - Do not change the application's dependencies without approval.
+
+## Permissions and RBAC
+
+- **Docs**: Full reference is **docs/developer/backend/permissions.md**.
+- **Routes**: Name all application routes (dot notation, e.g. `users.index`). Run `permission:sync-routes` after `route:cache` on deploy. Keep `route_skip_patterns` in `config/permission.php` in sync with public/auth routes (Filament is already skipped).
+- **Commands**: `permission:check-routes` (CI), `permission:sync-routes`, `permission:health` (super-admin check; optional warnings).
+- **Config**: `default_role` for new users; optional `default_role_permissions` for the default role when seeding.
+- **Frontend**: Inertia shared data includes `auth.permissions`, `auth.roles`, `auth.can_bypass`. Use `useCan(permission)` or `<Can permission="…">` for permission-based UI; permission name = route name when using route-based permissions.
+- **Filament**: Duplicate role action available; last super-admin cannot be demoted or deleted.
 
 ## Frontend Bundling
 

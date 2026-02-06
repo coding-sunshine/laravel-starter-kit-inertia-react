@@ -54,6 +54,12 @@ jobs:
       - name: Generate Application Key
         run: php artisan key:generate
 
+      - name: Run migrations
+        run: php artisan migrate --no-interaction --force
+
+      - name: Seed roles and permissions
+        run: php artisan db:seed --class=Database\\Seeders\\Essential\\RolesAndPermissionsSeeder --no-interaction
+
       - name: Install Bun Dependencies
         run: bun install --frozen-lockfile
 
@@ -111,6 +117,10 @@ jobs:
 
       - name: Check permission sync
         run: php artisan permission:sync-routes --dry-run --silent
+        continue-on-error: false
+
+      - name: Check permission health
+        run: php artisan permission:health
         continue-on-error: false
 
       - name: Check Seed Specs

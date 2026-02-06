@@ -2,6 +2,12 @@
 
 declare(strict_types=1);
 
+/*
+ * All routes must have ->name() for RBAC (permission:sync-routes). Run:
+ *   php artisan permission:sync-routes
+ * after adding or changing routes.
+ */
+
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserEmailResetNotificationController;

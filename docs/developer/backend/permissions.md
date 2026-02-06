@@ -22,6 +22,7 @@ All application routes must have a name so that `permission:sync-routes` can cre
   - **`route_based_enforcement`** – When `true`, `AutoPermissionMiddleware` runs on web routes and requires a permission matching the route name for named app routes not in the skip list. Set via `PERMISSION_ROUTE_BASED_ENFORCEMENT` (default: `false`).
   - **`route_skip_patterns`** – Route name patterns to skip (e.g. `login`, `password.*`, `dashboard`, `filament.*`). Use `*` for wildcard.
   - **`default_role`** – Role name assigned to newly registered or Filament-created users when no role is set. Set via `PERMISSION_DEFAULT_ROLE` (default: `user`). Set to `null` to disable. The role must exist (e.g. seeded).
+  - **`default_role_permissions`** – Array of permission names to assign to the default role when seeding. Empty by default (authenticated routes in `route_skip_patterns` don’t require a permission). Set e.g. `['dashboard']` to give the default role baseline permissions and satisfy `permission:health`.
   - **`permission_categories_enabled`** – When `true`, `RolesAndPermissionsSeeder` uses `config/permission_categories.php` and `PermissionCategoryResolver` to assign permissions to roles by category/wildcard. Set via `PERMISSION_CATEGORIES_ENABLED` (default: `false`).
 - **`config/permission_categories.php`** – Optional. Defines categories (patterns + roles) and per-role strategy (`bypass`, `categories`, `explicit`). Used only when `permission_categories_enabled` is true.
 
@@ -82,6 +83,13 @@ All application routes must have a name so that `permission:sync-routes` can cre
 | `role` | Spatie `RoleMiddleware` | Require one or more roles. |
 | `role_or_permission` | Spatie `RoleOrPermissionMiddleware` | Require any of the given roles or permissions. |
 | `auto.permission` | `App\Http\Middleware\AutoPermissionMiddleware` | Require permission matching route name (used globally when route-based enforcement is on). |
+
+## Frontend (Inertia)
+
+- **Shared data**: `HandleInertiaRequests` shares `auth.permissions` (permission names), `auth.roles` (role names), and `auth.can_bypass` (true when user has `bypass-permissions`). Use these for conditional UI without extra requests.
+- **Convention**: Permission name = route name for route-based permissions; use the same string in the frontend (e.g. `useCan('dashboard')`).
+- **`useCan(permission)`**: Hook (in `@/hooks/use-can`) returns `true` if the current user has the given permission or has `can_bypass`. Accepts one permission string or an array (true if user has any).
+- **`<Can permission="…">`**: Component (in `@/components/can`) renders children only when the user has the given permission(s). Uses shared `auth.permissions` and `auth.can_bypass`.
 
 ## Filament management UI
 

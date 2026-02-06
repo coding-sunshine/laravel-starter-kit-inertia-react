@@ -1,6 +1,6 @@
 {
     "version": "1.0.0",
-    "lastGenerated": "2026-02-05",
+    "lastGenerated": "2026-02-06",
     "actions": {
         "CreateUser": {
             "documented": true,
@@ -141,7 +141,9 @@
             "relationships": {
                 "usedBy": [],
                 "usesModels": [],
-                "relatedRoutes": ["two-factor.enable"]
+                "relatedRoutes": [
+                    "two-factor.enable"
+                ]
             }
         },
         "LoggingDisableTwoFactorAuthentication": {
@@ -150,7 +152,9 @@
             "relationships": {
                 "usedBy": [],
                 "usesModels": [],
-                "relatedRoutes": ["two-factor.disable"]
+                "relatedRoutes": [
+                    "two-factor.disable"
+                ]
             }
         },
         "LoggingConfirmTwoFactorAuthentication": {
@@ -159,7 +163,9 @@
             "relationships": {
                 "usedBy": [],
                 "usesModels": [],
-                "relatedRoutes": ["two-factor.confirm"]
+                "relatedRoutes": [
+                    "two-factor.confirm"
+                ]
             }
         },
         "LoggingGenerateNewRecoveryCodes": {
@@ -168,7 +174,9 @@
             "relationships": {
                 "usedBy": [],
                 "usesModels": [],
-                "relatedRoutes": ["two-factor.regenerate-recovery-codes"]
+                "relatedRoutes": [
+                    "two-factor.regenerate-recovery-codes"
+                ]
             }
         }
     },

@@ -198,6 +198,13 @@ return [
      */
     'default_role' => env('PERMISSION_DEFAULT_ROLE', 'user'),
 
+    /*
+     * Permission names to assign to the default role when seeding. Empty = no permissions
+     * (authenticated routes in route_skip_patterns do not require a permission).
+     * Set to e.g. ['dashboard'] to give the default role baseline permissions and satisfy permission:health.
+     */
+    'default_role_permissions' => [],
+
     /**
      * Route name patterns to skip for automatic permission checking.
      * Use '*' for wildcard (e.g. 'password.*' matches password.request, password.reset).

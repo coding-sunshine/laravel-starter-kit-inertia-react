@@ -36,8 +36,13 @@ final class RolesAndPermissionsSeeder extends Seeder
         $superAdmin->givePermissionTo('bypass-permissions');
 
         $admin = Role::query()->firstOrCreate(['name' => 'admin', 'guard_name' => self::GUARD]);
-        // "user" role is created with no permissions; authenticated routes (dashboard, settings, etc.) are in route_skip_patterns
-        Role::query()->firstOrCreate(['name' => 'user', 'guard_name' => self::GUARD]);
+        $userRole = Role::query()->firstOrCreate(['name' => 'user', 'guard_name' => self::GUARD]);
+        $defaultRolePerms = config('permission.default_role_permissions', []);
+        if (is_array($defaultRolePerms) && $defaultRolePerms !== []) {
+            $userRole->syncPermissions(
+                array_filter($defaultRolePerms, fn (string $name): bool => Permission::query()->where('name', $name)->where('guard_name', self::GUARD)->exists())
+            );
+        }
 
         if (config('permission.permission_categories_enabled', false)) {
             $resolver = app(PermissionCategoryResolver::class);
