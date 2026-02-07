@@ -299,6 +299,14 @@ This application is a Laravel application and its main Laravel ecosystems packag
 - eslint (ESLINT) - v9
 - prettier (PRETTIER) - v3
 - spatie/laravel-medialibrary (MEDIALIBRARY) - v11
+- a909m/filament-statefusion (STATEFUSION) - v2
+- askedio/laravel-soft-cascade (SOFTCASCADE) - v12
+- spatie/eloquent-sortable (SORTABLE) - v4
+- spatie/laravel-data (LARAVELDATA) - v4
+- spatie/laravel-model-flags (MODELFLAGS) - v1
+- spatie/laravel-model-states (MODELSTATES) - v2
+- spatie/laravel-schemaless-attributes (SCHEMALESS) - v2
+- spatie/laravel-sluggable (SLUGGABLE) - v3
 
 ## Skills Activation
 
@@ -313,6 +321,7 @@ This project has domain-specific skills available. You MUST activate the relevan
 
 ## Conventions
 
+- When adding DTOs, slugs, sort order, model flags/states, schemaless attributes, StateFusion, or soft cascade, consult `docs/developer/backend/search-and-data.md`.
 - You must follow all existing code conventions used in this application. When creating or editing a file, check sibling files for the correct structure, approach, and naming.
 - Use descriptive names for variables and methods. For example, `isRegisteredForDiscounts`, not `discount()`.
 - Check for existing components to reuse before writing a new one.
@@ -432,7 +441,7 @@ protected function isAccessible(User $user, ?string $path = null): bool
 # Inertia
 
 - Inertia creates fully client-side rendered SPAs without modern SPA complexity, leveraging existing server-side patterns.
-- Components live in `resources/js/Pages` (unless specified in `vite.config.js`). Use `Inertia::render()` for server-side routing instead of Blade views.
+- Components live in `resources/js/pages` (unless specified in `vite.config.js`). Use `Inertia::render()` for server-side routing instead of Blade views.
 - ALWAYS use `search-docs` tool for version-specific Inertia documentation and updated code examples.
 - IMPORTANT: Activate `inertia-react-development` when working with Inertia client-side patterns.
 
@@ -572,7 +581,8 @@ Wayfinder generates TypeScript functions for Laravel routes. Import from `@/acti
 ## Filament
 
 - Filament is used by this application. Follow existing conventions for how and where it's implemented.
-- **User avatar** is backed by Spatie Media Library: `User` has `avatar` and `avatar_profile` (conversions). Shown in Users table/infolist via `ImageColumn`/`ImageEntry`. The Filament Spatie Media Library plugin is not yet v5-compatible; see `docs/developer/backend/media-library.md` and `.cursor/rules/media-library.mdc`.
+- **User impersonation** is implemented via `stechstudio/filament-impersonate`: only super-admin can impersonate; super-admins cannot be impersonated; start/stop are logged (causer = impersonator). See `docs/developer/backend/filament.md` and `docs/developer/backend/activity-log.md`.
+- **User avatar**: User model uses Spatie Media Library for avatar (conversions, profile upload, Filament columns). See `docs/developer/backend/media-library.md`. For DTOs, Sluggable, Sortable, Model Flags/States, StateFusion, see `docs/developer/backend/search-and-data.md`.
 - Filament is a Server-Driven UI (SDUI) framework for Laravel that lets you define user interfaces in PHP using structured configuration objects. Built on Livewire, Alpine.js, and Tailwind CSS.
 - Use the `search-docs` tool for official documentation on Artisan commands, code examples, testing, relationships, and idiomatic practices.
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers\Filament;
 
+use A909M\FilamentStateFusion\FilamentStateFusionPlugin;
 use AlizHarb\ActivityLog\ActivityLogPlugin;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -45,6 +46,7 @@ final class AdminPanelProvider extends PanelProvider
             ->maxContentWidth(Width::SevenExtraLarge)
             ->databaseNotifications()
             ->plugins([
+                FilamentStateFusionPlugin::make(),
                 ActivityLogPlugin::make()
                     ->label('Log')
                     ->pluralLabel('Logs')

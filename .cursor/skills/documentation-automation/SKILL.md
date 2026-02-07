@@ -17,6 +17,7 @@ This skill activates when:
 - Creating Inertia pages in `resources/js/pages/`
 - Modifying `config/fortify.php` features
 - Adding new Eloquent models
+- Creating Data objects (app/Data/) — see docs/developer/backend/search-and-data.md
 - User explicitly requests documentation
 - User mentions: docs, documentation, readme, document this
 
@@ -176,6 +177,7 @@ This skill works alongside:
 
 ## Documentation Locations
 
+- **Search & Data**: `docs/developer/backend/search-and-data.md` — DTOs, Sluggable, Sortable, Model Flags, Schemaless Attributes, Model States, Soft Cascade
 - **Actions**: `docs/developer/backend/actions/{action-name}.md`
 - **Controllers**: `docs/developer/backend/controllers/{controller-name}.md`
 - **Pages**: `docs/developer/frontend/pages/{page-name}.md`

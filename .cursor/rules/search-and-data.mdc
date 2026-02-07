@@ -1,0 +1,18 @@
+---
+description: DTOs, Sluggable, Sortable, Model Flags/States, Schemaless, StateFusion, Soft Cascade
+globs: app/Data/**/*.php, app/Models/**/*.php, app/Providers/Filament/*.php, config/data.php, config/eloquent-sortable.php, config/model-flags.php
+---
+# Search & Data packages
+
+When working with **typed DTOs**, **slugs**, **sort order**, **model flags**, **model states**, **schemaless JSON**, **Filament state sync (StateFusion)**, or **soft cascade deletes**, follow the patterns and config in `docs/developer/backend/search-and-data.md`.
+
+- **spatie/laravel-data**: DTOs in `app/Data`; use for API/resources, validation, transforms. Config: `config/data.php`.
+- **spatie/laravel-sluggable**: Add `HasSlug` and slug config to models when human-readable URLs are needed.
+- **spatie/eloquent-sortable**: Add `Sortable` and `order_column` for ordered lists. Config: `config/eloquent-sortable.php`.
+- **spatie/laravel-model-flags**: Add `HasFlags`; flags in `model_flags` table. Config: `config/model-flags.php`, model `App\Models\ModelFlag`.
+- **spatie/laravel-model-states**: State machines on models; use when an entity has distinct states and transitions.
+- **spatie/laravel-schemaless-attributes**: JSON columns (e.g. `extra_attributes`) with cast and accessors.
+- **a909m/filament-statefusion**: Filament panel plugin in `AdminPanelProvider`; syncs table/form state with Livewire/URL.
+- **askedio/laravel-soft-cascade**: Cascade deletes/restores when using soft deletes; configure in model.
+
+Use the `search-docs` tool for version-specific docs when implementing a feature with any of these packages.

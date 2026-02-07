@@ -34,6 +34,11 @@ Use **policies** and **permissions** for authorization. Prefer `$user->can(...)`
 - **Panel**: `app/Providers/Filament/AdminPanelProvider.php` (path, guard, login, branding, global search, dark mode, max width, database notifications).
 - **Filament**: `config/filament.php`.
 
+## StateFusion & data packages
+
+- **StateFusion**: `a909m/filament-statefusion` is registered in `AdminPanelProvider`. Use it when you need Filament form/table state to sync with Livewire or URL (see [Search & Data](search-and-data.md)).
+- **Sortable, Sluggable, Model Flags, Model States, Schemaless**: Available for resources when needed; see [Search & Data](search-and-data.md) for DTOs, Sluggable, Sortable, flags, states, and schemaless attributes.
+
 ## DX features
 
 - **Branding**: `brandName`, `brandLogo`, `favicon` in `AdminPanelProvider`; app name and `public/logo.svg`, `public/favicon.svg` by default.

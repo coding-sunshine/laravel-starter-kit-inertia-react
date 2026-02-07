@@ -4,6 +4,7 @@ Database-related documentation for developers.
 
 ## Contents
 
+- [Search & Data](../search-and-data.md) - DTOs, Sluggable, Sortable, Model Flags, Schemaless Attributes, Model States, Soft Cascade
 - [Seeders](./seeders.md) - Comprehensive seeder system and automation
 - [Advanced Seeder Features](./advanced-features.md) - Advanced automation features
 - [Factories](./factories.md) - Factory patterns and states (coming soon)

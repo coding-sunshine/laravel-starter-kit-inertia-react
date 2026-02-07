@@ -8,6 +8,7 @@ Backend components, services, and patterns for developers.
 - [Activity Log](./activity-log.md) - Spatie and Filament activity logging
 - [Controllers](./controllers/README.md) - Controller documentation
 - [Database](./database/README.md) - Database patterns, seeders, and factories
+- [Search & Data](./search-and-data.md) - DTOs, Sluggable, Sortable, Model Flags, Schemaless Attributes, Model States, Soft Cascade
 - [Filament Admin Panel](./filament.md) - Filament panel at `/admin`
 - [Media Library (User avatar)](./media-library.md) - Spatie Media Library and user avatar (conversions, profile)
 - [Permissions and RBAC](./permissions.md) - Route-based permissions, permission categories, role hierarchy
