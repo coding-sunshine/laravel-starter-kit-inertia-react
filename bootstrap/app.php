@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use AlizHarb\ActivityLog\Http\Middleware\ActivityLogContextMiddleware;
+use App\Http\Middleware\AdditionalSecurityHeaders;
 use App\Http\Middleware\AutoPermissionMiddleware;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
@@ -11,6 +12,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
+use Spatie\Csp\AddCspHeaders;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 use Spatie\Permission\Middleware\RoleMiddleware;
 use Spatie\Permission\Middleware\RoleOrPermissionMiddleware;
@@ -33,6 +35,8 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $webAppend = [
+            AddCspHeaders::class,
+            AdditionalSecurityHeaders::class,
             ActivityLogContextMiddleware::class,
             HandleAppearance::class,
             HandleInertiaRequests::class,
@@ -49,6 +53,11 @@ return Application::configure(basePath: dirname(__DIR__))
                 ServeFavicon::class,
             ],
         );
+
+        $middleware->api(append: [
+            AddCspHeaders::class,
+            AdditionalSecurityHeaders::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

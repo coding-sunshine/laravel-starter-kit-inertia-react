@@ -20,6 +20,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use Spatie\Honeypot\ProtectAgainstSpam;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 Route::get('/favicon.ico', function (): BinaryFileResponse|RedirectResponse {
@@ -70,6 +71,7 @@ Route::middleware('guest')->group(function (): void {
     Route::get('register', [UserController::class, 'create'])
         ->name('register');
     Route::post('register', [UserController::class, 'store'])
+        ->middleware(ProtectAgainstSpam::class)
         ->name('register.store');
 
     // User Password...

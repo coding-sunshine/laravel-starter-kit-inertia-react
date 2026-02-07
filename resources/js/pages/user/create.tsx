@@ -3,6 +3,7 @@ import { login } from '@/routes';
 import { Form, Head } from '@inertiajs/react';
 import { LoaderCircle } from 'lucide-react';
 
+import HoneypotFields from '@/components/honeypot-fields';
 import InputError from '@/components/input-error';
 import TextLink from '@/components/text-link';
 import { Button } from '@/components/ui/button';
@@ -25,6 +26,7 @@ export default function Register() {
             >
                 {({ processing, errors }) => (
                     <>
+                        <HoneypotFields />
                         <div className="grid gap-6">
                             <div className="grid gap-2">
                                 <Label htmlFor="name">Name</Label>

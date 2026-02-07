@@ -7,6 +7,19 @@ use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 
+/**
+ * Valid honeypot fields for register.store (required when ProtectAgainstSpam is enabled).
+ *
+ * @return array<string, mixed>
+ */
+function registerHoneypotFields(): array
+{
+    return [
+        'my_name' => '',
+        'valid_from' => encrypt(now()->subSeconds(2)->timestamp),
+    ];
+}
+
 it('renders registration page', function (): void {
     $response = $this->fromRoute('home')
         ->get(route('register'));
@@ -24,6 +37,7 @@ it('may register a new user', function (): void {
             'email' => 'test@example.com',
             'password' => 'password1234',
             'password_confirmation' => 'password1234',
+            ...registerHoneypotFields(),
         ]);
 
     $response->assertRedirectToRoute('dashboard');
@@ -46,6 +60,7 @@ it('requires name', function (): void {
             'email' => 'test@example.com',
             'password' => 'password',
             'password_confirmation' => 'password',
+            ...registerHoneypotFields(),
         ]);
 
     $response->assertRedirectToRoute('register')
@@ -58,6 +73,7 @@ it('requires email', function (): void {
             'name' => 'Test User',
             'password' => 'password',
             'password_confirmation' => 'password',
+            ...registerHoneypotFields(),
         ]);
 
     $response->assertRedirectToRoute('register')
@@ -71,6 +87,7 @@ it('requires valid email', function (): void {
             'email' => 'not-an-email',
             'password' => 'password',
             'password_confirmation' => 'password',
+            ...registerHoneypotFields(),
         ]);
 
     $response->assertRedirectToRoute('register')
@@ -86,6 +103,7 @@ it('requires unique email', function (): void {
             'email' => 'test@example.com',
             'password' => 'password',
             'password_confirmation' => 'password',
+            ...registerHoneypotFields(),
         ]);
 
     $response->assertRedirectToRoute('register')
@@ -97,6 +115,7 @@ it('requires password', function (): void {
         ->post(route('register.store'), [
             'name' => 'Test User',
             'email' => 'test@example.com',
+            ...registerHoneypotFields(),
         ]);
 
     $response->assertRedirectToRoute('register')
@@ -109,6 +128,7 @@ it('requires password confirmation', function (): void {
             'name' => 'Test User',
             'email' => 'test@example.com',
             'password' => 'password',
+            ...registerHoneypotFields(),
         ]);
 
     $response->assertRedirectToRoute('register')
@@ -122,6 +142,7 @@ it('requires matching password confirmation', function (): void {
             'email' => 'test@example.com',
             'password' => 'password',
             'password_confirmation' => 'different-password',
+            ...registerHoneypotFields(),
         ]);
 
     $response->assertRedirectToRoute('register')

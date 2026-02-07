@@ -7,6 +7,7 @@ namespace App\Http\Middleware;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
+use Spatie\Honeypot\Honeypot;
 
 final class HandleInertiaRequests extends Middleware
 {
@@ -39,6 +40,8 @@ final class HandleInertiaRequests extends Middleware
 
         $user = $request->user();
 
+        $honeypot = app(Honeypot::class);
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
@@ -50,6 +53,7 @@ final class HandleInertiaRequests extends Middleware
                 'can_bypass' => $user?->can('bypass-permissions') ?? false,
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'honeypot' => $honeypot->enabled() ? $honeypot->toArray() : null,
         ];
     }
 }
