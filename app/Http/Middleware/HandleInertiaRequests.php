@@ -7,6 +7,7 @@ namespace App\Http\Middleware;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
+use Laravel\Pennant\Feature;
 use Spatie\Honeypot\Honeypot;
 
 final class HandleInertiaRequests extends Middleware
@@ -42,6 +43,13 @@ final class HandleInertiaRequests extends Middleware
 
         $honeypot = app(Honeypot::class);
 
+        $features = [];
+        if ($user) {
+            foreach (config('feature-flags.inertia_features', []) as $name => $featureClass) {
+                $features[$name] = Feature::for($user)->active($featureClass);
+            }
+        }
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
@@ -52,6 +60,7 @@ final class HandleInertiaRequests extends Middleware
                 'roles' => $user?->getRoleNames()->all() ?? [],
                 'can_bypass' => $user?->can('bypass-permissions') ?? false,
             ],
+            'features' => $features,
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'honeypot' => $honeypot->enabled() ? $honeypot->toArray() : null,
         ];

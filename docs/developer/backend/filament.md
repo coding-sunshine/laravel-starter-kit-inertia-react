@@ -60,6 +60,10 @@ Use **policies** and **permissions** for authorization. Prefer `$user->can(...)`
 - **Policy**: `UserPolicy::viewAny()` returns `true` when `app('impersonate')->isImpersonating()` to avoid 403s on the users list during impersonation.
 - **Routes**: `Route::impersonate()` in `routes/web.php` (auth) registers `impersonate` (take) and `impersonate.leave`; the package also registers `filament-impersonate.leave` for the banner.
 
+## Feature flags
+
+**Plugin**: `stephenjude/filament-feature-flags` — registered as `FeatureFlagPlugin::make()` in `AdminPanelProvider`. Provides a “Manage Features” (or custom label) resource under the Settings group where admins can enable/disable Pennant class-based features globally or per segment (e.g. by user email). See [Feature flags](feature-flags.md) for defining features and exposing them to Inertia.
+
 ## Testing
 
 Use the `actsAsFilamentAdmin(TestCase $test, string $role = 'admin'): User` helper in Pest feature tests when you need an authenticated admin or super-admin. It seeds `RolesAndPermissionsSeeder`, creates a user with the given role, calls `$this->actingAs($user)`, and returns the user. Example:
