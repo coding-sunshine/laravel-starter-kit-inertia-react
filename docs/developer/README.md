@@ -8,6 +8,7 @@ This documentation is for developers working on or extending this application.
 - [Backend](./backend/README.md) - Backend components and patterns
 - [Database](./backend/database/README.md) - Database patterns, seeders, and factories
 - [Frontend](./frontend/README.md) - Frontend components and patterns
+- [Deployment](./deployment.md) - Environment, assets, caching, and hardening
 
 ## Quick Links
 

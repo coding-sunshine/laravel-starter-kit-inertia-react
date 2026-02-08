@@ -29,7 +29,16 @@ final class UserFactory extends Factory
             'two_factor_secret' => Str::random(10),
             'two_factor_recovery_codes' => Str::random(10),
             'two_factor_confirmed_at' => now(),
+            'onboarding_completed' => true,
         ];
+    }
+
+    public function needsOnboarding(): self
+    {
+        return $this->state(fn (array $attributes): array => [
+            'onboarding_completed' => false,
+            'onboarding_steps_completed' => null,
+        ]);
     }
 
     public function unverified(): self

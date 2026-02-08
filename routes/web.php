@@ -10,6 +10,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\ContactSubmissionController;
 use App\Http\Controllers\CookieConsentController;
+use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\PersonalDataExportController;
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\UserController;
@@ -49,6 +50,11 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('dashboard', fn () => Inertia::render('dashboard'))->name('dashboard');
     Route::get('profile/export-pdf', App\Http\Controllers\ProfileExportPdfController::class)
         ->name('profile.export-pdf');
+});
+
+Route::middleware('auth')->group(function (): void {
+    Route::get('onboarding', [OnboardingController::class, 'show'])->name('onboarding');
+    Route::post('onboarding', [OnboardingController::class, 'store'])->name('onboarding.store');
 });
 
 Route::middleware('auth')->group(function (): void {

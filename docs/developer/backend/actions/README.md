@@ -26,5 +26,6 @@ All Actions:
 | [LoggingConfirmTwoFactorAuthentication](./LoggingConfirmTwoFactorAuthentication.md) | N/A | ✅ |
 | [LoggingGenerateNewRecoveryCodes](./LoggingGenerateNewRecoveryCodes.md) | N/A | ✅ |
 | [StoreContactSubmission](./StoreContactSubmission.md) | N/A | ✅ |
+| [CompleteOnboardingAction](./CompleteOnboardingAction.md) | N/A | ✅ |
 
 

@@ -26,5 +26,6 @@ All Controllers:
 | [ContactSubmissionController](./ContactSubmissionController.md) | N/A | ✅ |
 | [CookieConsentController](./CookieConsentController.md) | N/A | ✅ |
 | [PersonalDataExportController](./PersonalDataExportController.md) | N/A | ✅ |
+| [OnboardingController](./OnboardingController.md) | N/A | ✅ |
 
 

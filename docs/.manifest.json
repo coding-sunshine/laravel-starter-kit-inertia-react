@@ -215,6 +215,22 @@
                     "contact.store"
                 ]
             }
+        },
+        "CompleteOnboardingAction": {
+            "documented": true,
+            "path": "./CompleteOnboardingAction.md",
+            "relationships": {
+                "usedBy": [
+                    "OnboardingController"
+                ],
+                "usesModels": [
+                    "User"
+                ],
+                "relatedRoutes": [
+                    "onboarding",
+                    "onboarding.store"
+                ]
+            }
         }
     },
     "controllers": {
@@ -419,6 +435,23 @@
                 ],
                 "rendersPages": []
             }
+        },
+        "OnboardingController": {
+            "documented": true,
+            "path": "./OnboardingController.md",
+            "relationships": {
+                "usesActions": [
+                    "CompleteOnboardingAction"
+                ],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "onboarding",
+                    "onboarding.store"
+                ],
+                "rendersPages": [
+                    "onboarding/show"
+                ]
+            }
         }
     },
     "pages": {
@@ -484,6 +517,8 @@
                     "contact.create",
                     "contact.store",
                     "profile.export-pdf",
+                    "onboarding",
+                    "onboarding.store",
                     "impersonate",
                     "impersonate.leave",
                     "personal-data-exports",
@@ -569,6 +604,8 @@
                     "contact.create",
                     "contact.store",
                     "profile.export-pdf",
+                    "onboarding",
+                    "onboarding.store",
                     "impersonate",
                     "impersonate.leave",
                     "personal-data-exports",
@@ -789,6 +826,8 @@
                     "contact.create",
                     "contact.store",
                     "profile.export-pdf",
+                    "onboarding",
+                    "onboarding.store",
                     "impersonate",
                     "impersonate.leave",
                     "personal-data-exports",
@@ -888,6 +927,8 @@
                     "contact.create",
                     "contact.store",
                     "profile.export-pdf",
+                    "onboarding",
+                    "onboarding.store",
                     "impersonate",
                     "impersonate.leave",
                     "personal-data-exports",
@@ -908,6 +949,20 @@
                     "verification.notice",
                     "verification.send",
                     "verification.verify"
+                ]
+            }
+        },
+        "onboarding/show": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./onboarding-show.md",
+            "relationships": {
+                "renderedBy": [
+                    "OnboardingController"
+                ],
+                "relatedRoutes": [
+                    "onboarding",
+                    "onboarding.store"
                 ]
             }
         }

@@ -1,0 +1,69 @@
+#!/bin/sh
+#
+# Pre-commit hook: Pint (PHP style), tests, then model/seeder and docs checks.
+# Install: cp scripts/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+#
+
+set -e
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
+
+# 1. Laravel Pint (PHP code style)
+echo "📝 Running Pint..."
+if ! vendor/bin/pint --test --dirty 2>/dev/null; then
+    echo "❌ Pint check failed. Run: vendor/bin/pint --dirty --format agent"
+    exit 1
+fi
+echo "✅ Pint passed"
+
+# 2. Tests
+echo "🧪 Running tests..."
+if ! php artisan test --compact >/dev/null 2>&1; then
+    echo "❌ Tests failed. Run: php artisan test --compact"
+    exit 1
+fi
+echo "✅ Tests passed"
+
+# 3. New models: seeders and specs
+STAGED_MODELS=$(git diff --cached --name-only --diff-filter=A | grep -E '^app/Models/.*\.php$' || true)
+
+if [ -n "$STAGED_MODELS" ]; then
+    MISSING_SEEDERS=""
+    MISSING_SPECS=""
+    for MODEL_FILE in $STAGED_MODELS; do
+        MODEL_NAME=$(basename "$MODEL_FILE" .php)
+        SEEDER_FOUND=false
+        for CATEGORY in essential development production; do
+            if [ -f "database/seeders/$CATEGORY/${MODEL_NAME}Seeder.php" ]; then
+                SEEDER_FOUND=true
+                break
+            fi
+        done
+        if [ "$SEEDER_FOUND" = false ]; then
+            MISSING_SEEDERS="${MISSING_SEEDERS}${MISSING_SEEDERS:+, }$MODEL_NAME"
+        fi
+        if [ ! -f "database/seeders/specs/${MODEL_NAME}.json" ]; then
+            MISSING_SPECS="${MISSING_SPECS}${MISSING_SPECS:+, }$MODEL_NAME"
+        fi
+    done
+
+    if [ -n "$MISSING_SEEDERS" ] || [ -n "$MISSING_SPECS" ]; then
+        echo "❌ Pre-commit validation failed!"
+        [ -n "$MISSING_SEEDERS" ] && echo "Missing seeders: $MISSING_SEEDERS"
+        [ -n "$MISSING_SPECS" ] && echo "Missing specs: $MISSING_SPECS"
+        echo "Fix: php artisan make:model:full <Model> --category=development"
+        echo "Or skip: git commit --no-verify"
+        exit 1
+    fi
+fi
+
+# 4. Documentation
+echo "📚 Checking documentation..."
+if ! php artisan docs:sync --check >/dev/null 2>&1; then
+    echo "⚠️  Documentation incomplete. Run: php artisan docs:sync --check"
+    echo "Skip with: git commit --no-verify"
+    exit 1
+fi
+echo "✅ Docs OK"
+
+exit 0

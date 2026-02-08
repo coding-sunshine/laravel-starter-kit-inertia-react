@@ -56,6 +56,16 @@
             "type": "datetime",
             "nullable": true,
             "default": null
+        },
+        "onboarding_completed": {
+            "type": "tinyint",
+            "nullable": true,
+            "default": null
+        },
+        "onboarding_steps_completed": {
+            "type": "text",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {
@@ -96,6 +106,10 @@
         "email": {
             "type": "email",
             "example": "user@example.com"
+        },
+        "onboarding_completed": {
+            "type": "boolean",
+            "example": true
         }
     },
     "scenarios": []

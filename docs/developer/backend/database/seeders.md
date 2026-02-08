@@ -348,31 +348,25 @@ The `database/seeders/manifest.json` file tracks all seeders with metadata:
 
 ## Git Pre-Commit Hook
 
-A pre-commit hook validates that new models have corresponding seeders and seed specs:
+A pre-commit hook runs **Pint**, **tests**, **model/seeder checks**, and **documentation** checks.
 
-**Location**: `.git/hooks/pre-commit`
+**Source**: `scripts/pre-commit` (versioned). Install into Git:
 
-The hook:
-- Detects new model files
-- Checks for corresponding seeders
-- Checks for seed specs
-- **Interactive prompts**: Offers to auto-generate missing components
-- **Auto-fix capability**: Can automatically run `make:model:full` and `seeds:spec-sync`
-- Blocks commit if missing (with helpful error message)
-- Can be bypassed with `--no-verify` if needed
-
-**Interactive Mode:**
-When missing components are detected:
-1. Shows list of missing seeders/specs
-2. Prompts: "Auto-generate missing components? [Y/n]"
-3. If Yes: Automatically generates and continues
-4. If No: Blocks commit with instructions
-
-**Non-Interactive Mode:**
-Set `GIT_SEEDER_AUTO_FIX=1` environment variable for CI/CD:
 ```bash
-GIT_SEEDER_AUTO_FIX=1 git commit -m "Add new model"
+cp scripts/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
 ```
+
+**Location** (after install): `.git/hooks/pre-commit`
+
+The hook runs in order:
+1. **Pint** – PHP code style check on dirty files; fails with instructions to run `vendor/bin/pint --dirty --format agent`
+2. **Tests** – `php artisan test --compact`; fails if any test fails
+3. **New models** – If you staged new model files, requires corresponding seeders and seed specs (blocks commit with fix instructions)
+4. **Documentation** – `php artisan docs:sync --check`; fails if items are undocumented
+
+Bypass all checks: `git commit --no-verify`
+
+To fix missing seeders/specs before committing, run `php artisan make:model:full <Model> --category=development` (and optionally `php artisan seeds:spec-sync --model=<Model>`).
 
 ## Best Practices
 

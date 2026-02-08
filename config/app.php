@@ -125,4 +125,18 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | IP Whitelist
+    |--------------------------------------------------------------------------
+    |
+    | When non-empty, only these IPs (or CIDR ranges) may access routes
+    | protected by the EnforceIpWhitelist middleware. Used for admin or
+    | sensitive areas. Leave empty to allow all (e.g. local development).
+    | Set via IP_WHITELIST env (comma-separated) or here.
+    |
+    */
+
+    'ip_whitelist' => array_filter(array_map('trim', explode(',', (string) env('IP_WHITELIST', '')))),
+
 ];

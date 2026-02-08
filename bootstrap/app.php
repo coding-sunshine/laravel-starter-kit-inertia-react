@@ -5,9 +5,12 @@ declare(strict_types=1);
 use AlizHarb\ActivityLog\Http\Middleware\ActivityLogContextMiddleware;
 use App\Http\Middleware\AdditionalSecurityHeaders;
 use App\Http\Middleware\AutoPermissionMiddleware;
+use App\Http\Middleware\EnforceIpWhitelist;
+use App\Http\Middleware\EnsureOnboardingComplete;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\ServeFavicon;
+use App\Http\Middleware\ThrottleTwoFactorManagement;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -33,6 +36,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => RoleMiddleware::class,
             'role_or_permission' => RoleOrPermissionMiddleware::class,
             'auto.permission' => AutoPermissionMiddleware::class,
+            'ip.whitelist' => EnforceIpWhitelist::class,
         ]);
 
         $webAppend = [
@@ -44,6 +48,8 @@ return Application::configure(basePath: dirname(__DIR__))
             AddLinkHeadersForPreloadedAssets::class,
             CacheResponse::class,
             AutoPermissionMiddleware::class,
+            ThrottleTwoFactorManagement::class,
+            EnsureOnboardingComplete::class,
         ];
 
         $middleware->web(
