@@ -18,6 +18,7 @@ use Lab404\Impersonate\Models\Impersonate as ImpersonateTrait;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Sanctum\HasApiTokens;
 use Laravel\Sanctum\NewAccessToken;
+use Laravel\Scout\Searchable;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Image\Enums\Fit;
@@ -51,7 +52,7 @@ final class User extends Authenticatable implements ExportsPersonalData, Filamen
     /**
      * @use HasFactory<UserFactory>
      */
-    use HasApiTokens, HasFactory, HasRoles, HasTags, ImpersonateTrait, InteractsWithMedia, LogsActivity, Notifiable, TwoFactorAuthenticatable;
+    use HasApiTokens, HasFactory, HasRoles, HasTags, ImpersonateTrait, InteractsWithMedia, LogsActivity, Notifiable, Searchable, TwoFactorAuthenticatable;
 
     /**
      * @var list<string>
@@ -70,6 +71,22 @@ final class User extends Authenticatable implements ExportsPersonalData, Filamen
         'two_factor_secret',
         'two_factor_recovery_codes',
     ];
+
+    /**
+     * Get the indexable data array for the model (Typesense).
+     * Only safe, searchable fields; id and created_at must be string and int64.
+     *
+     * @return array<string, mixed>
+     */
+    public function toSearchableArray(): array
+    {
+        return [
+            'id' => (string) $this->id,
+            'name' => $this->name,
+            'email' => $this->email,
+            'created_at' => $this->created_at->timestamp,
+        ];
+    }
 
     public function registerMediaCollections(): void
     {

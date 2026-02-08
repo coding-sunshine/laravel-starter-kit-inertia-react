@@ -2,7 +2,7 @@
 
 Backend components, services, and patterns for developers.
 
-**At a glance (for agents):** Public API is versioned at **`/api/v1/`** (see [API reference](../api-reference/README.md)); list endpoints use **spatie/laravel-query-builder** (filter/sort/include); success/error shape uses **essa/api-tool-kit**. **MCP** server at `POST /mcp/api` (auth:sanctum) exposes tools `users_index`, `users_show` (see [mcp.md](./mcp.md)). **Content & export:** Tags on User (spatie/laravel-tags), profile PDF at `profile.export-pdf`, Filament User export (XLSX/CSV) — see [content-export.md](./content-export.md). Database-backed **settings** live in `App\Settings\*` and are edited in Filament under the **Settings** group (App, Auth, SEO). **Feature flags** are in `config/feature-flags.php` and shared to Inertia as the `features` prop. **Response cache** applies to guest GET only (see [response-cache.md](./response-cache.md)). **SEO & monitoring:** Sitemap (`sitemap:generate`, daily), robots.txt route, legal pages (`/legal/terms`, `/legal/privacy`), Sentry, GA4 (spatie/laravel-analytics), Slack webhook (failed-job alerts) — see [seo-and-monitoring.md](./seo-and-monitoring.md). **Backups:** spatie/laravel-backup, scheduled daily (`backup:run` then `backup:clean`) — [backup.md](./backup.md). **Third-party APIs:** use Saloon; connectors in `App\Http\Integrations\*`, example in [saloon.md](./saloon.md). **Userstamps:** wildside/userstamps (`created_by`/`updated_by`), see [userstamps.md](./userstamps.md). **ADRs:** architecture decisions in [docs/architecture/ADRs/](../../architecture/ADRs/README.md).
+**At a glance (for agents):** Public API is versioned at **`/api/v1/`** (see [API reference](../api-reference/README.md)); list endpoints use **spatie/laravel-query-builder** (filter/sort/include); success/error shape uses **essa/api-tool-kit**. **MCP** server at `POST /mcp/api` (auth:sanctum) exposes tools `users_index`, `users_show` (see [mcp.md](./mcp.md)). **Content & export:** Tags on User (spatie/laravel-tags), profile PDF at `profile.export-pdf`, Filament User export (XLSX/CSV) — see [content-export.md](./content-export.md). Database-backed **settings** live in `App\Settings\*` and are edited in Filament under the **Settings** group (App, Auth, SEO). **Feature flags** are in `config/feature-flags.php` and shared to Inertia as the `features` prop. **Response cache** applies to guest GET only (see [response-cache.md](./response-cache.md)). **SEO & monitoring:** Sitemap (`sitemap:generate`, daily), robots.txt route, legal pages (`/legal/terms`, `/legal/privacy`), Sentry, GA4 (spatie/laravel-analytics), Slack webhook (failed-job alerts) — see [seo-and-monitoring.md](./seo-and-monitoring.md). **Backups:** spatie/laravel-backup, scheduled daily (`backup:run` then `backup:clean`) — [backup.md](./backup.md). **Third-party APIs:** use Saloon; connectors in `App\Http\Integrations\*`, example in [saloon.md](./saloon.md). **Userstamps:** wildside/userstamps (`created_by`/`updated_by`), see [userstamps.md](./userstamps.md). **ADRs:** architecture decisions in [docs/architecture/ADRs/](../../architecture/ADRs/README.md). **Full-text search:** Laravel Scout + Typesense; `SCOUT_DRIVER=typesense`, `TYPESENSE_*` (Herd: LARAVEL-HERD, localhost:8108); User is searchable — [scout-typesense.md](./scout-typesense.md).
 
 ## Contents
 
@@ -23,6 +23,7 @@ Backend components, services, and patterns for developers.
 - [Laravel AI SDK](./ai-sdk.md) - Agents, embeddings, images, and when to use vs Prism
 - [PostgreSQL + pgvector](./pgvector.md) - Vector embeddings with pgvector (optional)
 - [Response Cache](./response-cache.md) - Guest GET response caching (exclude auth/admin)
+- [Scout + Typesense](./scout-typesense.md) - Full-text search with Laravel Scout and Typesense (Herd)
 - [Scramble OpenAPI Docs](./scramble.md) - OpenAPI/Swagger docs at `/docs/api`
 - [MCP Server](./mcp.md) - Model Context Protocol server and tools (users_index, users_show); auth via Sanctum
 - [SEO & Monitoring](./seo-and-monitoring.md) - Sitemap, robots.txt, legal pages, Sentry, GA4, Slack notifications
@@ -37,6 +38,7 @@ Backend components, services, and patterns for developers.
 - [Feature Flags](./feature-flags.md) - Pennant + Filament; expose to Inertia via `features` prop
 - [Response Cache](./response-cache.md) - Guest GET cache; exclude auth/admin
 - [Saloon](./saloon.md) - HTTP client for third-party APIs; connectors in `App\Http\Integrations\*`
+- [Scout + Typesense](./scout-typesense.md) - Full-text search; User searchable; Herd env in .env.example
 - [Settings](./settings.md) - DB-backed settings; `App\Settings\*`; Filament Settings group
 - [Userstamps](./userstamps.md) - created_by/updated_by with wildside/userstamps
 - [Seeder System](./database/seeders.md) - Automated seeder system

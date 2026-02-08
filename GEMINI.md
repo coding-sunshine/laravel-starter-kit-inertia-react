@@ -286,6 +286,7 @@ This application is a Laravel application and its main Laravel ecosystems packag
 - laravel/pennant (PENNANT) - v1
 - laravel/prompts (PROMPTS) - v0
 - laravel/sanctum (SANCTUM) - v4
+- laravel/scout (SCOUT) - v10
 - laravel/wayfinder (WAYFINDER) - v0
 - livewire/livewire (LIVEWIRE) - v4
 - larastan/larastan (LARASTAN) - v3

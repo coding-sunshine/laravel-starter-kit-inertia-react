@@ -286,6 +286,7 @@ This application is a Laravel application and its main Laravel ecosystems packag
 - laravel/pennant (PENNANT) - v1
 - laravel/prompts (PROMPTS) - v0
 - laravel/sanctum (SANCTUM) - v4
+- laravel/scout (SCOUT) - v10
 - laravel/wayfinder (WAYFINDER) - v0
 - livewire/livewire (LIVEWIRE) - v4
 - larastan/larastan (LARASTAN) - v3
@@ -318,7 +319,7 @@ This project has domain-specific skills available. You MUST activate the relevan
 - You must follow all existing code conventions used in this application. When creating or editing a file, check sibling files for the correct structure, approach, and naming.
 - Use descriptive names for variables and methods. For example, `isRegisteredForDiscounts`, not `discount()`.
 - Check for existing components to reuse before writing a new one.
-- **Third-party APIs:** use Saloon; add connectors and requests under `App\Http\Integrations\{Name}\` (see docs/developer/backend/saloon.md). **Backups:** spatie/laravel-backup (config/backup.php, docs/developer/backend/backup.md). **Userstamps:** wildside/userstamps for created_by/updated_by (docs/developer/backend/userstamps.md). **Architecture decisions:** record in docs/architecture/ADRs/ (see README there).
+- **Full-text search:** Use Laravel Scout; driver Typesense (Herd: `SCOUT_DRIVER=typesense`, `TYPESENSE_API_KEY=LARAVEL-HERD`, `TYPESENSE_HOST=localhost`). Add `Searchable` trait and `toSearchableArray()` (id as string, created_at as UNIX timestamp); define collection schema in `config/scout.php` under `typesense.model-settings`. See docs/developer/backend/scout-typesense.md.
 
 ## Verification Scripts
 
