@@ -25,5 +25,6 @@ All Actions:
 | [LoggingDisableTwoFactorAuthentication](./LoggingDisableTwoFactorAuthentication.md) | N/A | ✅ |
 | [LoggingConfirmTwoFactorAuthentication](./LoggingConfirmTwoFactorAuthentication.md) | N/A | ✅ |
 | [LoggingGenerateNewRecoveryCodes](./LoggingGenerateNewRecoveryCodes.md) | N/A | ✅ |
+| [StoreContactSubmission](./StoreContactSubmission.md) | N/A | ✅ |
 
 

@@ -16,7 +16,7 @@ interface SharedProps {
  * that posts to a route protected by ProtectAgainstSpam middleware (e.g. register).
  * Only renders when honeypot is enabled and data is available from shared props.
  */
-export function HoneypotFields() {
+function HoneypotFields() {
     const { honeypot } = usePage().props as SharedProps;
 
     if (!honeypot?.enabled) {
@@ -46,3 +46,6 @@ export function HoneypotFields() {
         </>
     );
 }
+
+export { HoneypotFields };
+export default HoneypotFields;

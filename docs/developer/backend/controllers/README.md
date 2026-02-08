@@ -22,6 +22,9 @@ All Controllers:
 | [UserPasswordController](./UserPasswordController.md) | N/A | ✅ |
 | [UserProfileController](./UserProfileController.md) | N/A | ✅ |
 | [UserTwoFactorAuthenticationController](./UserTwoFactorAuthenticationController.md) | N/A | ✅ |
-| [ProfileExportPdfController](./ProfileExportPdfController.md) | Profile PDF download (auth); Blade view, Inertia trigger | ✅ |
+| [ProfileExportPdfController](./ProfileExportPdfController.md) | N/A | ✅ |
+| [ContactSubmissionController](./ContactSubmissionController.md) | N/A | ✅ |
+| [CookieConsentController](./CookieConsentController.md) | N/A | ✅ |
+| [PersonalDataExportController](./PersonalDataExportController.md) | N/A | ✅ |
 
 

@@ -14,3 +14,6 @@ Artisan::command('inspire', function (): void {
 if (config('permission.route_based_enforcement', false)) {
     Schedule::command('permission:sync-routes', ['--silent' => true])->daily();
 }
+
+// Remove expired personal data exports (GDPR).
+Schedule::command('personal-data-export:clean')->daily();

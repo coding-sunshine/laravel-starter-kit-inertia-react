@@ -63,6 +63,11 @@ final class HandleInertiaRequests extends Middleware
             'features' => $features,
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'honeypot' => $honeypot->enabled() ? $honeypot->toArray() : null,
+            'cookieConsent' => config('cookie-consent.enabled', true) ? [
+                'accepted' => $request->hasCookie(config('cookie-consent.cookie_name', 'laravel_cookie_consent')),
+                'cookieName' => config('cookie-consent.cookie_name', 'laravel_cookie_consent'),
+                'lifetimeDays' => (int) config('cookie-consent.cookie_lifetime', 365 * 20),
+            ] : null,
         ];
     }
 }

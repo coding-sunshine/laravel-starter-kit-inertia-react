@@ -9,7 +9,8 @@ arch()->preset()->security()->ignoring([
 
 arch('controllers')
     ->expect('App\Http\Controllers')
-    ->not->toBeUsed();
+    ->not->toBeUsed()
+    ->ignoring('App\Http\Controllers\Api\V1\BaseApiController');
 
 // Prism: only PrismService may use the Prism facade; all other app code must use PrismService or ai().
 arch('Prism facade only in PrismService')

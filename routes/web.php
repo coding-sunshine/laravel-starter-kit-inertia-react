@@ -8,6 +8,9 @@ declare(strict_types=1);
  * after adding or changing routes.
  */
 
+use App\Http\Controllers\ContactSubmissionController;
+use App\Http\Controllers\CookieConsentController;
+use App\Http\Controllers\PersonalDataExportController;
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserEmailResetNotificationController;
@@ -35,6 +38,13 @@ Route::get('/favicon.ico', function (): BinaryFileResponse|RedirectResponse {
 
 Route::get('/', fn () => Inertia::render('welcome'))->name('home');
 
+Route::get('cookie-consent/accept', CookieConsentController::class)->name('cookie-consent.accept');
+
+Route::get('contact', [ContactSubmissionController::class, 'create'])->name('contact.create');
+Route::post('contact', [ContactSubmissionController::class, 'store'])
+    ->middleware(ProtectAgainstSpam::class)
+    ->name('contact.store');
+
 Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('dashboard', fn () => Inertia::render('dashboard'))->name('dashboard');
     Route::get('profile/export-pdf', App\Http\Controllers\ProfileExportPdfController::class)
@@ -43,6 +53,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 
 Route::middleware('auth')->group(function (): void {
     Route::impersonate();
+    Route::personalDataExports('personal-data-exports');
 });
 
 Route::middleware('auth')->group(function (): void {
@@ -62,6 +73,13 @@ Route::middleware('auth')->group(function (): void {
 
     // Appearance...
     Route::get('settings/appearance', fn () => Inertia::render('appearance/update'))->name('appearance.edit');
+
+    // Personal data export (GDPR)...
+    Route::get('settings/personal-data-export', fn () => Inertia::render('settings/personal-data-export'))
+        ->name('personal-data-export.edit');
+    Route::post('settings/personal-data-export', PersonalDataExportController::class)
+        ->middleware('throttle:3,1')
+        ->name('personal-data-export.store');
 
     // User Two-Factor Authentication...
     Route::get('settings/two-factor', [UserTwoFactorAuthenticationController::class, 'show'])

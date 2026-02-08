@@ -19,5 +19,7 @@ Inertia pages are React components that receive data from Laravel controllers. T
 | [user-two-factor-authentication/show](./user-two-factor-authentication-show.md) | two-factor.show | ✅ |
 | [user/create](./user-create.md) | user.destroy, register | ✅ |
 | [welcome](./welcome.md) | filament.exports.download, filament.imports.failed-rows.download | ✅ |
+| [contact/create](./contact-create.md) | contact.create, contact.store | ✅ |
+| [settings/personal-data-export](./settings-personal-data-export.md) | filament.exports.download, filament.imports.failed-rows.download | ✅ |
 
 

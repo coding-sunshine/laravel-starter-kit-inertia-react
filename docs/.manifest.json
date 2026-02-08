@@ -199,6 +199,22 @@
                     "two-factor.regenerate-recovery-codes"
                 ]
             }
+        },
+        "StoreContactSubmission": {
+            "documented": true,
+            "path": "./StoreContactSubmission.md",
+            "relationships": {
+                "usedBy": [
+                    "ContactSubmissionController"
+                ],
+                "usesModels": [
+                    "ContactSubmission"
+                ],
+                "relatedRoutes": [
+                    "contact.create",
+                    "contact.store"
+                ]
+            }
         }
     },
     "controllers": {
@@ -360,6 +376,49 @@
                 ],
                 "rendersPages": []
             }
+        },
+        "ContactSubmissionController": {
+            "documented": true,
+            "path": "./ContactSubmissionController.md",
+            "relationships": {
+                "usesActions": [
+                    "StoreContactSubmission"
+                ],
+                "usesFormRequests": [
+                    "StoreContactSubmissionRequest"
+                ],
+                "relatedRoutes": [
+                    "contact.create",
+                    "contact.store"
+                ],
+                "rendersPages": [
+                    "contact/create"
+                ]
+            }
+        },
+        "CookieConsentController": {
+            "documented": true,
+            "path": "./CookieConsentController.md",
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "cookie-consent.accept"
+                ],
+                "rendersPages": []
+            }
+        },
+        "PersonalDataExportController": {
+            "documented": true,
+            "path": "./PersonalDataExportController.md",
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "personal-data-export.store"
+                ],
+                "rendersPages": []
+            }
         }
     },
     "pages": {
@@ -382,6 +441,9 @@
                     "filament.admin.resources.feature-segments.index",
                     "filament.admin.resources.activity-logs.index",
                     "filament.admin.resources.activity-logs.view",
+                    "filament.admin.resources.contact-submissions.index",
+                    "filament.admin.resources.contact-submissions.view",
+                    "filament.admin.resources.contact-submissions.edit",
                     "filament.admin.resources.permissions.index",
                     "filament.admin.resources.permissions.view",
                     "filament.admin.resources.roles.index",
@@ -418,15 +480,20 @@
                     "api.v1.users.store",
                     "api.v1.users.update",
                     "api.v1.users.destroy",
+                    "cookie-consent.accept",
+                    "contact.create",
+                    "contact.store",
                     "profile.export-pdf",
                     "impersonate",
                     "impersonate.leave",
+                    "personal-data-exports",
                     "user.destroy",
                     "settings",
                     "user-profile.edit",
                     "user-profile.update",
                     "password.edit",
                     "password.update",
+                    "personal-data-export.store",
                     "two-factor.show",
                     "register",
                     "register.store",
@@ -459,6 +526,9 @@
                     "filament.admin.resources.feature-segments.index",
                     "filament.admin.resources.activity-logs.index",
                     "filament.admin.resources.activity-logs.view",
+                    "filament.admin.resources.contact-submissions.index",
+                    "filament.admin.resources.contact-submissions.view",
+                    "filament.admin.resources.contact-submissions.edit",
                     "filament.admin.resources.permissions.index",
                     "filament.admin.resources.permissions.view",
                     "filament.admin.resources.roles.index",
@@ -495,15 +565,20 @@
                     "api.v1.users.store",
                     "api.v1.users.update",
                     "api.v1.users.destroy",
+                    "cookie-consent.accept",
+                    "contact.create",
+                    "contact.store",
                     "profile.export-pdf",
                     "impersonate",
                     "impersonate.leave",
+                    "personal-data-exports",
                     "user.destroy",
                     "settings",
                     "user-profile.edit",
                     "user-profile.update",
                     "password.edit",
                     "password.update",
+                    "personal-data-export.store",
                     "two-factor.show",
                     "register",
                     "register.store",
@@ -671,6 +746,9 @@
                     "filament.admin.resources.feature-segments.index",
                     "filament.admin.resources.activity-logs.index",
                     "filament.admin.resources.activity-logs.view",
+                    "filament.admin.resources.contact-submissions.index",
+                    "filament.admin.resources.contact-submissions.view",
+                    "filament.admin.resources.contact-submissions.edit",
                     "filament.admin.resources.permissions.index",
                     "filament.admin.resources.permissions.view",
                     "filament.admin.resources.roles.index",
@@ -707,15 +785,119 @@
                     "api.v1.users.store",
                     "api.v1.users.update",
                     "api.v1.users.destroy",
+                    "cookie-consent.accept",
+                    "contact.create",
+                    "contact.store",
                     "profile.export-pdf",
                     "impersonate",
                     "impersonate.leave",
+                    "personal-data-exports",
                     "user.destroy",
                     "settings",
                     "user-profile.edit",
                     "user-profile.update",
                     "password.edit",
                     "password.update",
+                    "personal-data-export.store",
+                    "two-factor.show",
+                    "register",
+                    "register.store",
+                    "password.reset",
+                    "password.store",
+                    "password.request",
+                    "password.email",
+                    "verification.notice",
+                    "verification.send",
+                    "verification.verify"
+                ]
+            }
+        },
+        "contact/create": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./contact-create.md",
+            "relationships": {
+                "renderedBy": [
+                    "ContactSubmissionController"
+                ],
+                "relatedRoutes": [
+                    "contact.create",
+                    "contact.store"
+                ]
+            }
+        },
+        "settings/personal-data-export": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./settings-personal-data-export.md",
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": [
+                    "filament.exports.download",
+                    "filament.imports.failed-rows.download",
+                    "filament.admin.auth.login",
+                    "filament.admin.auth.logout",
+                    "filament.admin.pages.dashboard",
+                    "filament.admin.pages.user-activities-page",
+                    "filament.admin.pages.manage-app",
+                    "filament.admin.pages.manage-auth",
+                    "filament.admin.pages.manage-seo",
+                    "filament.admin.resources.feature-segments.index",
+                    "filament.admin.resources.activity-logs.index",
+                    "filament.admin.resources.activity-logs.view",
+                    "filament.admin.resources.contact-submissions.index",
+                    "filament.admin.resources.contact-submissions.view",
+                    "filament.admin.resources.contact-submissions.edit",
+                    "filament.admin.resources.permissions.index",
+                    "filament.admin.resources.permissions.view",
+                    "filament.admin.resources.roles.index",
+                    "filament.admin.resources.roles.create",
+                    "filament.admin.resources.roles.view",
+                    "filament.admin.resources.roles.edit",
+                    "filament.admin.resources.users.index",
+                    "filament.admin.resources.users.create",
+                    "filament.admin.resources.users.view",
+                    "filament.admin.resources.users.edit",
+                    "login",
+                    "login.store",
+                    "logout",
+                    "password.confirm",
+                    "password.confirmation",
+                    "password.confirm.store",
+                    "two-factor.login",
+                    "two-factor.login.store",
+                    "two-factor.enable",
+                    "two-factor.confirm",
+                    "two-factor.disable",
+                    "two-factor.qr-code",
+                    "two-factor.secret-key",
+                    "two-factor.recovery-codes",
+                    "two-factor.regenerate-recovery-codes",
+                    "sanctum.csrf-cookie",
+                    "default.livewire.update",
+                    "livewire.upload-file",
+                    "livewire.preview-file",
+                    "api.v1.users.index",
+                    "api.v1.users.batch",
+                    "api.v1.users.search",
+                    "api.v1.users.show",
+                    "api.v1.users.store",
+                    "api.v1.users.update",
+                    "api.v1.users.destroy",
+                    "cookie-consent.accept",
+                    "contact.create",
+                    "contact.store",
+                    "profile.export-pdf",
+                    "impersonate",
+                    "impersonate.leave",
+                    "personal-data-exports",
+                    "user.destroy",
+                    "settings",
+                    "user-profile.edit",
+                    "user-profile.update",
+                    "password.edit",
+                    "password.update",
+                    "personal-data-export.store",
                     "two-factor.show",
                     "register",
                     "register.store",

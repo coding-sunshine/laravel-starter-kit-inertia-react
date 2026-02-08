@@ -13,6 +13,7 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Str;
 use Lab404\Impersonate\Models\Impersonate as ImpersonateTrait;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Sanctum\HasApiTokens;
@@ -24,6 +25,8 @@ use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Spatie\Permission\Traits\HasRoles;
+use Spatie\PersonalDataExport\ExportsPersonalData;
+use Spatie\PersonalDataExport\PersonalDataSelection;
 use Spatie\Tags\HasTags;
 
 /**
@@ -41,7 +44,7 @@ use Spatie\Tags\HasTags;
  * @property-read CarbonInterface $created_at
  * @property-read CarbonInterface $updated_at
  */
-final class User extends Authenticatable implements FilamentUser, HasMedia, MustVerifyEmail
+final class User extends Authenticatable implements ExportsPersonalData, FilamentUser, HasMedia, MustVerifyEmail
 {
     /**
      * @use HasFactory<UserFactory>
@@ -169,6 +172,23 @@ final class User extends Authenticatable implements FilamentUser, HasMedia, Must
     /**
      * Whether this user is the only one with the super-admin role (cannot remove or delete).
      */
+    public function selectPersonalData(PersonalDataSelection $personalDataSelection): void
+    {
+        $personalDataSelection->add('user.json', [
+            'id' => $this->id,
+            'name' => $this->name,
+            'email' => $this->email,
+            'email_verified_at' => $this->email_verified_at?->toIso8601String(),
+            'created_at' => $this->created_at->toIso8601String(),
+            'updated_at' => $this->updated_at->toIso8601String(),
+        ]);
+    }
+
+    public function personalDataExportName(): string
+    {
+        return 'personal-data-'.Str::slug($this->name).'.zip';
+    }
+
     public function isLastSuperAdmin(): bool
     {
         $superAdminRole = \Spatie\Permission\Models\Role::query()

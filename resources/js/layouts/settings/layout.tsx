@@ -6,6 +6,7 @@ import { edit as editAppearance } from '@/routes/appearance';
 import { edit as editPassword } from '@/routes/password';
 import { show } from '@/routes/two-factor';
 import { edit } from '@/routes/user-profile';
+import { edit as editPersonalDataExport } from '@/routes/personal-data-export';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
 import { type PropsWithChildren } from 'react';
@@ -29,6 +30,11 @@ const sidebarNavItems: NavItem[] = [
     {
         title: 'Appearance',
         href: editAppearance(),
+        icon: null,
+    },
+    {
+        title: 'Data export',
+        href: editPersonalDataExport(),
         icon: null,
     },
 ];
