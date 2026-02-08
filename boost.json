@@ -5,7 +5,8 @@
         "gemini",
         "junie",
         "opencode",
-        "copilot"
+        "copilot",
+        "codex"
     ],
     "guidelines": true,
     "herd_mcp": true,
@@ -14,7 +15,8 @@
         "filament/filament",
         "laravel/fortify",
         "prism-php/prism",
-        "filament/blueprint"
+        "filament/blueprint",
+        "laravel/ai"
     ],
     "sail": false,
     "skills": [
@@ -24,6 +26,7 @@
         "pest-testing",
         "inertia-react-development",
         "tailwindcss-development",
+        "developing-with-ai-sdk",
         "developing-with-fortify",
         "developing-with-prism"
     ]

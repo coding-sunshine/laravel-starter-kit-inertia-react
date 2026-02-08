@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "883be45a1032db254739d60b1a02d09e",
+    "content-hash": "1c40021e6672ad5914cc030aa3572aa8",
     "packages": [
         {
             "name": "a909m/filament-statefusion",

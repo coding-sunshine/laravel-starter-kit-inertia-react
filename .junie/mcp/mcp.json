@@ -1,15 +1,17 @@
 {
     "mcpServers": {
         "laravel-boost": {
-            "command": "/Users/apple/Library/Application Support/Herd/bin/php84",
+            "command": "/Users/apple/Library/Application",
             "args": [
+                "Support/Herd/bin/php84",
                 "/Users/apple/Code/cogneiss/Products/laravel-starter-kit-inertia-react/artisan",
                 "boost:mcp"
             ]
         },
         "herd": {
-            "command": "/Users/apple/Library/Application Support/Herd/bin/php84",
+            "command": "/Users/apple/Library/Application",
             "args": [
+                "Support/Herd/bin/php84",
                 "/Applications/Herd.app/Contents/Resources/herd-mcp.phar"
             ],
             "env": {
