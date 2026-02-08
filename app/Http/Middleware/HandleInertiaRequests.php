@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Settings\SeoSettings;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 use Laravel\Pennant\Feature;
 use Spatie\Honeypot\Honeypot;
+use Throwable;
 
 final class HandleInertiaRequests extends Middleware
 {
@@ -68,6 +70,31 @@ final class HandleInertiaRequests extends Middleware
                 'cookieName' => config('cookie-consent.cookie_name', 'laravel_cookie_consent'),
                 'lifetimeDays' => (int) config('cookie-consent.cookie_lifetime', 365 * 20),
             ] : null,
+            'seo' => $this->seoSharedData(),
         ];
+    }
+
+    /**
+     * @return array{meta_title: string, meta_description: string, og_image: string|null, app_url: string}
+     */
+    private function seoSharedData(): array
+    {
+        try {
+            $settings = app(SeoSettings::class);
+
+            return [
+                'meta_title' => $settings->meta_title ?: config('app.name'),
+                'meta_description' => $settings->meta_description ?? '',
+                'og_image' => $settings->og_image,
+                'app_url' => mb_rtrim(config('app.url'), '/'),
+            ];
+        } catch (Throwable) {
+            return [
+                'meta_title' => config('app.name'),
+                'meta_description' => '',
+                'og_image' => null,
+                'app_url' => mb_rtrim(config('app.url'), '/'),
+            ];
+        }
     }
 }

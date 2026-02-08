@@ -1,5 +1,6 @@
 import { dashboard, login, register } from '@/routes';
 import { create as contactCreate } from '@/routes/contact';
+import { privacy as legalPrivacy, terms as legalTerms } from '@/routes/legal';
 import { type SharedData } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/react';
 
@@ -804,7 +805,16 @@ export default function Welcome() {
                             <div className="absolute inset-0 rounded-t-lg shadow-[inset_0px_0px_0px_1px_rgba(26,26,0,0.16)] lg:rounded-t-none lg:rounded-r-lg dark:shadow-[inset_0px_0px_0px_1px_#fffaed2d]" />
                         </div>
                     </main>
-                </div>
+                        </div>
+                <footer className="mt-8 w-full max-w-[335px] border-t border-[#e3e3e0] pt-4 text-center text-sm text-[#706f6c] dark:border-[#3E3E3A] dark:text-[#A1A09A] lg:max-w-4xl">
+                    <Link href={legalTerms().url} className="hover:underline">
+                        Terms of Service
+                    </Link>
+                    {' · '}
+                    <Link href={legalPrivacy().url} className="hover:underline">
+                        Privacy Policy
+                    </Link>
+                </footer>
                 <div className="hidden h-14.5 lg:block"></div>
             </div>
         </>

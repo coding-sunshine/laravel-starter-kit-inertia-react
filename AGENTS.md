@@ -318,6 +318,7 @@ This project has domain-specific skills available. You MUST activate the relevan
 - You must follow all existing code conventions used in this application. When creating or editing a file, check sibling files for the correct structure, approach, and naming.
 - Use descriptive names for variables and methods. For example, `isRegisteredForDiscounts`, not `discount()`.
 - Check for existing components to reuse before writing a new one.
+- **Third-party APIs:** use Saloon; add connectors and requests under `App\Http\Integrations\{Name}\` (see docs/developer/backend/saloon.md). **Backups:** spatie/laravel-backup (config/backup.php, docs/developer/backend/backup.md). **Userstamps:** wildside/userstamps for created_by/updated_by (docs/developer/backend/userstamps.md). **Architecture decisions:** record in docs/architecture/ADRs/ (see README there).
 
 ## Verification Scripts
 

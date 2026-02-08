@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\ContactSubmission;
+use App\Models\User;
 
 /**
  * Valid honeypot fields for contact.store (same as register when ProtectAgainstSpam is enabled).
@@ -43,7 +44,31 @@ it('stores a contact submission', function (): void {
         ->and($submission->name)->toBe('Jane Doe')
         ->and($submission->subject)->toBe('Question')
         ->and($submission->message)->toBe('Hello, I have a question.')
-        ->and($submission->status)->toBe('new');
+        ->and($submission->status)->toBe('new')
+        ->and($submission->created_by)->toBeNull(); // guest submission
+});
+
+it('sets userstamps when user is authenticated', function (): void {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)
+        ->fromRoute('contact.create')
+        ->post(route('contact.store'), [
+            'name' => 'Jane Doe',
+            'email' => 'jane@example.com',
+            'subject' => 'Question',
+            'message' => 'Hello.',
+            ...contactHoneypotFields(),
+        ]);
+
+    $response->assertRedirectToRoute('contact.create')
+        ->assertSessionHas('status');
+
+    $submission = ContactSubmission::query()->where('email', 'jane@example.com')->latest('id')->first();
+
+    expect($submission)->not->toBeNull()
+        ->and($submission->created_by)->toBe($user->id)
+        ->and($submission->updated_by)->toBe($user->id);
 });
 
 it('requires name', function (): void {

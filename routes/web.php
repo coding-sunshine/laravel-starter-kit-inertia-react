@@ -37,9 +37,20 @@ Route::get('/favicon.ico', function (): BinaryFileResponse|RedirectResponse {
     return redirect('/favicon.svg', 302);
 })->name('favicon');
 
+Route::get('robots.txt', function (): Illuminate\Http\Response {
+    $base = mb_rtrim(config('app.url'), '/');
+
+    return response("User-agent: *\nDisallow:\n\nSitemap: {$base}/sitemap.xml\n", 200, [
+        'Content-Type' => 'text/plain',
+    ]);
+})->name('robots');
+
 Route::get('/', fn () => Inertia::render('welcome'))->name('home');
 
 Route::get('cookie-consent/accept', CookieConsentController::class)->name('cookie-consent.accept');
+
+Route::get('legal/terms', fn () => Inertia::render('legal/terms'))->name('legal.terms');
+Route::get('legal/privacy', fn () => Inertia::render('legal/privacy'))->name('legal.privacy');
 
 Route::get('contact', [ContactSubmissionController::class, 'create'])->name('contact.create');
 Route::post('contact', [ContactSubmissionController::class, 'store'])

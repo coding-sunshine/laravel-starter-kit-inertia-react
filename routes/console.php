@@ -17,3 +17,10 @@ if (config('permission.route_based_enforcement', false)) {
 
 // Remove expired personal data exports (GDPR).
 Schedule::command('personal-data-export:clean')->daily();
+
+// Regenerate sitemap for SEO.
+Schedule::command('sitemap:generate')->daily();
+
+// Database and file backups (spatie/laravel-backup). Run first, then clean old ones.
+Schedule::command('backup:run')->daily()->at('01:00');
+Schedule::command('backup:clean')->daily()->at('01:00');

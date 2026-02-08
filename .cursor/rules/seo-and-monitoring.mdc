@@ -1,0 +1,16 @@
+---
+description: Sitemap, robots.txt, legal pages, Sentry, GA4, Slack notifications
+globs: routes/web.php, routes/console.php, app/Console/Commands/GenerateSitemap.php, app/Notifications/Slack*.php, app/Support/SlackWebhookRecipient.php, app/Listeners/SendSlackAlertOnJobFailed.php, config/sentry.php, config/analytics.php, config/services.php, resources/js/pages/legal/*.tsx, resources/views/app.blade.php
+---
+# SEO & Monitoring
+
+When working on **sitemap**, **robots.txt**, **legal pages**, **Sentry**, **Google Analytics 4**, or **Slack notifications**, follow `docs/developer/backend/seo-and-monitoring.md`.
+
+- **Sitemap**: `php artisan sitemap:generate` (command `App\Console\Commands\GenerateSitemap`); scheduled daily. Add new public URLs in the command if they should appear in the sitemap.
+- **robots.txt**: Served by route `robots`; includes `Sitemap: {APP_URL}/sitemap.xml`.
+- **Legal pages**: Routes `legal.terms`, `legal.privacy`; Inertia pages in `resources/js/pages/legal/`; linked from welcome footer. Wayfinder: `@/routes/legal` (terms, privacy).
+- **Sentry**: Config `config/sentry.php`; set `SENTRY_LARAVEL_DSN` to enable.
+- **GA4**: Config `config/analytics.php`; env `ANALYTICS_PROPERTY_ID`, `GOOGLE_ANALYTICS_CREDENTIALS_PATH`.
+- **Slack**: `config/services.php` → `slack.webhook_url` (`SLACK_WEBHOOK_URL`). Use `App\Support\SlackWebhookRecipient` and `App\Notifications\SlackCriticalAlertNotification` for alerts. Failed jobs are reported when webhook is set (listener `SendSlackAlertOnJobFailed`).
+
+After adding new public routes: run `php artisan permission:sync-routes` if route-based permissions are enabled; run `php artisan wayfinder:generate`; consider adding URLs to `GenerateSitemap` if they should be in the sitemap.

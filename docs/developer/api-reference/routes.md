@@ -2,7 +2,7 @@
 
 This document lists all available routes in the application.
 
-**Last Updated**: 2026-02-08 06:50:35
+**Last Updated**: 2026-02-08 (robots, legal.terms, legal.privacy added)
 
 ## Closure
 
@@ -41,7 +41,10 @@ This document lists all available routes in the application.
 | GET | `api` | api | api |
 | GET | `api/v1` | api.v1.info | api |
 | GET | `favicon.ico` | favicon | web |
+| GET | `robots.txt` | robots | web |
 | GET | `/` | home | web |
+| GET | `legal/terms` | legal.terms | web |
+| GET | `legal/privacy` | legal.privacy | web |
 | GET | `dashboard` | dashboard | web, auth, verified |
 | GET | `profile/export-pdf` | profile.export-pdf | web, auth, verified |
 | GET, POST, PUT, PATCH, DELETE | `settings` | settings | web, auth |

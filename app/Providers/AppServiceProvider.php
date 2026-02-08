@@ -6,24 +6,29 @@ namespace App\Providers;
 
 use App\Listeners\LogImpersonationEvents;
 use App\Listeners\MigrationListener;
+use App\Listeners\SendSlackAlertOnJobFailed;
 use App\Models\User;
 use App\Observers\ActivityLogObserver;
 use App\Observers\PermissionActivityObserver;
 use App\Observers\RoleActivityObserver;
 use App\Services\PrismService;
+use App\Settings\SeoSettings;
 use Essa\APIToolKit\Exceptions\Handler as ApiToolKitExceptionHandler;
 use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Database\Events\MigrationsEnded;
+use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Lab404\Impersonate\Events\LeaveImpersonation;
 use Lab404\Impersonate\Events\TakeImpersonation;
 use Spatie\Activitylog\ActivitylogServiceProvider;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Throwable;
 
 final class AppServiceProvider extends ServiceProvider
 {
@@ -38,6 +43,7 @@ final class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        $this->registerSeoViewComposer();
         $this->registerActivityLogTaps();
 
         Gate::before(function ($user, string $ability, array $arguments): ?bool {
@@ -60,6 +66,7 @@ final class AppServiceProvider extends ServiceProvider
 
         Event::listen(TakeImpersonation::class, [LogImpersonationEvents::class, 'handleTakeImpersonation']);
         Event::listen(LeaveImpersonation::class, [LogImpersonationEvents::class, 'handleLeaveImpersonation']);
+        Event::listen(JobFailed::class, SendSlackAlertOnJobFailed::class);
     }
 
     private function userHasBypassPermissions(object $user): bool
@@ -90,6 +97,30 @@ final class AppServiceProvider extends ServiceProvider
         $model = $arguments[0] ?? null;
 
         return $model instanceof User;
+    }
+
+    private function registerSeoViewComposer(): void
+    {
+        View::composer('app', function ($view): void {
+            try {
+                $settings = app(SeoSettings::class);
+                $seo = [
+                    'meta_title' => $settings->meta_title ?: config('app.name'),
+                    'meta_description' => $settings->meta_description ?? '',
+                    'og_image' => $settings->og_image,
+                    'app_url' => mb_rtrim(config('app.url'), '/'),
+                ];
+            } catch (Throwable) {
+                $seo = [
+                    'meta_title' => config('app.name'),
+                    'meta_description' => '',
+                    'og_image' => null,
+                    'app_url' => mb_rtrim(config('app.url'), '/'),
+                ];
+            }
+            $seo['current_url'] = request()->url();
+            $view->with('seo', $seo);
+        });
     }
 
     private function registerActivityLogTaps(): void

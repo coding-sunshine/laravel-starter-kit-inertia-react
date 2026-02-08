@@ -51,3 +51,7 @@ For detailed documentation on each layer:
 - [Actions](./../backend/actions/README.md)
 - [Controllers](./../backend/controllers/README.md)
 - [Pages](./../frontend/pages/README.md)
+
+## Architecture Decision Records
+
+Significant architectural decisions are recorded in [docs/architecture/ADRs/](../../architecture/ADRs/README.md). Each ADR documents context, decision, and consequences.

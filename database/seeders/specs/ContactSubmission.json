@@ -41,6 +41,16 @@
             "type": "datetime",
             "nullable": true,
             "default": null
+        },
+        "created_by": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": [],
