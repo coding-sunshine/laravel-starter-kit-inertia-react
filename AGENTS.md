@@ -379,11 +379,6 @@ This project has domain-specific skills available. You MUST activate the relevan
 4. Mixed Queries - query=middleware "rate limit" - "middleware" AND exact phrase "rate limit".
 5. Multiple Queries - queries=["authentication", "middleware"] - ANY of these terms.
 
-## API & MCP (for coding agents)
-
-- **Public API**: Versioned at `/api/v1/`. Success/error format uses **essa/api-tool-kit** (`application/problem+json` for errors). List endpoints support **filter**, **sort**, **include**, and **fields** (sparse fieldsets). See [API reference](docs/developer/api-reference/README.md), [routes](docs/developer/api-reference/routes.md), and [ApiV1UserController](docs/developer/backend/controllers/ApiV1UserController.md) for CRUD, batch, and search.
-- **MCP server**: `POST /mcp/api` (auth:sanctum). Tools: **users_index**, **users_show**. See [mcp.md](docs/developer/backend/mcp.md) and backend [README at-a-glance](docs/developer/backend/README.md).
-
 === php rules ===
 
 # PHP

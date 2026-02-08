@@ -2,13 +2,14 @@
 
 Backend components, services, and patterns for developers.
 
-**At a glance (for agents):** Public API is versioned at **`/api/v1/`** (see [API reference](../api-reference/README.md)); list endpoints use **spatie/laravel-query-builder** (filter/sort/include); success/error shape uses **essa/api-tool-kit**. **MCP** server at `POST /mcp/api` (auth:sanctum) exposes tools `users_index`, `users_show` (see [mcp.md](./mcp.md)). Database-backed **settings** live in `App\Settings\*` and are edited in Filament under the **Settings** group (App, Auth, SEO). **Feature flags** are in `config/feature-flags.php` and shared to Inertia as the `features` prop. **Response cache** applies to guest GET only (see [response-cache.md](./response-cache.md)).
+**At a glance (for agents):** Public API is versioned at **`/api/v1/`** (see [API reference](../api-reference/README.md)); list endpoints use **spatie/laravel-query-builder** (filter/sort/include); success/error shape uses **essa/api-tool-kit**. **MCP** server at `POST /mcp/api` (auth:sanctum) exposes tools `users_index`, `users_show` (see [mcp.md](./mcp.md)). **Content & export:** Tags on User (spatie/laravel-tags), profile PDF at `profile.export-pdf`, Filament User export (XLSX/CSV) — see [content-export.md](./content-export.md). Database-backed **settings** live in `App\Settings\*` and are edited in Filament under the **Settings** group (App, Auth, SEO). **Feature flags** are in `config/feature-flags.php` and shared to Inertia as the `features` prop. **Response cache** applies to guest GET only (see [response-cache.md](./response-cache.md)).
 
 ## Contents
 
 - [Actions](./actions/README.md) - Action classes and patterns
 - [Activity Log](./activity-log.md) - Spatie and Filament activity logging
 - [Controllers](./controllers/README.md) - Controller documentation (web and API v1)
+- [Content & export](./content-export.md) - Tags (User), profile PDF, Filament Excel/CSV export
 - [Database](./database/README.md) - Database patterns, seeders, and factories
 - [Search & Data](./search-and-data.md) - DTOs, Sluggable, Sortable, Model Flags, Schemaless Attributes, Model States, Soft Cascade
 - [Filament Admin Panel](./filament.md) - Filament panel at `/admin`

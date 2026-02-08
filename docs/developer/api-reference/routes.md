@@ -2,7 +2,7 @@
 
 This document lists all available routes in the application.
 
-**Last Updated**: 2026-02-08 05:03:21
+**Last Updated**: 2026-02-08 06:50:35
 
 ## Closure
 
@@ -36,12 +36,14 @@ This document lists all available routes in the application.
 | GET | `livewire-f0cf3e9a/js/{component}.js` | - | - |
 | GET | `livewire-f0cf3e9a/css/{component}.css` | - | - |
 | GET | `livewire-f0cf3e9a/css/{component}.global.css` | - | - |
+| GET | `filament-excel/{path}` | filament-excel-download | web, signed |
 | GET | `filament-impersonate/leave` | filament-impersonate.leave | web |
 | GET | `api` | api | api |
 | GET | `api/v1` | api.v1.info | api |
 | GET | `favicon.ico` | favicon | web |
 | GET | `/` | home | web |
 | GET | `dashboard` | dashboard | web, auth, verified |
+| GET | `profile/export-pdf` | profile.export-pdf | web, auth, verified |
 | GET, POST, PUT, PATCH, DELETE | `settings` | settings | web, auth |
 | GET | `settings/appearance` | appearance.edit | web, auth |
 | GET | `storage/{path}` | storage.local | - |

@@ -24,6 +24,9 @@ final class UserInfolist
                 TextEntry::make('roles.name')
                     ->label('Roles')
                     ->badge(),
+                TextEntry::make('tags.name')
+                    ->label('Tags')
+                    ->badge(),
                 TextEntry::make('email_verified_at')
                     ->dateTime()
                     ->placeholder('-'),

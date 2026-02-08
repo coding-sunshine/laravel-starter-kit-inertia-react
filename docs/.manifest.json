@@ -348,6 +348,18 @@
                     "user-two-factor-authentication/show"
                 ]
             }
+        },
+        "ProfileExportPdfController": {
+            "documented": true,
+            "path": "./ProfileExportPdfController.md",
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "profile.export-pdf"
+                ],
+                "rendersPages": []
+            }
         }
     },
     "pages": {
@@ -406,6 +418,7 @@
                     "api.v1.users.store",
                     "api.v1.users.update",
                     "api.v1.users.destroy",
+                    "profile.export-pdf",
                     "impersonate",
                     "impersonate.leave",
                     "user.destroy",
@@ -482,6 +495,7 @@
                     "api.v1.users.store",
                     "api.v1.users.update",
                     "api.v1.users.destroy",
+                    "profile.export-pdf",
                     "impersonate",
                     "impersonate.leave",
                     "user.destroy",
@@ -693,6 +707,7 @@
                     "api.v1.users.store",
                     "api.v1.users.update",
                     "api.v1.users.destroy",
+                    "profile.export-pdf",
                     "impersonate",
                     "impersonate.leave",
                     "user.destroy",

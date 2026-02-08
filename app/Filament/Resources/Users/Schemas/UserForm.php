@@ -6,6 +6,7 @@ namespace App\Filament\Resources\Users\Schemas;
 
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
@@ -27,6 +28,12 @@ final class UserForm
                     ->multiple()
                     ->preload()
                     ->searchable(),
+                TagsInput::make('tag_names')
+                    ->label('Tags')
+                    ->placeholder('Add a tag')
+                    ->suggestions(
+                        fn (): array => \Spatie\Tags\Tag::query()->pluck('name')->unique()->values()->all()
+                    ),
                 DateTimePicker::make('email_verified_at'),
                 TextInput::make('password')
                     ->password()

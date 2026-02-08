@@ -37,6 +37,8 @@ Route::get('/', fn () => Inertia::render('welcome'))->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('dashboard', fn () => Inertia::render('dashboard'))->name('dashboard');
+    Route::get('profile/export-pdf', App\Http\Controllers\ProfileExportPdfController::class)
+        ->name('profile.export-pdf');
 });
 
 Route::middleware('auth')->group(function (): void {

@@ -22,6 +22,22 @@ final class EditUser extends EditRecord
      */
     private array $previousRoleNames = [];
 
+    /**
+     * @var list<string>
+     */
+    private array $pendingTagNames = [];
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    public function mutateFormDataBeforeFill(array $data): array
+    {
+        $data['tag_names'] = $this->getRecord()->tags->pluck('name')->values()->all();
+
+        return $data;
+    }
+
     protected function getHeaderActions(): array
     {
         return [
@@ -37,6 +53,12 @@ final class EditUser extends EditRecord
      */
     protected function mutateFormDataBeforeSave(array $data): array
     {
+        $this->pendingTagNames = array_values(array_filter(
+            is_array($data['tag_names'] ?? null) ? $data['tag_names'] : [],
+            fn ($v): bool => is_string($v) && $v !== ''
+        ));
+        unset($data['tag_names']);
+
         $user = $this->getRecord();
         if (! $user->isLastSuperAdmin() || ! $user->hasRole('super-admin')) {
             return $data;
@@ -65,6 +87,7 @@ final class EditUser extends EditRecord
 
     protected function afterSave(): void
     {
+        $this->record->syncTags($this->pendingTagNames);
         $this->record->load('roles');
         app(ActivityLogRbac::class)->logRolesUpdated(
             $this->record,
