@@ -7,4 +7,5 @@ return [
     App\Providers\FakerServiceProvider::class,
     App\Providers\Filament\AdminPanelProvider::class,
     App\Providers\FortifyServiceProvider::class,
+    App\Providers\HorizonServiceProvider::class,
 ];

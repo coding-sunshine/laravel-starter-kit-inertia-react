@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\Concerns\Categorizable;
 use Carbon\CarbonInterface;
 use Database\Factories\UserFactory;
 use DateTimeInterface;
@@ -52,7 +53,7 @@ final class User extends Authenticatable implements ExportsPersonalData, Filamen
     /**
      * @use HasFactory<UserFactory>
      */
-    use HasApiTokens, HasFactory, HasRoles, HasTags, ImpersonateTrait, InteractsWithMedia, LogsActivity, Notifiable, Searchable, TwoFactorAuthenticatable;
+    use Categorizable, HasApiTokens, HasFactory, HasRoles, HasTags, ImpersonateTrait, InteractsWithMedia, LogsActivity, Notifiable, Searchable, TwoFactorAuthenticatable;
 
     /**
      * @var list<string>

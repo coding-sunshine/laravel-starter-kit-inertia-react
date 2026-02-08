@@ -1,0 +1,64 @@
+{
+    "model": "Category",
+    "table": "categories",
+    "fields": {
+        "id": {
+            "type": "int8",
+            "nullable": true,
+            "default": null
+        },
+        "name": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "slug": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "type": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "_lft": {
+            "type": "int4",
+            "nullable": true,
+            "default": null
+        },
+        "_rgt": {
+            "type": "int4",
+            "nullable": true,
+            "default": null
+        },
+        "parent_id": {
+            "type": "int4",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "entries": {
+            "type": "belongsTo",
+            "model": "Entry"
+        }
+    },
+    "value_hints": {
+        "name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    },
+    "scenarios": []
+}

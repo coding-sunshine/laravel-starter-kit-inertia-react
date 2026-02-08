@@ -2,13 +2,16 @@
 
 Backend components, services, and patterns for developers.
 
-**At a glance (for agents):** Public API is versioned at **`/api/v1/`** (see [API reference](../api-reference/README.md)); list endpoints use **spatie/laravel-query-builder** (filter/sort/include); success/error shape uses **essa/api-tool-kit**. **MCP** server at `POST /mcp/api` (auth:sanctum) exposes tools `users_index`, `users_show` (see [mcp.md](./mcp.md)). **Content & export:** Tags on User (spatie/laravel-tags), profile PDF at `profile.export-pdf`, Filament User export (XLSX/CSV) — see [content-export.md](./content-export.md). Database-backed **settings** live in `App\Settings\*` and are edited in Filament under the **Settings** group (App, Auth, SEO). **Feature flags** are in `config/feature-flags.php` and shared to Inertia as the `features` prop. **Response cache** applies to guest GET only (see [response-cache.md](./response-cache.md)). **SEO & monitoring:** Sitemap (`sitemap:generate`, daily), robots.txt route, legal pages (`/legal/terms`, `/legal/privacy`), Sentry, GA4 (spatie/laravel-analytics), Slack webhook (failed-job alerts) — see [seo-and-monitoring.md](./seo-and-monitoring.md). **Backups:** spatie/laravel-backup, scheduled daily (`backup:run` then `backup:clean`) — [backup.md](./backup.md). **Third-party APIs:** use Saloon; connectors in `App\Http\Integrations\*`, example in [saloon.md](./saloon.md). **Userstamps:** wildside/userstamps (`created_by`/`updated_by`), see [userstamps.md](./userstamps.md). **ADRs:** architecture decisions in [docs/architecture/ADRs/](../../architecture/ADRs/README.md). **Full-text search:** Laravel Scout + Typesense; `SCOUT_DRIVER=typesense`, `TYPESENSE_*` (Herd: LARAVEL-HERD, localhost:8108); User is searchable — [scout-typesense.md](./scout-typesense.md).
+**At a glance (for agents):** Public API is versioned at **`/api/v1/`** (see [API reference](../api-reference/README.md)); list endpoints use **spatie/laravel-query-builder** (filter/sort/include); success/error shape uses **essa/api-tool-kit**. **MCP** server at `POST /mcp/api` (auth:sanctum) exposes tools `users_index`, `users_show` (see [mcp.md](./mcp.md)). **Content & export:** Tags on User (spatie/laravel-tags), profile PDF at `profile.export-pdf`, Filament User export (XLSX/CSV) — see [content-export.md](./content-export.md). Database-backed **settings** live in `App\Settings\*` and are edited in Filament under the **Settings** group (App, Auth, SEO). **Feature flags** are in `config/feature-flags.php` and shared to Inertia as the `features` prop. **Response cache** applies to guest GET only (see [response-cache.md](./response-cache.md)). **SEO & monitoring:** Sitemap (`sitemap:generate`, daily), robots.txt route, legal pages (`/legal/terms`, `/legal/privacy`), Sentry, GA4 (spatie/laravel-analytics), Slack webhook (failed-job alerts) — see [seo-and-monitoring.md](./seo-and-monitoring.md). **Backups:** spatie/laravel-backup, scheduled daily (`backup:run` then `backup:clean`) — [backup.md](./backup.md). **Queues:** Laravel Horizon at `/horizon` (admin only; Redis) — [horizon.md](./horizon.md). **WebSockets:** Laravel Reverb; channels in `routes/channels.php`; Echo in `resources/js/echo.ts` — [reverb.md](./reverb.md). **Categories:** Nested set (kalnoy/nestedset); User has Categorizable trait; Filament Category resource and User categories relation manager — [categorizable.md](./categorizable.md). **Third-party APIs:** use Saloon; connectors in `App\Http\Integrations\*`, example in [saloon.md](./saloon.md). **Userstamps:** wildside/userstamps (`created_by`/`updated_by`), see [userstamps.md](./userstamps.md). **ADRs:** architecture decisions in [docs/architecture/ADRs/](../../architecture/ADRs/README.md). **Full-text search:** Laravel Scout + Typesense; `SCOUT_DRIVER=typesense`, `TYPESENSE_*` (Herd: LARAVEL-HERD, localhost:8108); User is searchable — [scout-typesense.md](./scout-typesense.md).
 
 ## Contents
 
 - [Actions](./actions/README.md) - Action classes and patterns
 - [Activity Log](./activity-log.md) - Spatie and Filament activity logging
 - [Backup & Restore](./backup.md) - spatie/laravel-backup, schedule, restore
+- [Horizon](./horizon.md) - Queue monitoring and Redis workers (dashboard at `/horizon`)
+- [Reverb](./reverb.md) - WebSockets (Laravel Echo + Reverb)
+- [Categorizable](./categorizable.md) - Nested set categories; User has Categorizable trait
 - [Saloon](./saloon.md) - HTTP client for third-party APIs (connectors, requests)
 - [Userstamps](./userstamps.md) - created_by / updated_by with wildside/userstamps
 - [Controllers](./controllers/README.md) - Controller documentation (web and API v1)
@@ -35,6 +38,9 @@ Backend components, services, and patterns for developers.
 - [Activity Log](./activity-log.md) - User and model activity logging
 - [API versioning & list endpoints](../api-reference/README.md) - Public API at `/api/v1/`, filter/sort/include
 - [Backup & Restore](./backup.md) - spatie/laravel-backup; schedule, commands, restore
+- [Horizon](./horizon.md) - Queue dashboard and Redis workers; `/horizon` (admin only)
+- [Reverb](./reverb.md) - WebSockets; Echo + `reverb:start`; channels in `routes/channels.php`
+- [Categorizable](./categorizable.md) - Nested set categories; User + Filament Category resource
 - [Feature Flags](./feature-flags.md) - Pennant + Filament; expose to Inertia via `features` prop
 - [Response Cache](./response-cache.md) - Guest GET cache; exclude auth/admin
 - [Saloon](./saloon.md) - HTTP client for third-party APIs; connectors in `App\Http\Integrations\*`

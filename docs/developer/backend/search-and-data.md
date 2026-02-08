@@ -179,8 +179,7 @@ class User extends Model
 
 - **Full-text search (Scout + Typesense)** — Add when needed; Scout works with Inertia.
 - **Flagable (sowailem)** — Social flags (like, follow, bookmark); distinct from Spatie Model Flags.
-- **Categorizable (alibayat)** — Flat categories.
-- **Nested set (kalnoy/nestedset)** — Hierarchical categories/trees.
+- **Categorizable & nested set** — Implemented in-app: `App\Models\Concerns\Categorizable`, `App\Models\Category` (kalnoy/nestedset). User has the trait; Filament Category resource and User categories relation manager. See [categorizable.md](./categorizable.md).
 
 ## Reference
 

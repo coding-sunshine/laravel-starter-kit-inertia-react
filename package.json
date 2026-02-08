@@ -25,6 +25,8 @@
         "typescript-eslint": "^8.54.0"
     },
     "dependencies": {
+        "laravel-echo": "^2.3.0",
+        "pusher-js": "^8.4.0",
         "@headlessui/react": "^2.2.9",
         "@inertiajs/react": "^2.3.13",
         "@radix-ui/react-avatar": "^1.1.11",
