@@ -43,11 +43,8 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
             CacheResponse::class,
+            AutoPermissionMiddleware::class,
         ];
-
-        if (config('permission.route_based_enforcement', false)) {
-            $webAppend[] = AutoPermissionMiddleware::class;
-        }
 
         $middleware->web(
             append: $webAppend,

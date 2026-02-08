@@ -14,6 +14,7 @@ All Controllers:
 
 | Controller | Purpose | Documented |
 |------------|---------|------------|
+| [ApiV1UserController](./ApiV1UserController.md) | API v1 users CRUD, batch, search (auth:sanctum) | ✅ |
 | [SessionController](./SessionController.md) | N/A | ✅ |
 | [UserController](./UserController.md) | N/A | ✅ |
 | [UserEmailResetNotificationController](./UserEmailResetNotificationController.md) | N/A | ✅ |

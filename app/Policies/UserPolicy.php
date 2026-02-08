@@ -20,9 +20,9 @@ final class UserPolicy
         return $user->can('view users');
     }
 
-    public function view(User $user): bool
+    public function view(User $actor, User $model): bool
     {
-        return $user->can('view users');
+        return $actor->can('view users');
     }
 
     public function create(User $user): bool
@@ -30,9 +30,9 @@ final class UserPolicy
         return $user->can('create users');
     }
 
-    public function update(User $user): bool
+    public function update(User $actor, User $model): bool
     {
-        return $user->can('edit users');
+        return $actor->can('edit users');
     }
 
     public function delete(User $user, User $model): bool

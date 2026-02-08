@@ -2,7 +2,7 @@
 
 This document lists all available routes in the application.
 
-**Last Updated**: 2026-02-06 15:13:05
+**Last Updated**: 2026-02-08 05:03:21
 
 ## Closure
 
@@ -14,6 +14,10 @@ This document lists all available routes in the application.
 | POST | `admin/logout` | filament.admin.auth.logout | panel:admin, AlizHarb\ActivityLog\Http\Middleware\ActivityLogContextMiddleware, Illuminate\Cookie\Middleware\EncryptCookies |
 | GET | `admin` | filament.admin.pages.dashboard | panel:admin, AlizHarb\ActivityLog\Http\Middleware\ActivityLogContextMiddleware, Illuminate\Cookie\Middleware\EncryptCookies |
 | GET | `admin/user-activities-page` | filament.admin.pages.user-activities-page | panel:admin, AlizHarb\ActivityLog\Http\Middleware\ActivityLogContextMiddleware, Illuminate\Cookie\Middleware\EncryptCookies |
+| GET | `admin/manage-app` | filament.admin.pages.manage-app | panel:admin, AlizHarb\ActivityLog\Http\Middleware\ActivityLogContextMiddleware, Illuminate\Cookie\Middleware\EncryptCookies |
+| GET | `admin/manage-auth` | filament.admin.pages.manage-auth | panel:admin, AlizHarb\ActivityLog\Http\Middleware\ActivityLogContextMiddleware, Illuminate\Cookie\Middleware\EncryptCookies |
+| GET | `admin/manage-seo` | filament.admin.pages.manage-seo | panel:admin, AlizHarb\ActivityLog\Http\Middleware\ActivityLogContextMiddleware, Illuminate\Cookie\Middleware\EncryptCookies |
+| GET | `admin/feature-segments` | filament.admin.resources.feature-segments.index | panel:admin, AlizHarb\ActivityLog\Http\Middleware\ActivityLogContextMiddleware, Illuminate\Cookie\Middleware\EncryptCookies |
 | GET | `admin/activity-logs` | filament.admin.resources.activity-logs.index | panel:admin, AlizHarb\ActivityLog\Http\Middleware\ActivityLogContextMiddleware, Illuminate\Cookie\Middleware\EncryptCookies |
 | GET | `admin/activity-logs/{record}` | filament.admin.resources.activity-logs.view | panel:admin, AlizHarb\ActivityLog\Http\Middleware\ActivityLogContextMiddleware, Illuminate\Cookie\Middleware\EncryptCookies |
 | GET | `admin/permissions` | filament.admin.resources.permissions.index | panel:admin, AlizHarb\ActivityLog\Http\Middleware\ActivityLogContextMiddleware, Illuminate\Cookie\Middleware\EncryptCookies |
@@ -27,11 +31,14 @@ This document lists all available routes in the application.
 | GET | `admin/users/{record}` | filament.admin.resources.users.view | panel:admin, AlizHarb\ActivityLog\Http\Middleware\ActivityLogContextMiddleware, Illuminate\Cookie\Middleware\EncryptCookies |
 | GET | `admin/users/{record}/edit` | filament.admin.resources.users.edit | panel:admin, AlizHarb\ActivityLog\Http\Middleware\ActivityLogContextMiddleware, Illuminate\Cookie\Middleware\EncryptCookies |
 | POST | `_boost/browser-logs` | boost.browser-logs | - |
+| GET | `mcp/api` | - | - |
+| POST | `mcp/api` | - | Laravel\Mcp\Server\Middleware\ReorderJsonAccept, Laravel\Mcp\Server\Middleware\AddWwwAuthenticateHeader, auth:sanctum |
 | GET | `livewire-f0cf3e9a/js/{component}.js` | - | - |
 | GET | `livewire-f0cf3e9a/css/{component}.css` | - | - |
 | GET | `livewire-f0cf3e9a/css/{component}.global.css` | - | - |
 | GET | `filament-impersonate/leave` | filament-impersonate.leave | web |
 | GET | `api` | api | api |
+| GET | `api/v1` | api.v1.info | api |
 | GET | `favicon.ico` | favicon | web |
 | GET | `/` | home | web |
 | GET | `dashboard` | dashboard | web, auth, verified |
@@ -448,6 +455,129 @@ This document lists all available routes in the application.
 - `filename`: `mixed`
 
 
+## UserController
+
+**Controller**: `App\Http\Controllers\Api\V1\UserController`
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| GET | `api/v1/users` | api.v1.users.index | api, auth:sanctum |
+| POST | `api/v1/users/batch` | api.v1.users.batch | api, auth:sanctum |
+| POST | `api/v1/users/search` | api.v1.users.search | api, auth:sanctum |
+| GET | `api/v1/users/{user}` | api.v1.users.show | api, auth:sanctum |
+| POST | `api/v1/users` | api.v1.users.store | api, auth:sanctum |
+| PUT, PATCH | `api/v1/users/{user}` | api.v1.users.update | api, auth:sanctum |
+| DELETE | `api/v1/users/{user}` | api.v1.users.destroy | api, auth:sanctum |
+
+### index
+
+**Route**: `api.v1.users.index`
+
+**URI**: `api/v1/users`
+
+**Methods**: GET
+
+**Middleware**: api, auth:sanctum
+
+**Method Parameters**:
+- `request`: `Illuminate\Http\Request`
+
+### batch
+
+**Route**: `api.v1.users.batch`
+
+**URI**: `api/v1/users/batch`
+
+**Methods**: POST
+
+**Middleware**: api, auth:sanctum
+
+**Method Parameters**:
+- `request`: `App\Http\Requests\Api\V1\BatchUserRequest`
+- `createUser`: `App\Actions\CreateUser`
+- `updateUser`: `App\Actions\UpdateUser`
+- `deleteUser`: `App\Actions\DeleteUser`
+
+### search
+
+**Route**: `api.v1.users.search`
+
+**URI**: `api/v1/users/search`
+
+**Methods**: POST
+
+**Middleware**: api, auth:sanctum
+
+**Method Parameters**:
+- `request`: `App\Http\Requests\Api\V1\SearchUserRequest`
+
+### show
+
+**Route**: `api.v1.users.show`
+
+**URI**: `api/v1/users/{user}`
+
+**Methods**: GET
+
+**Parameters**:
+- `user`
+
+**Middleware**: api, auth:sanctum
+
+**Method Parameters**:
+- `user`: `App\Models\User`
+
+### store
+
+**Route**: `api.v1.users.store`
+
+**URI**: `api/v1/users`
+
+**Methods**: POST
+
+**Middleware**: api, auth:sanctum
+
+**Method Parameters**:
+- `request`: `App\Http\Requests\CreateUserRequest`
+- `action`: `App\Actions\CreateUser`
+
+### update
+
+**Route**: `api.v1.users.update`
+
+**URI**: `api/v1/users/{user}`
+
+**Methods**: PUT, PATCH
+
+**Parameters**:
+- `user`
+
+**Middleware**: api, auth:sanctum
+
+**Method Parameters**:
+- `request`: `App\Http\Requests\UpdateUserRequest`
+- `user`: `App\Models\User`
+- `action`: `App\Actions\UpdateUser`
+
+### destroy
+
+**Route**: `api.v1.users.destroy`
+
+**URI**: `api/v1/users/{user}`
+
+**Methods**: DELETE
+
+**Parameters**:
+- `user`
+
+**Middleware**: api, auth:sanctum
+
+**Method Parameters**:
+- `request`: `App\Http\Requests\DeleteUserRequest`
+- `user`: `App\Models\User`
+- `action`: `App\Actions\DeleteUser`
+
+
 ## ImpersonateController
 
 **Controller**: `\Lab404\Impersonate\Controllers\ImpersonateController`
@@ -494,7 +624,7 @@ This document lists all available routes in the application.
 |--------|-----|------------|------------|
 | DELETE | `user` | user.destroy | web, auth |
 | GET | `register` | register | web, guest |
-| POST | `register` | register.store | web, guest |
+| POST | `register` | register.store | web, guest, Spatie\Honeypot\ProtectAgainstSpam |
 
 ### destroy
 
@@ -529,7 +659,7 @@ This document lists all available routes in the application.
 
 **Methods**: POST
 
-**Middleware**: web, guest
+**Middleware**: web, guest, Spatie\Honeypot\ProtectAgainstSpam
 
 **Method Parameters**:
 - `request`: `App\Http\Requests\CreateUserRequest`

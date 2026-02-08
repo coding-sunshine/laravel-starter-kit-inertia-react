@@ -60,6 +60,10 @@ Use **policies** and **permissions** for authorization. Prefer `$user->can(...)`
 - **Policy**: `UserPolicy::viewAny()` returns `true` when `app('impersonate')->isImpersonating()` to avoid 403s on the users list during impersonation.
 - **Routes**: `Route::impersonate()` in `routes/web.php` (auth) registers `impersonate` (take) and `impersonate.leave`; the package also registers `filament-impersonate.leave` for the banner.
 
+## Settings (database-backed)
+
+**Plugin**: `filament/spatie-laravel-settings-plugin` — Settings pages extend `Filament\Pages\SettingsPage` and are listed under the **Settings** navigation group (App, Auth, SEO). Each page is bound to a settings class in `App\Settings\*`. See [Settings](settings.md) for creating and using settings.
+
 ## Feature flags
 
 **Plugin**: `stephenjude/filament-feature-flags` — registered as `FeatureFlagPlugin::make()` in `AdminPanelProvider`. Provides a “Manage Features” (or custom label) resource under the Settings group where admins can enable/disable Pennant class-based features globally or per segment (e.g. by user email). See [Feature flags](feature-flags.md) for defining features and exposing them to Inertia.

@@ -11,6 +11,8 @@ use App\Observers\ActivityLogObserver;
 use App\Observers\PermissionActivityObserver;
 use App\Observers\RoleActivityObserver;
 use App\Services\PrismService;
+use Essa\APIToolKit\Exceptions\Handler as ApiToolKitExceptionHandler;
+use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Database\Events\MigrationsEnded;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -28,6 +30,8 @@ final class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(PrismService::class, fn (): PrismService => new PrismService);
+
+        $this->app->singleton(ExceptionHandler::class, ApiToolKitExceptionHandler::class);
 
         config(['filament-impersonate.redirect_to' => '/dashboard']);
     }

@@ -282,13 +282,13 @@ This application is a Laravel application and its main Laravel ecosystems packag
 - inertiajs/inertia-laravel (INERTIA) - v2
 - laravel/fortify (FORTIFY) - v1
 - laravel/framework (LARAVEL) - v12
+- laravel/mcp (MCP) - v0
 - laravel/pennant (PENNANT) - v1
 - laravel/prompts (PROMPTS) - v0
 - laravel/sanctum (SANCTUM) - v4
 - laravel/wayfinder (WAYFINDER) - v0
 - livewire/livewire (LIVEWIRE) - v4
 - larastan/larastan (LARASTAN) - v3
-- laravel/mcp (MCP) - v0
 - laravel/pint (PINT) - v1
 - pestphp/pest (PEST) - v4
 - phpunit/phpunit (PHPUNIT) - v12
@@ -304,6 +304,7 @@ This application is a Laravel application and its main Laravel ecosystems packag
 
 This project has domain-specific skills available. You MUST activate the relevant skill whenever you work in that domain—don't wait until you're stuck.
 
+- `mcp-development` — Develops MCP servers, tools, resources, and prompts. Activates when creating MCP tools, resources, or prompts; setting up AI integrations; debugging MCP connections; working with routes/ai.php; or when the user mentions MCP, Model Context Protocol, AI tools, AI server, or building tools for AI assistants.
 - `pennant-development` — Manages feature flags with Laravel Pennant. Activates when creating, checking, or toggling feature flags; showing or hiding features conditionally; implementing A/B testing; working with @feature directive; or when the user mentions feature flags, feature toggles, Pennant, conditional features, rollouts, or gradually enabling features.
 - `wayfinder-development` — Activates whenever referencing backend routes in frontend components. Use when importing from @/actions or @/routes, calling Laravel routes from TypeScript, or working with Wayfinder route functions.
 - `pest-testing` — Tests applications using the Pest 4 PHP framework. Activates when writing tests, creating unit or feature tests, adding assertions, testing Livewire components, browser testing, debugging test failures, working with datasets or mocking; or when the user mentions test, spec, TDD, expects, assertion, coverage, or needs to verify functionality works.
@@ -377,6 +378,11 @@ This project has domain-specific skills available. You MUST activate the relevan
 3. Quoted Phrases (Exact Position) - query="infinite scroll" - words must be adjacent and in that order.
 4. Mixed Queries - query=middleware "rate limit" - "middleware" AND exact phrase "rate limit".
 5. Multiple Queries - queries=["authentication", "middleware"] - ANY of these terms.
+
+## API & MCP (for coding agents)
+
+- **Public API**: Versioned at `/api/v1/`. Success/error format uses **essa/api-tool-kit** (`application/problem+json` for errors). List endpoints support **filter**, **sort**, **include**, and **fields** (sparse fieldsets). See [API reference](docs/developer/api-reference/README.md), [routes](docs/developer/api-reference/routes.md), and [ApiV1UserController](docs/developer/backend/controllers/ApiV1UserController.md) for CRUD, batch, and search.
+- **MCP server**: `POST /mcp/api` (auth:sanctum). Tools: **users_index**, **users_show**. See [mcp.md](docs/developer/backend/mcp.md) and backend [README at-a-glance](docs/developer/backend/README.md).
 
 === php rules ===
 
@@ -524,6 +530,14 @@ protected function isAccessible(User $user, ?string $path = null): bool
 ### Models
 
 - Casts can and likely should be set in a `casts()` method on a model rather than the `$casts` property. Follow existing conventions from other models.
+
+=== mcp/core rules ===
+
+# Laravel MCP
+
+- Laravel MCP allows you to rapidly build MCP servers for your Laravel applications.
+- IMPORTANT: laravel/mcp is very new. Always use the `search-docs` tool for authoritative documentation on writing and testing Laravel MCP servers, tools, resources, and prompts.
+- IMPORTANT: Activate `mcp-development` every time you're working with an MCP-related task.
 
 === pennant/core rules ===
 

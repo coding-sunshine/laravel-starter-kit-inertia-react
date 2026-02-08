@@ -24,6 +24,10 @@ final class AutoPermissionMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
+        if (! config('permission.route_based_enforcement', false)) {
+            return $next($request);
+        }
+
         $route = $request->route();
 
         if (! $route || ! $route->getName()) {
