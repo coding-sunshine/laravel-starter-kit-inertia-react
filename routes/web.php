@@ -8,8 +8,12 @@ declare(strict_types=1);
  * after adding or changing routes.
  */
 
+use App\Http\Controllers\Blog\BlogController;
+use App\Http\Controllers\Changelog\ChangelogController;
 use App\Http\Controllers\ContactSubmissionController;
 use App\Http\Controllers\CookieConsentController;
+use App\Http\Controllers\HelpCenter\HelpCenterController;
+use App\Http\Controllers\HelpCenter\RateHelpArticleController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\PersonalDataExportController;
 use App\Http\Controllers\SessionController;
@@ -47,23 +51,43 @@ Route::get('robots.txt', function (): Illuminate\Http\Response {
 
 Route::get('/', fn () => Inertia::render('welcome'))->name('home');
 
-Route::get('cookie-consent/accept', CookieConsentController::class)->name('cookie-consent.accept');
+Route::get('cookie-consent/accept', CookieConsentController::class)
+    ->middleware('feature:cookie_consent')
+    ->name('cookie-consent.accept');
 
 Route::get('legal/terms', fn () => Inertia::render('legal/terms'))->name('legal.terms');
 Route::get('legal/privacy', fn () => Inertia::render('legal/privacy'))->name('legal.privacy');
 
-Route::get('contact', [ContactSubmissionController::class, 'create'])->name('contact.create');
+Route::prefix('blog')->name('blog.')->middleware('feature:blog')->group(function (): void {
+    Route::get('/', [BlogController::class, 'index'])->name('index');
+    Route::get('/{post:slug}', [BlogController::class, 'show'])->name('show');
+});
+
+Route::get('changelog', [ChangelogController::class, 'index'])
+    ->middleware('feature:changelog')
+    ->name('changelog.index');
+
+Route::prefix('help')->name('help.')->middleware('feature:help')->group(function (): void {
+    Route::get('/', [HelpCenterController::class, 'index'])->name('index');
+    Route::get('/{helpArticle:slug}', [HelpCenterController::class, 'show'])->name('show');
+    Route::post('/{helpArticle:slug}/rate', RateHelpArticleController::class)->name('rate');
+});
+
+Route::get('contact', [ContactSubmissionController::class, 'create'])
+    ->middleware('feature:contact')
+    ->name('contact.create');
 Route::post('contact', [ContactSubmissionController::class, 'store'])
-    ->middleware(ProtectAgainstSpam::class)
+    ->middleware(['feature:contact', ProtectAgainstSpam::class])
     ->name('contact.store');
 
 Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('dashboard', fn () => Inertia::render('dashboard'))->name('dashboard');
     Route::get('profile/export-pdf', App\Http\Controllers\ProfileExportPdfController::class)
+        ->middleware('feature:profile_pdf_export')
         ->name('profile.export-pdf');
 });
 
-Route::middleware('auth')->group(function (): void {
+Route::middleware(['auth', 'feature:onboarding'])->group(function (): void {
     Route::get('onboarding', [OnboardingController::class, 'show'])->name('onboarding');
     Route::post('onboarding', [OnboardingController::class, 'store'])->name('onboarding.store');
 });
@@ -89,26 +113,31 @@ Route::middleware('auth')->group(function (): void {
         ->name('password.update');
 
     // Appearance...
-    Route::get('settings/appearance', fn () => Inertia::render('appearance/update'))->name('appearance.edit');
+    Route::get('settings/appearance', fn () => Inertia::render('appearance/update'))
+        ->middleware('feature:appearance_settings')
+        ->name('appearance.edit');
 
     // Personal data export (GDPR)...
     Route::get('settings/personal-data-export', fn () => Inertia::render('settings/personal-data-export'))
+        ->middleware('feature:personal_data_export')
         ->name('personal-data-export.edit');
     Route::post('settings/personal-data-export', PersonalDataExportController::class)
-        ->middleware('throttle:3,1')
+        ->middleware(['feature:personal_data_export', 'throttle:3,1'])
         ->name('personal-data-export.store');
 
     // User Two-Factor Authentication...
     Route::get('settings/two-factor', [UserTwoFactorAuthenticationController::class, 'show'])
+        ->middleware('feature:two_factor_auth')
         ->name('two-factor.show');
 });
 
 Route::middleware('guest')->group(function (): void {
     // User...
     Route::get('register', [UserController::class, 'create'])
+        ->middleware('registration.enabled')
         ->name('register');
     Route::post('register', [UserController::class, 'store'])
-        ->middleware(ProtectAgainstSpam::class)
+        ->middleware(['registration.enabled', ProtectAgainstSpam::class])
         ->name('register.store');
 
     // User Password...

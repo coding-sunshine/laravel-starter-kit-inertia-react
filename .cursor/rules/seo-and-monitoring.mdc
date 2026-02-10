@@ -1,6 +1,6 @@
 ---
 description: Sitemap, robots.txt, legal pages, Sentry, GA4, Slack notifications
-globs: routes/web.php, routes/console.php, app/Console/Commands/GenerateSitemap.php, app/Notifications/Slack*.php, app/Support/SlackWebhookRecipient.php, app/Listeners/SendSlackAlertOnJobFailed.php, config/sentry.php, config/analytics.php, config/services.php, resources/js/pages/legal/*.tsx, resources/views/app.blade.php
+globs: routes/web.php, routes/console.php, app/Console/Commands/GenerateSitemap.php, app/Notifications/Slack*.php, app/Support/SlackWebhookRecipient.php, app/Listeners/SendSlackAlertOnJobFailed.php, config/sentry.php, config/analytics.php, config/services.php, resources/js/pages/legal/*.tsx, resources/js/pages/blog/*.tsx, resources/js/pages/changelog/*.tsx, resources/js/pages/help/*.tsx, resources/views/app.blade.php
 ---
 # SEO & Monitoring
 
@@ -9,6 +9,7 @@ When working on **sitemap**, **robots.txt**, **legal pages**, **Sentry**, **Goog
 - **Sitemap**: `php artisan sitemap:generate` (command `App\Console\Commands\GenerateSitemap`); scheduled daily. Add new public URLs in the command if they should appear in the sitemap.
 - **robots.txt**: Served by route `robots`; includes `Sitemap: {APP_URL}/sitemap.xml`.
 - **Legal pages**: Routes `legal.terms`, `legal.privacy`; Inertia pages in `resources/js/pages/legal/`; linked from welcome footer. Wayfinder: `@/routes/legal` (terms, privacy).
+- **Public content**: Blog (`blog.index`, `blog.show`), Changelog (`changelog.index`), Help Center (`help.index`, `help.show`, `help.rate`). Inertia pages in `resources/js/pages/blog/`, `changelog/`, `help/`. Linked from welcome nav. Wayfinder: `@/routes/blog`, `@/routes/changelog`, `@/routes/help`. Sitemap includes `/blog`, `/changelog`, `/help`.
 - **Sentry**: Config `config/sentry.php`; set `SENTRY_LARAVEL_DSN` to enable.
 - **GA4**: Config `config/analytics.php`; env `ANALYTICS_PROPERTY_ID`, `GOOGLE_ANALYTICS_CREDENTIALS_PATH`.
 - **Slack**: `config/services.php` → `slack.webhook_url` (`SLACK_WEBHOOK_URL`). Use `App\Support\SlackWebhookRecipient` and `App\Notifications\SlackCriticalAlertNotification` for alerts. Failed jobs are reported when webhook is set (listener `SendSlackAlertOnJobFailed`).

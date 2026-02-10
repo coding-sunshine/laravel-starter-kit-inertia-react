@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Features\OnboardingFeature;
 use App\Models\User;
+use Laravel\Pennant\Feature;
 
 test('users without completed onboarding are redirected to onboarding page', function (): void {
     $user = User::factory()->needsOnboarding()->create();
@@ -57,4 +59,13 @@ test('logout is accessible without completing onboarding', function (): void {
     $this->actingAs($user)
         ->post(route('logout'))
         ->assertRedirect();
+});
+
+test('when onboarding feature is inactive user can access dashboard without completing onboarding', function (): void {
+    $user = User::factory()->needsOnboarding()->create();
+    Feature::for($user)->deactivate(OnboardingFeature::class);
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk();
 });

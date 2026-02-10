@@ -2,7 +2,7 @@
 
 This document lists all available routes in the application.
 
-**Last Updated**: 2026-02-08 (robots, legal.terms, legal.privacy added)
+**Last Updated**: 2026-02-08 (blog, changelog, help public routes added)
 
 ## Closure
 
@@ -45,6 +45,12 @@ This document lists all available routes in the application.
 | GET | `/` | home | web |
 | GET | `legal/terms` | legal.terms | web |
 | GET | `legal/privacy` | legal.privacy | web |
+| GET | `blog` | blog.index | web |
+| GET | `blog/{post:slug}` | blog.show | web |
+| GET | `changelog` | changelog.index | web |
+| GET | `help` | help.index | web |
+| GET | `help/{helpArticle:slug}` | help.show | web |
+| POST | `help/{helpArticle:slug}/rate` | help.rate | web |
 | GET | `dashboard` | dashboard | web, auth, verified |
 | GET | `profile/export-pdf` | profile.export-pdf | web, auth, verified |
 | GET, POST, PUT, PATCH, DELETE | `settings` | settings | web, auth |
@@ -52,6 +58,41 @@ This document lists all available routes in the application.
 | GET | `storage/{path}` | storage.local | - |
 | GET | `docs/api` | scramble.docs.ui | web, Dedoc\Scramble\Http\Middleware\RestrictedDocsAccess |
 | GET | `docs/api.json` | scramble.docs.document | web, Dedoc\Scramble\Http\Middleware\RestrictedDocsAccess |
+
+
+## BlogController
+
+**Controller**: `App\Http\Controllers\Blog\BlogController`
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| GET | `blog` | blog.index | web |
+| GET | `blog/{post:slug}` | blog.show | web |
+
+## ChangelogController
+
+**Controller**: `App\Http\Controllers\Changelog\ChangelogController`
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| GET | `changelog` | changelog.index | web |
+
+## HelpCenterController
+
+**Controller**: `App\Http\Controllers\HelpCenter\HelpCenterController`
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| GET | `help` | help.index | web |
+| GET | `help/{helpArticle:slug}` | help.show | web |
+
+## RateHelpArticleController
+
+**Controller**: `App\Http\Controllers\HelpCenter\RateHelpArticleController`
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| POST | `help/{helpArticle:slug}/rate` | help.rate | web |
 
 
 ## SessionController

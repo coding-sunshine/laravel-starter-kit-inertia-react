@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 
+use App\Features\ApiAccessFeature;
 use App\Models\User;
 use Database\Seeders\Essential\RolesAndPermissionsSeeder;
+use Laravel\Pennant\Feature;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\getJson;
@@ -18,6 +20,16 @@ test('unauthenticated request to api v1 users returns toolkit error format', fun
     $response->assertUnauthorized();
     $response->assertHeader('Content-Type', 'application/problem+json');
     $response->assertJsonStructure(['errors' => [['status', 'title', 'detail']]]);
+});
+
+test('authenticated user with api access feature inactive receives 404 on api users', function (): void {
+    $user = User::factory()->withoutTwoFactor()->create();
+    $user->givePermissionTo('view users');
+    Feature::for($user)->deactivate(ApiAccessFeature::class);
+
+    $response = actingAs($user, 'sanctum')->getJson('/api/v1/users');
+
+    $response->assertNotFound();
 });
 
 test('authenticated user with view users can list users', function (): void {

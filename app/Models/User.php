@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Features\ImpersonationFeature;
 use App\Models\Concerns\Categorizable;
 use Carbon\CarbonInterface;
 use Database\Factories\UserFactory;
@@ -17,6 +18,7 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
 use Lab404\Impersonate\Models\Impersonate as ImpersonateTrait;
 use Laravel\Fortify\TwoFactorAuthenticatable;
+use Laravel\Pennant\Feature;
 use Laravel\Sanctum\HasApiTokens;
 use Laravel\Sanctum\NewAccessToken;
 use Laravel\Scout\Searchable;
@@ -176,11 +178,12 @@ final class User extends Authenticatable implements ExportsPersonalData, Filamen
     }
 
     /**
-     * Only super-admins may impersonate other users.
+     * Only super-admins may impersonate, and only when Impersonation feature is active.
      */
     public function canImpersonate(): bool
     {
-        return $this->hasRole('super-admin');
+        return $this->hasRole('super-admin')
+            && Feature::for($this)->active(ImpersonationFeature::class);
     }
 
     /**

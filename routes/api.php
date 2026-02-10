@@ -23,7 +23,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         ]);
     })->name('info');
 
-    Route::middleware('auth:sanctum')->group(function (): void {
+    Route::middleware(['auth:sanctum', 'feature:api_access'])->group(function (): void {
         Route::get('users', [UserController::class, 'index'])->name('users.index');
         Route::post('users/batch', [UserController::class, 'batch'])->name('users.batch');
         Route::post('users/search', [UserController::class, 'search'])->name('users.search');

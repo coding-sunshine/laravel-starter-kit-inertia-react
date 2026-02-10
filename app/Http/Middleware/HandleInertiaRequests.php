@@ -46,10 +46,10 @@ final class HandleInertiaRequests extends Middleware
         $honeypot = app(Honeypot::class);
 
         $features = [];
-        if ($user) {
-            foreach (config('feature-flags.inertia_features', []) as $name => $featureClass) {
-                $features[$name] = Feature::for($user)->active($featureClass);
-            }
+        foreach (config('feature-flags.inertia_features', []) as $name => $featureClass) {
+            $features[$name] = $user
+                ? Feature::for($user)->active($featureClass)
+                : (new $featureClass)->defaultValue;
         }
 
         return [

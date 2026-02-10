@@ -26,12 +26,38 @@ export interface NavItem {
     href: NonNullable<InertiaLinkProps['href']>;
     icon?: LucideIcon | null;
     isActive?: boolean;
+    /** Permission name(s) required to show this item (user must have any). Omit to show to all authenticated users. */
+    permission?: string | string[];
+    /** Feature flag key (e.g. 'blog'). Item is hidden when this feature is inactive. */
+    feature?: string;
+}
+
+/** Pennant feature flags shared to the frontend (key => active for current user/guest default). */
+export interface SharedFeatures {
+    api_access?: boolean;
+    appearance_settings?: boolean;
+    blog?: boolean;
+    changelog?: boolean;
+    contact?: boolean;
+    cookie_consent?: boolean;
+    example?: boolean;
+    help?: boolean;
+    impersonation?: boolean;
+    onboarding?: boolean;
+    personal_data_export?: boolean;
+    profile_pdf_export?: boolean;
+    registration?: boolean;
+    scramble_api_docs?: boolean;
+    two_factor_auth?: boolean;
+    [key: string]: boolean | undefined;
 }
 
 export interface SharedData {
     name: string;
     quote: { message: string; author: string };
     auth: Auth;
+    /** Feature flags (guest = default value, authenticated = resolved for user). */
+    features: SharedFeatures;
     sidebarOpen: boolean;
     [key: string]: unknown;
 }

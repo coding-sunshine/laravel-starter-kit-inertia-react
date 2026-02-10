@@ -31,6 +31,15 @@ final class GenerateSitemap extends Command
         if (Route::has('legal.privacy')) {
             $sitemap->add(Url::create($base.'/legal/privacy')->setChangeFrequency(Url::CHANGE_FREQUENCY_YEARLY)->setPriority(0.3));
         }
+        if (Route::has('blog.index')) {
+            $sitemap->add(Url::create($base.'/blog')->setChangeFrequency(Url::CHANGE_FREQUENCY_WEEKLY)->setPriority(0.7));
+        }
+        if (Route::has('changelog.index')) {
+            $sitemap->add(Url::create($base.'/changelog')->setChangeFrequency(Url::CHANGE_FREQUENCY_WEEKLY)->setPriority(0.6));
+        }
+        if (Route::has('help.index')) {
+            $sitemap->add(Url::create($base.'/help')->setChangeFrequency(Url::CHANGE_FREQUENCY_MONTHLY)->setPriority(0.7));
+        }
 
         $path = public_path('sitemap.xml');
         $sitemap->writeToFile($path);

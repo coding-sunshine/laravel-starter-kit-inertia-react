@@ -1,0 +1,82 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Filament\Resources\ChangelogEntries;
+
+use App\Features\ChangelogFeature;
+use App\Filament\Resources\ChangelogEntries\Pages\CreateChangelogEntry;
+use App\Filament\Resources\ChangelogEntries\Pages\EditChangelogEntry;
+use App\Filament\Resources\ChangelogEntries\Pages\ListChangelogEntries;
+use App\Filament\Resources\ChangelogEntries\Pages\ViewChangelogEntry;
+use App\Filament\Resources\ChangelogEntries\Schemas\ChangelogEntryForm;
+use App\Filament\Resources\ChangelogEntries\Schemas\ChangelogEntryInfolist;
+use App\Filament\Resources\ChangelogEntries\Tables\ChangelogEntriesTable;
+use App\Models\ChangelogEntry;
+use BackedEnum;
+use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Laravel\Pennant\Feature;
+use UnitEnum;
+
+final class ChangelogEntryResource extends Resource
+{
+    protected static ?string $model = ChangelogEntry::class;
+
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedClipboardDocumentList;
+
+    protected static string|UnitEnum|null $navigationGroup = 'Content';
+
+    protected static ?int $navigationSort = 20;
+
+    public static function form(Schema $schema): Schema
+    {
+        return ChangelogEntryForm::configure($schema);
+    }
+
+    public static function infolist(Schema $schema): Schema
+    {
+        return ChangelogEntryInfolist::configure($schema);
+    }
+
+    public static function table(Table $table): Table
+    {
+        return ChangelogEntriesTable::configure($table);
+    }
+
+    public static function getRelations(): array
+    {
+        return [
+            //
+        ];
+    }
+
+    public static function canAccess(): bool
+    {
+        $user = auth()->user();
+
+        return $user && Feature::for($user)->active(ChangelogFeature::class) && parent::canAccess();
+    }
+
+    public static function getPages(): array
+    {
+        return [
+            'index' => ListChangelogEntries::route('/'),
+            'create' => CreateChangelogEntry::route('/create'),
+            'view' => ViewChangelogEntry::route('/{record}'),
+            'edit' => EditChangelogEntry::route('/{record}/edit'),
+        ];
+    }
+
+    public static function getRecordRouteBindingEloquentQuery(): Builder
+    {
+        return parent::getRecordRouteBindingEloquentQuery()
+            ->withoutGlobalScopes([
+                SoftDeletingScope::class,
+            ]);
+    }
+}

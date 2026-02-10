@@ -1,0 +1,78 @@
+{
+    "model": "ChangelogEntry",
+    "table": "changelog_entries",
+    "fields": {
+        "id": {
+            "type": "int8",
+            "nullable": true,
+            "default": null
+        },
+        "title": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "description": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "version": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "type": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "is_published": {
+            "type": "bool",
+            "nullable": true,
+            "default": null
+        },
+        "released_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "int8",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "int8",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": [],
+    "value_hints": {
+        "title": {
+            "type": "name",
+            "example": "New feature release"
+        },
+        "is_published": {
+            "type": "boolean",
+            "example": true
+        }
+    },
+    "scenarios": []
+}

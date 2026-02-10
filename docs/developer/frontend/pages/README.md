@@ -24,5 +24,10 @@ Inertia pages are React components that receive data from Laravel controllers. T
 | [onboarding/show](./onboarding-show.md) | onboarding, onboarding.store | ✅ |
 | [legal/privacy](./legal-privacy.md) | filament.exports.download, filament.imports.failed-rows.download | ✅ |
 | [legal/terms](./legal-terms.md) | filament.exports.download, filament.imports.failed-rows.download | ✅ |
+| [blog/index](./blog-index.md) | blog.index | ✅ |
+| [blog/show](./blog-show.md) | blog.show | ✅ |
+| [changelog/index](./changelog-index.md) | changelog.index | ✅ |
+| [help/index](./help-index.md) | help.index | ✅ |
+| [help/show](./help-show.md) | help.show, help.rate | ✅ |
 
 

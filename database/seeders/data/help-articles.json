@@ -1,0 +1,49 @@
+{
+  "metadata": {
+    "version": "1.0.0",
+    "description": "Help article seed data for development environment",
+    "created_at": "2025-12-13"
+  },
+  "help_articles": [
+    {
+      "title": "Getting Started",
+      "slug": "getting-started",
+      "excerpt": "Learn the basics of using our platform",
+      "content": "# Getting Started\n\nWelcome to our platform! This guide will help you get started.\n\n## Creating Your Account\n\n1. Click the Sign Up button\n2. Enter your email and password\n3. Verify your email address\n\n## Your First Steps\n\n- Complete your profile\n- Explore the dashboard\n- Set up your preferences",
+      "category": "Basics",
+      "is_published": true,
+      "is_featured": true,
+      "order": 1
+    },
+    {
+      "title": "Managing Your Profile",
+      "slug": "managing-your-profile",
+      "excerpt": "Learn how to update your profile information and settings",
+      "content": "# Managing Your Profile\n\nYour profile contains important information about your account.\n\n## Updating Information\n\n- Click on your avatar\n- Select Profile Settings\n- Make your changes\n- Click Save\n\n## Profile Settings\n\nYou can update:\n- Name and email\n- Profile picture\n- Notification preferences",
+      "category": "Account",
+      "is_published": true,
+      "is_featured": false,
+      "order": 2
+    },
+    {
+      "title": "Billing and Subscriptions",
+      "slug": "billing-and-subscriptions",
+      "excerpt": "Everything you need to know about billing and managing your subscription",
+      "content": "# Billing and Subscriptions\n\nManage your subscription and billing information.\n\n## Viewing Your Plan\n\nNavigate to Billing to see your current plan and usage.\n\n## Upgrading or Downgrading\n\n- Go to Billing\n- Click Change Plan\n- Select your new plan\n- Confirm the change\n\n## Payment Methods\n\nAdd or update your payment method in Billing settings.",
+      "category": "Billing",
+      "is_published": true,
+      "is_featured": true,
+      "order": 3
+    },
+    {
+      "title": "Troubleshooting Login Issues",
+      "slug": "troubleshooting-login-issues",
+      "excerpt": "Solutions for common login problems",
+      "content": "# Troubleshooting Login Issues\n\nHaving trouble logging in? Here are some common solutions.\n\n## Forgot Password\n\n1. Click Forgot Password on the login page\n2. Enter your email address\n3. Check your email for reset instructions\n4. Follow the link to reset your password\n\n## Account Locked\n\nIf your account is locked, contact support for assistance.",
+      "category": "Troubleshooting",
+      "is_published": true,
+      "is_featured": false,
+      "order": 4
+    }
+  ]
+}

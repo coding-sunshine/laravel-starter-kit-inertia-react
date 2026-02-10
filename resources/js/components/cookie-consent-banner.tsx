@@ -1,5 +1,6 @@
 import { router, usePage } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
+import { type SharedData } from '@/types';
 
 interface CookieConsentProps {
     accepted: boolean;
@@ -8,10 +9,10 @@ interface CookieConsentProps {
 }
 
 export function CookieConsentBanner() {
-    const { props } = usePage<{ cookieConsent: CookieConsentProps | null }>();
-    const cookieConsent = props.cookieConsent;
+    const { props } = usePage<SharedData & { cookieConsent: CookieConsentProps | null }>();
+    const { cookieConsent, features } = props;
 
-    if (!cookieConsent || cookieConsent.accepted) {
+    if (!features?.cookie_consent || !cookieConsent || cookieConsent.accepted) {
         return null;
     }
 

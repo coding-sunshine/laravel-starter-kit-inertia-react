@@ -68,9 +68,8 @@ final class RolesAndPermissionsSeeder extends Seeder
             ]);
         }
 
-        if (config('permission.route_based_enforcement', false)) {
-            Artisan::call('permission:sync-routes', ['--silent' => true]);
-        }
+        // Always sync route permissions so they exist in Filament for assignment to roles.
+        Artisan::call('permission:sync-routes', ['--silent' => true]);
 
         resolve(PermissionRegistrar::class)->forgetCachedPermissions();
     }

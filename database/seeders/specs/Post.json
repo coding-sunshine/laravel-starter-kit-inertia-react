@@ -1,0 +1,112 @@
+{
+    "model": "Post",
+    "table": "posts",
+    "fields": {
+        "id": {
+            "type": "int8",
+            "nullable": true,
+            "default": null
+        },
+        "author_id": {
+            "type": "int8",
+            "nullable": true,
+            "default": null
+        },
+        "title": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "slug": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "excerpt": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "content": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "is_published": {
+            "type": "bool",
+            "nullable": true,
+            "default": null
+        },
+        "published_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "meta_title": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "meta_description": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "meta_keywords": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "views": {
+            "type": "int4",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "int8",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "int8",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "author": {
+            "type": "belongsTo",
+            "model": "Author"
+        },
+        "categories": {
+            "type": "belongsTo",
+            "model": "Category"
+        }
+    },
+    "value_hints": {
+        "title": {
+            "type": "name",
+            "example": "Welcome Post"
+        },
+        "is_published": {
+            "type": "boolean",
+            "example": true
+        }
+    },
+    "scenarios": []
+}

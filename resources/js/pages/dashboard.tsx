@@ -2,8 +2,8 @@ import { Button } from '@/components/ui/button';
 import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
-import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/react';
+import { type BreadcrumbItem, type SharedData } from '@/types';
+import { Head, usePage } from '@inertiajs/react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -13,15 +13,20 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 export default function Dashboard() {
+    const { features } = usePage<SharedData>().props;
+    const showPdfExport = features?.profile_pdf_export ?? false;
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dashboard" />
             <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="text-sm text-muted-foreground" />
-                    <Button variant="outline" size="sm" asChild>
-                        <a href="/profile/export-pdf">Export profile (PDF)</a>
-                    </Button>
+                    {showPdfExport && (
+                        <Button variant="outline" size="sm" asChild>
+                            <a href="/profile/export-pdf">Export profile (PDF)</a>
+                        </Button>
+                    )}
                 </div>
                 <div className="grid auto-rows-min gap-4 md:grid-cols-3">
                     <div className="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">

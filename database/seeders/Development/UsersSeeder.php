@@ -72,6 +72,11 @@ final class UsersSeeder extends Seeder
                     } elseif ($roles !== []) {
                         $user->syncRoles($roles);
                     }
+
+                    // So demo admin can access dashboard and Filament without completing onboarding.
+                    if ($user->hasRole('super-admin')) {
+                        $user->update(['onboarding_completed' => true]);
+                    }
                 } else {
                     // Fallback to factory if no email
                     $factory = User::factory();

@@ -6,7 +6,10 @@ use AlizHarb\ActivityLog\Http\Middleware\ActivityLogContextMiddleware;
 use App\Http\Middleware\AdditionalSecurityHeaders;
 use App\Http\Middleware\AutoPermissionMiddleware;
 use App\Http\Middleware\EnforceIpWhitelist;
+use App\Http\Middleware\EnsureFeatureActive;
 use App\Http\Middleware\EnsureOnboardingComplete;
+use App\Http\Middleware\EnsureRegistrationEnabled;
+use App\Http\Middleware\EnsureScrambleApiDocsVisible;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\ServeFavicon;
@@ -33,6 +36,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->statefulApi();
 
         $middleware->alias([
+            'feature' => EnsureFeatureActive::class,
+            'registration.enabled' => EnsureRegistrationEnabled::class,
             'permission' => PermissionMiddleware::class,
             'role' => RoleMiddleware::class,
             'role_or_permission' => RoleOrPermissionMiddleware::class,
@@ -41,6 +46,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $webAppend = [
+            EnsureScrambleApiDocsVisible::class,
             AddCspHeaders::class,
             AdditionalSecurityHeaders::class,
             ActivityLogContextMiddleware::class,

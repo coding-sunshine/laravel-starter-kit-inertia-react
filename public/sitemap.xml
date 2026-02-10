@@ -30,4 +30,19 @@
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
             </url>
+    <url>
+    <loc>https://laravel-starter-kit-inertia-react.test/blog</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+            </url>
+    <url>
+    <loc>https://laravel-starter-kit-inertia-react.test/changelog</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+            </url>
+    <url>
+    <loc>https://laravel-starter-kit-inertia-react.test/help</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+            </url>
 </urlset>

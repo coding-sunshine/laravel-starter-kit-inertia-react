@@ -4,13 +4,16 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Features\OnboardingFeature;
 use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
+use Laravel\Pennant\Feature;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Redirects authenticated users who have not completed onboarding to the onboarding page.
+ * When OnboardingFeature is inactive for the user, onboarding is skipped (no redirect).
  */
 final class EnsureOnboardingComplete
 {
@@ -41,6 +44,10 @@ final class EnsureOnboardingComplete
 
         /** @var User $user */
         $user = $request->user();
+
+        if (! Feature::for($user)->active(OnboardingFeature::class)) {
+            return $next($request);
+        }
 
         if ($user->onboarding_completed) {
             return $next($request);

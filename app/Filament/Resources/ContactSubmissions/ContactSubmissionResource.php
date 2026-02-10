@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\ContactSubmissions;
 
+use App\Features\ContactFeature;
 use App\Filament\Resources\ContactSubmissions\Pages\EditContactSubmission;
 use App\Filament\Resources\ContactSubmissions\Pages\ListContactSubmissions;
 use App\Filament\Resources\ContactSubmissions\Pages\ViewContactSubmission;
@@ -16,6 +17,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Laravel\Pennant\Feature;
 use UnitEnum;
 
 final class ContactSubmissionResource extends Resource
@@ -48,6 +50,13 @@ final class ContactSubmissionResource extends Resource
         return [
             //
         ];
+    }
+
+    public static function canAccess(): bool
+    {
+        $user = auth()->user();
+
+        return $user && Feature::for($user)->active(ContactFeature::class) && parent::canAccess();
     }
 
     public static function getPages(): array

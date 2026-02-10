@@ -40,6 +40,24 @@ return [
             'exclude' => [],
             'roles' => ['admin'],
         ],
+        'blog' => [
+            'description' => 'Public blog (view, list)',
+            'patterns' => ['blog.*'],
+            'exclude' => [],
+            'roles' => ['user', 'admin'],
+        ],
+        'changelog' => [
+            'description' => 'Public changelog',
+            'patterns' => ['changelog.*'],
+            'exclude' => [],
+            'roles' => ['user', 'admin'],
+        ],
+        'help' => [
+            'description' => 'Help center (view, rate)',
+            'patterns' => ['help.*'],
+            'exclude' => [],
+            'roles' => ['user', 'admin'],
+        ],
     ],
 
     'roles' => [

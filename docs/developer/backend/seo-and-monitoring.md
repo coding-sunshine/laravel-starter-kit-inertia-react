@@ -10,6 +10,7 @@ SEO, sitemap, error tracking, analytics, and Slack notifications.
 | **SEO meta / OG** | `App\Settings\SeoSettings` | Filament Manage SEO; `app.blade` + Inertia shared `seo` |
 | **robots.txt** | Route `robots` | Dynamic; includes `Sitemap: {app.url}/sitemap.xml` |
 | **Legal pages** | Inertia | `/legal/terms`, `/legal/privacy`; linked from welcome footer |
+| **Public content** | Inertia | `/blog`, `/changelog`, `/help`; linked from welcome nav; sitemap includes index URLs |
 | **Sentry** | `sentry/sentry-laravel` | Set `SENTRY_LARAVEL_DSN` to enable |
 | **GA4** | `spatie/laravel-analytics` | Server-side; `ANALYTICS_PROPERTY_ID`, credentials path |
 | **Slack** | `laravel/slack-notification-channel` | `SLACK_WEBHOOK_URL`; failed-job alerts |
@@ -19,7 +20,7 @@ SEO, sitemap, error tracking, analytics, and Slack notifications.
 - **Command**: `php artisan sitemap:generate`
 - **Output**: `public/sitemap.xml`
 - **Schedule**: Daily (in `routes/console.php`)
-- **URLs included**: home, contact, login, register, legal/terms, legal/privacy (when routes exist)
+- **URLs included**: home, contact, login, register, legal/terms, legal/privacy, blog, changelog, help (when routes exist)
 
 Add more URLs in `App\Console\Commands\GenerateSitemap` (e.g. dynamic models implementing `Spatie\Sitemap\Contracts\Sitemapable`).
 
@@ -39,6 +40,13 @@ Add more URLs in `App\Console\Commands\GenerateSitemap` (e.g. dynamic models imp
 - **Routes**: `legal.terms` → `legal/terms`, `legal.privacy` → `legal/privacy`
 - **Pages**: `resources/js/pages/legal/terms.tsx`, `legal/privacy.tsx`
 - **Links**: Welcome page footer uses `@/routes/legal` (terms, privacy).
+
+## Public content (Blog, Changelog, Help)
+
+- **Routes**: `blog.index`, `blog.show`, `changelog.index`, `help.index`, `help.show`, `help.rate`
+- **Pages**: `resources/js/pages/blog/`, `changelog/`, `help/`
+- **Links**: Welcome page nav uses `@/routes/blog`, `@/routes/changelog`, `@/routes/help`
+- **Sitemap**: Index URLs `/blog`, `/changelog`, `/help` are added by `GenerateSitemap` when routes exist.
 
 ## Sentry
 

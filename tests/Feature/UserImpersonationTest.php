@@ -3,9 +3,11 @@
 declare(strict_types=1);
 
 use App\Enums\ActivityType;
+use App\Features\ImpersonationFeature;
 use App\Models\User;
 use Database\Seeders\Essential\RolesAndPermissionsSeeder;
 use Lab404\Impersonate\Services\ImpersonateManager;
+use Laravel\Pennant\Feature;
 use Spatie\Activitylog\Models\Activity;
 
 beforeEach(function (): void {
@@ -25,6 +27,14 @@ test('only super-admin can impersonate', function (): void {
     expect($superAdmin->canImpersonate())->toBeTrue()
         ->and($admin->canImpersonate())->toBeFalse()
         ->and($user->canImpersonate())->toBeFalse();
+});
+
+test('super-admin cannot impersonate when impersonation feature is inactive', function (): void {
+    $superAdmin = User::factory()->withoutTwoFactor()->create();
+    $superAdmin->assignRole('super-admin');
+    Feature::for($superAdmin)->deactivate(ImpersonationFeature::class);
+
+    expect($superAdmin->canImpersonate())->toBeFalse();
 });
 
 test('super-admin cannot be impersonated', function (): void {

@@ -49,6 +49,42 @@ final class PermissionCategoryResolver
     }
 
     /**
+     * Permissions grouped by category key for Filament role form.
+     * Uncategorized permissions are in key 'other'.
+     *
+     * @return array<string, array<int, string>> category_key => [permission_id => permission_name]
+     */
+    public function getPermissionsGroupedByCategory(): array
+    {
+        $all = Permission::query()->orderBy('name')->get();
+        $categories = config('permission_categories.categories', []);
+        $grouped = [];
+        $assigned = [];
+
+        foreach ($categories as $key => $config) {
+            $patterns = $config['patterns'] ?? [];
+            $exclude = $config['exclude'] ?? [];
+            $matched = $this->matchPatterns($all->pluck('name'), $patterns);
+            $grouped[$key] = [];
+            foreach ($all as $perm) {
+                if (in_array($perm->name, $matched, true) && ! in_array($perm->name, $exclude, true)) {
+                    $grouped[$key][$perm->id] = $perm->name;
+                    $assigned[$perm->id] = true;
+                }
+            }
+        }
+
+        $grouped['other'] = [];
+        foreach ($all as $perm) {
+            if (empty($assigned[$perm->id])) {
+                $grouped['other'][$perm->id] = $perm->name;
+            }
+        }
+
+        return array_filter($grouped, fn (array $items): bool => $items !== []);
+    }
+
+    /**
      * @param  list<string>  $categoryKeys
      * @return list<string>
      */

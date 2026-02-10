@@ -1,0 +1,49 @@
+{
+  "metadata": {
+    "version": "1.0.0",
+    "description": "Changelog entry seed data for development environment",
+    "created_at": "2025-12-13"
+  },
+  "changelog_entries": [
+    {
+      "title": "User Engagement Features",
+      "description": "Added feedback system, help center, announcements, and contact form",
+      "version": "2.1.0",
+      "type": "added",
+      "is_published": true,
+      "released_at": "2025-12-13T10:00:00Z"
+    },
+    {
+      "title": "Content Management System",
+      "description": "Introduced blog posts and changelog management with SEO support",
+      "version": "2.0.0",
+      "type": "added",
+      "is_published": true,
+      "released_at": "2025-12-12T10:00:00Z"
+    },
+    {
+      "title": "Performance Improvements",
+      "description": "Optimized database queries and improved page load times",
+      "version": "1.9.1",
+      "type": "changed",
+      "is_published": true,
+      "released_at": "2025-12-10T10:00:00Z"
+    },
+    {
+      "title": "Fixed Login Bug",
+      "description": "Resolved issue with authentication redirect after login",
+      "version": "1.9.0",
+      "type": "fixed",
+      "is_published": true,
+      "released_at": "2025-12-08T10:00:00Z"
+    },
+    {
+      "title": "Security Enhancement",
+      "description": "Improved password hashing and session security",
+      "version": "1.8.5",
+      "type": "security",
+      "is_published": true,
+      "released_at": "2025-12-05T10:00:00Z"
+    }
+  ]
+}

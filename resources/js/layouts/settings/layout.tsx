@@ -7,39 +7,30 @@ import { edit as editPassword } from '@/routes/password';
 import { show } from '@/routes/two-factor';
 import { edit } from '@/routes/user-profile';
 import { edit as editPersonalDataExport } from '@/routes/personal-data-export';
-import { type NavItem } from '@/types';
-import { Link } from '@inertiajs/react';
-import { type PropsWithChildren } from 'react';
+import { type NavItem, type SharedData } from '@/types';
+import { Link, usePage } from '@inertiajs/react';
+import { type PropsWithChildren, useMemo } from 'react';
 
-const sidebarNavItems: NavItem[] = [
-    {
-        title: 'Profile',
-        href: edit(),
-        icon: null,
-    },
-    {
-        title: 'Password',
-        href: editPassword(),
-        icon: null,
-    },
-    {
-        title: 'Two-Factor Auth',
-        href: show(),
-        icon: null,
-    },
-    {
-        title: 'Appearance',
-        href: editAppearance(),
-        icon: null,
-    },
-    {
-        title: 'Data export',
-        href: editPersonalDataExport(),
-        icon: null,
-    },
+const sidebarNavItems: (NavItem & { feature?: string })[] = [
+    { title: 'Profile', href: edit(), icon: null },
+    { title: 'Password', href: editPassword(), icon: null },
+    { title: 'Two-Factor Auth', href: show(), icon: null, feature: 'two_factor_auth' },
+    { title: 'Appearance', href: editAppearance(), icon: null, feature: 'appearance_settings' },
+    { title: 'Data export', href: editPersonalDataExport(), icon: null, feature: 'personal_data_export' },
 ];
 
 export default function SettingsLayout({ children }: PropsWithChildren) {
+    const { features } = usePage<SharedData>().props;
+    const f = features ?? {};
+
+    const visibleNavItems = useMemo(
+        () =>
+            sidebarNavItems.filter(
+                (item) => !item.feature || f[item.feature],
+            ),
+        [f],
+    );
+
     // When server-side rendering, we only render the layout on the client...
     if (typeof window === 'undefined') {
         return null;
@@ -57,7 +48,7 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
             <div className="flex flex-col lg:flex-row lg:space-x-12">
                 <aside className="w-full max-w-xl lg:w-48">
                     <nav className="flex flex-col space-y-1 space-x-0">
-                        {sidebarNavItems.map((item, index) => (
+                        {visibleNavItems.map((item, index) => (
                             <Button
                                 key={`${typeof item.href === 'string' ? item.href : item.href.url}-${index}`}
                                 size="sm"

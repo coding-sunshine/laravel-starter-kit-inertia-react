@@ -231,9 +231,84 @@
                     "onboarding.store"
                 ]
             }
+        },
+        "RateHelpArticleAction": {
+            "documented": true,
+            "path": "./RateHelpArticleAction.md",
+            "relationships": {
+                "usedBy": [
+                    "RateHelpArticleController"
+                ],
+                "usesModels": [
+                    "HelpArticle"
+                ],
+                "relatedRoutes": [
+                    "help.rate"
+                ]
+            }
         }
     },
     "controllers": {
+        "BlogController": {
+            "documented": true,
+            "path": "./BlogController.md",
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "blog.index",
+                    "blog.show"
+                ],
+                "rendersPages": [
+                    "blog/index",
+                    "blog/show"
+                ]
+            }
+        },
+        "ChangelogController": {
+            "documented": true,
+            "path": "./ChangelogController.md",
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "changelog.index"
+                ],
+                "rendersPages": [
+                    "changelog/index"
+                ]
+            }
+        },
+        "HelpCenterController": {
+            "documented": true,
+            "path": "./HelpCenterController.md",
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "help.index",
+                    "help.show"
+                ],
+                "rendersPages": [
+                    "help/index",
+                    "help/show"
+                ]
+            }
+        },
+        "RateHelpArticleController": {
+            "documented": true,
+            "path": "./RateHelpArticleController.md",
+            "relationships": {
+                "usesActions": [
+                    "RateHelpArticleAction"
+                ],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "help.rate"
+                ],
+                "rendersPages": []
+            }
+        },
         "SessionController": {
             "documented": true,
             "path": "./SessionController.md",
@@ -929,6 +1004,51 @@
                     "contact.create",
                     "contact.store"
                 ]
+            }
+        },
+        "blog/index": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./blog-index.md",
+            "relationships": {
+                "renderedBy": ["BlogController"],
+                "relatedRoutes": ["blog.index"]
+            }
+        },
+        "blog/show": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./blog-show.md",
+            "relationships": {
+                "renderedBy": ["BlogController"],
+                "relatedRoutes": ["blog.show"]
+            }
+        },
+        "changelog/index": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./changelog-index.md",
+            "relationships": {
+                "renderedBy": ["ChangelogController"],
+                "relatedRoutes": ["changelog.index"]
+            }
+        },
+        "help/index": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./help-index.md",
+            "relationships": {
+                "renderedBy": ["HelpCenterController"],
+                "relatedRoutes": ["help.index"]
+            }
+        },
+        "help/show": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./help-show.md",
+            "relationships": {
+                "renderedBy": ["HelpCenterController"],
+                "relatedRoutes": ["help.show", "help.rate"]
             }
         },
         "settings/personal-data-export": {

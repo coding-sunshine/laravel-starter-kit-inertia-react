@@ -40,5 +40,8 @@ it('generates sitemap with expected urls', function (): void {
         ->toContain('/login')
         ->toContain('/register')
         ->toContain('/legal/terms')
-        ->toContain('/legal/privacy');
+        ->toContain('/legal/privacy')
+        ->toContain('/blog')
+        ->toContain('/changelog')
+        ->toContain('/help');
 });
