@@ -27,6 +27,6 @@ All Actions:
 | [LoggingGenerateNewRecoveryCodes](./LoggingGenerateNewRecoveryCodes.md) | N/A | ✅ |
 | [StoreContactSubmission](./StoreContactSubmission.md) | N/A | ✅ |
 | [CompleteOnboardingAction](./CompleteOnboardingAction.md) | N/A | ✅ |
-| [RateHelpArticleAction](./RateHelpArticleAction.md) | Record helpful/not-helpful feedback on help articles | ✅ |
+| [RateHelpArticleAction](./RateHelpArticleAction.md) | N/A | ✅ |
 
 

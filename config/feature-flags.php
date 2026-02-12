@@ -9,6 +9,7 @@ use App\Features\ChangelogFeature;
 use App\Features\ContactFeature;
 use App\Features\CookieConsentFeature;
 use App\Features\ExampleFeature;
+use App\Features\GamificationFeature;
 use App\Features\HelpFeature;
 use App\Features\ImpersonationFeature;
 use App\Features\OnboardingFeature;
@@ -39,6 +40,7 @@ return [
         'api_access' => ApiAccessFeature::class,
         'scramble_api_docs' => ScrambleApiDocsFeature::class,
         'appearance_settings' => AppearanceSettingsFeature::class,
+        'gamification' => GamificationFeature::class,
     ],
 
     /*
@@ -47,6 +49,7 @@ return [
     'route_feature_map' => [
         'api_access' => ApiAccessFeature::class,
         'appearance_settings' => AppearanceSettingsFeature::class,
+        'gamification' => GamificationFeature::class,
         'blog' => BlogFeature::class,
         'changelog' => ChangelogFeature::class,
         'contact' => ContactFeature::class,

@@ -14,6 +14,10 @@ All Controllers:
 
 | Controller | Purpose | Documented |
 |------------|---------|------------|
+| [BlogController](./BlogController.md) | N/A | ✅ |
+| [ChangelogController](./ChangelogController.md) | N/A | ✅ |
+| [HelpCenterController](./HelpCenterController.md) | N/A | ✅ |
+| [RateHelpArticleController](./RateHelpArticleController.md) | N/A | ✅ |
 | [SessionController](./SessionController.md) | N/A | ✅ |
 | [UserController](./UserController.md) | N/A | ✅ |
 | [UserEmailResetNotificationController](./UserEmailResetNotificationController.md) | N/A | ✅ |
@@ -27,9 +31,5 @@ All Controllers:
 | [CookieConsentController](./CookieConsentController.md) | N/A | ✅ |
 | [PersonalDataExportController](./PersonalDataExportController.md) | N/A | ✅ |
 | [OnboardingController](./OnboardingController.md) | N/A | ✅ |
-| [BlogController](./BlogController.md) | Public blog listing and post view | ✅ |
-| [ChangelogController](./ChangelogController.md) | Public changelog listing | ✅ |
-| [HelpCenterController](./HelpCenterController.md) | Public help index and article view | ✅ |
-| [RateHelpArticleController](./RateHelpArticleController.md) | Submit help article rating (invokable) | ✅ |
 
 

@@ -41,6 +41,7 @@ export interface SharedFeatures {
     contact?: boolean;
     cookie_consent?: boolean;
     example?: boolean;
+    gamification?: boolean;
     help?: boolean;
     impersonation?: boolean;
     onboarding?: boolean;

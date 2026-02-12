@@ -17,6 +17,7 @@ use App\Http\Controllers\HelpCenter\RateHelpArticleController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\PersonalDataExportController;
 use App\Http\Controllers\SessionController;
+use App\Http\Controllers\Settings\AchievementsController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserEmailResetNotificationController;
 use App\Http\Controllers\UserEmailVerificationController;
@@ -129,6 +130,11 @@ Route::middleware('auth')->group(function (): void {
     Route::get('settings/two-factor', [UserTwoFactorAuthenticationController::class, 'show'])
         ->middleware('feature:two_factor_auth')
         ->name('two-factor.show');
+
+    // Gamification (Level & Achievements)...
+    Route::get('settings/achievements', [AchievementsController::class, 'show'])
+        ->middleware('feature:gamification')
+        ->name('achievements.show');
 });
 
 Route::middleware('guest')->group(function (): void {

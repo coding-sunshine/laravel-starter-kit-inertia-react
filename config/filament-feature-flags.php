@@ -6,10 +6,11 @@ return [
     // This package supports only class based features.
 
     /*
-    * This is the default state for all class based features when
-     * there is no segmentation. New features are off by default.
-    */
-    'default' => false,
+     * Default state for class-based features when there is no segment override.
+     * When true, all features are visible after setup; super-admin can turn them off
+     * per segment (e.g. role, user) from Filament → Settings → Manage Features & Segments.
+     */
+    'default' => true,
 
     /*
      * Default scope: User::class, Team::class

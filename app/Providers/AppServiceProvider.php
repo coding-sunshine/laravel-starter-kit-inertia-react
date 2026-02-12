@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Events\User\UserCreated;
+use App\Listeners\Gamification\GrantGamificationOnUserCreated;
 use App\Listeners\LogImpersonationEvents;
 use App\Listeners\MigrationListener;
 use App\Listeners\SendSlackAlertOnJobFailed;
@@ -11,6 +13,7 @@ use App\Models\User;
 use App\Observers\ActivityLogObserver;
 use App\Observers\PermissionActivityObserver;
 use App\Observers\RoleActivityObserver;
+use App\Observers\UserObserver;
 use App\Services\PrismService;
 use App\Settings\SeoSettings;
 use Essa\APIToolKit\Exceptions\Handler as ApiToolKitExceptionHandler;
@@ -67,6 +70,8 @@ final class AppServiceProvider extends ServiceProvider
         Event::listen(TakeImpersonation::class, [LogImpersonationEvents::class, 'handleTakeImpersonation']);
         Event::listen(LeaveImpersonation::class, [LogImpersonationEvents::class, 'handleLeaveImpersonation']);
         Event::listen(JobFailed::class, SendSlackAlertOnJobFailed::class);
+        Event::listen(UserCreated::class, GrantGamificationOnUserCreated::class);
+        User::observe(UserObserver::class);
     }
 
     private function userHasBypassPermissions(object $user): bool

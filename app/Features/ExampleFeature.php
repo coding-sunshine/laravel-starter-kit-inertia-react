@@ -10,5 +10,5 @@ final class ExampleFeature
 {
     use WithFeatureResolver;
 
-    public bool $defaultValue = false;
+    public bool $defaultValue = true;
 }

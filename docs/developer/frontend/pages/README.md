@@ -20,14 +20,15 @@ Inertia pages are React components that receive data from Laravel controllers. T
 | [user/create](./user-create.md) | user.destroy, register | ✅ |
 | [welcome](./welcome.md) | filament.exports.download, filament.imports.failed-rows.download | ✅ |
 | [contact/create](./contact-create.md) | contact.create, contact.store | ✅ |
+| [blog/index](./blog-index.md) | blog.index, blog.show | ✅ |
+| [blog/show](./blog-show.md) | blog.index, blog.show | ✅ |
+| [changelog/index](./changelog-index.md) | changelog.index | ✅ |
+| [help/index](./help-index.md) | help.index, help.show | ✅ |
+| [help/show](./help-show.md) | help.index, help.show | ✅ |
 | [settings/personal-data-export](./settings-personal-data-export.md) | filament.exports.download, filament.imports.failed-rows.download | ✅ |
 | [onboarding/show](./onboarding-show.md) | onboarding, onboarding.store | ✅ |
 | [legal/privacy](./legal-privacy.md) | filament.exports.download, filament.imports.failed-rows.download | ✅ |
 | [legal/terms](./legal-terms.md) | filament.exports.download, filament.imports.failed-rows.download | ✅ |
-| [blog/index](./blog-index.md) | blog.index | ✅ |
-| [blog/show](./blog-show.md) | blog.show | ✅ |
-| [changelog/index](./changelog-index.md) | changelog.index | ✅ |
-| [help/index](./help-index.md) | help.index | ✅ |
-| [help/show](./help-show.md) | help.show, help.rate | ✅ |
+| [settings/achievements](docs/developer/frontend/pages/settings/achievements.md) | achievements.show | ✅ |
 
 

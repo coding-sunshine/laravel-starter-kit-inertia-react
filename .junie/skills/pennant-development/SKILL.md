@@ -9,6 +9,10 @@ description: >-
 
 # Pennant Features
 
+## Features in this kit
+
+Feature flags are configured in `config/feature-flags.php` (`inertia_features` and `route_feature_map`). Kit features include blog, changelog, help, contact, gamification, appearance_settings, registration, api_access, scramble_api_docs, and others. See [Feature Flags](../../../docs/developer/backend/feature-flags.md) for the full list and route middleware.
+
 ## When to Apply
 
 Activate this skill when:
@@ -16,61 +20,59 @@ Activate this skill when:
 - Creating or checking feature flags
 - Managing feature rollouts
 - Implementing A/B testing
-- Gating routes, Filament resources, or frontend nav by feature
 
-## This kit: class-based features
+## Documentation
 
-This application uses **class-based features** in `App\Features\*`, not string-based `Feature::define()`.
+Use `search-docs` for detailed Pennant patterns and documentation.
 
-- **Define**: Create a class in `App\Features\` with `Stephenjude\FilamentFeatureFlag\Traits\WithFeatureResolver` and `public bool $defaultValue = true|false`.
-- **Config**: Add to `config/feature-flags.php`:
-  - `inertia_features`: `'key' => FeatureClass` so the frontend receives `features.key`.
-  - `route_feature_map`: `'key' => FeatureClass` if the feature will be used in route middleware.
-- **Route middleware**: Use `->middleware('feature:key')` on routes; keys must be in `route_feature_map`. See `EnsureFeatureActive`.
-- **Frontend**: `usePage<SharedData>().props.features`; sidebar and settings filter by `features[item.feature]`.
-- **Filament**: Override `canAccess()` on a resource and check `Feature::for(auth()->user())->active(FeatureClass::class)`.
-- **Impersonation**: `User::canImpersonate()` also requires `ImpersonationFeature` to be active.
+## Basic Usage
 
-Full list of features and gating: **docs/developer/backend/feature-flags.md**. Inventory vs boilerplate: **compare_features.md**.
+### Defining Features
 
-## General Pennant usage (reference)
-
-### Checking features (class-based)
-
-```php
-use App\Features\BlogFeature;
+<code-snippet name="Defining Features" lang="php">
 use Laravel\Pennant\Feature;
 
-if (Feature::for($user)->active(BlogFeature::class)) {
+Feature::define('new-dashboard', function (User $user) {
+    return $user->isAdmin();
+});
+</code-snippet>
+
+### Checking Features
+
+<code-snippet name="Checking Features" lang="php">
+if (Feature::active('new-dashboard')) {
+    // Feature is active
+}
+
+// With scope
+if (Feature::for($user)->active('new-dashboard')) {
     // Feature is active for this user
 }
-```
+</code-snippet>
 
-### Activating / deactivating (e.g. in tests)
+### Blade Directive
 
-```php
-Feature::for($user)->activate(BlogFeature::class);
-Feature::for($user)->deactivate(BlogFeature::class);
-```
-
-### Blade directive (string-based; kit prefers class-based)
-
-```blade
+<code-snippet name="Blade Directive" lang="blade">
 @feature('new-dashboard')
     <x-new-dashboard />
+@else
+    <x-old-dashboard />
 @endfeature
-```
+</code-snippet>
 
-Use `search-docs` for detailed Pennant patterns when using string-based or advanced scenarios.
+### Activating / Deactivating
+
+<code-snippet name="Activating Features" lang="php">
+Feature::activate('new-dashboard');
+Feature::for($user)->activate('new-dashboard');
+</code-snippet>
 
 ## Verification
 
-1. New feature class in `App\Features\*` with `WithFeatureResolver` and `$defaultValue`.
-2. Added to `config/feature-flags.php` (`inertia_features` and/or `route_feature_map`).
-3. Routes/Filament/frontend updated as needed; tests cover feature-on and feature-off.
+1. Check feature flag is defined
+2. Test with different scopes/users
 
-## Common pitfalls
+## Common Pitfalls
 
-- Forgetting to add the feature to `route_feature_map` before using `feature:key` middleware.
-- Assuming guests get empty `features`; they get each feature's `$defaultValue`.
-- Gating a Filament resource without overriding `canAccess()` (nav still shows; use feature check in `canAccess()`).
+- Forgetting to scope features for specific users/entities
+- Not following existing naming conventions

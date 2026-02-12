@@ -1,6 +1,6 @@
 {
     "version": "1.0.0",
-    "lastGenerated": "2026-02-08",
+    "lastGenerated": "2026-02-11",
     "actions": {
         "CreateUser": {
             "documented": true,
@@ -236,9 +236,7 @@
             "documented": true,
             "path": "./RateHelpArticleAction.md",
             "relationships": {
-                "usedBy": [
-                    "RateHelpArticleController"
-                ],
+                "usedBy": [],
                 "usesModels": [
                     "HelpArticle"
                 ],
@@ -549,11 +547,24 @@
                     "filament.admin.resources.feature-segments.index",
                     "filament.admin.resources.activity-logs.index",
                     "filament.admin.resources.activity-logs.view",
+                    "filament.admin.resources.categories.index",
+                    "filament.admin.resources.changelog-entries.index",
+                    "filament.admin.resources.changelog-entries.create",
+                    "filament.admin.resources.changelog-entries.view",
+                    "filament.admin.resources.changelog-entries.edit",
                     "filament.admin.resources.contact-submissions.index",
                     "filament.admin.resources.contact-submissions.view",
                     "filament.admin.resources.contact-submissions.edit",
+                    "filament.admin.resources.help-articles.index",
+                    "filament.admin.resources.help-articles.create",
+                    "filament.admin.resources.help-articles.view",
+                    "filament.admin.resources.help-articles.edit",
                     "filament.admin.resources.permissions.index",
                     "filament.admin.resources.permissions.view",
+                    "filament.admin.resources.posts.index",
+                    "filament.admin.resources.posts.create",
+                    "filament.admin.resources.posts.view",
+                    "filament.admin.resources.posts.edit",
                     "filament.admin.resources.roles.index",
                     "filament.admin.resources.roles.create",
                     "filament.admin.resources.roles.view",
@@ -611,6 +622,12 @@
                     "api.v1.users.update",
                     "api.v1.users.destroy",
                     "cookie-consent.accept",
+                    "blog.index",
+                    "blog.show",
+                    "changelog.index",
+                    "help.index",
+                    "help.show",
+                    "help.rate",
                     "contact.create",
                     "contact.store",
                     "profile.export-pdf",
@@ -627,6 +644,7 @@
                     "password.update",
                     "personal-data-export.store",
                     "two-factor.show",
+                    "achievements.show",
                     "register",
                     "register.store",
                     "password.reset",
@@ -658,11 +676,24 @@
                     "filament.admin.resources.feature-segments.index",
                     "filament.admin.resources.activity-logs.index",
                     "filament.admin.resources.activity-logs.view",
+                    "filament.admin.resources.categories.index",
+                    "filament.admin.resources.changelog-entries.index",
+                    "filament.admin.resources.changelog-entries.create",
+                    "filament.admin.resources.changelog-entries.view",
+                    "filament.admin.resources.changelog-entries.edit",
                     "filament.admin.resources.contact-submissions.index",
                     "filament.admin.resources.contact-submissions.view",
                     "filament.admin.resources.contact-submissions.edit",
+                    "filament.admin.resources.help-articles.index",
+                    "filament.admin.resources.help-articles.create",
+                    "filament.admin.resources.help-articles.view",
+                    "filament.admin.resources.help-articles.edit",
                     "filament.admin.resources.permissions.index",
                     "filament.admin.resources.permissions.view",
+                    "filament.admin.resources.posts.index",
+                    "filament.admin.resources.posts.create",
+                    "filament.admin.resources.posts.view",
+                    "filament.admin.resources.posts.edit",
                     "filament.admin.resources.roles.index",
                     "filament.admin.resources.roles.create",
                     "filament.admin.resources.roles.view",
@@ -720,6 +751,12 @@
                     "api.v1.users.update",
                     "api.v1.users.destroy",
                     "cookie-consent.accept",
+                    "blog.index",
+                    "blog.show",
+                    "changelog.index",
+                    "help.index",
+                    "help.show",
+                    "help.rate",
                     "contact.create",
                     "contact.store",
                     "profile.export-pdf",
@@ -736,6 +773,7 @@
                     "password.update",
                     "personal-data-export.store",
                     "two-factor.show",
+                    "achievements.show",
                     "register",
                     "register.store",
                     "password.reset",
@@ -902,11 +940,24 @@
                     "filament.admin.resources.feature-segments.index",
                     "filament.admin.resources.activity-logs.index",
                     "filament.admin.resources.activity-logs.view",
+                    "filament.admin.resources.categories.index",
+                    "filament.admin.resources.changelog-entries.index",
+                    "filament.admin.resources.changelog-entries.create",
+                    "filament.admin.resources.changelog-entries.view",
+                    "filament.admin.resources.changelog-entries.edit",
                     "filament.admin.resources.contact-submissions.index",
                     "filament.admin.resources.contact-submissions.view",
                     "filament.admin.resources.contact-submissions.edit",
+                    "filament.admin.resources.help-articles.index",
+                    "filament.admin.resources.help-articles.create",
+                    "filament.admin.resources.help-articles.view",
+                    "filament.admin.resources.help-articles.edit",
                     "filament.admin.resources.permissions.index",
                     "filament.admin.resources.permissions.view",
+                    "filament.admin.resources.posts.index",
+                    "filament.admin.resources.posts.create",
+                    "filament.admin.resources.posts.view",
+                    "filament.admin.resources.posts.edit",
                     "filament.admin.resources.roles.index",
                     "filament.admin.resources.roles.create",
                     "filament.admin.resources.roles.view",
@@ -964,6 +1015,12 @@
                     "api.v1.users.update",
                     "api.v1.users.destroy",
                     "cookie-consent.accept",
+                    "blog.index",
+                    "blog.show",
+                    "changelog.index",
+                    "help.index",
+                    "help.show",
+                    "help.rate",
                     "contact.create",
                     "contact.store",
                     "profile.export-pdf",
@@ -980,6 +1037,7 @@
                     "password.update",
                     "personal-data-export.store",
                     "two-factor.show",
+                    "achievements.show",
                     "register",
                     "register.store",
                     "password.reset",
@@ -1011,8 +1069,11 @@
             "userGuide": null,
             "developerGuide": "./blog-index.md",
             "relationships": {
-                "renderedBy": ["BlogController"],
-                "relatedRoutes": ["blog.index"]
+                "renderedBy": [],
+                "relatedRoutes": [
+                    "blog.index",
+                    "blog.show"
+                ]
             }
         },
         "blog/show": {
@@ -1020,8 +1081,11 @@
             "userGuide": null,
             "developerGuide": "./blog-show.md",
             "relationships": {
-                "renderedBy": ["BlogController"],
-                "relatedRoutes": ["blog.show"]
+                "renderedBy": [],
+                "relatedRoutes": [
+                    "blog.index",
+                    "blog.show"
+                ]
             }
         },
         "changelog/index": {
@@ -1029,8 +1093,10 @@
             "userGuide": null,
             "developerGuide": "./changelog-index.md",
             "relationships": {
-                "renderedBy": ["ChangelogController"],
-                "relatedRoutes": ["changelog.index"]
+                "renderedBy": [],
+                "relatedRoutes": [
+                    "changelog.index"
+                ]
             }
         },
         "help/index": {
@@ -1038,8 +1104,11 @@
             "userGuide": null,
             "developerGuide": "./help-index.md",
             "relationships": {
-                "renderedBy": ["HelpCenterController"],
-                "relatedRoutes": ["help.index"]
+                "renderedBy": [],
+                "relatedRoutes": [
+                    "help.index",
+                    "help.show"
+                ]
             }
         },
         "help/show": {
@@ -1047,8 +1116,11 @@
             "userGuide": null,
             "developerGuide": "./help-show.md",
             "relationships": {
-                "renderedBy": ["HelpCenterController"],
-                "relatedRoutes": ["help.show", "help.rate"]
+                "renderedBy": [],
+                "relatedRoutes": [
+                    "help.index",
+                    "help.show"
+                ]
             }
         },
         "settings/personal-data-export": {
@@ -1070,11 +1142,24 @@
                     "filament.admin.resources.feature-segments.index",
                     "filament.admin.resources.activity-logs.index",
                     "filament.admin.resources.activity-logs.view",
+                    "filament.admin.resources.categories.index",
+                    "filament.admin.resources.changelog-entries.index",
+                    "filament.admin.resources.changelog-entries.create",
+                    "filament.admin.resources.changelog-entries.view",
+                    "filament.admin.resources.changelog-entries.edit",
                     "filament.admin.resources.contact-submissions.index",
                     "filament.admin.resources.contact-submissions.view",
                     "filament.admin.resources.contact-submissions.edit",
+                    "filament.admin.resources.help-articles.index",
+                    "filament.admin.resources.help-articles.create",
+                    "filament.admin.resources.help-articles.view",
+                    "filament.admin.resources.help-articles.edit",
                     "filament.admin.resources.permissions.index",
                     "filament.admin.resources.permissions.view",
+                    "filament.admin.resources.posts.index",
+                    "filament.admin.resources.posts.create",
+                    "filament.admin.resources.posts.view",
+                    "filament.admin.resources.posts.edit",
                     "filament.admin.resources.roles.index",
                     "filament.admin.resources.roles.create",
                     "filament.admin.resources.roles.view",
@@ -1132,6 +1217,12 @@
                     "api.v1.users.update",
                     "api.v1.users.destroy",
                     "cookie-consent.accept",
+                    "blog.index",
+                    "blog.show",
+                    "changelog.index",
+                    "help.index",
+                    "help.show",
+                    "help.rate",
                     "contact.create",
                     "contact.store",
                     "profile.export-pdf",
@@ -1148,6 +1239,7 @@
                     "password.update",
                     "personal-data-export.store",
                     "two-factor.show",
+                    "achievements.show",
                     "register",
                     "register.store",
                     "password.reset",
@@ -1193,11 +1285,24 @@
                     "filament.admin.resources.feature-segments.index",
                     "filament.admin.resources.activity-logs.index",
                     "filament.admin.resources.activity-logs.view",
+                    "filament.admin.resources.categories.index",
+                    "filament.admin.resources.changelog-entries.index",
+                    "filament.admin.resources.changelog-entries.create",
+                    "filament.admin.resources.changelog-entries.view",
+                    "filament.admin.resources.changelog-entries.edit",
                     "filament.admin.resources.contact-submissions.index",
                     "filament.admin.resources.contact-submissions.view",
                     "filament.admin.resources.contact-submissions.edit",
+                    "filament.admin.resources.help-articles.index",
+                    "filament.admin.resources.help-articles.create",
+                    "filament.admin.resources.help-articles.view",
+                    "filament.admin.resources.help-articles.edit",
                     "filament.admin.resources.permissions.index",
                     "filament.admin.resources.permissions.view",
+                    "filament.admin.resources.posts.index",
+                    "filament.admin.resources.posts.create",
+                    "filament.admin.resources.posts.view",
+                    "filament.admin.resources.posts.edit",
                     "filament.admin.resources.roles.index",
                     "filament.admin.resources.roles.create",
                     "filament.admin.resources.roles.view",
@@ -1255,6 +1360,12 @@
                     "api.v1.users.update",
                     "api.v1.users.destroy",
                     "cookie-consent.accept",
+                    "blog.index",
+                    "blog.show",
+                    "changelog.index",
+                    "help.index",
+                    "help.show",
+                    "help.rate",
                     "contact.create",
                     "contact.store",
                     "profile.export-pdf",
@@ -1271,6 +1382,7 @@
                     "password.update",
                     "personal-data-export.store",
                     "two-factor.show",
+                    "achievements.show",
                     "register",
                     "register.store",
                     "password.reset",
@@ -1302,11 +1414,24 @@
                     "filament.admin.resources.feature-segments.index",
                     "filament.admin.resources.activity-logs.index",
                     "filament.admin.resources.activity-logs.view",
+                    "filament.admin.resources.categories.index",
+                    "filament.admin.resources.changelog-entries.index",
+                    "filament.admin.resources.changelog-entries.create",
+                    "filament.admin.resources.changelog-entries.view",
+                    "filament.admin.resources.changelog-entries.edit",
                     "filament.admin.resources.contact-submissions.index",
                     "filament.admin.resources.contact-submissions.view",
                     "filament.admin.resources.contact-submissions.edit",
+                    "filament.admin.resources.help-articles.index",
+                    "filament.admin.resources.help-articles.create",
+                    "filament.admin.resources.help-articles.view",
+                    "filament.admin.resources.help-articles.edit",
                     "filament.admin.resources.permissions.index",
                     "filament.admin.resources.permissions.view",
+                    "filament.admin.resources.posts.index",
+                    "filament.admin.resources.posts.create",
+                    "filament.admin.resources.posts.view",
+                    "filament.admin.resources.posts.edit",
                     "filament.admin.resources.roles.index",
                     "filament.admin.resources.roles.create",
                     "filament.admin.resources.roles.view",
@@ -1364,6 +1489,12 @@
                     "api.v1.users.update",
                     "api.v1.users.destroy",
                     "cookie-consent.accept",
+                    "blog.index",
+                    "blog.show",
+                    "changelog.index",
+                    "help.index",
+                    "help.show",
+                    "help.rate",
                     "contact.create",
                     "contact.store",
                     "profile.export-pdf",
@@ -1380,6 +1511,7 @@
                     "password.update",
                     "personal-data-export.store",
                     "two-factor.show",
+                    "achievements.show",
                     "register",
                     "register.store",
                     "password.reset",
@@ -1389,6 +1521,18 @@
                     "verification.notice",
                     "verification.send",
                     "verification.verify"
+                ]
+            }
+        },
+        "settings/achievements": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "docs/developer/frontend/pages/settings/achievements.md",
+            "lastUpdated": "2026-02-10",
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": [
+                    "achievements.show"
                 ]
             }
         }

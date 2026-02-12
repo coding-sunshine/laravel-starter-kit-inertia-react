@@ -8,7 +8,7 @@ Feature flags are provided by **Laravel Pennant** (`laravel/pennant`) with class
 
 - **Location**: `App\Features\*`
 - **Trait**: Use `Stephenjude\FilamentFeatureFlag\Traits\WithFeatureResolver` so the Filament plugin can discover and manage the feature.
-- **Default**: Set `public bool $defaultValue = false` (or `true`) on the class, or rely on `config('filament-feature-flags.default')` (default `false`).
+- **Default**: Set `public bool $defaultValue = true` (or `false`) on the class. When there is no segment override, this value is used. In this app, `config('filament-feature-flags.default')` is `true`, so all features are visible after setup; super-admin can turn them off per segment (e.g. role, user) from Filament → Settings → **Manage Features & Segments**.
 
 Example:
 
@@ -21,7 +21,7 @@ final class ExampleFeature
 {
     use WithFeatureResolver;
 
-    public bool $defaultValue = false;
+    public bool $defaultValue = true;
 }
 ```
 
@@ -49,6 +49,17 @@ final class ExampleFeature
 | `api_access` | Sanctum API routes under `/api/v1/*` |
 | `scramble_api_docs` | `/docs/api` and `/docs/api.json` (middleware: `EnsureScrambleApiDocsVisible`) |
 | `appearance_settings` | Settings “Appearance” link, appearance edit route |
+| `gamification` | XP, levels, achievements (cjmellor/level-up); signup XP, Profile Completed; settings "Level & achievements"; Filament UserLevelWidget |
+
+## Resetting to defaults
+
+If features were previously stored (e.g. by Pennant or by segments) and you want every user to see all features again, run:
+
+```bash
+php artisan features:reset-to-defaults
+```
+
+This purges Pennant’s stored feature values and clears all feature segments. Features then re-resolve to their class default (on). You can then adjust per user or segment from Filament → Settings → **Manage Features & Segments**.
 
 ## Route middleware
 

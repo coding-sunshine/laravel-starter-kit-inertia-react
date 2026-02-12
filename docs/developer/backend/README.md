@@ -20,6 +20,7 @@ Backend components, services, and patterns for developers.
 - [Search & Data](./search-and-data.md) - DTOs, Sluggable, Sortable, Model Flags, Schemaless Attributes, Model States, Soft Cascade
 - [Filament Admin Panel](./filament.md) - Filament panel at `/admin`
 - [Feature Flags](./feature-flags.md) - Laravel Pennant, Filament plugin, Inertia shared props
+- [Gamification](./gamification.md) - XP, levels, achievements (cjmellor/level-up); feature-gated
 - [Media Library (User avatar)](./media-library.md) - Spatie Media Library and user avatar (conversions, profile)
 - [Permissions and RBAC](./permissions.md) - Route-based permissions, permission categories, role hierarchy
 - [Prism AI Integration](./prism.md) - AI integration with Prism and OpenRouter
@@ -42,6 +43,7 @@ Backend components, services, and patterns for developers.
 - [Reverb](./reverb.md) - WebSockets; Echo + `reverb:start`; channels in `routes/channels.php`
 - [Categorizable](./categorizable.md) - Nested set categories; User + Filament Category resource
 - [Feature Flags](./feature-flags.md) - Pennant + Filament; expose to Inertia via `features` prop
+- [Gamification](./gamification.md) - XP, levels, achievements; signup XP, Profile Completed; settings page
 - [Response Cache](./response-cache.md) - Guest GET cache; exclude auth/admin
 - [Saloon](./saloon.md) - HTTP client for third-party APIs; connectors in `App\Http\Integrations\*`
 - [Scout + Typesense](./scout-typesense.md) - Full-text search; User searchable; Herd env in .env.example

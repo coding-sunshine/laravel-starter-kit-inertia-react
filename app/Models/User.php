@@ -22,6 +22,8 @@ use Laravel\Pennant\Feature;
 use Laravel\Sanctum\HasApiTokens;
 use Laravel\Sanctum\NewAccessToken;
 use Laravel\Scout\Searchable;
+use LevelUp\Experience\Concerns\GiveExperience;
+use LevelUp\Experience\Concerns\HasAchievements;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Image\Enums\Fit;
@@ -55,7 +57,7 @@ final class User extends Authenticatable implements ExportsPersonalData, Filamen
     /**
      * @use HasFactory<UserFactory>
      */
-    use Categorizable, HasApiTokens, HasFactory, HasRoles, HasTags, ImpersonateTrait, InteractsWithMedia, LogsActivity, Notifiable, Searchable, TwoFactorAuthenticatable;
+    use Categorizable, GiveExperience, HasAchievements, HasApiTokens, HasFactory, HasRoles, HasTags, ImpersonateTrait, InteractsWithMedia, LogsActivity, Notifiable, Searchable, TwoFactorAuthenticatable;
 
     /**
      * @var list<string>

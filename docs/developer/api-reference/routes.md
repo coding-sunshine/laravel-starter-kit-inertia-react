@@ -2,7 +2,7 @@
 
 This document lists all available routes in the application.
 
-**Last Updated**: 2026-02-08 (blog, changelog, help public routes added)
+**Last Updated**: 2026-02-10 (gamification achievements route added)
 
 ## Closure
 
@@ -55,6 +55,7 @@ This document lists all available routes in the application.
 | GET | `profile/export-pdf` | profile.export-pdf | web, auth, verified |
 | GET, POST, PUT, PATCH, DELETE | `settings` | settings | web, auth |
 | GET | `settings/appearance` | appearance.edit | web, auth |
+| GET | `settings/achievements` | achievements.show | web, auth, feature:gamification |
 | GET | `storage/{path}` | storage.local | - |
 | GET | `docs/api` | scramble.docs.ui | web, Dedoc\Scramble\Http\Middleware\RestrictedDocsAccess |
 | GET | `docs/api.json` | scramble.docs.document | web, Dedoc\Scramble\Http\Middleware\RestrictedDocsAccess |
@@ -94,6 +95,13 @@ This document lists all available routes in the application.
 |--------|-----|------------|------------|
 | POST | `help/{helpArticle:slug}/rate` | help.rate | web |
 
+## AchievementsController
+
+**Controller**: `App\Http\Controllers\Settings\AchievementsController`
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| GET | `settings/achievements` | achievements.show | web, auth, feature:gamification |
 
 ## SessionController
 
