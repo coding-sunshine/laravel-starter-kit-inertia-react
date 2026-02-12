@@ -36,6 +36,16 @@ export default function HelpIndex({ featured, byCategory }: Props) {
                 </header>
                 <main className="mx-auto max-w-4xl px-4 py-8">
                     <h1 className="mb-6 text-2xl font-semibold">Help Center</h1>
+                    {featured.length === 0 && Object.keys(byCategory).length === 0 && (
+                        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16 text-center">
+                            <p className="text-sm font-medium text-muted-foreground">
+                                No help articles yet
+                            </p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                                Help articles and guides will appear here once published.
+                            </p>
+                        </div>
+                    )}
                     {featured.length > 0 && (
                         <section className="mb-8">
                             <h2 className="mb-3 text-lg font-medium">

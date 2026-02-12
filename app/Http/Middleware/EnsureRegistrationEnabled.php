@@ -4,13 +4,18 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Features\RegistrationFeature;
 use App\Settings\AuthSettings;
 use Closure;
 use Illuminate\Http\Request;
+use Laravel\Pennant\Feature;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Redirect guests to login when registration is disabled (AuthSettings).
+ * Redirect guests to login when registration is disabled.
+ *
+ * Checks both the Pennant RegistrationFeature flag and the AuthSettings toggle.
+ * Both must be enabled for registration to be accessible.
  */
 final class EnsureRegistrationEnabled
 {
@@ -19,7 +24,10 @@ final class EnsureRegistrationEnabled
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (app(AuthSettings::class)->registration_enabled) {
+        $pennantActive = Feature::active(RegistrationFeature::class);
+        $settingsEnabled = app(AuthSettings::class)->registration_enabled;
+
+        if ($pennantActive && $settingsEnabled) {
             return $next($request);
         }
 

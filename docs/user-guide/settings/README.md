@@ -2,6 +2,10 @@
 
 From the main menu, open **Settings** to manage your account, security, and preferences.
 
+## Onboarding
+
+If **Onboarding** is enabled, you will see an **Onboarding** item in the Settings sidebar. Use it to open the getting-started flow again (for example to review or run through it after you have already completed it once). See the [Onboarding](../onboarding.md) section of the user guide for more.
+
 ## Profile
 
 Update your name, email, and profile details. You can also upload a profile picture (avatar). Changes are saved when you submit the form.

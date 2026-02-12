@@ -6,16 +6,26 @@ import { LoaderCircle } from 'lucide-react';
 
 interface OnboardingProps {
     status?: string;
+    alreadyCompleted?: boolean;
 }
 
-export default function OnboardingShow({ status }: OnboardingProps) {
+export default function OnboardingShow({ status, alreadyCompleted }: OnboardingProps) {
     return (
         <AuthLayout
             title="Welcome"
-            description="Complete a quick step to get started."
+            description={
+                alreadyCompleted
+                    ? 'Review or run through onboarding again.'
+                    : 'Complete a quick step to get started.'
+            }
         >
-            <Head title="Get started" />
+            <Head title={alreadyCompleted ? 'Review onboarding' : 'Get started'} />
 
+            {alreadyCompleted && (
+                <div className="mb-4 rounded-md bg-muted p-3 text-sm text-muted-foreground">
+                    You&apos;ve already completed onboarding. You can run through it again below.
+                </div>
+            )}
             {status && (
                 <div className="mb-4 rounded-md bg-green-50 p-3 text-sm text-green-800 dark:bg-green-900/20 dark:text-green-200">
                     {status}

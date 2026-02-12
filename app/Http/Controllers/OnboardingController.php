@@ -14,17 +14,14 @@ use Inertia\Response;
 
 final readonly class OnboardingController
 {
-    public function show(Request $request): Response|RedirectResponse
+    public function show(Request $request): Response
     {
         /** @var User $user */
         $user = $request->user();
 
-        if ($user->onboarding_completed) {
-            return redirect()->route('dashboard');
-        }
-
         return Inertia::render('onboarding/show', [
             'status' => $request->session()->get('status'),
+            'alreadyCompleted' => $user->onboarding_completed,
         ]);
     }
 

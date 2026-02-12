@@ -8,7 +8,6 @@ use App\Features\BlogFeature;
 use App\Features\ChangelogFeature;
 use App\Features\ContactFeature;
 use App\Features\CookieConsentFeature;
-use App\Features\ExampleFeature;
 use App\Features\GamificationFeature;
 use App\Features\HelpFeature;
 use App\Features\ImpersonationFeature;
@@ -25,7 +24,6 @@ return [
      * Keys become the feature name in the `features` object (e.g. BlogFeature -> blog).
      */
     'inertia_features' => [
-        'example' => ExampleFeature::class,
         'blog' => BlogFeature::class,
         'changelog' => ChangelogFeature::class,
         'help' => HelpFeature::class,

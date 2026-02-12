@@ -40,7 +40,6 @@ export interface SharedFeatures {
     changelog?: boolean;
     contact?: boolean;
     cookie_consent?: boolean;
-    example?: boolean;
     gamification?: boolean;
     help?: boolean;
     impersonation?: boolean;

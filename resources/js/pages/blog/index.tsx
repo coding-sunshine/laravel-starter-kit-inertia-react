@@ -54,6 +54,16 @@ export default function BlogIndex({ posts }: Props) {
                 </header>
                 <main className="mx-auto max-w-4xl px-4 py-8">
                     <h1 className="mb-6 text-2xl font-semibold">Blog</h1>
+                    {posts.data.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16 text-center">
+                            <p className="text-sm font-medium text-muted-foreground">
+                                No posts yet
+                            </p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                                Check back soon for new articles.
+                            </p>
+                        </div>
+                    ) : (
                     <ul className="space-y-6">
                         {posts.data.map((post) => (
                             <li key={post.id}>
@@ -87,6 +97,7 @@ export default function BlogIndex({ posts }: Props) {
                             </li>
                         ))}
                     </ul>
+                    )}
                     {(posts.prev_page_url || posts.next_page_url) && (
                         <nav
                             className="mt-8 flex items-center justify-center gap-4"

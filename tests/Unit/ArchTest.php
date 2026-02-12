@@ -56,6 +56,7 @@ arch('seeders do not use Controllers')
 arch('seeders only use allowed layers')
     ->expect(['Database\Seeders\Essential', 'Database\Seeders\Development', 'Database\Seeders\Production'])
     ->toOnlyUse([
+        'App\Enums',
         'App\Models',
         'App\Services',
         'Database\Seeders',
@@ -64,10 +65,11 @@ arch('seeders only use allowed layers')
         'Illuminate\Support',
         'Illuminate\Contracts',
         'Illuminate\Foundation',
+        'LevelUp\Experience',
         'Pgvector\Laravel',
         'Spatie\Permission',
     ])
-    ->ignoring(['RuntimeException', 'Throwable', 'app', 'config', 'now', 'resolve']);
+    ->ignoring(['RuntimeException', 'Throwable', 'app', 'config', 'database_path', 'now', 'resolve']);
 
 // Strict preset disabled: Filament resource pages override protected getHeaderActions()
 // and LoadsJsonData uses protected loadJson(); strict()->ignoring() did not exclude them.

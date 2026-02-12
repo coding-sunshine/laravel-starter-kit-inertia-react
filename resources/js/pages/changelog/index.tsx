@@ -56,6 +56,16 @@ export default function ChangelogIndex({ entries }: Props) {
                 </header>
                 <main className="mx-auto max-w-4xl px-4 py-8">
                     <h1 className="mb-6 text-2xl font-semibold">Changelog</h1>
+                    {entries.data.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16 text-center">
+                            <p className="text-sm font-medium text-muted-foreground">
+                                No changelog entries yet
+                            </p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                                Updates and release notes will appear here.
+                            </p>
+                        </div>
+                    ) : (
                     <ul className="space-y-6">
                         {entries.data.map((entry) => (
                             <li
@@ -94,6 +104,7 @@ export default function ChangelogIndex({ entries }: Props) {
                             </li>
                         ))}
                     </ul>
+                    )}
                     {(entries.prev_page_url || entries.next_page_url) && (
                         <nav
                             className="mt-8 flex items-center justify-center gap-4"

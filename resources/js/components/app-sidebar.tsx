@@ -13,10 +13,11 @@ import {
 import { dashboard } from '@/routes';
 import { index as blogIndex } from '@/routes/blog';
 import { index as changelogIndex } from '@/routes/changelog';
+import { create as contactCreate } from '@/routes/contact';
 import { index as helpIndex } from '@/routes/help';
 import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, FileText, Folder, LayoutGrid, LifeBuoy, Megaphone } from 'lucide-react';
+import { BookOpen, FileText, Folder, LayoutGrid, LifeBuoy, Mail, Megaphone } from 'lucide-react';
 import { useMemo } from 'react';
 import AppLogo from './app-logo';
 
@@ -47,9 +48,22 @@ const mainNavItems: NavItem[] = [
         permission: 'help.index',
         feature: 'help',
     },
+    {
+        title: 'Contact',
+        href: contactCreate().url,
+        icon: Mail,
+        permission: 'contact.create',
+        feature: 'contact',
+    },
 ];
 
-const footerNavItems: NavItem[] = [
+const footerNavItems: (NavItem & { feature?: string })[] = [
+    {
+        title: 'API docs',
+        href: '/docs/api',
+        icon: BookOpen,
+        feature: 'scramble_api_docs',
+    },
     {
         title: 'Repository',
         href: 'https://github.com/laravel/react-starter-kit',
@@ -95,6 +109,13 @@ export function AppSidebar() {
         [auth.permissions, auth.can_bypass, features],
     );
 
+    const visibleFooterNavItems = useMemo(() => {
+        const f = features ?? {};
+        return footerNavItems.filter(
+            (item) => !item.feature || f[item.feature as keyof typeof f],
+        );
+    }, [features]);
+
     return (
         <Sidebar collapsible="icon" variant="inset">
             <SidebarHeader>
@@ -114,7 +135,7 @@ export function AppSidebar() {
             </SidebarContent>
 
             <SidebarFooter>
-                <NavFooter items={footerNavItems} className="mt-auto" />
+                <NavFooter items={visibleFooterNavItems} className="mt-auto" />
                 <NavUser />
             </SidebarFooter>
         </Sidebar>

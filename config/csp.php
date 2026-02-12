@@ -26,6 +26,7 @@ return [
             Keyword::UNSAFE_INLINE,
             'https://fonts.bunny.net',
             'https://fonts.googleapis.com',
+            'https://unpkg.com',
             env('APP_ENV') === 'local' ? 'http://localhost:5173' : null,
         ])],
 
@@ -41,8 +42,8 @@ return [
         ])],
 
         in_array(env('APP_ENV'), ['local', 'testing'], true)
-            ? [Directive::SCRIPT, [Keyword::SELF, Keyword::UNSAFE_EVAL, Keyword::UNSAFE_INLINE, 'http://localhost:5173']]
-            : [Directive::SCRIPT, [Keyword::SELF, Keyword::UNSAFE_INLINE]],
+            ? [Directive::SCRIPT, [Keyword::SELF, Keyword::UNSAFE_EVAL, Keyword::UNSAFE_INLINE, 'http://localhost:5173', 'https://unpkg.com']]
+            : [Directive::SCRIPT, [Keyword::SELF, Keyword::UNSAFE_INLINE, 'https://unpkg.com']],
     ]),
 
     'report_only_presets' => [

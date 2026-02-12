@@ -6,6 +6,7 @@ import { edit as editAppearance } from '@/routes/appearance';
 import { edit as editPassword } from '@/routes/password';
 import { show } from '@/routes/two-factor';
 import { edit } from '@/routes/user-profile';
+import { onboarding } from '@/routes';
 import { edit as editPersonalDataExport } from '@/routes/personal-data-export';
 import { show as showAchievements } from '@/routes/achievements';
 import { type NavItem, type SharedData } from '@/types';
@@ -19,6 +20,7 @@ const sidebarNavItems: (NavItem & { feature?: string })[] = [
     { title: 'Appearance', href: editAppearance(), icon: null, feature: 'appearance_settings' },
     { title: 'Data export', href: editPersonalDataExport(), icon: null, feature: 'personal_data_export' },
     { title: 'Level & achievements', href: showAchievements(), icon: null, feature: 'gamification' },
+    { title: 'Onboarding', href: onboarding(), icon: null, feature: 'onboarding' },
 ];
 
 export default function SettingsLayout({ children }: PropsWithChildren) {

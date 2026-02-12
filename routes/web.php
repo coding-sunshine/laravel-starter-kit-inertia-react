@@ -50,6 +50,19 @@ Route::get('robots.txt', function (): Illuminate\Http\Response {
     ]);
 })->name('robots');
 
+Route::get('up', function (): Illuminate\Http\JsonResponse {
+    $checks = ['app' => true];
+    try {
+        Illuminate\Support\Facades\DB::connection()->getPdo();
+        $checks['database'] = true;
+    } catch (Throwable) {
+        $checks['database'] = false;
+    }
+    $ok = ! in_array(false, $checks, true);
+
+    return response()->json(['status' => $ok ? 'ok' : 'degraded', 'checks' => $checks], $ok ? 200 : 503);
+})->name('up');
+
 Route::get('/', fn () => Inertia::render('welcome'))->name('home');
 
 Route::get('cookie-consent/accept', CookieConsentController::class)

@@ -109,6 +109,10 @@ final class SeedHelper
 
         // Get all belongsTo relationships
         foreach ($reflection->getMethods() as $method) {
+            if ($method->getNumberOfRequiredParameters() > 0) {
+                continue;
+            }
+
             $returnType = $method->getReturnType();
 
             if ($returnType === null) {

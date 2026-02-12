@@ -32,14 +32,18 @@ test('onboarding page is accessible for incomplete users', function (): void {
         ->assertOk();
 });
 
-test('completed users are redirected away from onboarding', function (): void {
+test('completed users can view onboarding page again for review', function (): void {
     $user = User::factory()->withoutTwoFactor()->create([
         'onboarding_completed' => true,
     ]);
 
-    $this->actingAs($user)
+    $response = $this->actingAs($user)
         ->get(route('onboarding'))
-        ->assertRedirect(route('dashboard'));
+        ->assertOk();
+
+    $response->assertInertia(fn ($page) => $page
+        ->component('onboarding/show')
+        ->where('alreadyCompleted', true));
 });
 
 test('can complete onboarding', function (): void {

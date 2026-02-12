@@ -14,7 +14,7 @@ Route::get('/', function (): JsonResponse {
     ]);
 })->name('api');
 
-Route::prefix('v1')->name('api.v1.')->group(function (): void {
+Route::prefix('v1')->name('api.v1.')->middleware('throttle:60,1')->group(function (): void {
     Route::get('/', function (): JsonResponse {
         return response()->json([
             'name' => config('app.name'),
