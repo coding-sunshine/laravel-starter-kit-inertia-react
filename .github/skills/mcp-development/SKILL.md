@@ -1,10 +1,9 @@
 ---
 name: mcp-development
-description: >-
-  Develops MCP servers, tools, resources, and prompts. Activates when creating MCP tools,
-  resources, or prompts; setting up AI integrations; debugging MCP connections; working with
-  routes/ai.php; or when the user mentions MCP, Model Context Protocol, AI tools, AI server,
-  or building tools for AI assistants.
+description: "Develops MCP servers, tools, resources, and prompts. Activates when creating MCP tools, resources, or prompts; setting up AI integrations; debugging MCP connections; working with routes/ai.php; or when the user mentions MCP, Model Context Protocol, AI tools, AI server, or building tools for AI assistants."
+license: MIT
+metadata:
+  author: laravel
 ---
 
 # MCP Development
@@ -25,20 +24,19 @@ Use `search-docs` for detailed Laravel MCP patterns and documentation.
 
 Register MCP servers in `routes/ai.php`:
 
-<code-snippet name="Register MCP Server" lang="php">
-
+<!-- Register MCP Server -->
+```php
 use Laravel\Mcp\Facades\Mcp;
 
 Mcp::web();
-
-</code-snippet>
+```
 
 ### Creating MCP Primitives
 
 Create MCP tools, resources, prompts, and servers using artisan commands:
 
-<code-snippet name="MCP Artisan Commands" lang="bash">
-
+<!-- MCP Artisan Commands -->
+```bash
 {{ $assist->artisanCommand('make:mcp-tool ToolName') }}        # Create a tool
 
 {{ $assist->artisanCommand('make:mcp-resource ResourceName') }} # Create a resource
@@ -47,14 +45,14 @@ Create MCP tools, resources, prompts, and servers using artisan commands:
 
 {{ $assist->artisanCommand('make:mcp-server ServerName') }}    # Create a server
 
-</code-snippet>
+```
 
 After creating primitives, register them in your server's `$tools`, `$resources`, or `$prompts` properties.
 
 ### Tools
 
-<code-snippet name="MCP Tool Example" lang="php">
-
+<!-- MCP Tool Example -->
+```php
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Request;
 use Laravel\Mcp\Server\Response;
@@ -66,8 +64,7 @@ class MyTool extends Tool
         return new Response(['result' => 'success']);
     }
 }
-
-</code-snippet>
+```
 
 ## Verification
 

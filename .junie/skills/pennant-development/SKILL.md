@@ -1,17 +1,12 @@
 ---
 name: pennant-development
-description: >-
-  Manages feature flags with Laravel Pennant. Activates when creating, checking, or toggling
-  feature flags; showing or hiding features conditionally; implementing A/B testing; working with
-  @feature directive; or when the user mentions feature flags, feature toggles, Pennant, conditional
-  features, rollouts, or gradually enabling features.
+description: "Manages feature flags with Laravel Pennant. Activates when creating, checking, or toggling feature flags; showing or hiding features conditionally; implementing A/B testing; working with @feature directive; or when the user mentions feature flags, feature toggles, Pennant, conditional features, rollouts, or gradually enabling features."
+license: MIT
+metadata:
+  author: laravel
 ---
 
 # Pennant Features
-
-## Features in this kit
-
-Feature flags are configured in `config/feature-flags.php` (`inertia_features` and `route_feature_map`). Kit features include blog, changelog, help, contact, gamification, appearance_settings, registration, api_access, scramble_api_docs, and others. See [Feature Flags](../../../docs/developer/backend/feature-flags.md) for the full list and route middleware.
 
 ## When to Apply
 
@@ -29,17 +24,19 @@ Use `search-docs` for detailed Pennant patterns and documentation.
 
 ### Defining Features
 
-<code-snippet name="Defining Features" lang="php">
+<!-- Defining Features -->
+```php
 use Laravel\Pennant\Feature;
 
 Feature::define('new-dashboard', function (User $user) {
     return $user->isAdmin();
 });
-</code-snippet>
+```
 
 ### Checking Features
 
-<code-snippet name="Checking Features" lang="php">
+<!-- Checking Features -->
+```php
 if (Feature::active('new-dashboard')) {
     // Feature is active
 }
@@ -48,24 +45,26 @@ if (Feature::active('new-dashboard')) {
 if (Feature::for($user)->active('new-dashboard')) {
     // Feature is active for this user
 }
-</code-snippet>
+```
 
 ### Blade Directive
 
-<code-snippet name="Blade Directive" lang="blade">
+<!-- Blade Directive -->
+```blade
 @feature('new-dashboard')
     <x-new-dashboard />
 @else
     <x-old-dashboard />
 @endfeature
-</code-snippet>
+```
 
 ### Activating / Deactivating
 
-<code-snippet name="Activating Features" lang="php">
+<!-- Activating Features -->
+```php
 Feature::activate('new-dashboard');
 Feature::for($user)->activate('new-dashboard');
-</code-snippet>
+```
 
 ## Verification
 
