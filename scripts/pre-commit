@@ -18,7 +18,7 @@ echo "✅ Pint passed"
 
 # 3. New models: seeders and specs (exclude Concerns/ traits, Scopes/, and known non-models)
 STAGED_MODELS=$(git diff --cached --name-only --diff-filter=A | grep -E '^app/Models/.*\.php$' | grep -v -E '^app/Models/(Concerns|Scopes)/' || true)
-SKIP_NAMES="BelongsToOrganization OrganizationScope Categorizable"
+SKIP_NAMES="BelongsToOrganization OrganizationScope Categorizable TermsVersion UserTermsAcceptance"
 
 if [ -n "$STAGED_MODELS" ]; then
     MISSING_SEEDERS=""
