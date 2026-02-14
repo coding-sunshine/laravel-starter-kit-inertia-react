@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "1ed9a8ec5faccebe9f5204f6fb58f3b3",
+    "content-hash": "7a36b7f95cd4b5d66a1a43085e611ab6",
     "packages": [
         {
             "name": "a909m/filament-statefusion",
@@ -6913,6 +6913,89 @@
             "time": "2022-12-02T22:17:43+00:00"
         },
         {
+            "name": "martinpetricko/laravel-database-mail",
+            "version": "1.4.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/MartinPetricko/laravel-database-mail.git",
+                "reference": "b32e90a334c475eed01053579864690ca3ff6192"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/MartinPetricko/laravel-database-mail/zipball/b32e90a334c475eed01053579864690ca3ff6192",
+                "reference": "b32e90a334c475eed01053579864690ca3ff6192",
+                "shasum": ""
+            },
+            "require": {
+                "nesbot/carbon": "^3.8",
+                "nette/utils": "^4.0",
+                "php": "^8.2",
+                "phpdocumentor/reflection-docblock": "^5.6",
+                "spatie/laravel-package-tools": "^1.19"
+            },
+            "require-dev": {
+                "larastan/larastan": "^3.1",
+                "laravel/pint": "^1.21",
+                "nunomaduro/collision": "^8.6",
+                "orchestra/testbench": "^10.0",
+                "pestphp/pest": "^3.7",
+                "pestphp/pest-plugin-arch": "^3.0",
+                "pestphp/pest-plugin-laravel": "^3.1"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "aliases": {
+                        "LaravelDatabaseMail": "MartinPetricko\\LaravelDatabaseMail\\Facades\\LaravelDatabaseMail"
+                    },
+                    "providers": [
+                        "MartinPetricko\\LaravelDatabaseMail\\LaravelDatabaseMailServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "MartinPetricko\\LaravelDatabaseMail\\": "src/",
+                    "MartinPetricko\\LaravelDatabaseMail\\Database\\Factories\\": "database/factories/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Martin Petricko",
+                    "email": "matopetricko@gmail.com",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Laravel package that allows sending emails stored in the database based on fired events.",
+            "homepage": "https://github.com/martinpetricko/laravel-database-mail",
+            "keywords": [
+                "Martin Petricko",
+                "database",
+                "laravel",
+                "laravel-database-mail",
+                "mail"
+            ],
+            "support": {
+                "issues": "https://github.com/martinpetricko/laravel-database-mail/issues",
+                "source": "https://github.com/martinpetricko/laravel-database-mail"
+            },
+            "funding": [
+                {
+                    "url": "https://filamentphp.com/plugins/martin-petricko-database-mail",
+                    "type": "custom"
+                },
+                {
+                    "url": "https://github.com/MartinPetricko",
+                    "type": "github"
+                }
+            ],
+            "time": "2025-12-11T20:52:19+00:00"
+        },
+        {
             "name": "masterminds/html5",
             "version": "2.10.0",
             "source": {
@@ -8086,6 +8169,94 @@
                 }
             ],
             "time": "2025-09-03T16:03:54+00:00"
+        },
+        {
+            "name": "panphp/pan",
+            "version": "v0.1.8",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/panphp/pan.git",
+                "reference": "115c70e42a36cc9778dce87b118221d11aadb58a"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/panphp/pan/zipball/115c70e42a36cc9778dce87b118221d11aadb58a",
+                "reference": "115c70e42a36cc9778dce87b118221d11aadb58a",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^8.3.0"
+            },
+            "conflict": {
+                "laravel/framework": "<11.0.0"
+            },
+            "require-dev": {
+                "laravel/pint": "^1.18.1",
+                "orchestra/testbench": "^9.5.2",
+                "pestphp/pest": "^3.5.1",
+                "pestphp/pest-plugin-type-coverage": "^3.1.0",
+                "phpstan/phpstan": "^1.12.7",
+                "rector/rector": "^1.2.8",
+                "symfony/var-dumper": "^7.1.6"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Pan\\Adapters\\Laravel\\Providers\\PanServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Pan\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Nuno Maduro",
+                    "email": "enunomaduro@gmail.com"
+                },
+                {
+                    "name": "David Hill",
+                    "email": "david@laravel.com"
+                }
+            ],
+            "description": "A simple, lightweight, and privacy-focused product analytics php package.",
+            "keywords": [
+                "analytics",
+                "laravel",
+                "library",
+                "pan",
+                "php"
+            ],
+            "support": {
+                "issues": "https://github.com/panphp/pan/issues",
+                "source": "https://github.com/panphp/pan/tree/v0.1.8"
+            },
+            "funding": [
+                {
+                    "url": "https://www.paypal.com/paypalme/enunomaduro",
+                    "type": "custom"
+                },
+                {
+                    "url": "https://github.com/iamdavidhill",
+                    "type": "github"
+                },
+                {
+                    "url": "https://github.com/nunomaduro",
+                    "type": "github"
+                },
+                {
+                    "url": "https://www.patreon.com/nunomaduro",
+                    "type": "patreon"
+                }
+            ],
+            "time": "2024-11-02T02:04:52+00:00"
         },
         {
             "name": "paragonie/constant_time_encoding",

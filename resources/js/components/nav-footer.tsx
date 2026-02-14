@@ -45,6 +45,9 @@ export function NavFooter({
                                             href={url}
                                             target="_blank"
                                             rel="noopener noreferrer"
+                                            {...(item.dataPan
+                                                ? { 'data-pan': item.dataPan }
+                                                : {})}
                                         >
                                             {item.icon && (
                                                 <Icon
@@ -55,7 +58,12 @@ export function NavFooter({
                                             <span>{item.title}</span>
                                         </a>
                                     ) : (
-                                        <Link href={url}>
+                                        <Link
+                                            href={url}
+                                            {...(item.dataPan
+                                                ? { 'data-pan': item.dataPan }
+                                                : {})}
+                                        >
                                             {item.icon && (
                                                 <Icon
                                                     iconNode={item.icon}

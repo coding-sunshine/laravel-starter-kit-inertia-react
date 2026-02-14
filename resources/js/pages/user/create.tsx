@@ -97,6 +97,7 @@ export default function Register() {
                                 className="mt-2 w-full"
                                 tabIndex={5}
                                 data-test="register-user-button"
+                                data-pan="auth-register-button"
                             >
                                 {processing && (
                                     <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -107,7 +108,11 @@ export default function Register() {
 
                         <div className="text-center text-sm text-muted-foreground">
                             Already have an account?{' '}
-                            <TextLink href={login()} tabIndex={6}>
+                            <TextLink
+                                href={login()}
+                                tabIndex={6}
+                                data-pan="auth-log-in-link"
+                            >
                                 Log in
                             </TextLink>
                         </div>

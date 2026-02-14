@@ -8,7 +8,6 @@ use App\Events\OrganizationInvitationAccepted;
 use App\Events\OrganizationMemberAdded;
 use App\Models\OrganizationInvitation;
 use App\Models\User;
-use App\Notifications\InvitationAcceptedNotification;
 use Throwable;
 
 final readonly class AcceptOrganizationInvitationAction
@@ -21,8 +20,6 @@ final readonly class AcceptOrganizationInvitationAction
     public function handle(OrganizationInvitation $invitation, User $user): OrganizationInvitation
     {
         $invitation->acceptForUser($user);
-
-        $invitation->inviter->notify(new InvitationAcceptedNotification($invitation, $user));
 
         event(new OrganizationInvitationAccepted($invitation, $invitation->organization, $user, $invitation->role));
         event(new OrganizationMemberAdded($invitation->organization, $user, $invitation->role, $invitation->inviter));

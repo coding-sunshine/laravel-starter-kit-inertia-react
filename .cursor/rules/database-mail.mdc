@@ -1,0 +1,27 @@
+---
+description: Database Mail (martinpetricko/laravel-database-mail) — event-triggered email templates
+globs: app/Events/**/*.php, config/database-mail.php, database/seeders/**/*.php
+---
+
+# Database Mail (email templates)
+
+This project uses **martinpetricko/laravel-database-mail** for email templates stored in the database and sent when events are dispatched.
+
+## When adding an event that should send an email from a DB template
+
+1. **Implement** `TriggersDatabaseMail` and use the `CanTriggerDatabaseMail` trait on the event class.
+2. **Define** `getName(): string`, `getDescription(): ?string`, `getRecipients(): array` (map of string keys to `Recipient` instances), and optionally `getAttachments(): array` (map of string keys to `Attachment` instances).
+3. **Register the event** in `config/database-mail.php` under the `'events'` array. Unregistered events will not trigger database mail.
+
+## Recipients and attachments
+
+- **Recipient:** `new Recipient('Label', fn (YourEvent $event): array => [$event->user])` — closure return is passed to `Mail::to()` (single or array of users/addresses).
+- **Attachment:** `new Attachment('Label', fn (YourEvent $event) => [ Attachment::fromPath(...)->as('file.pdf') ])` — closure returns `Illuminate\Mail\Attachment` or array of them.
+
+Event **public properties** are available in the mail template Blade (subject and body) as variables (e.g. `$user`, `$emailVerificationUrl`).
+
+## Creating templates
+
+Create `MailTemplate` records in seeders or via the Filament plugin ([Filament Database Mail](https://filamentphp.com/plugins/martin-petricko-database-mail)). Set `event` to the event class, `recipients` to an array of recipient keys, `attachments` to an array of attachment keys; subject and body use Blade.
+
+See **docs/developer/backend/database-mail.md** for full documentation.

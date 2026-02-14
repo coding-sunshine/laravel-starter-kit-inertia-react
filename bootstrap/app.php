@@ -84,5 +84,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->report(function (MartinPetricko\LaravelDatabaseMail\Exceptions\DatabaseMailException $e): void {
+            MartinPetricko\LaravelDatabaseMail\Facades\LaravelDatabaseMail::logException($e);
+        });
     })->create();

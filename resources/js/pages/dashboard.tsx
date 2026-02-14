@@ -6,7 +6,14 @@ import { exportPdf } from '@/routes/profile';
 import { edit as editProfile } from '@/routes/user-profile';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/react';
-import { FileText, LifeBuoy, Settings, UserPen } from 'lucide-react';
+import {
+    BarChart3,
+    Envelope,
+    FileText,
+    LifeBuoy,
+    Settings,
+    UserPen,
+} from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -21,6 +28,10 @@ export default function Dashboard() {
     const showPdfExport = f.profile_pdf_export ?? false;
     const showApiDocs = f.scramble_api_docs ?? false;
     const showContact = f.contact ?? false;
+    const isSuperAdmin = auth.roles?.includes('super-admin') ?? false;
+    const canAccessAdmin =
+        (auth.permissions?.includes('access admin panel') ?? false) ||
+        auth.can_bypass === true;
 
     const quickActions = [
         {
@@ -28,20 +39,45 @@ export default function Dashboard() {
             href: editProfile(),
             icon: UserPen,
             show: true,
+            dataPan: 'dashboard-quick-edit-profile',
         },
-        { label: 'Settings', href: '/settings', icon: Settings, show: true },
+        {
+            label: 'Settings',
+            href: '/settings',
+            icon: Settings,
+            show: true,
+            dataPan: 'dashboard-quick-settings',
+        },
         {
             label: 'Export profile (PDF)',
             href: exportPdf().url,
             icon: FileText,
             show: showPdfExport,
             external: true,
+            dataPan: 'dashboard-quick-export-pdf',
         },
         {
             label: 'Contact support',
             href: contactCreate().url,
             icon: LifeBuoy,
             show: showContact,
+            dataPan: 'dashboard-quick-contact',
+        },
+        {
+            label: 'Email templates',
+            href: '/admin/mail-templates',
+            icon: Envelope,
+            show: isSuperAdmin,
+            external: true,
+            dataPan: 'dashboard-quick-email-templates',
+        },
+        {
+            label: 'Product analytics',
+            href: '/admin/analytics/product',
+            icon: BarChart3,
+            show: canAccessAdmin,
+            external: true,
+            dataPan: 'dashboard-quick-product-analytics',
         },
     ].filter((a) => a.show);
 
@@ -75,6 +111,7 @@ export default function Dashboard() {
                             variant="outline"
                             className="h-auto flex-col items-center gap-2 py-6"
                             asChild
+                            data-pan={action.dataPan}
                         >
                             {action.external ? (
                                 <a
@@ -100,6 +137,31 @@ export default function Dashboard() {
                         </Button>
                     ))}
                 </div>
+
+                {canAccessAdmin && (
+                    <div className="rounded-lg border bg-card p-6">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <h3 className="font-medium">
+                                    Product analytics
+                                </h3>
+                                <p className="mt-1 text-sm text-muted-foreground">
+                                    App-wide impressions, hovers, and clicks for
+                                    tracked UI elements. View full table and
+                                    stats in the admin panel.
+                                </p>
+                            </div>
+                            <Button variant="outline" size="sm" asChild>
+                                <a
+                                    href="/admin/analytics/product"
+                                    data-pan="dashboard-card-view-analytics"
+                                >
+                                    View analytics
+                                </a>
+                            </Button>
+                        </div>
+                    </div>
+                )}
 
                 <div className="rounded-lg border bg-card p-6 text-sm text-muted-foreground">
                     <p>

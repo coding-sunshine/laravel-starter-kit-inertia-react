@@ -25,6 +25,11 @@ Schedule::command('sitemap:generate')->daily();
 Schedule::command('backup:run')->daily()->at('01:00');
 Schedule::command('backup:clean')->daily()->at('01:00');
 
+// Database Mail: prune old mail exceptions (martinpetricko/laravel-database-mail).
+Schedule::command('model:prune', [
+    '--model' => [MartinPetricko\LaravelDatabaseMail\Models\MailException::class],
+])->daily();
+
 // Billing jobs: metrics, credit expiration, trial reminders.
 Schedule::job(new App\Jobs\Billing\GenerateBillingMetrics)->daily()->at('02:00');
 Schedule::job(new App\Jobs\Billing\ExpireCredits)->daily()->at('03:00');

@@ -38,16 +38,19 @@ const mainNavItems: NavItem[] = [
         title: 'Dashboard',
         href: dashboard().url,
         icon: LayoutGrid,
+        dataPan: 'nav-dashboard',
     },
     {
         title: 'Organizations',
         href: organizations.index.url(),
         icon: Building2,
+        dataPan: 'nav-organizations',
     },
     {
         title: 'Billing',
         href: '/billing',
         icon: CreditCard,
+        dataPan: 'nav-billing',
     },
     {
         title: 'Blog',
@@ -55,6 +58,7 @@ const mainNavItems: NavItem[] = [
         icon: FileText,
         permission: 'blog.index',
         feature: 'blog',
+        dataPan: 'nav-blog',
     },
     {
         title: 'Changelog',
@@ -62,6 +66,7 @@ const mainNavItems: NavItem[] = [
         icon: Megaphone,
         permission: 'changelog.index',
         feature: 'changelog',
+        dataPan: 'nav-changelog',
     },
     {
         title: 'Help',
@@ -69,6 +74,7 @@ const mainNavItems: NavItem[] = [
         icon: LifeBuoy,
         permission: 'help.index',
         feature: 'help',
+        dataPan: 'nav-help',
     },
     {
         title: 'Contact',
@@ -76,25 +82,29 @@ const mainNavItems: NavItem[] = [
         icon: Mail,
         permission: 'contact.create',
         feature: 'contact',
+        dataPan: 'nav-contact',
     },
 ];
 
-const footerNavItems: (NavItem & { feature?: string })[] = [
+const footerNavItems: NavItem[] = [
     {
         title: 'API docs',
         href: '/docs/api',
         icon: BookOpen,
         feature: 'scramble_api_docs',
+        dataPan: 'nav-api-docs',
     },
     {
         title: 'Repository',
         href: 'https://github.com/laravel/react-starter-kit',
         icon: Folder,
+        dataPan: 'nav-repository',
     },
     {
         title: 'Documentation',
         href: 'https://laravel.com/docs/starter-kits#react',
         icon: BookOpen,
+        dataPan: 'nav-documentation',
     },
 ];
 

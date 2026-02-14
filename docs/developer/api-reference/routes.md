@@ -2,7 +2,7 @@
 
 This document lists all available routes in the application.
 
-**Last Updated**: 2026-02-14 (billing, organizations, invitations, pricing routes added)
+**Last Updated**: 2026-02-14 (Pan product analytics, Filament Product Analytics page)
 
 ## Closure
 
@@ -17,6 +17,7 @@ This document lists all available routes in the application.
 | GET | `admin/manage-app` | filament.admin.pages.manage-app | panel:admin, AlizHarb\ActivityLog\Http\Middleware\ActivityLogContextMiddleware, Illuminate\Cookie\Middleware\EncryptCookies |
 | GET | `admin/manage-auth` | filament.admin.pages.manage-auth | panel:admin, AlizHarb\ActivityLog\Http\Middleware\ActivityLogContextMiddleware, Illuminate\Cookie\Middleware\EncryptCookies |
 | GET | `admin/manage-seo` | filament.admin.pages.manage-seo | panel:admin, AlizHarb\ActivityLog\Http\Middleware\ActivityLogContextMiddleware, Illuminate\Cookie\Middleware\EncryptCookies |
+| GET | `admin/analytics/product` | filament.admin.pages.analytics.product | panel:admin, AlizHarb\ActivityLog\Http\Middleware\ActivityLogContextMiddleware, … (Product Analytics page; see [Pan](backend/pan.md)) |
 | GET | `admin/feature-segments` | filament.admin.resources.feature-segments.index | panel:admin, AlizHarb\ActivityLog\Http\Middleware\ActivityLogContextMiddleware, Illuminate\Cookie\Middleware\EncryptCookies |
 | GET | `admin/activity-logs` | filament.admin.resources.activity-logs.index | panel:admin, AlizHarb\ActivityLog\Http\Middleware\ActivityLogContextMiddleware, Illuminate\Cookie\Middleware\EncryptCookies |
 | GET | `admin/activity-logs/{record}` | filament.admin.resources.activity-logs.view | panel:admin, AlizHarb\ActivityLog\Http\Middleware\ActivityLogContextMiddleware, Illuminate\Cookie\Middleware\EncryptCookies |
@@ -60,6 +61,13 @@ This document lists all available routes in the application.
 | GET | `docs/api` | scramble.docs.ui | web, Dedoc\Scramble\Http\Middleware\RestrictedDocsAccess |
 | GET | `docs/api.json` | scramble.docs.document | web, Dedoc\Scramble\Http\Middleware\RestrictedDocsAccess |
 
+## Pan (product analytics)
+
+**Package**: panphp/pan. Events endpoint for client-side tracking. See [Pan (product analytics)](../backend/pan.md).
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| POST | `pan/events` | (Pan) | web |
 
 ## BlogController
 

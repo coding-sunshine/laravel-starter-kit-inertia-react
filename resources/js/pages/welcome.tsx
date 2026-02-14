@@ -26,6 +26,7 @@ export default function Welcome() {
                         {auth.user ? (
                             <Link
                                 href={dashboard()}
+                                data-pan="welcome-dashboard"
                                 className="inline-block rounded-sm border border-[#19140035] px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#1915014a] dark:border-[#3E3E3A] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
                             >
                                 Dashboard
@@ -35,6 +36,7 @@ export default function Welcome() {
                                 {f.blog && (
                                     <Link
                                         href={blogIndex().url}
+                                        data-pan="welcome-blog"
                                         className="inline-block rounded-sm border border-transparent px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#19140035] dark:text-[#EDEDEC] dark:hover:border-[#3E3E3A]"
                                     >
                                         Blog
@@ -43,6 +45,7 @@ export default function Welcome() {
                                 {f.changelog && (
                                     <Link
                                         href={changelogIndex().url}
+                                        data-pan="welcome-changelog"
                                         className="inline-block rounded-sm border border-transparent px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#19140035] dark:text-[#EDEDEC] dark:hover:border-[#3E3E3A]"
                                     >
                                         Changelog
@@ -51,6 +54,7 @@ export default function Welcome() {
                                 {f.help && (
                                     <Link
                                         href={helpIndex().url}
+                                        data-pan="welcome-help"
                                         className="inline-block rounded-sm border border-transparent px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#19140035] dark:text-[#EDEDEC] dark:hover:border-[#3E3E3A]"
                                     >
                                         Help
@@ -59,6 +63,7 @@ export default function Welcome() {
                                 {f.contact && (
                                     <Link
                                         href={contactCreate().url}
+                                        data-pan="welcome-contact"
                                         className="inline-block rounded-sm border border-transparent px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#19140035] dark:text-[#EDEDEC] dark:hover:border-[#3E3E3A]"
                                     >
                                         Contact
@@ -66,6 +71,7 @@ export default function Welcome() {
                                 )}
                                 <Link
                                     href={login()}
+                                    data-pan="welcome-log-in"
                                     className="inline-block rounded-sm border border-transparent px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#19140035] dark:text-[#EDEDEC] dark:hover:border-[#3E3E3A]"
                                 >
                                     Log in
@@ -73,6 +79,7 @@ export default function Welcome() {
                                 {f.registration && (
                                     <Link
                                         href={register()}
+                                        data-pan="welcome-register"
                                         className="inline-block rounded-sm border border-[#19140035] px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#1915014a] dark:border-[#3E3E3A] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
                                     >
                                         Register

@@ -35,6 +35,7 @@ use Illuminate\Support\ServiceProvider;
 use Lab404\Impersonate\Events\LeaveImpersonation;
 use Lab404\Impersonate\Events\TakeImpersonation;
 use LemonSqueezy\Laravel\Events\OrderCreated;
+use Pan\PanConfiguration;
 use Spatie\Activitylog\ActivitylogServiceProvider;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -55,6 +56,8 @@ final class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        $this->configurePan();
+
         $this->registerSeoViewComposer();
         $this->registerActivityLogTaps();
 
@@ -117,6 +120,51 @@ final class AppServiceProvider extends ServiceProvider
         return $model instanceof User;
     }
 
+    private function configurePan(): void
+    {
+        PanConfiguration::allowedAnalytics([
+            'settings-nav-profile',
+            'settings-nav-password',
+            'settings-nav-two-factor',
+            'settings-nav-appearance',
+            'settings-nav-data-export',
+            'settings-nav-achievements',
+            'settings-nav-onboarding',
+            'appearance-tab-light',
+            'appearance-tab-dark',
+            'appearance-tab-system',
+            'auth-login-button',
+            'auth-sign-up-link',
+            'auth-register-button',
+            'auth-log-in-link',
+            'auth-forgot-password-button',
+            'welcome-dashboard',
+            'welcome-log-in',
+            'welcome-register',
+            'welcome-blog',
+            'welcome-changelog',
+            'welcome-help',
+            'welcome-contact',
+            'nav-dashboard',
+            'nav-organizations',
+            'nav-billing',
+            'nav-blog',
+            'nav-changelog',
+            'nav-help',
+            'nav-contact',
+            'nav-api-docs',
+            'nav-repository',
+            'nav-documentation',
+            'dashboard-quick-edit-profile',
+            'dashboard-quick-settings',
+            'dashboard-quick-export-pdf',
+            'dashboard-quick-contact',
+            'dashboard-quick-email-templates',
+            'dashboard-quick-product-analytics',
+            'dashboard-card-view-analytics',
+        ]);
+    }
+
     private function registerSeoViewComposer(): void
     {
         View::composer('app', function ($view): void {
@@ -143,9 +191,13 @@ final class AppServiceProvider extends ServiceProvider
 
     private function registerActivityLogTaps(): void
     {
-        if (Schema::hasTable(config('activitylog.table_name', 'activity_log'))) {
-            $activityModel = ActivitylogServiceProvider::determineActivityModel();
-            $activityModel::observe(ActivityLogObserver::class);
+        try {
+            if (Schema::hasTable(config('activitylog.table_name', 'activity_log'))) {
+                $activityModel = ActivitylogServiceProvider::determineActivityModel();
+                $activityModel::observe(ActivityLogObserver::class);
+            }
+        } catch (Throwable) {
+            // DB may be unavailable (e.g. docs:sync --check in pre-commit, CI without DB)
         }
 
         Role::observe(RoleActivityObserver::class);

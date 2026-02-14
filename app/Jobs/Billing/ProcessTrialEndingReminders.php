@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Jobs\Billing;
 
+use App\Events\Billing\TrialEndingReminder;
 use App\Models\Billing\Plan;
 use App\Models\Billing\Subscription;
 use App\Models\Organization;
-use App\Notifications\Billing\TrialEndingNotification;
 use Exception;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -65,7 +65,8 @@ final class ProcessTrialEndingReminders implements ShouldQueue
                 ? (string) Arr::get($plan->name, 'en', Arr::first($plan->name) ?? 'your plan')
                 : 'your plan';
 
-            $owner->notify(new TrialEndingNotification(
+            event(new TrialEndingReminder(
+                organization: $organization,
                 planName: $planName,
                 daysRemaining: $daysRemaining,
                 trialEndsAt: $subscription->trial_ends_at,

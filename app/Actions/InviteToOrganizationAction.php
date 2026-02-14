@@ -8,7 +8,6 @@ use App\Events\OrganizationInvitationSent;
 use App\Models\Organization;
 use App\Models\OrganizationInvitation;
 use App\Models\User;
-use App\Notifications\OrganizationInvitationNotification;
 use InvalidArgumentException;
 
 final readonly class InviteToOrganizationAction
@@ -30,13 +29,6 @@ final readonly class InviteToOrganizationAction
             'role' => $role,
             'invited_by' => $invitedBy->id,
         ]);
-
-        $existingUser = User::query()->where('email', $email)->first();
-        if ($existingUser instanceof User) {
-            $existingUser->notify(new OrganizationInvitationNotification($invitation));
-        } else {
-            OrganizationInvitationNotification::sendToEmail($invitation);
-        }
 
         event(new OrganizationInvitationSent($invitation, $organization, $email, $role, $invitedBy));
 

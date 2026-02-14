@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Jobs\Billing;
 
+use App\Events\Billing\DunningFailedPaymentReminder;
 use App\Models\Billing\FailedPaymentAttempt;
-use App\Notifications\Billing\DunningFailedPaymentNotification;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
@@ -41,7 +41,7 @@ final class ProcessDunningReminders implements ShouldQueue
                 }
 
                 try {
-                    $owner->notify(new DunningFailedPaymentNotification(
+                    event(new DunningFailedPaymentReminder(
                         $attempt->organization,
                         $attempt->attempt_number,
                         $nextInterval

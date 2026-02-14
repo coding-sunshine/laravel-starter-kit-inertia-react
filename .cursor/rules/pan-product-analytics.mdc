@@ -1,0 +1,27 @@
+---
+description: Pan (panphp/pan) product analytics — when to add data-pan and whitelist
+globs: resources/js/**/*.tsx, resources/js/**/*.ts, resources/views/**/*.blade.php, app/Providers/AppServiceProvider.php
+---
+
+# Pan product analytics
+
+This project uses **Pan** (panphp/pan) for privacy-focused product analytics (impressions, hovers, clicks). No PII is collected.
+
+## When adding UI that should be tracked
+
+1. **Add `data-pan="name"`** to the element. Use only letters, numbers, dashes, underscores. Prefer kebab-case and a context prefix (e.g. `settings-nav-profile`, `auth-login-button`, `welcome-register`).
+2. **Register the name** in `AppServiceProvider::configurePan()` inside the `allowedAnalytics` array. Unlisted names are not persisted.
+
+## Examples
+
+- Tabs / toggle groups: `data-pan="appearance-tab-light"`, `data-pan="appearance-tab-dark"`.
+- Auth: `data-pan="auth-login-button"`, `data-pan="auth-sign-up-link"`.
+- Settings nav: `data-pan="settings-nav-profile"`, `data-pan="settings-nav-password"`.
+- Welcome/landing: `data-pan="welcome-dashboard"`, `data-pan="welcome-register"`.
+
+## Viewing analytics
+
+- **Terminal:** `php artisan pan`, `php artisan pan --filter=name`, `php artisan pan:flush`
+- **Filament (admin/super-admin):** Analytics → Product Analytics (`/admin/analytics/product`); Product Analytics widget on admin dashboard
+
+See **docs/developer/backend/pan.md** for full documentation.

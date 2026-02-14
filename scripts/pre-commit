@@ -62,8 +62,12 @@ fi
 
 # 4. Documentation
 echo "📚 Checking documentation..."
-if ! php artisan docs:sync --check >/dev/null 2>&1; then
-    echo "⚠️  Documentation incomplete. Run: php artisan docs:sync --check"
+DOCS_OUTPUT=$(php artisan docs:sync --check 2>&1) || true
+DOCS_EXIT=$?
+if [ "$DOCS_EXIT" -ne 0 ]; then
+    echo "⚠️  Documentation check failed."
+    echo "$DOCS_OUTPUT"
+    echo "Fix: php artisan docs:sync && php artisan docs:sync --generate"
     echo "Skip with: git commit --no-verify"
     exit 1
 fi

@@ -40,6 +40,8 @@ export interface NavItem {
     permission?: string | string[];
     /** Feature flag key (e.g. 'blog'). Item is hidden when this feature is inactive. */
     feature?: string;
+    /** Pan product analytics name (letters, numbers, dashes, underscores). Must be whitelisted in AppServiceProvider. */
+    dataPan?: string;
 }
 
 /** Pennant feature flags shared to the frontend (key => active for current user/guest default). */

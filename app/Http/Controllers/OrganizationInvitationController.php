@@ -50,12 +50,13 @@ final readonly class OrganizationInvitationController
 
         $invitation->resend();
         $invitation->load('inviter');
-        $existingUser = \App\Models\User::query()->where('email', $invitation->email)->first();
-        if ($existingUser) {
-            $existingUser->notify(new \App\Notifications\OrganizationInvitationNotification($invitation));
-        } else {
-            \App\Notifications\OrganizationInvitationNotification::sendToEmail($invitation);
-        }
+        event(new \App\Events\OrganizationInvitationSent(
+            $invitation,
+            $invitation->organization,
+            $invitation->email,
+            $invitation->role,
+            $invitation->inviter
+        ));
 
         return back()->with('status', __('Invitation resent.'));
     }

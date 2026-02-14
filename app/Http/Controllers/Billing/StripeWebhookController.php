@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Billing;
 
+use App\Events\Billing\InvoicePaid;
 use App\Models\Billing\Invoice;
 use App\Models\Billing\Subscription;
 use App\Models\Billing\WebhookLog;
@@ -170,6 +171,8 @@ final readonly class StripeWebhookController
             $invoice->currency = mb_strtoupper($object['currency'] ?? 'usd');
             $invoice->paid_at = now();
             $invoice->save();
+            $invoice->load('organization.owner');
+            event(new InvoicePaid($invoice));
         }
 
         if ($eventType === 'invoice.payment_failed') {

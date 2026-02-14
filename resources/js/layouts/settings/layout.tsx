@@ -13,38 +13,53 @@ import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import { type PropsWithChildren, useMemo } from 'react';
 
-const sidebarNavItems: (NavItem & { feature?: string })[] = [
-    { title: 'Profile', href: edit(), icon: null },
-    { title: 'Password', href: editPassword(), icon: null },
+const sidebarNavItems: (NavItem & { feature?: string; dataPan: string })[] = [
+    {
+        title: 'Profile',
+        href: edit(),
+        icon: null,
+        dataPan: 'settings-nav-profile',
+    },
+    {
+        title: 'Password',
+        href: editPassword(),
+        icon: null,
+        dataPan: 'settings-nav-password',
+    },
     {
         title: 'Two-Factor Auth',
         href: show(),
         icon: null,
         feature: 'two_factor_auth',
+        dataPan: 'settings-nav-two-factor',
     },
     {
         title: 'Appearance',
         href: editAppearance(),
         icon: null,
         feature: 'appearance_settings',
+        dataPan: 'settings-nav-appearance',
     },
     {
         title: 'Data export',
         href: editPersonalDataExport(),
         icon: null,
         feature: 'personal_data_export',
+        dataPan: 'settings-nav-data-export',
     },
     {
         title: 'Level & achievements',
         href: showAchievements(),
         icon: null,
         feature: 'gamification',
+        dataPan: 'settings-nav-achievements',
     },
     {
         title: 'Onboarding',
         href: onboarding(),
         icon: null,
         feature: 'onboarding',
+        dataPan: 'settings-nav-onboarding',
     },
 ];
 
@@ -87,6 +102,7 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
                                 size="sm"
                                 variant="ghost"
                                 asChild
+                                data-pan={item.dataPan}
                                 className={cn('w-full justify-start', {
                                     'bg-muted':
                                         currentPath ===

@@ -35,6 +35,7 @@ export default function AppearanceToggleTab({
                         key={value}
                         value={value}
                         aria-label={label}
+                        data-pan={`appearance-tab-${value}`}
                         className={cn(
                             'flex items-center rounded-md px-3.5 py-1.5 transition-colors',
                             appearance === value

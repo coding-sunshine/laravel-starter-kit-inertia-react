@@ -87,6 +87,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                 tabIndex={4}
                                 disabled={processing}
                                 data-test="login-button"
+                                data-pan="auth-login-button"
                             >
                                 {processing && (
                                     <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -97,7 +98,11 @@ export default function Login({ status, canResetPassword }: LoginProps) {
 
                         <div className="text-center text-sm text-muted-foreground">
                             Don't have an account?{' '}
-                            <TextLink href={register()} tabIndex={5}>
+                            <TextLink
+                                href={register()}
+                                tabIndex={5}
+                                data-pan="auth-sign-up-link"
+                            >
                                 Sign up
                             </TextLink>
                         </div>
