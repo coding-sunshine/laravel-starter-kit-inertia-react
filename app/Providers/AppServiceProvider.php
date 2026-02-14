@@ -14,11 +14,13 @@ use App\Listeners\Gamification\GrantGamificationOnUserCreated;
 use App\Listeners\LogImpersonationEvents;
 use App\Listeners\MigrationListener;
 use App\Listeners\SendSlackAlertOnJobFailed;
+use App\Models\Shareable;
 use App\Models\User;
 use App\Observers\ActivityLogObserver;
 use App\Observers\PermissionActivityObserver;
 use App\Observers\RoleActivityObserver;
 use App\Observers\UserObserver;
+use App\Policies\ShareablePolicy;
 use App\Services\PaymentGateway\PaymentGatewayManager;
 use App\Services\PrismService;
 use App\Settings\SeoSettings;
@@ -60,6 +62,8 @@ final class AppServiceProvider extends ServiceProvider
 
         $this->registerSeoViewComposer();
         $this->registerActivityLogTaps();
+
+        Gate::policy(Shareable::class, ShareablePolicy::class);
 
         Gate::before(function ($user, string $ability, array $arguments): ?bool {
             if (! $user) {

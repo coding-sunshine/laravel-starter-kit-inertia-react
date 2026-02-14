@@ -1,0 +1,13 @@
+---
+description: HasVisibility trait; global/org/shared data; cross-organization sharing; copy-on-write
+globs: app/Models/Concerns/HasVisibility.php, app/Models/Shareable.php, app/Models/Scopes/VisibilityScope.php, app/Enums/VisibilityEnum.php, app/Policies/ShareablePolicy.php, app/Models/VisibilityDemo.php
+---
+# Visibility & Sharing
+
+When working with **HasVisibility**, **visibility levels** (global / organization / shared), **cross-organization sharing**, **Shareable**, or **copy-on-write** cloning, follow the patterns in `docs/developer/backend/visibility-sharing.md`.
+
+- **Trait:** `App\Models\Concerns\HasVisibility` — use on models that need global/org/shared visibility and sharing. Do **not** use `BelongsToOrganization` on the same model.
+- **Columns:** `organization_id` (nullable), `visibility` (string, default `'organization'`), optionally `cloned_from`.
+- **Sharing:** `Shareable` model (polymorphic); `shareWithOrganization()` / `shareWithUser()` (permission: view/edit; optional expiry); revoke methods. Authorize with `shareItem` (ShareablePolicy).
+- **Scope:** `VisibilityScope` filters by current user/tenant; super-admin can bypass with `view_all_organizations` session.
+- **Reference:** `App\Models\VisibilityDemo` and `tests/Feature/HasVisibilityTest.php`.

@@ -1,0 +1,49 @@
+{
+    "model": "VisibilityDemo",
+    "table": "visibility_demos",
+    "fields": {
+        "id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "visibility": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "cloned_from": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "title": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}
