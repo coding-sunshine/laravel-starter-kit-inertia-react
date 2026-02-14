@@ -1,0 +1,61 @@
+{
+    "organization_permissions": {
+        "org_core": {
+            "permissions": [
+                {
+                    "name": "org.view",
+                    "roles": [
+                        "owner",
+                        "admin",
+                        "member"
+                    ]
+                },
+                {
+                    "name": "org.manage",
+                    "roles": [
+                        "owner"
+                    ]
+                }
+            ]
+        },
+        "org_members": {
+            "permissions": [
+                {
+                    "name": "org.members.view",
+                    "roles": [
+                        "owner",
+                        "admin",
+                        "member"
+                    ]
+                },
+                {
+                    "name": "org.members.invite",
+                    "roles": [
+                        "owner",
+                        "admin"
+                    ]
+                }
+            ]
+        },
+        "org_billing": {
+            "permissions": [
+                {
+                    "name": "org.billing.view",
+                    "roles": [
+                        "owner",
+                        "admin"
+                    ]
+                },
+                {
+                    "name": "org.billing.manage",
+                    "roles": [
+                        "owner"
+                    ]
+                }
+            ]
+        }
+    },
+    "metadata": {
+        "version": "1.0.0"
+    }
+}

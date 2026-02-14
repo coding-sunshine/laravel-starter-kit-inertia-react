@@ -37,5 +37,7 @@ All Controllers:
 | [OrganizationMemberController](./organizationmembercontroller.md) | N/A | ✅ |
 | [OrganizationSwitchController](./organizationswitchcontroller.md) | N/A | ✅ |
 | [TermsAcceptController](./TermsAcceptController.md) | N/A | ✅ |
+| [EnterpriseInquiryController](./EnterpriseInquiryController.md) | N/A | ✅ |
+| Controller | N/A | ❌ |
 
 

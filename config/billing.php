@@ -55,4 +55,13 @@ return [
     */
     'lemon_squeezy_cents_per_credit' => (int) env('BILLING_LEMON_SQUEEZY_CENTS_PER_CREDIT', 10),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Geo-restriction (laravel-geo-genius)
+    |--------------------------------------------------------------------------
+    */
+    'geo_restriction_enabled' => (bool) env('BILLING_GEO_RESTRICTION_ENABLED', false),
+    'geo_blocked_countries' => array_map(strtoupper(...), array_filter(explode(',', (string) env('BILLING_GEO_BLOCKED_COUNTRIES', '')))),
+    'geo_allowed_countries' => array_map(strtoupper(...), array_filter(explode(',', (string) env('BILLING_GEO_ALLOWED_COUNTRIES', '')))),
+
 ];

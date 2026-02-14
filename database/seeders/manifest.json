@@ -546,6 +546,24 @@
             "data_files": [
                 "activity_log_injected_models.json"
             ]
+        },
+        {
+            "name": "EnterpriseInquirySeeder",
+            "category": "development",
+            "description": "Seeds EnterpriseInquiry data",
+            "dependencies": [],
+            "data_files": [
+                "enterprise_inquiries.json"
+            ]
+        },
+        {
+            "name": "ActivityLogInjectedModelSeeder",
+            "category": "development",
+            "description": "Seeds ActivityLogInjectedModel data",
+            "dependencies": [],
+            "data_files": [
+                "activity_log_injected_models.json"
+            ]
         }
     ],
     "categories": {

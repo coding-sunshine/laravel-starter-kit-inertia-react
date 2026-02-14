@@ -40,7 +40,7 @@ Seeders that must run in all environments (roles, settings, required lookup data
 
 **When it runs**: Always, in every environment
 
-**RolesAndPermissionsSeeder** creates core permissions (`bypass-permissions`, `access admin panel`, `view users`, etc.), roles (`super-admin`, `admin`, `user`), assigns `bypass-permissions` to `super-admin`, and assigns admin permissions to `admin`. The `user` role is left with no permissions (authenticated routes like dashboard/settings are in `route_skip_patterns`). When `permission.route_based_enforcement` is true, it runs `permission:sync-routes` so route-named permissions exist after seeding. When `permission.permission_categories_enabled` is true, it uses `PermissionCategoryResolver` and `config/permission_categories.php` to assign permissions by category/wildcard. See [Permissions and RBAC](../permissions.md).
+**RolesAndPermissionsSeeder** creates core permissions (`bypass-permissions`, `access admin panel`, `view users`, etc.), roles (`super-admin`, `admin`, `user`), assigns `bypass-permissions` to `super-admin`, and assigns admin permissions to `admin`. The `user` role is left with no permissions (authenticated routes like dashboard/settings are in `route_skip_patterns`). When `permission.route_based_enforcement` is true, it runs `permission:sync-routes` so route-named permissions exist after seeding. When `permission.permission_categories_enabled` is true, it uses `PermissionCategoryResolver` and `config/permission_categories.php` to assign permissions by category/wildcard. If `database/seeders/data/organization-permissions.json` exists, it runs `permission:sync` to create org permissions and assign them to org roles. See [Permissions and RBAC](../permissions.md).
 
 ### Development
 Seeders for local development and testing (fake users, dummy content, test scenarios).
@@ -348,7 +348,7 @@ The `database/seeders/manifest.json` file tracks all seeders with metadata:
 
 ## Git Pre-Commit Hook
 
-A pre-commit hook runs **Pint**, **model/seeder checks**, and **documentation** checks.
+A pre-commit hook runs **Rector**, **Pint**, **model/seeder checks**, and **documentation** checks.
 
 **Source**: `scripts/pre-commit` (versioned). Install into Git:
 
@@ -359,9 +359,10 @@ cp scripts/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
 **Location** (after install): `.git/hooks/pre-commit`
 
 The hook runs in order:
-1. **Pint** – PHP code style check on dirty files; fails with instructions to run `vendor/bin/pint --dirty --format agent`
-2. **New models** – If you staged new model files, requires corresponding seeders and seed specs (blocks commit with fix instructions)
-3. **Documentation** – `php artisan docs:sync --check`; fails if items are undocumented
+1. **Rector** – Fixes parse errors (e.g. `final` on anonymous classes) before Pint; stages any fixes
+2. **Pint** – PHP code style check on dirty files; fails with instructions to run `vendor/bin/pint --dirty --format agent`
+3. **New models** – If you staged new model files (in `app/Models/` excluding `Concerns/`, `Scopes/`), requires corresponding seeders and seed specs (blocks commit with fix instructions). Trait/scope helpers (BelongsToOrganization, OrganizationScope, Categorizable, TermsVersion, UserTermsAcceptance) are in `SKIP_NAMES` and exempt
+4. **Documentation** – `php artisan docs:sync --check`; fails if items are undocumented
 
 Bypass all checks: `git commit --no-verify`
 

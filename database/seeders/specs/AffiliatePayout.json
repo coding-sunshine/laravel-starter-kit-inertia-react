@@ -1,0 +1,83 @@
+{
+    "model": "AffiliatePayout",
+    "table": "affiliate_payouts",
+    "fields": {
+        "id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "affiliate_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "amount": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "currency": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "payment_method": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "transaction_id": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "notes": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "processed_by": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "processed_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "affiliate": {
+            "type": "belongsTo",
+            "model": "Affiliate"
+        },
+        "processor": {
+            "type": "belongsTo",
+            "model": "Processor"
+        }
+    },
+    "value_hints": {
+        "processed_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        }
+    },
+    "scenarios": []
+}

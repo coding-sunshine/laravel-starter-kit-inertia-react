@@ -430,13 +430,6 @@ protected function isAccessible(User $user, ?string $path = null): bool
 - The application is served by Laravel Herd and will be available at: `https?://[kebab-case-project-dir].test`. Use the `get-absolute-url` tool to generate valid URLs for the user.
 - You must not run any commands to make the site available via HTTP(S). It is always available through Laravel Herd.
 
-=== tests rules ===
-
-# Test Enforcement
-
-- Every change must be programmatically tested. Write a new test or update an existing test, then run the affected tests to make sure they pass.
-- Run the minimum number of tests needed to ensure code quality and speed. Use `php artisan test --compact` with a specific filename or filter.
-
 === inertia-laravel/core rules ===
 
 # Inertia
@@ -810,6 +803,7 @@ required sections, and what to clarify with the user before planning.
 These apply in addition to the Laravel Boost guidelines above. They are kept **after** the `</laravel-boost-guidelines>` block so `php artisan boost:update` does not remove them.
 
 - **Multi-tenancy:** Organizations own content; use `TenantContext`, `SetTenantContext`, `EnsureTenantContext` (`tenant` middleware), and `BelongsToOrganization` trait. Spatie permissions use `organization_id` as team. Domain/subdomain resolution via `ResolveDomainMiddleware` and `organization_domains`. See `config/tenancy.php`, docs/developer/backend/billing-and-tenancy.md.
+- **Org permissions:** JSON-driven org permissions in `database/seeders/data/organization-permissions.json`; run `permission:sync` to create and assign. Use `$user->canInOrganization()`, `@canOrg`, etc. See docs/developer/backend/permissions.md.
 - **Billing:** laravelcm/laravel-subscriptions + Stripe + Lemon Squeezy (one-time products); `HasCredits` and `HasBilling` traits on Organization; seat-based billing (`BillingSettings`, `SyncSubscriptionSeatsAction`); billing routes under `tenant` middleware. See `config/billing.php`, `app/Http/Controllers/Billing/`, docs/developer/backend/billing-and-tenancy.md, docs/developer/backend/lemon-squeezy.md.
 - **Full-text search:** Use Laravel Scout; driver Typesense (Herd: `SCOUT_DRIVER=typesense`, `TYPESENSE_API_KEY=LARAVEL-HERD`, `TYPESENSE_HOST=localhost`). Add `Searchable` trait and `toSearchableArray()` (id as string, created_at as UNIX timestamp); define collection schema in `config/scout.php` under `typesense.model-settings`. See docs/developer/backend/scout-typesense.md.
 - **Third-party APIs:** use Saloon; add connectors and requests under `App\Http\Integrations\{Name}\` (see docs/developer/backend/saloon.md).

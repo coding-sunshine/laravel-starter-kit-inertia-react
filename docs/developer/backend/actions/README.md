@@ -37,5 +37,6 @@ All Actions:
 | [TransferOrganizationOwnershipAction](./transferorganizationownershipaction.md) | N/A | ✅ |
 | [GetRequiredTermsVersionsForUser](./GetRequiredTermsVersionsForUser.md) | N/A | ✅ |
 | [RecordTermsAcceptance](./RecordTermsAcceptance.md) | N/A | ✅ |
+| [StoreEnterpriseInquiryAction](./StoreEnterpriseInquiryAction.md) | N/A | ✅ |
 
 

@@ -67,10 +67,20 @@ All application routes must have a name so that `permission:sync-routes` can cre
 
 - Use `$user->createTokenWithPermissionAbilities('token-name')` to create a personal access token whose abilities match the user’s permissions. Users with `bypass-permissions` get `['*']`; others get their permission names. Check in API with `$request->user()->tokenCan('permission.name')`.
 
+## Organization permissions (JSON-driven)
+
+Organization-scoped permissions (`org.*`) are defined in `database/seeders/data/organization-permissions.json` and synced via `permission:sync`. Each org has `admin` and `member` roles; the owner implicitly has all org permissions.
+
+- **Config**: `organization-permissions.json` defines permission names and which roles (`owner`, `admin`, `member`) get them.
+- **Sync**: Run `php artisan permission:sync` to create Permission records and assign them to org roles. `RolesAndPermissionsSeeder` runs this automatically.
+- **User methods** (via `HasOrganizationPermissions`): `canInOrganization()`, `canInCurrentOrganization()`, `canAnyInOrganization()`, `canAllInOrganization()`, `isOrganizationOwner()`, `isOrganizationAdmin()`, `hasOrganizationRole()`, `roleNamesInOrganization()`.
+- **Blade directives**: `@canOrg`, `@cannotOrg`, `@canAnyOrg`, `@canAllOrg`, `@isOrgOwner`, `@isOrgAdmin`, `@isOrgMember`, `@isOrgRole`.
+
 ## Artisan commands
 
 | Command | Description |
 |--------|-------------|
+| `permission:sync` | Create org permissions from `organization-permissions.json` and assign to org roles. Options: `--dry-run`, `--silent`. |
 | `permission:sync-routes` | Create/update permissions from named routes. Options: `--dry-run`, `--prune`, `--silent`. |
 | `permission:check-routes` | List application routes that have no name; exit 1 when `require_named_routes` is true or `--strict`. Use in CI to enforce named routes. |
 | `permission:health` | Check RBAC health: super-admin role exists, optionally warn on users with no roles or empty default role. Exit 1 on critical failure; use `--strict` to exit 1 on warnings too. |

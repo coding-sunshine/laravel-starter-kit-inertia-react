@@ -11,12 +11,14 @@ declare(strict_types=1);
 use App\Http\Controllers\Billing\BillingDashboardController;
 use App\Http\Controllers\Billing\CreditController;
 use App\Http\Controllers\Billing\InvoiceController;
+use App\Http\Controllers\Billing\PaddleWebhookController;
 use App\Http\Controllers\Billing\PricingController;
 use App\Http\Controllers\Billing\StripeWebhookController;
 use App\Http\Controllers\Blog\BlogController;
 use App\Http\Controllers\Changelog\ChangelogController;
 use App\Http\Controllers\ContactSubmissionController;
 use App\Http\Controllers\CookieConsentController;
+use App\Http\Controllers\EnterpriseInquiryController;
 use App\Http\Controllers\HelpCenter\HelpCenterController;
 use App\Http\Controllers\HelpCenter\RateHelpArticleController;
 use App\Http\Controllers\InvitationAcceptController;
@@ -111,6 +113,12 @@ Route::post('contact', [ContactSubmissionController::class, 'store'])
     ->middleware(['feature:contact', ProtectAgainstSpam::class])
     ->name('contact.store');
 
+Route::get('enterprise', [EnterpriseInquiryController::class, 'create'])
+    ->name('enterprise-inquiries.create');
+Route::post('enterprise', [EnterpriseInquiryController::class, 'store'])
+    ->middleware(ProtectAgainstSpam::class)
+    ->name('enterprise-inquiries.store');
+
 Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('terms/accept', [TermsAcceptController::class, 'show'])->name('terms.accept');
     Route::post('terms/accept', [TermsAcceptController::class, 'store'])->name('terms.accept.store');
@@ -144,6 +152,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 });
 
 Route::post('webhooks/stripe', StripeWebhookController::class)->name('webhooks.stripe')->withoutMiddleware([Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class]);
+Route::post('webhooks/paddle', PaddleWebhookController::class)->name('webhooks.paddle')->withoutMiddleware([Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class]);
 
 Route::middleware(['auth', 'feature:onboarding'])->group(function (): void {
     Route::get('onboarding', [OnboardingController::class, 'show'])->name('onboarding');

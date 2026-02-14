@@ -315,6 +315,9 @@ final class SyncDocumentationManifest extends Command
 
             try {
                 $reflection = new ReflectionClass($fullClassName);
+                if ($reflection->isAbstract()) {
+                    continue;
+                }
                 $methods = [];
 
                 foreach ($reflection->getMethods(ReflectionMethod::IS_PUBLIC) as $method) {

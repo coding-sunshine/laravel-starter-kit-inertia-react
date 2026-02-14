@@ -6,6 +6,9 @@ namespace App\Models;
 
 use App\Features\ImpersonationFeature;
 use App\Models\Concerns\Categorizable;
+use App\Models\Concerns\HasOrganizationPermissions;
+use App\Traits\Billing\HasAffiliate;
+use BeyondCode\Vouchers\Traits\CanRedeemVouchers;
 use Carbon\CarbonInterface;
 use Database\Factories\UserFactory;
 use DateTimeInterface;
@@ -18,6 +21,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
+use Jijunair\LaravelReferral\Traits\Referrable;
 use Lab404\Impersonate\Models\Impersonate as ImpersonateTrait;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Pennant\Feature;
@@ -59,7 +63,7 @@ final class User extends Authenticatable implements ExportsPersonalData, Filamen
     /**
      * @use HasFactory<UserFactory>
      */
-    use Categorizable, GiveExperience, HasAchievements, HasApiTokens, HasFactory, HasRoles, HasTags, ImpersonateTrait, InteractsWithMedia, LogsActivity, Notifiable, Searchable, TwoFactorAuthenticatable;
+    use CanRedeemVouchers, Categorizable, GiveExperience, HasAchievements, HasAffiliate, HasApiTokens, HasFactory, HasOrganizationPermissions, HasRoles, HasTags, ImpersonateTrait, InteractsWithMedia, LogsActivity, Notifiable, Referrable, Searchable, TwoFactorAuthenticatable;
 
     /**
      * @var list<string>

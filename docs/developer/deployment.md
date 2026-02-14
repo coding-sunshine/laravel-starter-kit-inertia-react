@@ -96,7 +96,7 @@ php artisan optimize:clear
 ## First-run and post-deploy
 
 - **Migrations**: Run `php artisan migrate --force` on first deploy and after pulling migration changes.
-- **Seeding**: On first deploy (or when you need default data), run `php artisan db:seed`. This creates roles, permissions, and optional data (e.g. gamification levels/achievements via `GamificationSeeder`). The main `DatabaseSeeder` runs the essential seeders.
+- **Seeding**: On first deploy (or when you need default data), run `php artisan db:seed`. This creates roles, permissions (including org permissions via `permission:sync` in `RolesAndPermissionsSeeder`), and optional data (e.g. gamification levels/achievements via `GamificationSeeder`). The main `DatabaseSeeder` runs the essential seeders.
 - **Feature flags**: To turn all feature flags back to their default (e.g. all on) after a deploy, run: `php artisan features:reset-to-defaults`. Run this only when you intend to reset; it overwrites current feature state.
 
 ## Queue and scheduler

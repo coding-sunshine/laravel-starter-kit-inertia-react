@@ -8,6 +8,7 @@ use App\Models\Billing\PaymentGateway as PaymentGatewayModel;
 use App\Services\PaymentGateway\Contracts\PaymentGatewayInterface;
 use App\Services\PaymentGateway\Gateways\LemonSqueezyGateway;
 use App\Services\PaymentGateway\Gateways\ManualGateway;
+use App\Services\PaymentGateway\Gateways\PaddleGateway;
 use App\Services\PaymentGateway\Gateways\StripeGateway;
 use Illuminate\Support\Facades\Cache;
 
@@ -18,7 +19,7 @@ final class PaymentGatewayManager
      */
     private array $gateways = [
         'stripe' => StripeGateway::class,
-        'paddle' => StripeGateway::class, // placeholder until PaddleGateway exists
+        'paddle' => PaddleGateway::class,
         'lemon_squeezy' => LemonSqueezyGateway::class,
         'manual' => ManualGateway::class,
     ];

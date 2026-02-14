@@ -396,6 +396,22 @@
                     "terms.accept.store"
                 ]
             }
+        },
+        "StoreEnterpriseInquiryAction": {
+            "documented": true,
+            "path": "./StoreEnterpriseInquiryAction.md",
+            "relationships": {
+                "usedBy": [
+                    "EnterpriseInquiryController"
+                ],
+                "usesModels": [
+                    "EnterpriseInquiry"
+                ],
+                "relatedRoutes": [
+                    "enterprise-inquiries.create",
+                    "enterprise-inquiries.store"
+                ]
+            }
         }
     },
     "controllers": {
@@ -789,6 +805,35 @@
                     "terms/accept"
                 ]
             }
+        },
+        "EnterpriseInquiryController": {
+            "documented": true,
+            "path": "./EnterpriseInquiryController.md",
+            "relationships": {
+                "usesActions": [
+                    "StoreEnterpriseInquiryAction"
+                ],
+                "usesFormRequests": [
+                    "StoreEnterpriseInquiryRequest"
+                ],
+                "relatedRoutes": [
+                    "enterprise-inquiries.create",
+                    "enterprise-inquiries.store"
+                ],
+                "rendersPages": [
+                    "enterprise-inquiries/create"
+                ]
+            }
+        },
+        "Controller": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": []
+            }
         }
     },
     "pages": {
@@ -806,12 +851,14 @@
                     "filament.admin.pages.dashboard",
                     "filament.admin.pages.user-activities-page",
                     "filament.admin.pages.api-docs",
+                    "filament.admin.pages.billing.revenue-analytics",
                     "filament.admin.pages.manage-app",
                     "filament.admin.pages.manage-auth",
                     "filament.admin.pages.manage-seo",
                     "filament.admin.resources.feature-segments.index",
                     "filament.admin.resources.activity-logs.index",
                     "filament.admin.resources.activity-logs.view",
+                    "filament.admin.resources.billing.affiliates.index",
                     "filament.admin.resources.categories.index",
                     "filament.admin.resources.changelog-entries.index",
                     "filament.admin.resources.changelog-entries.create",
@@ -823,6 +870,9 @@
                     "filament.admin.resources.credit-packs.index",
                     "filament.admin.resources.credit-packs.create",
                     "filament.admin.resources.credit-packs.edit",
+                    "filament.admin.resources.enterprise-inquiries.index",
+                    "filament.admin.resources.enterprise-inquiries.view",
+                    "filament.admin.resources.enterprise-inquiries.edit",
                     "filament.admin.resources.help-articles.index",
                     "filament.admin.resources.help-articles.create",
                     "filament.admin.resources.help-articles.view",
@@ -850,6 +900,11 @@
                     "filament.admin.resources.users.create",
                     "filament.admin.resources.users.view",
                     "filament.admin.resources.users.edit",
+                    "filament.admin.resources.vouchers.index",
+                    "filament.admin.resources.vouchers.create",
+                    "filament.admin.resources.vouchers.edit",
+                    "referralLink",
+                    "generateReferralCodes",
                     "login",
                     "login.store",
                     "logout",
@@ -911,6 +966,8 @@
                     "pricing",
                     "contact.create",
                     "contact.store",
+                    "enterprise-inquiries.create",
+                    "enterprise-inquiries.store",
                     "terms.accept",
                     "terms.accept.store",
                     "organizations.switch",
@@ -935,6 +992,7 @@
                     "billing.invoices.download",
                     "profile.export-pdf",
                     "webhooks.stripe",
+                    "webhooks.paddle",
                     "onboarding",
                     "onboarding.store",
                     "impersonate",
@@ -975,12 +1033,14 @@
                     "filament.admin.pages.dashboard",
                     "filament.admin.pages.user-activities-page",
                     "filament.admin.pages.api-docs",
+                    "filament.admin.pages.billing.revenue-analytics",
                     "filament.admin.pages.manage-app",
                     "filament.admin.pages.manage-auth",
                     "filament.admin.pages.manage-seo",
                     "filament.admin.resources.feature-segments.index",
                     "filament.admin.resources.activity-logs.index",
                     "filament.admin.resources.activity-logs.view",
+                    "filament.admin.resources.billing.affiliates.index",
                     "filament.admin.resources.categories.index",
                     "filament.admin.resources.changelog-entries.index",
                     "filament.admin.resources.changelog-entries.create",
@@ -992,6 +1052,9 @@
                     "filament.admin.resources.credit-packs.index",
                     "filament.admin.resources.credit-packs.create",
                     "filament.admin.resources.credit-packs.edit",
+                    "filament.admin.resources.enterprise-inquiries.index",
+                    "filament.admin.resources.enterprise-inquiries.view",
+                    "filament.admin.resources.enterprise-inquiries.edit",
                     "filament.admin.resources.help-articles.index",
                     "filament.admin.resources.help-articles.create",
                     "filament.admin.resources.help-articles.view",
@@ -1019,6 +1082,11 @@
                     "filament.admin.resources.users.create",
                     "filament.admin.resources.users.view",
                     "filament.admin.resources.users.edit",
+                    "filament.admin.resources.vouchers.index",
+                    "filament.admin.resources.vouchers.create",
+                    "filament.admin.resources.vouchers.edit",
+                    "referralLink",
+                    "generateReferralCodes",
                     "login",
                     "login.store",
                     "logout",
@@ -1080,6 +1148,8 @@
                     "pricing",
                     "contact.create",
                     "contact.store",
+                    "enterprise-inquiries.create",
+                    "enterprise-inquiries.store",
                     "terms.accept",
                     "terms.accept.store",
                     "organizations.switch",
@@ -1104,6 +1174,7 @@
                     "billing.invoices.download",
                     "profile.export-pdf",
                     "webhooks.stripe",
+                    "webhooks.paddle",
                     "onboarding",
                     "onboarding.store",
                     "impersonate",
@@ -1279,12 +1350,14 @@
                     "filament.admin.pages.dashboard",
                     "filament.admin.pages.user-activities-page",
                     "filament.admin.pages.api-docs",
+                    "filament.admin.pages.billing.revenue-analytics",
                     "filament.admin.pages.manage-app",
                     "filament.admin.pages.manage-auth",
                     "filament.admin.pages.manage-seo",
                     "filament.admin.resources.feature-segments.index",
                     "filament.admin.resources.activity-logs.index",
                     "filament.admin.resources.activity-logs.view",
+                    "filament.admin.resources.billing.affiliates.index",
                     "filament.admin.resources.categories.index",
                     "filament.admin.resources.changelog-entries.index",
                     "filament.admin.resources.changelog-entries.create",
@@ -1296,6 +1369,9 @@
                     "filament.admin.resources.credit-packs.index",
                     "filament.admin.resources.credit-packs.create",
                     "filament.admin.resources.credit-packs.edit",
+                    "filament.admin.resources.enterprise-inquiries.index",
+                    "filament.admin.resources.enterprise-inquiries.view",
+                    "filament.admin.resources.enterprise-inquiries.edit",
                     "filament.admin.resources.help-articles.index",
                     "filament.admin.resources.help-articles.create",
                     "filament.admin.resources.help-articles.view",
@@ -1323,6 +1399,11 @@
                     "filament.admin.resources.users.create",
                     "filament.admin.resources.users.view",
                     "filament.admin.resources.users.edit",
+                    "filament.admin.resources.vouchers.index",
+                    "filament.admin.resources.vouchers.create",
+                    "filament.admin.resources.vouchers.edit",
+                    "referralLink",
+                    "generateReferralCodes",
                     "login",
                     "login.store",
                     "logout",
@@ -1384,6 +1465,8 @@
                     "pricing",
                     "contact.create",
                     "contact.store",
+                    "enterprise-inquiries.create",
+                    "enterprise-inquiries.store",
                     "terms.accept",
                     "terms.accept.store",
                     "organizations.switch",
@@ -1408,6 +1491,7 @@
                     "billing.invoices.download",
                     "profile.export-pdf",
                     "webhooks.stripe",
+                    "webhooks.paddle",
                     "onboarding",
                     "onboarding.store",
                     "impersonate",
@@ -1521,12 +1605,14 @@
                     "filament.admin.pages.dashboard",
                     "filament.admin.pages.user-activities-page",
                     "filament.admin.pages.api-docs",
+                    "filament.admin.pages.billing.revenue-analytics",
                     "filament.admin.pages.manage-app",
                     "filament.admin.pages.manage-auth",
                     "filament.admin.pages.manage-seo",
                     "filament.admin.resources.feature-segments.index",
                     "filament.admin.resources.activity-logs.index",
                     "filament.admin.resources.activity-logs.view",
+                    "filament.admin.resources.billing.affiliates.index",
                     "filament.admin.resources.categories.index",
                     "filament.admin.resources.changelog-entries.index",
                     "filament.admin.resources.changelog-entries.create",
@@ -1538,6 +1624,9 @@
                     "filament.admin.resources.credit-packs.index",
                     "filament.admin.resources.credit-packs.create",
                     "filament.admin.resources.credit-packs.edit",
+                    "filament.admin.resources.enterprise-inquiries.index",
+                    "filament.admin.resources.enterprise-inquiries.view",
+                    "filament.admin.resources.enterprise-inquiries.edit",
                     "filament.admin.resources.help-articles.index",
                     "filament.admin.resources.help-articles.create",
                     "filament.admin.resources.help-articles.view",
@@ -1565,6 +1654,11 @@
                     "filament.admin.resources.users.create",
                     "filament.admin.resources.users.view",
                     "filament.admin.resources.users.edit",
+                    "filament.admin.resources.vouchers.index",
+                    "filament.admin.resources.vouchers.create",
+                    "filament.admin.resources.vouchers.edit",
+                    "referralLink",
+                    "generateReferralCodes",
                     "login",
                     "login.store",
                     "logout",
@@ -1626,6 +1720,8 @@
                     "pricing",
                     "contact.create",
                     "contact.store",
+                    "enterprise-inquiries.create",
+                    "enterprise-inquiries.store",
                     "terms.accept",
                     "terms.accept.store",
                     "organizations.switch",
@@ -1650,6 +1746,7 @@
                     "billing.invoices.download",
                     "profile.export-pdf",
                     "webhooks.stripe",
+                    "webhooks.paddle",
                     "onboarding",
                     "onboarding.store",
                     "impersonate",
@@ -1704,12 +1801,14 @@
                     "filament.admin.pages.dashboard",
                     "filament.admin.pages.user-activities-page",
                     "filament.admin.pages.api-docs",
+                    "filament.admin.pages.billing.revenue-analytics",
                     "filament.admin.pages.manage-app",
                     "filament.admin.pages.manage-auth",
                     "filament.admin.pages.manage-seo",
                     "filament.admin.resources.feature-segments.index",
                     "filament.admin.resources.activity-logs.index",
                     "filament.admin.resources.activity-logs.view",
+                    "filament.admin.resources.billing.affiliates.index",
                     "filament.admin.resources.categories.index",
                     "filament.admin.resources.changelog-entries.index",
                     "filament.admin.resources.changelog-entries.create",
@@ -1721,6 +1820,9 @@
                     "filament.admin.resources.credit-packs.index",
                     "filament.admin.resources.credit-packs.create",
                     "filament.admin.resources.credit-packs.edit",
+                    "filament.admin.resources.enterprise-inquiries.index",
+                    "filament.admin.resources.enterprise-inquiries.view",
+                    "filament.admin.resources.enterprise-inquiries.edit",
                     "filament.admin.resources.help-articles.index",
                     "filament.admin.resources.help-articles.create",
                     "filament.admin.resources.help-articles.view",
@@ -1748,6 +1850,11 @@
                     "filament.admin.resources.users.create",
                     "filament.admin.resources.users.view",
                     "filament.admin.resources.users.edit",
+                    "filament.admin.resources.vouchers.index",
+                    "filament.admin.resources.vouchers.create",
+                    "filament.admin.resources.vouchers.edit",
+                    "referralLink",
+                    "generateReferralCodes",
                     "login",
                     "login.store",
                     "logout",
@@ -1809,6 +1916,8 @@
                     "pricing",
                     "contact.create",
                     "contact.store",
+                    "enterprise-inquiries.create",
+                    "enterprise-inquiries.store",
                     "terms.accept",
                     "terms.accept.store",
                     "organizations.switch",
@@ -1833,6 +1942,7 @@
                     "billing.invoices.download",
                     "profile.export-pdf",
                     "webhooks.stripe",
+                    "webhooks.paddle",
                     "onboarding",
                     "onboarding.store",
                     "impersonate",
@@ -1873,12 +1983,14 @@
                     "filament.admin.pages.dashboard",
                     "filament.admin.pages.user-activities-page",
                     "filament.admin.pages.api-docs",
+                    "filament.admin.pages.billing.revenue-analytics",
                     "filament.admin.pages.manage-app",
                     "filament.admin.pages.manage-auth",
                     "filament.admin.pages.manage-seo",
                     "filament.admin.resources.feature-segments.index",
                     "filament.admin.resources.activity-logs.index",
                     "filament.admin.resources.activity-logs.view",
+                    "filament.admin.resources.billing.affiliates.index",
                     "filament.admin.resources.categories.index",
                     "filament.admin.resources.changelog-entries.index",
                     "filament.admin.resources.changelog-entries.create",
@@ -1890,6 +2002,9 @@
                     "filament.admin.resources.credit-packs.index",
                     "filament.admin.resources.credit-packs.create",
                     "filament.admin.resources.credit-packs.edit",
+                    "filament.admin.resources.enterprise-inquiries.index",
+                    "filament.admin.resources.enterprise-inquiries.view",
+                    "filament.admin.resources.enterprise-inquiries.edit",
                     "filament.admin.resources.help-articles.index",
                     "filament.admin.resources.help-articles.create",
                     "filament.admin.resources.help-articles.view",
@@ -1917,6 +2032,11 @@
                     "filament.admin.resources.users.create",
                     "filament.admin.resources.users.view",
                     "filament.admin.resources.users.edit",
+                    "filament.admin.resources.vouchers.index",
+                    "filament.admin.resources.vouchers.create",
+                    "filament.admin.resources.vouchers.edit",
+                    "referralLink",
+                    "generateReferralCodes",
                     "login",
                     "login.store",
                     "logout",
@@ -1978,6 +2098,8 @@
                     "pricing",
                     "contact.create",
                     "contact.store",
+                    "enterprise-inquiries.create",
+                    "enterprise-inquiries.store",
                     "terms.accept",
                     "terms.accept.store",
                     "organizations.switch",
@@ -2002,6 +2124,7 @@
                     "billing.invoices.download",
                     "profile.export-pdf",
                     "webhooks.stripe",
+                    "webhooks.paddle",
                     "onboarding",
                     "onboarding.store",
                     "impersonate",
@@ -2184,6 +2307,20 @@
                 "relatedRoutes": [
                     "terms.accept",
                     "terms.accept.store"
+                ]
+            }
+        },
+        "enterprise-inquiries/create": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./enterprise-inquiries-create.md",
+            "relationships": {
+                "renderedBy": [
+                    "EnterpriseInquiryController"
+                ],
+                "relatedRoutes": [
+                    "enterprise-inquiries.create",
+                    "enterprise-inquiries.store"
                 ]
             }
         }

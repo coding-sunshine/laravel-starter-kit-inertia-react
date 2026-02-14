@@ -71,6 +71,11 @@ final class RolesAndPermissionsSeeder extends Seeder
         // Always sync route permissions so they exist in Filament for assignment to roles.
         Artisan::call('permission:sync-routes', ['--silent' => true]);
 
+        // Sync org permissions from organization-permissions.json so org roles (admin/member) get org.* permissions.
+        if (is_file(database_path('seeders/data/organization-permissions.json'))) {
+            Artisan::call('permission:sync', ['--silent' => true]);
+        }
+
         resolve(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 }

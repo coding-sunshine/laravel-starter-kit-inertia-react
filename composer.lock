@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "d5d1cf3c536795047d479fa46846362b",
+    "content-hash": "1ed9a8ec5faccebe9f5204f6fb58f3b3",
     "packages": [
         {
             "name": "a909m/filament-statefusion",
@@ -93,6 +93,74 @@
                 }
             ],
             "time": "2026-01-16T21:21:14+00:00"
+        },
+        {
+            "name": "akaunting/laravel-money",
+            "version": "6.0.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/akaunting/laravel-money.git",
+                "reference": "5dca81f4297b99f8dbf0f4a6bb4d45c56acbd76a"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/akaunting/laravel-money/zipball/5dca81f4297b99f8dbf0f4a6bb4d45c56acbd76a",
+                "reference": "5dca81f4297b99f8dbf0f4a6bb4d45c56acbd76a",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/contracts": "^10.0|^11.0|^12",
+                "illuminate/support": "^10.0|^11.0|^12",
+                "illuminate/validation": "^10.0|^11.0|^12",
+                "illuminate/view": "^10.0|^11.0|^12",
+                "php": "^8.2",
+                "vlucas/phpdotenv": "^5.4.1"
+            },
+            "require-dev": {
+                "orchestra/testbench": "^8.0|^9.0|^10",
+                "phpunit/phpunit": "^10.5|^11.0",
+                "vimeo/psalm": "^6.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Akaunting\\Money\\Provider"
+                    ]
+                }
+            },
+            "autoload": {
+                "files": [
+                    "src/helpers.php"
+                ],
+                "psr-4": {
+                    "Akaunting\\Money\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Denis Duliçi",
+                    "email": "info@akaunting.com",
+                    "homepage": "https://akaunting.com",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Currency formatting and conversion package for Laravel",
+            "keywords": [
+                "convert",
+                "currency",
+                "format",
+                "laravel",
+                "money"
+            ],
+            "support": {
+                "source": "https://github.com/akaunting/laravel-money/tree/6.0.2"
+            },
+            "time": "2025-02-22T11:28:38+00:00"
         },
         {
             "name": "alizharb/filament-activity-log",
@@ -1594,6 +1662,89 @@
                 }
             ],
             "time": "2026-02-12T06:10:32+00:00"
+        },
+        {
+            "name": "devrabiul/laravel-geo-genius",
+            "version": "v1.5",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/devrabiul/laravel-geo-genius.git",
+                "reference": "3884460d3af7e36af7c7ae301714e687e45cdbf6"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/devrabiul/laravel-geo-genius/zipball/3884460d3af7e36af7c7ae301714e687e45cdbf6",
+                "reference": "3884460d3af7e36af7c7ae301714e687e45cdbf6",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^8.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "aliases": {
+                        "LaravelGeoGenius": "Devrabiul\\LaravelGeoGenius\\Facades\\LaravelGeoGenius"
+                    },
+                    "providers": [
+                        "Devrabiul\\LaravelGeoGenius\\LaravelGeoGeniusServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "files": [
+                    "src/utils/GeniusTranslate.php",
+                    "src/utils/GeniusHelpers.php"
+                ],
+                "psr-4": {
+                    "Devrabiul\\LaravelGeoGenius\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Muhammad Rabiul",
+                    "email": "devrabiul@gmail.com"
+                }
+            ],
+            "description": "Laravel GeoGenius — A powerful, intelligent toolkit for geo-location, timezone, and locale-based features in Laravel applications.",
+            "homepage": "https://github.com/devrabiul/laravel-geo-genius",
+            "keywords": [
+                "IP Location",
+                "context-aware",
+                "country detection",
+                "datetime",
+                "geo",
+                "geo genius",
+                "geolocation",
+                "internationalization",
+                "laravel",
+                "laravel timezone",
+                "locale",
+                "region detection",
+                "timezone",
+                "timezone conversion",
+                "timezone detection",
+                "user timezone"
+            ],
+            "support": {
+                "issues": "https://github.com/devrabiul/laravel-geo-genius/issues",
+                "source": "https://github.com/devrabiul/laravel-geo-genius/tree/v1.5"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/devrabiul",
+                    "type": "github"
+                },
+                {
+                    "url": "https://ko-fi.com/devrabiul",
+                    "type": "ko_fi"
+                }
+            ],
+            "time": "2025-12-17T09:49:46+00:00"
         },
         {
             "name": "dflydev/dot-access-data",
@@ -4074,6 +4225,69 @@
                 "source": "https://github.com/Jean85/pretty-package-versions/tree/2.1.1"
             },
             "time": "2025-03-19T14:43:43+00:00"
+        },
+        {
+            "name": "jijunair/laravel-referral",
+            "version": "v1.0.4",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/jijunair/laravel-referral.git",
+                "reference": "3fab42b5fe5b9824d82f562c7ca29e9aea3da139"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/jijunair/laravel-referral/zipball/3fab42b5fe5b9824d82f562c7ca29e9aea3da139",
+                "reference": "3fab42b5fe5b9824d82f562c7ca29e9aea3da139",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/auth": "^8.0|^9.0|^10.0|^11.0|^12.0",
+                "illuminate/database": "^8.0|^9.0|^10.0|^11.0|^12.0",
+                "php": "^7.2|^7.3|^7.4|^8.0|^8.1|^8.2"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^9.4|^10.0|^11.0|^12.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Jijunair\\LaravelReferral\\Providers\\ReferralServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Jijunair\\LaravelReferral\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Jiju Nair",
+                    "email": "hello@jijunair.com"
+                }
+            ],
+            "description": "Laravel package for a referral system",
+            "homepage": "https://github.com/jijunair/laravel-referral",
+            "keywords": [
+                "affiliate",
+                "jijunair",
+                "laravel",
+                "laravel-referral",
+                "package",
+                "referral",
+                "referral-system",
+                "user-referral"
+            ],
+            "support": {
+                "issues": "https://github.com/jijunair/laravel-referral/issues",
+                "source": "https://github.com/jijunair/laravel-referral/tree/v1.0.4"
+            },
+            "time": "2025-05-02T03:13:23+00:00"
         },
         {
             "name": "kalnoy/nestedset",
@@ -7705,6 +7919,80 @@
                 }
             ],
             "time": "2024-09-09T07:06:30+00:00"
+        },
+        {
+            "name": "omaralalwi/laravel-taxify",
+            "version": "2.0.4",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/omaralalwi/laravel-taxify.git",
+                "reference": "8e50cc14ac1975304844f2eb31a262b2093ab6b7"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/omaralalwi/laravel-taxify/zipball/8e50cc14ac1975304844f2eb31a262b2093ab6b7",
+                "reference": "8e50cc14ac1975304844f2eb31a262b2093ab6b7",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^8.0|^8.1|^8.2|^8.3"
+            },
+            "require-dev": {
+                "orchestra/testbench": "^8.21.1",
+                "phpunit/phpunit": "^9.3.3|^10.5"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Omaralalwi\\LaravelTaxify\\LaravelTaxifyServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "files": [
+                    "src/helpers.php"
+                ],
+                "psr-4": {
+                    "Omaralalwi\\LaravelTaxify\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "omar alalwi",
+                    "email": "omaralwi2010@gmail.com",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Laravel Taxify provides a set of helper functions and classes to simplify tax (VAT) calculations within Laravel applications. that allow developers to easily integrate tax calculation functionalities into their projects. it's offers a straightforward and efficient solution Designed to streamline the process of handling taxes.",
+            "homepage": "https://github.com/omaralalwi/laravel-taxify",
+            "keywords": [
+                "Laravel-VAT-helper",
+                "Tax-package",
+                "VAT-calculation",
+                "VAT-helper",
+                "VAT-package",
+                "laravel-Tax-package",
+                "laravel-facade",
+                "laravel-helper",
+                "laravel-helpers",
+                "laravel-library",
+                "laravel-taxify",
+                "laravel-vat",
+                "omaralalwi",
+                "php-Tax-package",
+                "tax-calculation",
+                "tax-helper"
+            ],
+            "support": {
+                "issues": "https://github.com/omaralalwi/laravel-taxify/issues",
+                "source": "https://github.com/omaralalwi/laravel-taxify/tree/v2.0.4"
+            },
+            "time": "2025-07-12T22:09:46+00:00"
         },
         {
             "name": "openspout/openspout",

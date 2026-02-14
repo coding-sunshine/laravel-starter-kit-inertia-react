@@ -66,6 +66,11 @@
             "type": "text",
             "nullable": true,
             "default": null
+        },
+        "timezone": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {
@@ -112,6 +117,10 @@
         "secretAchievements": {
             "type": "belongsTo",
             "model": "SecretAchievement"
+        },
+        "affiliate": {
+            "type": "hasOne",
+            "model": "Affiliate"
         },
         "roles": {
             "type": "belongsTo",

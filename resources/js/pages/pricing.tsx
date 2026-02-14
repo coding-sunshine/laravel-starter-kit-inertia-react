@@ -70,6 +70,18 @@ export default function Pricing() {
                             No plans available at the moment.
                         </div>
                     )}
+
+                    <div className="mt-12 flex justify-center">
+                        <p className="text-sm text-muted-foreground">
+                            Need a custom enterprise plan?{' '}
+                            <Link
+                                href="/enterprise"
+                                className="font-medium text-primary underline-offset-4 hover:underline"
+                            >
+                                Contact us
+                            </Link>
+                        </p>
+                    </div>
                 </div>
             </div>
         </>

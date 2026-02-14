@@ -1,0 +1,34 @@
+{
+    "model": "VoucherScope",
+    "table": "voucher_scopes",
+    "fields": {
+        "id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "name": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": [],
+    "value_hints": {
+        "name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    },
+    "scenarios": []
+}

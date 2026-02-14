@@ -8,7 +8,16 @@ set -e
 ROOT="$(git rev-parse --show-toplevel)"
 cd "$ROOT"
 
-# 1. Laravel Pint (PHP code style)
+# 1. Rector (fixes e.g. final on anonymous class before Pint can parse)
+HAD_STASH=0
+if ! git diff --quiet 2>/dev/null; then
+    git stash push --keep-index -m "pre-commit" -q 2>/dev/null && HAD_STASH=1 || true
+fi
+php vendor/bin/rector process --no-progress-bar 2>/dev/null || true
+for f in $(git diff --name-only); do [ -n "$f" ] && git add "$f"; done
+[ "$HAD_STASH" = 1 ] && git stash pop -q 2>/dev/null || true
+
+# 2. Laravel Pint (PHP code style)
 echo "📝 Running Pint..."
 if ! vendor/bin/pint --test --dirty 2>/dev/null; then
     echo "❌ Pint check failed. Run: vendor/bin/pint --dirty --format agent"

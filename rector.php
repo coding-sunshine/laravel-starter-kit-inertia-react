@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Rector\RemoveFinalFromAnonymousClassRector;
 use Rector\Caching\ValueObject\Storage\FileCacheStorage;
 use Rector\Config\RectorConfig;
 use Rector\Php83\Rector\ClassMethod\AddOverrideAttributeToOverriddenMethodsRector;
@@ -35,6 +36,9 @@ return RectorConfig::configure()
         __DIR__.'/public',
         __DIR__.'/routes',
         __DIR__.'/tests',
+    ])
+    ->withRules([
+        RemoveFinalFromAnonymousClassRector::class,
     ])
     ->withSkip([
         AddOverrideAttributeToOverriddenMethodsRector::class,

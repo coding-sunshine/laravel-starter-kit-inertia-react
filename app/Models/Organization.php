@@ -151,6 +151,32 @@ final class Organization extends Model
     }
 
     /**
+     * Whether the user has admin role in this organization (or is owner).
+     */
+    public function hasAdmin(User $user): bool
+    {
+        if ($this->isOwner($user)) {
+            return true;
+        }
+
+        return in_array('admin', $user->roleNamesInOrganization($this), true);
+    }
+
+    /**
+     * Get the user's primary role in this organization (owner, admin, or member).
+     */
+    public function getUserRole(User $user): ?string
+    {
+        if ($this->isOwner($user)) {
+            return 'owner';
+        }
+
+        $roles = $user->roleNamesInOrganization($this);
+
+        return $roles[0] ?? null;
+    }
+
+    /**
      * Add a user to the organization with the given role (admin or member).
      * Does not check authorization; use from actions/controllers that enforce policy.
      * Creates org-scoped roles if they do not exist yet.
@@ -240,5 +266,7 @@ final class Organization extends Model
                 ]);
             }
         }
+
+        resolve(\App\Services\Organization\OrganizationRoleService::class)->syncRolePermissions($this);
     }
 }

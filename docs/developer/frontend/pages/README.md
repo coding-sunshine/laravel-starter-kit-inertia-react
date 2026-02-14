@@ -40,5 +40,6 @@ Inertia pages are React components that receive data from Laravel controllers. T
 | [billing/invoices](./billing/invoices.md) | billing.invoices.index, billing.invoices.download | ✅ |
 | [pricing](./pricing.md) | pricing | ✅ |
 | [terms/accept](./terms-accept.md) | terms.accept, terms.accept.store | ✅ |
+| [enterprise-inquiries/create](./enterprise-inquiries-create.md) | enterprise-inquiries.create, enterprise-inquiries.store | ✅ |
 
 

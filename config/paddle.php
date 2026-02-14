@@ -6,8 +6,12 @@ return [
 
     'vendor_id' => env('PADDLE_VENDOR_ID'),
 
-    'api_key' => env('PADDLE_API_KEY'),
+    'vendor_auth_code' => env('PADDLE_VENDOR_AUTH_CODE'),
+
+    'public_key' => env('PADDLE_PUBLIC_KEY'),
 
     'webhook_secret' => env('PADDLE_WEBHOOK_SECRET'),
+
+    'sandbox' => env('PADDLE_SANDBOX', true),
 
 ];
