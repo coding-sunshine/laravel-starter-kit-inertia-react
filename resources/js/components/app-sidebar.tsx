@@ -1,6 +1,7 @@
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
+import { OrganizationSwitcher } from '@/components/organization-switcher';
 import {
     Sidebar,
     SidebarContent,
@@ -15,9 +16,20 @@ import { index as blogIndex } from '@/routes/blog';
 import { index as changelogIndex } from '@/routes/changelog';
 import { create as contactCreate } from '@/routes/contact';
 import { index as helpIndex } from '@/routes/help';
+import organizations from '@/routes/organizations';
 import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, FileText, Folder, LayoutGrid, LifeBuoy, Mail, Megaphone } from 'lucide-react';
+import {
+    BookOpen,
+    Building2,
+    CreditCard,
+    FileText,
+    Folder,
+    LayoutGrid,
+    LifeBuoy,
+    Mail,
+    Megaphone,
+} from 'lucide-react';
 import { useMemo } from 'react';
 import AppLogo from './app-logo';
 
@@ -26,6 +38,16 @@ const mainNavItems: NavItem[] = [
         title: 'Dashboard',
         href: dashboard().url,
         icon: LayoutGrid,
+    },
+    {
+        title: 'Organizations',
+        href: organizations.index.url(),
+        icon: Building2,
+    },
+    {
+        title: 'Billing',
+        href: '/billing',
+        icon: CreditCard,
     },
     {
         title: 'Blog',
@@ -126,6 +148,9 @@ export function AppSidebar() {
                                 <AppLogo />
                             </Link>
                         </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                        <OrganizationSwitcher />
                     </SidebarMenuItem>
                 </SidebarMenu>
             </SidebarHeader>

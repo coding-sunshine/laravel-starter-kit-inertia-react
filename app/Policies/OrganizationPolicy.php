@@ -1,0 +1,86 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Policies;
+
+use App\Models\Organization;
+use App\Models\User;
+
+use function getPermissionsTeamId;
+use function setPermissionsTeamId;
+
+final class OrganizationPolicy
+{
+    public function viewAny(): bool
+    {
+        return true;
+    }
+
+    public function view(User $user, Organization $organization): bool
+    {
+        if ($user->belongsToOrganization($organization->id)) {
+            return true;
+        }
+
+        return $user->isSuperAdmin();
+    }
+
+    public function create(): bool
+    {
+        return config('tenancy.enabled', true)
+            && config('tenancy.allow_user_organization_creation', true);
+    }
+
+    public function update(User $user, Organization $organization): bool
+    {
+        if ($organization->isOwner($user) || $user->isSuperAdmin()) {
+            return true;
+        }
+
+        return $this->userHasOrgRole($user, $organization, 'admin');
+    }
+
+    public function delete(User $user, Organization $organization): bool
+    {
+        if ($organization->isOwner($user)) {
+            return true;
+        }
+
+        return $user->isSuperAdmin();
+    }
+
+    public function restore(User $user, Organization $organization): bool
+    {
+        if ($organization->isOwner($user)) {
+            return true;
+        }
+
+        return $user->isSuperAdmin();
+    }
+
+    public function forceDelete(User $user): bool
+    {
+        return $user->isSuperAdmin();
+    }
+
+    public function addMember(User $user, Organization $organization): bool
+    {
+        if ($organization->isOwner($user) || $user->isSuperAdmin()) {
+            return true;
+        }
+
+        return $this->userHasOrgRole($user, $organization, 'admin');
+    }
+
+    private function userHasOrgRole(User $user, Organization $organization, string $role): bool
+    {
+        $previousTeamId = getPermissionsTeamId();
+        setPermissionsTeamId($organization->id);
+        try {
+            return $user->hasRole($role);
+        } finally {
+            setPermissionsTeamId($previousTeamId);
+        }
+    }
+}

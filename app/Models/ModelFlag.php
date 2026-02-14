@@ -10,6 +10,7 @@ use Spatie\ModelFlags\Models\Flag as BaseFlag;
 
 final class ModelFlag extends BaseFlag
 {
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use LogsActivity;
 
     protected $table = 'model_flags';

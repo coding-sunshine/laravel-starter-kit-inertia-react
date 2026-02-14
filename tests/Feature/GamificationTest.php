@@ -19,7 +19,7 @@ it('dispatches UserCreated when a user is created', function (): void {
 
     $user = User::factory()->create();
 
-    Event::assertDispatched(UserCreated::class, fn (UserCreated $e) => $e->user->id === $user->id);
+    Event::assertDispatched(UserCreated::class, fn (UserCreated $e): bool => $e->user->id === $user->id);
 });
 
 it('awards signup XP when user is created and gamification is active', function (): void {

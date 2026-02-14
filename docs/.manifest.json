@@ -1,6 +1,6 @@
 {
     "version": "1.0.0",
-    "lastGenerated": "2026-02-13",
+    "lastGenerated": "2026-02-14",
     "actions": {
         "CreateUser": {
             "documented": true,
@@ -242,6 +242,158 @@
                 ],
                 "relatedRoutes": [
                     "help.rate"
+                ]
+            }
+        },
+        "AcceptOrganizationInvitationAction": {
+            "documented": true,
+            "path": "./acceptorganizationinvitationaction.md",
+            "relationships": {
+                "usedBy": [
+                    "InvitationAcceptController"
+                ],
+                "usesModels": [
+                    "OrganizationInvitation",
+                    "User"
+                ],
+                "relatedRoutes": [
+                    "invitations.show",
+                    "invitations.accept"
+                ]
+            }
+        },
+        "CreateOrganizationAction": {
+            "documented": true,
+            "path": "./createorganizationaction.md",
+            "relationships": {
+                "usedBy": [
+                    "OrganizationController"
+                ],
+                "usesModels": [
+                    "User",
+                    "Organization"
+                ],
+                "relatedRoutes": [
+                    "organizations.index",
+                    "organizations.create",
+                    "organizations.store",
+                    "organizations.show",
+                    "organizations.update",
+                    "organizations.destroy",
+                    "organizations.edit"
+                ]
+            }
+        },
+        "CreatePersonalOrganizationForUserAction": {
+            "documented": true,
+            "path": "./createpersonalorganizationforuseraction.md",
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [
+                    "User",
+                    "Organization"
+                ],
+                "relatedRoutes": []
+            }
+        },
+        "InviteToOrganizationAction": {
+            "documented": true,
+            "path": "./invitetoorganizationaction.md",
+            "relationships": {
+                "usedBy": [
+                    "OrganizationInvitationController"
+                ],
+                "usesModels": {
+                    "0": "Organization",
+                    "1": "User",
+                    "3": "OrganizationInvitation"
+                },
+                "relatedRoutes": [
+                    "organizations.invitations.store",
+                    "organizations.invitations.destroy",
+                    "organizations.invitations.resend"
+                ]
+            }
+        },
+        "RemoveOrganizationMemberAction": {
+            "documented": true,
+            "path": "./removeorganizationmemberaction.md",
+            "relationships": {
+                "usedBy": [
+                    "OrganizationMemberController"
+                ],
+                "usesModels": [
+                    "Organization",
+                    "User"
+                ],
+                "relatedRoutes": [
+                    "organizations.members.index",
+                    "organizations.members.update",
+                    "organizations.members.destroy"
+                ]
+            }
+        },
+        "SwitchOrganizationAction": {
+            "documented": true,
+            "path": "./switchorganizationaction.md",
+            "relationships": {
+                "usedBy": [
+                    "OrganizationSwitchController"
+                ],
+                "usesModels": [
+                    "User",
+                    "Organization|int",
+                    "Organization"
+                ],
+                "relatedRoutes": [
+                    "organizations.switch"
+                ]
+            }
+        },
+        "TransferOrganizationOwnershipAction": {
+            "documented": true,
+            "path": "./transferorganizationownershipaction.md",
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [
+                    "Organization",
+                    "User"
+                ],
+                "relatedRoutes": []
+            }
+        },
+        "GetRequiredTermsVersionsForUser": {
+            "documented": true,
+            "path": "./GetRequiredTermsVersionsForUser.md",
+            "relationships": {
+                "usedBy": [
+                    "TermsAcceptController"
+                ],
+                "usesModels": [
+                    "User",
+                    "TermsVersion"
+                ],
+                "relatedRoutes": [
+                    "terms.accept",
+                    "terms.accept.store"
+                ]
+            }
+        },
+        "RecordTermsAcceptance": {
+            "documented": true,
+            "path": "./RecordTermsAcceptance.md",
+            "relationships": {
+                "usedBy": [
+                    "TermsAcceptController"
+                ],
+                "usesModels": {
+                    "0": "User",
+                    "1": "TermsVersion",
+                    "4": "UserTermsAcceptance"
+                },
+                "relatedRoutes": [
+                    "terms.accept",
+                    "terms.accept.store"
                 ]
             }
         }
@@ -525,6 +677,118 @@
                     "onboarding/show"
                 ]
             }
+        },
+        "InvitationAcceptController": {
+            "documented": true,
+            "path": "./invitationacceptcontroller.md",
+            "relationships": {
+                "usesActions": [
+                    "AcceptOrganizationInvitationAction"
+                ],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "invitations.show",
+                    "invitations.accept"
+                ],
+                "rendersPages": [
+                    "invitations/accept"
+                ]
+            }
+        },
+        "OrganizationController": {
+            "documented": true,
+            "path": "./organizationcontroller.md",
+            "relationships": {
+                "usesActions": [
+                    "CreateOrganizationAction"
+                ],
+                "usesFormRequests": [
+                    "StoreOrganizationRequest",
+                    "UpdateOrganizationRequest"
+                ],
+                "relatedRoutes": [
+                    "organizations.index",
+                    "organizations.create",
+                    "organizations.store",
+                    "organizations.show",
+                    "organizations.update",
+                    "organizations.destroy",
+                    "organizations.edit"
+                ],
+                "rendersPages": [
+                    "organizations/index",
+                    "organizations/create",
+                    "organizations/show"
+                ]
+            }
+        },
+        "OrganizationInvitationController": {
+            "documented": true,
+            "path": "./organizationinvitationcontroller.md",
+            "relationships": {
+                "usesActions": [
+                    "InviteToOrganizationAction"
+                ],
+                "usesFormRequests": [
+                    "StoreInvitationRequest"
+                ],
+                "relatedRoutes": [
+                    "organizations.invitations.store",
+                    "organizations.invitations.destroy",
+                    "organizations.invitations.resend"
+                ],
+                "rendersPages": []
+            }
+        },
+        "OrganizationMemberController": {
+            "documented": true,
+            "path": "./organizationmembercontroller.md",
+            "relationships": {
+                "usesActions": [
+                    "RemoveOrganizationMemberAction"
+                ],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "organizations.members.index",
+                    "organizations.members.update",
+                    "organizations.members.destroy"
+                ],
+                "rendersPages": [
+                    "organizations/members"
+                ]
+            }
+        },
+        "OrganizationSwitchController": {
+            "documented": true,
+            "path": "./organizationswitchcontroller.md",
+            "relationships": {
+                "usesActions": [
+                    "SwitchOrganizationAction"
+                ],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "organizations.switch"
+                ],
+                "rendersPages": []
+            }
+        },
+        "TermsAcceptController": {
+            "documented": true,
+            "path": "./TermsAcceptController.md",
+            "relationships": {
+                "usesActions": [
+                    "GetRequiredTermsVersionsForUser",
+                    "RecordTermsAcceptance"
+                ],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "terms.accept",
+                    "terms.accept.store"
+                ],
+                "rendersPages": [
+                    "terms/accept"
+                ]
+            }
         }
     },
     "pages": {
@@ -556,10 +820,19 @@
                     "filament.admin.resources.contact-submissions.index",
                     "filament.admin.resources.contact-submissions.view",
                     "filament.admin.resources.contact-submissions.edit",
+                    "filament.admin.resources.credit-packs.index",
+                    "filament.admin.resources.credit-packs.create",
+                    "filament.admin.resources.credit-packs.edit",
                     "filament.admin.resources.help-articles.index",
                     "filament.admin.resources.help-articles.create",
                     "filament.admin.resources.help-articles.view",
                     "filament.admin.resources.help-articles.edit",
+                    "filament.admin.resources.organization-invitations.index",
+                    "filament.admin.resources.organization-invitations.create",
+                    "filament.admin.resources.organization-invitations.edit",
+                    "filament.admin.resources.organizations.index",
+                    "filament.admin.resources.organizations.create",
+                    "filament.admin.resources.organizations.edit",
                     "filament.admin.resources.permissions.index",
                     "filament.admin.resources.permissions.view",
                     "filament.admin.resources.posts.index",
@@ -570,6 +843,9 @@
                     "filament.admin.resources.roles.create",
                     "filament.admin.resources.roles.view",
                     "filament.admin.resources.roles.edit",
+                    "filament.admin.resources.terms-versions.index",
+                    "filament.admin.resources.terms-versions.create",
+                    "filament.admin.resources.terms-versions.edit",
                     "filament.admin.resources.users.index",
                     "filament.admin.resources.users.create",
                     "filament.admin.resources.users.view",
@@ -612,6 +888,7 @@
                     "horizon.jobs.show",
                     "horizon.index",
                     "sanctum.csrf-cookie",
+                    "lemon-squeezy.webhook",
                     "default-livewire.update",
                     "livewire.upload-file",
                     "livewire.preview-file",
@@ -622,6 +899,8 @@
                     "api.v1.users.store",
                     "api.v1.users.update",
                     "api.v1.users.destroy",
+                    "invitations.show",
+                    "invitations.accept",
                     "cookie-consent.accept",
                     "blog.index",
                     "blog.show",
@@ -629,9 +908,33 @@
                     "help.index",
                     "help.show",
                     "help.rate",
+                    "pricing",
                     "contact.create",
                     "contact.store",
+                    "terms.accept",
+                    "terms.accept.store",
+                    "organizations.switch",
+                    "organizations.index",
+                    "organizations.create",
+                    "organizations.store",
+                    "organizations.show",
+                    "organizations.update",
+                    "organizations.destroy",
+                    "organizations.edit",
+                    "organizations.members.index",
+                    "organizations.members.update",
+                    "organizations.members.destroy",
+                    "organizations.invitations.store",
+                    "organizations.invitations.destroy",
+                    "organizations.invitations.resend",
+                    "billing.index",
+                    "billing.credits.index",
+                    "billing.credits.purchase",
+                    "billing.credits.checkout.lemon-squeezy",
+                    "billing.invoices.index",
+                    "billing.invoices.download",
                     "profile.export-pdf",
+                    "webhooks.stripe",
                     "onboarding",
                     "onboarding.store",
                     "impersonate",
@@ -686,10 +989,19 @@
                     "filament.admin.resources.contact-submissions.index",
                     "filament.admin.resources.contact-submissions.view",
                     "filament.admin.resources.contact-submissions.edit",
+                    "filament.admin.resources.credit-packs.index",
+                    "filament.admin.resources.credit-packs.create",
+                    "filament.admin.resources.credit-packs.edit",
                     "filament.admin.resources.help-articles.index",
                     "filament.admin.resources.help-articles.create",
                     "filament.admin.resources.help-articles.view",
                     "filament.admin.resources.help-articles.edit",
+                    "filament.admin.resources.organization-invitations.index",
+                    "filament.admin.resources.organization-invitations.create",
+                    "filament.admin.resources.organization-invitations.edit",
+                    "filament.admin.resources.organizations.index",
+                    "filament.admin.resources.organizations.create",
+                    "filament.admin.resources.organizations.edit",
                     "filament.admin.resources.permissions.index",
                     "filament.admin.resources.permissions.view",
                     "filament.admin.resources.posts.index",
@@ -700,6 +1012,9 @@
                     "filament.admin.resources.roles.create",
                     "filament.admin.resources.roles.view",
                     "filament.admin.resources.roles.edit",
+                    "filament.admin.resources.terms-versions.index",
+                    "filament.admin.resources.terms-versions.create",
+                    "filament.admin.resources.terms-versions.edit",
                     "filament.admin.resources.users.index",
                     "filament.admin.resources.users.create",
                     "filament.admin.resources.users.view",
@@ -742,6 +1057,7 @@
                     "horizon.jobs.show",
                     "horizon.index",
                     "sanctum.csrf-cookie",
+                    "lemon-squeezy.webhook",
                     "default-livewire.update",
                     "livewire.upload-file",
                     "livewire.preview-file",
@@ -752,6 +1068,8 @@
                     "api.v1.users.store",
                     "api.v1.users.update",
                     "api.v1.users.destroy",
+                    "invitations.show",
+                    "invitations.accept",
                     "cookie-consent.accept",
                     "blog.index",
                     "blog.show",
@@ -759,9 +1077,33 @@
                     "help.index",
                     "help.show",
                     "help.rate",
+                    "pricing",
                     "contact.create",
                     "contact.store",
+                    "terms.accept",
+                    "terms.accept.store",
+                    "organizations.switch",
+                    "organizations.index",
+                    "organizations.create",
+                    "organizations.store",
+                    "organizations.show",
+                    "organizations.update",
+                    "organizations.destroy",
+                    "organizations.edit",
+                    "organizations.members.index",
+                    "organizations.members.update",
+                    "organizations.members.destroy",
+                    "organizations.invitations.store",
+                    "organizations.invitations.destroy",
+                    "organizations.invitations.resend",
+                    "billing.index",
+                    "billing.credits.index",
+                    "billing.credits.purchase",
+                    "billing.credits.checkout.lemon-squeezy",
+                    "billing.invoices.index",
+                    "billing.invoices.download",
                     "profile.export-pdf",
+                    "webhooks.stripe",
                     "onboarding",
                     "onboarding.store",
                     "impersonate",
@@ -951,10 +1293,19 @@
                     "filament.admin.resources.contact-submissions.index",
                     "filament.admin.resources.contact-submissions.view",
                     "filament.admin.resources.contact-submissions.edit",
+                    "filament.admin.resources.credit-packs.index",
+                    "filament.admin.resources.credit-packs.create",
+                    "filament.admin.resources.credit-packs.edit",
                     "filament.admin.resources.help-articles.index",
                     "filament.admin.resources.help-articles.create",
                     "filament.admin.resources.help-articles.view",
                     "filament.admin.resources.help-articles.edit",
+                    "filament.admin.resources.organization-invitations.index",
+                    "filament.admin.resources.organization-invitations.create",
+                    "filament.admin.resources.organization-invitations.edit",
+                    "filament.admin.resources.organizations.index",
+                    "filament.admin.resources.organizations.create",
+                    "filament.admin.resources.organizations.edit",
                     "filament.admin.resources.permissions.index",
                     "filament.admin.resources.permissions.view",
                     "filament.admin.resources.posts.index",
@@ -965,6 +1316,9 @@
                     "filament.admin.resources.roles.create",
                     "filament.admin.resources.roles.view",
                     "filament.admin.resources.roles.edit",
+                    "filament.admin.resources.terms-versions.index",
+                    "filament.admin.resources.terms-versions.create",
+                    "filament.admin.resources.terms-versions.edit",
                     "filament.admin.resources.users.index",
                     "filament.admin.resources.users.create",
                     "filament.admin.resources.users.view",
@@ -1007,6 +1361,7 @@
                     "horizon.jobs.show",
                     "horizon.index",
                     "sanctum.csrf-cookie",
+                    "lemon-squeezy.webhook",
                     "default-livewire.update",
                     "livewire.upload-file",
                     "livewire.preview-file",
@@ -1017,6 +1372,8 @@
                     "api.v1.users.store",
                     "api.v1.users.update",
                     "api.v1.users.destroy",
+                    "invitations.show",
+                    "invitations.accept",
                     "cookie-consent.accept",
                     "blog.index",
                     "blog.show",
@@ -1024,9 +1381,33 @@
                     "help.index",
                     "help.show",
                     "help.rate",
+                    "pricing",
                     "contact.create",
                     "contact.store",
+                    "terms.accept",
+                    "terms.accept.store",
+                    "organizations.switch",
+                    "organizations.index",
+                    "organizations.create",
+                    "organizations.store",
+                    "organizations.show",
+                    "organizations.update",
+                    "organizations.destroy",
+                    "organizations.edit",
+                    "organizations.members.index",
+                    "organizations.members.update",
+                    "organizations.members.destroy",
+                    "organizations.invitations.store",
+                    "organizations.invitations.destroy",
+                    "organizations.invitations.resend",
+                    "billing.index",
+                    "billing.credits.index",
+                    "billing.credits.purchase",
+                    "billing.credits.checkout.lemon-squeezy",
+                    "billing.invoices.index",
+                    "billing.invoices.download",
                     "profile.export-pdf",
+                    "webhooks.stripe",
                     "onboarding",
                     "onboarding.store",
                     "impersonate",
@@ -1154,10 +1535,19 @@
                     "filament.admin.resources.contact-submissions.index",
                     "filament.admin.resources.contact-submissions.view",
                     "filament.admin.resources.contact-submissions.edit",
+                    "filament.admin.resources.credit-packs.index",
+                    "filament.admin.resources.credit-packs.create",
+                    "filament.admin.resources.credit-packs.edit",
                     "filament.admin.resources.help-articles.index",
                     "filament.admin.resources.help-articles.create",
                     "filament.admin.resources.help-articles.view",
                     "filament.admin.resources.help-articles.edit",
+                    "filament.admin.resources.organization-invitations.index",
+                    "filament.admin.resources.organization-invitations.create",
+                    "filament.admin.resources.organization-invitations.edit",
+                    "filament.admin.resources.organizations.index",
+                    "filament.admin.resources.organizations.create",
+                    "filament.admin.resources.organizations.edit",
                     "filament.admin.resources.permissions.index",
                     "filament.admin.resources.permissions.view",
                     "filament.admin.resources.posts.index",
@@ -1168,6 +1558,9 @@
                     "filament.admin.resources.roles.create",
                     "filament.admin.resources.roles.view",
                     "filament.admin.resources.roles.edit",
+                    "filament.admin.resources.terms-versions.index",
+                    "filament.admin.resources.terms-versions.create",
+                    "filament.admin.resources.terms-versions.edit",
                     "filament.admin.resources.users.index",
                     "filament.admin.resources.users.create",
                     "filament.admin.resources.users.view",
@@ -1210,6 +1603,7 @@
                     "horizon.jobs.show",
                     "horizon.index",
                     "sanctum.csrf-cookie",
+                    "lemon-squeezy.webhook",
                     "default-livewire.update",
                     "livewire.upload-file",
                     "livewire.preview-file",
@@ -1220,6 +1614,8 @@
                     "api.v1.users.store",
                     "api.v1.users.update",
                     "api.v1.users.destroy",
+                    "invitations.show",
+                    "invitations.accept",
                     "cookie-consent.accept",
                     "blog.index",
                     "blog.show",
@@ -1227,9 +1623,33 @@
                     "help.index",
                     "help.show",
                     "help.rate",
+                    "pricing",
                     "contact.create",
                     "contact.store",
+                    "terms.accept",
+                    "terms.accept.store",
+                    "organizations.switch",
+                    "organizations.index",
+                    "organizations.create",
+                    "organizations.store",
+                    "organizations.show",
+                    "organizations.update",
+                    "organizations.destroy",
+                    "organizations.edit",
+                    "organizations.members.index",
+                    "organizations.members.update",
+                    "organizations.members.destroy",
+                    "organizations.invitations.store",
+                    "organizations.invitations.destroy",
+                    "organizations.invitations.resend",
+                    "billing.index",
+                    "billing.credits.index",
+                    "billing.credits.purchase",
+                    "billing.credits.checkout.lemon-squeezy",
+                    "billing.invoices.index",
+                    "billing.invoices.download",
                     "profile.export-pdf",
+                    "webhooks.stripe",
                     "onboarding",
                     "onboarding.store",
                     "impersonate",
@@ -1298,10 +1718,19 @@
                     "filament.admin.resources.contact-submissions.index",
                     "filament.admin.resources.contact-submissions.view",
                     "filament.admin.resources.contact-submissions.edit",
+                    "filament.admin.resources.credit-packs.index",
+                    "filament.admin.resources.credit-packs.create",
+                    "filament.admin.resources.credit-packs.edit",
                     "filament.admin.resources.help-articles.index",
                     "filament.admin.resources.help-articles.create",
                     "filament.admin.resources.help-articles.view",
                     "filament.admin.resources.help-articles.edit",
+                    "filament.admin.resources.organization-invitations.index",
+                    "filament.admin.resources.organization-invitations.create",
+                    "filament.admin.resources.organization-invitations.edit",
+                    "filament.admin.resources.organizations.index",
+                    "filament.admin.resources.organizations.create",
+                    "filament.admin.resources.organizations.edit",
                     "filament.admin.resources.permissions.index",
                     "filament.admin.resources.permissions.view",
                     "filament.admin.resources.posts.index",
@@ -1312,6 +1741,9 @@
                     "filament.admin.resources.roles.create",
                     "filament.admin.resources.roles.view",
                     "filament.admin.resources.roles.edit",
+                    "filament.admin.resources.terms-versions.index",
+                    "filament.admin.resources.terms-versions.create",
+                    "filament.admin.resources.terms-versions.edit",
                     "filament.admin.resources.users.index",
                     "filament.admin.resources.users.create",
                     "filament.admin.resources.users.view",
@@ -1354,6 +1786,7 @@
                     "horizon.jobs.show",
                     "horizon.index",
                     "sanctum.csrf-cookie",
+                    "lemon-squeezy.webhook",
                     "default-livewire.update",
                     "livewire.upload-file",
                     "livewire.preview-file",
@@ -1364,6 +1797,8 @@
                     "api.v1.users.store",
                     "api.v1.users.update",
                     "api.v1.users.destroy",
+                    "invitations.show",
+                    "invitations.accept",
                     "cookie-consent.accept",
                     "blog.index",
                     "blog.show",
@@ -1371,9 +1806,33 @@
                     "help.index",
                     "help.show",
                     "help.rate",
+                    "pricing",
                     "contact.create",
                     "contact.store",
+                    "terms.accept",
+                    "terms.accept.store",
+                    "organizations.switch",
+                    "organizations.index",
+                    "organizations.create",
+                    "organizations.store",
+                    "organizations.show",
+                    "organizations.update",
+                    "organizations.destroy",
+                    "organizations.edit",
+                    "organizations.members.index",
+                    "organizations.members.update",
+                    "organizations.members.destroy",
+                    "organizations.invitations.store",
+                    "organizations.invitations.destroy",
+                    "organizations.invitations.resend",
+                    "billing.index",
+                    "billing.credits.index",
+                    "billing.credits.purchase",
+                    "billing.credits.checkout.lemon-squeezy",
+                    "billing.invoices.index",
+                    "billing.invoices.download",
                     "profile.export-pdf",
+                    "webhooks.stripe",
                     "onboarding",
                     "onboarding.store",
                     "impersonate",
@@ -1428,10 +1887,19 @@
                     "filament.admin.resources.contact-submissions.index",
                     "filament.admin.resources.contact-submissions.view",
                     "filament.admin.resources.contact-submissions.edit",
+                    "filament.admin.resources.credit-packs.index",
+                    "filament.admin.resources.credit-packs.create",
+                    "filament.admin.resources.credit-packs.edit",
                     "filament.admin.resources.help-articles.index",
                     "filament.admin.resources.help-articles.create",
                     "filament.admin.resources.help-articles.view",
                     "filament.admin.resources.help-articles.edit",
+                    "filament.admin.resources.organization-invitations.index",
+                    "filament.admin.resources.organization-invitations.create",
+                    "filament.admin.resources.organization-invitations.edit",
+                    "filament.admin.resources.organizations.index",
+                    "filament.admin.resources.organizations.create",
+                    "filament.admin.resources.organizations.edit",
                     "filament.admin.resources.permissions.index",
                     "filament.admin.resources.permissions.view",
                     "filament.admin.resources.posts.index",
@@ -1442,6 +1910,9 @@
                     "filament.admin.resources.roles.create",
                     "filament.admin.resources.roles.view",
                     "filament.admin.resources.roles.edit",
+                    "filament.admin.resources.terms-versions.index",
+                    "filament.admin.resources.terms-versions.create",
+                    "filament.admin.resources.terms-versions.edit",
                     "filament.admin.resources.users.index",
                     "filament.admin.resources.users.create",
                     "filament.admin.resources.users.view",
@@ -1484,6 +1955,7 @@
                     "horizon.jobs.show",
                     "horizon.index",
                     "sanctum.csrf-cookie",
+                    "lemon-squeezy.webhook",
                     "default-livewire.update",
                     "livewire.upload-file",
                     "livewire.preview-file",
@@ -1494,6 +1966,8 @@
                     "api.v1.users.store",
                     "api.v1.users.update",
                     "api.v1.users.destroy",
+                    "invitations.show",
+                    "invitations.accept",
                     "cookie-consent.accept",
                     "blog.index",
                     "blog.show",
@@ -1501,9 +1975,33 @@
                     "help.index",
                     "help.show",
                     "help.rate",
+                    "pricing",
                     "contact.create",
                     "contact.store",
+                    "terms.accept",
+                    "terms.accept.store",
+                    "organizations.switch",
+                    "organizations.index",
+                    "organizations.create",
+                    "organizations.store",
+                    "organizations.show",
+                    "organizations.update",
+                    "organizations.destroy",
+                    "organizations.edit",
+                    "organizations.members.index",
+                    "organizations.members.update",
+                    "organizations.members.destroy",
+                    "organizations.invitations.store",
+                    "organizations.invitations.destroy",
+                    "organizations.invitations.resend",
+                    "billing.index",
+                    "billing.credits.index",
+                    "billing.credits.purchase",
+                    "billing.credits.checkout.lemon-squeezy",
+                    "billing.invoices.index",
+                    "billing.invoices.download",
                     "profile.export-pdf",
+                    "webhooks.stripe",
                     "onboarding",
                     "onboarding.store",
                     "impersonate",
@@ -1539,6 +2037,153 @@
                 "renderedBy": [],
                 "relatedRoutes": [
                     "achievements.show"
+                ]
+            }
+        },
+        "invitations/accept": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./invitations/accept.md",
+            "relationships": {
+                "renderedBy": [
+                    "InvitationAcceptController"
+                ],
+                "relatedRoutes": [
+                    "invitations.show",
+                    "invitations.accept"
+                ]
+            }
+        },
+        "organizations/create": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./organizations/create.md",
+            "relationships": {
+                "renderedBy": [
+                    "OrganizationController"
+                ],
+                "relatedRoutes": [
+                    "organizations.index",
+                    "organizations.create",
+                    "organizations.store",
+                    "organizations.show",
+                    "organizations.update",
+                    "organizations.destroy",
+                    "organizations.edit"
+                ]
+            }
+        },
+        "organizations/index": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./organizations/index.md",
+            "relationships": {
+                "renderedBy": [
+                    "OrganizationController"
+                ],
+                "relatedRoutes": [
+                    "organizations.index",
+                    "organizations.create",
+                    "organizations.store",
+                    "organizations.show",
+                    "organizations.update",
+                    "organizations.destroy",
+                    "organizations.edit"
+                ]
+            }
+        },
+        "organizations/members": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./organizations/members.md",
+            "relationships": {
+                "renderedBy": [
+                    "OrganizationMemberController"
+                ],
+                "relatedRoutes": [
+                    "organizations.members.index",
+                    "organizations.members.update",
+                    "organizations.members.destroy"
+                ]
+            }
+        },
+        "organizations/show": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./organizations/show.md",
+            "relationships": {
+                "renderedBy": [
+                    "OrganizationController"
+                ],
+                "relatedRoutes": [
+                    "organizations.index",
+                    "organizations.create",
+                    "organizations.store",
+                    "organizations.show",
+                    "organizations.update",
+                    "organizations.destroy",
+                    "organizations.edit"
+                ]
+            }
+        },
+        "billing/credits": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./billing/credits.md",
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": [
+                    "billing.credits.index",
+                    "billing.credits.purchase",
+                    "billing.credits.checkout.lemon-squeezy"
+                ]
+            }
+        },
+        "billing/index": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./billing/index.md",
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": [
+                    "billing.index"
+                ]
+            }
+        },
+        "billing/invoices": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./billing/invoices.md",
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": [
+                    "billing.invoices.index",
+                    "billing.invoices.download"
+                ]
+            }
+        },
+        "pricing": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./pricing.md",
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": [
+                    "pricing"
+                ]
+            }
+        },
+        "terms/accept": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./terms-accept.md",
+            "relationships": {
+                "renderedBy": [
+                    "TermsAcceptController"
+                ],
+                "relatedRoutes": [
+                    "terms.accept",
+                    "terms.accept.store"
                 ]
             }
         }

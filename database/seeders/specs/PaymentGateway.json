@@ -1,0 +1,82 @@
+{
+    "model": "PaymentGateway",
+    "table": "payment_gateways",
+    "fields": {
+        "id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "name": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "type": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "settings": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "is_active": {
+            "type": "tinyint",
+            "nullable": true,
+            "default": null
+        },
+        "is_default": {
+            "type": "tinyint",
+            "nullable": true,
+            "default": null
+        },
+        "supported_currencies": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "supported_payment_methods": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "sort_order": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "gatewayProducts": {
+            "type": "hasMany",
+            "model": "GatewayProduct"
+        }
+    },
+    "value_hints": {
+        "name": {
+            "type": "name",
+            "example": "John Doe"
+        },
+        "is_active": {
+            "type": "boolean",
+            "example": true
+        },
+        "is_default": {
+            "type": "boolean",
+            "example": true
+        }
+    },
+    "scenarios": []
+}

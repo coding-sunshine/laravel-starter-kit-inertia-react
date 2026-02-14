@@ -13,7 +13,7 @@ final class ProfileExportPdfController
     /**
      * Return the current user's profile as a PDF download.
      */
-    public function __invoke(Request $request)
+    public function __invoke(Request $request): \Spatie\LaravelPdf\PdfBuilder
     {
         $user = $request->user();
 

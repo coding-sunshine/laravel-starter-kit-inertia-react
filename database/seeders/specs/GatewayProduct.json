@@ -1,0 +1,53 @@
+{
+    "model": "GatewayProduct",
+    "table": "gateway_products",
+    "fields": {
+        "id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "payment_gateway_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "plan_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "gateway_product_id": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "gateway_price_id": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "paymentGateway": {
+            "type": "belongsTo",
+            "model": "PaymentGateway"
+        },
+        "plan": {
+            "type": "belongsTo",
+            "model": "Plan"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

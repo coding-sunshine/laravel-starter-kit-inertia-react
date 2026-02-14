@@ -1,0 +1,64 @@
+{
+    "model": "WebhookLog",
+    "table": "webhook_logs",
+    "fields": {
+        "id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "gateway": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "event_type": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "payload": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "processed": {
+            "type": "tinyint",
+            "nullable": true,
+            "default": null
+        },
+        "response": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": {
+        "processed": {
+            "type": "boolean",
+            "example": true
+        }
+    },
+    "scenarios": []
+}

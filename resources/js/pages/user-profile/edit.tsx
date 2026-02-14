@@ -1,7 +1,7 @@
 import UserProfileController from '@/actions/App/Http/Controllers/UserProfileController';
+import { useInitials } from '@/hooks/use-initials';
 import { send } from '@/routes/verification';
 import { type BreadcrumbItem, type SharedData } from '@/types';
-import { useInitials } from '@/hooks/use-initials';
 import { Transition } from '@headlessui/react';
 import { Form, Head, Link, usePage } from '@inertiajs/react';
 
@@ -26,8 +26,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 export default function Edit({ status }: { status?: string }) {
     const { auth } = usePage<SharedData>().props;
     const getInitials = useInitials();
-    const avatarUrl =
-        auth.user.avatar_profile ?? auth.user.avatar ?? undefined;
+    const avatarUrl = auth.user.avatar_profile ?? auth.user.avatar ?? undefined;
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>

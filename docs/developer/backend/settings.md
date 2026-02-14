@@ -16,6 +16,7 @@ Current groups:
 |-------|--------|---------|
 | `AppSettings` | app | Site name, maintenance mode, timezone |
 | `AuthSettings` | auth | Registration enabled, email verification required |
+| `BillingSettings` | billing | Seat-based billing enabled, allow multiple subscriptions |
 | `SeoSettings` | seo | Meta title, meta description, Open Graph image URL |
 
 ## Filament UI

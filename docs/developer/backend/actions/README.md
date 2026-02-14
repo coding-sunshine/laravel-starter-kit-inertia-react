@@ -28,5 +28,14 @@ All Actions:
 | [StoreContactSubmission](./StoreContactSubmission.md) | N/A | ✅ |
 | [CompleteOnboardingAction](./CompleteOnboardingAction.md) | N/A | ✅ |
 | [RateHelpArticleAction](./RateHelpArticleAction.md) | N/A | ✅ |
+| [AcceptOrganizationInvitationAction](./acceptorganizationinvitationaction.md) | N/A | ✅ |
+| [CreateOrganizationAction](./createorganizationaction.md) | N/A | ✅ |
+| [CreatePersonalOrganizationForUserAction](./createpersonalorganizationforuseraction.md) | N/A | ✅ |
+| [InviteToOrganizationAction](./invitetoorganizationaction.md) | N/A | ✅ |
+| [RemoveOrganizationMemberAction](./removeorganizationmemberaction.md) | N/A | ✅ |
+| [SwitchOrganizationAction](./switchorganizationaction.md) | N/A | ✅ |
+| [TransferOrganizationOwnershipAction](./transferorganizationownershipaction.md) | N/A | ✅ |
+| [GetRequiredTermsVersionsForUser](./GetRequiredTermsVersionsForUser.md) | N/A | ✅ |
+| [RecordTermsAcceptance](./RecordTermsAcceptance.md) | N/A | ✅ |
 
 

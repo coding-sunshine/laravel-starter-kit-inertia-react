@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use Exception;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -21,6 +22,7 @@ final class SeedSpecGenerator
     public function generateSpec(string $modelClass): array
     {
         throw_unless(class_exists($modelClass), InvalidArgumentException::class, "Model class {$modelClass} does not exist");
+        throw_unless(is_subclass_of($modelClass, Model::class), InvalidArgumentException::class, "Class {$modelClass} is not an Eloquent model");
 
         $model = new $modelClass;
         $table = $model->getTable();

@@ -207,6 +207,7 @@ final class SyncDocumentationManifest extends Command
                     }
                 } else {
                     $this->generateStubs($undocumented);
+                    $this->markStubsAsDocumented($undocumented, $manifest, $manifestPath);
                 }
             } else {
                 $this->warn('Run with --generate to create documentation stubs for undocumented items.');
@@ -441,6 +442,30 @@ final class SyncDocumentationManifest extends Command
         }
 
         $this->info('Documentation stubs generated!');
+    }
+
+    /**
+     * Mark generated stubs as documented in the manifest.
+     *
+     * @param  array<string, array<string>>  $undocumented
+     * @param  array<string, mixed>  $manifest
+     */
+    private function markStubsAsDocumented(array $undocumented, array &$manifest, string $manifestPath): void
+    {
+        foreach ($undocumented['actions'] ?? [] as $actionName) {
+            $manifest['actions'][$actionName]['documented'] = true;
+            $manifest['actions'][$actionName]['path'] = './'.mb_strtolower($actionName).'.md';
+        }
+        foreach ($undocumented['controllers'] ?? [] as $controllerName) {
+            $manifest['controllers'][$controllerName]['documented'] = true;
+            $manifest['controllers'][$controllerName]['path'] = './'.mb_strtolower($controllerName).'.md';
+        }
+        foreach ($undocumented['pages'] ?? [] as $pagePath) {
+            $manifest['pages'][$pagePath]['documented'] = true;
+            $manifest['pages'][$pagePath]['developerGuide'] = "./{$pagePath}.md";
+        }
+        File::put($manifestPath, json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."\n");
+        $this->updateIndexFiles($manifest);
     }
 
     /**

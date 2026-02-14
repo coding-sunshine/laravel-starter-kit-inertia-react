@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\ChangelogType;
+use App\Models\Concerns\BelongsToOrganization;
 use Database\Factories\ChangelogEntryFactory;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
@@ -19,6 +20,7 @@ use Spatie\Tags\HasTags;
 
 /**
  * @property int $id
+ * @property int|null $organization_id
  * @property string $title
  * @property string $description
  * @property string|null $version
@@ -32,8 +34,9 @@ use Spatie\Tags\HasTags;
 final class ChangelogEntry extends Model
 {
     /** @use HasFactory<ChangelogEntryFactory> */
-    use HasFactory;
+    use BelongsToOrganization;
 
+    use HasFactory;
     use HasTags;
     use LogsActivity;
     use Searchable;

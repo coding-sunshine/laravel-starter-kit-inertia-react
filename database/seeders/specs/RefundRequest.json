@@ -1,0 +1,77 @@
+{
+    "model": "RefundRequest",
+    "table": "refund_requests",
+    "fields": {
+        "id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "invoice_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "amount": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "reason": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "processed_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        },
+        "processed_by": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        },
+        "invoice": {
+            "type": "belongsTo",
+            "model": "Invoice"
+        },
+        "processedBy": {
+            "type": "belongsTo",
+            "model": "ProcessedBy"
+        }
+    },
+    "value_hints": {
+        "processed_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        }
+    },
+    "scenarios": []
+}

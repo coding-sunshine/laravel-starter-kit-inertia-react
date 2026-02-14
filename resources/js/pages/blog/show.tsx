@@ -1,7 +1,7 @@
 import AppLogoIcon from '@/components/app-logo-icon';
 import TextLink from '@/components/text-link';
 import { home } from '@/routes';
-import { index as blogIndex, show as blogShow } from '@/routes/blog';
+import { index as blogIndex } from '@/routes/blog';
 import { Head, Link } from '@inertiajs/react';
 
 interface Author {

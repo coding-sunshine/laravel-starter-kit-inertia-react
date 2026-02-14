@@ -11,8 +11,6 @@ use Pgvector\Laravel\Vector;
 
 final class EmbeddingDemoSeeder extends Seeder
 {
-    private array $dependencies = [];
-
     /**
      * Run the database seeds (idempotent).
      */

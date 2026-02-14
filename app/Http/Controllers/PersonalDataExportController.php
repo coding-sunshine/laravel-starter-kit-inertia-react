@@ -21,8 +21,7 @@ final class PersonalDataExportController
 
         dispatch(new CreatePersonalDataExportJob($user));
 
-        return redirect()
-            ->back()
+        return back()
             ->with('status', 'Your data export has been queued. You will receive an email with a download link when it is ready.');
     }
 }

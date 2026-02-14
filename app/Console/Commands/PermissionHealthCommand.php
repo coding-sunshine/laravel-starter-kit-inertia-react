@@ -10,9 +10,9 @@ use Spatie\Permission\Models\Role;
 
 final class PermissionHealthCommand extends Command
 {
-    private const SUPER_ADMIN_ROLE = 'super-admin';
+    private const string SUPER_ADMIN_ROLE = 'super-admin';
 
-    private const DEFAULT_ROLE = 'user';
+    private const string DEFAULT_ROLE = 'user';
 
     protected $signature = 'permission:health
                             {--strict : Exit with code 1 on warnings (e.g. users with no roles)}';

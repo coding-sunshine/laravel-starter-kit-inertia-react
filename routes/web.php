@@ -8,16 +8,27 @@ declare(strict_types=1);
  * after adding or changing routes.
  */
 
+use App\Http\Controllers\Billing\BillingDashboardController;
+use App\Http\Controllers\Billing\CreditController;
+use App\Http\Controllers\Billing\InvoiceController;
+use App\Http\Controllers\Billing\PricingController;
+use App\Http\Controllers\Billing\StripeWebhookController;
 use App\Http\Controllers\Blog\BlogController;
 use App\Http\Controllers\Changelog\ChangelogController;
 use App\Http\Controllers\ContactSubmissionController;
 use App\Http\Controllers\CookieConsentController;
 use App\Http\Controllers\HelpCenter\HelpCenterController;
 use App\Http\Controllers\HelpCenter\RateHelpArticleController;
+use App\Http\Controllers\InvitationAcceptController;
 use App\Http\Controllers\OnboardingController;
+use App\Http\Controllers\OrganizationController;
+use App\Http\Controllers\OrganizationInvitationController;
+use App\Http\Controllers\OrganizationMemberController;
+use App\Http\Controllers\OrganizationSwitchController;
 use App\Http\Controllers\PersonalDataExportController;
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\Settings\AchievementsController;
+use App\Http\Controllers\TermsAcceptController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserEmailResetNotificationController;
 use App\Http\Controllers\UserEmailVerificationController;
@@ -65,6 +76,10 @@ Route::get('up', function (): Illuminate\Http\JsonResponse {
 
 Route::get('/', fn () => Inertia::render('welcome'))->name('home');
 
+// Invitation accept (public show, auth store)
+Route::get('invitations/{token}', [InvitationAcceptController::class, 'show'])->name('invitations.show');
+Route::post('invitations/{token}/accept', [InvitationAcceptController::class, 'store'])->name('invitations.accept')->middleware('auth');
+
 Route::get('cookie-consent/accept', CookieConsentController::class)
     ->middleware('feature:cookie_consent')
     ->name('cookie-consent.accept');
@@ -87,6 +102,8 @@ Route::prefix('help')->name('help.')->middleware('feature:help')->group(function
     Route::post('/{helpArticle:slug}/rate', RateHelpArticleController::class)->name('rate');
 });
 
+Route::get('pricing', [PricingController::class, 'index'])->name('pricing');
+
 Route::get('contact', [ContactSubmissionController::class, 'create'])
     ->middleware('feature:contact')
     ->name('contact.create');
@@ -95,11 +112,38 @@ Route::post('contact', [ContactSubmissionController::class, 'store'])
     ->name('contact.store');
 
 Route::middleware(['auth', 'verified'])->group(function (): void {
+    Route::get('terms/accept', [TermsAcceptController::class, 'show'])->name('terms.accept');
+    Route::post('terms/accept', [TermsAcceptController::class, 'store'])->name('terms.accept.store');
+
     Route::get('dashboard', fn () => Inertia::render('dashboard'))->name('dashboard');
+
+    // Organizations (multi-tenancy)
+    Route::post('organizations/switch', OrganizationSwitchController::class)->name('organizations.switch');
+    Route::resource('organizations', OrganizationController::class)->except(['edit']);
+    Route::get('organizations/{organization}/edit', [OrganizationController::class, 'edit'])->name('organizations.edit');
+    Route::get('organizations/{organization}/members', [OrganizationMemberController::class, 'index'])->name('organizations.members.index');
+    Route::put('organizations/{organization}/members/{member}', [OrganizationMemberController::class, 'update'])->name('organizations.members.update')->scopeBindings();
+    Route::delete('organizations/{organization}/members/{member}', [OrganizationMemberController::class, 'destroy'])->name('organizations.members.destroy')->scopeBindings();
+    Route::post('organizations/{organization}/invitations', [OrganizationInvitationController::class, 'store'])->name('organizations.invitations.store');
+    Route::delete('organizations/{organization}/invitations/{invitation}', [OrganizationInvitationController::class, 'destroy'])->name('organizations.invitations.destroy')->scopeBindings();
+    Route::put('organizations/{organization}/invitations/{invitation}/resend', [OrganizationInvitationController::class, 'update'])->name('organizations.invitations.resend')->scopeBindings();
+
+    // Billing (org-scoped; tenant middleware ensures current org)
+    Route::middleware('tenant')->group(function (): void {
+        Route::get('billing', [BillingDashboardController::class, 'index'])->name('billing.index');
+        Route::get('billing/credits', [CreditController::class, 'index'])->name('billing.credits.index');
+        Route::post('billing/credits/purchase', [CreditController::class, 'purchase'])->name('billing.credits.purchase');
+        Route::post('billing/credits/checkout/lemon-squeezy', [CreditController::class, 'checkoutLemonSqueezy'])->name('billing.credits.checkout.lemon-squeezy');
+        Route::get('billing/invoices', [InvoiceController::class, 'index'])->name('billing.invoices.index');
+        Route::get('billing/invoices/{invoice}', [InvoiceController::class, 'download'])->name('billing.invoices.download');
+    });
+
     Route::get('profile/export-pdf', App\Http\Controllers\ProfileExportPdfController::class)
         ->middleware('feature:profile_pdf_export')
         ->name('profile.export-pdf');
 });
+
+Route::post('webhooks/stripe', StripeWebhookController::class)->name('webhooks.stripe')->withoutMiddleware([Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class]);
 
 Route::middleware(['auth', 'feature:onboarding'])->group(function (): void {
     Route::get('onboarding', [OnboardingController::class, 'show'])->name('onboarding');

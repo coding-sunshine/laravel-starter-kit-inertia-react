@@ -23,8 +23,23 @@ pest()->extend(TestCase::class)
         Sleep::fake();
 
         $this->freezeTime();
+        $this->withoutVite();
     })
-    ->in('Browser', 'Feature', 'Unit');
+    ->in('Feature', 'Unit');
+
+pest()->extend(TestCase::class)
+    ->use(RefreshDatabase::class)
+    ->beforeEach(function (): void {
+        Str::createRandomStringsNormally();
+        Str::createUuidsNormally();
+        Http::preventStrayRequests();
+        Process::preventStrayProcesses();
+        Sleep::fake();
+
+        $this->freezeTime();
+        // Do not call withoutVite() so Browser tests load real Vite assets and the app JS runs.
+    })
+    ->in('Browser');
 
 expect()->extend('toBeOne', function (): mixed {
     /** @var Pest\Expectation $this */

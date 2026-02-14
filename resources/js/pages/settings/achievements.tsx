@@ -1,4 +1,4 @@
-import { type BreadcrumbItem, type SharedData } from '@/types';
+import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
 
 import HeadingSmall from '@/components/heading-small';

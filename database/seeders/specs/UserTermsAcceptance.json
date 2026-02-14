@@ -1,0 +1,63 @@
+{
+    "model": "UserTermsAcceptance",
+    "table": "user_terms_acceptances",
+    "fields": {
+        "id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "user_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "terms_version_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "accepted_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        },
+        "ip": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "user_agent": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "user": {
+            "type": "belongsTo",
+            "model": "User"
+        },
+        "termsVersion": {
+            "type": "belongsTo",
+            "model": "TermsVersion"
+        }
+    },
+    "value_hints": {
+        "accepted_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        }
+    },
+    "scenarios": []
+}

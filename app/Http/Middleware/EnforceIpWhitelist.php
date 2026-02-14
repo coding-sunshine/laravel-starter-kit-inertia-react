@@ -26,9 +26,7 @@ final class EnforceIpWhitelist
         }
 
         $clientIp = $request->ip();
-        if ($clientIp === null) {
-            abort(403, 'Access denied.');
-        }
+        abort_if($clientIp === null, 403, 'Access denied.');
 
         foreach ($whitelist as $entry) {
             if ($this->ipMatches($clientIp, mb_trim((string) $entry))) {

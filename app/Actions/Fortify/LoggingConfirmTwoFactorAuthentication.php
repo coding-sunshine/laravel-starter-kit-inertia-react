@@ -8,10 +8,10 @@ use App\Enums\ActivityType;
 use Illuminate\Database\Eloquent\Model;
 use Laravel\Fortify\Actions\ConfirmTwoFactorAuthentication;
 
-final class LoggingConfirmTwoFactorAuthentication
+final readonly class LoggingConfirmTwoFactorAuthentication
 {
     public function __construct(
-        private readonly ConfirmTwoFactorAuthentication $confirm
+        private ConfirmTwoFactorAuthentication $confirm
     ) {}
 
     public function __invoke(Model $user, string $code): void

@@ -61,8 +61,8 @@ final class LogImpersonationEvents
     private function userName(Authenticatable $user): string
     {
         return match (true) {
-            isset($user->name) => (string) $user->name,
-            isset($user->email) => (string) $user->email,
+            property_exists($user, 'name') && $user->name !== null => (string) $user->name,
+            property_exists($user, 'email') && $user->email !== null => (string) $user->email,
             default => (string) $user->getAuthIdentifier(),
         };
     }

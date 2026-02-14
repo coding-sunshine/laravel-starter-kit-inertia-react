@@ -35,25 +35,17 @@ final class FortifyServiceProvider extends ServiceProvider
 
     private function registerTwoFactorActivityLogging(): void
     {
-        $this->app->bind(EnableTwoFactorAuthentication::class, function ($app): LoggingEnableTwoFactorAuthentication {
-            return new LoggingEnableTwoFactorAuthentication(
-                new EnableTwoFactorAuthentication($app->make(TwoFactorAuthenticationProvider::class))
-            );
-        });
+        $this->app->bind(EnableTwoFactorAuthentication::class, fn ($app): LoggingEnableTwoFactorAuthentication => new LoggingEnableTwoFactorAuthentication(
+            new EnableTwoFactorAuthentication($app->make(TwoFactorAuthenticationProvider::class))
+        ));
 
-        $this->app->bind(DisableTwoFactorAuthentication::class, function (): LoggingDisableTwoFactorAuthentication {
-            return new LoggingDisableTwoFactorAuthentication(new DisableTwoFactorAuthentication);
-        });
+        $this->app->bind(DisableTwoFactorAuthentication::class, fn (): LoggingDisableTwoFactorAuthentication => new LoggingDisableTwoFactorAuthentication(new DisableTwoFactorAuthentication));
 
-        $this->app->bind(ConfirmTwoFactorAuthentication::class, function ($app): LoggingConfirmTwoFactorAuthentication {
-            return new LoggingConfirmTwoFactorAuthentication(
-                new ConfirmTwoFactorAuthentication($app->make(TwoFactorAuthenticationProvider::class))
-            );
-        });
+        $this->app->bind(ConfirmTwoFactorAuthentication::class, fn ($app): LoggingConfirmTwoFactorAuthentication => new LoggingConfirmTwoFactorAuthentication(
+            new ConfirmTwoFactorAuthentication($app->make(TwoFactorAuthenticationProvider::class))
+        ));
 
-        $this->app->bind(GenerateNewRecoveryCodes::class, function (): LoggingGenerateNewRecoveryCodes {
-            return new LoggingGenerateNewRecoveryCodes(new GenerateNewRecoveryCodes);
-        });
+        $this->app->bind(GenerateNewRecoveryCodes::class, fn (): LoggingGenerateNewRecoveryCodes => new LoggingGenerateNewRecoveryCodes(new GenerateNewRecoveryCodes));
     }
 
     private function bootFortifyDefaults(): void

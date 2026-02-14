@@ -42,4 +42,11 @@ return [
         'url' => env('EXAMPLE_API_URL', 'https://jsonplaceholder.typicode.com'),
     ],
 
+    'lemon_squeezy' => [
+        'api_key' => env('LEMON_SQUEEZY_API_KEY'),
+        'store_id' => env('LEMON_SQUEEZY_STORE'),
+        'signing_secret' => env('LEMON_SQUEEZY_SIGNING_SECRET'),
+        'generic_variant_id' => env('LEMON_SQUEEZY_GENERIC_VARIANT_ID'),
+    ],
+
 ];

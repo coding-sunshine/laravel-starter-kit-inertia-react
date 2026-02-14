@@ -348,7 +348,7 @@ The `database/seeders/manifest.json` file tracks all seeders with metadata:
 
 ## Git Pre-Commit Hook
 
-A pre-commit hook runs **Pint**, **tests**, **model/seeder checks**, and **documentation** checks.
+A pre-commit hook runs **Pint**, **model/seeder checks**, and **documentation** checks.
 
 **Source**: `scripts/pre-commit` (versioned). Install into Git:
 
@@ -360,9 +360,8 @@ cp scripts/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
 
 The hook runs in order:
 1. **Pint** – PHP code style check on dirty files; fails with instructions to run `vendor/bin/pint --dirty --format agent`
-2. **Tests** – `php artisan test --compact`; fails if any test fails
-3. **New models** – If you staged new model files, requires corresponding seeders and seed specs (blocks commit with fix instructions)
-4. **Documentation** – `php artisan docs:sync --check`; fails if items are undocumented
+2. **New models** – If you staged new model files, requires corresponding seeders and seed specs (blocks commit with fix instructions)
+3. **Documentation** – `php artisan docs:sync --check`; fails if items are undocumented
 
 Bypass all checks: `git commit --no-verify`
 

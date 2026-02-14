@@ -33,7 +33,7 @@ final class UsersTable
                 ImageColumn::make('avatar')
                     ->label('')
                     ->circular()
-                    ->defaultImageUrl(fn ($record) => 'https://ui-avatars.com/api/?name='.urlencode($record->name).'&size=48'),
+                    ->defaultImageUrl(fn ($record): string => 'https://ui-avatars.com/api/?name='.urlencode((string) $record->name).'&size=48'),
                 TextColumn::make('name')
                     ->searchable(),
                 TextColumn::make('email')

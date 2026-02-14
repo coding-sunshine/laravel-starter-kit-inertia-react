@@ -13,6 +13,8 @@ use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
@@ -112,26 +114,6 @@ final class User extends Authenticatable implements ExportsPersonalData, Filamen
             ->nonQueued();
     }
 
-    /**
-     * Avatar URL (thumb conversion) for nav/header, or null when no avatar.
-     */
-    public function getAvatarAttribute(): ?string
-    {
-        $url = $this->getFirstMediaUrl('avatar', 'thumb');
-
-        return $url !== '' ? $url : null;
-    }
-
-    /**
-     * Avatar URL (profile conversion) for profile/settings preview, or null when no avatar.
-     */
-    public function getAvatarProfileAttribute(): ?string
-    {
-        $url = $this->getFirstMediaUrl('avatar', 'profile');
-
-        return $url !== '' ? $url : null;
-    }
-
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
@@ -229,5 +211,107 @@ final class User extends Authenticatable implements ExportsPersonalData, Filamen
         $userIdsWithSuperAdmin = $superAdminRole->users()->pluck('id')->all();
 
         return count($userIdsWithSuperAdmin) === 1 && in_array($this->getKey(), $userIdsWithSuperAdmin, true);
+    }
+
+    /**
+     * Organizations this user belongs to.
+     *
+     * @return BelongsToMany<Organization, $this>
+     */
+    public function organizations(): BelongsToMany
+    {
+        return $this->belongsToMany(Organization::class, 'organization_user')
+            ->withPivot(['is_default', 'joined_at', 'invited_by'])
+            ->withTimestamps();
+    }
+
+    /**
+     * Organizations this user owns.
+     *
+     * @return HasMany<Organization, $this>
+     */
+    public function ownedOrganizations(): HasMany
+    {
+        return $this->hasMany(Organization::class, 'owner_id');
+    }
+
+    /**
+     * @return HasMany<UserTermsAcceptance>
+     */
+    public function termsAcceptances(): HasMany
+    {
+        return $this->hasMany(UserTermsAcceptance::class);
+    }
+
+    /**
+     * The user's default organization (is_default = true on pivot).
+     */
+    public function defaultOrganization(): ?Organization
+    {
+        return $this->organizations()->wherePivot('is_default', true)->first();
+    }
+
+    /**
+     * Switch the current tenant context to the given organization.
+     * Validates the user is a member. Use for web (session) or API (stateless for request).
+     */
+    public function switchOrganization(Organization|int $organization): bool
+    {
+        $org = $organization instanceof Organization
+            ? $organization
+            : Organization::query()->find($organization);
+
+        if (! $org instanceof Organization || ! $this->belongsToOrganization($org->id)) {
+            return false;
+        }
+
+        \App\Services\TenantContext::set($org);
+
+        return true;
+    }
+
+    /**
+     * Whether the user belongs to the given organization (by ID).
+     */
+    public function belongsToOrganization(int $organizationId): bool
+    {
+        return $this->organizations()->where('organizations.id', $organizationId)->exists();
+    }
+
+    /**
+     * Whether this user has the super-admin role (application-wide, global team).
+     */
+    public function isSuperAdmin(): bool
+    {
+        $tableNames = config('permission.table_names');
+        $teamKey = config('permission.column_names.team_foreign_key');
+
+        return (bool) \Illuminate\Support\Facades\DB::table($tableNames['model_has_roles'])
+            ->join($tableNames['roles'], $tableNames['roles'].'.id', '=', $tableNames['model_has_roles'].'.role_id')
+            ->where($tableNames['model_has_roles'].'.model_id', $this->id)
+            ->where($tableNames['model_has_roles'].'.model_type', self::class)
+            ->where($tableNames['model_has_roles'].'.'.$teamKey, 0)
+            ->where($tableNames['roles'].'.name', 'super-admin')
+            ->exists();
+    }
+
+    /**
+     * Avatar URL (thumb conversion) for nav/header, or null when no avatar.
+     */
+    protected function getAvatarAttribute(): ?string
+    {
+        $url = $this->getFirstMediaUrl('avatar', 'thumb');
+
+        return $url !== '' ? $url : null;
+    }
+
+    /**
+     * Avatar URL (profile conversion) for profile/settings preview, or null when no avatar.
+     */
+    protected function getAvatarProfileAttribute(): ?string
+    {
+        $url = $this->getFirstMediaUrl('avatar', 'profile');
+
+        return $url !== '' ? $url : null;
     }
 }

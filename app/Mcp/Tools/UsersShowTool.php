@@ -33,7 +33,7 @@ final class UsersShowTool extends Tool
             return Response::error("User with id {$id} not found.");
         }
 
-        $data = (new UserResource($user))->response()->getData(true);
+        $data = new UserResource($user)->response()->getData(true);
 
         return Response::json($data);
     }

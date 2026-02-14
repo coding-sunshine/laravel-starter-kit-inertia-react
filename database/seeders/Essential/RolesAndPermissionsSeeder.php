@@ -45,7 +45,7 @@ final class RolesAndPermissionsSeeder extends Seeder
         }
 
         if (config('permission.permission_categories_enabled', false)) {
-            $resolver = app(PermissionCategoryResolver::class);
+            $resolver = resolve(PermissionCategoryResolver::class);
             $adminPerms = $resolver->getPermissionsForRole('admin');
             if ($adminPerms !== []) {
                 $admin->syncPermissions($adminPerms);

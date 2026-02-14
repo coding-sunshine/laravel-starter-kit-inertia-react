@@ -69,6 +69,18 @@
         }
     },
     "relationships": {
+        "organizations": {
+            "type": "belongsTo",
+            "model": "Organization"
+        },
+        "ownedOrganizations": {
+            "type": "hasMany",
+            "model": "OwnedOrganization"
+        },
+        "termsAcceptances": {
+            "type": "hasMany",
+            "model": "TermsAcceptance"
+        },
         "categories": {
             "type": "belongsTo",
             "model": "Category"

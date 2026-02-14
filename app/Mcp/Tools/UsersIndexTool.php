@@ -26,10 +26,10 @@ final class UsersIndexTool extends Tool
         $query = User::query();
 
         if ($request->get('filter_name') !== null) {
-            $query->where('name', 'like', '%'.((string) $request->get('filter_name')).'%');
+            $query->where('name', 'like', '%'.($request->get('filter_name')).'%');
         }
         if ($request->get('filter_email') !== null) {
-            $query->where('email', 'like', '%'.((string) $request->get('filter_email')).'%');
+            $query->where('email', 'like', '%'.($request->get('filter_email')).'%');
         }
         $sort = $request->get('sort');
         if (is_string($sort) && $sort !== '') {
@@ -38,7 +38,7 @@ final class UsersIndexTool extends Tool
         }
         $include = $request->get('include');
         if (is_string($include) && $include !== '') {
-            $query->with(array_map('trim', explode(',', $include)));
+            $query->with(array_map(trim(...), explode(',', $include)));
         }
 
         $perPage = (int) $request->get('per_page', 15);

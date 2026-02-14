@@ -8,9 +8,9 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    public function up()
+    public function up(): void
     {
-        Schema::create('levels', function (Blueprint $table) {
+        Schema::create('levels', function (Blueprint $table): void {
             $table->id();
             $table->integer('level')->unique();
             $table->integer('next_level_experience')->nullable()->index();
@@ -18,7 +18,7 @@ return new class extends Migration
         });
     }
 
-    public function down()
+    public function down(): void
     {
         Schema::dropIfExists('levels');
     }

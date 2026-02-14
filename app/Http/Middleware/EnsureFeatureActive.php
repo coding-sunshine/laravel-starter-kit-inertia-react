@@ -33,9 +33,7 @@ final class EnsureFeatureActive
             return $next($request);
         }
 
-        if (! Feature::for($user)->active($featureClass)) {
-            abort(404);
-        }
+        abort_unless(Feature::for($user)->active($featureClass), 404);
 
         return $next($request);
     }

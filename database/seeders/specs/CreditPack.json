@@ -1,0 +1,88 @@
+{
+    "model": "CreditPack",
+    "table": "credit_packs",
+    "fields": {
+        "id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "name": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "slug": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "description": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "credits": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "bonus_credits": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "price": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "currency": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "validity_days": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "is_active": {
+            "type": "tinyint",
+            "nullable": true,
+            "default": null
+        },
+        "sort_order": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": [],
+    "value_hints": {
+        "name": {
+            "type": "name",
+            "example": "John Doe"
+        },
+        "is_active": {
+            "type": "boolean",
+            "example": true
+        }
+    },
+    "scenarios": []
+}

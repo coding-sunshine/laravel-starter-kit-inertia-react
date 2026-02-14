@@ -43,7 +43,7 @@ final class HandleInertiaRequests extends Middleware
 
         $user = $request->user();
 
-        $honeypot = app(Honeypot::class);
+        $honeypot = resolve(Honeypot::class);
 
         $features = [];
         foreach (config('feature-flags.inertia_features', []) as $name => $featureClass) {
@@ -51,6 +51,14 @@ final class HandleInertiaRequests extends Middleware
                 ? Feature::for($user)->active($featureClass)
                 : (new $featureClass)->defaultValue;
         }
+
+        $currentOrganization = $user && config('tenancy.enabled', true)
+            ? \App\Services\TenantContext::get()
+            : null;
+
+        $userOrganizations = $user && config('tenancy.enabled', true)
+            ? $user->organizations()->orderBy('name')->get(['id', 'name', 'slug'])
+            : [];
 
         return [
             ...parent::share($request),
@@ -61,6 +69,8 @@ final class HandleInertiaRequests extends Middleware
                 'permissions' => $user?->getAllPermissions()->pluck('name')->all() ?? [],
                 'roles' => $user?->getRoleNames()->all() ?? [],
                 'can_bypass' => $user?->can('bypass-permissions') ?? false,
+                'current_organization' => $currentOrganization?->only(['id', 'name', 'slug']),
+                'organizations' => $userOrganizations,
             ],
             'features' => $features,
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
@@ -80,7 +90,7 @@ final class HandleInertiaRequests extends Middleware
     private function seoSharedData(): array
     {
         try {
-            $settings = app(SeoSettings::class);
+            $settings = resolve(SeoSettings::class);
 
             return [
                 'meta_title' => $settings->meta_title ?: config('app.name'),

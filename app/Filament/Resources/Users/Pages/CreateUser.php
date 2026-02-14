@@ -48,7 +48,7 @@ final class CreateUser extends CreateRecord
     {
         $this->record->syncTags($this->pendingTagNames);
         $this->record->load('roles');
-        app(ActivityLogRbac::class)->logRolesAssigned(
+        resolve(ActivityLogRbac::class)->logRolesAssigned(
             $this->record,
             ActivityLogRbac::roleNamesFrom($this->record)
         );

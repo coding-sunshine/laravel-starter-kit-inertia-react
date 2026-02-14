@@ -9,6 +9,8 @@ Backend components, services, and patterns for developers.
 - [Actions](./actions/README.md) - Action classes and patterns
 - [Activity Log](./activity-log.md) - Spatie and Filament activity logging
 - [Backup & Restore](./backup.md) - spatie/laravel-backup, schedule, restore
+- [Billing & Multi-Tenancy](./billing-and-tenancy.md) - Seat-based billing, domain/subdomain tenant resolution, ScopesToCurrentTenant
+- [Lemon Squeezy](./lemon-squeezy.md) - One-time products payment gateway (credits checkout)
 - [Horizon](./horizon.md) - Queue monitoring and Redis workers (dashboard at `/horizon`)
 - [Reverb](./reverb.md) - WebSockets (Laravel Echo + Reverb)
 - [Categorizable](./categorizable.md) - Nested set categories; User has Categorizable trait
@@ -39,6 +41,8 @@ Backend components, services, and patterns for developers.
 - [Activity Log](./activity-log.md) - User and model activity logging
 - [API versioning & list endpoints](../api-reference/README.md) - Public API at `/api/v1/`, filter/sort/include
 - [Backup & Restore](./backup.md) - spatie/laravel-backup; schedule, commands, restore
+- [Billing & Multi-Tenancy](./billing-and-tenancy.md) - Seat billing, domain tenant resolution, Filament tenant scoping
+- [Lemon Squeezy](./lemon-squeezy.md) - One-time products (credits) via Lemon Squeezy
 - [Horizon](./horizon.md) - Queue dashboard and Redis workers; `/horizon` (admin only)
 - [Reverb](./reverb.md) - WebSockets; Echo + `reverb:start`; channels in `routes/channels.php`
 - [Categorizable](./categorizable.md) - Nested set categories; User + Filament Category resource

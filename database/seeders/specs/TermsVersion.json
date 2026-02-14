@@ -1,0 +1,69 @@
+{
+    "model": "TermsVersion",
+    "table": "terms_versions",
+    "fields": {
+        "id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "title": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "slug": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "body": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "type": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "effective_at": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "summary": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "is_required": {
+            "type": "tinyint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "acceptances": {
+            "type": "hasMany",
+            "model": "Acceptance"
+        }
+    },
+    "value_hints": {
+        "is_required": {
+            "type": "boolean",
+            "example": true
+        }
+    },
+    "scenarios": []
+}

@@ -13,7 +13,7 @@ return new class extends AiMigration
      */
     public function up(): void
     {
-        Schema::create('agent_conversations', function (Blueprint $table) {
+        Schema::create('agent_conversations', function (Blueprint $table): void {
             $table->string('id', 36)->primary();
             $table->foreignId('user_id');
             $table->string('title');
@@ -22,7 +22,7 @@ return new class extends AiMigration
             $table->index(['user_id', 'updated_at']);
         });
 
-        Schema::create('agent_conversation_messages', function (Blueprint $table) {
+        Schema::create('agent_conversation_messages', function (Blueprint $table): void {
             $table->string('id', 36)->primary();
             $table->string('conversation_id', 36)->index();
             $table->foreignId('user_id');

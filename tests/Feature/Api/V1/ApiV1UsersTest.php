@@ -60,7 +60,7 @@ test('batch creates updates and deletes users and returns counts', function (): 
     ]);
 
     $response->assertOk();
-    $response->assertJsonPath('data.created.0', fn ($id) => is_int($id));
+    $response->assertJsonPath('data.created.0', fn ($id): bool => is_int($id));
     $response->assertJsonPath('data.updated.0', $target->id);
     $response->assertJsonPath('data.deleted.0', $toDelete->id);
 

@@ -11,7 +11,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create(table: 'streak_histories', callback: function (Blueprint $table) {
+        Schema::create(table: 'streak_histories', callback: function (Blueprint $table): void {
             $table->id();
             $table->foreignId(column: config(key: 'level-up.user.foreign_key'))->constrained(table: config(key: 'level-up.user.users_table'))->cascadeOnDelete();
             $table->foreignIdFor(model: Activity::class)->constrained(table: 'streak_activities');

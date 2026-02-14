@@ -23,7 +23,7 @@ final class ActivityLogObserver
 
         foreach ($taps as $tapClass) {
             if (is_string($tapClass) && class_exists($tapClass)) {
-                $tap = app($tapClass);
+                $tap = resolve($tapClass);
                 if (is_callable($tap)) {
                     $tap($activity, $eventName, $subject, $causer, $properties);
                 }

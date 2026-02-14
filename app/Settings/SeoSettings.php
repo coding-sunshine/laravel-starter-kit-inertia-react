@@ -12,7 +12,7 @@ final class SeoSettings extends Settings
 
     public string $meta_description;
 
-    public ?string $og_image;
+    public ?string $og_image = null;
 
     public static function group(): string
     {

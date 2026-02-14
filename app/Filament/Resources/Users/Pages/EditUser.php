@@ -94,7 +94,7 @@ final class EditUser extends EditRecord
     {
         $this->record->syncTags($this->pendingTagNames);
         $this->record->load('roles');
-        app(ActivityLogRbac::class)->logRolesUpdated(
+        resolve(ActivityLogRbac::class)->logRolesUpdated(
             $this->record,
             $this->previousRoleNames,
             ActivityLogRbac::roleNamesFrom($this->record)

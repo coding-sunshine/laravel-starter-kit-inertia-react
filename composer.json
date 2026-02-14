@@ -17,6 +17,7 @@
         "a909m/filament-statefusion": "^2.3.0",
         "alizharb/filament-activity-log": "^1.3.1",
         "askedio/laravel-soft-cascade": "^12.0",
+        "beyondcode/laravel-vouchers": "^2.3",
         "cjmellor/level-up": "^1.5.1",
         "dedoc/scramble": "^0.13.13",
         "essa/api-tool-kit": "^2.2",
@@ -36,6 +37,9 @@
         "laravel/slack-notification-channel": "^3.7",
         "laravel/tinker": "^2.11.1",
         "laravel/wayfinder": "^0.1.13",
+        "laravelcm/laravel-subscriptions": "^1.7.2",
+        "laraveldaily/laravel-invoices": "^4.1.1",
+        "lemonsqueezy/laravel": "^1.8.5",
         "nunomaduro/essentials": "^1.0.1",
         "pgvector/pgvector": "^0.2.2",
         "prism-php/prism": "^0.99.19",
@@ -43,7 +47,7 @@
         "pxlrbt/filament-excel": "^3.4",
         "saloonphp/saloon": "^3.14.2",
         "sentry/sentry-laravel": "^4.20.1",
-        "spatie/browsershot": "^5.2",
+        "spatie/browsershot": "^5.2.2",
         "spatie/eloquent-sortable": "^4.5.2",
         "spatie/laravel-activitylog": "^4.11",
         "spatie/laravel-analytics": "^5.6.1",
@@ -67,6 +71,7 @@
         "spatie/laravel-tags": "^4.10.1",
         "stechstudio/filament-impersonate": "^4.1.4",
         "stephenjude/filament-feature-flags": "^5.0",
+        "stripe/stripe-php": "^19.3",
         "typesense/typesense-php": "^6.0",
         "wildside/userstamps": "^3.1.1"
     },
@@ -158,11 +163,13 @@
             "bun run test:lint"
         ],
         "test:unit": "XDEBUG_MODE=\"coverage\" pest --parallel --coverage --exactly=100.0",
+        "test:quick": "pest --parallel --compact",
         "test:types": [
             "phpstan",
             "bun run test:types"
         ],
-        "test": [
+        "test": "@test:quick",
+        "test:full": [
             "@test:type-coverage",
             "@test:unit",
             "@test:lint",

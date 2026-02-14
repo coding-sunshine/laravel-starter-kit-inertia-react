@@ -27,7 +27,7 @@ final class HelpArticleSeeder extends Seeder
                 continue;
             }
 
-            HelpArticle::create([
+            HelpArticle::query()->create([
                 'title' => $article['title'],
                 'slug' => $article['slug'],
                 'excerpt' => $article['excerpt'] ?? null,

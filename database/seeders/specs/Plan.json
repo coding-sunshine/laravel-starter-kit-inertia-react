@@ -1,0 +1,143 @@
+{
+    "model": "Plan",
+    "table": "plans",
+    "fields": {
+        "id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "name": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "slug": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "description": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "is_active": {
+            "type": "tinyint",
+            "nullable": true,
+            "default": null
+        },
+        "price": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "signup_fee": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "currency": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "trial_period": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "trial_interval": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "invoice_period": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "invoice_interval": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "grace_period": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "grace_interval": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "prorate_day": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "prorate_period": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "prorate_extend_due": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "active_subscribers_limit": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "sort_order": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        },
+        "is_per_seat": {
+            "type": "tinyint",
+            "nullable": true,
+            "default": null
+        },
+        "price_per_seat": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "features": {
+            "type": "hasMany",
+            "model": "Feature"
+        },
+        "subscriptions": {
+            "type": "hasMany",
+            "model": "Subscription"
+        }
+    },
+    "value_hints": {
+        "name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    },
+    "scenarios": []
+}

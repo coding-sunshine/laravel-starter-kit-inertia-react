@@ -24,3 +24,8 @@ Schedule::command('sitemap:generate')->daily();
 // Database and file backups (spatie/laravel-backup). Run first, then clean old ones.
 Schedule::command('backup:run')->daily()->at('01:00');
 Schedule::command('backup:clean')->daily()->at('01:00');
+
+// Billing jobs: metrics, credit expiration, trial reminders.
+Schedule::job(new App\Jobs\Billing\GenerateBillingMetrics)->daily()->at('02:00');
+Schedule::job(new App\Jobs\Billing\ExpireCredits)->daily()->at('03:00');
+Schedule::job(new App\Jobs\Billing\ProcessTrialEndingReminders)->daily()->at('04:00');

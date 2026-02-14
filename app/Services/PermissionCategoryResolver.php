@@ -128,10 +128,8 @@ final class PermissionCategoryResolver
                         $result[] = $name;
                     }
                 }
-            } else {
-                if ($permissionNames->contains($pattern)) {
-                    $result[] = $pattern;
-                }
+            } elseif ($permissionNames->contains($pattern)) {
+                $result[] = $pattern;
             }
         }
 

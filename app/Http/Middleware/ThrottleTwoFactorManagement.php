@@ -14,16 +14,16 @@ use Symfony\Component\HttpFoundation\Response;
  */
 final class ThrottleTwoFactorManagement
 {
-    private const MAX_ATTEMPTS = 5;
+    private const int MAX_ATTEMPTS = 5;
 
-    private const DECAY_SECONDS = 60;
+    private const int DECAY_SECONDS = 60;
 
     /**
      * Paths that require stricter rate limiting (Fortify 2FA management).
      *
      * @var list<string>
      */
-    private const SENSITIVE_PATHS = [
+    private const array SENSITIVE_PATHS = [
         'user/confirmed-two-factor-authentication',
         'user/two-factor-recovery-codes',
         'user/two-factor-qr-code',
@@ -46,9 +46,7 @@ final class ThrottleTwoFactorManagement
         $userId = $request->user()?->getKey() ?? $request->session()->getId();
         $key = 'two-factor-management:'.$userId.':'.$path;
 
-        if (RateLimiter::tooManyAttempts($key, self::MAX_ATTEMPTS)) {
-            abort(429, 'Too Many Requests');
-        }
+        abort_if(RateLimiter::tooManyAttempts($key, self::MAX_ATTEMPTS), 429, 'Too Many Requests');
 
         RateLimiter::hit($key, self::DECAY_SECONDS);
 
@@ -64,7 +62,11 @@ final class ThrottleTwoFactorManagement
         }
 
         if ($path === 'user/two-factor-authentication') {
-            return $request->isMethod('POST') || $request->isMethod('DELETE');
+            if ($request->isMethod('POST')) {
+                return true;
+            }
+
+            return $request->isMethod('DELETE');
         }
 
         return false;

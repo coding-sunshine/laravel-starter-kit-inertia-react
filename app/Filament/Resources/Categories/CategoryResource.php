@@ -36,7 +36,7 @@ final class CategoryResource extends Resource
                     ->maxLength(255),
                 TextInput::make('slug')
                     ->maxLength(255)
-                    ->visible(fn (?Category $record) => $record !== null),
+                    ->visible(fn (?Category $record): bool => $record instanceof Category),
                 TextInput::make('type')
                     ->default('default')
                     ->maxLength(255),

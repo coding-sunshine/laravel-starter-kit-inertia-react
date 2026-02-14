@@ -86,9 +86,18 @@
             "type": "datetime",
             "nullable": true,
             "default": null
+        },
+        "organization_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        },
         "categories": {
             "type": "belongsTo",
             "model": "Category"

@@ -25,13 +25,13 @@ final class EnsureRegistrationEnabled
     public function handle(Request $request, Closure $next): Response
     {
         $pennantActive = Feature::active(RegistrationFeature::class);
-        $settingsEnabled = app(AuthSettings::class)->registration_enabled;
+        $settingsEnabled = resolve(AuthSettings::class)->registration_enabled;
 
         if ($pennantActive && $settingsEnabled) {
             return $next($request);
         }
 
-        return redirect()->route('login')
+        return to_route('login')
             ->with('message', __('Registration is currently disabled.'));
     }
 }

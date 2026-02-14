@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToOrganization;
 use App\Models\Concerns\Categorizable;
 use Database\Factories\HelpArticleFactory;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -25,6 +26,7 @@ use Spatie\Tags\HasTags;
 
 /**
  * @property int $id
+ * @property int|null $organization_id
  * @property string $title
  * @property string $slug
  * @property string|null $excerpt
@@ -43,8 +45,9 @@ use Spatie\Tags\HasTags;
 final class HelpArticle extends Model implements HasMedia, Sortable
 {
     /** @use HasFactory<HelpArticleFactory> */
-    use Categorizable;
+    use BelongsToOrganization;
 
+    use Categorizable;
     use HasFactory;
     use HasSlug;
     use HasTags;

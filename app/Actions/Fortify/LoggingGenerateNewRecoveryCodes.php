@@ -8,10 +8,10 @@ use App\Enums\ActivityType;
 use Illuminate\Database\Eloquent\Model;
 use Laravel\Fortify\Actions\GenerateNewRecoveryCodes;
 
-final class LoggingGenerateNewRecoveryCodes
+final readonly class LoggingGenerateNewRecoveryCodes
 {
     public function __construct(
-        private readonly GenerateNewRecoveryCodes $generate
+        private GenerateNewRecoveryCodes $generate
     ) {}
 
     public function __invoke(Model $user): void

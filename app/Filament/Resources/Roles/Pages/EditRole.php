@@ -55,7 +55,7 @@ final class EditRole extends EditRecord
     {
         $this->record->permissions()->sync(RoleForm::mergePermissionIds($this->form->getState()));
         $this->record->load('permissions');
-        app(ActivityLogRbac::class)->logPermissionsUpdated(
+        resolve(ActivityLogRbac::class)->logPermissionsUpdated(
             $this->record,
             $this->previousPermissionNames,
             ActivityLogRbac::permissionNamesFrom($this->record)
@@ -67,7 +67,7 @@ final class EditRole extends EditRecord
      */
     private function getRoleFormStateFromRecord(): array
     {
-        $resolver = app(\App\Services\PermissionCategoryResolver::class);
+        $resolver = resolve(\App\Services\PermissionCategoryResolver::class);
         $grouped = $resolver->getPermissionsGroupedByCategory();
         $rolePermissionIds = $this->record->permissions->pluck('id')->all();
         $state = [];

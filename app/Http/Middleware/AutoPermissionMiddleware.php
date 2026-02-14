@@ -71,7 +71,7 @@ final class AutoPermissionMiddleware
 
         foreach ($patterns as $pattern) {
             if (str_contains((string) $pattern, '*')) {
-                $regex = '/^'.str_replace('\*', '.*', preg_quote($pattern, '/')).'$/';
+                $regex = '/^'.str_replace('\*', '.*', preg_quote((string) $pattern, '/')).'$/';
                 if (preg_match($regex, $routeName) === 1) {
                     return true;
                 }

@@ -28,7 +28,7 @@ final class CreateRole extends CreateRecord
     {
         $this->record->permissions()->sync(RoleForm::mergePermissionIds($this->form->getState()));
         $this->record->load('permissions');
-        app(ActivityLogRbac::class)->logPermissionsAssigned(
+        resolve(ActivityLogRbac::class)->logPermissionsAssigned(
             $this->record,
             ActivityLogRbac::permissionNamesFrom($this->record)
         );

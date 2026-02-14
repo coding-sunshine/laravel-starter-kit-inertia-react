@@ -14,7 +14,7 @@ final class UsersShow implements Tool
     /**
      * Get the description of the tool's purpose.
      */
-    public function description(): Stringable|string
+    public function description(): string
     {
         return 'A description of the tool.';
     }

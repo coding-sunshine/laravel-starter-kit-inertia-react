@@ -92,10 +92,10 @@ return [
 
         /*
          * Change this if you want to use the teams feature and your related model's
-         * foreign key is other than `team_id`.
+         * foreign key is other than `team_id`. We use organization_id for multi-tenancy.
          */
 
-        'team_foreign_key' => 'team_id',
+        'team_foreign_key' => 'organization_id',
     ],
 
     /*
@@ -133,12 +133,12 @@ return [
      * (view the latest version of this package's migration file)
      */
 
-    'teams' => false,
+    'teams' => true,
 
     /*
-     * The class to use to resolve the permissions team id
+     * The class to use to resolve the permissions team id (current organization).
      */
-    'team_resolver' => Spatie\Permission\DefaultTeamResolver::class,
+    'team_resolver' => App\Services\OrganizationTeamResolver::class,
 
     /*
      * Passport Client Credentials Grant

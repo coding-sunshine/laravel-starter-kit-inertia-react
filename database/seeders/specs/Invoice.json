@@ -1,0 +1,113 @@
+{
+    "model": "Invoice",
+    "table": "invoices",
+    "fields": {
+        "id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "billable_type": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "billable_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "number": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "currency": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "subtotal": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "tax": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "total": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "paid_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        },
+        "due_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "line_items": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "billing_address": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "payment_gateway_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "gateway_invoice_id": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        },
+        "paymentGateway": {
+            "type": "belongsTo",
+            "model": "PaymentGateway"
+        }
+    },
+    "value_hints": {
+        "paid_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        }
+    },
+    "scenarios": []
+}

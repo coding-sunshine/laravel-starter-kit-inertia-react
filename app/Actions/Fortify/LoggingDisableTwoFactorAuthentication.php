@@ -8,10 +8,10 @@ use App\Enums\ActivityType;
 use Illuminate\Database\Eloquent\Model;
 use Laravel\Fortify\Actions\DisableTwoFactorAuthentication;
 
-final class LoggingDisableTwoFactorAuthentication
+final readonly class LoggingDisableTwoFactorAuthentication
 {
     public function __construct(
-        private readonly DisableTwoFactorAuthentication $disable
+        private DisableTwoFactorAuthentication $disable
     ) {}
 
     public function __invoke(Model $user): void

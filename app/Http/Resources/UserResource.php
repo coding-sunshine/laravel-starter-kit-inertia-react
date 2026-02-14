@@ -34,7 +34,7 @@ final class UserResource extends JsonResource
         }
 
         $filtered = array_intersect_key($all, array_fill_keys($requestedFields, true));
-        if (array_key_exists('roles', $all) && $this->relationLoaded('roles')) {
+        if ($this->relationLoaded('roles')) {
             $filtered['roles'] = $all['roles'];
         }
 
@@ -52,8 +52,6 @@ final class UserResource extends JsonResource
             return null;
         }
 
-        $userFields = $fields->get('users') ?? $fields->get('_');
-
-        return $userFields !== null ? $userFields : null;
+        return $fields->get('users') ?? $fields->get('_');
     }
 }

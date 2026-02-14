@@ -14,7 +14,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('users', function (Blueprint $table) {
+        Schema::table('users', function (Blueprint $table): void {
             $table->boolean('onboarding_completed')->default(false)->after('email_verified_at');
             $table->json('onboarding_steps_completed')->nullable()->after('onboarding_completed');
         });
@@ -27,7 +27,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('users', function (Blueprint $table) {
+        Schema::table('users', function (Blueprint $table): void {
             $table->dropColumn(['onboarding_completed', 'onboarding_steps_completed']);
         });
     }

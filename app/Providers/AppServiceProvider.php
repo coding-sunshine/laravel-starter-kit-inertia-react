@@ -4,7 +4,12 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Events\OrganizationMemberAdded;
+use App\Events\OrganizationMemberRemoved;
 use App\Events\User\UserCreated;
+use App\Listeners\Billing\AddCreditsFromLemonSqueezyOrder;
+use App\Listeners\Billing\SyncSubscriptionSeatsOnMemberChange;
+use App\Listeners\CreatePersonalOrganizationOnUserCreated;
 use App\Listeners\Gamification\GrantGamificationOnUserCreated;
 use App\Listeners\LogImpersonationEvents;
 use App\Listeners\MigrationListener;
@@ -14,6 +19,7 @@ use App\Observers\ActivityLogObserver;
 use App\Observers\PermissionActivityObserver;
 use App\Observers\RoleActivityObserver;
 use App\Observers\UserObserver;
+use App\Services\PaymentGateway\PaymentGatewayManager;
 use App\Services\PrismService;
 use App\Settings\SeoSettings;
 use Essa\APIToolKit\Exceptions\Handler as ApiToolKitExceptionHandler;
@@ -28,6 +34,7 @@ use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Lab404\Impersonate\Events\LeaveImpersonation;
 use Lab404\Impersonate\Events\TakeImpersonation;
+use LemonSqueezy\Laravel\Events\OrderCreated;
 use Spatie\Activitylog\ActivitylogServiceProvider;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -40,6 +47,8 @@ final class AppServiceProvider extends ServiceProvider
         $this->app->singleton(PrismService::class, fn (): PrismService => new PrismService);
 
         $this->app->singleton(ExceptionHandler::class, ApiToolKitExceptionHandler::class);
+
+        $this->app->singleton(PaymentGatewayManager::class);
 
         config(['filament-impersonate.redirect_to' => '/dashboard']);
     }
@@ -71,6 +80,10 @@ final class AppServiceProvider extends ServiceProvider
         Event::listen(LeaveImpersonation::class, [LogImpersonationEvents::class, 'handleLeaveImpersonation']);
         Event::listen(JobFailed::class, SendSlackAlertOnJobFailed::class);
         Event::listen(UserCreated::class, GrantGamificationOnUserCreated::class);
+        Event::listen(UserCreated::class, CreatePersonalOrganizationOnUserCreated::class);
+        Event::listen(OrganizationMemberAdded::class, SyncSubscriptionSeatsOnMemberChange::class);
+        Event::listen(OrganizationMemberRemoved::class, SyncSubscriptionSeatsOnMemberChange::class);
+        Event::listen(OrderCreated::class, AddCreditsFromLemonSqueezyOrder::class);
         User::observe(UserObserver::class);
     }
 
@@ -108,7 +121,7 @@ final class AppServiceProvider extends ServiceProvider
     {
         View::composer('app', function ($view): void {
             try {
-                $settings = app(SeoSettings::class);
+                $settings = resolve(SeoSettings::class);
                 $seo = [
                     'meta_title' => $settings->meta_title ?: config('app.name'),
                     'meta_description' => $settings->meta_description ?? '',

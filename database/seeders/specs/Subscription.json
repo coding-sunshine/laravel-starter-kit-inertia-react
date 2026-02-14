@@ -1,0 +1,108 @@
+{
+    "model": "Subscription",
+    "table": "subscriptions",
+    "fields": {
+        "id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "subscriber_type": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "subscriber_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "plan_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "name": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "slug": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "description": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "timezone": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "trial_ends_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        },
+        "starts_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        },
+        "ends_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        },
+        "canceled_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        },
+        "gateway_subscription_id": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "quantity": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "usage": {
+            "type": "hasMany",
+            "model": "Usage"
+        },
+        "plan": {
+            "type": "belongsTo",
+            "model": "Plan"
+        }
+    },
+    "value_hints": {
+        "name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    },
+    "scenarios": []
+}

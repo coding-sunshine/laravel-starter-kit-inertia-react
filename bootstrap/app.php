@@ -6,13 +6,18 @@ use AlizHarb\ActivityLog\Http\Middleware\ActivityLogContextMiddleware;
 use App\Http\Middleware\AdditionalSecurityHeaders;
 use App\Http\Middleware\AutoPermissionMiddleware;
 use App\Http\Middleware\EnforceIpWhitelist;
+use App\Http\Middleware\EnsureCountryAllowed;
 use App\Http\Middleware\EnsureFeatureActive;
 use App\Http\Middleware\EnsureOnboardingComplete;
 use App\Http\Middleware\EnsureRegistrationEnabled;
 use App\Http\Middleware\EnsureScrambleApiDocsVisible;
+use App\Http\Middleware\EnsureTenantContext;
+use App\Http\Middleware\EnsureTermsAccepted;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\ResolveDomainMiddleware;
 use App\Http\Middleware\ServeFavicon;
+use App\Http\Middleware\SetTenantContext;
 use App\Http\Middleware\ThrottleTwoFactorManagement;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -34,6 +39,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
         $middleware->statefulApi();
+        $middleware->validateCsrfTokens(except: ['webhooks/*', 'lemon-squeezy/*']);
 
         $middleware->alias([
             'feature' => EnsureFeatureActive::class,
@@ -43,6 +49,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'role_or_permission' => RoleOrPermissionMiddleware::class,
             'auto.permission' => AutoPermissionMiddleware::class,
             'ip.whitelist' => EnforceIpWhitelist::class,
+            'tenant' => EnsureTenantContext::class,
+            'billing.country' => EnsureCountryAllowed::class,
         ]);
 
         $webAppend = [
@@ -52,23 +60,27 @@ return Application::configure(basePath: dirname(__DIR__))
             ActivityLogContextMiddleware::class,
             HandleAppearance::class,
             HandleInertiaRequests::class,
+            SetTenantContext::class,
             AddLinkHeadersForPreloadedAssets::class,
             CacheResponse::class,
             AutoPermissionMiddleware::class,
             ThrottleTwoFactorManagement::class,
             EnsureOnboardingComplete::class,
+            EnsureTermsAccepted::class,
         ];
 
         $middleware->web(
             append: $webAppend,
             prepend: [
                 ServeFavicon::class,
+                ResolveDomainMiddleware::class,
             ],
         );
 
         $middleware->api(append: [
             AddCspHeaders::class,
             AdditionalSecurityHeaders::class,
+            SetTenantContext::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

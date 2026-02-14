@@ -1,6 +1,12 @@
 import { InertiaLinkProps } from '@inertiajs/react';
 import { LucideIcon } from 'lucide-react';
 
+export interface OrganizationSummary {
+    id: number;
+    name: string;
+    slug: string;
+}
+
 export interface Auth {
     user: User;
     /** Permission names for the current user (empty when guest). Use with useCan() or <Can>. */
@@ -9,6 +15,10 @@ export interface Auth {
     roles: string[];
     /** True when user has bypass-permissions (e.g. super-admin). useCan() treats as allowed for any permission. */
     can_bypass: boolean;
+    /** Current tenant organization (when tenancy enabled). */
+    current_organization?: OrganizationSummary | null;
+    /** Organizations the user belongs to (when tenancy enabled). */
+    organizations?: OrganizationSummary[];
 }
 
 export interface BreadcrumbItem {

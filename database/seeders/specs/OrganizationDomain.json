@@ -1,0 +1,77 @@
+{
+    "model": "OrganizationDomain",
+    "table": "organization_domains",
+    "fields": {
+        "id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "domain": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "type": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "is_verified": {
+            "type": "tinyint",
+            "nullable": true,
+            "default": null
+        },
+        "verification_token": {
+            "type": "varchar",
+            "nullable": true,
+            "default": null
+        },
+        "is_primary": {
+            "type": "tinyint",
+            "nullable": true,
+            "default": null
+        },
+        "verified_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": {
+        "is_verified": {
+            "type": "boolean",
+            "example": true
+        },
+        "is_primary": {
+            "type": "boolean",
+            "example": true
+        },
+        "verified_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        }
+    },
+    "scenarios": []
+}

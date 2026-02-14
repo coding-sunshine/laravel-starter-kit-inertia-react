@@ -10,6 +10,6 @@ return new class extends SettingsMigration
     {
         $this->migrator->add('seo.meta_title', config('app.name', ''));
         $this->migrator->add('seo.meta_description', '');
-        $this->migrator->add('seo.og_image', null);
+        $this->migrator->add('seo.og_image');
     }
 };

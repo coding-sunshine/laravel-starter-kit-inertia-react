@@ -1,0 +1,69 @@
+{
+    "model": "BillingMetric",
+    "table": "billing_metrics",
+    "fields": {
+        "id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "mrr": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "arr": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "new_subscriptions": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "churned": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "credits_purchased": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "credits_used": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "datetime",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

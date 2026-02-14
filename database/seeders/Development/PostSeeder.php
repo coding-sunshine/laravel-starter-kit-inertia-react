@@ -10,11 +10,6 @@ use Illuminate\Database\Seeder;
 
 final class PostSeeder extends Seeder
 {
-    /**
-     * @var array<string>
-     */
-    private array $dependencies = ['UsersSeeder'];
-
     public function run(): void
     {
         $jsonPath = database_path('seeders/data/posts.json');
@@ -41,14 +36,14 @@ final class PostSeeder extends Seeder
                 continue;
             }
 
-            Post::create([
+            Post::query()->create([
                 'author_id' => $author->id,
                 'title' => $postData['title'],
                 'slug' => $postData['slug'],
                 'excerpt' => $postData['excerpt'] ?? null,
                 'content' => $postData['content'],
                 'is_published' => $postData['is_published'] ?? false,
-                'published_at' => isset($postData['published_at']) ? $postData['published_at'] : null,
+                'published_at' => $postData['published_at'] ?? null,
                 'meta_title' => $postData['meta_title'] ?? null,
                 'meta_description' => $postData['meta_description'] ?? null,
                 'meta_keywords' => $postData['meta_keywords'] ?? null,

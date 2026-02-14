@@ -28,7 +28,7 @@ final class ChangelogEntrySeeder extends Seeder
                 continue;
             }
 
-            ChangelogEntry::create([
+            ChangelogEntry::query()->create([
                 'title' => $entry['title'],
                 'description' => $entry['description'],
                 'version' => $entry['version'] ?? null,

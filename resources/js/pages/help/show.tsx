@@ -1,7 +1,11 @@
 import AppLogoIcon from '@/components/app-logo-icon';
 import TextLink from '@/components/text-link';
 import { home } from '@/routes';
-import { index as helpIndex, rate as helpRate, show as helpShow } from '@/routes/help';
+import {
+    index as helpIndex,
+    rate as helpRate,
+    show as helpShow,
+} from '@/routes/help';
 import { Form, Head, Link, usePage } from '@inertiajs/react';
 
 interface HelpArticle {
@@ -71,7 +75,10 @@ export default function HelpShow({ article, related }: Props) {
                         ) : (
                             <div className="flex flex-wrap items-center gap-3">
                                 <Form
-                                    action={helpRate({ helpArticle: article.slug }).url}
+                                    action={
+                                        helpRate({ helpArticle: article.slug })
+                                            .url
+                                    }
                                     method="post"
                                     className="inline-block"
                                 >
@@ -88,7 +95,10 @@ export default function HelpShow({ article, related }: Props) {
                                     </button>
                                 </Form>
                                 <Form
-                                    action={helpRate({ helpArticle: article.slug }).url}
+                                    action={
+                                        helpRate({ helpArticle: article.slug })
+                                            .url
+                                    }
                                     method="post"
                                     className="inline-block"
                                 >
@@ -116,9 +126,11 @@ export default function HelpShow({ article, related }: Props) {
                                 {related.map((item) => (
                                     <li key={item.id}>
                                         <Link
-                                            href={helpShow({
-                                                helpArticle: item.slug,
-                                            }).url}
+                                            href={
+                                                helpShow({
+                                                    helpArticle: item.slug,
+                                                }).url
+                                            }
                                             className="text-foreground underline underline-offset-4 hover:no-underline"
                                         >
                                             {item.title}

@@ -165,7 +165,7 @@ final class UserController extends BaseApiController
         }
 
         if ($sort !== '') {
-            $direction = str_starts_with($sort, '-') ? 'desc' : 'asc';
+            $direction = str_starts_with((string) $sort, '-') ? 'desc' : 'asc';
             $column = mb_ltrim($sort, '-');
             $query->orderBy($column, $direction);
         }

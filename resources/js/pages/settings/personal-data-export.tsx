@@ -1,12 +1,14 @@
-import { edit as editPersonalDataExport } from '@/routes/personal-data-export';
-import { store as storePersonalDataExport } from '@/routes/personal-data-export';
+import {
+    edit as editPersonalDataExport,
+    store as storePersonalDataExport,
+} from '@/routes/personal-data-export';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Form, Head, usePage } from '@inertiajs/react';
 
 import HeadingSmall from '@/components/heading-small';
+import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
-import { Button } from '@/components/ui/button';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -16,7 +18,8 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 export default function PersonalDataExport() {
-    const { flash } = usePage<SharedData & { flash?: { status?: string } }>().props;
+    const { flash } = usePage<SharedData & { flash?: { status?: string } }>()
+        .props;
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -39,7 +42,9 @@ export default function PersonalDataExport() {
                     >
                         {({ processing }) => (
                             <Button type="submit" disabled={processing}>
-                                {processing ? 'Requesting…' : 'Request data export'}
+                                {processing
+                                    ? 'Requesting…'
+                                    : 'Request data export'}
                             </Button>
                         )}
                     </Form>

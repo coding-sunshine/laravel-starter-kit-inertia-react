@@ -1,7 +1,7 @@
 import OnboardingController from '@/actions/App/Http/Controllers/OnboardingController';
+import { Button } from '@/components/ui/button';
 import AuthLayout from '@/layouts/auth-layout';
 import { Form, Head } from '@inertiajs/react';
-import { Button } from '@/components/ui/button';
 import { LoaderCircle } from 'lucide-react';
 
 interface OnboardingProps {
@@ -9,7 +9,10 @@ interface OnboardingProps {
     alreadyCompleted?: boolean;
 }
 
-export default function OnboardingShow({ status, alreadyCompleted }: OnboardingProps) {
+export default function OnboardingShow({
+    status,
+    alreadyCompleted,
+}: OnboardingProps) {
     return (
         <AuthLayout
             title="Welcome"
@@ -19,11 +22,14 @@ export default function OnboardingShow({ status, alreadyCompleted }: OnboardingP
                     : 'Complete a quick step to get started.'
             }
         >
-            <Head title={alreadyCompleted ? 'Review onboarding' : 'Get started'} />
+            <Head
+                title={alreadyCompleted ? 'Review onboarding' : 'Get started'}
+            />
 
             {alreadyCompleted && (
                 <div className="mb-4 rounded-md bg-muted p-3 text-sm text-muted-foreground">
-                    You&apos;ve already completed onboarding. You can run through it again below.
+                    You&apos;ve already completed onboarding. You can run
+                    through it again below.
                 </div>
             )}
             {status && (
@@ -37,7 +43,11 @@ export default function OnboardingShow({ status, alreadyCompleted }: OnboardingP
                 className="flex flex-col gap-4"
             >
                 {({ processing }) => (
-                    <Button type="submit" disabled={processing} className="w-full">
+                    <Button
+                        type="submit"
+                        disabled={processing}
+                        className="w-full"
+                    >
                         {processing ? (
                             <LoaderCircle className="size-4 animate-spin" />
                         ) : (

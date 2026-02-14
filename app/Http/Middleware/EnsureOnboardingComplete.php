@@ -22,7 +22,7 @@ final class EnsureOnboardingComplete
      *
      * @var list<string>
      */
-    private const EXCLUDED_ROUTES = [
+    private const array EXCLUDED_ROUTES = [
         'onboarding',
         'onboarding.store',
         'logout',
@@ -70,6 +70,6 @@ final class EnsureOnboardingComplete
             return $next($request);
         }
 
-        return redirect()->route('onboarding');
+        return to_route('onboarding');
     }
 }

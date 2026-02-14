@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToOrganization;
 use App\Models\Concerns\Categorizable;
 use Database\Factories\PostFactory;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -22,6 +23,7 @@ use Spatie\Tags\HasTags;
 
 /**
  * @property int $id
+ * @property int|null $organization_id
  * @property int $author_id
  * @property string $title
  * @property string $slug
@@ -40,8 +42,9 @@ use Spatie\Tags\HasTags;
 final class Post extends Model implements HasMedia
 {
     /** @use HasFactory<PostFactory> */
-    use Categorizable;
+    use BelongsToOrganization;
 
+    use Categorizable;
     use HasFactory;
     use HasSlug;
     use HasTags;

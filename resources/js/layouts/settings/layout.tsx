@@ -2,13 +2,13 @@ import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import { onboarding } from '@/routes';
+import { show as showAchievements } from '@/routes/achievements';
 import { edit as editAppearance } from '@/routes/appearance';
 import { edit as editPassword } from '@/routes/password';
+import { edit as editPersonalDataExport } from '@/routes/personal-data-export';
 import { show } from '@/routes/two-factor';
 import { edit } from '@/routes/user-profile';
-import { onboarding } from '@/routes';
-import { edit as editPersonalDataExport } from '@/routes/personal-data-export';
-import { show as showAchievements } from '@/routes/achievements';
 import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import { type PropsWithChildren, useMemo } from 'react';
@@ -16,30 +16,53 @@ import { type PropsWithChildren, useMemo } from 'react';
 const sidebarNavItems: (NavItem & { feature?: string })[] = [
     { title: 'Profile', href: edit(), icon: null },
     { title: 'Password', href: editPassword(), icon: null },
-    { title: 'Two-Factor Auth', href: show(), icon: null, feature: 'two_factor_auth' },
-    { title: 'Appearance', href: editAppearance(), icon: null, feature: 'appearance_settings' },
-    { title: 'Data export', href: editPersonalDataExport(), icon: null, feature: 'personal_data_export' },
-    { title: 'Level & achievements', href: showAchievements(), icon: null, feature: 'gamification' },
-    { title: 'Onboarding', href: onboarding(), icon: null, feature: 'onboarding' },
+    {
+        title: 'Two-Factor Auth',
+        href: show(),
+        icon: null,
+        feature: 'two_factor_auth',
+    },
+    {
+        title: 'Appearance',
+        href: editAppearance(),
+        icon: null,
+        feature: 'appearance_settings',
+    },
+    {
+        title: 'Data export',
+        href: editPersonalDataExport(),
+        icon: null,
+        feature: 'personal_data_export',
+    },
+    {
+        title: 'Level & achievements',
+        href: showAchievements(),
+        icon: null,
+        feature: 'gamification',
+    },
+    {
+        title: 'Onboarding',
+        href: onboarding(),
+        icon: null,
+        feature: 'onboarding',
+    },
 ];
 
 export default function SettingsLayout({ children }: PropsWithChildren) {
     const { features } = usePage<SharedData>().props;
-    const f = features ?? {};
 
-    const visibleNavItems = useMemo(
-        () =>
-            sidebarNavItems.filter((item) => {
-                if (!item.feature) return true;
-                const value = f[item.feature];
-                // Gamification: show when true, 1, or undefined (fail open so it appears after features:reset-to-defaults or fresh deploy)
-                if (item.feature === 'gamification') {
-                    return value === true || value === 1 || value === undefined;
-                }
-                return Boolean(value);
-            }),
-        [f],
-    );
+    const visibleNavItems = useMemo(() => {
+        const f = features ?? {};
+        return sidebarNavItems.filter((item) => {
+            if (!item.feature) return true;
+            const value = f[item.feature];
+            // Gamification: show when true, 1, or undefined (fail open so it appears after features:reset-to-defaults or fresh deploy)
+            if (item.feature === 'gamification') {
+                return value === true || value === 1 || value === undefined;
+            }
+            return Boolean(value);
+        });
+    }, [features]);
 
     // When server-side rendering, we only render the layout on the client...
     if (typeof window === 'undefined') {

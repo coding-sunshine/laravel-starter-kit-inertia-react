@@ -17,7 +17,7 @@ final class RateHelpArticleController
             'is_helpful' => ['required', 'boolean'],
         ]);
 
-        app(RateHelpArticleAction::class)->handle($helpArticle, (bool) $validated['is_helpful']);
+        resolve(RateHelpArticleAction::class)->handle($helpArticle, (bool) $validated['is_helpful']);
 
         return back()->with('status', 'Thank you for your feedback.');
     }

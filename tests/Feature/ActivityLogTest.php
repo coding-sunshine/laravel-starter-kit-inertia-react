@@ -63,14 +63,14 @@ test('two factor enable logs activity', function (): void {
     $user = User::factory()->withoutTwoFactor()->create();
     $user->assignRole('user');
 
-    $enable = app(EnableTwoFactorAuthentication::class);
+    $enable = resolve(EnableTwoFactorAuthentication::class);
     $enable($user, true);
 
     assertActivityLogged(ActivityType::TwoFactorEnabled->value, User::class, (int) $user->getKey());
 });
 
 test('CreateUser logs roles_assigned when default role is assigned', function (): void {
-    $createUser = app(CreateUser::class);
+    $createUser = resolve(CreateUser::class);
     $user = $createUser->handle(
         ['name' => 'New User', 'email' => 'newuser@example.com'],
         'password'

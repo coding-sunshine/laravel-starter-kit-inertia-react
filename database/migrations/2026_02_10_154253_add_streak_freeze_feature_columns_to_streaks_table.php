@@ -10,8 +10,8 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('streaks', function (Blueprint $table) {
-            $table->after('activity_at', function (Blueprint $table) {
+        Schema::table('streaks', function (Blueprint $table): void {
+            $table->after('activity_at', function (Blueprint $table): void {
                 $table->timestamp('frozen_until')->nullable();
             });
         });
@@ -19,7 +19,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('streaks', function (Blueprint $table) {
+        Schema::table('streaks', function (Blueprint $table): void {
             $table->dropColumn('frozen_until');
         });
     }

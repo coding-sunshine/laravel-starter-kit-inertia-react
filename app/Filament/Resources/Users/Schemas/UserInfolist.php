@@ -17,7 +17,7 @@ final class UserInfolist
                 ImageEntry::make('avatar')
                     ->label('Photo')
                     ->circular()
-                    ->defaultImageUrl(fn ($record) => 'https://ui-avatars.com/api/?name='.urlencode($record->name).'&size=192'),
+                    ->defaultImageUrl(fn ($record): string => 'https://ui-avatars.com/api/?name='.urlencode((string) $record->name).'&size=192'),
                 TextEntry::make('name'),
                 TextEntry::make('email')
                     ->label('Email address'),

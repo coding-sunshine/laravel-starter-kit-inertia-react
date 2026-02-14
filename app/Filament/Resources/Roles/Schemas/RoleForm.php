@@ -16,7 +16,7 @@ final class RoleForm
 {
     public static function configure(Schema $schema): Schema
     {
-        $resolver = app(PermissionCategoryResolver::class);
+        $resolver = resolve(PermissionCategoryResolver::class);
         $grouped = $resolver->getPermissionsGroupedByCategory();
         $categories = config('permission_categories.categories', []);
 
@@ -71,6 +71,6 @@ final class RoleForm
             }
         }
 
-        return array_values(array_unique(array_filter($merged, fn ($id) => is_numeric($id))));
+        return array_values(array_unique(array_filter($merged, is_numeric(...))));
     }
 }

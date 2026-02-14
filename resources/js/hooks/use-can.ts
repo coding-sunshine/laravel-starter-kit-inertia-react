@@ -1,5 +1,5 @@
-import { usePage } from '@inertiajs/react';
 import type { SharedData } from '@/types';
+import { usePage } from '@inertiajs/react';
 
 /**
  * Check if the current user has the given permission(s).

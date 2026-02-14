@@ -23,10 +23,26 @@ export default function Dashboard() {
     const showContact = f.contact ?? false;
 
     const quickActions = [
-        { label: 'Edit profile', href: editProfile(), icon: UserPen, show: true },
+        {
+            label: 'Edit profile',
+            href: editProfile(),
+            icon: UserPen,
+            show: true,
+        },
         { label: 'Settings', href: '/settings', icon: Settings, show: true },
-        { label: 'Export profile (PDF)', href: exportPdf().url, icon: FileText, show: showPdfExport, external: true },
-        { label: 'Contact support', href: contactCreate().url, icon: LifeBuoy, show: showContact },
+        {
+            label: 'Export profile (PDF)',
+            href: exportPdf().url,
+            icon: FileText,
+            show: showPdfExport,
+            external: true,
+        },
+        {
+            label: 'Contact support',
+            href: contactCreate().url,
+            icon: LifeBuoy,
+            show: showContact,
+        },
     ].filter((a) => a.show);
 
     return (
@@ -61,14 +77,24 @@ export default function Dashboard() {
                             asChild
                         >
                             {action.external ? (
-                                <a href={typeof action.href === 'string' ? action.href : action.href.url}>
+                                <a
+                                    href={
+                                        typeof action.href === 'string'
+                                            ? action.href
+                                            : action.href.url
+                                    }
+                                >
                                     <action.icon className="size-5 text-muted-foreground" />
-                                    <span className="text-sm">{action.label}</span>
+                                    <span className="text-sm">
+                                        {action.label}
+                                    </span>
                                 </a>
                             ) : (
                                 <Link href={action.href}>
                                     <action.icon className="size-5 text-muted-foreground" />
-                                    <span className="text-sm">{action.label}</span>
+                                    <span className="text-sm">
+                                        {action.label}
+                                    </span>
                                 </Link>
                             )}
                         </Button>

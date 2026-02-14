@@ -29,6 +29,6 @@ final readonly class OnboardingController
     {
         $action->handle($user);
 
-        return redirect()->route('dashboard')->with('status', __('Welcome! You’re all set.'));
+        return to_route('dashboard')->with('status', __('Welcome! You’re all set.'));
     }
 }

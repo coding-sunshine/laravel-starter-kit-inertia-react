@@ -2,7 +2,7 @@
 
 This document lists all available routes in the application.
 
-**Last Updated**: 2026-02-10 (gamification achievements route added)
+**Last Updated**: 2026-02-14 (billing, organizations, invitations, pricing routes added)
 
 ## Closure
 
@@ -949,4 +949,113 @@ This document lists all available routes in the application.
 - `request`: `Illuminate\Foundation\Auth\EmailVerificationRequest`
 - `user`: `App\Models\User`
 
+
+## PricingController
+
+**Controller**: `App\Http\Controllers\Billing\PricingController`
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| GET | `pricing` | pricing | web |
+
+
+## InvitationAcceptController
+
+**Controller**: `App\Http\Controllers\InvitationAcceptController`
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| GET | `invitations/{token}` | invitations.show | web |
+| POST | `invitations/{token}/accept` | invitations.accept | web, auth |
+
+
+## OrganizationController
+
+**Controller**: `App\Http\Controllers\Organization\OrganizationController`
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| GET | `organizations` | organizations.index | web, auth, verified |
+| GET | `organizations/create` | organizations.create | web, auth, verified |
+| POST | `organizations` | organizations.store | web, auth, verified |
+| GET | `organizations/{organization}` | organizations.show | web, auth, verified |
+| PUT, PATCH | `organizations/{organization}` | organizations.update | web, auth, verified |
+| DELETE | `organizations/{organization}` | organizations.destroy | web, auth, verified |
+| GET | `organizations/{organization}/edit` | organizations.edit | web, auth, verified |
+
+
+## OrganizationMemberController
+
+**Controller**: `App\Http\Controllers\Organization\OrganizationMemberController`
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| GET | `organizations/{organization}/members` | organizations.members.index | web, auth, verified |
+| PUT | `organizations/{organization}/members/{member}` | organizations.members.update | web, auth, verified |
+| DELETE | `organizations/{organization}/members/{member}` | organizations.members.destroy | web, auth, verified |
+
+
+## OrganizationInvitationController
+
+**Controller**: `App\Http\Controllers\Organization\OrganizationInvitationController`
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| POST | `organizations/{organization}/invitations` | organizations.invitations.store | web, auth, verified |
+| DELETE | `organizations/{organization}/invitations/{invitation}` | organizations.invitations.destroy | web, auth, verified |
+| PUT | `organizations/{organization}/invitations/{invitation}/resend` | organizations.invitations.resend | web, auth, verified |
+
+
+## OrganizationSwitchController
+
+**Controller**: `App\Http\Controllers\Organization\OrganizationSwitchController`
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| POST | `organizations/switch` | organizations.switch | web, auth, verified |
+
+
+## BillingDashboardController
+
+**Controller**: `App\Http\Controllers\Billing\BillingDashboardController`
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| GET | `billing` | billing.index | web, auth, verified, tenant |
+
+
+## CreditController
+
+**Controller**: `App\Http\Controllers\Billing\CreditController`
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| GET | `billing/credits` | billing.credits.index | web, auth, verified, tenant |
+| POST | `billing/credits/purchase` | billing.credits.purchase | web, auth, verified, tenant |
+| POST | `billing/credits/checkout/lemon-squeezy` | billing.credits.checkout.lemon-squeezy | web, auth, verified, tenant |
+
+
+## InvoiceController
+
+**Controller**: `App\Http\Controllers\Billing\InvoiceController`
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| GET | `billing/invoices` | billing.invoices.index | web, auth, verified, tenant |
+| GET | `billing/invoices/{invoice}` | billing.invoices.download | web, auth, verified, tenant |
+
+
+## StripeWebhookController
+
+**Controller**: `App\Http\Controllers\Billing\StripeWebhookController`
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| POST | `webhooks/stripe` | webhooks.stripe | web (CSRF excluded) |
+
+## Lemon Squeezy Webhook (lemonsqueezy/laravel)
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| POST | `lemon-squeezy/webhook` | lemon-squeezy.webhook | web (CSRF excluded) |
 

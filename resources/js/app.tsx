@@ -1,9 +1,9 @@
 import '../css/app.css';
 import './echo';
 
-import type { ReactNode } from 'react';
 import { createInertiaApp } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
+import type { ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { CookieConsentBanner } from './components/cookie-consent-banner';
 import { initializeTheme } from './hooks/use-appearance';

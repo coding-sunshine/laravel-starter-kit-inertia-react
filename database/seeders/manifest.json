@@ -384,6 +384,168 @@
             "data_files": [
                 "activity_log_injected_models.json"
             ]
+        },
+        {
+            "name": "ActivityLogInjectedModelSeeder",
+            "category": "development",
+            "description": "Seeds ActivityLogInjectedModel data",
+            "dependencies": [],
+            "data_files": [
+                "activity_log_injected_models.json"
+            ]
+        },
+        {
+            "name": "BillingMetricSeeder",
+            "category": "development",
+            "description": "Seeds BillingMetric data",
+            "dependencies": [],
+            "data_files": [
+                "billing_metrics.json"
+            ]
+        },
+        {
+            "name": "CreditSeeder",
+            "category": "development",
+            "description": "Seeds Credit data",
+            "dependencies": [],
+            "data_files": [
+                "credits.json"
+            ]
+        },
+        {
+            "name": "CreditPackSeeder",
+            "category": "development",
+            "description": "Seeds CreditPack data",
+            "dependencies": [],
+            "data_files": [
+                "credit_packs.json"
+            ]
+        },
+        {
+            "name": "GatewayProductSeeder",
+            "category": "development",
+            "description": "Seeds GatewayProduct data",
+            "dependencies": [],
+            "data_files": [
+                "gateway_products.json"
+            ]
+        },
+        {
+            "name": "InvoiceSeeder",
+            "category": "development",
+            "description": "Seeds Invoice data",
+            "dependencies": [],
+            "data_files": [
+                "invoices.json"
+            ]
+        },
+        {
+            "name": "PaymentGatewaySeeder",
+            "category": "development",
+            "description": "Seeds PaymentGateway data",
+            "dependencies": [],
+            "data_files": [
+                "payment_gateways.json"
+            ]
+        },
+        {
+            "name": "PlanSeeder",
+            "category": "development",
+            "description": "Seeds Plan data",
+            "dependencies": [],
+            "data_files": [
+                "plans.json"
+            ]
+        },
+        {
+            "name": "RefundRequestSeeder",
+            "category": "development",
+            "description": "Seeds RefundRequest data",
+            "dependencies": [],
+            "data_files": [
+                "refund_requests.json"
+            ]
+        },
+        {
+            "name": "SubscriptionSeeder",
+            "category": "development",
+            "description": "Seeds Subscription data",
+            "dependencies": [],
+            "data_files": [
+                "subscriptions.json"
+            ]
+        },
+        {
+            "name": "WebhookLogSeeder",
+            "category": "development",
+            "description": "Seeds WebhookLog data",
+            "dependencies": [],
+            "data_files": [
+                "webhook_logs.json"
+            ]
+        },
+        {
+            "name": "OrganizationSeeder",
+            "category": "development",
+            "description": "Seeds Organization data",
+            "dependencies": [],
+            "data_files": [
+                "organizations.json"
+            ]
+        },
+        {
+            "name": "OrganizationDomainSeeder",
+            "category": "development",
+            "description": "Seeds OrganizationDomain data",
+            "dependencies": [],
+            "data_files": [
+                "organization_domains.json"
+            ]
+        },
+        {
+            "name": "OrganizationInvitationSeeder",
+            "category": "development",
+            "description": "Seeds OrganizationInvitation data",
+            "dependencies": [],
+            "data_files": [
+                "organization_invitations.json"
+            ]
+        },
+        {
+            "name": "ActivityLogInjectedModelSeeder",
+            "category": "development",
+            "description": "Seeds ActivityLogInjectedModel data",
+            "dependencies": [],
+            "data_files": [
+                "activity_log_injected_models.json"
+            ]
+        },
+        {
+            "name": "ActivityLogInjectedModelSeeder",
+            "category": "development",
+            "description": "Seeds ActivityLogInjectedModel data",
+            "dependencies": [],
+            "data_files": [
+                "activity_log_injected_models.json"
+            ]
+        },
+        {
+            "name": "ActivityLogInjectedModelSeeder",
+            "category": "development",
+            "description": "Seeds ActivityLogInjectedModel data",
+            "dependencies": [],
+            "data_files": [
+                "activity_log_injected_models.json"
+            ]
+        },
+        {
+            "name": "ActivityLogInjectedModelSeeder",
+            "category": "development",
+            "description": "Seeds ActivityLogInjectedModel data",
+            "dependencies": [],
+            "data_files": [
+                "activity_log_injected_models.json"
+            ]
         }
     ],
     "categories": {

@@ -45,14 +45,11 @@ final class GamificationSeeder extends Seeder
         ];
 
         foreach ($achievements as $attrs) {
-            Achievement::firstOrCreate(
-                ['name' => $attrs['name']],
-                [
-                    'description' => $attrs['description'],
-                    'is_secret' => $attrs['is_secret'],
-                    'image' => $attrs['image'],
-                ]
-            );
+            Achievement::query()->firstOrCreate(['name' => $attrs['name']], [
+                'description' => $attrs['description'],
+                'is_secret' => $attrs['is_secret'],
+                'image' => $attrs['image'],
+            ]);
         }
     }
 }

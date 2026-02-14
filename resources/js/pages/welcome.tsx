@@ -837,8 +837,8 @@ export default function Welcome() {
                             <div className="absolute inset-0 rounded-t-lg shadow-[inset_0px_0px_0px_1px_rgba(26,26,0,0.16)] lg:rounded-t-none lg:rounded-r-lg dark:shadow-[inset_0px_0px_0px_1px_#fffaed2d]" />
                         </div>
                     </main>
-                        </div>
-                <footer className="mt-8 w-full max-w-[335px] border-t border-[#e3e3e0] pt-4 text-center text-sm text-[#706f6c] dark:border-[#3E3E3A] dark:text-[#A1A09A] lg:max-w-4xl">
+                </div>
+                <footer className="mt-8 w-full max-w-[335px] border-t border-[#e3e3e0] pt-4 text-center text-sm text-[#706f6c] lg:max-w-4xl dark:border-[#3E3E3A] dark:text-[#A1A09A]">
                     <Link href={legalTerms().url} className="hover:underline">
                         Terms of Service
                     </Link>

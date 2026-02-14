@@ -1,7 +1,7 @@
-import { router, usePage } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { accept } from '@/routes/cookie-consent';
 import { type SharedData } from '@/types';
+import { router, usePage } from '@inertiajs/react';
 
 interface CookieConsentProps {
     accepted: boolean;
@@ -10,7 +10,9 @@ interface CookieConsentProps {
 }
 
 export function CookieConsentBanner() {
-    const { props } = usePage<SharedData & { cookieConsent: CookieConsentProps | null }>();
+    const { props } = usePage<
+        SharedData & { cookieConsent: CookieConsentProps | null }
+    >();
     const { cookieConsent, features } = props;
 
     if (!features?.cookie_consent || !cookieConsent || cookieConsent.accepted) {
@@ -23,7 +25,7 @@ export function CookieConsentBanner() {
 
     return (
         <div
-            className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/95 p-4 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/80"
+            className="fixed right-0 bottom-0 left-0 z-50 border-t border-border bg-background/95 p-4 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/80"
             role="dialog"
             aria-label="Cookie consent"
         >

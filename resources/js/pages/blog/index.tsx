@@ -1,7 +1,7 @@
 import AppLogoIcon from '@/components/app-logo-icon';
 import TextLink from '@/components/text-link';
 import { home } from '@/routes';
-import { index as blogIndex, show as blogShow } from '@/routes/blog';
+import { show as blogShow } from '@/routes/blog';
 import { Head, Link } from '@inertiajs/react';
 
 interface Author {
@@ -64,39 +64,42 @@ export default function BlogIndex({ posts }: Props) {
                             </p>
                         </div>
                     ) : (
-                    <ul className="space-y-6">
-                        {posts.data.map((post) => (
-                            <li key={post.id}>
-                                <Link
-                                    href={blogShow({ post: post.slug }).url}
-                                    className="block rounded-lg border bg-card p-4 transition-colors hover:bg-muted/50"
-                                >
-                                    <h2 className="font-medium text-foreground">
-                                        {post.title}
-                                    </h2>
-                                    {post.excerpt && (
-                                        <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
-                                            {post.excerpt}
+                        <ul className="space-y-6">
+                            {posts.data.map((post) => (
+                                <li key={post.id}>
+                                    <Link
+                                        href={blogShow({ post: post.slug }).url}
+                                        className="block rounded-lg border bg-card p-4 transition-colors hover:bg-muted/50"
+                                    >
+                                        <h2 className="font-medium text-foreground">
+                                            {post.title}
+                                        </h2>
+                                        {post.excerpt && (
+                                            <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+                                                {post.excerpt}
+                                            </p>
+                                        )}
+                                        <p className="mt-2 text-xs text-muted-foreground">
+                                            {post.published_at
+                                                ? new Date(
+                                                      post.published_at,
+                                                  ).toLocaleDateString(
+                                                      'en-CA',
+                                                      {
+                                                          year: 'numeric',
+                                                          month: 'long',
+                                                          day: 'numeric',
+                                                      },
+                                                  )
+                                                : null}
+                                            {post.author
+                                                ? ` · ${post.author.name}`
+                                                : null}
                                         </p>
-                                    )}
-                                    <p className="mt-2 text-xs text-muted-foreground">
-                                        {post.published_at
-                                            ? new Date(
-                                                  post.published_at,
-                                              ).toLocaleDateString('en-CA', {
-                                                  year: 'numeric',
-                                                  month: 'long',
-                                                  day: 'numeric',
-                                              })
-                                            : null}
-                                        {post.author
-                                            ? ` · ${post.author.name}`
-                                            : null}
-                                    </p>
-                                </Link>
-                            </li>
-                        ))}
-                    </ul>
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
                     )}
                     {(posts.prev_page_url || posts.next_page_url) && (
                         <nav

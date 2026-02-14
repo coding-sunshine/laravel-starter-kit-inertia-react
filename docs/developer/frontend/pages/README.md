@@ -30,5 +30,15 @@ Inertia pages are React components that receive data from Laravel controllers. T
 | [legal/privacy](./legal-privacy.md) | filament.exports.download, filament.imports.failed-rows.download | ✅ |
 | [legal/terms](./legal-terms.md) | filament.exports.download, filament.imports.failed-rows.download | ✅ |
 | [settings/achievements](docs/developer/frontend/pages/settings/achievements.md) | achievements.show | ✅ |
+| [invitations/accept](./invitations/accept.md) | invitations.show, invitations.accept | ✅ |
+| [organizations/create](./organizations/create.md) | organizations.index, organizations.create | ✅ |
+| [organizations/index](./organizations/index.md) | organizations.index, organizations.create | ✅ |
+| [organizations/members](./organizations/members.md) | organizations.members.index, organizations.members.update | ✅ |
+| [organizations/show](./organizations/show.md) | organizations.index, organizations.create | ✅ |
+| [billing/credits](./billing/credits.md) | billing.credits.index, billing.credits.purchase | ✅ |
+| [billing/index](./billing/index.md) | billing.index | ✅ |
+| [billing/invoices](./billing/invoices.md) | billing.invoices.index, billing.invoices.download | ✅ |
+| [pricing](./pricing.md) | pricing | ✅ |
+| [terms/accept](./terms-accept.md) | terms.accept, terms.accept.store | ✅ |
 
 

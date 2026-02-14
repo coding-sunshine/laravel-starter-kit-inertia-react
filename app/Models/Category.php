@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToOrganization;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -13,6 +14,7 @@ use Spatie\Sluggable\SlugOptions;
 
 /**
  * @property int $id
+ * @property int|null $organization_id
  * @property string $name
  * @property string $slug
  * @property string $type
@@ -24,6 +26,7 @@ use Spatie\Sluggable\SlugOptions;
  */
 final class Category extends Model
 {
+    use BelongsToOrganization;
     use HasFactory;
     use HasSlug;
     use NodeTrait;

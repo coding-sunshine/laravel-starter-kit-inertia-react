@@ -33,9 +33,7 @@ final class HelpCenterController
 
     public function show(HelpArticle $helpArticle): Response
     {
-        if (! $helpArticle->is_published) {
-            abort(404);
-        }
+        abort_unless($helpArticle->is_published, 404);
 
         $helpArticle->increment('views');
         $helpArticle->load('tags');

@@ -8,7 +8,6 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Gate;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
-use Tests\TestCase;
 
 beforeEach(function (): void {
     $this->seed(RolesAndPermissionsSeeder::class);
@@ -34,7 +33,6 @@ it('sync-routes command runs successfully', function (): void {
 });
 
 it('user with bypass-permissions passes gate check for arbitrary ability', function (): void {
-    /** @var TestCase $this */
     $user = User::factory()->withoutTwoFactor()->create();
     $user->givePermissionTo('bypass-permissions');
 
@@ -42,7 +40,6 @@ it('user with bypass-permissions passes gate check for arbitrary ability', funct
 });
 
 it('user without bypass-permissions does not pass arbitrary ability', function (): void {
-    /** @var TestCase $this */
     $user = User::factory()->withoutTwoFactor()->create();
     $user->assignRole('user');
 
@@ -63,7 +60,6 @@ it('permission:health exits 0 when super-admin role exists', function (): void {
 });
 
 it('last super-admin cannot be deleted', function (): void {
-    /** @var TestCase $this */
     $superAdminUser = User::factory()->withoutTwoFactor()->create();
     $superAdminUser->assignRole('super-admin');
 

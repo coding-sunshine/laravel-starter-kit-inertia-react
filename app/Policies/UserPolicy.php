@@ -13,14 +13,14 @@ final class UserPolicy
 
     public function viewAny(User $user): bool
     {
-        if (app('impersonate')->isImpersonating()) {
+        if (resolve('impersonate')->isImpersonating()) {
             return true;
         }
 
         return $user->can('view users');
     }
 
-    public function view(User $actor, User $model): bool
+    public function view(User $actor): bool
     {
         return $actor->can('view users');
     }
@@ -30,7 +30,7 @@ final class UserPolicy
         return $user->can('create users');
     }
 
-    public function update(User $actor, User $model): bool
+    public function update(User $actor): bool
     {
         return $actor->can('edit users');
     }

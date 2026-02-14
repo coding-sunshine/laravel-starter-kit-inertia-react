@@ -79,7 +79,7 @@ Run the test suite to ensure everything is configured correctly:
 composer test
 ```
 
-You should see 100% test coverage and all quality checks passing.
+You should see all tests passing. For the full suite (coverage, type coverage, lint, static analysis), run `composer test:full`.
 
 ## Available Tooling
 
@@ -92,10 +92,12 @@ You should see 100% test coverage and all quality checks passing.
 - `composer test:lint` - Dry-run mode for CI/CD pipelines
 
 ### Testing
+- `composer test` - Fast test suite (Pest in parallel, compact output); used by pre-commit
+- `composer test:quick` - Alias for the same fast run
+- `composer test:full` - Full suite: type coverage, unit tests with coverage, lint, static analysis (use in CI or before release)
 - `composer test:type-coverage` - Ensures 100% type coverage with Pest
 - `composer test:types` - Runs PHPStan at level 9 (maximum strictness)
 - `composer test:unit` - Runs Pest tests with 100% code coverage requirement
-- `composer test` - Runs the complete test suite (type coverage, unit tests, linting, static analysis)
 
 ### Maintenance
 - `composer update:requirements` - Updates all PHP and NPM dependencies to latest versions

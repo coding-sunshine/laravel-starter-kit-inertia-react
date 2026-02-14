@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToOrganization;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Mattiverse\Userstamps\Traits\Userstamps;
@@ -11,8 +12,9 @@ use Mattiverse\Userstamps\Traits\Userstamps;
 final class ContactSubmission extends Model
 {
     /** @use HasFactory<\Database\Factories\ContactSubmissionFactory> */
-    use HasFactory;
+    use BelongsToOrganization;
 
+    use HasFactory;
     use Userstamps;
 
     /**

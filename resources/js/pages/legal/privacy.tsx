@@ -21,43 +21,64 @@ export default function LegalPrivacy() {
                     </div>
                 </header>
                 <main className="mx-auto max-w-3xl px-4 py-8">
-                    <h1 className="mb-2 text-2xl font-semibold">Privacy Policy</h1>
+                    <h1 className="mb-2 text-2xl font-semibold">
+                        Privacy Policy
+                    </h1>
                     <p className="mb-6 text-sm text-muted-foreground">
-                        Last updated: {new Date().toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' })}
+                        Last updated:{' '}
+                        {new Date().toLocaleDateString('en-CA', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                        })}
                     </p>
                     <div className="prose prose-neutral dark:prose-invert max-w-none">
                         <p>
-                            This privacy policy describes how we collect, use, and protect your
-                            information when you use this application.
+                            This privacy policy describes how we collect, use,
+                            and protect your information when you use this
+                            application.
                         </p>
-                        <h2 className="mt-6 text-lg font-medium">1. Information we collect</h2>
+                        <h2 className="mt-6 text-lg font-medium">
+                            1. Information we collect
+                        </h2>
                         <p>
-                            We collect information you provide when registering (such as name and
-                            email), usage data, and technical data (e.g. IP address, browser type)
-                            necessary to operate the service.
+                            We collect information you provide when registering
+                            (such as name and email), usage data, and technical
+                            data (e.g. IP address, browser type) necessary to
+                            operate the service.
                         </p>
-                        <h2 className="mt-6 text-lg font-medium">2. How we use your information</h2>
+                        <h2 className="mt-6 text-lg font-medium">
+                            2. How we use your information
+                        </h2>
                         <p>
-                            We use your information to provide and improve the service, to
-                            communicate with you, and to comply with legal obligations. We do not
-                            sell your personal data.
+                            We use your information to provide and improve the
+                            service, to communicate with you, and to comply with
+                            legal obligations. We do not sell your personal
+                            data.
                         </p>
-                        <h2 className="mt-6 text-lg font-medium">3. Data retention and your rights</h2>
+                        <h2 className="mt-6 text-lg font-medium">
+                            3. Data retention and your rights
+                        </h2>
                         <p>
-                            We retain your data for as long as your account is active or as needed
-                            for legal purposes. You may request access, correction, export, or
-                            deletion of your data through your account settings or by contacting us.
+                            We retain your data for as long as your account is
+                            active or as needed for legal purposes. You may
+                            request access, correction, export, or deletion of
+                            your data through your account settings or by
+                            contacting us.
                         </p>
-                        <h2 className="mt-6 text-lg font-medium">4. Cookies and similar technologies</h2>
+                        <h2 className="mt-6 text-lg font-medium">
+                            4. Cookies and similar technologies
+                        </h2>
                         <p>
-                            We use cookies and similar technologies for authentication, preferences,
-                            and analytics. You can manage cookie preferences in your browser or
-                            through our cookie consent when applicable.
+                            We use cookies and similar technologies for
+                            authentication, preferences, and analytics. You can
+                            manage cookie preferences in your browser or through
+                            our cookie consent when applicable.
                         </p>
                         <h2 className="mt-6 text-lg font-medium">5. Contact</h2>
                         <p>
-                            For privacy-related questions or to exercise your rights, please
-                            contact us through the contact page.
+                            For privacy-related questions or to exercise your
+                            rights, please contact us through the contact page.
                         </p>
                     </div>
                 </main>

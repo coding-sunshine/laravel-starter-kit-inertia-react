@@ -25,8 +25,6 @@ final class HorizonServiceProvider extends HorizonApplicationServiceProvider
      */
     protected function gate(): void
     {
-        Gate::define('viewHorizon', function (?User $user = null): bool {
-            return $user !== null && $user->can('access admin panel');
-        });
+        Gate::define('viewHorizon', fn (?User $user = null): bool => $user instanceof User && $user->can('access admin panel'));
     }
 }

@@ -57,7 +57,7 @@ test('taking impersonation logs activity with impersonator as causer', function 
 
     $this->actingAs($superAdmin);
 
-    app(ImpersonateManager::class)->take($superAdmin, $target, 'web');
+    resolve(ImpersonateManager::class)->take($superAdmin, $target, 'web');
 
     $activity = Activity::query()
         ->where('description', ActivityType::ImpersonationStarted->value)
@@ -81,10 +81,10 @@ test('leaving impersonation logs activity with impersonator as causer', function
     $target->assignRole('user');
 
     $this->actingAs($superAdmin);
-    app(ImpersonateManager::class)->take($superAdmin, $target, 'web');
+    resolve(ImpersonateManager::class)->take($superAdmin, $target, 'web');
 
     $this->actingAs($target);
-    app(ImpersonateManager::class)->leave();
+    resolve(ImpersonateManager::class)->leave();
 
     $activity = Activity::query()
         ->where('description', ActivityType::ImpersonationEnded->value)

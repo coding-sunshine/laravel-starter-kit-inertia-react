@@ -58,7 +58,7 @@ final class RolesTable
                         ]);
                         $permissionNames = $record->permissions->pluck('name')->all();
                         $newRole->syncPermissions($permissionNames);
-                        app(ActivityLogRbac::class)->logPermissionsAssigned($newRole, $permissionNames);
+                        resolve(ActivityLogRbac::class)->logPermissionsAssigned($newRole, $permissionNames);
                         Notification::make()
                             ->title('Role duplicated')
                             ->body("Created \"{$name}\" with same permissions.")

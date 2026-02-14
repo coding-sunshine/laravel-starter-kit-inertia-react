@@ -8,9 +8,9 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    public function up()
+    public function up(): void
     {
-        Schema::create('feature_segments', function (Blueprint $table) {
+        Schema::create('feature_segments', function (Blueprint $table): void {
             $table->id();
             $table->string('feature');
             $table->string('scope');

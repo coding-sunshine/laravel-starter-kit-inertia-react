@@ -26,8 +26,7 @@ final readonly class ContactSubmissionController
 
         $action->handle($data);
 
-        return redirect()
-            ->route('contact.create')
+        return to_route('contact.create')
             ->with('status', 'Thank you. Your message has been sent.');
     }
 }

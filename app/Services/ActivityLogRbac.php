@@ -33,7 +33,7 @@ final readonly class ActivityLogRbac
         }
 
         $causer = $this->resolveCauser();
-        if ($causer === null) {
+        if (! $causer instanceof Authenticatable) {
             return;
         }
 
@@ -54,7 +54,7 @@ final readonly class ActivityLogRbac
         }
 
         $causer = $this->resolveCauser();
-        if ($causer === null) {
+        if (! $causer instanceof Authenticatable) {
             return;
         }
 
@@ -72,7 +72,7 @@ final readonly class ActivityLogRbac
         }
 
         $causer = $this->resolveCauser();
-        if ($causer === null) {
+        if (! $causer instanceof Authenticatable) {
             return;
         }
 
@@ -93,7 +93,7 @@ final readonly class ActivityLogRbac
         }
 
         $causer = $this->resolveCauser();
-        if ($causer === null) {
+        if (! $causer instanceof Authenticatable) {
             return;
         }
 

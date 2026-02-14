@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
 import { useCan } from '@/hooks/use-can';
+import type { ReactNode } from 'react';
 
 interface CanProps {
     /** Permission name, or array of names (children render if user has any). */

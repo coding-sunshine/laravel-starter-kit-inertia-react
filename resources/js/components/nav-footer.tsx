@@ -7,8 +7,8 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
-import { type ComponentPropsWithoutRef } from 'react';
 import { Link } from '@inertiajs/react';
+import { type ComponentPropsWithoutRef } from 'react';
 
 function isExternalHref(href: string): boolean {
     return href.startsWith('http://') || href.startsWith('https://');

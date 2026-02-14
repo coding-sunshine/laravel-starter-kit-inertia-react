@@ -17,7 +17,7 @@ final class AchievementsController extends Controller
         $level = max(1, $user->getLevel());
         $points = $user->getPoints();
         $nextLevelAt = $user->experience()->exists() ? $user->nextLevelAt(showAsPercentage: true) : 0;
-        $achievements = $user->getUserAchievements()->map(fn ($a) => [
+        $achievements = $user->getUserAchievements()->map(fn ($a): array => [
             'id' => $a->id,
             'name' => $a->name,
             'description' => $a->description,

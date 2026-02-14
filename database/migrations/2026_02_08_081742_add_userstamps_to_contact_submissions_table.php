@@ -10,7 +10,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('contact_submissions', function (Blueprint $table) {
+        Schema::table('contact_submissions', function (Blueprint $table): void {
             $table->foreignId('created_by')->nullable()->after('status')->constrained('users')->nullOnDelete();
             $table->foreignId('updated_by')->nullable()->after('created_by')->constrained('users')->nullOnDelete();
         });
@@ -18,7 +18,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('contact_submissions', function (Blueprint $table) {
+        Schema::table('contact_submissions', function (Blueprint $table): void {
             $table->dropForeign(['created_by']);
             $table->dropForeign(['updated_by']);
         });

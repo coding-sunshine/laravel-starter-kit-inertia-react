@@ -92,7 +92,10 @@ final class SyncRoutePermissionsCommand extends Command
 
         foreach (RouteFacade::getRoutes() as $route) {
             $name = $route->getName();
-            if (! is_string($name) || $name === '') {
+            if (! is_string($name)) {
+                continue;
+            }
+            if ($name === '') {
                 continue;
             }
             if (! $this->isApplicationRoute($route)) {

@@ -10,7 +10,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('achievement_user', function (Blueprint $table) {
+        Schema::create('achievement_user', function (Blueprint $table): void {
             $table->id();
             $table->foreignId(column: config('level-up.user.foreign_key'))->constrained(config('level-up.user.users_table'));
             $table->foreignId(column: 'achievement_id')->constrained();

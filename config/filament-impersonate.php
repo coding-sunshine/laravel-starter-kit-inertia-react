@@ -13,7 +13,7 @@ return [
     'leave_middleware' => env('FILAMENT_IMPERSONATE_LEAVE_MIDDLEWARE', 'web'),
 
     // Add a prefix for routes - Useful for apps installed with a subdirectory
-    'route_prefix' => env('FILAMENT_IMPERSONATE_ROUTE_PREFIX', null),
+    'route_prefix' => env('FILAMENT_IMPERSONATE_ROUTE_PREFIX'),
 
     'allow_soft_deleted' => env('FILAMENT_IMPERSONATE_ALLOW_SOFT_DELETED', false),
 

@@ -31,5 +31,11 @@ All Controllers:
 | [CookieConsentController](./CookieConsentController.md) | N/A | ✅ |
 | [PersonalDataExportController](./PersonalDataExportController.md) | N/A | ✅ |
 | [OnboardingController](./OnboardingController.md) | N/A | ✅ |
+| [InvitationAcceptController](./invitationacceptcontroller.md) | N/A | ✅ |
+| [OrganizationController](./organizationcontroller.md) | N/A | ✅ |
+| [OrganizationInvitationController](./organizationinvitationcontroller.md) | N/A | ✅ |
+| [OrganizationMemberController](./organizationmembercontroller.md) | N/A | ✅ |
+| [OrganizationSwitchController](./organizationswitchcontroller.md) | N/A | ✅ |
+| [TermsAcceptController](./TermsAcceptController.md) | N/A | ✅ |
 
 

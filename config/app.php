@@ -137,6 +137,6 @@ return [
     |
     */
 
-    'ip_whitelist' => array_filter(array_map('trim', explode(',', (string) env('IP_WHITELIST', '')))),
+    'ip_whitelist' => array_filter(array_map(trim(...), explode(',', (string) env('IP_WHITELIST', '')))),
 
 ];

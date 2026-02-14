@@ -40,7 +40,7 @@ final class ChangelogEntryForm
 
                         Select::make('type')
                             ->label('Type')
-                            ->options(collect(ChangelogType::cases())->mapWithKeys(fn (ChangelogType $t) => [$t->value => $t->name])->all())
+                            ->options(collect(ChangelogType::cases())->mapWithKeys(fn (ChangelogType $t): array => [$t->value => $t->name])->all())
                             ->default(ChangelogType::Added)
                             ->required(),
 

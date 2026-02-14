@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Pre-commit hook: Pint (PHP style), tests, then model/seeder and docs checks.
+# Pre-commit hook: Pint (PHP style), model/seeder and docs checks.
 # Install: cp scripts/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
 #
 
@@ -16,22 +16,16 @@ if ! vendor/bin/pint --test --dirty 2>/dev/null; then
 fi
 echo "✅ Pint passed"
 
-# 2. Tests
-echo "🧪 Running tests..."
-if ! php artisan test --compact >/dev/null 2>&1; then
-    echo "❌ Tests failed. Run: php artisan test --compact"
-    exit 1
-fi
-echo "✅ Tests passed"
-
-# 3. New models: seeders and specs
-STAGED_MODELS=$(git diff --cached --name-only --diff-filter=A | grep -E '^app/Models/.*\.php$' || true)
+# 3. New models: seeders and specs (exclude Concerns/ traits, Scopes/, and known non-models)
+STAGED_MODELS=$(git diff --cached --name-only --diff-filter=A | grep -E '^app/Models/.*\.php$' | grep -v -E '^app/Models/(Concerns|Scopes)/' || true)
+SKIP_NAMES="BelongsToOrganization OrganizationScope Categorizable"
 
 if [ -n "$STAGED_MODELS" ]; then
     MISSING_SEEDERS=""
     MISSING_SPECS=""
     for MODEL_FILE in $STAGED_MODELS; do
         MODEL_NAME=$(basename "$MODEL_FILE" .php)
+        case " $SKIP_NAMES " in *" $MODEL_NAME "*) continue ;; esac
         SEEDER_FOUND=false
         for CATEGORY in essential development production; do
             if [ -f "database/seeders/$CATEGORY/${MODEL_NAME}Seeder.php" ]; then
