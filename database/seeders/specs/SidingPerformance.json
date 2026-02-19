@@ -1,0 +1,13 @@
+{
+    "model": "SidingPerformance",
+    "table": "siding_performances",
+    "fields": [],
+    "relationships": {
+        "siding": {
+            "type": "belongsTo",
+            "model": "Siding"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

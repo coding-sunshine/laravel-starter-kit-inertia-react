@@ -1,0 +1,147 @@
+import InputError from '@/components/input-error';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import AppLayout from '@/layouts/app-layout';
+import { type BreadcrumbItem } from '@/types';
+import { Head, router, usePage } from '@inertiajs/react';
+
+interface Rake {
+    id: number;
+    rake_number: string;
+    siding_id: number;
+}
+
+interface Siding {
+    id: number;
+    name: string;
+    code: string;
+}
+
+interface Props {
+    rakes: Rake[];
+    sidings: Siding[];
+    preselectedRakeId: number | null;
+}
+
+export default function RailwayReceiptsCreate({
+    rakes,
+    sidings,
+    preselectedRakeId,
+}: Props) {
+    const { errors } = usePage<{ errors?: Record<string, string> }>().props;
+    const breadcrumbs: BreadcrumbItem[] = [
+        { title: 'Dashboard', href: '/dashboard' },
+        { title: 'Railway Receipts', href: '/railway-receipts' },
+        { title: 'Add RR document', href: '/railway-receipts/create' },
+    ];
+
+    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const form = e.currentTarget;
+        const formData = new FormData(form);
+        router.post('/railway-receipts', formData, {
+            forceFormData: true,
+        });
+    };
+
+    return (
+        <AppLayout breadcrumbs={breadcrumbs}>
+            <Head title="Add RR document" />
+            <div className="space-y-6">
+                <h2 className="text-lg font-medium">Add RR document</h2>
+                <form
+                    onSubmit={handleSubmit}
+                    className="max-w-md space-y-4"
+                    encType="multipart/form-data"
+                >
+                    <div className="grid gap-2">
+                        <Label htmlFor="rake_id">Rake *</Label>
+                        <select
+                            id="rake_id"
+                            name="rake_id"
+                            required
+                            defaultValue={preselectedRakeId ?? ''}
+                            className="rounded-md border border-input bg-background px-4 py-2.5 text-sm"
+                        >
+                            <option value="">Select rake</option>
+                            {rakes.map((r) => (
+                                <option key={r.id} value={r.id}>
+                                    {r.rake_number}
+                                </option>
+                            ))}
+                        </select>
+                        <InputError message={errors?.rake_id} />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="rr_number">RR number *</Label>
+                        <Input
+                            id="rr_number"
+                            name="rr_number"
+                            required
+                            className="text-sm"
+                        />
+                        <InputError message={errors?.rr_number} />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="rr_received_date">RR received date *</Label>
+                        <Input
+                            id="rr_received_date"
+                            name="rr_received_date"
+                            type="date"
+                            required
+                            className="text-sm"
+                        />
+                        <InputError message={errors?.rr_received_date} />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="rr_weight_mt">Weight (MT)</Label>
+                        <Input
+                            id="rr_weight_mt"
+                            name="rr_weight_mt"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            className="text-sm"
+                        />
+                        <InputError message={errors?.rr_weight_mt} />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="document_status">Status</Label>
+                        <select
+                            id="document_status"
+                            name="document_status"
+                            className="rounded-md border border-input bg-background px-4 py-2.5 text-sm"
+                        >
+                            <option value="received">Received</option>
+                            <option value="verified">Verified</option>
+                            <option value="discrepancy">Discrepancy</option>
+                        </select>
+                        <InputError message={errors?.document_status} />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="pdf">PDF (optional)</Label>
+                        <Input
+                            id="pdf"
+                            name="pdf"
+                            type="file"
+                            accept=".pdf"
+                            className="text-sm"
+                        />
+                        <InputError message={errors?.pdf} />
+                    </div>
+                    <div className="flex gap-2">
+                        <Button type="submit">Save</Button>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => router.get('/railway-receipts')}
+                        >
+                            Cancel
+                        </Button>
+                    </div>
+                </form>
+            </div>
+        </AppLayout>
+    );
+}

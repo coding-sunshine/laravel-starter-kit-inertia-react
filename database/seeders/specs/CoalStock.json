@@ -1,0 +1,64 @@
+{
+    "model": "CoalStock",
+    "table": "coal_stock",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "siding_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "opening_balance_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "receipt_quantity_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "dispatch_quantity_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "closing_balance_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "as_of_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "remarks": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "siding": {
+            "type": "belongsTo",
+            "model": "Siding"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

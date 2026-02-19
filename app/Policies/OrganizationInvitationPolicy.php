@@ -13,8 +13,17 @@ use function setPermissionsTeamId;
 
 final class OrganizationInvitationPolicy
 {
-    public function viewAny(User $user, Organization $organization): bool
+    /**
+     * When called with only the user (e.g. by Filament for sidebar), allow if the user
+     * can access the admin panel. When called with organization (tenant context),
+     * allow if the user belongs to that organization.
+     */
+    public function viewAny(User $user, ?Organization $organization = null): bool
     {
+        if ($organization === null) {
+            return $user->can('access admin panel');
+        }
+
         return $user->belongsToOrganization($organization->id);
     }
 

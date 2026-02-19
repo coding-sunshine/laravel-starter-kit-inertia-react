@@ -1,0 +1,116 @@
+{
+    "model": "VehicleUnload",
+    "table": "vehicle_unload",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "siding_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "vehicle_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "jimms_challan_number": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "arrival_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "unload_start_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "unload_end_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "mine_weight_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "weighment_weight_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "variance_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "state": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "remarks": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "shift": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "siding": {
+            "type": "belongsTo",
+            "model": "Siding"
+        },
+        "vehicle": {
+            "type": "belongsTo",
+            "model": "Vehicle"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "model": "CreatedBy"
+        },
+        "updatedBy": {
+            "type": "belongsTo",
+            "model": "UpdatedBy"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

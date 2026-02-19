@@ -17,7 +17,18 @@ return [
     |
     */
 
-    'default' => 'openai',
+    'default' => 'openrouter',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Chat model (OpenRouter)
+    |--------------------------------------------------------------------------
+    | Model used by the in-app AI chatbot. Use a free model id from
+    | https://openrouter.ai/collections/free-models (e.g. stepfun/step-3.5-flash:free).
+    | Override with AI_CHAT_MODEL in .env if the default is rate-limited.
+    */
+    'chat_model' => env('AI_CHAT_MODEL', 'stepfun/step-3.5-flash:free'),
+
     'default_for_images' => 'gemini',
     'default_for_audio' => 'openai',
     'default_for_transcription' => 'openai',

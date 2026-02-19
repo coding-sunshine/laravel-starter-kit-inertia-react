@@ -8,6 +8,7 @@ declare(strict_types=1);
  * after adding or changing routes.
  */
 
+use App\Http\Controllers\Alerts\AlertController;
 use App\Http\Controllers\Billing\BillingDashboardController;
 use App\Http\Controllers\Billing\CreditController;
 use App\Http\Controllers\Billing\InvoiceController;
@@ -16,11 +17,13 @@ use App\Http\Controllers\Billing\PricingController;
 use App\Http\Controllers\Billing\StripeWebhookController;
 use App\Http\Controllers\Blog\BlogController;
 use App\Http\Controllers\Changelog\ChangelogController;
+use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ContactSubmissionController;
 use App\Http\Controllers\CookieConsentController;
 use App\Http\Controllers\EnterpriseInquiryController;
 use App\Http\Controllers\HelpCenter\HelpCenterController;
 use App\Http\Controllers\HelpCenter\RateHelpArticleController;
+use App\Http\Controllers\Indents\IndentsController;
 use App\Http\Controllers\InvitationAcceptController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\OrganizationController;
@@ -28,6 +31,17 @@ use App\Http\Controllers\OrganizationInvitationController;
 use App\Http\Controllers\OrganizationMemberController;
 use App\Http\Controllers\OrganizationSwitchController;
 use App\Http\Controllers\PersonalDataExportController;
+use App\Http\Controllers\RailwayReceipts\PenaltyController;
+use App\Http\Controllers\RailwayReceipts\RrDocumentController;
+use App\Http\Controllers\Rakes\RakeGuardInspectionController;
+use App\Http\Controllers\Rakes\RakesController;
+use App\Http\Controllers\Rakes\RakeTxrController;
+use App\Http\Controllers\Rakes\RakeWeighmentController;
+use App\Http\Controllers\Reconciliation\PowerPlantReceiptController;
+use App\Http\Controllers\Reconciliation\ReconciliationController;
+use App\Http\Controllers\Reports\ReportsController;
+use App\Http\Controllers\RoadDispatch\VehicleArrivalController;
+use App\Http\Controllers\RoadDispatch\VehicleUnloadController;
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\Settings\AchievementsController;
 use App\Http\Controllers\TermsAcceptController;
@@ -123,7 +137,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('terms/accept', [TermsAcceptController::class, 'show'])->name('terms.accept');
     Route::post('terms/accept', [TermsAcceptController::class, 'store'])->name('terms.accept.store');
 
-    Route::get('dashboard', fn () => Inertia::render('dashboard'))->name('dashboard');
+    Route::get('dashboard', App\Http\Controllers\Dashboard\ExecutiveDashboardController::class)->name('dashboard');
 
     // Organizations (multi-tenancy; routes redirect to dashboard when tenancy disabled)
     Route::middleware('tenancy.enabled')->group(function (): void {
@@ -147,6 +161,51 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         Route::get('billing/invoices', [InvoiceController::class, 'index'])->name('billing.invoices.index');
         Route::get('billing/invoices/{invoice}', [InvoiceController::class, 'download'])->name('billing.invoices.download');
     });
+
+    // RRMCS Routes (Railway Rake Management Control System)
+    Route::get('rakes', [RakesController::class, 'index'])->name('rakes.index');
+    Route::get('rakes/{rake}', [RakesController::class, 'show'])->name('rakes.show');
+    Route::put('rakes/{rake}/txr', [RakeTxrController::class, 'update'])->name('rakes.txr.update');
+    Route::post('rakes/{rake}/weighments', [RakeWeighmentController::class, 'store'])->name('rakes.weighments.store');
+    Route::post('rakes/{rake}/guard-inspection', [RakeGuardInspectionController::class, 'store'])->name('rakes.guard-inspection.store');
+    Route::get('indents', [IndentsController::class, 'index'])->name('indents.index');
+
+    // Road Dispatch (vehicle arrivals and unloads)
+    Route::get('road-dispatch/arrivals', [VehicleArrivalController::class, 'index'])->name('road-dispatch.arrivals.index');
+    Route::get('road-dispatch/arrivals/create', [VehicleArrivalController::class, 'create'])->name('road-dispatch.arrivals.create');
+    Route::post('road-dispatch/arrivals', [VehicleArrivalController::class, 'store'])->name('road-dispatch.arrivals.store');
+    Route::get('road-dispatch/unloads', [VehicleUnloadController::class, 'index'])->name('road-dispatch.unloads.index');
+    Route::get('road-dispatch/unloads/create', [VehicleUnloadController::class, 'create'])->name('road-dispatch.unloads.create');
+    Route::post('road-dispatch/unloads', [VehicleUnloadController::class, 'store'])->name('road-dispatch.unloads.store');
+    Route::put('road-dispatch/unloads/{unload}/confirm', [VehicleUnloadController::class, 'confirm'])->name('road-dispatch.unloads.confirm');
+
+    // Railway Receipts (RR) and Penalties
+    Route::get('railway-receipts', [RrDocumentController::class, 'index'])->name('railway-receipts.index');
+    Route::get('railway-receipts/create', [RrDocumentController::class, 'create'])->name('railway-receipts.create');
+    Route::post('railway-receipts', [RrDocumentController::class, 'store'])->name('railway-receipts.store');
+    Route::get('railway-receipts/{rrDocument}', [RrDocumentController::class, 'show'])->name('railway-receipts.show');
+    Route::put('railway-receipts/{rrDocument}', [RrDocumentController::class, 'update'])->name('railway-receipts.update');
+    Route::get('penalties', [PenaltyController::class, 'index'])->name('penalties.index');
+
+    // Alerts
+    Route::get('alerts', [AlertController::class, 'index'])->name('alerts.index');
+    Route::put('alerts/{alert}/resolve', [AlertController::class, 'resolve'])->name('alerts.resolve');
+
+    // Reconciliation
+    Route::get('reconciliation', [ReconciliationController::class, 'index'])->name('reconciliation.index');
+    Route::get('reconciliation/{rake}', [ReconciliationController::class, 'show'])->name('reconciliation.show');
+    Route::get('reconciliation/power-plant-receipts', [PowerPlantReceiptController::class, 'index'])->name('reconciliation.power-plant-receipts.index');
+    Route::get('reconciliation/power-plant-receipts/create', [PowerPlantReceiptController::class, 'create'])->name('reconciliation.power-plant-receipts.create');
+    Route::post('reconciliation/power-plant-receipts', [PowerPlantReceiptController::class, 'store'])->name('reconciliation.power-plant-receipts.store');
+
+    // Reports
+    Route::get('reports', [ReportsController::class, 'index'])->name('reports.index');
+    Route::post('reports/generate', [ReportsController::class, 'generate'])->name('reports.generate');
+
+    // AI Chatbot
+    Route::get('chat/conversations', [ChatController::class, 'index'])->name('chat.conversations.index');
+    Route::get('chat/conversations/{id}', [ChatController::class, 'show'])->name('chat.conversations.show');
+    Route::post('chat', [ChatController::class, 'message'])->name('chat.message');
 
     Route::get('profile/export-pdf', App\Http\Controllers\ProfileExportPdfController::class)
         ->middleware('feature:profile_pdf_export')

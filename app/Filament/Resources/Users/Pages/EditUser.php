@@ -30,12 +30,20 @@ final class EditUser extends EditRecord
     private array $pendingTagNames = [];
 
     /**
+     * @var array<int, array<string, mixed>>
+     */
+    private array $pendingSidingsPivot = [];
+
+    /**
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
     public function mutateFormDataBeforeFill(array $data): array
     {
         $data['tag_names'] = $this->getRecord()->tags->pluck('name')->values()->all();
+        $data['sidings'] = $this->getRecord()->sidings->pluck('id')->values()->all();
+        $primary = $this->getRecord()->sidings()->wherePivot('is_primary', true)->first();
+        $data['primary_siding_id'] = $primary?->getKey();
 
         return $data;
     }
@@ -63,6 +71,17 @@ final class EditUser extends EditRecord
             fn ($v): bool => is_string($v) && $v !== ''
         ));
         unset($data['tag_names']);
+
+        $sidingIds = array_filter(array_map('intval', (array) ($data['sidings'] ?? [])));
+        $primaryId = isset($data['primary_siding_id']) ? (int) $data['primary_siding_id'] : null;
+        $this->pendingSidingsPivot = [];
+        foreach ($sidingIds as $id) {
+            $this->pendingSidingsPivot[$id] = [
+                'is_primary' => $primaryId === $id,
+                'assigned_at' => now(),
+            ];
+        }
+        unset($data['sidings'], $data['primary_siding_id']);
 
         $user = $this->getRecord();
         if (! $user->isLastSuperAdmin() || ! $user->hasRole('super-admin')) {
@@ -93,7 +112,8 @@ final class EditUser extends EditRecord
     protected function afterSave(): void
     {
         $this->record->syncTags($this->pendingTagNames);
-        $this->record->load('roles');
+        $this->record->sidings()->sync($this->pendingSidingsPivot);
+        $this->record->load('roles', 'sidings');
         resolve(ActivityLogRbac::class)->logRolesUpdated(
             $this->record,
             $this->previousRoleNames,

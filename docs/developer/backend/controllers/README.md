@@ -39,5 +39,6 @@ All Controllers:
 | [TermsAcceptController](./TermsAcceptController.md) | N/A | ✅ |
 | [EnterpriseInquiryController](./EnterpriseInquiryController.md) | N/A | ✅ |
 | [Controller](./controller.md) | N/A | ✅ |
+| [ChatController](./chatcontroller.md) | N/A | ✅ |
 
 

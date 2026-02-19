@@ -11,6 +11,9 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use ReflectionClass;
+use ReflectionNamedType;
+use ReflectionType;
+use ReflectionUnionType;
 
 final class SeedSpecGenerator
 {
@@ -223,7 +226,10 @@ final class SeedSpecGenerator
                 continue;
             }
 
-            $returnTypeName = $returnType->getName();
+            $returnTypeName = $this->getReturnTypeName($returnType);
+            if ($returnTypeName === null) {
+                continue;
+            }
 
             // Check if it's a relationship method
             if (! is_subclass_of($returnTypeName, \Illuminate\Database\Eloquent\Relations\Relation::class)) {
@@ -247,6 +253,25 @@ final class SeedSpecGenerator
         }
 
         return $relationships;
+    }
+
+    /**
+     * Get the return type name, supporting ReflectionNamedType and ReflectionUnionType.
+     * For union types, returns the first type name or null so the caller can skip.
+     */
+    private function getReturnTypeName(ReflectionType $returnType): ?string
+    {
+        if ($returnType instanceof ReflectionNamedType) {
+            return $returnType->getName();
+        }
+
+        if ($returnType instanceof ReflectionUnionType) {
+            $types = $returnType->getTypes();
+
+            return $types !== [] ? $types[0]->getName() : null;
+        }
+
+        return null;
     }
 
     /**

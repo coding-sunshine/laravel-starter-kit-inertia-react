@@ -88,7 +88,7 @@ export default function HelpShow({ article, related }: Props) {
                                 />
                                 <button
                                     type="submit"
-                                    className="rounded-md border bg-background px-4 py-2 text-sm font-medium hover:bg-muted"
+                                    className="rounded-md border bg-background px-4 py-2.5 text-sm font-medium hover:bg-muted"
                                 >
                                     Yes
                                 </button>

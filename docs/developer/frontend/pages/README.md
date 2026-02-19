@@ -20,7 +20,7 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | Page | Route | Documented |
 |------|-------|------------|
 | [appearance/update](./appearance-update.md) | filament.exports.download, filament.imports.failed-rows.download | ✅ |
-| [dashboard](./dashboard.md) | filament.exports.download, filament.imports.failed-rows.download | ✅ |
+| [dashboard](./dashboard.md) | dashboard | ✅ |
 | [session/create](./session-create.md) | login, login.store | ✅ |
 | [user-email-reset-notification/create](./user-email-reset-notification-create.md) | password.request, password.email | ✅ |
 | [user-email-verification-notification/create](./user-email-verification-notification-create.md) | verification.notice, verification.send | ✅ |
@@ -54,5 +54,23 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | [pricing](./pricing.md) | pricing | ✅ |
 | [terms/accept](./terms-accept.md) | terms.accept, terms.accept.store | ✅ |
 | [enterprise-inquiries/create](./enterprise-inquiries-create.md) | enterprise-inquiries.create, enterprise-inquiries.store | ✅ |
+| [alerts/index](./alerts/index.md) | alerts.index, alerts.resolve | ✅ |
+| [indents/index](./indents/index.md) | indents.index | ✅ |
+| [mobile/SidingDashboard](./mobile/SidingDashboard.md) | N/A | ✅ |
+| [penalties/index](./penalties/index.md) | penalties.index | ✅ |
+| [railway-receipts/create](./railway-receipts/create.md) | railway-receipts.index, railway-receipts.create | ✅ |
+| [railway-receipts/index](./railway-receipts/index.md) | railway-receipts.index, railway-receipts.create | ✅ |
+| [railway-receipts/show](./railway-receipts/show.md) | railway-receipts.index, railway-receipts.create | ✅ |
+| [rakes/index](./rakes/index.md) | rakes.index, rakes.show | ✅ |
+| [rakes/show](./rakes/show.md) | rakes.index, rakes.show | ✅ |
+| [reconciliation/index](./reconciliation/index.md) | reconciliation.index, reconciliation.show | ✅ |
+| [reconciliation/power-plant-receipts/create](./reconciliation/power-plant-receipts/create.md) | reconciliation.power-plant-receipts.index, reconciliation.power-plant-receipts.create | ✅ |
+| [reconciliation/power-plant-receipts/index](./reconciliation/power-plant-receipts/index.md) | reconciliation.power-plant-receipts.index, reconciliation.power-plant-receipts.create | ✅ |
+| [reconciliation/show](./reconciliation/show.md) | reconciliation.index, reconciliation.show | ✅ |
+| [reports/index](./reports/index.md) | reports.index, reports.generate | ✅ |
+| [road-dispatch/arrivals/create](./road-dispatch/arrivals/create.md) | road-dispatch.arrivals.index, road-dispatch.arrivals.create | ✅ |
+| [road-dispatch/arrivals/index](./road-dispatch/arrivals/index.md) | road-dispatch.arrivals.index, road-dispatch.arrivals.create | ✅ |
+| [road-dispatch/unloads/create](./road-dispatch/unloads/create.md) | road-dispatch.unloads.index, road-dispatch.unloads.create | ✅ |
+| [road-dispatch/unloads/index](./road-dispatch/unloads/index.md) | road-dispatch.unloads.index, road-dispatch.unloads.create | ✅ |
 
 

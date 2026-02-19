@@ -1,0 +1,40 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Mattiverse\Userstamps\Traits\Userstamps;
+
+final class Txr extends Model
+{
+    use SoftDeletes, Userstamps;
+
+    protected $table = 'txr';
+
+    protected $fillable = [
+        'rake_id',
+        'inspection_time',
+        'state',
+        'unfit_wagons_count',
+        'unfit_wagon_numbers',
+        'remarks',
+    ];
+
+    protected $casts = [
+        'inspection_time' => 'datetime',
+    ];
+
+    public function rake(): BelongsTo
+    {
+        return $this->belongsTo(Rake::class);
+    }
+
+    public function createdBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+}

@@ -38,5 +38,21 @@ All Actions:
 | [GetRequiredTermsVersionsForUser](./GetRequiredTermsVersionsForUser.md) | N/A | ✅ |
 | [RecordTermsAcceptance](./RecordTermsAcceptance.md) | N/A | ✅ |
 | [StoreEnterpriseInquiryAction](./StoreEnterpriseInquiryAction.md) | N/A | ✅ |
+| [CalculateDemurrageCharges](./calculatedemurragecharges.md) | N/A | ✅ |
+| [ConfirmVehicleUnload](./confirmvehicleunload.md) | N/A | ✅ |
+| [CreateIndent](./createindent.md) | N/A | ✅ |
+| [CreateRake](./createrake.md) | N/A | ✅ |
+| [CreateVehicleArrival](./createvehiclearrival.md) | N/A | ✅ |
+| [GenerateReports](./generatereports.md) | N/A | ✅ |
+| [OptimizePerformance](./optimizeperformance.md) | N/A | ✅ |
+| [ProcessGuardInspection](./processguardinspection.md) | N/A | ✅ |
+| [ProcessRrDocument](./processrrdocument.md) | N/A | ✅ |
+| [ReconcileRakeAction](./reconcilerakeaction.md) | N/A | ✅ |
+| [ReconcileRrData](./reconcilerrdata.md) | N/A | ✅ |
+| [RunReportAction](./runreportaction.md) | N/A | ✅ |
+| [SyncDemurrageAlertsAction](./syncdemurragealertsaction.md) | N/A | ✅ |
+| [UatUtilities](./uatutilities.md) | N/A | ✅ |
+| [UpdateStockLedger](./updatestockledger.md) | N/A | ✅ |
+| [ImportRakeDataFromExcelAction](./importrakedatafromexcelaction.md) | N/A | ✅ |
 
 

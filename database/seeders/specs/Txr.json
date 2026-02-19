@@ -1,0 +1,78 @@
+{
+    "model": "Txr",
+    "table": "txrs",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "rake_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "inspection_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "state": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "unfit_wagons_count": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "unfit_wagon_numbers": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "remarks": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "rake": {
+            "type": "belongsTo",
+            "model": "Rake"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "model": "CreatedBy"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

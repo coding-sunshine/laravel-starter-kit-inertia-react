@@ -20,7 +20,7 @@ export default function LegalTerms() {
                         <TextLink href={home()}>Back to home</TextLink>
                     </div>
                 </header>
-                <main className="mx-auto max-w-3xl px-4 py-8">
+                <main className="mx-auto max-w-3xl px-4 p-8">
                     <h1 className="mb-2 text-2xl font-semibold">
                         Terms of Service
                     </h1>

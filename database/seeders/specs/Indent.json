@@ -1,0 +1,92 @@
+{
+    "model": "Indent",
+    "table": "indents",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "siding_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "indent_number": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "target_quantity_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "allocated_quantity_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "state": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "indent_date": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "required_by_date": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "remarks": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "siding": {
+            "type": "belongsTo",
+            "model": "Siding"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "model": "CreatedBy"
+        },
+        "updatedBy": {
+            "type": "belongsTo",
+            "model": "UpdatedBy"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

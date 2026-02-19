@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Mcp\Servers;
 
+use App\Mcp\Tools\SidingsIndexTool;
+use App\Mcp\Tools\UserSidingsTool;
 use App\Mcp\Tools\UsersIndexTool;
 use App\Mcp\Tools\UsersShowTool;
 use Laravel\Mcp\Server;
@@ -24,7 +26,15 @@ final class ApiServer extends Server
      * The MCP server's instructions for the LLM.
      */
     protected string $instructions = <<<'MARKDOWN'
-        This server exposes API capabilities as tools. Use users_index to list users with optional filters/sort, and users_show to get a single user by ID. All tools require an authenticated session (Sanctum).
+        This server exposes API capabilities for the Railway Rake Management Control System (RRMCS).
+
+        Available tools:
+        - users_index: List users with optional filters/sort
+        - users_show: Get a single user by ID
+        - sidings_index: List all railway sidings (Pakur, Dumka, Kurwa)
+        - user_sidings: Get sidings that a specific user can access
+
+        All tools require authenticated session (Sanctum).
     MARKDOWN;
 
     /**
@@ -35,6 +45,8 @@ final class ApiServer extends Server
     protected array $tools = [
         UsersIndexTool::class,
         UsersShowTool::class,
+        SidingsIndexTool::class,
+        UserSidingsTool::class,
     ];
 
     /**

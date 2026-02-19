@@ -1,0 +1,58 @@
+{
+    "model": "PowerPlant",
+    "table": "power_plants",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "code": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "location": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "is_active": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "powerPlantReceipts": {
+            "type": "hasMany",
+            "model": "PowerPlantReceipt"
+        }
+    },
+    "value_hints": {
+        "is_active": {
+            "type": "boolean",
+            "example": true
+        },
+        "name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    },
+    "scenarios": []
+}

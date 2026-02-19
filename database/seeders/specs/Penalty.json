@@ -1,0 +1,74 @@
+{
+    "model": "Penalty",
+    "table": "penalties",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "rake_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "penalty_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "penalty_amount": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "penalty_status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "description": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "remediation_notes": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "penalty_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "calculation_breakdown": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "rake": {
+            "type": "belongsTo",
+            "model": "Rake"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

@@ -1,0 +1,103 @@
+{
+    "model": "Siding",
+    "table": "sidings",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "code": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "location": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "station_code": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "is_active": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        },
+        "routes": {
+            "type": "hasMany",
+            "model": "Route"
+        },
+        "loaders": {
+            "type": "hasMany",
+            "model": "Loader"
+        },
+        "rakes": {
+            "type": "hasMany",
+            "model": "Rake"
+        },
+        "indents": {
+            "type": "hasMany",
+            "model": "Indent"
+        },
+        "vehicleUnloads": {
+            "type": "hasMany",
+            "model": "VehicleUnload"
+        },
+        "coalStock": {
+            "type": "hasMany",
+            "model": "CoalStock"
+        }
+    },
+    "value_hints": {
+        "name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    },
+    "scenarios": []
+}

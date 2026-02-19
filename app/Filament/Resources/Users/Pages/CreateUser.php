@@ -19,6 +19,11 @@ final class CreateUser extends CreateRecord
     private array $pendingTagNames = [];
 
     /**
+     * @var array<int, array<string, mixed>>
+     */
+    private array $pendingSidingsPivot = [];
+
+    /**
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
@@ -29,6 +34,16 @@ final class CreateUser extends CreateRecord
             fn ($v): bool => is_string($v) && $v !== ''
         ));
         unset($data['tag_names']);
+
+        $sidingIds = array_filter(array_map('intval', (array) ($data['sidings'] ?? [])));
+        $primaryId = isset($data['primary_siding_id']) ? (int) $data['primary_siding_id'] : null;
+        foreach ($sidingIds as $id) {
+            $this->pendingSidingsPivot[$id] = [
+                'is_primary' => $primaryId === $id,
+                'assigned_at' => now(),
+            ];
+        }
+        unset($data['sidings'], $data['primary_siding_id']);
 
         $roles = $data['roles'] ?? [];
         if ($roles === [] || $roles === null) {
@@ -47,7 +62,8 @@ final class CreateUser extends CreateRecord
     protected function afterCreate(): void
     {
         $this->record->syncTags($this->pendingTagNames);
-        $this->record->load('roles');
+        $this->record->sidings()->sync($this->pendingSidingsPivot);
+        $this->record->load('roles', 'sidings');
         resolve(ActivityLogRbac::class)->logRolesAssigned(
             $this->record,
             ActivityLogRbac::roleNamesFrom($this->record)

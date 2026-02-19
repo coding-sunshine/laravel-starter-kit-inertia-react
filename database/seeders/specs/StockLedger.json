@@ -1,0 +1,100 @@
+{
+    "model": "StockLedger",
+    "table": "stock_ledgers",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "siding_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "transaction_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "vehicle_arrival_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "rake_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "quantity_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "opening_balance_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "closing_balance_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "reference_number": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "remarks": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "verified_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "siding": {
+            "type": "belongsTo",
+            "model": "Siding"
+        },
+        "vehicleArrival": {
+            "type": "belongsTo",
+            "model": "VehicleArrival"
+        },
+        "rake": {
+            "type": "belongsTo",
+            "model": "Rake"
+        },
+        "creator": {
+            "type": "belongsTo",
+            "model": "Creator"
+        },
+        "verifier": {
+            "type": "belongsTo",
+            "model": "Verifier"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

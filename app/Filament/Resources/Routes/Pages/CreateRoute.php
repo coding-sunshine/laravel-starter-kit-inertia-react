@@ -1,0 +1,13 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Filament\Resources\Routes\Pages;
+
+use App\Filament\Resources\Routes\RouteResource;
+use Filament\Resources\Pages\CreateRecord;
+
+final class CreateRoute extends CreateRecord
+{
+    protected static string $resource = RouteResource::class;
+}

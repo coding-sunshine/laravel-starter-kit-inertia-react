@@ -1,0 +1,13 @@
+{
+    "model": "LoaderPerformance",
+    "table": "loader_performances",
+    "fields": [],
+    "relationships": {
+        "loader": {
+            "type": "belongsTo",
+            "model": "Loader"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

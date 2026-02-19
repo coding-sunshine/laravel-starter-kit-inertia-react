@@ -1,0 +1,87 @@
+{
+    "model": "RrDocument",
+    "table": "rr_documents",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "rake_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "rr_number": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "rr_received_date": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "rr_weight_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "rr_details": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "document_status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "has_discrepancy": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "discrepancy_details": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "rake": {
+            "type": "belongsTo",
+            "model": "Rake"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "model": "CreatedBy"
+        },
+        "updatedBy": {
+            "type": "belongsTo",
+            "model": "UpdatedBy"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

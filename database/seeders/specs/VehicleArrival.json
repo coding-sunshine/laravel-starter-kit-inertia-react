@@ -1,0 +1,120 @@
+{
+    "model": "VehicleArrival",
+    "table": "vehicle_arrivals",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "siding_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "vehicle_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "indent_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "arrived_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "unloading_started_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "unloading_completed_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "gross_weight": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "tare_weight": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "net_weight": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "unloaded_quantity": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "notes": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "shift": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "siding": {
+            "type": "belongsTo",
+            "model": "Siding"
+        },
+        "vehicle": {
+            "type": "belongsTo",
+            "model": "Vehicle"
+        },
+        "indent": {
+            "type": "belongsTo",
+            "model": "Indent"
+        },
+        "creator": {
+            "type": "belongsTo",
+            "model": "Creator"
+        },
+        "updater": {
+            "type": "belongsTo",
+            "model": "Updater"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

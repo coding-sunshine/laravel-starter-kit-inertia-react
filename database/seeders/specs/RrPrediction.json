@@ -1,0 +1,59 @@
+{
+    "model": "RrPrediction",
+    "table": "rr_predictions",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "rake_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "predicted_weight_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "predicted_rr_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "prediction_confidence": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "prediction_status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "variance_percent": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "rake": {
+            "type": "belongsTo",
+            "model": "Rake"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

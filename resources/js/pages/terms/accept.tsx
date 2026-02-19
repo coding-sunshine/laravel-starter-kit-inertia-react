@@ -43,7 +43,7 @@ export default function TermsAccept({
     return (
         <div className="min-h-svh bg-background">
             <Head title="Accept Terms" />
-            <div className="mx-auto max-w-3xl px-4 py-8">
+            <div className="mx-auto max-w-3xl px-4 p-8">
                 <div className="mb-6 flex items-center justify-between">
                     <Link
                         href={home()}

@@ -12,7 +12,6 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
-import { index as blogIndex } from '@/routes/blog';
 import { index as changelogIndex } from '@/routes/changelog';
 import { create as contactCreate } from '@/routes/contact';
 import { index as helpIndex } from '@/routes/help';
@@ -20,6 +19,8 @@ import organizations from '@/routes/organizations';
 import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import {
+    AlertTriangle,
+    BarChart3,
     BookOpen,
     Building2,
     CreditCard,
@@ -29,6 +30,9 @@ import {
     LifeBuoy,
     Mail,
     Megaphone,
+    Scale,
+    Train,
+    Truck,
 } from 'lucide-react';
 import { useMemo } from 'react';
 import AppLogo from './app-logo';
@@ -51,15 +55,56 @@ const mainNavItems: NavItem[] = [
         title: 'Billing',
         href: '/billing',
         icon: CreditCard,
+        tenancyRequired: true,
         dataPan: 'nav-billing',
     },
     {
-        title: 'Blog',
-        href: blogIndex().url,
+        title: 'Rakes',
+        href: '/rakes',
+        icon: Train,
+        dataPan: 'nav-rakes',
+    },
+    {
+        title: 'Indents',
+        href: '/indents',
         icon: FileText,
-        permission: 'blog.index',
-        feature: 'blog',
-        dataPan: 'nav-blog',
+        dataPan: 'nav-indents',
+    },
+    {
+        title: 'Road Dispatch',
+        href: '/road-dispatch/arrivals',
+        icon: Truck,
+        dataPan: 'nav-road-dispatch',
+    },
+    {
+        title: 'Railway Receipts',
+        href: '/railway-receipts',
+        icon: FileText,
+        dataPan: 'nav-railway-receipts',
+    },
+    {
+        title: 'Penalties',
+        href: '/penalties',
+        icon: AlertTriangle,
+        dataPan: 'nav-penalties',
+    },
+    {
+        title: 'Alerts',
+        href: '/alerts',
+        icon: AlertTriangle,
+        dataPan: 'nav-alerts',
+    },
+    {
+        title: 'Reconciliation',
+        href: '/reconciliation',
+        icon: Scale,
+        dataPan: 'nav-reconciliation',
+    },
+    {
+        title: 'Reports',
+        href: '/reports',
+        icon: BarChart3,
+        dataPan: 'nav-reports',
     },
     {
         title: 'Changelog',

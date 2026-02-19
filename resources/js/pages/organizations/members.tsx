@@ -114,7 +114,7 @@ export default function OrganizationsMembers() {
                                     <select
                                         id="role"
                                         name="role"
-                                        className="flex h-9 w-[120px] rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                                        className="flex h-9 w-[120px] rounded-md border border-input bg-transparent px-4 py-2 text-sm shadow-sm"
                                         defaultValue="member"
                                     >
                                         <option value="member">Member</option>

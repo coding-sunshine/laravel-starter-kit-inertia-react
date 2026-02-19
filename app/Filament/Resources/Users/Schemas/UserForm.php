@@ -28,6 +28,33 @@ final class UserForm
                     ->multiple()
                     ->preload()
                     ->searchable(),
+                Select::make('sidings')
+                    ->relationship(
+                        'sidings',
+                        'name',
+                        fn ($query) => tenant_id() ? $query->where('organization_id', tenant_id()) : $query
+                    )
+                    ->multiple()
+                    ->preload()
+                    ->searchable()
+                    ->live()
+                    ->helperText('RRMCS: Sidings this user can access.'),
+                Select::make('primary_siding_id')
+                    ->label('Primary siding')
+                    ->options(function ($get): array {
+                        $ids = $get('sidings') ?? [];
+                        if ($ids === [] || ! is_array($ids)) {
+                            return [];
+                        }
+
+                        return \App\Models\Siding::query()
+                            ->whereIn('id', $ids)
+                            ->when(tenant_id(), fn ($q) => $q->where('organization_id', tenant_id()))
+                            ->pluck('name', 'id')
+                            ->all();
+                    })
+                    ->searchable()
+                    ->helperText('Optional: default siding for this user.'),
                 TagsInput::make('tag_names')
                     ->label('Tags')
                     ->placeholder('Add a tag')

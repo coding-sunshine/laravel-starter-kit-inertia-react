@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
+use App\Events\User\UserCreated;
 use App\Models\User;
 use Database\Seeders\Essential\RolesAndPermissionsSeeder;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
@@ -45,11 +47,15 @@ it('allows admin to open users list', function (): void {
 it('denies user without access admin panel permission', function (): void {
     /** @var TestCase $test */
     $test = $this;
+    Event::fake([UserCreated::class]);
+
     $user = User::factory()->withoutTwoFactor()->create([
         'email' => 'regular@test.example',
         'password' => Hash::make('password'),
     ]);
     $user->assignRole('user');
+
+    expect($user->can('access admin panel'))->toBeFalse();
 
     $response = $test->actingAs($user)->get('/admin');
 

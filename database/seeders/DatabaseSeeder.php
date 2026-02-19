@@ -116,7 +116,7 @@ final class DatabaseSeeder extends Seeder
     {
         $categories = [SeederCategory::Essential];
 
-        if (app()->environment('local', 'testing')) {
+        if (app()->environment('local', 'testing', 'staging')) {
             $categories[] = SeederCategory::Development;
         }
 

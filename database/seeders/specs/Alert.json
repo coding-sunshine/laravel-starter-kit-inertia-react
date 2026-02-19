@@ -1,0 +1,91 @@
+{
+    "model": "Alert",
+    "table": "alerts",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "user_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "siding_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "rake_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "title": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "body": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "severity": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "resolved_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "resolved_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "user": {
+            "type": "belongsTo",
+            "model": "User"
+        },
+        "siding": {
+            "type": "belongsTo",
+            "model": "Siding"
+        },
+        "rake": {
+            "type": "belongsTo",
+            "model": "Rake"
+        },
+        "resolvedBy": {
+            "type": "belongsTo",
+            "model": "ResolvedBy"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

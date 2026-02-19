@@ -7,6 +7,7 @@ namespace App\Models;
 use App\Features\ImpersonationFeature;
 use App\Models\Concerns\Categorizable;
 use App\Models\Concerns\HasOrganizationPermissions;
+use App\Models\Concerns\HasRRMCSAuthorization;
 use App\Support\FeatureHelper;
 use App\Traits\Billing\HasAffiliate;
 use BeyondCode\Vouchers\Traits\CanRedeemVouchers;
@@ -62,7 +63,7 @@ final class User extends Authenticatable implements ExportsPersonalData, Filamen
     /**
      * @use HasFactory<UserFactory>
      */
-    use CanRedeemVouchers, Categorizable, GiveExperience, HasAchievements, HasAffiliate, HasApiTokens, HasFactory, HasOrganizationPermissions, HasRoles, HasTags, InteractsWithMedia, LogsActivity, Notifiable, Referrable, Searchable, TwoFactorAuthenticatable;
+    use CanRedeemVouchers, Categorizable, GiveExperience, HasAchievements, HasAffiliate, HasApiTokens, HasFactory, HasOrganizationPermissions, HasRoles, HasRRMCSAuthorization, HasTags, InteractsWithMedia, LogsActivity, Notifiable, Referrable, Searchable, TwoFactorAuthenticatable;
 
     /**
      * @var list<string>
