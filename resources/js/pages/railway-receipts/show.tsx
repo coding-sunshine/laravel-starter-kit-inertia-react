@@ -19,35 +19,15 @@ interface Rake {
     siding?: { id: number; name: string; code: string };
 }
 
-interface RrWagon {
-    wagon_number?: string;
-    wagon_type?: string;
-    cc_mt?: number;
-    tare_mt?: number;
-    gross_mt?: number;
-    actual_mt?: number;
-    permissible_mt?: number;
-    over_weight_mt?: number;
-    chargeable_mt?: number;
-}
-
 interface RrDocument {
     id: number;
     rake_id: number;
     rr_number: string;
     rr_received_date: string;
     rr_weight_mt: string | null;
-    fnr: string | null;
-    from_station_code: string | null;
-    to_station_code: string | null;
-    freight_total: string | null;
     document_status: string;
     has_discrepancy: boolean;
     discrepancy_details: string | null;
-    rr_details?: {
-        charges?: Record<string, number>;
-        wagons?: RrWagon[];
-    } | null;
     rake?: Rake;
 }
 
@@ -67,17 +47,10 @@ export default function RailwayReceiptsShow({ rrDocument }: Props) {
         rr_number: rrDocument.rr_number,
         rr_received_date: rrDocument.rr_received_date.split('T')[0],
         rr_weight_mt: rrDocument.rr_weight_mt ?? '',
-        fnr: rrDocument.fnr ?? '',
-        from_station_code: rrDocument.from_station_code ?? '',
-        to_station_code: rrDocument.to_station_code ?? '',
-        freight_total: rrDocument.freight_total ?? '',
         document_status: rrDocument.document_status,
         has_discrepancy: rrDocument.has_discrepancy,
         discrepancy_details: rrDocument.discrepancy_details ?? '',
     });
-
-    const charges = rrDocument.rr_details?.charges ?? {};
-    const wagons = rrDocument.rr_details?.wagons ?? [];
 
     const handleUpdate = (e: React.FormEvent) => {
         e.preventDefault();
@@ -105,46 +78,10 @@ export default function RailwayReceiptsShow({ rrDocument }: Props) {
                         <dl className="grid gap-2 text-sm">
                             <dt className="font-medium">RR number</dt>
                             <dd>{rrDocument.rr_number}</dd>
-                            {rrDocument.fnr && (
-                                <>
-                                    <dt className="font-medium">FNR</dt>
-                                    <dd>{rrDocument.fnr}</dd>
-                                </>
-                            )}
                             <dt className="font-medium">Received date</dt>
                             <dd>{rrDocument.rr_received_date}</dd>
                             <dt className="font-medium">Weight (MT)</dt>
                             <dd>{rrDocument.rr_weight_mt ?? '-'}</dd>
-                            {rrDocument.from_station_code && (
-                                <>
-                                    <dt className="font-medium">From station</dt>
-                                    <dd>{rrDocument.from_station_code}</dd>
-                                </>
-                            )}
-                            {rrDocument.to_station_code && (
-                                <>
-                                    <dt className="font-medium">To station</dt>
-                                    <dd>{rrDocument.to_station_code}</dd>
-                                </>
-                            )}
-                            {rrDocument.freight_total != null && rrDocument.freight_total !== '' && (
-                                <>
-                                    <dt className="font-medium">Freight total (₹)</dt>
-                                    <dd>{Number(rrDocument.freight_total).toLocaleString('en-IN')}</dd>
-                                </>
-                            )}
-                            {Object.keys(charges).length > 0 && (
-                                <>
-                                    <dt className="font-medium">Charges</dt>
-                                    <dd className="space-y-1">
-                                        {Object.entries(charges).map(([code, amount]) => (
-                                            <span key={code} className="block">
-                                                {code}: ₹{Number(amount).toLocaleString('en-IN')}
-                                            </span>
-                                        ))}
-                                    </dd>
-                                </>
-                            )}
                             <dt className="font-medium">Status</dt>
                             <dd>{rrDocument.document_status}</dd>
                             {rrDocument.has_discrepancy && rrDocument.discrepancy_details && (
@@ -154,39 +91,6 @@ export default function RailwayReceiptsShow({ rrDocument }: Props) {
                                 </>
                             )}
                         </dl>
-                        {wagons.length > 0 && (
-                            <div className="mt-4">
-                                <h4 className="mb-2 text-sm font-medium">Wagon details (from RR)</h4>
-                                <div className="overflow-x-auto rounded-md border border-input">
-                                    <table className="w-full min-w-[600px] text-left text-sm">
-                                        <thead>
-                                            <tr className="border-b bg-muted/50">
-                                                <th className="p-2">Wagon No</th>
-                                                <th className="p-2">Type</th>
-                                                <th className="p-2">CC (MT)</th>
-                                                <th className="p-2">Actual (MT)</th>
-                                                <th className="p-2">Permissible (MT)</th>
-                                                <th className="p-2">Over (MT)</th>
-                                                <th className="p-2">Chargeable (MT)</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {wagons.map((w, i) => (
-                                                <tr key={i} className="border-b last:border-0">
-                                                    <td className="p-2">{w.wagon_number ?? '-'}</td>
-                                                    <td className="p-2">{w.wagon_type ?? '-'}</td>
-                                                    <td className="p-2">{w.cc_mt ?? '-'}</td>
-                                                    <td className="p-2">{w.actual_mt ?? '-'}</td>
-                                                    <td className="p-2">{w.permissible_mt ?? '-'}</td>
-                                                    <td className="p-2">{w.over_weight_mt ?? '-'}</td>
-                                                    <td className="p-2">{w.chargeable_mt ?? '-'}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        )}
                     </CardContent>
                 </Card>
                 <Card>
@@ -229,51 +133,6 @@ export default function RailwayReceiptsShow({ rrDocument }: Props) {
                                     className="text-sm"
                                 />
                                 <InputError message={form.errors.rr_weight_mt ?? errors?.rr_weight_mt} />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="fnr">FNR</Label>
-                                <Input
-                                    id="fnr"
-                                    value={form.data.fnr}
-                                    onChange={(e) => form.setData('fnr', e.target.value)}
-                                    className="text-sm"
-                                />
-                                <InputError message={form.errors.fnr ?? errors?.fnr} />
-                            </div>
-                            <div className="grid grid-cols-2 gap-2">
-                                <div className="grid gap-2">
-                                    <Label htmlFor="from_station_code">From station code</Label>
-                                    <Input
-                                        id="from_station_code"
-                                        value={form.data.from_station_code}
-                                        onChange={(e) => form.setData('from_station_code', e.target.value)}
-                                        className="text-sm"
-                                    />
-                                    <InputError message={form.errors.from_station_code ?? errors?.from_station_code} />
-                                </div>
-                                <div className="grid gap-2">
-                                    <Label htmlFor="to_station_code">To station code</Label>
-                                    <Input
-                                        id="to_station_code"
-                                        value={form.data.to_station_code}
-                                        onChange={(e) => form.setData('to_station_code', e.target.value)}
-                                        className="text-sm"
-                                    />
-                                    <InputError message={form.errors.to_station_code ?? errors?.to_station_code} />
-                                </div>
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="freight_total">Freight total (₹)</Label>
-                                <Input
-                                    id="freight_total"
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    value={form.data.freight_total}
-                                    onChange={(e) => form.setData('freight_total', e.target.value)}
-                                    className="text-sm"
-                                />
-                                <InputError message={form.errors.freight_total ?? errors?.freight_total} />
                             </div>
                             <div className="grid gap-2">
                                 <Label htmlFor="document_status">Status</Label>

@@ -7,12 +7,10 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Mattiverse\Userstamps\Traits\Userstamps;
-use Spatie\MediaLibrary\HasMedia;
-use Spatie\MediaLibrary\InteractsWithMedia;
 
-final class Weighment extends Model implements HasMedia
+final class Weighment extends Model
 {
-    use InteractsWithMedia, Userstamps;
+    use Userstamps;
 
     protected $fillable = [
         'rake_id',
@@ -26,22 +24,6 @@ final class Weighment extends Model implements HasMedia
     protected $casts = [
         'weighment_time' => 'datetime',
     ];
-
-    protected $appends = ['weighment_slip_url'];
-
-    public function getWeighmentSlipUrlAttribute(): ?string
-    {
-        $media = $this->getFirstMedia('weighment_slip_pdf');
-
-        return $media ? $media->getUrl() : null;
-    }
-
-    public function registerMediaCollections(): void
-    {
-        $this->addMediaCollection('weighment_slip_pdf')
-            ->singleFile()
-            ->acceptsMimeTypes(['application/pdf']);
-    }
 
     public function rake(): BelongsTo
     {

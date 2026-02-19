@@ -7,37 +7,10 @@ return [
     |--------------------------------------------------------------------------
     | Demurrage rate (₹ per MT per hour)
     |--------------------------------------------------------------------------
-    | Railway demurrage is charged when rakes exceed free time. This value is
-    | used as ₹ per metric tonne (MT) per hour in the formula:
-    |   demurrage = hours_over × weight_mt × demurrage_rate_per_mt_hour
-    | Set RRMCS_DEMURRAGE_RATE_PER_MT_HOUR in .env accordingly.
-    |
-    | If the railway provides a total-per-hour figure (e.g. "₹15,440 + GST per
-    | hour" for the whole rake), convert to per-MT-hour by dividing by a
-    | typical rake weight (e.g. 3500 MT): 15440 / 3500 ≈ 4.41 ₹/MT/h. The app
-    | does not change this conversion; confirm the exact formula with product.
+    | Railway demurrage is charged when rakes exceed free time. This rate is
+    | used for calculations, alerts, and transparent breakdowns in the UI.
     */
     'demurrage_rate_per_mt_hour' => (float) env('RRMCS_DEMURRAGE_RATE_PER_MT_HOUR', 50),
-
-    /*
-    |--------------------------------------------------------------------------
-    | Demurrage escalation thresholds (minutes remaining)
-    |--------------------------------------------------------------------------
-    | When the scheduled rrmcs:check-demurrage command detects a loading rake
-    | crossing one of these thresholds, it fires a DemurrageThresholdCrossed
-    | event which triggers role-based notifications and database mail.
-    |   60 → siding operators, 30 → siding in-charge, 0 → management
-    */
-    'demurrage_thresholds' => [60, 30, 0],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Demurrage check interval (minutes)
-    |--------------------------------------------------------------------------
-    | How frequently the rrmcs:check-demurrage command should run.
-    | The schedule is registered in routes/console.php.
-    */
-    'demurrage_check_interval' => 5,
 
     /*
     |--------------------------------------------------------------------------
@@ -51,14 +24,6 @@ return [
         'pakur_monthly' => 'Rake Management Application - references/Rake Data Nov19-Dec24/RAKE NOV-19 TO DEC-24 (Pakur).xlsx',
         'dumka_loading' => 'Requirements/Rake Loading Data Dumka.xlsx',
         'kurwa_loading' => 'Requirements/RAKE LOADING DATA KURWA.xlsx',
-        'imwb_sensor' => 'Requirements/IMWB - LOAD SENSOR REPORT.xlsx',
         'reports_draft' => 'Rake Management Application - references/Scope of Work/Rake Management Reports (Draft Only).xlsx',
     ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Default siding for IMWB (load sensor) import when not determinable
-    |--------------------------------------------------------------------------
-    */
-    'imwb_default_siding_code' => env('RRMCS_IMWB_DEFAULT_SIDING', 'DUMK'),
 ];

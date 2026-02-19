@@ -162,7 +162,9 @@
             "relationships": {
                 "usedBy": [],
                 "usesModels": [],
-                "relatedRoutes": []
+                "relatedRoutes": [
+                    "two-factor.enable"
+                ]
             }
         },
         "LoggingDisableTwoFactorAuthentication": {
@@ -171,7 +173,9 @@
             "relationships": {
                 "usedBy": [],
                 "usesModels": [],
-                "relatedRoutes": []
+                "relatedRoutes": [
+                    "two-factor.disable"
+                ]
             }
         },
         "LoggingConfirmTwoFactorAuthentication": {
@@ -180,7 +184,9 @@
             "relationships": {
                 "usedBy": [],
                 "usesModels": [],
-                "relatedRoutes": []
+                "relatedRoutes": [
+                    "two-factor.confirm"
+                ]
             }
         },
         "LoggingGenerateNewRecoveryCodes": {
@@ -189,7 +195,9 @@
             "relationships": {
                 "usedBy": [],
                 "usesModels": [],
-                "relatedRoutes": []
+                "relatedRoutes": [
+                    "two-factor.regenerate-recovery-codes"
+                ]
             }
         },
         "StoreContactSubmission": {
@@ -630,71 +638,7 @@
             "path": "./importrakedatafromexcelaction.md",
             "relationships": {
                 "usedBy": [],
-                "usesModels": [
-                    "Loader",
-                    "Penalty",
-                    "Rake",
-                    "RrDocument",
-                    "Siding",
-                    "Wagon",
-                    "Weighment"
-                ],
-                "relatedRoutes": []
-            }
-        },
-        "PurchaseCreditsAction": {
-            "documented": true,
-            "path": "./purchasecreditsaction.md",
-            "relationships": {
-                "usedBy": [],
-                "usesModels": [
-                    "Organization",
-                    "CreditPack"
-                ],
-                "relatedRoutes": []
-            }
-        },
-        "SyncSubscriptionSeatsAction": {
-            "documented": true,
-            "path": "./syncsubscriptionseatsaction.md",
-            "relationships": {
-                "usedBy": [],
-                "usesModels": [
-                    "Organization"
-                ],
-                "relatedRoutes": []
-            }
-        },
-        "CreateNewUser": {
-            "documented": true,
-            "path": "./createnewuser.md",
-            "relationships": {
-                "usedBy": [],
-                "usesModels": [
-                    "User"
-                ],
-                "relatedRoutes": []
-            }
-        },
-        "ResetUserPassword": {
-            "documented": true,
-            "path": "./resetuserpassword.md",
-            "relationships": {
-                "usedBy": [],
-                "usesModels": [
-                    "User"
-                ],
-                "relatedRoutes": []
-            }
-        },
-        "UpdateUserProfileInformation": {
-            "documented": true,
-            "path": "./updateuserprofileinformation.md",
-            "relationships": {
-                "usedBy": [],
-                "usesModels": [
-                    "User"
-                ],
+                "usesModels": [],
                 "relatedRoutes": []
             }
         }
@@ -706,7 +650,10 @@
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
-                "relatedRoutes": [],
+                "relatedRoutes": [
+                    "blog.index",
+                    "blog.show"
+                ],
                 "rendersPages": [
                     "blog/index",
                     "blog/show"
@@ -719,7 +666,9 @@
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
-                "relatedRoutes": [],
+                "relatedRoutes": [
+                    "changelog.index"
+                ],
                 "rendersPages": [
                     "changelog/index"
                 ]
@@ -731,7 +680,10 @@
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
-                "relatedRoutes": [],
+                "relatedRoutes": [
+                    "help.index",
+                    "help.show"
+                ],
                 "rendersPages": [
                     "help/index",
                     "help/show"
@@ -746,7 +698,9 @@
                     "RateHelpArticleAction"
                 ],
                 "usesFormRequests": [],
-                "relatedRoutes": [],
+                "relatedRoutes": [
+                    "help.rate"
+                ],
                 "rendersPages": []
             }
         },
@@ -1123,283 +1077,6 @@
                 ],
                 "rendersPages": []
             }
-        },
-        "AlertController": {
-            "documented": true,
-            "path": "./alertcontroller.md",
-            "relationships": {
-                "usesActions": [],
-                "usesFormRequests": [],
-                "relatedRoutes": [],
-                "rendersPages": [
-                    "alerts/index"
-                ]
-            }
-        },
-        "BillingDashboardController": {
-            "documented": true,
-            "path": "./billingdashboardcontroller.md",
-            "relationships": {
-                "usesActions": [],
-                "usesFormRequests": [],
-                "relatedRoutes": [],
-                "rendersPages": [
-                    "billing/index"
-                ]
-            }
-        },
-        "CreditController": {
-            "documented": true,
-            "path": "./creditcontroller.md",
-            "relationships": {
-                "usesActions": [],
-                "usesFormRequests": [],
-                "relatedRoutes": [],
-                "rendersPages": [
-                    "billing/credits"
-                ]
-            }
-        },
-        "InvoiceController": {
-            "documented": true,
-            "path": "./invoicecontroller.md",
-            "relationships": {
-                "usesActions": [],
-                "usesFormRequests": [],
-                "relatedRoutes": [],
-                "rendersPages": [
-                    "billing/invoices"
-                ]
-            }
-        },
-        "PaddleWebhookController": {
-            "documented": true,
-            "path": "./paddlewebhookcontroller.md",
-            "relationships": {
-                "usesActions": [],
-                "usesFormRequests": [],
-                "relatedRoutes": [],
-                "rendersPages": []
-            }
-        },
-        "PricingController": {
-            "documented": true,
-            "path": "./pricingcontroller.md",
-            "relationships": {
-                "usesActions": [],
-                "usesFormRequests": [],
-                "relatedRoutes": [],
-                "rendersPages": [
-                    "pricing"
-                ]
-            }
-        },
-        "StripeWebhookController": {
-            "documented": true,
-            "path": "./stripewebhookcontroller.md",
-            "relationships": {
-                "usesActions": [],
-                "usesFormRequests": [],
-                "relatedRoutes": [],
-                "rendersPages": []
-            }
-        },
-        "ExecutiveDashboardController": {
-            "documented": true,
-            "path": "./executivedashboardcontroller.md",
-            "relationships": {
-                "usesActions": [
-                    "SyncDemurrageAlertsAction"
-                ],
-                "usesFormRequests": [],
-                "relatedRoutes": [],
-                "rendersPages": [
-                    "dashboard"
-                ]
-            }
-        },
-        "IndentsController": {
-            "documented": true,
-            "path": "./indentscontroller.md",
-            "relationships": {
-                "usesActions": [],
-                "usesFormRequests": [],
-                "relatedRoutes": [],
-                "rendersPages": [
-                    "indents/index",
-                    "indents/create",
-                    "indents/show",
-                    "indents/edit"
-                ]
-            }
-        },
-        "PenaltyController": {
-            "documented": true,
-            "path": "./penaltycontroller.md",
-            "relationships": {
-                "usesActions": [],
-                "usesFormRequests": [],
-                "relatedRoutes": [],
-                "rendersPages": [
-                    "penalties/index"
-                ]
-            }
-        },
-        "RrDocumentController": {
-            "documented": true,
-            "path": "./rrdocumentcontroller.md",
-            "relationships": {
-                "usesActions": [
-                    "ProcessRrDocument"
-                ],
-                "usesFormRequests": [],
-                "relatedRoutes": [],
-                "rendersPages": [
-                    "railway-receipts/index",
-                    "railway-receipts/show",
-                    "railway-receipts/create"
-                ]
-            }
-        },
-        "RakeGuardInspectionController": {
-            "documented": true,
-            "path": "./rakeguardinspectioncontroller.md",
-            "relationships": {
-                "usesActions": [],
-                "usesFormRequests": [],
-                "relatedRoutes": [],
-                "rendersPages": []
-            }
-        },
-        "RakeTxrController": {
-            "documented": true,
-            "path": "./raketxrcontroller.md",
-            "relationships": {
-                "usesActions": [],
-                "usesFormRequests": [],
-                "relatedRoutes": [],
-                "rendersPages": []
-            }
-        },
-        "RakeWeighmentController": {
-            "documented": true,
-            "path": "./rakeweighmentcontroller.md",
-            "relationships": {
-                "usesActions": [],
-                "usesFormRequests": [],
-                "relatedRoutes": [],
-                "rendersPages": []
-            }
-        },
-        "RakesController": {
-            "documented": true,
-            "path": "./rakescontroller.md",
-            "relationships": {
-                "usesActions": [],
-                "usesFormRequests": [],
-                "relatedRoutes": [],
-                "rendersPages": [
-                    "rakes/index",
-                    "rakes/show"
-                ]
-            }
-        },
-        "PowerPlantReceiptController": {
-            "documented": true,
-            "path": "./powerplantreceiptcontroller.md",
-            "relationships": {
-                "usesActions": [],
-                "usesFormRequests": [],
-                "relatedRoutes": [],
-                "rendersPages": [
-                    "reconciliation/power-plant-receipts/index",
-                    "reconciliation/power-plant-receipts/create"
-                ]
-            }
-        },
-        "ReconciliationController": {
-            "documented": true,
-            "path": "./reconciliationcontroller.md",
-            "relationships": {
-                "usesActions": [
-                    "ReconcileRakeAction"
-                ],
-                "usesFormRequests": [],
-                "relatedRoutes": [],
-                "rendersPages": [
-                    "reconciliation/index",
-                    "reconciliation/show"
-                ]
-            }
-        },
-        "ReportsController": {
-            "documented": true,
-            "path": "./reportscontroller.md",
-            "relationships": {
-                "usesActions": [
-                    "RunReportAction"
-                ],
-                "usesFormRequests": [],
-                "relatedRoutes": [],
-                "rendersPages": [
-                    "reports/index"
-                ]
-            }
-        },
-        "VehicleArrivalController": {
-            "documented": true,
-            "path": "./vehiclearrivalcontroller.md",
-            "relationships": {
-                "usesActions": [
-                    "CreateVehicleArrival"
-                ],
-                "usesFormRequests": [],
-                "relatedRoutes": [],
-                "rendersPages": [
-                    "road-dispatch/arrivals/index",
-                    "road-dispatch/arrivals/create"
-                ]
-            }
-        },
-        "VehicleUnloadController": {
-            "documented": true,
-            "path": "./vehicleunloadcontroller.md",
-            "relationships": {
-                "usesActions": [
-                    "ConfirmVehicleUnload"
-                ],
-                "usesFormRequests": [],
-                "relatedRoutes": [],
-                "rendersPages": [
-                    "road-dispatch/unloads/index",
-                    "road-dispatch/unloads/create"
-                ]
-            }
-        },
-        "AchievementsController": {
-            "documented": true,
-            "path": "./achievementscontroller.md",
-            "relationships": {
-                "usesActions": [],
-                "usesFormRequests": [],
-                "relatedRoutes": [],
-                "rendersPages": [
-                    "settings/achievements"
-                ]
-            }
-        },
-        "SidingSwitchController": {
-            "documented": true,
-            "path": "docs/developer/backend/controllers/sidingswitchcontroller.md",
-            "lastUpdated": "2026-02-20",
-            "relationships": {
-                "usesActions": [],
-                "usesFormRequests": [],
-                "relatedRoutes": [
-                    "siding.switch"
-                ],
-                "rendersPages": []
-            }
         }
     },
     "pages": {
@@ -1577,18 +1254,12 @@
                     "billing.credits.checkout.lemon-squeezy",
                     "billing.invoices.index",
                     "billing.invoices.download",
-                    "siding.switch",
                     "rakes.index",
                     "rakes.show",
                     "rakes.txr.update",
                     "rakes.weighments.store",
                     "rakes.guard-inspection.store",
                     "indents.index",
-                    "indents.create",
-                    "indents.store",
-                    "indents.show",
-                    "indents.edit",
-                    "indents.update",
                     "road-dispatch.arrivals.index",
                     "road-dispatch.arrivals.create",
                     "road-dispatch.arrivals.store",
@@ -1961,18 +1632,12 @@
                     "billing.credits.checkout.lemon-squeezy",
                     "billing.invoices.index",
                     "billing.invoices.download",
-                    "siding.switch",
                     "rakes.index",
                     "rakes.show",
                     "rakes.txr.update",
                     "rakes.weighments.store",
                     "rakes.guard-inspection.store",
                     "indents.index",
-                    "indents.create",
-                    "indents.store",
-                    "indents.show",
-                    "indents.edit",
-                    "indents.update",
                     "road-dispatch.arrivals.index",
                     "road-dispatch.arrivals.create",
                     "road-dispatch.arrivals.store",
@@ -2272,18 +1937,12 @@
                     "billing.credits.checkout.lemon-squeezy",
                     "billing.invoices.index",
                     "billing.invoices.download",
-                    "siding.switch",
                     "rakes.index",
                     "rakes.show",
                     "rakes.txr.update",
                     "rakes.weighments.store",
                     "rakes.guard-inspection.store",
                     "indents.index",
-                    "indents.create",
-                    "indents.store",
-                    "indents.show",
-                    "indents.edit",
-                    "indents.update",
                     "road-dispatch.arrivals.index",
                     "road-dispatch.arrivals.create",
                     "road-dispatch.arrivals.store",
@@ -2524,18 +2183,12 @@
                     "billing.credits.checkout.lemon-squeezy",
                     "billing.invoices.index",
                     "billing.invoices.download",
-                    "siding.switch",
                     "rakes.index",
                     "rakes.show",
                     "rakes.txr.update",
                     "rakes.weighments.store",
                     "rakes.guard-inspection.store",
                     "indents.index",
-                    "indents.create",
-                    "indents.store",
-                    "indents.show",
-                    "indents.edit",
-                    "indents.update",
                     "road-dispatch.arrivals.index",
                     "road-dispatch.arrivals.create",
                     "road-dispatch.arrivals.store",
@@ -2762,18 +2415,12 @@
                     "billing.credits.checkout.lemon-squeezy",
                     "billing.invoices.index",
                     "billing.invoices.download",
-                    "siding.switch",
                     "rakes.index",
                     "rakes.show",
                     "rakes.txr.update",
                     "rakes.weighments.store",
                     "rakes.guard-inspection.store",
                     "indents.index",
-                    "indents.create",
-                    "indents.store",
-                    "indents.show",
-                    "indents.edit",
-                    "indents.update",
                     "road-dispatch.arrivals.index",
                     "road-dispatch.arrivals.create",
                     "road-dispatch.arrivals.store",
@@ -3018,12 +2665,7 @@
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
-                    "indents.index",
-                    "indents.create",
-                    "indents.store",
-                    "indents.show",
-                    "indents.edit",
-                    "indents.update"
+                    "indents.index"
                 ]
             }
         },
@@ -3229,54 +2871,6 @@
                     "road-dispatch.unloads.create",
                     "road-dispatch.unloads.store",
                     "road-dispatch.unloads.confirm"
-                ]
-            }
-        },
-        "indents/create": {
-            "documented": true,
-            "userGuide": null,
-            "developerGuide": "./indents/create.md",
-            "relationships": {
-                "renderedBy": [],
-                "relatedRoutes": [
-                    "indents.index",
-                    "indents.create",
-                    "indents.store",
-                    "indents.show",
-                    "indents.edit",
-                    "indents.update"
-                ]
-            }
-        },
-        "indents/edit": {
-            "documented": true,
-            "userGuide": null,
-            "developerGuide": "./indents/edit.md",
-            "relationships": {
-                "renderedBy": [],
-                "relatedRoutes": [
-                    "indents.index",
-                    "indents.create",
-                    "indents.store",
-                    "indents.show",
-                    "indents.edit",
-                    "indents.update"
-                ]
-            }
-        },
-        "indents/show": {
-            "documented": true,
-            "userGuide": null,
-            "developerGuide": "./indents/show.md",
-            "relationships": {
-                "renderedBy": [],
-                "relatedRoutes": [
-                    "indents.index",
-                    "indents.create",
-                    "indents.store",
-                    "indents.show",
-                    "indents.edit",
-                    "indents.update"
                 ]
             }
         }

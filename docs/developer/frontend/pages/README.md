@@ -55,7 +55,7 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | [terms/accept](./terms-accept.md) | terms.accept, terms.accept.store | ✅ |
 | [enterprise-inquiries/create](./enterprise-inquiries-create.md) | enterprise-inquiries.create, enterprise-inquiries.store | ✅ |
 | [alerts/index](./alerts/index.md) | alerts.index, alerts.resolve | ✅ |
-| [indents/index](./indents/index.md) | indents.index, indents.create | ✅ |
+| [indents/index](./indents/index.md) | indents.index | ✅ |
 | [mobile/SidingDashboard](./mobile/SidingDashboard.md) | N/A | ✅ |
 | [penalties/index](./penalties/index.md) | penalties.index | ✅ |
 | [railway-receipts/create](./railway-receipts/create.md) | railway-receipts.index, railway-receipts.create | ✅ |
@@ -72,8 +72,5 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | [road-dispatch/arrivals/index](./road-dispatch/arrivals/index.md) | road-dispatch.arrivals.index, road-dispatch.arrivals.create | ✅ |
 | [road-dispatch/unloads/create](./road-dispatch/unloads/create.md) | road-dispatch.unloads.index, road-dispatch.unloads.create | ✅ |
 | [road-dispatch/unloads/index](./road-dispatch/unloads/index.md) | road-dispatch.unloads.index, road-dispatch.unloads.create | ✅ |
-| [indents/create](./indents/create.md) | indents.index, indents.create | ✅ |
-| [indents/edit](./indents/edit.md) | indents.index, indents.create | ✅ |
-| [indents/show](./indents/show.md) | indents.index, indents.create | ✅ |
 
 

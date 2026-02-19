@@ -107,47 +107,6 @@ export default function RailwayReceiptsCreate({
                         <InputError message={errors?.rr_weight_mt} />
                     </div>
                     <div className="grid gap-2">
-                        <Label htmlFor="fnr">FNR (optional)</Label>
-                        <Input
-                            id="fnr"
-                            name="fnr"
-                            className="text-sm"
-                        />
-                        <InputError message={errors?.fnr} />
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                        <div className="grid gap-2">
-                            <Label htmlFor="from_station_code">From station code</Label>
-                            <Input
-                                id="from_station_code"
-                                name="from_station_code"
-                                className="text-sm"
-                            />
-                            <InputError message={errors?.from_station_code} />
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="to_station_code">To station code</Label>
-                            <Input
-                                id="to_station_code"
-                                name="to_station_code"
-                                className="text-sm"
-                            />
-                            <InputError message={errors?.to_station_code} />
-                        </div>
-                    </div>
-                    <div className="grid gap-2">
-                        <Label htmlFor="freight_total">Freight total (₹)</Label>
-                        <Input
-                            id="freight_total"
-                            name="freight_total"
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            className="text-sm"
-                        />
-                        <InputError message={errors?.freight_total} />
-                    </div>
-                    <div className="grid gap-2">
                         <Label htmlFor="document_status">Status</Label>
                         <select
                             id="document_status"

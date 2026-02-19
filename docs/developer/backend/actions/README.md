@@ -54,10 +54,5 @@ All Actions:
 | [UatUtilities](./uatutilities.md) | N/A | ✅ |
 | [UpdateStockLedger](./updatestockledger.md) | N/A | ✅ |
 | [ImportRakeDataFromExcelAction](./importrakedatafromexcelaction.md) | N/A | ✅ |
-| [PurchaseCreditsAction](./purchasecreditsaction.md) | N/A | ✅ |
-| [SyncSubscriptionSeatsAction](./syncsubscriptionseatsaction.md) | N/A | ✅ |
-| [CreateNewUser](./createnewuser.md) | N/A | ✅ |
-| [ResetUserPassword](./resetuserpassword.md) | N/A | ✅ |
-| [UpdateUserProfileInformation](./updateuserprofileinformation.md) | N/A | ✅ |
 
 

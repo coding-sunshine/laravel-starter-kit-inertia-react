@@ -14,7 +14,6 @@ use App\Models\Rake;
 use App\Models\Siding;
 use App\Models\StockLedger;
 use App\Models\VehicleUnload;
-use App\Services\SidingContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -25,7 +24,9 @@ final class ExecutiveDashboardController extends Controller
     public function __invoke(Request $request): Response
     {
         $user = $request->user();
-        $sidingIds = SidingContext::activeSidingIds($user);
+        $sidingIds = $user->isSuperAdmin()
+            ? Siding::query()->pluck('id')->all()
+            : $user->accessibleSidings()->get()->pluck('id')->all();
 
         $summary = $this->buildSummary($sidingIds);
         $sidingStocks = $this->buildSidingStocks($sidingIds);

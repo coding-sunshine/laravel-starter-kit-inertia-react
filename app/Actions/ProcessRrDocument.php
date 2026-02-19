@@ -12,7 +12,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
-use Throwable;
 
 use function Laravel\Ai\agent;
 
@@ -51,27 +50,13 @@ final readonly class ProcessRrDocument
                 // Extract data from RR document using Laravel AI SDK
                 $extractedData = $this->extractRrData($storedPath, $file->getMimeType());
 
-                $rrReceivedDate = isset($extractedData['receipt_date']) && $extractedData['receipt_date']
-                    ? $extractedData['receipt_date']
-                    : now()->toDateTimeString();
-                if (is_string($rrReceivedDate)) {
-                    try {
-                        $rrReceivedDate = \Carbon\Carbon::parse($rrReceivedDate);
-                    } catch (Throwable) {
-                        $rrReceivedDate = now();
-                    }
-                }
-
+                // Create RrDocument record
                 $rrDocument = RrDocument::create([
                     'rake_id' => $rake->id,
                     'rr_number' => $data['rr_number'] ?? $extractedData['rr_number'] ?? 'RR-'.now()->timestamp,
-                    'rr_received_date' => $rrReceivedDate,
+                    'rr_received_date' => now(),
                     'rr_weight_mt' => $extractedData['rr_weight_mt'] ?? null,
-                    'fnr' => $extractedData['fnr'] ?? null,
-                    'from_station_code' => $extractedData['from_station_code'] ?? null,
-                    'to_station_code' => $extractedData['to_station_code'] ?? null,
-                    'freight_total' => isset($extractedData['freight_total']) ? (float) $extractedData['freight_total'] : null,
-                    'rr_details' => $extractedData,
+                    'rr_details' => json_encode($extractedData),
                     'document_status' => 'received',
                     'has_discrepancy' => false,
                     'created_by' => $userId,
@@ -105,19 +90,12 @@ final readonly class ProcessRrDocument
             $out = [
                 'rr_number' => $extracted['rr_number'] ?? null,
                 'rr_weight_mt' => isset($extracted['rr_weight_mt']) ? (float) $extracted['rr_weight_mt'] : null,
-                'fnr' => $extracted['fnr'] ?? null,
-                'from_station_code' => $extracted['from_station_code'] ?? null,
-                'to_station_code' => $extracted['to_station_code'] ?? null,
-                'freight_total' => isset($extracted['freight_total']) ? (float) $extracted['freight_total'] : null,
-                'charges' => $extracted['charges'] ?? null,
-                'wagons' => $extracted['wagons'] ?? null,
-                'rr_details' => $extracted,
             ];
             if (isset($extracted['receipt_date']) && $extracted['receipt_date']) {
                 $out['rr_received_date'] = $extracted['receipt_date'];
             }
 
-            return array_filter($out, fn ($v, $k) => $k === 'rr_details' || ($v !== null && $v !== ''), ARRAY_FILTER_USE_BOTH);
+            return array_filter($out, fn ($v) => $v !== null && $v !== '');
         } catch (Exception $e) {
             Log::warning('RR document extraction failed', ['error' => $e->getMessage()]);
 
@@ -182,31 +160,21 @@ final readonly class ProcessRrDocument
         // Use Laravel AI SDK with structured output to extract RR data
         $response = agent(
             instructions: <<<'PROMPT'
-            You are an expert in railway documentation. Extract key information from Indian Railway Receipt (eT-RR) documents.
+            You are an expert in railway documentation. Extract key information from Railway Receipt (RR) documents.
 
-            Extract and return a single JSON object with:
+            Extract and return the following fields:
+            - RR number/reference
+            - Total weight in MT (metric tonnes)
+            - Number of wagons
+            - Coal quality/grade
+            - Sender/origin siding
+            - Receiver/destination siding
+            - Receipt date/time
 
-            Header fields:
-            - rr_number (RR No)
-            - fnr (F/Note Number or FNR)
-            - rr_weight_mt (Actual Weight or Chargeable Weight in MT - use the main weight total)
-            - wagon_count (number of wagons)
-            - receipt_date (RR Date in ISO or Y-m-d format)
-            - from_station_code (Station From code, e.g. BMGK, DUMK)
-            - to_station_code (Station To code, e.g. PSPM, KPPS)
-            - freight_total (total freight amount in rupees, number)
-            - charges: object with keys POL1, OTC, GST (amounts as numbers; use 0 if absent)
-
-            Wagon table (if present): wagons as array of objects, each with:
-            - wagon_number, wagon_type, cc_mt, tare_mt, gross_mt, actual_mt, permissible_mt, over_weight_mt, chargeable_mt
-            (use null for missing numeric fields; keep wagon_number and wagon_type as strings)
-
-            Also include if found: coal_grade, origin_siding, destination_siding.
-
-            Return only valid JSON. Use null for any field you cannot find.
+            Return null for any field you cannot find. Focus on accuracy.
             PROMPT
         )->prompt(
-            message: 'Extract all header and wagon-table data from this Railway Receipt. Return one JSON object.',
+            message: 'Please extract information from this Railway Receipt document. Return the data as JSON.',
             attachments: [
                 [
                     'type' => 'image',
@@ -220,77 +188,28 @@ final readonly class ProcessRrDocument
         try {
             $text = $response->text;
 
-            // Try to extract JSON from response (handle nested braces for wagons array)
+            // Try to extract JSON from response
             if (str_contains($text, '{')) {
                 $jsonStart = mb_strpos($text, '{');
-                $depth = 0;
-                $jsonEnd = $jsonStart;
-                $len = mb_strlen($text);
-                for ($i = $jsonStart; $i < $len; $i++) {
-                    $ch = mb_substr($text, $i, 1);
-                    if ($ch === '{') {
-                        $depth++;
-                    } elseif ($ch === '}') {
-                        $depth--;
-                        if ($depth === 0) {
-                            $jsonEnd = $i;
-                            break;
-                        }
-                    }
-                }
-                $jsonStr = mb_substr($text, $jsonStart, $jsonEnd - $jsonStart + 1);
-                $parsed = json_decode($jsonStr, true);
-                if (is_array($parsed)) {
-                    $wagons = $parsed['wagons'] ?? null;
-                    if (is_array($wagons)) {
-                        $wagons = array_values(array_map(function ($w) {
-                            if (! is_array($w)) {
-                                return null;
-                            }
+                $jsonEnd = mb_strrpos($text, '}');
+                if ($jsonStart !== false && $jsonEnd !== false) {
+                    $jsonStr = mb_substr($text, $jsonStart, $jsonEnd - $jsonStart + 1);
+                    $parsed = json_decode($jsonStr, true);
 
-                            return [
-                                'wagon_number' => $w['wagon_number'] ?? $w['wagonNumber'] ?? null,
-                                'wagon_type' => $w['wagon_type'] ?? $w['wagonType'] ?? null,
-                                'cc_mt' => isset($w['cc_mt']) ? (float) $w['cc_mt'] : (isset($w['ccMt']) ? (float) $w['ccMt'] : null),
-                                'tare_mt' => isset($w['tare_mt']) ? (float) $w['tare_mt'] : null,
-                                'gross_mt' => isset($w['gross_mt']) ? (float) $w['gross_mt'] : null,
-                                'actual_mt' => isset($w['actual_mt']) ? (float) $w['actual_mt'] : null,
-                                'permissible_mt' => isset($w['permissible_mt']) ? (float) $w['permissible_mt'] : null,
-                                'over_weight_mt' => isset($w['over_weight_mt']) ? (float) $w['over_weight_mt'] : null,
-                                'chargeable_mt' => isset($w['chargeable_mt']) ? (float) $w['chargeable_mt'] : null,
-                            ];
-                        }, $wagons));
-                        $wagons = array_filter($wagons);
-                    }
-                    $charges = $parsed['charges'] ?? null;
-                    if (is_array($charges)) {
-                        $charges = array_filter([
-                            'POL1' => isset($charges['POL1']) ? (float) $charges['POL1'] : null,
-                            'OTC' => isset($charges['OTC']) ? (float) $charges['OTC'] : null,
-                            'GST' => isset($charges['GST']) ? (float) $charges['GST'] : null,
-                        ], fn ($v) => $v !== null);
-                    }
-
-                    return array_filter([
+                    return [
                         'rr_number' => $parsed['rr_number'] ?? $parsed['RR_number'] ?? null,
-                        'rr_weight_mt' => is_numeric($parsed['rr_weight_mt'] ?? $parsed['weight'] ?? $parsed['total_weight_mt'] ?? null)
-                            ? (float) ($parsed['rr_weight_mt'] ?? $parsed['weight'] ?? $parsed['total_weight_mt'])
+                        'rr_weight_mt' => is_numeric($parsed['weight'] ?? $parsed['total_weight_mt'] ?? null)
+                            ? (float) ($parsed['weight'] ?? $parsed['total_weight_mt'])
                             : null,
                         'wagon_count' => is_numeric($parsed['wagon_count'] ?? $parsed['wagons'] ?? null)
                             ? (int) ($parsed['wagon_count'] ?? $parsed['wagons'])
                             : null,
-                        'fnr' => $parsed['fnr'] ?? null,
-                        'receipt_date' => $parsed['receipt_date'] ?? null,
-                        'from_station_code' => $parsed['from_station_code'] ?? null,
-                        'to_station_code' => $parsed['to_station_code'] ?? null,
-                        'freight_total' => is_numeric($parsed['freight_total'] ?? null) ? (float) $parsed['freight_total'] : null,
-                        'charges' => $charges,
-                        'wagons' => ! empty($wagons) ? $wagons : null,
                         'coal_grade' => $parsed['coal_grade'] ?? $parsed['quality'] ?? null,
                         'origin_siding' => $parsed['origin_siding'] ?? $parsed['sender'] ?? null,
                         'destination_siding' => $parsed['destination_siding'] ?? $parsed['receiver'] ?? null,
+                        'receipt_date' => $parsed['receipt_date'] ?? null,
                         'raw_extraction' => $text,
-                    ], fn ($v) => $v !== null && $v !== '');
+                    ];
                 }
             }
 

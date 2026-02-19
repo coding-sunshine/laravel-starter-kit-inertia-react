@@ -9,10 +9,7 @@ import {
 } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import InputError from '@/components/input-error';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { Clock, FileText, Scale, Train } from 'lucide-react';
 
 interface Siding {
@@ -55,7 +52,6 @@ interface WeighmentRecord {
     weighment_time: string;
     total_weight_mt: string;
     weighment_status: string | null;
-    weighment_slip_url?: string | null;
 }
 
 interface GuardInspectionRecord {
@@ -122,65 +118,6 @@ function formatRemaining(m: number): string {
     const min = m % 60;
     if (h > 0) return `${h}h ${min}m`;
     return `${min}m`;
-}
-
-function WeighmentForm({ rakeId }: { rakeId: number }) {
-    const { errors } = usePage<{ errors?: Record<string, string> }>().props;
-
-    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        const form = e.currentTarget;
-        const formData = new FormData(form);
-        router.post(`/rakes/${rakeId}/weighments`, formData, {
-            forceFormData: true,
-        });
-    };
-
-    return (
-        <form
-            onSubmit={handleSubmit}
-            className="flex flex-wrap items-end gap-4 rounded border bg-muted/30 p-4"
-        >
-            <div className="grid gap-1.5">
-                <Label htmlFor="weighment_time">Weighment time *</Label>
-                <Input
-                    id="weighment_time"
-                    name="weighment_time"
-                    type="datetime-local"
-                    required
-                    className="w-48 text-sm"
-                />
-                <InputError message={errors?.weighment_time} />
-            </div>
-            <div className="grid gap-1.5">
-                <Label htmlFor="total_weight_mt">Total weight (MT) *</Label>
-                <Input
-                    id="total_weight_mt"
-                    name="total_weight_mt"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    required
-                    className="w-28 text-sm"
-                />
-                <InputError message={errors?.total_weight_mt} />
-            </div>
-            <div className="grid gap-1.5">
-                <Label htmlFor="weighment_pdf">Weighment slip (PDF)</Label>
-                <Input
-                    id="weighment_pdf"
-                    name="pdf"
-                    type="file"
-                    accept=".pdf,application/pdf"
-                    className="w-48 text-sm"
-                />
-                <InputError message={errors?.pdf} />
-            </div>
-            <Button type="submit" size="sm">
-                Record weighment
-            </Button>
-        </form>
-    );
 }
 
 export default function RakesShow({
@@ -400,21 +337,20 @@ export default function RakesShow({
                     </Card>
                 )}
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Weighments</CardTitle>
-                        <CardDescription>
-                            Weighment records for this rake. Attach weighment
-                            slip PDF when recording.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        {rake.weighments.length > 0 && (
+                {rake.weighments.length > 0 && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Weighments</CardTitle>
+                            <CardDescription>
+                                Weighment records for this rake
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
                             <ul className="space-y-2 text-sm">
                                 {rake.weighments.map((w) => (
                                     <li
                                         key={w.id}
-                                        className="flex flex-wrap items-center gap-4 rounded border p-3"
+                                        className="flex flex-wrap gap-4 rounded border p-3"
                                     >
                                         <span>
                                             {new Date(
@@ -430,23 +366,12 @@ export default function RakesShow({
                                                 {w.weighment_status}
                                             </span>
                                         )}
-                                        {w.weighment_slip_url && (
-                                            <a
-                                                href={w.weighment_slip_url}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="text-primary underline underline-offset-2"
-                                            >
-                                                View slip
-                                            </a>
-                                        )}
                                     </li>
                                 ))}
                             </ul>
-                        )}
-                        <WeighmentForm rakeId={rake.id} />
-                    </CardContent>
-                </Card>
+                        </CardContent>
+                    </Card>
+                )}
 
                 {rake.guard_inspection && (
                     <Card>

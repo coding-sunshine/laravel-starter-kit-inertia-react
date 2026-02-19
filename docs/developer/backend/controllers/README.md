@@ -40,27 +40,5 @@ All Controllers:
 | [EnterpriseInquiryController](./EnterpriseInquiryController.md) | N/A | ✅ |
 | [Controller](./controller.md) | N/A | ✅ |
 | [ChatController](./chatcontroller.md) | N/A | ✅ |
-| [AlertController](./alertcontroller.md) | N/A | ✅ |
-| [BillingDashboardController](./billingdashboardcontroller.md) | N/A | ✅ |
-| [CreditController](./creditcontroller.md) | N/A | ✅ |
-| [InvoiceController](./invoicecontroller.md) | N/A | ✅ |
-| [PaddleWebhookController](./paddlewebhookcontroller.md) | N/A | ✅ |
-| [PricingController](./pricingcontroller.md) | N/A | ✅ |
-| [StripeWebhookController](./stripewebhookcontroller.md) | N/A | ✅ |
-| [ExecutiveDashboardController](./executivedashboardcontroller.md) | N/A | ✅ |
-| [IndentsController](./indentscontroller.md) | N/A | ✅ |
-| [PenaltyController](./penaltycontroller.md) | N/A | ✅ |
-| [RrDocumentController](./rrdocumentcontroller.md) | N/A | ✅ |
-| [RakeGuardInspectionController](./rakeguardinspectioncontroller.md) | N/A | ✅ |
-| [RakeTxrController](./raketxrcontroller.md) | N/A | ✅ |
-| [RakeWeighmentController](./rakeweighmentcontroller.md) | N/A | ✅ |
-| [RakesController](./rakescontroller.md) | N/A | ✅ |
-| [PowerPlantReceiptController](./powerplantreceiptcontroller.md) | N/A | ✅ |
-| [ReconciliationController](./reconciliationcontroller.md) | N/A | ✅ |
-| [ReportsController](./reportscontroller.md) | N/A | ✅ |
-| [VehicleArrivalController](./vehiclearrivalcontroller.md) | N/A | ✅ |
-| [VehicleUnloadController](./vehicleunloadcontroller.md) | N/A | ✅ |
-| [AchievementsController](./achievementscontroller.md) | N/A | ✅ |
-| [SidingSwitchController](docs/developer/backend/controllers/sidingswitchcontroller.md) | N/A | ✅ |
 
 
