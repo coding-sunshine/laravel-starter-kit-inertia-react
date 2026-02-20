@@ -71,6 +71,16 @@
             "type": "timestamp",
             "nullable": true,
             "default": null
+        },
+        "e_demand_reference_id": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "fnr_number": {
+            "type": "string",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {

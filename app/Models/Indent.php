@@ -8,10 +8,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Mattiverse\Userstamps\Traits\Userstamps;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 
-final class Indent extends Model
+final class Indent extends Model implements HasMedia
 {
-    use SoftDeletes, Userstamps;
+    use InteractsWithMedia, SoftDeletes, Userstamps;
 
     protected $fillable = [
         'siding_id',
@@ -22,12 +24,30 @@ final class Indent extends Model
         'indent_date',
         'required_by_date',
         'remarks',
+        'e_demand_reference_id',
+        'fnr_number',
     ];
 
     protected $casts = [
         'indent_date' => 'datetime',
         'required_by_date' => 'datetime',
     ];
+
+    protected $appends = ['indent_confirmation_pdf_url'];
+
+    public function getIndentConfirmationPdfUrlAttribute(): ?string
+    {
+        $media = $this->getFirstMedia('indent_confirmation_pdf');
+
+        return $media ? $media->getUrl() : null;
+    }
+
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('indent_confirmation_pdf')
+            ->singleFile()
+            ->acceptsMimeTypes(['application/pdf']);
+    }
 
     public function siding(): BelongsTo
     {

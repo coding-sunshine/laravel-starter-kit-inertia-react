@@ -638,7 +638,15 @@
             "path": "./importrakedatafromexcelaction.md",
             "relationships": {
                 "usedBy": [],
-                "usesModels": [],
+                "usesModels": [
+                    "Loader",
+                    "Penalty",
+                    "Rake",
+                    "RrDocument",
+                    "Siding",
+                    "Wagon",
+                    "Weighment"
+                ],
                 "relatedRoutes": []
             }
         }
@@ -1260,6 +1268,11 @@
                     "rakes.weighments.store",
                     "rakes.guard-inspection.store",
                     "indents.index",
+                    "indents.create",
+                    "indents.store",
+                    "indents.show",
+                    "indents.edit",
+                    "indents.update",
                     "road-dispatch.arrivals.index",
                     "road-dispatch.arrivals.create",
                     "road-dispatch.arrivals.store",
@@ -1638,6 +1651,11 @@
                     "rakes.weighments.store",
                     "rakes.guard-inspection.store",
                     "indents.index",
+                    "indents.create",
+                    "indents.store",
+                    "indents.show",
+                    "indents.edit",
+                    "indents.update",
                     "road-dispatch.arrivals.index",
                     "road-dispatch.arrivals.create",
                     "road-dispatch.arrivals.store",
@@ -1943,6 +1961,11 @@
                     "rakes.weighments.store",
                     "rakes.guard-inspection.store",
                     "indents.index",
+                    "indents.create",
+                    "indents.store",
+                    "indents.show",
+                    "indents.edit",
+                    "indents.update",
                     "road-dispatch.arrivals.index",
                     "road-dispatch.arrivals.create",
                     "road-dispatch.arrivals.store",
@@ -2189,6 +2212,11 @@
                     "rakes.weighments.store",
                     "rakes.guard-inspection.store",
                     "indents.index",
+                    "indents.create",
+                    "indents.store",
+                    "indents.show",
+                    "indents.edit",
+                    "indents.update",
                     "road-dispatch.arrivals.index",
                     "road-dispatch.arrivals.create",
                     "road-dispatch.arrivals.store",
@@ -2421,6 +2449,11 @@
                     "rakes.weighments.store",
                     "rakes.guard-inspection.store",
                     "indents.index",
+                    "indents.create",
+                    "indents.store",
+                    "indents.show",
+                    "indents.edit",
+                    "indents.update",
                     "road-dispatch.arrivals.index",
                     "road-dispatch.arrivals.create",
                     "road-dispatch.arrivals.store",
@@ -2665,7 +2698,12 @@
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
-                    "indents.index"
+                    "indents.index",
+                    "indents.create",
+                    "indents.store",
+                    "indents.show",
+                    "indents.edit",
+                    "indents.update"
                 ]
             }
         },
@@ -2871,6 +2909,54 @@
                     "road-dispatch.unloads.create",
                     "road-dispatch.unloads.store",
                     "road-dispatch.unloads.confirm"
+                ]
+            }
+        },
+        "indents/create": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./indents/create.md",
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": [
+                    "indents.index",
+                    "indents.create",
+                    "indents.store",
+                    "indents.show",
+                    "indents.edit",
+                    "indents.update"
+                ]
+            }
+        },
+        "indents/edit": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./indents/edit.md",
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": [
+                    "indents.index",
+                    "indents.create",
+                    "indents.store",
+                    "indents.show",
+                    "indents.edit",
+                    "indents.update"
+                ]
+            }
+        },
+        "indents/show": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./indents/show.md",
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": [
+                    "indents.index",
+                    "indents.create",
+                    "indents.store",
+                    "indents.show",
+                    "indents.edit",
+                    "indents.update"
                 ]
             }
         }

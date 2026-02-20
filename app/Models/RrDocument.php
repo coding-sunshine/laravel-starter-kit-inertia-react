@@ -19,17 +19,16 @@ final class RrDocument extends Model implements HasMedia
         'rr_number',
         'rr_received_date',
         'rr_weight_mt',
+        'fnr',
+        'from_station_code',
+        'to_station_code',
+        'freight_total',
         'rr_details',
         'document_status',
         'has_discrepancy',
         'discrepancy_details',
         'created_by',
         'updated_by',
-    ];
-
-    protected $casts = [
-        'rr_received_date' => 'datetime',
-        'has_discrepancy' => 'boolean',
     ];
 
     public function registerMediaCollections(): void
@@ -52,5 +51,15 @@ final class RrDocument extends Model implements HasMedia
     public function updatedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    protected function casts(): array
+    {
+        return [
+            'rr_received_date' => 'datetime',
+            'has_discrepancy' => 'boolean',
+            'rr_details' => 'array',
+            'freight_total' => 'decimal:2',
+        ];
     }
 }

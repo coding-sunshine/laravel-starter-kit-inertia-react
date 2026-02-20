@@ -89,6 +89,10 @@ final class RrDocumentController extends Controller
             'rr_number' => ['required', 'string', 'max:50', 'unique:rr_documents,rr_number'],
             'rr_received_date' => ['required', 'date'],
             'rr_weight_mt' => ['nullable', 'numeric', 'min:0'],
+            'fnr' => ['nullable', 'string', 'max:50'],
+            'from_station_code' => ['nullable', 'string', 'max:20'],
+            'to_station_code' => ['nullable', 'string', 'max:20'],
+            'freight_total' => ['nullable', 'numeric', 'min:0'],
             'document_status' => ['nullable', 'string', 'in:received,verified,discrepancy'],
             'pdf' => ['nullable', 'file', 'mimes:pdf', 'max:10240'],
         ]);
@@ -100,6 +104,10 @@ final class RrDocumentController extends Controller
             'rr_number' => $validated['rr_number'],
             'rr_received_date' => $validated['rr_received_date'],
             'rr_weight_mt' => $validated['rr_weight_mt'] ?? null,
+            'fnr' => $validated['fnr'] ?? null,
+            'from_station_code' => $validated['from_station_code'] ?? null,
+            'to_station_code' => $validated['to_station_code'] ?? null,
+            'freight_total' => $validated['freight_total'] ?? null,
             'document_status' => $validated['document_status'] ?? 'received',
             'created_by' => $request->user()->id,
         ]);
@@ -117,6 +125,21 @@ final class RrDocumentController extends Controller
                 }
                 if (! empty($extracted['rr_received_date'])) {
                     $update['rr_received_date'] = $extracted['rr_received_date'];
+                }
+                if (array_key_exists('fnr', $extracted)) {
+                    $update['fnr'] = $extracted['fnr'];
+                }
+                if (array_key_exists('from_station_code', $extracted)) {
+                    $update['from_station_code'] = $extracted['from_station_code'];
+                }
+                if (array_key_exists('to_station_code', $extracted)) {
+                    $update['to_station_code'] = $extracted['to_station_code'];
+                }
+                if (array_key_exists('freight_total', $extracted)) {
+                    $update['freight_total'] = $extracted['freight_total'];
+                }
+                if (! empty($extracted['rr_details']) && is_array($extracted['rr_details'])) {
+                    $update['rr_details'] = $extracted['rr_details'];
                 }
                 if ($update !== []) {
                     $doc->update($update);
@@ -140,6 +163,10 @@ final class RrDocumentController extends Controller
             'rr_number' => ['required', 'string', 'max:50', 'unique:rr_documents,rr_number,'.$rrDocument->id],
             'rr_received_date' => ['required', 'date'],
             'rr_weight_mt' => ['nullable', 'numeric', 'min:0'],
+            'fnr' => ['nullable', 'string', 'max:50'],
+            'from_station_code' => ['nullable', 'string', 'max:20'],
+            'to_station_code' => ['nullable', 'string', 'max:20'],
+            'freight_total' => ['nullable', 'numeric', 'min:0'],
             'document_status' => ['nullable', 'string', 'in:received,verified,discrepancy'],
             'has_discrepancy' => ['nullable', 'boolean'],
             'discrepancy_details' => ['nullable', 'string', 'max:2000'],
