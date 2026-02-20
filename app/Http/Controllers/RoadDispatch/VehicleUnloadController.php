@@ -10,6 +10,7 @@ use App\Http\Requests\RoadDispatch\StoreVehicleUnloadRequest;
 use App\Models\Siding;
 use App\Models\Vehicle;
 use App\Models\VehicleUnload;
+use App\Services\SidingContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -24,9 +25,7 @@ final class VehicleUnloadController extends Controller
     public function index(Request $request): Response
     {
         $user = $request->user();
-        $sidingIds = $user->isSuperAdmin()
-            ? Siding::query()->pluck('id')->all()
-            : $user->accessibleSidings()->get()->pluck('id')->all();
+        $sidingIds = SidingContext::activeSidingIds($user);
 
         $query = VehicleUnload::query()
             ->with(['siding:id,name,code', 'vehicle:id,vehicle_number,owner_name'])
@@ -55,9 +54,7 @@ final class VehicleUnloadController extends Controller
     public function create(Request $request): Response
     {
         $user = $request->user();
-        $sidingIds = $user->isSuperAdmin()
-            ? Siding::query()->pluck('id')->all()
-            : $user->accessibleSidings()->get()->pluck('id')->all();
+        $sidingIds = SidingContext::activeSidingIds($user);
 
         $sidings = Siding::query()
             ->whereIn('id', $sidingIds)
@@ -71,6 +68,7 @@ final class VehicleUnloadController extends Controller
         return Inertia::render('road-dispatch/unloads/create', [
             'sidings' => $sidings,
             'vehicles' => $vehicles,
+            'currentSidingId' => SidingContext::id(),
         ]);
     }
 

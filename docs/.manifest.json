@@ -1387,6 +1387,19 @@
                     "settings/achievements"
                 ]
             }
+        },
+        "SidingSwitchController": {
+            "documented": true,
+            "path": "docs/developer/backend/controllers/sidingswitchcontroller.md",
+            "lastUpdated": "2026-02-20",
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "siding.switch"
+                ],
+                "rendersPages": []
+            }
         }
     },
     "pages": {
@@ -1564,6 +1577,7 @@
                     "billing.credits.checkout.lemon-squeezy",
                     "billing.invoices.index",
                     "billing.invoices.download",
+                    "siding.switch",
                     "rakes.index",
                     "rakes.show",
                     "rakes.txr.update",
@@ -1947,6 +1961,7 @@
                     "billing.credits.checkout.lemon-squeezy",
                     "billing.invoices.index",
                     "billing.invoices.download",
+                    "siding.switch",
                     "rakes.index",
                     "rakes.show",
                     "rakes.txr.update",
@@ -2257,6 +2272,7 @@
                     "billing.credits.checkout.lemon-squeezy",
                     "billing.invoices.index",
                     "billing.invoices.download",
+                    "siding.switch",
                     "rakes.index",
                     "rakes.show",
                     "rakes.txr.update",
@@ -2508,6 +2524,7 @@
                     "billing.credits.checkout.lemon-squeezy",
                     "billing.invoices.index",
                     "billing.invoices.download",
+                    "siding.switch",
                     "rakes.index",
                     "rakes.show",
                     "rakes.txr.update",
@@ -2745,6 +2762,7 @@
                     "billing.credits.checkout.lemon-squeezy",
                     "billing.invoices.index",
                     "billing.invoices.download",
+                    "siding.switch",
                     "rakes.index",
                     "rakes.show",
                     "rakes.txr.update",

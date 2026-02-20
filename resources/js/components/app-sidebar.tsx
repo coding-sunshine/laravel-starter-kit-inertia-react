@@ -2,6 +2,7 @@ import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
 import { OrganizationSwitcher } from '@/components/organization-switcher';
+import { SidingSwitcher } from '@/components/siding-switcher';
 import {
     Sidebar,
     SidebarContent,
@@ -217,6 +218,9 @@ export function AppSidebar() {
                             <OrganizationSwitcher />
                         </SidebarMenuItem>
                     )}
+                    <SidebarMenuItem>
+                        <SidingSwitcher />
+                    </SidebarMenuItem>
                 </SidebarMenu>
             </SidebarHeader>
 

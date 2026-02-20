@@ -21,6 +21,26 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Demurrage escalation thresholds (minutes remaining)
+    |--------------------------------------------------------------------------
+    | When the scheduled rrmcs:check-demurrage command detects a loading rake
+    | crossing one of these thresholds, it fires a DemurrageThresholdCrossed
+    | event which triggers role-based notifications and database mail.
+    |   60 → siding operators, 30 → siding in-charge, 0 → management
+    */
+    'demurrage_thresholds' => [60, 30, 0],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Demurrage check interval (minutes)
+    |--------------------------------------------------------------------------
+    | How frequently the rrmcs:check-demurrage command should run.
+    | The schedule is registered in routes/console.php.
+    */
+    'demurrage_check_interval' => 5,
+
+    /*
+    |--------------------------------------------------------------------------
     | PRD / real data import paths (Excel)
     |--------------------------------------------------------------------------
     | Paths relative to project base for seeding historical rake/penalty data.

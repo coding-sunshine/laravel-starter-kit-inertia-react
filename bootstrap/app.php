@@ -19,6 +19,7 @@ use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\ResolveDomainMiddleware;
 use App\Http\Middleware\ServeFavicon;
+use App\Http\Middleware\SetSidingContext;
 use App\Http\Middleware\SetTenantContext;
 use App\Http\Middleware\ThrottleTwoFactorManagement;
 use Illuminate\Foundation\Application;
@@ -63,8 +64,9 @@ return Application::configure(basePath: dirname(__DIR__))
             AdditionalSecurityHeaders::class,
             ActivityLogContextMiddleware::class,
             HandleAppearance::class,
-            HandleInertiaRequests::class,
             SetTenantContext::class,
+            SetSidingContext::class,
+            HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
             CacheResponse::class,
             AutoPermissionMiddleware::class,

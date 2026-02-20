@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Events\DemurrageThresholdCrossed;
 use App\Events\OrganizationMemberAdded;
 use App\Events\OrganizationMemberRemoved;
 use App\Events\User\UserCreated;
@@ -13,6 +14,7 @@ use App\Listeners\CreatePersonalOrganizationOnUserCreated;
 use App\Listeners\Gamification\GrantGamificationOnUserCreated;
 use App\Listeners\LogImpersonationEvents;
 use App\Listeners\MigrationListener;
+use App\Listeners\SendDemurrageEscalation;
 use App\Listeners\SendSlackAlertOnJobFailed;
 use App\Models\Shareable;
 use App\Models\User;
@@ -91,6 +93,7 @@ final class AppServiceProvider extends ServiceProvider
         Event::listen(OrganizationMemberAdded::class, SyncSubscriptionSeatsOnMemberChange::class);
         Event::listen(OrganizationMemberRemoved::class, SyncSubscriptionSeatsOnMemberChange::class);
         Event::listen(OrderCreated::class, AddCreditsFromLemonSqueezyOrder::class);
+        Event::listen(DemurrageThresholdCrossed::class, SendDemurrageEscalation::class);
         User::observe(UserObserver::class);
     }
 
@@ -170,6 +173,7 @@ final class AppServiceProvider extends ServiceProvider
             'chat-new-chat',
             'chat-send',
             'chat-conversation-item',
+            'siding-switcher',
         ]);
     }
 

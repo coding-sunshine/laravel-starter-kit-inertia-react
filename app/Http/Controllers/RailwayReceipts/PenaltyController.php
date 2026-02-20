@@ -7,6 +7,7 @@ namespace App\Http\Controllers\RailwayReceipts;
 use App\Http\Controllers\Controller;
 use App\Models\Penalty;
 use App\Models\Siding;
+use App\Services\SidingContext;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -16,9 +17,7 @@ final class PenaltyController extends Controller
     public function index(Request $request): Response
     {
         $user = $request->user();
-        $sidingIds = $user->isSuperAdmin()
-            ? Siding::query()->pluck('id')->all()
-            : $user->accessibleSidings()->get()->pluck('id')->all();
+        $sidingIds = SidingContext::activeSidingIds($user);
 
         $query = Penalty::query()
             ->with('rake.siding:id,name,code')

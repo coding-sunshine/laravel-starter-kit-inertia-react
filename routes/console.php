@@ -30,6 +30,9 @@ Schedule::command('model:prune', [
     '--model' => [MartinPetricko\LaravelDatabaseMail\Models\MailException::class],
 ])->daily();
 
+// RRMCS: check loading rakes for demurrage threshold crossings.
+Schedule::command('rrmcs:check-demurrage')->everyFiveMinutes();
+
 // Billing jobs: metrics, credit expiration, trial reminders.
 Schedule::job(new App\Jobs\Billing\GenerateBillingMetrics)->daily()->at('02:00');
 Schedule::job(new App\Jobs\Billing\ExpireCredits)->daily()->at('03:00');

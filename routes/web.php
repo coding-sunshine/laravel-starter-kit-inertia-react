@@ -44,6 +44,7 @@ use App\Http\Controllers\RoadDispatch\VehicleArrivalController;
 use App\Http\Controllers\RoadDispatch\VehicleUnloadController;
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\Settings\AchievementsController;
+use App\Http\Controllers\SidingSwitchController;
 use App\Http\Controllers\TermsAcceptController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserEmailResetNotificationController;
@@ -161,6 +162,9 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         Route::get('billing/invoices', [InvoiceController::class, 'index'])->name('billing.invoices.index');
         Route::get('billing/invoices/{invoice}', [InvoiceController::class, 'download'])->name('billing.invoices.download');
     });
+
+    // Siding context switcher
+    Route::post('siding/switch', SidingSwitchController::class)->name('siding.switch');
 
     // RRMCS Routes (Railway Rake Management Control System)
     Route::get('rakes', [RakesController::class, 'index'])->name('rakes.index');

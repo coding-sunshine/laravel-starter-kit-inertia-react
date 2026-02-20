@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Alerts;
 use App\Http\Controllers\Controller;
 use App\Models\Alert;
 use App\Models\Siding;
+use App\Services\SidingContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -17,9 +18,7 @@ final class AlertController extends Controller
     public function index(Request $request): Response
     {
         $user = $request->user();
-        $sidingIds = $user->isSuperAdmin()
-            ? Siding::query()->pluck('id')->all()
-            : $user->accessibleSidings()->get()->pluck('id')->all();
+        $sidingIds = SidingContext::activeSidingIds($user);
 
         $query = Alert::query()
             ->with('rake:id,rake_number', 'siding:id,name,code')
@@ -52,9 +51,7 @@ final class AlertController extends Controller
     public function resolve(Request $request, Alert $alert): RedirectResponse
     {
         $user = $request->user();
-        $sidingIds = $user->isSuperAdmin()
-            ? Siding::query()->pluck('id')->all()
-            : $user->accessibleSidings()->get()->pluck('id')->all();
+        $sidingIds = SidingContext::activeSidingIds($user);
         if ($alert->siding_id !== null && ! in_array($alert->siding_id, $sidingIds, true)) {
             abort(403);
         }

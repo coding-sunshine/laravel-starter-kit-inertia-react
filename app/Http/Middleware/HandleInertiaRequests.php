@@ -56,6 +56,11 @@ final class HandleInertiaRequests extends Middleware
             ? $user->organizations()->orderBy('name')->get(['id', 'name', 'slug'])
             : [];
 
+        $currentSiding = $user ? \App\Services\SidingContext::get() : null;
+        $userSidings = $user
+            ? $user->sidings()->get(['sidings.id', 'sidings.name', 'sidings.code'])
+            : [];
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
@@ -68,6 +73,9 @@ final class HandleInertiaRequests extends Middleware
                 'tenancy_enabled' => $tenancyEnabled,
                 'current_organization' => $currentOrganization?->only(['id', 'name', 'slug']),
                 'organizations' => $tenancyEnabled ? $userOrganizations : [],
+                'sidings' => $userSidings,
+                'current_siding' => $currentSiding?->only(['id', 'name', 'code']),
+                'can_view_all_sidings' => $user?->isManagement() ?? false,
             ],
             'features' => $features,
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',

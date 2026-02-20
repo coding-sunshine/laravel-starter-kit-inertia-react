@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Rakes;
 
 use App\Http\Controllers\Controller;
 use App\Models\Rake;
+use App\Services\SidingContext;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -15,17 +16,14 @@ final class RakesController extends Controller
     public function index(Request $request): Response
     {
         $user = $request->user();
+        $sidingIds = SidingContext::activeSidingIds($user);
 
-        $query = Rake::query()
+        $rakes = Rake::query()
             ->with('siding:id,code,name')
-            ->latest('loading_start_time');
-
-        if (! $user->isSuperAdmin()) {
-            $sidingIds = $user->sidings()->get()->pluck('id')->all();
-            $query->whereIn('siding_id', $sidingIds);
-        }
-
-        $rakes = $query->paginate(15)->withQueryString();
+            ->whereIn('siding_id', $sidingIds)
+            ->latest('loading_start_time')
+            ->paginate(15)
+            ->withQueryString();
 
         return Inertia::render('rakes/index', [
             'rakes' => $rakes,

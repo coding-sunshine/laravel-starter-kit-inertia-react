@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Indents;
 use App\Http\Controllers\Controller;
 use App\Models\Indent;
 use App\Models\Siding;
+use App\Services\SidingContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -17,9 +18,7 @@ final class IndentsController extends Controller
     public function index(Request $request): Response
     {
         $user = $request->user();
-        $sidingIds = $user->isSuperAdmin()
-            ? Siding::query()->pluck('id')->all()
-            : $user->accessibleSidings()->get()->pluck('id')->all();
+        $sidingIds = SidingContext::activeSidingIds($user);
 
         $indents = Indent::query()
             ->with('siding:id,name,code')
@@ -44,9 +43,7 @@ final class IndentsController extends Controller
         $this->authorize('create', Indent::class);
 
         $user = $request->user();
-        $sidingIds = $user->isSuperAdmin()
-            ? Siding::query()->pluck('id')->all()
-            : $user->accessibleSidings()->get()->pluck('id')->all();
+        $sidingIds = SidingContext::activeSidingIds($user);
 
         $sidings = Siding::query()
             ->whereIn('id', $sidingIds)
@@ -55,6 +52,7 @@ final class IndentsController extends Controller
 
         return Inertia::render('indents/create', [
             'sidings' => $sidings,
+            'currentSidingId' => SidingContext::id(),
         ]);
     }
 
@@ -116,9 +114,7 @@ final class IndentsController extends Controller
         $this->authorize('update', $indent);
 
         $user = $request->user();
-        $sidingIds = $user->isSuperAdmin()
-            ? Siding::query()->pluck('id')->all()
-            : $user->accessibleSidings()->get()->pluck('id')->all();
+        $sidingIds = SidingContext::activeSidingIds($user);
 
         $sidings = Siding::query()
             ->whereIn('id', $sidingIds)
@@ -130,6 +126,7 @@ final class IndentsController extends Controller
         return Inertia::render('indents/edit', [
             'indent' => $indent,
             'sidings' => $sidings,
+            'currentSidingId' => SidingContext::id(),
         ]);
     }
 

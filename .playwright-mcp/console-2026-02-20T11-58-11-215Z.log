@@ -1,0 +1,9 @@
+[ 1178545ms] TypeError: f.addEventListener is not a function
+    at p (https://laravel-starter-kit-inertia-react.test/build/assets/app-layout-zheq941Q.js:45:77382)
+    at https://laravel-starter-kit-inertia-react.test/build/assets/index-CWqgC_kx.js:1:291
+    at ny (https://laravel-starter-kit-inertia-react.test/build/assets/app-aGjw4efc.js:90:127808)
+    at https://laravel-starter-kit-inertia-react.test/build/assets/app-aGjw4efc.js:90:132985
+    at is (https://laravel-starter-kit-inertia-react.test/build/assets/app-aGjw4efc.js:90:15131)
+    at Zf (https://laravel-starter-kit-inertia-react.test/build/assets/app-aGjw4efc.js:90:129044)
+    at fd (https://laravel-starter-kit-inertia-react.test/build/assets/app-aGjw4efc.js:91:28626)
+    at C_ (https://laravel-starter-kit-inertia-react.test/build/assets/app-aGjw4efc.js:91:28444)

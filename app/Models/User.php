@@ -284,6 +284,9 @@ final class User extends Authenticatable implements ExportsPersonalData, Filamen
 
     /**
      * Whether this user has the super-admin role (application-wide, global team).
+     *
+     * Checks both 'super-admin' (Filament/Shield) and 'super_admin' (RRMCS)
+     * role names at the global team level (organization_id = 0).
      */
     public function isSuperAdmin(): bool
     {
@@ -295,7 +298,7 @@ final class User extends Authenticatable implements ExportsPersonalData, Filamen
             ->where($tableNames['model_has_roles'].'.model_id', $this->id)
             ->where($tableNames['model_has_roles'].'.model_type', self::class)
             ->where($tableNames['model_has_roles'].'.'.$teamKey, 0)
-            ->where($tableNames['roles'].'.name', 'super-admin')
+            ->whereIn($tableNames['roles'].'.name', ['super-admin', 'super_admin'])
             ->exists();
     }
 

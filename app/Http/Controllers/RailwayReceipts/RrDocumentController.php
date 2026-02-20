@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Rake;
 use App\Models\RrDocument;
 use App\Models\Siding;
+use App\Services\SidingContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -19,9 +20,7 @@ final class RrDocumentController extends Controller
     public function index(Request $request): Response
     {
         $user = $request->user();
-        $sidingIds = $user->isSuperAdmin()
-            ? Siding::query()->pluck('id')->all()
-            : $user->accessibleSidings()->get()->pluck('id')->all();
+        $sidingIds = SidingContext::activeSidingIds($user);
 
         $query = RrDocument::query()
             ->with('rake.siding:id,name,code')
@@ -62,9 +61,7 @@ final class RrDocumentController extends Controller
     {
         $this->authorize('create', RrDocument::class);
         $user = $request->user();
-        $sidingIds = $user->isSuperAdmin()
-            ? Siding::query()->pluck('id')->all()
-            : $user->accessibleSidings()->get()->pluck('id')->all();
+        $sidingIds = SidingContext::activeSidingIds($user);
         $rakes = Rake::query()
             ->whereIn('siding_id', $sidingIds)
             ->orderBy('rake_number')
@@ -79,6 +76,7 @@ final class RrDocumentController extends Controller
             'rakes' => $rakes,
             'sidings' => $sidings,
             'preselectedRakeId' => $preselectedRakeId ? (int) $preselectedRakeId : null,
+            'currentSidingId' => SidingContext::id(),
         ]);
     }
 

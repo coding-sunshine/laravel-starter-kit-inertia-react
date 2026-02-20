@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Reports;
 use App\Actions\RunReportAction;
 use App\Http\Controllers\Controller;
 use App\Models\Siding;
+use App\Services\SidingContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -18,9 +19,7 @@ final class ReportsController extends Controller
     public function index(Request $request): Response
     {
         $user = $request->user();
-        $sidingIds = $user->isSuperAdmin()
-            ? Siding::query()->pluck('id')->all()
-            : $user->accessibleSidings()->get()->pluck('id')->all();
+        $sidingIds = SidingContext::activeSidingIds($user);
         $sidings = Siding::query()
             ->whereIn('id', $sidingIds)
             ->orderBy('name')
@@ -42,9 +41,7 @@ final class ReportsController extends Controller
         ]);
 
         $user = $request->user();
-        $sidingIds = $user->isSuperAdmin()
-            ? Siding::query()->pluck('id')->all()
-            : $user->accessibleSidings()->get()->pluck('id')->all();
+        $sidingIds = SidingContext::activeSidingIds($user);
 
         if ($sidingIds === []) {
             return response()->json(['data' => []]);

@@ -7,6 +7,12 @@ export interface OrganizationSummary {
     slug: string;
 }
 
+export interface SidingSummary {
+    id: number;
+    name: string;
+    code: string;
+}
+
 export interface Auth {
     user: User;
     /** Permission names for the current user (empty when guest). Use with useCan() or <Can>. */
@@ -21,6 +27,12 @@ export interface Auth {
     current_organization?: OrganizationSummary | null;
     /** Organizations the user belongs to (when tenancy enabled; empty when single-tenant). */
     organizations?: OrganizationSummary[];
+    /** Sidings the user can access (RRMCS). */
+    sidings?: SidingSummary[];
+    /** Currently selected siding context (null = "All sidings"). */
+    current_siding?: SidingSummary | null;
+    /** Whether the user can switch to "All sidings" (super admin / management). */
+    can_view_all_sidings?: boolean;
 }
 
 export interface BreadcrumbItem {

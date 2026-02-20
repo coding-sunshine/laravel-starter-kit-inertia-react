@@ -8,6 +8,7 @@ use App\Actions\ReconcileRakeAction;
 use App\Http\Controllers\Controller;
 use App\Models\Rake;
 use App\Models\Siding;
+use App\Services\SidingContext;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -17,9 +18,7 @@ final class ReconciliationController extends Controller
     public function index(Request $request): Response
     {
         $user = $request->user();
-        $sidingIds = $user->isSuperAdmin()
-            ? Siding::query()->pluck('id')->all()
-            : $user->accessibleSidings()->get()->pluck('id')->all();
+        $sidingIds = SidingContext::activeSidingIds($user);
 
         $query = Rake::query()
             ->with('siding:id,name,code')

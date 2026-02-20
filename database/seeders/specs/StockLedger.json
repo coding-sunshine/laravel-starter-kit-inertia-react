@@ -3,12 +3,12 @@
     "table": "stock_ledgers",
     "fields": {
         "id": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },
         "siding_id": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },
@@ -18,12 +18,12 @@
             "default": null
         },
         "vehicle_arrival_id": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },
         "rake_id": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },
@@ -53,12 +53,12 @@
             "default": null
         },
         "created_by": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },
         "verified_by": {
-            "type": "bigint",
+            "type": "integer",
             "nullable": true,
             "default": null
         },
