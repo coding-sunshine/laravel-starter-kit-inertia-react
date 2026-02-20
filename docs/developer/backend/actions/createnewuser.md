@@ -1,4 +1,4 @@
-# SyncSubscriptionSeatsAction
+# CreateNewUser
 
 ## Purpose
 
@@ -6,7 +6,7 @@
 
 ## Location
 
-`app/Actions/SyncSubscriptionSeatsAction.php`
+`app/Actions/CreateNewUser.php`
 
 ## Method Signature
 
@@ -33,13 +33,13 @@ public function handle({parameters}): {returnType}
 ### From Controller
 
 ```php
-app(SyncSubscriptionSeatsAction::class)->handle($params);
+app(CreateNewUser::class)->handle($params);
 ```
 
 ### From Job/Command
 
 ```php
-(new SyncSubscriptionSeatsAction($dependency))->handle($params);
+(new CreateNewUser($dependency))->handle($params);
 ```
 
 ## Related Components

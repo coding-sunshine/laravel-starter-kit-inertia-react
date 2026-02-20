@@ -72,8 +72,8 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | [road-dispatch/arrivals/index](./road-dispatch/arrivals/index.md) | road-dispatch.arrivals.index, road-dispatch.arrivals.create | ✅ |
 | [road-dispatch/unloads/create](./road-dispatch/unloads/create.md) | road-dispatch.unloads.index, road-dispatch.unloads.create | ✅ |
 | [road-dispatch/unloads/index](./road-dispatch/unloads/index.md) | road-dispatch.unloads.index, road-dispatch.unloads.create | ✅ |
-| [indents/create](./indents/create.md) | indents.create, indents.store | ✅ |
-| [indents/edit](./indents/edit.md) | indents.edit, indents.update | ✅ |
-| [indents/show](./indents/show.md) | indents.show | ✅ |
+| [indents/create](./indents/create.md) | indents.index, indents.create | ✅ |
+| [indents/edit](./indents/edit.md) | indents.index, indents.create | ✅ |
+| [indents/show](./indents/show.md) | indents.index, indents.create | ✅ |
 
 

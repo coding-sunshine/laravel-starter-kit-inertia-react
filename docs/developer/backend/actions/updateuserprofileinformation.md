@@ -1,4 +1,4 @@
-# SyncSubscriptionSeatsAction
+# UpdateUserProfileInformation
 
 ## Purpose
 
@@ -6,7 +6,7 @@
 
 ## Location
 
-`app/Actions/SyncSubscriptionSeatsAction.php`
+`app/Actions/UpdateUserProfileInformation.php`
 
 ## Method Signature
 
@@ -33,13 +33,13 @@ public function handle({parameters}): {returnType}
 ### From Controller
 
 ```php
-app(SyncSubscriptionSeatsAction::class)->handle($params);
+app(UpdateUserProfileInformation::class)->handle($params);
 ```
 
 ### From Job/Command
 
 ```php
-(new SyncSubscriptionSeatsAction($dependency))->handle($params);
+(new UpdateUserProfileInformation($dependency))->handle($params);
 ```
 
 ## Related Components

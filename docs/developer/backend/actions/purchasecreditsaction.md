@@ -1,4 +1,4 @@
-# SyncSubscriptionSeatsAction
+# PurchaseCreditsAction
 
 ## Purpose
 
@@ -6,7 +6,7 @@
 
 ## Location
 
-`app/Actions/SyncSubscriptionSeatsAction.php`
+`app/Actions/PurchaseCreditsAction.php`
 
 ## Method Signature
 
@@ -33,13 +33,13 @@ public function handle({parameters}): {returnType}
 ### From Controller
 
 ```php
-app(SyncSubscriptionSeatsAction::class)->handle($params);
+app(PurchaseCreditsAction::class)->handle($params);
 ```
 
 ### From Job/Command
 
 ```php
-(new SyncSubscriptionSeatsAction($dependency))->handle($params);
+(new PurchaseCreditsAction($dependency))->handle($params);
 ```
 
 ## Related Components

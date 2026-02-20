@@ -1,4 +1,4 @@
-# SyncSubscriptionSeatsAction
+# ResetUserPassword
 
 ## Purpose
 
@@ -6,7 +6,7 @@
 
 ## Location
 
-`app/Actions/SyncSubscriptionSeatsAction.php`
+`app/Actions/ResetUserPassword.php`
 
 ## Method Signature
 
@@ -33,13 +33,13 @@ public function handle({parameters}): {returnType}
 ### From Controller
 
 ```php
-app(SyncSubscriptionSeatsAction::class)->handle($params);
+app(ResetUserPassword::class)->handle($params);
 ```
 
 ### From Job/Command
 
 ```php
-(new SyncSubscriptionSeatsAction($dependency))->handle($params);
+(new ResetUserPassword($dependency))->handle($params);
 ```
 
 ## Related Components

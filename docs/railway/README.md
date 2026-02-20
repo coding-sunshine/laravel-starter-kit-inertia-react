@@ -1,5 +1,7 @@
 # Railway (RRMCS) documentation
 
+For **whether docs cover 100% of the system** and what is in/out of scope, see [Documentation coverage](../documentation-coverage.md).
+
 ## Full feature overview
 
 **[rrmcs-features.md](./rrmcs-features.md)** – Single document describing all railway-specific features: sidings, indents, rakes, railway receipts, weighments, road dispatch, penalties & demurrage, reconciliation, reports, dashboard, alerts, mobile siding dashboard, AI/MCP tools, config, and external APIs.
