@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Handles switching the user's active siding context (session-level siding scoping for RRMCS pages).
+Handles switching the current user's siding context (RRMCS). Accepts `siding_id`; sets "All sidings" for management users when empty, or a specific siding when the user has access.
 
 ## Location
 
@@ -10,28 +10,23 @@ Handles switching the user's active siding context (session-level siding scoping
 
 ## Methods
 
-| Method | HTTP Method | Route | Purpose |
-|--------|------------|-------|---------|
-| __invoke | POST | `/siding/switch` | Switch the user's active siding or clear to "All sidings" |
+| Method     | HTTP Method | Route           | Purpose                          |
+|-----------|------------|-----------------|----------------------------------|
+| __invoke  | POST       | `siding/switch` | Set current siding context and redirect back |
 
 ## Routes
 
-- `siding.switch`: `POST /siding/switch` - Accepts `siding_id` (nullable int). When null, clears siding context to show all sidings (super-admin/management only).
+- `siding.switch`: POST `siding/switch` — Switch siding context; expects `siding_id` (optional for management).
 
 ## Actions Used
 
-None. Uses `SidingContext::set()` directly.
+None. Uses `SidingContext::set()` and `User::canAccessSiding()` / `User::isManagement()`.
 
 ## Validation
 
-Inline validation:
-- `siding_id`: nullable integer, must exist in `sidings` table
-- Additional check: user must have access via `canAccessSiding()`
-- Only super-admin or management roles may set `siding_id` to null ("All sidings")
+No Form Request. Validates via controller: `siding_id` present and valid, user has access to the siding (or is management for "all sidings").
 
 ## Related Components
 
-- **Services**: `SidingContext` (sets the active siding in session)
-- **Frontend**: `siding-switcher.tsx` (React dropdown that posts to this endpoint)
-- **Middleware**: `SetSidingContext` (restores siding context from session on each request)
 - **Routes**: `siding.switch` (defined in routes/web.php)
+- **Services**: `App\Services\SidingContext`, `App\Models\Siding`
