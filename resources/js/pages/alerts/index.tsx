@@ -1,4 +1,5 @@
 import Heading from '@/components/heading';
+import { RrmcsGuidance } from '@/components/rrmcs-guidance';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -69,6 +70,11 @@ export default function AlertsIndex({ alerts, sidings }: Props) {
                 <Heading
                     title="Alerts"
                     description="Demurrage, overload, and RR mismatch alerts"
+                />
+                <RrmcsGuidance
+                    title="What this section is for"
+                    before="No formal alert system; demurrage discovered only when RR arrived (24+ hours late)."
+                    after="Automated alerts at 60/30/0 minutes remaining; escalation by role (operator → in-charge → management)."
                 />
                 <Card>
                     <CardHeader>

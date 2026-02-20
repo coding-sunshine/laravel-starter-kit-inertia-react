@@ -203,29 +203,6 @@ export function ChatWidget() {
 
             const data = await response.json();
 
-            // #region agent log
-            fetch(
-                'http://127.0.0.1:7245/ingest/84c2e6d8-378d-4027-b1f1-e1006360429d',
-                {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        location: 'chat-widget.tsx:sendMessage',
-                        message: 'chat_response',
-                        data: {
-                            status: response.status,
-                            ok: response.ok,
-                            dataKeys: Object.keys(data ?? {}),
-                            dataError: data?.error,
-                            dataMessage: data?.message,
-                        },
-                        timestamp: Date.now(),
-                        hypothesisId: 'A',
-                    }),
-                },
-            ).catch(() => {});
-            // #endregion
-
             if (!response.ok) {
                 const message =
                     data?.error ??

@@ -1,4 +1,6 @@
+import { GlossaryTerm } from '@/components/glossary-term';
 import Heading from '@/components/heading';
+import { RrmcsGuidance } from '@/components/rrmcs-guidance';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -76,6 +78,11 @@ export default function RailwayReceiptsIndex({ rrDocuments, sidings }: Props) {
                         </Button>
                     </Link>
                 </div>
+                <RrmcsGuidance
+                    title="What this section is for"
+                    before="RR documents filed in physical folders; FNR, freight, and wagon details copied manually into Excel."
+                    after="Upload RR PDF, auto-parsed into structured data — FNR, freight, charges, wagon table all searchable."
+                />
                 <Card>
                     <CardHeader>
                         <CardTitle>RR documents</CardTitle>
@@ -148,7 +155,7 @@ export default function RailwayReceiptsIndex({ rrDocuments, sidings }: Props) {
                                                     Received date
                                                 </th>
                                                 <th className="px-5 py-3.5 text-right font-medium">
-                                                    Weight (MT)
+                                                    Weight (<GlossaryTerm term="MT">MT</GlossaryTerm>)
                                                 </th>
                                                 <th className="px-5 py-3.5 text-left font-medium">
                                                     Status

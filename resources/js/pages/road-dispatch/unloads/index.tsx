@@ -1,4 +1,6 @@
+import { GlossaryTerm } from '@/components/glossary-term';
 import Heading from '@/components/heading';
+import { RrmcsGuidance } from '@/components/rrmcs-guidance';
 import { StatusPill } from '@/components/status-pill';
 import { Button } from '@/components/ui/button';
 import {
@@ -85,6 +87,11 @@ export default function RoadDispatchUnloadsIndex({ unloads, sidings }: Props) {
                         </Button>
                     </Link>
                 </div>
+                <RrmcsGuidance
+                    title="What this section is for"
+                    before="Unload confirmation done by phone call or physical challan, often delayed."
+                    after="Real-time unload confirmation with weight capture, instant stock update."
+                />
                 <Card>
                     <CardHeader>
                         <CardTitle>Unloads</CardTitle>
@@ -178,7 +185,7 @@ export default function RoadDispatchUnloadsIndex({ unloads, sidings }: Props) {
                                                 Mine (MT)
                                             </th>
                                             <th className="px-5 py-3.5 text-right font-medium">
-                                                Weighment (MT)
+                                                <GlossaryTerm term="Weighment">Weighment</GlossaryTerm> (<GlossaryTerm term="MT">MT</GlossaryTerm>)
                                             </th>
                                             <th className="px-5 py-3.5 text-right font-medium">
                                                 Action

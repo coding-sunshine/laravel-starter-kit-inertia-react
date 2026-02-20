@@ -1,3 +1,4 @@
+import { GlossaryTerm } from '@/components/glossary-term';
 import Heading from '@/components/heading';
 import { RrmcsGuidance } from '@/components/rrmcs-guidance';
 import { StatusPill } from '@/components/status-pill';
@@ -115,7 +116,7 @@ export default function RakesIndex({ rakes }: Props) {
                                                     Loading window
                                                 </th>
                                                 <th className="px-5 py-3.5 text-right font-medium">
-                                                    Demurrage (h)
+                                                    <GlossaryTerm term="Demurrage">Demurrage</GlossaryTerm> (h)
                                                 </th>
                                                 <th className="px-5 py-3.5 text-right font-medium">
                                                     Penalty

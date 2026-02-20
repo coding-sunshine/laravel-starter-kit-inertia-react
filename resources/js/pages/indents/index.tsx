@@ -1,3 +1,4 @@
+import { GlossaryTerm } from '@/components/glossary-term';
 import Heading from '@/components/heading';
 import { RrmcsGuidance } from '@/components/rrmcs-guidance';
 import { Button } from '@/components/ui/button';
@@ -110,10 +111,10 @@ export default function IndentsIndex({ indents }: Props) {
                                                 Indent date
                                             </th>
                                             <th className="pr-4 pb-2 font-medium">
-                                                e-Demand ref
+                                                <GlossaryTerm term="e-Demand">e-Demand</GlossaryTerm> ref
                                             </th>
                                             <th className="pr-4 pb-2 font-medium">
-                                                FNR
+                                                <GlossaryTerm term="FNR">FNR</GlossaryTerm>
                                             </th>
                                             <th className="pb-2 font-medium">
                                                 Actions

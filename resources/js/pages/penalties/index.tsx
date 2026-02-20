@@ -1,4 +1,6 @@
+import { GlossaryTerm } from '@/components/glossary-term';
 import Heading from '@/components/heading';
+import { RrmcsGuidance } from '@/components/rrmcs-guidance';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -85,12 +87,17 @@ export default function PenaltiesIndex({
                     title="Penalties"
                     description="Penalty register by rake and siding"
                 />
+                <RrmcsGuidance
+                    title="What this section is for"
+                    before="Penalty amounts calculated manually from RR after the fact — often discovered days late."
+                    after="Real-time penalty tracking with automated calculation (hours × MT × rate); demurrage alerts warn you BEFORE penalties hit."
+                />
                 <Card>
                     <CardHeader>
                         <CardTitle>Penalty register</CardTitle>
                         <CardDescription>
-                            Filter by siding or status. Demurrage formula: hours
-                            over free time × weight (MT) × ₹
+                            Filter by siding or status. <GlossaryTerm term="Demurrage">Demurrage</GlossaryTerm> formula: hours
+                            over free time × weight (<GlossaryTerm term="MT">MT</GlossaryTerm>) × ₹
                             {demurrage_rate_per_mt_hour}/MT/h.
                         </CardDescription>
                     </CardHeader>

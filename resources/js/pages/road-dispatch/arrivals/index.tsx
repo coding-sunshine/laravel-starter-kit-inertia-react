@@ -1,4 +1,6 @@
+import { GlossaryTerm } from '@/components/glossary-term';
 import Heading from '@/components/heading';
+import { RrmcsGuidance } from '@/components/rrmcs-guidance';
 import { StatusPill } from '@/components/status-pill';
 import { Button } from '@/components/ui/button';
 import {
@@ -83,6 +85,11 @@ export default function RoadDispatchArrivalsIndex({
                         </Button>
                     </Link>
                 </div>
+                <RrmcsGuidance
+                    title="What this section is for"
+                    before="Vehicle arrivals logged in a paper register at the gate, with manual tonnage tallying."
+                    after="Digital arrival log with vehicle/driver details, linked to stock movement — no paper register needed."
+                />
                 <Card>
                     <CardHeader>
                         <CardTitle>Arrivals</CardTitle>
@@ -184,7 +191,7 @@ export default function RoadDispatchArrivalsIndex({
                                                 Status
                                             </th>
                                             <th className="px-6 py-4 text-right font-medium">
-                                                Net (MT)
+                                                Net (<GlossaryTerm term="MT">MT</GlossaryTerm>)
                                             </th>
                                         </tr>
                                     </thead>

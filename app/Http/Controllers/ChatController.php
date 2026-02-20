@@ -72,20 +72,11 @@ final class ChatController extends Controller
      */
     public function message(Request $request): JsonResponse
     {
-        // #region agent log
-        $logPath = base_path('.cursor/debug.log');
-        file_put_contents($logPath, json_encode(['location' => 'ChatController.php:message', 'message' => 'message_entry', 'data' => ['hasUser' => $request->user() !== null], 'timestamp' => (int) (microtime(true) * 1000), 'hypothesisId' => 'C'])."\n", FILE_APPEND | LOCK_EX);
-        // #endregion
-
         $validated = $request->validate([
             'message' => ['required', 'string', 'max:10000'],
             'conversation_id' => ['nullable', 'string', 'uuid'],
             'current_page' => ['nullable', 'string', 'max:200'],
         ]);
-
-        // #region agent log
-        file_put_contents($logPath, json_encode(['location' => 'ChatController.php:message', 'message' => 'message_validated', 'data' => [], 'timestamp' => (int) (microtime(true) * 1000), 'hypothesisId' => 'A'])."\n", FILE_APPEND | LOCK_EX);
-        // #endregion
 
         $user = $request->user();
         $message = mb_trim((string) $validated['message']);
@@ -126,11 +117,6 @@ final class ChatController extends Controller
                 ],
             ]);
         } catch (Throwable $e) {
-            // #region agent log
-            $logPath = base_path('.cursor/debug.log');
-            file_put_contents($logPath, json_encode(['location' => 'ChatController.php:message', 'message' => 'message_catch', 'data' => ['exception' => $e::class, 'msg' => $e->getMessage(), 'code' => $e->getCode()], 'timestamp' => (int) (microtime(true) * 1000), 'hypothesisId' => 'C'])."\n", FILE_APPEND | LOCK_EX);
-            // #endregion
-
             Log::warning('Chat message failed', ['error' => $e->getMessage()]);
 
             $message = $e->getMessage();

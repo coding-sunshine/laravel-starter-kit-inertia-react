@@ -1,4 +1,5 @@
 import Heading from '@/components/heading';
+import { RrmcsGuidance } from '@/components/rrmcs-guidance';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -81,6 +82,11 @@ export default function ReconciliationIndex({
                         <Button>Add power plant receipt</Button>
                     </Link>
                 </div>
+                <RrmcsGuidance
+                    title="What this section is for"
+                    before="Cross-checking RR against loading records and power-plant receipts done in Excel with vlookup, taking hours."
+                    after="One-click reconciliation matching RR wagon data against loading records automatically."
+                />
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <Card>
                         <CardHeader className="pb-2">
