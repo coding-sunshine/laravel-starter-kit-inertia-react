@@ -169,6 +169,11 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::post('rakes/{rake}/weighments', [RakeWeighmentController::class, 'store'])->name('rakes.weighments.store');
     Route::post('rakes/{rake}/guard-inspection', [RakeGuardInspectionController::class, 'store'])->name('rakes.guard-inspection.store');
     Route::get('indents', [IndentsController::class, 'index'])->name('indents.index');
+    Route::get('indents/create', [IndentsController::class, 'create'])->name('indents.create');
+    Route::post('indents', [IndentsController::class, 'store'])->name('indents.store');
+    Route::get('indents/{indent}', [IndentsController::class, 'show'])->name('indents.show');
+    Route::get('indents/{indent}/edit', [IndentsController::class, 'edit'])->name('indents.edit');
+    Route::put('indents/{indent}', [IndentsController::class, 'update'])->name('indents.update');
 
     // Road Dispatch (vehicle arrivals and unloads)
     Route::get('road-dispatch/arrivals', [VehicleArrivalController::class, 'index'])->name('road-dispatch.arrivals.index');

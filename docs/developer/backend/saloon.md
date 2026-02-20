@@ -41,6 +41,16 @@ Base URL is configurable via `config('services.example_api.url')` (default: `htt
 - Use Saloon’s `FakeResponse` or `MockClient` to avoid real HTTP calls in tests.
 - See [Saloon testing docs](https://docs.saloon.dev/testing/overview) for mocking and fixtures.
 
+## External APIs (RRMCS / future)
+
+For future integrations (e.g. FBD e-Demand, RR status, or weighment-vendor APIs):
+
+1. Add a **Saloon connector** under `App\Http\Integrations\{Name}\` (e.g. `FbdApi`, `WeighmentVendorApi`).
+2. Put base URL and API keys in `config/services.php` and `.env` (e.g. `FBD_API_URL`, `FBD_API_KEY`).
+3. Call the connector from an **Action** or **job** (e.g. `ProcessIndentDocument`, sync RR status). Prefer Actions for reuse from HTTP, console, and MCP.
+
+No new connector is added until a specific API contract (base URL, auth, endpoints) is available.
+
 ## References
 
 - [Saloon v3 docs](https://docs.saloon.dev)

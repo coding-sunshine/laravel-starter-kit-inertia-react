@@ -9,6 +9,7 @@ use App\Models\CoalStock;
 use App\Models\GuardInspection;
 use App\Models\Indent;
 use App\Models\Loader;
+use App\Models\LoaderPerformance;
 use App\Models\Penalty;
 use App\Models\PowerPlant;
 use App\Models\PowerPlantReceipt;
@@ -16,6 +17,7 @@ use App\Models\Rake;
 use App\Models\RrDocument;
 use App\Models\RrPrediction;
 use App\Models\Siding;
+use App\Models\SidingPerformance;
 use App\Models\StockLedger;
 use App\Models\Txr;
 use App\Models\User;
@@ -88,6 +90,8 @@ final class RakeManagementDemoSeeder extends Seeder
                 $this->seedStockLedgersForSiding($siding);
             }
             $this->seedAlertsForRakes($sidings);
+            $this->seedLoaderPerformanceForSidings($sidings);
+            $this->seedSidingPerformanceForSidings($sidings);
             $this->seedPowerPlantReceipts();
         });
     }
@@ -492,6 +496,48 @@ final class RakeManagementDemoSeeder extends Seeder
                 'created_at' => now(),
             ]
         );
+    }
+
+    private function seedLoaderPerformanceForSidings(\Illuminate\Support\Collection $sidings): void
+    {
+        $loaders = Loader::whereIn('siding_id', $sidings->pluck('id'))->get();
+        $today = Carbon::today();
+        foreach ($loaders->take(5) as $loader) {
+            LoaderPerformance::firstOrCreate(
+                [
+                    'loader_id' => $loader->id,
+                    'as_of_date' => $today,
+                ],
+                [
+                    'rakes_processed' => 4,
+                    'average_loading_time_minutes' => 165,
+                    'consistency_variance_minutes' => 12,
+                    'overload_incidents' => 0,
+                    'quality_score' => 92,
+                ]
+            );
+        }
+    }
+
+    private function seedSidingPerformanceForSidings(\Illuminate\Support\Collection $sidings): void
+    {
+        $today = Carbon::today();
+        foreach ($sidings->take(3) as $siding) {
+            SidingPerformance::firstOrCreate(
+                [
+                    'siding_id' => $siding->id,
+                    'as_of_date' => $today,
+                ],
+                [
+                    'rakes_processed' => 8,
+                    'total_penalty_amount' => 0,
+                    'penalty_incidents' => 0,
+                    'average_demurrage_hours' => 0,
+                    'overload_incidents' => 0,
+                    'closing_stock_mt' => 560.4,
+                ]
+            );
+        }
     }
 
     private function seedPowerPlantReceipts(): void

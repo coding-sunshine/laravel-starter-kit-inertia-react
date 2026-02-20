@@ -33,7 +33,7 @@ final readonly class ReconcileRrData
     {
         return DB::transaction(function () use ($rrDocument, $userId): array {
             $rake = $rrDocument->rake;
-            $rrData = json_decode($rrDocument->rr_details, true) ?? [];
+            $rrData = is_array($rrDocument->rr_details) ? $rrDocument->rr_details : (json_decode((string) $rrDocument->rr_details, true) ?? []);
 
             // Run all 5 reconciliation points
             $point1 = $this->validateCoalQuantity($rake, $rrData, $rrDocument);
@@ -207,13 +207,62 @@ final readonly class ReconcileRrData
     }
 
     /**
-     * Point 3: Weight per Wagon Validation (max 50 MT per wagon)
+     * Point 3: Weight per Wagon Validation
+     * If rr_details.wagons exists: validate each wagon actual_mt vs permissible_mt (or cc_mt), flag overloads.
+     * Optionally compare RR wagon numbers to rake wagons. Otherwise fall back to average weight vs 50 MT.
      */
     private function validateWeightPerWagon(Rake $rake, array $rrData): array
     {
-        $totalWeight = $rrData['rr_weight_mt'] ?? 0;
+        $totalWeight = $rrData['rr_weight_mt'] ?? $rake->loaded_weight_mt ?? 0;
         $wagonCount = $rrData['wagon_count'] ?? $rake->wagon_count ?? 1;
-        $maxWeightPerWagon = 50; // MT
+        $maxWeightPerWagon = 50; // MT fallback cap
+
+        $rrWagons = $rrData['wagons'] ?? null;
+        if (is_array($rrWagons) && count($rrWagons) > 0) {
+            $overloaded = [];
+            $wagonNumberMismatches = [];
+            $rakeWagonNumbers = $rake->wagons->pluck('wagon_number')->map(fn ($n) => (string) $n)->all();
+            $rrWagonNumbers = [];
+
+            foreach ($rrWagons as $w) {
+                if (! is_array($w)) {
+                    continue;
+                }
+                $wn = $w['wagon_number'] ?? $w['wagonNumber'] ?? null;
+                if ($wn !== null) {
+                    $rrWagonNumbers[] = (string) $wn;
+                }
+                $actual = isset($w['actual_mt']) ? (float) $w['actual_mt'] : (isset($w['actualMt']) ? (float) $w['actualMt'] : null);
+                $permissible = isset($w['permissible_mt']) ? (float) $w['permissible_mt'] : (isset($w['permissibleMt']) ? (float) $w['permissibleMt'] : (isset($w['cc_mt']) ? (float) $w['cc_mt'] : null));
+                if ($actual !== null && $permissible !== null && $permissible > 0 && $actual > $permissible) {
+                    $overloaded[] = ['wagon_number' => $wn, 'actual_mt' => $actual, 'permissible_mt' => $permissible];
+                }
+            }
+
+            $inRrNotRake = array_diff($rrWagonNumbers, $rakeWagonNumbers);
+            $inRakeNotRr = array_diff($rakeWagonNumbers, $rrWagonNumbers);
+            if (count($inRrNotRake) > 0 || count($inRakeNotRr) > 0) {
+                $wagonNumberMismatches = [
+                    'in_rr_not_rake' => array_values($inRrNotRake),
+                    'in_rake_not_rr' => array_values($inRakeNotRr),
+                ];
+            }
+
+            $passed = count($overloaded) === 0;
+
+            return [
+                'passed' => $passed,
+                'name' => 'Weight per Wagon Validation',
+                'total_weight_mt' => $totalWeight,
+                'wagon_count' => count($rrWagons),
+                'max_per_wagon_mt' => $maxWeightPerWagon,
+                'overloaded_wagons' => $overloaded,
+                'wagon_number_mismatches' => $wagonNumberMismatches,
+                'status' => $passed
+                    ? (count($wagonNumberMismatches) > 0 ? 'All wagon weights within limit; wagon list mismatch with rake.' : 'All wagon weights within limit.')
+                    : (count($overloaded).' wagon(s) exceed permissible weight.'),
+            ];
+        }
 
         if (! $wagonCount || $wagonCount === 0) {
             return [

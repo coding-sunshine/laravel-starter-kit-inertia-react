@@ -66,6 +66,26 @@
             "type": "bigint",
             "nullable": true,
             "default": null
+        },
+        "fnr": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "from_station_code": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "to_station_code": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "freight_total": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {
@@ -82,6 +102,15 @@
             "model": "UpdatedBy"
         }
     },
-    "value_hints": [],
+    "value_hints": {
+        "rr_received_date": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        },
+        "has_discrepancy": {
+            "type": "boolean",
+            "example": true
+        }
+    },
     "scenarios": []
 }
