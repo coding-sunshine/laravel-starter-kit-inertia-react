@@ -1,7 +1,13 @@
-import { RrmcsGuidance } from '@/components/rrmcs-guidance';
 import Heading from '@/components/heading';
+import { RrmcsGuidance } from '@/components/rrmcs-guidance';
 import { StatusPill } from '@/components/status-pill';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
@@ -105,7 +111,7 @@ export default function RakesIndex({ rakes }: Props) {
                                                 <th className="px-5 py-3.5 text-left font-medium">
                                                     State
                                                 </th>
-                                                <th className="px-5 py-3.5 text-left font-medium min-w-[12rem]">
+                                                <th className="min-w-[12rem] px-5 py-3.5 text-left font-medium">
                                                     Loading window
                                                 </th>
                                                 <th className="px-5 py-3.5 text-right font-medium">
@@ -140,10 +146,13 @@ export default function RakesIndex({ rakes }: Props) {
                                                         {rake.wagon_count}
                                                     </td>
                                                     <td className="px-5 py-3.5">
-                                                        <StatusPill status={rake.state} />
+                                                        <StatusPill
+                                                            status={rake.state}
+                                                        />
                                                     </td>
-                                                    <td className="px-5 py-3.5 text-muted-foreground whitespace-nowrap">
-                                                        {rake.loading_start_time && rake.loading_end_time
+                                                    <td className="px-5 py-3.5 whitespace-nowrap text-muted-foreground">
+                                                        {rake.loading_start_time &&
+                                                        rake.loading_end_time
                                                             ? `${new Date(rake.loading_start_time).toLocaleString()} – ${new Date(rake.loading_end_time).toLocaleString()}`
                                                             : '—'}
                                                     </td>
@@ -151,7 +160,9 @@ export default function RakesIndex({ rakes }: Props) {
                                                         {rake.demurrage_hours}
                                                     </td>
                                                     <td className="px-5 py-3.5 text-right">
-                                                        {rake.demurrage_penalty_amount}
+                                                        {
+                                                            rake.demurrage_penalty_amount
+                                                        }
                                                     </td>
                                                     <td className="px-5 py-3.5 text-right">
                                                         <Link
@@ -166,7 +177,8 @@ export default function RakesIndex({ rakes }: Props) {
                                         </tbody>
                                     </table>
                                 </div>
-                                {(rakes.prev_page_url || rakes.next_page_url) && (
+                                {(rakes.prev_page_url ||
+                                    rakes.next_page_url) && (
                                     <nav
                                         className="mt-6 flex items-center justify-center gap-4 pt-2"
                                         aria-label="Pagination"

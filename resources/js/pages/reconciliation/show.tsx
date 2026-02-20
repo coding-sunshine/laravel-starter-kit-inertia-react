@@ -1,3 +1,4 @@
+import { Button } from '@/components/ui/button';
 import {
     Card,
     CardContent,
@@ -5,7 +6,6 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
@@ -41,7 +41,10 @@ export default function ReconciliationShow({ rake, points }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: '/dashboard' },
         { title: 'Reconciliation', href: '/reconciliation' },
-        { title: `Rake ${rake.rake_number}`, href: `/reconciliation/${rake.id}` },
+        {
+            title: `Rake ${rake.rake_number}`,
+            href: `/reconciliation/${rake.id}`,
+        },
     ];
 
     return (
@@ -70,21 +73,28 @@ export default function ReconciliationShow({ rake, points }: Props) {
                             </CardTitle>
                             <CardDescription>
                                 Status: {p.status}
-                                {p.variance_pct != null && ` · Variance: ${p.variance_pct}%`}
+                                {p.variance_pct != null &&
+                                    ` · Variance: ${p.variance_pct}%`}
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="grid gap-2 text-sm">
                             <p>
-                                <span className="text-muted-foreground">Source A:</span>{' '}
+                                <span className="text-muted-foreground">
+                                    Source A:
+                                </span>{' '}
                                 {p.value_a != null ? `${p.value_a} MT` : '—'}
                             </p>
                             <p>
-                                <span className="text-muted-foreground">Source B:</span>{' '}
+                                <span className="text-muted-foreground">
+                                    Source B:
+                                </span>{' '}
                                 {p.value_b != null ? `${p.value_b} MT` : '—'}
                             </p>
                             {p.variance_mt != null && (
                                 <p>
-                                    <span className="text-muted-foreground">Variance:</span>{' '}
+                                    <span className="text-muted-foreground">
+                                        Variance:
+                                    </span>{' '}
                                     {p.variance_mt} MT
                                 </p>
                             )}

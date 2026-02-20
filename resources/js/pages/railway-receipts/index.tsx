@@ -1,4 +1,5 @@
 import Heading from '@/components/heading';
+import { Button } from '@/components/ui/button';
 import {
     Card,
     CardContent,
@@ -6,7 +7,6 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/react';
@@ -79,7 +79,9 @@ export default function RailwayReceiptsIndex({ rrDocuments, sidings }: Props) {
                 <Card>
                     <CardHeader>
                         <CardTitle>RR documents</CardTitle>
-                        <CardDescription>Filter by siding or rake</CardDescription>
+                        <CardDescription>
+                            Filter by siding or rake
+                        </CardDescription>
                     </CardHeader>
                     <CardContent>
                         <form
@@ -88,14 +90,23 @@ export default function RailwayReceiptsIndex({ rrDocuments, sidings }: Props) {
                             onSubmit={(e) => {
                                 e.preventDefault();
                                 const form = e.currentTarget;
-                                const siding = (form.querySelector('[name=siding_id]') as HTMLSelectElement)?.value;
+                                const siding = (
+                                    form.querySelector(
+                                        '[name=siding_id]',
+                                    ) as HTMLSelectElement
+                                )?.value;
                                 const params = new URLSearchParams();
                                 if (siding) params.set('siding_id', siding);
-                                router.get('/railway-receipts', Object.fromEntries(params));
+                                router.get(
+                                    '/railway-receipts',
+                                    Object.fromEntries(params),
+                                );
                             }}
                         >
                             <div className="grid gap-2">
-                                <label className="text-sm font-medium">Siding</label>
+                                <label className="text-sm font-medium">
+                                    Siding
+                                </label>
                                 <select
                                     name="siding_id"
                                     defaultValue={q.get('siding_id') ?? ''}
@@ -124,27 +135,65 @@ export default function RailwayReceiptsIndex({ rrDocuments, sidings }: Props) {
                                     <table className="w-full text-sm">
                                         <thead>
                                             <tr className="border-b bg-muted/50">
-                                                <th className="px-5 py-3.5 text-left font-medium">RR number</th>
-                                                <th className="px-5 py-3.5 text-left font-medium">Rake</th>
-                                                <th className="px-5 py-3.5 text-left font-medium">Siding</th>
-                                                <th className="px-5 py-3.5 text-left font-medium">Received date</th>
-                                                <th className="px-5 py-3.5 text-right font-medium">Weight (MT)</th>
-                                                <th className="px-5 py-3.5 text-left font-medium">Status</th>
-                                                <th className="px-5 py-3.5 text-right font-medium">Actions</th>
+                                                <th className="px-5 py-3.5 text-left font-medium">
+                                                    RR number
+                                                </th>
+                                                <th className="px-5 py-3.5 text-left font-medium">
+                                                    Rake
+                                                </th>
+                                                <th className="px-5 py-3.5 text-left font-medium">
+                                                    Siding
+                                                </th>
+                                                <th className="px-5 py-3.5 text-left font-medium">
+                                                    Received date
+                                                </th>
+                                                <th className="px-5 py-3.5 text-right font-medium">
+                                                    Weight (MT)
+                                                </th>
+                                                <th className="px-5 py-3.5 text-left font-medium">
+                                                    Status
+                                                </th>
+                                                <th className="px-5 py-3.5 text-right font-medium">
+                                                    Actions
+                                                </th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {rrDocuments.data.map((doc) => (
-                                                <tr key={doc.id} className="border-b last:border-0 hover:bg-muted/30">
-                                                    <td className="px-5 py-3.5 font-medium">{doc.rr_number}</td>
-                                                    <td className="px-5 py-3.5">{doc.rake?.rake_number ?? '-'}</td>
-                                                    <td className="px-5 py-3.5">{doc.rake?.siding?.name ?? '-'}</td>
-                                                    <td className="px-5 py-3.5">{doc.rr_received_date}</td>
-                                                    <td className="px-5 py-3.5 text-right">{doc.rr_weight_mt ?? '-'}</td>
-                                                    <td className="px-5 py-3.5">{doc.document_status}</td>
+                                                <tr
+                                                    key={doc.id}
+                                                    className="border-b last:border-0 hover:bg-muted/30"
+                                                >
+                                                    <td className="px-5 py-3.5 font-medium">
+                                                        {doc.rr_number}
+                                                    </td>
+                                                    <td className="px-5 py-3.5">
+                                                        {doc.rake
+                                                            ?.rake_number ??
+                                                            '-'}
+                                                    </td>
+                                                    <td className="px-5 py-3.5">
+                                                        {doc.rake?.siding
+                                                            ?.name ?? '-'}
+                                                    </td>
+                                                    <td className="px-5 py-3.5">
+                                                        {doc.rr_received_date}
+                                                    </td>
                                                     <td className="px-5 py-3.5 text-right">
-                                                        <Link href={`/railway-receipts/${doc.id}`}>
-                                                            <Button variant="outline" size="sm">
+                                                        {doc.rr_weight_mt ??
+                                                            '-'}
+                                                    </td>
+                                                    <td className="px-5 py-3.5">
+                                                        {doc.document_status}
+                                                    </td>
+                                                    <td className="px-5 py-3.5 text-right">
+                                                        <Link
+                                                            href={`/railway-receipts/${doc.id}`}
+                                                        >
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                            >
                                                                 View
                                                             </Button>
                                                         </Link>
@@ -162,7 +211,10 @@ export default function RailwayReceiptsIndex({ rrDocuments, sidings }: Props) {
                                                 type="button"
                                                 disabled={!link.url}
                                                 className="rounded-md border border-input px-4 py-2.5 text-sm disabled:opacity-50"
-                                                onClick={() => link.url && router.get(link.url)}
+                                                onClick={() =>
+                                                    link.url &&
+                                                    router.get(link.url)
+                                                }
                                             >
                                                 {link.label}
                                             </button>

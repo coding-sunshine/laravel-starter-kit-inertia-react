@@ -93,9 +93,13 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
             <div className="flex flex-col lg:flex-row lg:space-x-12">
                 <aside className="w-full max-w-xl lg:w-48">
                     <nav className="flex flex-col space-y-1 space-x-0">
-                        {visibleNavItems.map((item, index) => (
+                        {visibleNavItems.map((item) => (
                             <Button
-                                key={`${typeof item.href === 'string' ? item.href : item.href.url}-${index}`}
+                                key={
+                                    typeof item.href === 'string'
+                                        ? item.href
+                                        : item.href.url
+                                }
                                 size="sm"
                                 variant="ghost"
                                 asChild
@@ -122,9 +126,7 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
                 <Separator className="my-6 lg:hidden" />
 
                 <div className="flex-1 md:max-w-2xl">
-                    <section className="max-w-xl space-y-8">
-                        {children}
-                    </section>
+                    <section className="max-w-xl space-y-8">{children}</section>
                 </div>
             </div>
         </div>

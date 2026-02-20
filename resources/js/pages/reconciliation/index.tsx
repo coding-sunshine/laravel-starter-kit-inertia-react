@@ -1,4 +1,5 @@
 import Heading from '@/components/heading';
+import { Button } from '@/components/ui/button';
 import {
     Card,
     CardContent,
@@ -6,7 +7,6 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/react';
@@ -84,20 +84,30 @@ export default function ReconciliationIndex({
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <Card>
                         <CardHeader className="pb-2">
-                            <CardDescription>Pending (no weighment)</CardDescription>
-                            <CardTitle className="text-lg">{summary.pending}</CardTitle>
+                            <CardDescription>
+                                Pending (no weighment)
+                            </CardDescription>
+                            <CardTitle className="text-lg">
+                                {summary.pending}
+                            </CardTitle>
                         </CardHeader>
                     </Card>
                     <Card>
                         <CardHeader className="pb-2">
                             <CardDescription>Matched this page</CardDescription>
-                            <CardTitle className="text-lg">{summary.matched}</CardTitle>
+                            <CardTitle className="text-lg">
+                                {summary.matched}
+                            </CardTitle>
                         </CardHeader>
                     </Card>
                     <Card>
                         <CardHeader className="pb-2">
-                            <CardDescription>Mismatched this page</CardDescription>
-                            <CardTitle className="text-lg">{summary.mismatched}</CardTitle>
+                            <CardDescription>
+                                Mismatched this page
+                            </CardDescription>
+                            <CardTitle className="text-lg">
+                                {summary.mismatched}
+                            </CardTitle>
                         </CardHeader>
                     </Card>
                 </div>
@@ -113,14 +123,23 @@ export default function ReconciliationIndex({
                             onSubmit={(e) => {
                                 e.preventDefault();
                                 const form = e.currentTarget;
-                                const siding = (form.querySelector('[name=siding_id]') as HTMLSelectElement)?.value;
+                                const siding = (
+                                    form.querySelector(
+                                        '[name=siding_id]',
+                                    ) as HTMLSelectElement
+                                )?.value;
                                 const params = new URLSearchParams();
                                 if (siding) params.set('siding_id', siding);
-                                router.get('/reconciliation', Object.fromEntries(params));
+                                router.get(
+                                    '/reconciliation',
+                                    Object.fromEntries(params),
+                                );
                             }}
                         >
                             <div className="grid gap-2">
-                                <label className="text-sm font-medium">Siding</label>
+                                <label className="text-sm font-medium">
+                                    Siding
+                                </label>
                                 <select
                                     name="siding_id"
                                     defaultValue={q.get('siding_id') ?? ''}
@@ -149,23 +168,41 @@ export default function ReconciliationIndex({
                                     <table className="w-full text-sm">
                                         <thead>
                                             <tr className="border-b bg-muted/50">
-                                                <th className="px-5 py-3.5 text-left font-medium">Rake</th>
-                                                <th className="px-5 py-3.5 text-left font-medium">Siding</th>
-                                                <th className="px-5 py-3.5 text-left font-medium">Status</th>
-                                                <th className="px-5 py-3.5 text-right font-medium">Actions</th>
+                                                <th className="px-5 py-3.5 text-left font-medium">
+                                                    Rake
+                                                </th>
+                                                <th className="px-5 py-3.5 text-left font-medium">
+                                                    Siding
+                                                </th>
+                                                <th className="px-5 py-3.5 text-left font-medium">
+                                                    Status
+                                                </th>
+                                                <th className="px-5 py-3.5 text-right font-medium">
+                                                    Actions
+                                                </th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {rows.map((row) => (
-                                                <tr key={row.rake.id} className="border-b last:border-0 hover:bg-muted/30">
-                                                    <td className="px-5 py-3.5 font-medium">{row.rake.rake_number}</td>
-                                                    <td className="px-5 py-3.5">{row.rake.siding?.name ?? '—'}</td>
+                                                <tr
+                                                    key={row.rake.id}
+                                                    className="border-b last:border-0 hover:bg-muted/30"
+                                                >
+                                                    <td className="px-5 py-3.5 font-medium">
+                                                        {row.rake.rake_number}
+                                                    </td>
+                                                    <td className="px-5 py-3.5">
+                                                        {row.rake.siding
+                                                            ?.name ?? '—'}
+                                                    </td>
                                                     <td className="px-5 py-3.5">
                                                         <span
                                                             className={
-                                                                row.overall_status === 'MAJOR_DIFF'
+                                                                row.overall_status ===
+                                                                'MAJOR_DIFF'
                                                                     ? 'text-red-600 dark:text-red-400'
-                                                                    : row.overall_status === 'MINOR_DIFF'
+                                                                    : row.overall_status ===
+                                                                        'MINOR_DIFF'
                                                                       ? 'text-amber-600 dark:text-amber-400'
                                                                       : ''
                                                             }
@@ -174,8 +211,13 @@ export default function ReconciliationIndex({
                                                         </span>
                                                     </td>
                                                     <td className="px-5 py-3.5 text-right">
-                                                        <Link href={`/reconciliation/${row.rake.id}`}>
-                                                            <Button variant="outline" size="sm">
+                                                        <Link
+                                                            href={`/reconciliation/${row.rake.id}`}
+                                                        >
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                            >
                                                                 Detail
                                                             </Button>
                                                         </Link>
@@ -193,7 +235,10 @@ export default function ReconciliationIndex({
                                                 type="button"
                                                 disabled={!link.url}
                                                 className="rounded-md border border-input px-4 py-2.5 text-sm disabled:opacity-50"
-                                                onClick={() => link.url && router.get(link.url)}
+                                                onClick={() =>
+                                                    link.url &&
+                                                    router.get(link.url)
+                                                }
                                             >
                                                 {link.label}
                                             </button>

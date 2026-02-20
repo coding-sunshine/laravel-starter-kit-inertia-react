@@ -69,6 +69,7 @@ function SidebarProvider({
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
+  /* eslint-disable-next-line @eslint-react/naming-convention/use-state -- internal state; setOpen is the public callback */
   const [_open, _setOpen] = React.useState(defaultOpen)
   const open = openProp ?? _open
   const setOpen = React.useCallback(

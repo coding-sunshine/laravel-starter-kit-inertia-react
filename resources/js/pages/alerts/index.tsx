@@ -1,4 +1,5 @@
 import Heading from '@/components/heading';
+import { Button } from '@/components/ui/button';
 import {
     Card,
     CardContent,
@@ -6,7 +7,6 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router, usePage } from '@inertiajs/react';
@@ -73,7 +73,9 @@ export default function AlertsIndex({ alerts, sidings }: Props) {
                 <Card>
                     <CardHeader>
                         <CardTitle>Alert list</CardTitle>
-                        <CardDescription>Filter by siding or status</CardDescription>
+                        <CardDescription>
+                            Filter by siding or status
+                        </CardDescription>
                     </CardHeader>
                     <CardContent>
                         <form
@@ -82,16 +84,29 @@ export default function AlertsIndex({ alerts, sidings }: Props) {
                             onSubmit={(e) => {
                                 e.preventDefault();
                                 const form = e.currentTarget;
-                                const siding = (form.querySelector('[name=siding_id]') as HTMLSelectElement)?.value;
-                                const status = (form.querySelector('[name=status]') as HTMLSelectElement)?.value;
+                                const siding = (
+                                    form.querySelector(
+                                        '[name=siding_id]',
+                                    ) as HTMLSelectElement
+                                )?.value;
+                                const status = (
+                                    form.querySelector(
+                                        '[name=status]',
+                                    ) as HTMLSelectElement
+                                )?.value;
                                 const params = new URLSearchParams();
                                 if (siding) params.set('siding_id', siding);
                                 if (status) params.set('status', status);
-                                router.get('/alerts', Object.fromEntries(params));
+                                router.get(
+                                    '/alerts',
+                                    Object.fromEntries(params),
+                                );
                             }}
                         >
                             <div className="grid gap-2">
-                                <label className="text-sm font-medium">Siding</label>
+                                <label className="text-sm font-medium">
+                                    Siding
+                                </label>
                                 <select
                                     name="siding_id"
                                     defaultValue={q.get('siding_id') ?? ''}
@@ -106,7 +121,9 @@ export default function AlertsIndex({ alerts, sidings }: Props) {
                                 </select>
                             </div>
                             <div className="grid gap-2">
-                                <label className="text-sm font-medium">Status</label>
+                                <label className="text-sm font-medium">
+                                    Status
+                                </label>
                                 <select
                                     name="status"
                                     defaultValue={q.get('status') ?? ''}
@@ -132,39 +149,72 @@ export default function AlertsIndex({ alerts, sidings }: Props) {
                                     <table className="w-full text-sm">
                                         <thead>
                                             <tr className="border-b bg-muted/50">
-                                                <th className="px-5 py-3.5 text-left font-medium">Type</th>
-                                                <th className="px-5 py-3.5 text-left font-medium">Title</th>
-                                                <th className="px-5 py-3.5 text-left font-medium">Rake / Siding</th>
-                                                <th className="px-5 py-3.5 text-left font-medium">Severity</th>
-                                                <th className="px-5 py-3.5 text-left font-medium">Status</th>
-                                                <th className="px-5 py-3.5 text-left font-medium">Created</th>
-                                                <th className="px-5 py-3.5 text-right font-medium">Actions</th>
+                                                <th className="px-5 py-3.5 text-left font-medium">
+                                                    Type
+                                                </th>
+                                                <th className="px-5 py-3.5 text-left font-medium">
+                                                    Title
+                                                </th>
+                                                <th className="px-5 py-3.5 text-left font-medium">
+                                                    Rake / Siding
+                                                </th>
+                                                <th className="px-5 py-3.5 text-left font-medium">
+                                                    Severity
+                                                </th>
+                                                <th className="px-5 py-3.5 text-left font-medium">
+                                                    Status
+                                                </th>
+                                                <th className="px-5 py-3.5 text-left font-medium">
+                                                    Created
+                                                </th>
+                                                <th className="px-5 py-3.5 text-right font-medium">
+                                                    Actions
+                                                </th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {alerts.data.map((alert) => (
-                                                <tr key={alert.id} className="border-b last:border-0 hover:bg-muted/30">
-                                                    <td className="px-5 py-3.5">{alert.type}</td>
-                                                    <td className="px-5 py-3.5 font-medium">{alert.title}</td>
+                                                <tr
+                                                    key={alert.id}
+                                                    className="border-b last:border-0 hover:bg-muted/30"
+                                                >
+                                                    <td className="px-5 py-3.5">
+                                                        {alert.type}
+                                                    </td>
+                                                    <td className="px-5 py-3.5 font-medium">
+                                                        {alert.title}
+                                                    </td>
                                                     <td className="px-5 py-3.5">
                                                         {alert.rake
-                                                            ? alert.rake.rake_number
+                                                            ? alert.rake
+                                                                  .rake_number
                                                             : alert.siding
-                                                              ? alert.siding.name
+                                                              ? alert.siding
+                                                                    .name
                                                               : '—'}
                                                     </td>
-                                                    <td className="px-5 py-3.5 capitalize">{alert.severity}</td>
-                                                    <td className="px-5 py-3.5 capitalize">{alert.status}</td>
-                                                    <td className="px-5 py-3.5">{alert.created_at}</td>
+                                                    <td className="px-5 py-3.5 capitalize">
+                                                        {alert.severity}
+                                                    </td>
+                                                    <td className="px-5 py-3.5 capitalize">
+                                                        {alert.status}
+                                                    </td>
+                                                    <td className="px-5 py-3.5">
+                                                        {alert.created_at}
+                                                    </td>
                                                     <td className="px-5 py-3.5 text-right">
-                                                        {alert.status === 'active' && (
+                                                        {alert.status ===
+                                                            'active' && (
                                                             <Button
                                                                 variant="outline"
                                                                 size="sm"
                                                                 onClick={() =>
                                                                     router.put(
                                                                         `/alerts/${alert.id}/resolve`,
-                                                                        { redirect: '/alerts' }
+                                                                        {
+                                                                            redirect:
+                                                                                '/alerts',
+                                                                        },
                                                                     )
                                                                 }
                                                             >
@@ -185,7 +235,10 @@ export default function AlertsIndex({ alerts, sidings }: Props) {
                                                 type="button"
                                                 disabled={!link.url}
                                                 className="rounded-md border border-input px-4 py-2.5 text-sm disabled:opacity-50"
-                                                onClick={() => link.url && router.get(link.url)}
+                                                onClick={() =>
+                                                    link.url &&
+                                                    router.get(link.url)
+                                                }
                                             >
                                                 {link.label}
                                             </button>

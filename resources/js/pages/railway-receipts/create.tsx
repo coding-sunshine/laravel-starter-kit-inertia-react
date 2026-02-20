@@ -26,7 +26,6 @@ interface Props {
 
 export default function RailwayReceiptsCreate({
     rakes,
-    sidings,
     preselectedRakeId,
 }: Props) {
     const { errors } = usePage<{ errors?: Record<string, string> }>().props;
@@ -84,7 +83,9 @@ export default function RailwayReceiptsCreate({
                         <InputError message={errors?.rr_number} />
                     </div>
                     <div className="grid gap-2">
-                        <Label htmlFor="rr_received_date">RR received date *</Label>
+                        <Label htmlFor="rr_received_date">
+                            RR received date *
+                        </Label>
                         <Input
                             id="rr_received_date"
                             name="rr_received_date"
@@ -108,16 +109,14 @@ export default function RailwayReceiptsCreate({
                     </div>
                     <div className="grid gap-2">
                         <Label htmlFor="fnr">FNR (optional)</Label>
-                        <Input
-                            id="fnr"
-                            name="fnr"
-                            className="text-sm"
-                        />
+                        <Input id="fnr" name="fnr" className="text-sm" />
                         <InputError message={errors?.fnr} />
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                         <div className="grid gap-2">
-                            <Label htmlFor="from_station_code">From station code</Label>
+                            <Label htmlFor="from_station_code">
+                                From station code
+                            </Label>
                             <Input
                                 id="from_station_code"
                                 name="from_station_code"
@@ -126,7 +125,9 @@ export default function RailwayReceiptsCreate({
                             <InputError message={errors?.from_station_code} />
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="to_station_code">To station code</Label>
+                            <Label htmlFor="to_station_code">
+                                To station code
+                            </Label>
                             <Input
                                 id="to_station_code"
                                 name="to_station_code"

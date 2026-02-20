@@ -43,7 +43,7 @@ export default function TermsAccept({
     return (
         <div className="min-h-svh bg-background">
             <Head title="Accept Terms" />
-            <div className="mx-auto max-w-3xl px-4 p-8">
+            <div className="mx-auto max-w-3xl p-8 px-4">
                 <div className="mb-6 flex items-center justify-between">
                     <Link
                         href={home()}
@@ -114,6 +114,7 @@ export default function TermsAccept({
                                         )}
                                         <div
                                             className="prose prose-sm dark:prose-invert mt-2 max-h-48 overflow-y-auto [&_a]:text-primary"
+                                            /* eslint-disable-next-line @eslint-react/dom/no-dangerously-set-innerhtml -- terms HTML from server */
                                             dangerouslySetInnerHTML={{
                                                 __html: version.body_html,
                                             }}

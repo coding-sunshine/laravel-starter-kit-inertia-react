@@ -1,4 +1,5 @@
 import Heading from '@/components/heading';
+import { Button } from '@/components/ui/button';
 import {
     Card,
     CardContent,
@@ -6,10 +7,9 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { Receipt } from 'lucide-react';
 
 interface Rake {
@@ -51,13 +51,14 @@ interface Props {
     powerPlants: PowerPlant[];
 }
 
-export default function PowerPlantReceiptsIndex({
-    receipts,
-}: Props) {
+export default function PowerPlantReceiptsIndex({ receipts }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: '/dashboard' },
         { title: 'Reconciliation', href: '/reconciliation' },
-        { title: 'Power plant receipts', href: '/reconciliation/power-plant-receipts' },
+        {
+            title: 'Power plant receipts',
+            href: '/reconciliation/power-plant-receipts',
+        },
     ];
 
     return (
@@ -73,13 +74,17 @@ export default function PowerPlantReceiptsIndex({
                         <Button>Add power plant receipt</Button>
                     </Link>
                     <Link href="/reconciliation">
-                        <Button variant="outline">Back to reconciliation</Button>
+                        <Button variant="outline">
+                            Back to reconciliation
+                        </Button>
                     </Link>
                 </div>
                 <Card>
                     <CardHeader>
                         <CardTitle>Receipts</CardTitle>
-                        <CardDescription>By rake and power plant</CardDescription>
+                        <CardDescription>
+                            By rake and power plant
+                        </CardDescription>
                     </CardHeader>
                     <CardContent>
                         {receipts.data.length === 0 ? (
@@ -93,21 +98,46 @@ export default function PowerPlantReceiptsIndex({
                                     <table className="w-full text-sm">
                                         <thead>
                                             <tr className="border-b bg-muted/50">
-                                                <th className="px-5 py-3.5 text-left font-medium">Rake</th>
-                                                <th className="px-5 py-3.5 text-left font-medium">Power plant</th>
-                                                <th className="px-5 py-3.5 text-left font-medium">Date</th>
-                                                <th className="px-5 py-3.5 text-right font-medium">Weight (MT)</th>
-                                                <th className="px-5 py-3.5 text-left font-medium">Status</th>
+                                                <th className="px-5 py-3.5 text-left font-medium">
+                                                    Rake
+                                                </th>
+                                                <th className="px-5 py-3.5 text-left font-medium">
+                                                    Power plant
+                                                </th>
+                                                <th className="px-5 py-3.5 text-left font-medium">
+                                                    Date
+                                                </th>
+                                                <th className="px-5 py-3.5 text-right font-medium">
+                                                    Weight (MT)
+                                                </th>
+                                                <th className="px-5 py-3.5 text-left font-medium">
+                                                    Status
+                                                </th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {receipts.data.map((r) => (
-                                                <tr key={r.id} className="border-b last:border-0 hover:bg-muted/30">
-                                                    <td className="px-5 py-3.5 font-medium">{r.rake?.rake_number ?? r.rake_id}</td>
-                                                    <td className="px-5 py-3.5">{r.power_plant?.name ?? r.power_plant_id}</td>
-                                                    <td className="px-5 py-3.5">{r.receipt_date}</td>
-                                                    <td className="px-5 py-3.5 text-right">{r.weight_mt}</td>
-                                                    <td className="px-5 py-3.5">{r.status}</td>
+                                                <tr
+                                                    key={r.id}
+                                                    className="border-b last:border-0 hover:bg-muted/30"
+                                                >
+                                                    <td className="px-5 py-3.5 font-medium">
+                                                        {r.rake?.rake_number ??
+                                                            r.rake_id}
+                                                    </td>
+                                                    <td className="px-5 py-3.5">
+                                                        {r.power_plant?.name ??
+                                                            r.power_plant_id}
+                                                    </td>
+                                                    <td className="px-5 py-3.5">
+                                                        {r.receipt_date}
+                                                    </td>
+                                                    <td className="px-5 py-3.5 text-right">
+                                                        {r.weight_mt}
+                                                    </td>
+                                                    <td className="px-5 py-3.5">
+                                                        {r.status}
+                                                    </td>
                                                 </tr>
                                             ))}
                                         </tbody>
@@ -121,7 +151,10 @@ export default function PowerPlantReceiptsIndex({
                                                 type="button"
                                                 disabled={!link.url}
                                                 className="rounded-md border border-input px-4 py-2.5 text-sm disabled:opacity-50"
-                                                onClick={() => link.url && router.get(link.url)}
+                                                onClick={() =>
+                                                    link.url &&
+                                                    router.get(link.url)
+                                                }
                                             >
                                                 {link.label}
                                             </button>

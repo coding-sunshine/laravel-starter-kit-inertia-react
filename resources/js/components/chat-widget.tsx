@@ -90,7 +90,9 @@ export function ChatWidget() {
     const [open, setOpen] = useState(false);
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [conversationId, setConversationId] = useState<string | null>(null);
-    const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+    const [conversations, setConversations] = useState<ConversationSummary[]>(
+        [],
+    );
     const [conversationsLoading, setConversationsLoading] = useState(false);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
@@ -157,15 +159,15 @@ export function ChatWidget() {
                         (m: { role: string; content: string }) => ({
                             role: m.role as 'user' | 'assistant',
                             content: m.content ?? '',
-                        })
-                    )
+                        }),
+                    ),
                 );
                 scrollToBottom();
             } catch {
                 setError('Failed to load conversation.');
             }
         },
-        [scrollToBottom]
+        [scrollToBottom],
     );
 
     const sendMessage = useCallback(async () => {
@@ -202,23 +204,26 @@ export function ChatWidget() {
             const data = await response.json();
 
             // #region agent log
-            fetch('http://127.0.0.1:7245/ingest/84c2e6d8-378d-4027-b1f1-e1006360429d', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    location: 'chat-widget.tsx:sendMessage',
-                    message: 'chat_response',
-                    data: {
-                        status: response.status,
-                        ok: response.ok,
-                        dataKeys: Object.keys(data ?? {}),
-                        dataError: data?.error,
-                        dataMessage: data?.message,
-                    },
-                    timestamp: Date.now(),
-                    hypothesisId: 'A',
-                }),
-            }).catch(() => {});
+            fetch(
+                'http://127.0.0.1:7245/ingest/84c2e6d8-378d-4027-b1f1-e1006360429d',
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        location: 'chat-widget.tsx:sendMessage',
+                        message: 'chat_response',
+                        data: {
+                            status: response.status,
+                            ok: response.ok,
+                            dataKeys: Object.keys(data ?? {}),
+                            dataError: data?.error,
+                            dataMessage: data?.message,
+                        },
+                        timestamp: Date.now(),
+                        hypothesisId: 'A',
+                    }),
+                },
+            ).catch(() => {});
             // #endregion
 
             if (!response.ok) {
@@ -227,7 +232,9 @@ export function ChatWidget() {
                     (response.status === 419
                         ? 'Session may have expired. Please refresh the page and try again.'
                         : 'Something went wrong.');
-                const detail = data?.debug_error ? ` (${data.debug_error})` : '';
+                const detail = data?.debug_error
+                    ? ` (${data.debug_error})`
+                    : '';
                 setError(message + detail);
                 return;
             }
@@ -258,7 +265,7 @@ export function ChatWidget() {
     };
 
     const handleTextareaChange = (
-        e: React.ChangeEvent<HTMLTextAreaElement>
+        e: React.ChangeEvent<HTMLTextAreaElement>,
     ) => {
         setInput(e.target.value);
         const el = e.target;
@@ -272,7 +279,7 @@ export function ChatWidget() {
                 <Button
                     variant="default"
                     size="icon"
-                    className="fixed bottom-6 right-6 size-14 rounded-full shadow-xl transition-all hover:scale-105 hover:shadow-2xl"
+                    className="fixed right-6 bottom-6 size-14 rounded-full shadow-xl transition-all hover:scale-105 hover:shadow-2xl"
                     aria-label="Open AI chat"
                     data-pan="chat-open"
                 >
@@ -316,7 +323,7 @@ export function ChatWidget() {
 
                 {/* Conversations strip */}
                 <div className="flex-shrink-0 border-b border-border bg-muted px-3 py-2.5">
-                    <p className="mb-2 px-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                    <p className="mb-2 px-1 text-[11px] font-medium tracking-wider text-muted-foreground uppercase">
                         Conversations
                     </p>
                     <div className="flex gap-1.5 overflow-x-auto pb-1">
@@ -338,7 +345,7 @@ export function ChatWidget() {
                                         'shrink-0 rounded-lg border px-3 py-2 text-left text-xs transition-all',
                                         conversationId === c.id
                                             ? 'border-primary/40 bg-primary/10 font-medium text-foreground shadow-sm'
-                                            : 'border-border bg-background text-muted-foreground hover:border-border hover:bg-muted/50 hover:text-foreground'
+                                            : 'border-border bg-background text-muted-foreground hover:border-border hover:bg-muted/50 hover:text-foreground',
                                     )}
                                     title={c.title}
                                     data-pan="chat-conversation-item"
@@ -368,17 +375,18 @@ export function ChatWidget() {
                                         Ask anything about RRMCS
                                     </p>
                                     <p className="mt-1 max-w-[260px] text-xs leading-relaxed text-muted-foreground">
-                                        Rakes, indents, sidings, demurrage —
-                                        I can use your current data to answer.
+                                        Rakes, indents, sidings, demurrage — I
+                                        can use your current data to answer.
                                     </p>
                                 </div>
                             )}
                             {messages.map((msg, i) => (
                                 <div
-                                    key={i}
+                                    // eslint-disable-next-line @eslint-react/no-array-index-key -- chat messages: role+content+index for stable keys
+                                    key={`${msg.role}-${msg.content.slice(0, 80)}-${i}`}
                                     className={cn(
                                         'flex',
-                                        msg.role === 'user' && 'justify-end'
+                                        msg.role === 'user' && 'justify-end',
                                     )}
                                 >
                                     <div
@@ -386,10 +394,10 @@ export function ChatWidget() {
                                             'max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow-sm',
                                             msg.role === 'user'
                                                 ? 'bg-primary text-primary-foreground'
-                                                : 'border border-border/70 bg-muted/30 text-foreground'
+                                                : 'border border-border/70 bg-muted/30 text-foreground',
                                         )}
                                     >
-                                        <div className="whitespace-pre-wrap break-words leading-relaxed">
+                                        <div className="leading-relaxed break-words whitespace-pre-wrap">
                                             {msg.content}
                                         </div>
                                     </div>
@@ -425,10 +433,10 @@ export function ChatWidget() {
                                 disabled={loading}
                                 rows={1}
                                 className={cn(
-                                    'min-h-[44px] max-h-[120px] w-full resize-none rounded-xl border border-input bg-background px-4 py-3 text-sm shadow-xs outline-none transition-[box-shadow,border-color]',
+                                    'max-h-[120px] min-h-[44px] w-full resize-none rounded-xl border border-input bg-background px-4 py-3 text-sm shadow-xs transition-[box-shadow,border-color] outline-none',
                                     'placeholder:text-muted-foreground',
-                                    'focus:border-ring focus:ring-ring/30 focus:ring-2',
-                                    'disabled:cursor-not-allowed disabled:opacity-60'
+                                    'focus:border-ring focus:ring-2 focus:ring-ring/30',
+                                    'disabled:cursor-not-allowed disabled:opacity-60',
                                 )}
                             />
                             <Button

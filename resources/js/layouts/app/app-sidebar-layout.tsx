@@ -15,9 +15,7 @@ export default function AppSidebarLayout({
             <AppSidebar />
             <AppContent variant="sidebar" className="overflow-x-hidden">
                 <AppSidebarHeader breadcrumbs={breadcrumbs} />
-                <div className="flex-1 p-4 sm:p-6 lg:p-8">
-                    {children}
-                </div>
+                <div className="flex-1 p-4 sm:p-6 lg:p-8">{children}</div>
             </AppContent>
             <ChatWidget />
         </AppShell>

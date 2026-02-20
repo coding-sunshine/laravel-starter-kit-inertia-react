@@ -3,8 +3,8 @@ import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import { create as contactCreate } from '@/routes/contact';
-import { index as rakes } from '@/routes/rakes';
 import { exportPdf } from '@/routes/profile';
+import { index as rakes } from '@/routes/rakes';
 import { edit as editProfile } from '@/routes/user-profile';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/react';
@@ -124,7 +124,7 @@ function DemurrageTimer({ rake }: { rake: ActiveRake }) {
                 </div>
                 <span
                     className={
-                        'tabular-nums font-semibold ' +
+                        'font-semibold tabular-nums ' +
                         (isCritical
                             ? 'text-red-600 dark:text-red-400'
                             : isLow
@@ -159,10 +159,7 @@ export default function Dashboard() {
         auth.can_bypass === true;
 
     const hasRrmcs = sidings.length > 0;
-    const maxPenalty = Math.max(
-        ...penaltyChartData.map((d) => d.total),
-        1,
-    );
+    const maxPenalty = Math.max(...penaltyChartData.map((d) => d.total), 1);
 
     const quickActions = [
         {
@@ -262,7 +259,7 @@ export default function Dashboard() {
                                         router.put(
                                             `/alerts/${alert.id}/resolve`,
                                             { redirect: '/dashboard' },
-                                            { preserveScroll: true }
+                                            { preserveScroll: true },
                                         )
                                     }
                                 >
@@ -279,7 +276,9 @@ export default function Dashboard() {
                             <div className="rounded-lg border bg-card p-4">
                                 <div className="flex items-center gap-2 text-muted-foreground">
                                     <Train className="size-4" />
-                                    <span className="text-sm">Active rakes</span>
+                                    <span className="text-sm">
+                                        Active rakes
+                                    </span>
                                 </div>
                                 <p className="mt-1 text-2xl font-semibold">
                                     {summary.totalRakes}
@@ -343,7 +342,7 @@ export default function Dashboard() {
                                                     <span className="font-medium">
                                                         {s.name}
                                                     </span>
-                                                    <span className="tabular-nums text-muted-foreground">
+                                                    <span className="text-muted-foreground tabular-nums">
                                                         {balance.toLocaleString(
                                                             undefined,
                                                             {
@@ -359,7 +358,9 @@ export default function Dashboard() {
                                                         style={{
                                                             width: `${Math.min(
                                                                 100,
-                                                                (balance / 1000) * 10,
+                                                                (balance /
+                                                                    1000) *
+                                                                    10,
                                                             )}%`,
                                                         }}
                                                     />
@@ -386,7 +387,9 @@ export default function Dashboard() {
                                 </div>
                                 <div className="mt-3">
                                     <Button variant="outline" size="sm" asChild>
-                                        <Link href={rakes().url}>View all rakes</Link>
+                                        <Link href={rakes().url}>
+                                            View all rakes
+                                        </Link>
                                     </Button>
                                 </div>
                             </div>

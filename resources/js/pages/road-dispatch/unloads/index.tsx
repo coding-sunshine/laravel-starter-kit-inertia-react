@@ -1,5 +1,6 @@
 import Heading from '@/components/heading';
 import { StatusPill } from '@/components/status-pill';
+import { Button } from '@/components/ui/button';
 import {
     Card,
     CardContent,
@@ -7,10 +8,9 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { Truck } from 'lucide-react';
 
 interface Siding {
@@ -99,16 +99,29 @@ export default function RoadDispatchUnloadsIndex({ unloads, sidings }: Props) {
                             onSubmit={(e) => {
                                 e.preventDefault();
                                 const form = e.currentTarget;
-                                const siding = (form.querySelector('[name=siding_id]') as HTMLSelectElement)?.value;
-                                const state = (form.querySelector('[name=state]') as HTMLSelectElement)?.value;
+                                const siding = (
+                                    form.querySelector(
+                                        '[name=siding_id]',
+                                    ) as HTMLSelectElement
+                                )?.value;
+                                const state = (
+                                    form.querySelector(
+                                        '[name=state]',
+                                    ) as HTMLSelectElement
+                                )?.value;
                                 const params = new URLSearchParams();
                                 if (siding) params.set('siding_id', siding);
                                 if (state) params.set('state', state);
-                                router.get('/road-dispatch/unloads', Object.fromEntries(params));
+                                router.get(
+                                    '/road-dispatch/unloads',
+                                    Object.fromEntries(params),
+                                );
                             }}
                         >
                             <div className="grid gap-2">
-                                <label className="text-sm font-medium">Siding</label>
+                                <label className="text-sm font-medium">
+                                    Siding
+                                </label>
                                 <select
                                     name="siding_id"
                                     className="rounded-md border border-input bg-background px-4 py-2.5 text-sm"
@@ -122,7 +135,9 @@ export default function RoadDispatchUnloadsIndex({ unloads, sidings }: Props) {
                                 </select>
                             </div>
                             <div className="grid gap-2">
-                                <label className="text-sm font-medium">State</label>
+                                <label className="text-sm font-medium">
+                                    State
+                                </label>
                                 <select
                                     name="state"
                                     className="rounded-md border border-input bg-background px-4 py-2.5 text-sm"
@@ -147,50 +162,84 @@ export default function RoadDispatchUnloadsIndex({ unloads, sidings }: Props) {
                                 <table className="w-full text-sm">
                                     <thead>
                                         <tr className="border-b bg-muted/50">
-                                            <th className="px-5 py-3.5 text-left font-medium">Arrival time</th>
-                                            <th className="px-5 py-3.5 text-left font-medium">Siding</th>
-                                            <th className="px-5 py-3.5 text-left font-medium">Vehicle</th>
-                                            <th className="px-5 py-3.5 text-left font-medium">State</th>
-                                            <th className="px-5 py-3.5 text-right font-medium">Mine (MT)</th>
-                                            <th className="px-5 py-3.5 text-right font-medium">Weighment (MT)</th>
-                                            <th className="px-5 py-3.5 text-right font-medium">Action</th>
+                                            <th className="px-5 py-3.5 text-left font-medium">
+                                                Arrival time
+                                            </th>
+                                            <th className="px-5 py-3.5 text-left font-medium">
+                                                Siding
+                                            </th>
+                                            <th className="px-5 py-3.5 text-left font-medium">
+                                                Vehicle
+                                            </th>
+                                            <th className="px-5 py-3.5 text-left font-medium">
+                                                State
+                                            </th>
+                                            <th className="px-5 py-3.5 text-right font-medium">
+                                                Mine (MT)
+                                            </th>
+                                            <th className="px-5 py-3.5 text-right font-medium">
+                                                Weighment (MT)
+                                            </th>
+                                            <th className="px-5 py-3.5 text-right font-medium">
+                                                Action
+                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {unloads.data.map((u) => (
-                                            <tr key={u.id} className="border-b last:border-0 hover:bg-muted/30">
+                                            <tr
+                                                key={u.id}
+                                                className="border-b last:border-0 hover:bg-muted/30"
+                                            >
                                                 <td className="px-5 py-3.5">
-                                                    {new Date(u.arrival_time).toLocaleString()}
+                                                    {new Date(
+                                                        u.arrival_time,
+                                                    ).toLocaleString()}
                                                 </td>
                                                 <td className="px-5 py-3.5">
-                                                    {u.siding ? `${u.siding.code} (${u.siding.name})` : '—'}
+                                                    {u.siding
+                                                        ? `${u.siding.code} (${u.siding.name})`
+                                                        : '—'}
                                                 </td>
                                                 <td className="px-5 py-3.5">
-                                                    {u.vehicle ? u.vehicle.vehicle_number : u.vehicle_id}
+                                                    {u.vehicle
+                                                        ? u.vehicle
+                                                              .vehicle_number
+                                                        : u.vehicle_id}
                                                 </td>
                                                 <td className="px-5 py-3.5">
-                                                    <StatusPill status={u.state} />
+                                                    <StatusPill
+                                                        status={u.state}
+                                                    />
                                                 </td>
                                                 <td className="px-5 py-3.5 text-right">
                                                     {u.mine_weight_mt ?? '—'}
                                                 </td>
                                                 <td className="px-5 py-3.5 text-right">
-                                                    {u.weighment_weight_mt ?? '—'}
+                                                    {u.weighment_weight_mt ??
+                                                        '—'}
                                                 </td>
                                                 <td className="px-5 py-3.5 text-right">
-                                                    {u.state === 'pending' || u.state === 'unloading' ? (
+                                                    {u.state === 'pending' ||
+                                                    u.state === 'unloading' ? (
                                                         <Button
                                                             type="button"
                                                             size="sm"
                                                             variant="secondary"
-                                                            onClick={() => handleConfirm(u.id)}
+                                                            onClick={() =>
+                                                                handleConfirm(
+                                                                    u.id,
+                                                                )
+                                                            }
                                                         >
                                                             Confirm receipt
                                                         </Button>
+                                                    ) : u.unload_end_time ? (
+                                                        new Date(
+                                                            u.unload_end_time,
+                                                        ).toLocaleString()
                                                     ) : (
-                                                        u.unload_end_time
-                                                            ? new Date(u.unload_end_time).toLocaleString()
-                                                            : '—'
+                                                        '—'
                                                     )}
                                                 </td>
                                             </tr>
@@ -202,15 +251,22 @@ export default function RoadDispatchUnloadsIndex({ unloads, sidings }: Props) {
                         {(unloads.prev_page_url || unloads.next_page_url) && (
                             <nav className="mt-6 flex items-center justify-center gap-4 pt-2">
                                 {unloads.prev_page_url ? (
-                                    <Link href={unloads.prev_page_url} className="text-sm font-medium underline">
+                                    <Link
+                                        href={unloads.prev_page_url}
+                                        className="text-sm font-medium underline"
+                                    >
                                         Previous
                                     </Link>
                                 ) : null}
                                 <span className="text-sm text-muted-foreground">
-                                    Page {unloads.current_page} of {unloads.last_page}
+                                    Page {unloads.current_page} of{' '}
+                                    {unloads.last_page}
                                 </span>
                                 {unloads.next_page_url ? (
-                                    <Link href={unloads.next_page_url} className="text-sm font-medium underline">
+                                    <Link
+                                        href={unloads.next_page_url}
+                                        className="text-sm font-medium underline"
+                                    >
                                         Next
                                     </Link>
                                 ) : null}

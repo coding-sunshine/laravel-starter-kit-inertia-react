@@ -23,7 +23,10 @@ interface Props {
     vehicles: Vehicle[];
 }
 
-export default function RoadDispatchArrivalsCreate({ sidings, vehicles }: Props) {
+export default function RoadDispatchArrivalsCreate({
+    sidings,
+    vehicles,
+}: Props) {
     const { errors } = usePage<{ errors?: Record<string, string> }>().props;
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: '/dashboard' },
@@ -70,7 +73,8 @@ export default function RoadDispatchArrivalsCreate({ sidings, vehicles }: Props)
                             <option value="">Select vehicle</option>
                             {vehicles.map((v) => (
                                 <option key={v.id} value={v.id}>
-                                    {v.vehicle_number} {v.owner_name ? `(${v.owner_name})` : ''}
+                                    {v.vehicle_number}{' '}
+                                    {v.owner_name ? `(${v.owner_name})` : ''}
                                 </option>
                             ))}
                         </select>
@@ -136,7 +140,11 @@ export default function RoadDispatchArrivalsCreate({ sidings, vehicles }: Props)
                     </div>
                     <div className="flex gap-2">
                         <Button type="submit">Save</Button>
-                        <Button type="button" variant="outline" onClick={() => window.history.back()}>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => window.history.back()}
+                        >
                             Cancel
                         </Button>
                     </div>

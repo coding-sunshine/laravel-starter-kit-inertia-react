@@ -1,4 +1,5 @@
 import Heading from '@/components/heading';
+import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -7,11 +8,10 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import AppLayout from '@/layouts/app-layout';
-import { type BreadcrumbItem } from '@/types';
-import InputError from '@/components/input-error';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import AppLayout from '@/layouts/app-layout';
+import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Clock, FileText, Scale, Train } from 'lucide-react';
 
@@ -193,8 +193,10 @@ export default function RakesShow({
         { title: 'Rakes', href: '/rakes' },
         { title: rake.rake_number, href: `/rakes/${rake.id}` },
     ];
-    const isLow = demurrageRemainingMinutes !== null && demurrageRemainingMinutes <= 30;
-    const isCritical = demurrageRemainingMinutes !== null && demurrageRemainingMinutes <= 0;
+    const isLow =
+        demurrageRemainingMinutes !== null && demurrageRemainingMinutes <= 30;
+    const isCritical =
+        demurrageRemainingMinutes !== null && demurrageRemainingMinutes <= 0;
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -422,8 +424,7 @@ export default function RakesShow({
                                             ).toLocaleString()}
                                         </span>
                                         <span>
-                                            Total:{' '}
-                                            {w.total_weight_mt} MT
+                                            Total: {w.total_weight_mt} MT
                                         </span>
                                         {w.weighment_status && (
                                             <span className="capitalize">
@@ -483,8 +484,8 @@ export default function RakesShow({
                                 Penalties
                             </CardTitle>
                             <CardDescription>
-                                Demurrage formula: hours over free time × weight (MT) ×
-                                ₹{demurrage_rate_per_mt_hour}/MT/h
+                                Demurrage formula: hours over free time × weight
+                                (MT) × ₹{demurrage_rate_per_mt_hour}/MT/h
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -500,7 +501,8 @@ export default function RakesShow({
                                             </span>
                                             <span>₹{p.penalty_amount}</span>
                                             <span className="text-muted-foreground">
-                                                {p.penalty_status} · {p.penalty_date}
+                                                {p.penalty_status} ·{' '}
+                                                {p.penalty_date}
                                             </span>
                                         </div>
                                         {p.description && (
@@ -510,9 +512,35 @@ export default function RakesShow({
                                         )}
                                         {p.calculation_breakdown && (
                                             <p className="mt-1 text-xs text-muted-foreground">
-                                                {p.calculation_breakdown.formula}
-                                                {p.calculation_breakdown.demurrage_hours != null && (
-                                                    <> = {p.calculation_breakdown.demurrage_hours} h × {p.calculation_breakdown.weight_mt} MT × ₹{p.calculation_breakdown.rate_per_mt_hour}/MT/h</>
+                                                {
+                                                    p.calculation_breakdown
+                                                        .formula
+                                                }
+                                                {p.calculation_breakdown
+                                                    .demurrage_hours !=
+                                                    null && (
+                                                    <>
+                                                        {' '}
+                                                        ={' '}
+                                                        {
+                                                            p
+                                                                .calculation_breakdown
+                                                                .demurrage_hours
+                                                        }{' '}
+                                                        h ×{' '}
+                                                        {
+                                                            p
+                                                                .calculation_breakdown
+                                                                .weight_mt
+                                                        }{' '}
+                                                        MT × ₹
+                                                        {
+                                                            p
+                                                                .calculation_breakdown
+                                                                .rate_per_mt_hour
+                                                        }
+                                                        /MT/h
+                                                    </>
                                                 )}
                                             </p>
                                         )}

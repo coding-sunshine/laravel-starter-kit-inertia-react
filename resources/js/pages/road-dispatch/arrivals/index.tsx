@@ -1,5 +1,6 @@
 import Heading from '@/components/heading';
 import { StatusPill } from '@/components/status-pill';
+import { Button } from '@/components/ui/button';
 import {
     Card,
     CardContent,
@@ -7,10 +8,9 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { Truck } from 'lucide-react';
 
 interface Siding {
@@ -57,8 +57,10 @@ interface Props {
     sidings: Siding[];
 }
 
-export default function RoadDispatchArrivalsIndex({ arrivals, sidings }: Props) {
-    const { filters } = usePage<{ filters?: { siding_id?: string; date_from?: string; date_to?: string } }>().props;
+export default function RoadDispatchArrivalsIndex({
+    arrivals,
+    sidings,
+}: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: '/dashboard' },
         { title: 'Road Dispatch', href: '/road-dispatch/arrivals' },
@@ -95,18 +97,35 @@ export default function RoadDispatchArrivalsIndex({ arrivals, sidings }: Props) 
                             onSubmit={(e) => {
                                 e.preventDefault();
                                 const form = e.currentTarget;
-                                const siding = (form.querySelector('[name=siding_id]') as HTMLSelectElement)?.value;
-                                const from = (form.querySelector('[name=date_from]') as HTMLInputElement)?.value;
-                                const to = (form.querySelector('[name=date_to]') as HTMLInputElement)?.value;
+                                const siding = (
+                                    form.querySelector(
+                                        '[name=siding_id]',
+                                    ) as HTMLSelectElement
+                                )?.value;
+                                const from = (
+                                    form.querySelector(
+                                        '[name=date_from]',
+                                    ) as HTMLInputElement
+                                )?.value;
+                                const to = (
+                                    form.querySelector(
+                                        '[name=date_to]',
+                                    ) as HTMLInputElement
+                                )?.value;
                                 const params = new URLSearchParams();
                                 if (siding) params.set('siding_id', siding);
                                 if (from) params.set('date_from', from);
                                 if (to) params.set('date_to', to);
-                                router.get('/road-dispatch/arrivals', Object.fromEntries(params));
+                                router.get(
+                                    '/road-dispatch/arrivals',
+                                    Object.fromEntries(params),
+                                );
                             }}
                         >
                             <div className="grid gap-2">
-                                <label className="text-sm font-medium">Siding</label>
+                                <label className="text-sm font-medium">
+                                    Siding
+                                </label>
                                 <select
                                     name="siding_id"
                                     className="rounded-md border border-input bg-background px-4 py-2.5 text-sm"
@@ -120,7 +139,9 @@ export default function RoadDispatchArrivalsIndex({ arrivals, sidings }: Props) 
                                 </select>
                             </div>
                             <div className="grid gap-2">
-                                <label className="text-sm font-medium">From</label>
+                                <label className="text-sm font-medium">
+                                    From
+                                </label>
                                 <input
                                     type="date"
                                     name="date_from"
@@ -128,7 +149,9 @@ export default function RoadDispatchArrivalsIndex({ arrivals, sidings }: Props) 
                                 />
                             </div>
                             <div className="grid gap-2">
-                                <label className="text-sm font-medium">To</label>
+                                <label className="text-sm font-medium">
+                                    To
+                                </label>
                                 <input
                                     type="date"
                                     name="date_to"
@@ -148,30 +171,54 @@ export default function RoadDispatchArrivalsIndex({ arrivals, sidings }: Props) 
                                 <table className="w-full text-sm">
                                     <thead>
                                         <tr className="border-b bg-muted/50">
-                                            <th className="px-6 py-4 text-left font-medium">Arrived at</th>
-                                            <th className="px-6 py-4 text-left font-medium">Siding</th>
-                                            <th className="px-6 py-4 text-left font-medium">Vehicle</th>
-                                            <th className="px-6 py-4 text-left font-medium">Status</th>
-                                            <th className="px-6 py-4 text-right font-medium">Net (MT)</th>
+                                            <th className="px-6 py-4 text-left font-medium">
+                                                Arrived at
+                                            </th>
+                                            <th className="px-6 py-4 text-left font-medium">
+                                                Siding
+                                            </th>
+                                            <th className="px-6 py-4 text-left font-medium">
+                                                Vehicle
+                                            </th>
+                                            <th className="px-6 py-4 text-left font-medium">
+                                                Status
+                                            </th>
+                                            <th className="px-6 py-4 text-right font-medium">
+                                                Net (MT)
+                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {arrivals.data.map((a) => (
-                                            <tr key={a.id} className="border-b last:border-0 hover:bg-muted/30">
+                                            <tr
+                                                key={a.id}
+                                                className="border-b last:border-0 hover:bg-muted/30"
+                                            >
                                                 <td className="px-6 py-4">
-                                                    {new Date(a.arrived_at).toLocaleString()}
+                                                    {new Date(
+                                                        a.arrived_at,
+                                                    ).toLocaleString()}
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    {a.siding ? `${a.siding.code} (${a.siding.name})` : '—'}
+                                                    {a.siding
+                                                        ? `${a.siding.code} (${a.siding.name})`
+                                                        : '—'}
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    {a.vehicle ? a.vehicle.vehicle_number : a.vehicle_id}
+                                                    {a.vehicle
+                                                        ? a.vehicle
+                                                              .vehicle_number
+                                                        : a.vehicle_id}
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <StatusPill status={a.status} />
+                                                    <StatusPill
+                                                        status={a.status}
+                                                    />
                                                 </td>
                                                 <td className="px-6 py-4 text-right">
-                                                    {a.net_weight ?? a.unloaded_quantity ?? '—'}
+                                                    {a.net_weight ??
+                                                        a.unloaded_quantity ??
+                                                        '—'}
                                                 </td>
                                             </tr>
                                         ))}
@@ -182,15 +229,22 @@ export default function RoadDispatchArrivalsIndex({ arrivals, sidings }: Props) 
                         {(arrivals.prev_page_url || arrivals.next_page_url) && (
                             <nav className="mt-6 flex items-center justify-center gap-4 pt-2">
                                 {arrivals.prev_page_url ? (
-                                    <Link href={arrivals.prev_page_url} className="text-sm font-medium underline">
+                                    <Link
+                                        href={arrivals.prev_page_url}
+                                        className="text-sm font-medium underline"
+                                    >
                                         Previous
                                     </Link>
                                 ) : null}
                                 <span className="text-sm text-muted-foreground">
-                                    Page {arrivals.current_page} of {arrivals.last_page}
+                                    Page {arrivals.current_page} of{' '}
+                                    {arrivals.last_page}
                                 </span>
                                 {arrivals.next_page_url ? (
-                                    <Link href={arrivals.next_page_url} className="text-sm font-medium underline">
+                                    <Link
+                                        href={arrivals.next_page_url}
+                                        className="text-sm font-medium underline"
+                                    >
                                         Next
                                     </Link>
                                 ) : null}

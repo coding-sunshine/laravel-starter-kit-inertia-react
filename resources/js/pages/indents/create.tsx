@@ -70,7 +70,9 @@ export default function IndentsCreate({ sidings }: Props) {
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div className="grid gap-2">
-                            <Label htmlFor="target_quantity_mt">Target quantity (MT) *</Label>
+                            <Label htmlFor="target_quantity_mt">
+                                Target quantity (MT) *
+                            </Label>
                             <Input
                                 id="target_quantity_mt"
                                 name="target_quantity_mt"
@@ -95,7 +97,9 @@ export default function IndentsCreate({ sidings }: Props) {
                         </div>
                     </div>
                     <div className="grid gap-2">
-                        <Label htmlFor="required_by_date">Required by date</Label>
+                        <Label htmlFor="required_by_date">
+                            Required by date
+                        </Label>
                         <Input
                             id="required_by_date"
                             name="required_by_date"
@@ -105,7 +109,9 @@ export default function IndentsCreate({ sidings }: Props) {
                         <InputError message={errors?.required_by_date} />
                     </div>
                     <div className="grid gap-2">
-                        <Label htmlFor="e_demand_reference_id">e-Demand reference ID</Label>
+                        <Label htmlFor="e_demand_reference_id">
+                            e-Demand reference ID
+                        </Label>
                         <Input
                             id="e_demand_reference_id"
                             name="e_demand_reference_id"
@@ -123,7 +129,9 @@ export default function IndentsCreate({ sidings }: Props) {
                         <InputError message={errors?.fnr_number} />
                     </div>
                     <div className="grid gap-2">
-                        <Label htmlFor="indent_pdf">e-Demand confirmation (PDF)</Label>
+                        <Label htmlFor="indent_pdf">
+                            e-Demand confirmation (PDF)
+                        </Label>
                         <Input
                             id="indent_pdf"
                             name="pdf"

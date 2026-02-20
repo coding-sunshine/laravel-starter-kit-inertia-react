@@ -150,7 +150,7 @@ final readonly class GenerateReports
                 'delivery_date' => $r->rr_actual_date?->toDateString(),
                 'inspection_status' => $r->guardInspection?->is_approved ? 'Approved' : 'Pending/Rejected',
                 'penalty_amount' => $r->penalties?->sum('penalty_amount') ?? 0,
-            ])->toArray(),
+            ])->all(),
         ];
     }
 
@@ -186,7 +186,7 @@ final readonly class GenerateReports
                 'collected' => $group->where('penalty_status', 'incurred')->sum('penalty_amount'),
                 'pending' => $group->where('penalty_status', 'pending')->sum('penalty_amount'),
                 'count' => $group->count(),
-            ])->values()->toArray(),
+            ])->values()->all(),
         ];
     }
 
@@ -228,7 +228,7 @@ final readonly class GenerateReports
                 'required_by' => $i->required_by_date?->toDateString(),
                 'progress_percent' => round(($i->allocated_quantity_mt / $i->target_quantity_mt) * 100, 2),
                 'is_overdue' => $i->required_by_date < now() && $i->state !== 'closed',
-            ])->toArray(),
+            ])->all(),
         ];
     }
 

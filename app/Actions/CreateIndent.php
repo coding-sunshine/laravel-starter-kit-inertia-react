@@ -149,7 +149,7 @@ final readonly class CreateIndent
     {
         return Indent::query()->where('siding_id', $sidingId)
             ->whereIn('state', ['pending', 'approved'])
-            ->orderBy('required_by_date', 'asc')
+            ->oldest('required_by_date')
             ->get();
     }
 
@@ -160,7 +160,7 @@ final readonly class CreateIndent
     {
         return Indent::query()->where('siding_id', $sidingId)
             ->whereIn('state', ['approved', 'partial'])
-            ->orderBy('required_by_date', 'asc')
+            ->oldest('required_by_date')
             ->get();
     }
 

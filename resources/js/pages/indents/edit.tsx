@@ -165,8 +165,7 @@ export default function IndentsEdit({ indent, sidings }: Props) {
                                 name="required_by_date"
                                 type="date"
                                 defaultValue={
-                                    indent.required_by_date?.slice(0, 10) ??
-                                    ''
+                                    indent.required_by_date?.slice(0, 10) ?? ''
                                 }
                                 className="text-sm"
                             />
@@ -180,14 +179,10 @@ export default function IndentsEdit({ indent, sidings }: Props) {
                         <Input
                             id="e_demand_reference_id"
                             name="e_demand_reference_id"
-                            defaultValue={
-                                indent.e_demand_reference_id ?? ''
-                            }
+                            defaultValue={indent.e_demand_reference_id ?? ''}
                             className="text-sm"
                         />
-                        <InputError
-                            message={errors?.e_demand_reference_id}
-                        />
+                        <InputError message={errors?.e_demand_reference_id} />
                     </div>
                     <div className="grid gap-2">
                         <Label htmlFor="fnr_number">FNR number</Label>

@@ -1,4 +1,5 @@
 import Heading from '@/components/heading';
+import { Button } from '@/components/ui/button';
 import {
     Card,
     CardContent,
@@ -6,12 +7,11 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { Fragment } from 'react';
 import { Scale } from 'lucide-react';
+import { Fragment } from 'react';
 
 interface Siding {
     id: number;
@@ -89,8 +89,9 @@ export default function PenaltiesIndex({
                     <CardHeader>
                         <CardTitle>Penalty register</CardTitle>
                         <CardDescription>
-                            Filter by siding or status. Demurrage formula: hours over
-                            free time × weight (MT) × ₹{demurrage_rate_per_mt_hour}/MT/h.
+                            Filter by siding or status. Demurrage formula: hours
+                            over free time × weight (MT) × ₹
+                            {demurrage_rate_per_mt_hour}/MT/h.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -100,16 +101,29 @@ export default function PenaltiesIndex({
                             onSubmit={(e) => {
                                 e.preventDefault();
                                 const form = e.currentTarget;
-                                const siding = (form.querySelector('[name=siding_id]') as HTMLSelectElement)?.value;
-                                const status = (form.querySelector('[name=status]') as HTMLSelectElement)?.value;
+                                const siding = (
+                                    form.querySelector(
+                                        '[name=siding_id]',
+                                    ) as HTMLSelectElement
+                                )?.value;
+                                const status = (
+                                    form.querySelector(
+                                        '[name=status]',
+                                    ) as HTMLSelectElement
+                                )?.value;
                                 const params = new URLSearchParams();
                                 if (siding) params.set('siding_id', siding);
                                 if (status) params.set('status', status);
-                                router.get('/penalties', Object.fromEntries(params));
+                                router.get(
+                                    '/penalties',
+                                    Object.fromEntries(params),
+                                );
                             }}
                         >
                             <div className="grid gap-2">
-                                <label className="text-sm font-medium">Siding</label>
+                                <label className="text-sm font-medium">
+                                    Siding
+                                </label>
                                 <select
                                     name="siding_id"
                                     defaultValue={q.get('siding_id') ?? ''}
@@ -124,7 +138,9 @@ export default function PenaltiesIndex({
                                 </select>
                             </div>
                             <div className="grid gap-2">
-                                <label className="text-sm font-medium">Status</label>
+                                <label className="text-sm font-medium">
+                                    Status
+                                </label>
                                 <select
                                     name="status"
                                     defaultValue={q.get('status') ?? ''}
@@ -152,48 +168,146 @@ export default function PenaltiesIndex({
                                     <table className="w-full text-sm">
                                         <thead>
                                             <tr className="border-b bg-muted/50">
-                                                <th className="px-5 py-3.5 text-left font-medium">Rake</th>
-                                                <th className="px-5 py-3.5 text-left font-medium">Siding</th>
-                                                <th className="px-5 py-3.5 text-left font-medium">Type</th>
-                                                <th className="px-5 py-3.5 text-right font-medium">Amount</th>
-                                                <th className="px-5 py-3.5 text-left font-medium">Status</th>
-                                                <th className="px-5 py-3.5 text-left font-medium">Date</th>
-                                                <th className="px-5 py-3.5 text-right font-medium">Actions</th>
+                                                <th className="px-5 py-3.5 text-left font-medium">
+                                                    Rake
+                                                </th>
+                                                <th className="px-5 py-3.5 text-left font-medium">
+                                                    Siding
+                                                </th>
+                                                <th className="px-5 py-3.5 text-left font-medium">
+                                                    Type
+                                                </th>
+                                                <th className="px-5 py-3.5 text-right font-medium">
+                                                    Amount
+                                                </th>
+                                                <th className="px-5 py-3.5 text-left font-medium">
+                                                    Status
+                                                </th>
+                                                <th className="px-5 py-3.5 text-left font-medium">
+                                                    Date
+                                                </th>
+                                                <th className="px-5 py-3.5 text-right font-medium">
+                                                    Actions
+                                                </th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {penalties.data.map((p) => (
                                                 <Fragment key={p.id}>
                                                     <tr className="border-b last:border-0 hover:bg-muted/30">
-                                                        <td className="px-5 py-3.5 font-medium">{p.rake?.rake_number ?? '-'}</td>
-                                                        <td className="px-5 py-3.5">{p.rake?.siding?.name ?? '-'}</td>
-                                                        <td className="px-5 py-3.5">{p.penalty_type}</td>
-                                                        <td className="px-5 py-3.5 text-right">{p.penalty_amount}</td>
-                                                        <td className="px-5 py-3.5">{p.penalty_status}</td>
-                                                        <td className="px-5 py-3.5">{p.penalty_date}</td>
+                                                        <td className="px-5 py-3.5 font-medium">
+                                                            {p.rake
+                                                                ?.rake_number ??
+                                                                '-'}
+                                                        </td>
+                                                        <td className="px-5 py-3.5">
+                                                            {p.rake?.siding
+                                                                ?.name ?? '-'}
+                                                        </td>
+                                                        <td className="px-5 py-3.5">
+                                                            {p.penalty_type}
+                                                        </td>
                                                         <td className="px-5 py-3.5 text-right">
-                                                            <Link href={`/rakes/${p.rake_id}`}>
-                                                                <Button variant="outline" size="sm">
+                                                            {p.penalty_amount}
+                                                        </td>
+                                                        <td className="px-5 py-3.5">
+                                                            {p.penalty_status}
+                                                        </td>
+                                                        <td className="px-5 py-3.5">
+                                                            {p.penalty_date}
+                                                        </td>
+                                                        <td className="px-5 py-3.5 text-right">
+                                                            <Link
+                                                                href={`/rakes/${p.rake_id}`}
+                                                            >
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                >
                                                                     View rake
                                                                 </Button>
                                                             </Link>
                                                         </td>
                                                     </tr>
                                                     {p.calculation_breakdown && (
-                                                        <tr key={`${p.id}-breakdown`} className="border-b last:border-0 bg-muted/20">
-                                                            <td colSpan={7} className="px-5 py-3 text-sm text-muted-foreground">
-                                                                <span className="font-medium text-foreground">How calculated: </span>
-                                                                {p.calculation_breakdown.formula}
-                                                                {p.calculation_breakdown.demurrage_hours != null && (
-                                                                    <> = {p.calculation_breakdown.demurrage_hours} h × {p.calculation_breakdown.weight_mt} MT × ₹{p.calculation_breakdown.rate_per_mt_hour}/MT/h</>
+                                                        <tr
+                                                            key={`${p.id}-breakdown`}
+                                                            className="border-b bg-muted/20 last:border-0"
+                                                        >
+                                                            <td
+                                                                colSpan={7}
+                                                                className="px-5 py-3 text-sm text-muted-foreground"
+                                                            >
+                                                                <span className="font-medium text-foreground">
+                                                                    How
+                                                                    calculated:{' '}
+                                                                </span>
+                                                                {
+                                                                    p
+                                                                        .calculation_breakdown
+                                                                        .formula
+                                                                }
+                                                                {p
+                                                                    .calculation_breakdown
+                                                                    .demurrage_hours !=
+                                                                    null && (
+                                                                    <>
+                                                                        {' '}
+                                                                        ={' '}
+                                                                        {
+                                                                            p
+                                                                                .calculation_breakdown
+                                                                                .demurrage_hours
+                                                                        }{' '}
+                                                                        h ×{' '}
+                                                                        {
+                                                                            p
+                                                                                .calculation_breakdown
+                                                                                .weight_mt
+                                                                        }{' '}
+                                                                        MT × ₹
+                                                                        {
+                                                                            p
+                                                                                .calculation_breakdown
+                                                                                .rate_per_mt_hour
+                                                                        }
+                                                                        /MT/h
+                                                                    </>
                                                                 )}
-                                                                {p.calculation_breakdown.free_hours != null && (
-                                                                    <> (free time: {p.calculation_breakdown.free_hours} h</>
+                                                                {p
+                                                                    .calculation_breakdown
+                                                                    .free_hours !=
+                                                                    null && (
+                                                                    <>
+                                                                        {' '}
+                                                                        (free
+                                                                        time:{' '}
+                                                                        {
+                                                                            p
+                                                                                .calculation_breakdown
+                                                                                .free_hours
+                                                                        }{' '}
+                                                                        h
+                                                                    </>
                                                                 )}
-                                                                {p.calculation_breakdown.dwell_hours != null && (
-                                                                    <>, dwell: {p.calculation_breakdown.dwell_hours} h</>
+                                                                {p
+                                                                    .calculation_breakdown
+                                                                    .dwell_hours !=
+                                                                    null && (
+                                                                    <>
+                                                                        , dwell:{' '}
+                                                                        {
+                                                                            p
+                                                                                .calculation_breakdown
+                                                                                .dwell_hours
+                                                                        }{' '}
+                                                                        h
+                                                                    </>
                                                                 )}
-                                                                {p.calculation_breakdown.free_hours != null && ')'}
+                                                                {p
+                                                                    .calculation_breakdown
+                                                                    .free_hours !=
+                                                                    null && ')'}
                                                             </td>
                                                         </tr>
                                                     )}
@@ -213,7 +327,8 @@ export default function PenaltiesIndex({
                                             </Link>
                                         ) : null}
                                         <span className="text-sm text-muted-foreground">
-                                            Page {penalties.current_page} of {penalties.last_page}
+                                            Page {penalties.current_page} of{' '}
+                                            {penalties.last_page}
                                         </span>
                                         {penalties.next_page_url ? (
                                             <Link

@@ -59,6 +59,7 @@ export default function HelpShow({ article, related }: Props) {
                     )}
                     <div
                         className="prose prose-neutral dark:prose-invert max-w-none"
+                        /* eslint-disable-next-line @eslint-react/dom/no-dangerously-set-innerhtml -- article content from CMS */
                         dangerouslySetInnerHTML={{
                             __html: article.content,
                         }}

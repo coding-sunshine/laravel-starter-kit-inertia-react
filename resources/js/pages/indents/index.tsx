@@ -1,5 +1,5 @@
-import { RrmcsGuidance } from '@/components/rrmcs-guidance';
 import Heading from '@/components/heading';
+import { RrmcsGuidance } from '@/components/rrmcs-guidance';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -47,7 +47,7 @@ interface Props {
     sidings: Siding[];
 }
 
-export default function IndentsIndex({ indents, sidings }: Props) {
+export default function IndentsIndex({ indents }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: '/dashboard' },
         { title: 'Indents', href: '/indents' },
@@ -94,25 +94,25 @@ export default function IndentsIndex({ indents, sidings }: Props) {
                                 <table className="w-full text-sm">
                                     <thead>
                                         <tr className="border-b text-left">
-                                            <th className="pb-2 pr-4 font-medium">
+                                            <th className="pr-4 pb-2 font-medium">
                                                 Indent number
                                             </th>
-                                            <th className="pb-2 pr-4 font-medium">
+                                            <th className="pr-4 pb-2 font-medium">
                                                 Siding
                                             </th>
-                                            <th className="pb-2 pr-4 font-medium">
+                                            <th className="pr-4 pb-2 font-medium">
                                                 Target (MT)
                                             </th>
-                                            <th className="pb-2 pr-4 font-medium">
+                                            <th className="pr-4 pb-2 font-medium">
                                                 State
                                             </th>
-                                            <th className="pb-2 pr-4 font-medium">
+                                            <th className="pr-4 pb-2 font-medium">
                                                 Indent date
                                             </th>
-                                            <th className="pb-2 pr-4 font-medium">
+                                            <th className="pr-4 pb-2 font-medium">
                                                 e-Demand ref
                                             </th>
-                                            <th className="pb-2 pr-4 font-medium">
+                                            <th className="pr-4 pb-2 font-medium">
                                                 FNR
                                             </th>
                                             <th className="pb-2 font-medium">
@@ -173,9 +173,9 @@ export default function IndentsIndex({ indents, sidings }: Props) {
                                 </table>
                                 {indents.last_page > 1 && (
                                     <div className="mt-4 flex flex-wrap gap-2">
-                                        {indents.links.map((link, i) => (
+                                        {indents.links.map((link) => (
                                             <Link
-                                                key={i}
+                                                key={link.url ?? link.label}
                                                 href={link.url ?? '#'}
                                                 className={
                                                     link.active

@@ -163,9 +163,7 @@ export default function IndentsShow({ indent }: Props) {
                                 <dt className="text-muted-foreground">
                                     Remarks
                                 </dt>
-                                <p className="mt-1 text-sm">
-                                    {indent.remarks}
-                                </p>
+                                <p className="mt-1 text-sm">{indent.remarks}</p>
                             </div>
                         )}
                     </CardContent>

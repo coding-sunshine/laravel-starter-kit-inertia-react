@@ -495,7 +495,7 @@ final class RakeManagementDemoSeeder extends Seeder
 
         $rakesWithRr = Rake::query()->whereHas('rrDocuments')->with('rrDocuments')->get();
         foreach ($rakesWithRr->take(3) as $idx => $rake) {
-            $rr = $rake->rrDocuments()->orderByDesc('rr_received_date')->first();
+            $rr = $rake->rrDocuments()->latest('rr_received_date')->first();
             $plant = $plants->get($idx % $plants->count());
             if (! $plant) {
                 continue;

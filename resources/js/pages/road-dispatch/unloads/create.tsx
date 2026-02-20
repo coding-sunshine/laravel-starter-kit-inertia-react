@@ -23,7 +23,10 @@ interface Props {
     vehicles: Vehicle[];
 }
 
-export default function RoadDispatchUnloadsCreate({ sidings, vehicles }: Props) {
+export default function RoadDispatchUnloadsCreate({
+    sidings,
+    vehicles,
+}: Props) {
     const { errors } = usePage<{ errors?: Record<string, string> }>().props;
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: '/dashboard' },
@@ -70,7 +73,8 @@ export default function RoadDispatchUnloadsCreate({ sidings, vehicles }: Props) 
                             <option value="">Select vehicle</option>
                             {vehicles.map((v) => (
                                 <option key={v.id} value={v.id}>
-                                    {v.vehicle_number} {v.owner_name ? `(${v.owner_name})` : ''}
+                                    {v.vehicle_number}{' '}
+                                    {v.owner_name ? `(${v.owner_name})` : ''}
                                 </option>
                             ))}
                         </select>
@@ -102,7 +106,9 @@ export default function RoadDispatchUnloadsCreate({ sidings, vehicles }: Props) 
                         <InputError message={errors?.shift} />
                     </div>
                     <div className="grid gap-2">
-                        <Label htmlFor="jimms_challan_number">JIMMS challan number</Label>
+                        <Label htmlFor="jimms_challan_number">
+                            JIMMS challan number
+                        </Label>
                         <Input
                             id="jimms_challan_number"
                             name="jimms_challan_number"
@@ -125,7 +131,9 @@ export default function RoadDispatchUnloadsCreate({ sidings, vehicles }: Props) 
                         <InputError message={errors?.mine_weight_mt} />
                     </div>
                     <div className="grid gap-2">
-                        <Label htmlFor="weighment_weight_mt">Weighment weight (MT)</Label>
+                        <Label htmlFor="weighment_weight_mt">
+                            Weighment weight (MT)
+                        </Label>
                         <Input
                             id="weighment_weight_mt"
                             name="weighment_weight_mt"
@@ -148,7 +156,11 @@ export default function RoadDispatchUnloadsCreate({ sidings, vehicles }: Props) 
                     </div>
                     <div className="flex gap-2">
                         <Button type="submit">Save</Button>
-                        <Button type="button" variant="outline" onClick={() => window.history.back()}>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => window.history.back()}
+                        >
                             Cancel
                         </Button>
                     </div>

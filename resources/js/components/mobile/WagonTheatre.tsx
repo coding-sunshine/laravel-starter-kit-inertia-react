@@ -7,185 +7,178 @@
 import { useState } from 'react';
 
 export interface Wagon {
-  id: string;
-  number: string;
-  status: 'unfit' | 'pending' | 'loaded' | 'empty';
-  weight?: number;
-  notes?: string;
+    id: string;
+    number: string;
+    status: 'unfit' | 'pending' | 'loaded' | 'empty';
+    weight?: number;
+    notes?: string;
 }
 
 interface WagonTheatreProps {
-  wagons: Wagon[];
-  selectedWagons?: string[];
-  onSelect?: (wagonId: string) => void;
-  onMultiSelect?: (wagonIds: string[]) => void;
-  maxWagons?: number;
-  readOnly?: boolean;
+    wagons: Wagon[];
+    selectedWagons?: string[];
+    onSelect?: (wagonId: string) => void;
+    onMultiSelect?: (wagonIds: string[]) => void;
+    maxWagons?: number;
+    readOnly?: boolean;
 }
 
 const statusColors = {
-  unfit: 'bg-red-500 hover:bg-red-600',
-  pending: 'bg-blue-500 hover:bg-blue-600',
-  loaded: 'bg-green-500 hover:bg-green-600',
-  empty: 'bg-gray-300 hover:bg-gray-400',
+    unfit: 'bg-red-500 hover:bg-red-600',
+    pending: 'bg-blue-500 hover:bg-blue-600',
+    loaded: 'bg-green-500 hover:bg-green-600',
+    empty: 'bg-gray-300 hover:bg-gray-400',
 };
 
 const statusLabels = {
-  unfit: 'Unfit',
-  pending: 'Pending',
-  loaded: 'Loaded',
-  empty: 'Empty',
+    unfit: 'Unfit',
+    pending: 'Pending',
+    loaded: 'Loaded',
+    empty: 'Empty',
 };
 
 export function WagonTheatre({
-  wagons,
-  selectedWagons = [],
-  onSelect,
-  onMultiSelect,
-  maxWagons = 60,
-  readOnly = false,
+    wagons,
+    selectedWagons = [],
+    onSelect,
+    onMultiSelect,
+    maxWagons = 60,
+    readOnly = false,
 }: WagonTheatreProps) {
-  const [multiSelectMode, setMultiSelectMode] = useState(false);
-  const [selections, setSelections] = useState<Set<string>>(
-    new Set(selectedWagons)
-  );
+    const [multiSelectMode, setMultiSelectMode] = useState(false);
+    const [selections, setSelections] = useState<Set<string>>(
+        () => new Set(selectedWagons),
+    );
 
-  const handleWagonClick = (wagonId: string) => {
-    if (readOnly) return;
+    const handleWagonClick = (wagonId: string) => {
+        if (readOnly) return;
 
-    if (multiSelectMode) {
-      const newSelections = new Set(selections);
-      if (newSelections.has(wagonId)) {
-        newSelections.delete(wagonId);
-      } else if (newSelections.size < maxWagons) {
-        newSelections.add(wagonId);
-      }
-      setSelections(newSelections);
-      onMultiSelect?.(Array.from(newSelections));
-    } else {
-      onSelect?.(wagonId);
-    }
-  };
+        if (multiSelectMode) {
+            const newSelections = new Set(selections);
+            if (newSelections.has(wagonId)) {
+                newSelections.delete(wagonId);
+            } else if (newSelections.size < maxWagons) {
+                newSelections.add(wagonId);
+            }
+            setSelections(newSelections);
+            onMultiSelect?.(Array.from(newSelections));
+        } else {
+            onSelect?.(wagonId);
+        }
+    };
 
-  const handleRangeSelect = (startIndex: number, endIndex: number) => {
-    if (readOnly || !multiSelectMode) return;
+    const clearSelections = () => {
+        setSelections(new Set());
+        onMultiSelect?.([]);
+    };
 
-    const newSelections = new Set(selections);
-    const [from, to] = startIndex < endIndex ? [startIndex, endIndex] : [endIndex, startIndex];
+    // Pad wagons array to 60 with empty placeholders
+    const paddedWagons = Array.from(
+        { length: maxWagons },
+        (_, i) =>
+            wagons[i] || {
+                id: `empty-${i}`,
+                number: `${i + 1}`,
+                status: 'empty' as const,
+            },
+    );
 
-    for (let i = from; i <= to; i++) {
-      if (wagons[i] && newSelections.size < maxWagons) {
-        newSelections.add(wagons[i].id);
-      }
-    }
-    setSelections(newSelections);
-    onMultiSelect?.(Array.from(newSelections));
-  };
+    return (
+        <div className="flex w-full flex-col gap-4 p-3">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+                <div>
+                    <h3 className="text-lg font-bold">Wagon Theatre</h3>
+                    <p className="text-sm text-gray-600">
+                        {selections.size}/{maxWagons} selected
+                    </p>
+                </div>
+                <div className="flex gap-2">
+                    {!readOnly && (
+                        <>
+                            <button
+                                onClick={() =>
+                                    setMultiSelectMode(!multiSelectMode)
+                                }
+                                className={`rounded px-3 py-2 text-sm font-medium transition-colors ${
+                                    multiSelectMode
+                                        ? 'bg-blue-500 text-white'
+                                        : 'bg-gray-200 text-gray-800'
+                                }`}
+                            >
+                                {multiSelectMode ? 'Multi On' : 'Single'}
+                            </button>
+                            {multiSelectMode && selections.size > 0 && (
+                                <button
+                                    onClick={clearSelections}
+                                    className="rounded bg-red-500 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-red-600"
+                                >
+                                    Clear
+                                </button>
+                            )}
+                        </>
+                    )}
+                </div>
+            </div>
 
-  const clearSelections = () => {
-    setSelections(new Set());
-    onMultiSelect?.([]);
-  };
+            {/* Legend */}
+            <div className="grid grid-cols-4 gap-2 text-xs">
+                {Object.entries(statusLabels).map(([status, label]) => (
+                    <div key={status} className="flex items-center gap-1">
+                        <div
+                            className={`h-4 w-4 rounded ${statusColors[status as keyof typeof statusColors]}`}
+                        />
+                        <span>{label}</span>
+                    </div>
+                ))}
+            </div>
 
-  // Pad wagons array to 60 with empty placeholders
-  const paddedWagons = Array.from({ length: maxWagons }, (_, i) =>
-    wagons[i] || { id: `empty-${i}`, number: `${i + 1}`, status: 'empty' as const }
-  );
+            {/* Wagon Grid - 6 columns, 10 rows for 60 wagons */}
+            <div className="grid grid-cols-6 gap-2">
+                {paddedWagons.map((wagon) => (
+                    <button
+                        key={wagon.id}
+                        onClick={() => handleWagonClick(wagon.id)}
+                        disabled={readOnly}
+                        className={`flex aspect-square flex-col items-center justify-center rounded border-2 text-xs font-bold transition-all duration-200 ${
+                            selections.has(wagon.id)
+                                ? 'scale-105 border-black'
+                                : 'border-transparent'
+                        } ${
+                            readOnly
+                                ? 'cursor-not-allowed opacity-75'
+                                : 'cursor-pointer active:scale-95'
+                        } ${statusColors[wagon.status as keyof typeof statusColors]} text-white`}
+                        title={`${wagon.number}${wagon.notes ? ': ' + wagon.notes : ''}`}
+                    >
+                        <span className="px-1 text-center break-words">
+                            {wagon.number}
+                        </span>
+                        {wagon.weight && (
+                            <span className="text-xs opacity-90">
+                                {wagon.weight}T
+                            </span>
+                        )}
+                    </button>
+                ))}
+            </div>
 
-  return (
-    <div className="flex flex-col gap-4 w-full p-3">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="font-bold text-lg">Wagon Theatre</h3>
-          <p className="text-sm text-gray-600">
-            {selections.size}/{maxWagons} selected
-          </p>
-        </div>
-        <div className="flex gap-2">
-          {!readOnly && (
-            <>
-              <button
-                onClick={() => setMultiSelectMode(!multiSelectMode)}
-                className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
-                  multiSelectMode
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-200 text-gray-800'
-                }`}
-              >
-                {multiSelectMode ? 'Multi On' : 'Single'}
-              </button>
-              {multiSelectMode && selections.size > 0 && (
-                <button
-                  onClick={clearSelections}
-                  className="px-3 py-2 rounded text-sm font-medium bg-red-500 text-white hover:bg-red-600 transition-colors"
-                >
-                  Clear
-                </button>
-              )}
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Legend */}
-      <div className="grid grid-cols-4 gap-2 text-xs">
-        {Object.entries(statusLabels).map(([status, label]) => (
-          <div key={status} className="flex items-center gap-1">
-            <div
-              className={`w-4 h-4 rounded ${statusColors[status as keyof typeof statusColors]}`}
-            />
-            <span>{label}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* Wagon Grid - 6 columns, 10 rows for 60 wagons */}
-      <div className="grid grid-cols-6 gap-2">
-        {paddedWagons.map((wagon, index) => (
-          <button
-            key={wagon.id}
-            onClick={() => handleWagonClick(wagon.id)}
-            disabled={readOnly}
-            className={`
-              aspect-square rounded flex flex-col items-center justify-center text-xs font-bold
-              transition-all duration-200 border-2
-              ${
-                selections.has(wagon.id)
-                  ? 'border-black scale-105'
-                  : 'border-transparent'
-              }
-              ${
-                readOnly
-                  ? 'cursor-not-allowed opacity-75'
-                  : 'cursor-pointer active:scale-95'
-              }
-              ${statusColors[wagon.status as keyof typeof statusColors]}
-              text-white
-            `}
-            title={`${wagon.number}${wagon.notes ? ': ' + wagon.notes : ''}`}
-          >
-            <span className="text-center break-words px-1">{wagon.number}</span>
-            {wagon.weight && (
-              <span className="text-xs opacity-90">{wagon.weight}T</span>
+            {/* Status Summary */}
+            {!readOnly && multiSelectMode && selections.size > 0 && (
+                <div className="rounded bg-blue-50 p-3 text-sm">
+                    <p className="font-medium">
+                        Selected:{' '}
+                        {Array.from(selections)
+                            .map((id) => {
+                                const wagon = wagons.find((w) => w.id === id);
+                                return wagon?.number;
+                            })
+                            .join(', ')}
+                    </p>
+                </div>
             )}
-          </button>
-        ))}
-      </div>
-
-      {/* Status Summary */}
-      {!readOnly && multiSelectMode && selections.size > 0 && (
-        <div className="bg-blue-50 p-3 rounded text-sm">
-          <p className="font-medium">
-            Selected: {Array.from(selections).map((id) => {
-              const wagon = wagons.find((w) => w.id === id);
-              return wagon?.number;
-            }).join(', ')}
-          </p>
         </div>
-      )}
-    </div>
-  );
+    );
 }
 
 export default WagonTheatre;
