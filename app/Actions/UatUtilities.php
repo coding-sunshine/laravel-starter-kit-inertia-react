@@ -24,16 +24,14 @@ use Illuminate\Support\Facades\DB;
  */
 final readonly class UatUtilities
 {
-    public function __construct() {}
-
     /**
      * Generate UAT test data for a siding
      */
     public function generateTestData(int $sidingId, int $rakeCount = 5): array
     {
-        return DB::transaction(function () use ($sidingId, $rakeCount) {
-            $siding = Siding::findOrFail($sidingId);
-            $user = User::first();
+        return DB::transaction(function () use ($sidingId, $rakeCount): array {
+            $siding = Siding::query()->findOrFail($sidingId);
+            $user = User::query()->first();
 
             $rakes = [];
             $vehicles = [];
@@ -41,18 +39,18 @@ final readonly class UatUtilities
 
             // Create test rakes
             for ($i = 0; $i < $rakeCount; $i++) {
-                $rake = Rake::create([
+                $rake = Rake::query()->create([
                     'siding_id' => $sidingId,
                     'rake_number' => "UAT-RAKE-{$sidingId}-{$i}",
                     'rake_type' => 'Coal',
                     'wagon_count' => 60,
-                    'state' => ['pending', 'loading', 'staged', 'in_transit', 'delivered'][rand(0, 4)],
-                    'loading_start_time' => now()->subHours(rand(1, 48)),
-                    'loading_end_time' => now()->subHours(rand(0, 24)),
+                    'state' => ['pending', 'loading', 'staged', 'in_transit', 'delivered'][random_int(0, 4)],
+                    'loading_start_time' => now()->subHours(random_int(1, 48)),
+                    'loading_end_time' => now()->subHours(random_int(0, 24)),
                     'free_time_minutes' => 144 * 60,
-                    'rr_expected_date' => now()->addDays(rand(1, 10)),
-                    'rr_actual_date' => rand(0, 1) ? now()->addDays(rand(0, 5)) : null,
-                    'loaded_weight_mt' => rand(2000, 3000),
+                    'rr_expected_date' => now()->addDays(random_int(1, 10)),
+                    'rr_actual_date' => random_int(0, 1) !== 0 ? now()->addDays(random_int(0, 5)) : null,
+                    'loaded_weight_mt' => random_int(2000, 3000),
                     'created_by' => $user->id,
                 ]);
 
@@ -61,14 +59,14 @@ final readonly class UatUtilities
 
             // Create test vehicles
             for ($i = 0; $i < 3; $i++) {
-                $vehicle = VehicleArrival::create([
+                $vehicle = VehicleArrival::query()->create([
                     'siding_id' => $sidingId,
                     'vehicle_number' => "UAT-VEH-{$sidingId}-{$i}",
-                    'arrived_at' => now()->subHours(rand(0, 72)),
-                    'status' => ['pending', 'unloading', 'unloaded'][rand(0, 2)],
-                    'gross_weight_mt' => rand(40, 60),
-                    'tare_weight_mt' => rand(10, 15),
-                    'unloaded_quantity' => rand(25, 50),
+                    'arrived_at' => now()->subHours(random_int(0, 72)),
+                    'status' => ['pending', 'unloading', 'unloaded'][random_int(0, 2)],
+                    'gross_weight_mt' => random_int(40, 60),
+                    'tare_weight_mt' => random_int(10, 15),
+                    'unloaded_quantity' => random_int(25, 50),
                     'created_by' => $user->id,
                 ]);
 
@@ -77,14 +75,14 @@ final readonly class UatUtilities
 
             // Create test indents
             for ($i = 0; $i < 2; $i++) {
-                $indent = Indent::create([
+                $indent = Indent::query()->create([
                     'siding_id' => $sidingId,
                     'indent_number' => "UAT-INDENT-{$sidingId}-{$i}",
-                    'target_quantity_mt' => rand(500, 1000),
-                    'allocated_quantity_mt' => rand(0, 1000),
-                    'state' => ['pending', 'approved', 'partial', 'fulfilled'][rand(0, 3)],
+                    'target_quantity_mt' => random_int(500, 1000),
+                    'allocated_quantity_mt' => random_int(0, 1000),
+                    'state' => ['pending', 'approved', 'partial', 'fulfilled'][random_int(0, 3)],
                     'indent_date' => now(),
-                    'required_by_date' => now()->addDays(rand(5, 15)),
+                    'required_by_date' => now()->addDays(random_int(5, 15)),
                     'created_by' => $user->id,
                 ]);
 
@@ -149,7 +147,7 @@ final readonly class UatUtilities
      */
     public function runUatScenario(int $sidingId): array
     {
-        return DB::transaction(function () use ($sidingId) {
+        return DB::transaction(function () use ($sidingId): array {
             $startTime = microtime(true);
 
             $results = [
@@ -159,14 +157,14 @@ final readonly class UatUtilities
             ];
 
             // Step 1: Create vehicle arrival
-            $vehicle = VehicleArrival::create([
+            $vehicle = VehicleArrival::query()->create([
                 'siding_id' => $sidingId,
                 'vehicle_number' => 'UAT-SCENARIO-'.time(),
                 'arrived_at' => now(),
                 'status' => 'unloading',
                 'gross_weight_mt' => 50,
                 'tare_weight_mt' => 12,
-                'created_by' => User::first()->id,
+                'created_by' => User::query()->first()->id,
             ]);
 
             $results['steps'][] = [
@@ -176,14 +174,14 @@ final readonly class UatUtilities
             ];
 
             // Step 2: Create rake
-            $rake = Rake::create([
+            $rake = Rake::query()->create([
                 'siding_id' => $sidingId,
                 'rake_number' => 'UAT-RAKE-'.time(),
                 'wagon_count' => 60,
                 'state' => 'loading',
                 'loading_start_time' => now(),
                 'free_time_minutes' => 144 * 60,
-                'created_by' => User::first()->id,
+                'created_by' => User::query()->first()->id,
             ]);
 
             $results['steps'][] = [
@@ -207,13 +205,13 @@ final readonly class UatUtilities
             ];
 
             // Step 4: Create indent
-            $indent = Indent::create([
+            $indent = Indent::query()->create([
                 'siding_id' => $sidingId,
                 'indent_number' => 'UAT-INDENT-'.time(),
                 'target_quantity_mt' => 1000,
                 'state' => 'pending',
                 'required_by_date' => now()->addDays(5),
-                'created_by' => User::first()->id,
+                'created_by' => User::query()->first()->id,
             ]);
 
             $results['steps'][] = [
@@ -236,21 +234,21 @@ final readonly class UatUtilities
      */
     public function cleanupTestData(int $sidingId): int
     {
-        return DB::transaction(function () use ($sidingId) {
+        return DB::transaction(function () use ($sidingId): int|float {
             $deleted = 0;
 
             // Delete rakes created for UAT
-            $deleted += Rake::where('siding_id', $sidingId)
+            $deleted += Rake::query()->where('siding_id', $sidingId)
                 ->where('rake_number', 'like', 'UAT-%')
                 ->delete();
 
             // Delete vehicles
-            $deleted += VehicleArrival::where('siding_id', $sidingId)
+            $deleted += VehicleArrival::query()->where('siding_id', $sidingId)
                 ->where('vehicle_number', 'like', 'UAT-%')
                 ->delete();
 
             // Delete indents
-            $deleted += Indent::where('siding_id', $sidingId)
+            $deleted += Indent::query()->where('siding_id', $sidingId)
                 ->where('indent_number', 'like', 'UAT-%')
                 ->delete();
 
@@ -291,8 +289,8 @@ final readonly class UatUtilities
         }
 
         return [
-            'passed' => empty($missingTables),
-            'message' => empty($missingTables) ? 'All required tables exist' : 'Missing tables: '.implode(', ', $missingTables),
+            'passed' => $missingTables === [],
+            'message' => $missingTables === [] ? 'All required tables exist' : 'Missing tables: '.implode(', ', $missingTables),
         ];
     }
 
@@ -304,7 +302,7 @@ final readonly class UatUtilities
         $issues = [];
 
         // Check for orphaned records
-        $orphanedRakes = Rake::where('siding_id', $sidingId)
+        $orphanedRakes = Rake::query()->where('siding_id', $sidingId)
             ->whereNull('loaded_weight_mt')
             ->whereIn('state', ['staged', 'in_transit', 'delivered'])
             ->count();
@@ -314,7 +312,7 @@ final readonly class UatUtilities
         }
 
         // Check for invalid state transitions
-        $invalidRakes = Rake::where('siding_id', $sidingId)
+        $invalidRakes = Rake::query()->where('siding_id', $sidingId)
             ->where('state', 'loading')
             ->whereNull('loading_start_time')
             ->count();
@@ -324,8 +322,8 @@ final readonly class UatUtilities
         }
 
         return [
-            'passed' => empty($issues),
-            'message' => empty($issues) ? 'Data integrity OK' : 'Issues found: '.implode('; ', $issues),
+            'passed' => $issues === [],
+            'message' => $issues === [] ? 'Data integrity OK' : 'Issues found: '.implode('; ', $issues),
         ];
     }
 
@@ -335,8 +333,8 @@ final readonly class UatUtilities
     private function checkAuthorizationSystem(int $sidingId): array
     {
         try {
-            $user = User::first();
-            $siding = Siding::find($sidingId);
+            $user = User::query()->first();
+            $siding = Siding::query()->find($sidingId);
 
             if (! $user || ! $siding) {
                 return ['passed' => false, 'message' => 'Test user or siding not found'];
@@ -384,7 +382,7 @@ final readonly class UatUtilities
 
         try {
             // Test demurrage calculation
-            $rake = Rake::where('siding_id', $sidingId)
+            $rake = Rake::query()->where('siding_id', $sidingId)
                 ->where('state', 'delivered')
                 ->first();
 
@@ -396,7 +394,7 @@ final readonly class UatUtilities
             }
 
             // Test indent fulfillment logic
-            $indent = Indent::where('siding_id', $sidingId)->first();
+            $indent = Indent::query()->where('siding_id', $sidingId)->first();
             if ($indent && $indent->allocated_quantity_mt > $indent->target_quantity_mt) {
                 $issues[] = 'Indent allocated exceeds target';
             }
@@ -405,8 +403,8 @@ final readonly class UatUtilities
         }
 
         return [
-            'passed' => empty($issues),
-            'message' => empty($issues) ? 'Business logic OK' : implode('; ', $issues),
+            'passed' => $issues === [],
+            'message' => $issues === [] ? 'Business logic OK' : implode('; ', $issues),
         ];
     }
 
@@ -418,9 +416,9 @@ final readonly class UatUtilities
         $startTime = microtime(true);
 
         // Run sample queries
-        Rake::count();
-        Penalty::count();
-        Indent::count();
+        Rake::query()->count();
+        Penalty::query()->count();
+        Indent::query()->count();
 
         $endTime = microtime(true);
         $executionTime = ($endTime - $startTime) * 1000;

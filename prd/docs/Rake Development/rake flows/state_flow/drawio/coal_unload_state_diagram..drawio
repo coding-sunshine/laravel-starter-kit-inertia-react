@@ -1,0 +1,58 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0" version="29.3.8">
+  <diagram name="Coal Unload State Transition" id="7YGmzID1TB72NyQdWUPT">
+    <mxGraphModel dx="1426" dy="798" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="yiaCJu_NKc03uBDhnTK7-1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;" value="ARRIVED" vertex="1">
+          <mxGeometry height="60" width="200" x="445" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="yiaCJu_NKc03uBDhnTK7-2" parent="1" style="rounded=1;" value="ARRIVAL_VALIDATION_PENDING" vertex="1">
+          <mxGeometry height="60" width="260" x="420" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="yiaCJu_NKc03uBDhnTK7-3" parent="1" style="rounded=1;" value="READY_FOR_UNLOAD" vertex="1">
+          <mxGeometry height="60" width="220" x="445" y="250" as="geometry" />
+        </mxCell>
+        <mxCell id="yiaCJu_NKc03uBDhnTK7-4" parent="1" style="rounded=1;" value="UNLOADING" vertex="1">
+          <mxGeometry height="60" width="200" x="455" y="350" as="geometry" />
+        </mxCell>
+        <mxCell id="yiaCJu_NKc03uBDhnTK7-5" parent="1" style="rounded=1;" value="UNLOAD_COMPLETED" vertex="1">
+          <mxGeometry height="60" width="240" x="100" y="450" as="geometry" />
+        </mxCell>
+        <mxCell id="yiaCJu_NKc03uBDhnTK7-6" parent="1" style="rounded=1;" value="TARE_VALIDATION_PENDING" vertex="1">
+          <mxGeometry height="60" width="260" x="425" y="460" as="geometry" />
+        </mxCell>
+        <mxCell id="yiaCJu_NKc03uBDhnTK7-7" parent="1" style="rounded=1;fillColor=#d5e8d4;" value="COMPLETED\n(Stock Updated)" vertex="1">
+          <mxGeometry height="80" width="220" x="445" y="600" as="geometry" />
+        </mxCell>
+        <mxCell id="yiaCJu_NKc03uBDhnTK7-8" parent="1" style="rounded=1;fillColor=#f8cecc;" value="CANCELLED" vertex="1">
+          <mxGeometry height="60" width="200" x="60" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="yiaCJu_NKc03uBDhnTK7-9" edge="1" parent="1" source="yiaCJu_NKc03uBDhnTK7-1" target="yiaCJu_NKc03uBDhnTK7-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="yiaCJu_NKc03uBDhnTK7-10" edge="1" parent="1" source="yiaCJu_NKc03uBDhnTK7-2" target="yiaCJu_NKc03uBDhnTK7-3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="yiaCJu_NKc03uBDhnTK7-11" edge="1" parent="1" source="yiaCJu_NKc03uBDhnTK7-2" target="yiaCJu_NKc03uBDhnTK7-8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="yiaCJu_NKc03uBDhnTK7-12" edge="1" parent="1" source="yiaCJu_NKc03uBDhnTK7-3" target="yiaCJu_NKc03uBDhnTK7-4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="yiaCJu_NKc03uBDhnTK7-13" edge="1" parent="1" source="yiaCJu_NKc03uBDhnTK7-4" target="yiaCJu_NKc03uBDhnTK7-5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="yiaCJu_NKc03uBDhnTK7-14" edge="1" parent="1" source="yiaCJu_NKc03uBDhnTK7-5" target="yiaCJu_NKc03uBDhnTK7-6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="yiaCJu_NKc03uBDhnTK7-15" edge="1" parent="1" source="yiaCJu_NKc03uBDhnTK7-6" target="yiaCJu_NKc03uBDhnTK7-4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="yiaCJu_NKc03uBDhnTK7-16" edge="1" parent="1" source="yiaCJu_NKc03uBDhnTK7-6" target="yiaCJu_NKc03uBDhnTK7-7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

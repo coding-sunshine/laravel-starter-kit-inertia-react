@@ -12,6 +12,7 @@ use Mattiverse\Userstamps\Traits\Userstamps;
 
 final class Siding extends Model
 {
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use SoftDeletes, Userstamps;
 
     protected $fillable = [

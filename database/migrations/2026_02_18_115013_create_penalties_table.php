@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('penalties', function (Blueprint $table) {
+        Schema::create('penalties', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('rake_id')->constrained('rakes')->onDelete('cascade');
             $table->string('penalty_type', 50); // POL1, POLA, PLO, ULC, SPL, DEM, WMC, MCF, etc.

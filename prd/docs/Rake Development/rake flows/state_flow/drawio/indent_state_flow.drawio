@@ -1,0 +1,46 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0" version="29.3.8">
+  <diagram name="Indent State Transition - Final" id="_MjPaGnnvkJhgg-97VLr">
+    <mxGraphModel dx="1678" dy="939" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="eg4pDywrw9sCwxLq9us5-1" parent="1" style="rounded=1;" value="RAISED" vertex="1">
+          <mxGeometry height="60" width="200" x="500" y="50" as="geometry" />
+        </mxCell>
+        <mxCell id="eg4pDywrw9sCwxLq9us5-2" parent="1" style="rounded=1;" value="APPROVAL_PENDING" vertex="1">
+          <mxGeometry height="60" width="240" x="480" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="eg4pDywrw9sCwxLq9us5-3" parent="1" style="rounded=1;fillColor=#d5e8d4;" value="APPROVED" vertex="1">
+          <mxGeometry height="60" width="200" x="500" y="250" as="geometry" />
+        </mxCell>
+        <mxCell id="eg4pDywrw9sCwxLq9us5-4" parent="1" style="rounded=1;fillColor=#dae8fc;" value="RAKE_ALLOCATED" vertex="1">
+          <mxGeometry height="60" width="220" x="490" y="370" as="geometry" />
+        </mxCell>
+        <mxCell id="eg4pDywrw9sCwxLq9us5-5" parent="1" style="rounded=1;fillColor=#f8cecc;" value="REJECTED" vertex="1">
+          <mxGeometry height="60" width="200" x="120" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="eg4pDywrw9sCwxLq9us5-6" parent="1" style="rounded=1;fillColor=#f8cecc;" value="CANCELLED" vertex="1">
+          <mxGeometry height="60" width="200" x="900" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="eg4pDywrw9sCwxLq9us5-7" edge="1" parent="1" source="eg4pDywrw9sCwxLq9us5-1" target="eg4pDywrw9sCwxLq9us5-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eg4pDywrw9sCwxLq9us5-8" edge="1" parent="1" source="eg4pDywrw9sCwxLq9us5-2" target="eg4pDywrw9sCwxLq9us5-3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eg4pDywrw9sCwxLq9us5-9" edge="1" parent="1" source="eg4pDywrw9sCwxLq9us5-2" target="eg4pDywrw9sCwxLq9us5-5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eg4pDywrw9sCwxLq9us5-10" edge="1" parent="1" source="eg4pDywrw9sCwxLq9us5-2" target="eg4pDywrw9sCwxLq9us5-6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eg4pDywrw9sCwxLq9us5-11" edge="1" parent="1" source="eg4pDywrw9sCwxLq9us5-3" target="eg4pDywrw9sCwxLq9us5-4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eg4pDywrw9sCwxLq9us5-12" edge="1" parent="1" source="eg4pDywrw9sCwxLq9us5-3" target="eg4pDywrw9sCwxLq9us5-6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

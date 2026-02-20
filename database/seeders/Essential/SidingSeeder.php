@@ -15,14 +15,11 @@ final class SidingSeeder extends Seeder
     public function run(): void
     {
         // Get or create the default organization (owner_id set by UserSeeder)
-        $org = \App\Models\Organization::firstOrCreate(
-            ['slug' => 'default'],
-            [
-                'name' => 'Railway Rake Management',
-                'billing_email' => 'billing@rrmcs.local',
-                'owner_id' => null,
-            ]
-        );
+        $org = \App\Models\Organization::query()->firstOrCreate(['slug' => 'default'], [
+            'name' => 'Railway Rake Management',
+            'billing_email' => 'billing@rrmcs.local',
+            'owner_id' => null,
+        ]);
 
         // Create the three main sidings
         $sidings = [
@@ -50,10 +47,7 @@ final class SidingSeeder extends Seeder
         ];
 
         foreach ($sidings as $sidingData) {
-            \App\Models\Siding::firstOrCreate(
-                ['code' => $sidingData['code']],
-                array_merge($sidingData, ['organization_id' => $org->id])
-            );
+            \App\Models\Siding::query()->firstOrCreate(['code' => $sidingData['code']], array_merge($sidingData, ['organization_id' => $org->id]));
         }
     }
 }

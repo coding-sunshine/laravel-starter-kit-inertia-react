@@ -10,6 +10,7 @@ use Mattiverse\Userstamps\Traits\Userstamps;
 
 final class GuardInspection extends Model
 {
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use Userstamps;
 
     protected $fillable = [

@@ -16,8 +16,6 @@ use Illuminate\Support\Facades\DB;
  */
 final readonly class CreateVehicleArrival
 {
-    public function __construct() {}
-
     /**
      * Create a new vehicle arrival
      *
@@ -41,7 +39,7 @@ final readonly class CreateVehicleArrival
             }
 
             // Create the vehicle arrival record
-            $arrival = VehicleArrival::create([
+            $arrival = VehicleArrival::query()->create([
                 'siding_id' => $data['siding_id'],
                 'vehicle_id' => $data['vehicle_id'],
                 'indent_id' => $data['indent_id'] ?? null,
@@ -69,9 +67,9 @@ final readonly class CreateVehicleArrival
      */
     public function getPendingArrivals(int $sidingId): Collection
     {
-        return VehicleArrival::where('siding_id', $sidingId)
+        return VehicleArrival::query()->where('siding_id', $sidingId)
             ->where('status', 'pending')
-            ->orderBy('arrived_at', 'desc')
+            ->latest('arrived_at')
             ->with('vehicle', 'indent')
             ->get();
     }
@@ -81,9 +79,9 @@ final readonly class CreateVehicleArrival
      */
     public function getUnloadingVehicles(int $sidingId): Collection
     {
-        return VehicleArrival::where('siding_id', $sidingId)
+        return VehicleArrival::query()->where('siding_id', $sidingId)
             ->where('status', 'unloading')
-            ->orderBy('unloading_started_at', 'asc')
+            ->oldest('unloading_started_at')
             ->with('vehicle', 'indent')
             ->get();
     }
@@ -93,7 +91,7 @@ final readonly class CreateVehicleArrival
      */
     public function getUnloadingSummary(int $sidingId): array
     {
-        $arrivals = VehicleArrival::where('siding_id', $sidingId)
+        $arrivals = VehicleArrival::query()->where('siding_id', $sidingId)
             ->whereIn('status', ['pending', 'unloading', 'unloaded'])
             ->with('vehicle')
             ->get();

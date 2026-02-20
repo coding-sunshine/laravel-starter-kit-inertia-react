@@ -5,7 +5,7 @@
 
 import {
   createContext,
-  useContext,
+  use,
   ReactNode,
   useEffect,
   useState,
@@ -127,9 +127,9 @@ export function UserContextProvider({ children }: UserContextProviderProps) {
   };
 
   return (
-    <UserContext.Provider value={value}>
+    <UserContext value={value}>
       {children}
-    </UserContext.Provider>
+    </UserContext>
   );
 }
 
@@ -137,7 +137,7 @@ export function UserContextProvider({ children }: UserContextProviderProps) {
  * Hook to use UserContext
  */
 export function useUser(): UserContextType {
-  const context = useContext(UserContext);
+  const context = use(UserContext);
   if (context === undefined) {
     throw new Error('useUser must be used within UserContextProvider');
   }

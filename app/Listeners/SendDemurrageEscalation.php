@@ -58,18 +58,18 @@ final class SendDemurrageEscalation
 
         return match ($threshold) {
             'demurrage_60' => $sidingUsers
-                ->filter(fn (User $u) => $u->hasRole('siding_operator'))
+                ->filter(fn (User $u): bool => $u->hasRole('siding_operator'))
                 ->values()
                 ->all(),
 
             'demurrage_30' => $sidingUsers
-                ->filter(fn (User $u) => $u->hasRole('siding_in_charge'))
+                ->filter(fn (User $u): bool => $u->hasRole('siding_in_charge'))
                 ->values()
                 ->all(),
 
             'demurrage_0' => collect()
                 ->merge($sidingUsers)
-                ->merge(User::role('management')->get())
+                ->merge(User::query()->role('management')->get())
                 ->unique('id')
                 ->values()
                 ->all(),
@@ -90,13 +90,11 @@ final class SendDemurrageEscalation
         $threshold = $event->threshold;
         $oneHourAgo = now()->subHour();
 
-        return array_values(array_filter($recipients, function (User $user) use ($rakeId, $threshold, $oneHourAgo): bool {
-            return ! $user->notifications()
-                ->where('type', DemurrageAlertNotification::class)
-                ->where('created_at', '>=', $oneHourAgo)
-                ->whereJsonContains('data->rake_id', $rakeId)
-                ->whereJsonContains('data->threshold', $threshold)
-                ->exists();
-        }));
+        return array_values(array_filter($recipients, fn (User $user): bool => ! $user->notifications()
+            ->where('type', DemurrageAlertNotification::class)
+            ->where('created_at', '>=', $oneHourAgo)
+            ->whereJsonContains('data->rake_id', $rakeId)
+            ->whereJsonContains('data->threshold', $threshold)
+            ->exists()));
     }
 }

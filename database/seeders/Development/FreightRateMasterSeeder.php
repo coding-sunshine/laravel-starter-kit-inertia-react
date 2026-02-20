@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Database\Seeders\Development;
 
 use App\Models\FreightRateMaster;
-use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 
 /**
@@ -19,7 +18,7 @@ final class FreightRateMasterSeeder extends Seeder
             return;
         }
 
-        $today = Carbon::today();
+        $today = \Illuminate\Support\Facades\Date::today();
         FreightRateMaster::query()->create([
             'commodity_code' => 'COAL',
             'commodity_name' => 'Coal',

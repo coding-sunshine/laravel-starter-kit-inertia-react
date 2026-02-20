@@ -120,48 +120,6 @@ final class StockLedger extends Model
     }
 
     /**
-     * Scope: by siding
-     */
-    public function scopeBySiding(Builder $query, int|Siding $siding): Builder
-    {
-        $sidingId = $siding instanceof Siding ? $siding->id : $siding;
-
-        return $query->where('siding_id', $sidingId);
-    }
-
-    /**
-     * Scope: receipts only
-     */
-    public function scopeReceipts(Builder $query): Builder
-    {
-        return $query->where('transaction_type', 'receipt');
-    }
-
-    /**
-     * Scope: dispatches only
-     */
-    public function scopeDispatches(Builder $query): Builder
-    {
-        return $query->where('transaction_type', 'dispatch');
-    }
-
-    /**
-     * Scope: corrections only
-     */
-    public function scopeCorrections(Builder $query): Builder
-    {
-        return $query->where('transaction_type', 'correction');
-    }
-
-    /**
-     * Scope: recent (last 30 days)
-     */
-    public function scopeRecent(Builder $query): Builder
-    {
-        return $query->where('created_at', '>=', now()->subDays(30));
-    }
-
-    /**
      * Check if this is a receipt transaction
      */
     public function isReceipt(): bool
@@ -195,5 +153,52 @@ final class StockLedger extends Model
             'dispatch', 'correction' => -$this->quantity_mt,
             default => 0,
         };
+    }
+
+    /**
+     * Scope: by siding
+     */
+    #[\Illuminate\Database\Eloquent\Attributes\Scope]
+    protected function bySiding(Builder $query, int|Siding $siding): Builder
+    {
+        $sidingId = $siding instanceof Siding ? $siding->id : $siding;
+
+        return $query->where('siding_id', $sidingId);
+    }
+
+    /**
+     * Scope: receipts only
+     */
+    #[\Illuminate\Database\Eloquent\Attributes\Scope]
+    protected function receipts(Builder $query): Builder
+    {
+        return $query->where('transaction_type', 'receipt');
+    }
+
+    /**
+     * Scope: dispatches only
+     */
+    #[\Illuminate\Database\Eloquent\Attributes\Scope]
+    protected function dispatches(Builder $query): Builder
+    {
+        return $query->where('transaction_type', 'dispatch');
+    }
+
+    /**
+     * Scope: corrections only
+     */
+    #[\Illuminate\Database\Eloquent\Attributes\Scope]
+    protected function corrections(Builder $query): Builder
+    {
+        return $query->where('transaction_type', 'correction');
+    }
+
+    /**
+     * Scope: recent (last 30 days)
+     */
+    #[\Illuminate\Database\Eloquent\Attributes\Scope]
+    protected function recent(Builder $query): Builder
+    {
+        return $query->where('created_at', '>=', now()->subDays(30));
     }
 }

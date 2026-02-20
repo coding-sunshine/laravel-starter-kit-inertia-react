@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('txr', function (Blueprint $table) {
+        Schema::create('txr', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('rake_id')->constrained('rakes')->onDelete('cascade');
             $table->dateTime('inspection_time');

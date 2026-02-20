@@ -21,8 +21,6 @@ use InvalidArgumentException;
  */
 final readonly class ProcessGuardInspection
 {
-    public function __construct() {}
-
     /**
      * Record guard inspection and check for overloads
      *
@@ -37,15 +35,13 @@ final readonly class ProcessGuardInspection
     public function inspect(array $data, int $userId): GuardInspection
     {
         return DB::transaction(function () use ($data, $userId): GuardInspection {
-            $rake = Rake::findOrFail($data['rake_id']);
+            $rake = Rake::query()->findOrFail($data['rake_id']);
 
             // Validate rake state
-            if ($rake->state !== 'staged') {
-                throw new InvalidArgumentException('Can only inspect staged rakes');
-            }
+            throw_if($rake->state !== 'staged', InvalidArgumentException::class, 'Can only inspect staged rakes');
 
             // Create inspection record
-            $inspection = GuardInspection::create([
+            $inspection = GuardInspection::query()->create([
                 'rake_id' => $rake->id,
                 'inspection_time' => now(),
                 'is_approved' => $data['is_approved'],
@@ -94,11 +90,7 @@ final readonly class ProcessGuardInspection
         $isOverloaded = $actualWeight > $maxCapacity;
         $overloadMargin = max(0, $actualWeight - $maxCapacity);
 
-        if ($isOverloaded) {
-            throw new InvalidArgumentException(
-                "Rake overloaded by {$overloadMargin} MT (Max: {$maxCapacity} MT, Actual: {$actualWeight} MT)"
-            );
-        }
+        throw_if($isOverloaded, InvalidArgumentException::class, "Rake overloaded by {$overloadMargin} MT (Max: {$maxCapacity} MT, Actual: {$actualWeight} MT)");
 
         return [
             'max_capacity_mt' => $maxCapacity,
@@ -137,9 +129,7 @@ final readonly class ProcessGuardInspection
         return DB::transaction(function () use ($rake, $userId): Rake {
             $inspection = $rake->guardInspection;
 
-            if (! $inspection || ! $inspection->is_approved) {
-                throw new InvalidArgumentException('Rake must be inspected and approved by guard');
-            }
+            throw_if(! $inspection || ! $inspection->is_approved, InvalidArgumentException::class, 'Rake must be inspected and approved by guard');
 
             $rake->update([
                 'state' => 'approved',
@@ -162,7 +152,7 @@ final readonly class ProcessGuardInspection
             ]);
 
             // Record rejection in a new inspection attempt
-            GuardInspection::create([
+            GuardInspection::query()->create([
                 'rake_id' => $rake->id,
                 'inspection_time' => now(),
                 'is_approved' => false,
@@ -179,7 +169,7 @@ final readonly class ProcessGuardInspection
      */
     private function recordWholement(Rake $rake, float $actualWeight, int $userId): Weighment
     {
-        $weighment = Weighment::create([
+        $weighment = Weighment::query()->create([
             'rake_id' => $rake->id,
             'gross_weight_mt' => $actualWeight,
             'tare_weight_mt' => 0, // Will be subtracted later

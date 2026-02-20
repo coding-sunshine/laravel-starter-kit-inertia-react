@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('rr_predictions', function (Blueprint $table) {
+        Schema::create('rr_predictions', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('rake_id')->constrained('rakes')->onDelete('cascade');
             $table->decimal('predicted_weight_mt', 12, 2);

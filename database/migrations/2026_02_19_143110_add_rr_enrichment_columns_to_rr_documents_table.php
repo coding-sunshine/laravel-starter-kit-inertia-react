@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('rr_documents', function (Blueprint $table) {
+        Schema::table('rr_documents', function (Blueprint $table): void {
             $table->string('fnr', 50)->nullable()->after('rr_weight_mt');
             $table->string('from_station_code', 20)->nullable()->after('fnr');
             $table->string('to_station_code', 20)->nullable()->after('from_station_code');
@@ -26,7 +26,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('rr_documents', function (Blueprint $table) {
+        Schema::table('rr_documents', function (Blueprint $table): void {
             $table->dropColumn(['fnr', 'from_station_code', 'to_station_code', 'freight_total']);
         });
     }

@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('coal_stock', function (Blueprint $table) {
+        Schema::create('coal_stock', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('siding_id')->constrained('sidings')->onDelete('cascade');
             $table->decimal('opening_balance_mt', 12, 2)->default(0);

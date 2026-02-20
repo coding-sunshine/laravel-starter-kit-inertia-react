@@ -72,7 +72,7 @@ final class EditUser extends EditRecord
         ));
         unset($data['tag_names']);
 
-        $sidingIds = array_filter(array_map('intval', (array) ($data['sidings'] ?? [])));
+        $sidingIds = array_filter(array_map(intval(...), (array) ($data['sidings'] ?? [])));
         $primaryId = isset($data['primary_siding_id']) ? (int) $data['primary_siding_id'] : null;
         $this->pendingSidingsPivot = [];
         foreach ($sidingIds as $id) {

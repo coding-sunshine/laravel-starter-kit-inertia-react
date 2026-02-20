@@ -31,15 +31,13 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 final readonly class GenerateReports
 {
-    public function __construct() {}
-
     /**
      * Generate daily operations summary report
      */
     public function dailyOperationsSummary(int $sidingId, string $format = 'json'): array|StreamedResponse
     {
-        $siding = Siding::findOrFail($sidingId);
-        $today = now()->startOfDay();
+        $siding = Siding::query()->findOrFail($sidingId);
+        $today = today();
 
         $data = [
             'report_type' => 'Daily Operations Summary',
@@ -49,29 +47,29 @@ final readonly class GenerateReports
             'summary' => [
                 'stock_opening' => $this->getOpeningStock($sidingId, $today),
                 'stock_closing' => $this->getClosingStock($sidingId, $today),
-                'receipts_today' => VehicleArrival::where('siding_id', $sidingId)
+                'receipts_today' => VehicleArrival::query()->where('siding_id', $sidingId)
                     ->whereDate('arrived_at', $today)
                     ->sum('loaded_weight_mt') ?? 0,
-                'dispatches_today' => StockLedger::where('siding_id', $sidingId)
+                'dispatches_today' => StockLedger::query()->where('siding_id', $sidingId)
                     ->where('transaction_type', 'dispatch')
                     ->whereDate('created_at', $today)
                     ->sum('quantity_mt') ?? 0,
-                'rakes_loaded' => Rake::where('siding_id', $sidingId)
+                'rakes_loaded' => Rake::query()->where('siding_id', $sidingId)
                     ->where('state', 'staged')
                     ->whereDate('loading_end_time', $today)
                     ->count(),
-                'rakes_departed' => Rake::where('siding_id', $sidingId)
+                'rakes_departed' => Rake::query()->where('siding_id', $sidingId)
                     ->where('state', '!=', 'pending')
                     ->whereDate('updated_at', $today)
                     ->count(),
             ],
             'alerts' => [
                 'low_stock' => $this->getClosingStock($sidingId, $today) < 200,
-                'overdue_indents' => Indent::where('siding_id', $sidingId)
+                'overdue_indents' => Indent::query()->where('siding_id', $sidingId)
                     ->where('state', '!=', 'closed')
                     ->where('required_by_date', '<', $today)
                     ->count(),
-                'critical_demurrage' => Penalty::whereHas('rake', function ($q) use ($sidingId) {
+                'critical_demurrage' => Penalty::query()->whereHas('rake', function ($q) use ($sidingId): void {
                     $q->where('siding_id', $sidingId);
                 })->where('penalty_status', 'pending')->count(),
             ],
@@ -88,7 +86,7 @@ final readonly class GenerateReports
         $fromDate = now()->subDays($days)->startOfDay();
         $toDate = now()->endOfDay();
 
-        $transactions = StockLedger::where('siding_id', $sidingId)
+        $transactions = StockLedger::query()->where('siding_id', $sidingId)
             ->whereBetween('created_at', [$fromDate, $toDate])
             ->with(['vehicleArrival', 'rake', 'creator'])
             ->orderBy('created_at', 'desc')
@@ -104,7 +102,7 @@ final readonly class GenerateReports
                 'total_corrections' => $transactions->where('transaction_type', 'correction')->sum('quantity_mt'),
                 'transaction_count' => $transactions->count(),
             ],
-            'transactions' => $transactions->map(fn ($t) => [
+            'transactions' => $transactions->map(fn ($t): array => [
                 'date' => $t->created_at->toDateString(),
                 'type' => $t->transaction_type,
                 'quantity_mt' => $t->quantity_mt,
@@ -123,7 +121,7 @@ final readonly class GenerateReports
     {
         $fromDate = now()->subDays($days)->startOfDay();
 
-        $rakes = Rake::where('siding_id', $sidingId)
+        $rakes = Rake::query()->where('siding_id', $sidingId)
             ->where('created_at', '>=', $fromDate)
             ->with(['wagons', 'guardInspection', 'weighments', 'penalties'])
             ->get();
@@ -138,10 +136,10 @@ final readonly class GenerateReports
                 'in_transit' => $rakes->where('state', 'in_transit')->count(),
                 'staged' => $rakes->where('state', 'staged')->count(),
                 'avg_dwell_time_hours' => $rakes
-                    ->filter(fn ($r) => $r->loading_end_time && $r->rr_actual_date)
+                    ->filter(fn ($r): bool => $r->loading_end_time && $r->rr_actual_date)
                     ->avg(fn ($r) => $r->loading_end_time->diffInHours($r->rr_actual_date ?? now())),
             ],
-            'rakes' => $rakes->map(fn ($r) => [
+            'rakes' => $rakes->map(fn ($r): array => [
                 'rake_number' => $r->rake_number,
                 'state' => $r->state,
                 'wagon_count' => $r->wagon_count,
@@ -163,7 +161,7 @@ final readonly class GenerateReports
     {
         $fromDate = now()->subMonths($months)->startOfDay();
 
-        $penalties = Penalty::whereHas('rake', function ($q) use ($sidingId) {
+        $penalties = Penalty::query()->whereHas('rake', function ($q) use ($sidingId): void {
             $q->where('siding_id', $sidingId);
         })->where('penalty_date', '>=', $fromDate)
             ->with('rake')
@@ -182,9 +180,7 @@ final readonly class GenerateReports
                     ? round($penalties->sum('penalty_amount') / $penalties->pluck('rake_id')->unique()->count(), 2)
                     : 0,
             ],
-            'by_month' => $penalties->groupBy(function ($p) {
-                return $p->penalty_date->format('Y-m');
-            })->map(fn ($group) => [
+            'by_month' => $penalties->groupBy(fn ($p) => $p->penalty_date->format('Y-m'))->map(fn ($group): array => [
                 'month' => $group->first()->penalty_date->format('F Y'),
                 'total' => $group->sum('penalty_amount'),
                 'collected' => $group->where('penalty_status', 'incurred')->sum('penalty_amount'),
@@ -201,7 +197,7 @@ final readonly class GenerateReports
     {
         $fromDate = now()->subDays($days)->startOfDay();
 
-        $indents = Indent::where('siding_id', $sidingId)
+        $indents = Indent::query()->where('siding_id', $sidingId)
             ->where('created_at', '>=', $fromDate)
             ->get();
 
@@ -223,7 +219,7 @@ final readonly class GenerateReports
                     ? round(($indents->sum('allocated_quantity_mt') / $indents->sum('target_quantity_mt')) * 100, 2)
                     : 0,
             ],
-            'indents' => $indents->map(fn ($i) => [
+            'indents' => $indents->map(fn ($i): array => [
                 'indent_number' => $i->indent_number,
                 'state' => $i->state,
                 'target_mt' => $i->target_quantity_mt,
@@ -243,17 +239,17 @@ final readonly class GenerateReports
     {
         $fromDate = now()->subMonths($months)->startOfDay();
 
-        $demurrage = Penalty::whereHas('rake', function ($q) use ($sidingId) {
+        $demurrage = Penalty::query()->whereHas('rake', function ($q) use ($sidingId): void {
             $q->where('siding_id', $sidingId);
         })->where('penalty_date', '>=', $fromDate)
             ->get();
 
-        $receipts = StockLedger::where('siding_id', $sidingId)
+        $receipts = StockLedger::query()->where('siding_id', $sidingId)
             ->where('transaction_type', 'receipt')
             ->where('created_at', '>=', $fromDate)
             ->sum('quantity_mt') ?? 0;
 
-        $dispatches = StockLedger::where('siding_id', $sidingId)
+        $dispatches = StockLedger::query()->where('siding_id', $sidingId)
             ->where('transaction_type', 'dispatch')
             ->where('created_at', '>=', $fromDate)
             ->sum('quantity_mt') ?? 0;
@@ -301,11 +297,11 @@ final readonly class GenerateReports
      */
     private function formatCsv(array $data): StreamedResponse
     {
-        return new StreamedResponse(function () use ($data) {
+        return new StreamedResponse(function () use ($data): void {
             $handle = fopen('php://output', 'w');
 
             // Add headers
-            fputcsv($handle, ['Key', 'Value']);
+            fputcsv($handle, ['Key', 'Value'], escape: '\\');
 
             // Flatten and output data
             $this->flattenArray($data, $handle);
@@ -341,12 +337,12 @@ final readonly class GenerateReports
     private function flattenArray(array $array, $handle, string $prefix = ''): void
     {
         foreach ($array as $key => $value) {
-            $fullKey = $prefix ? "{$prefix}.{$key}" : $key;
+            $fullKey = $prefix !== '' && $prefix !== '0' ? "{$prefix}.{$key}" : $key;
 
             if (is_array($value)) {
                 $this->flattenArray($value, $handle, $fullKey);
             } else {
-                fputcsv($handle, [$fullKey, (string) $value]);
+                fputcsv($handle, [$fullKey, (string) $value], escape: '\\');
             }
         }
     }
@@ -356,7 +352,7 @@ final readonly class GenerateReports
      */
     private function getOpeningStock(int $sidingId, DateTimeImmutable $date): float
     {
-        $previousBalance = StockLedger::where('siding_id', $sidingId)
+        $previousBalance = StockLedger::query()->where('siding_id', $sidingId)
             ->where('created_at', '<', $date)
             ->latest('created_at')
             ->first();
@@ -369,7 +365,7 @@ final readonly class GenerateReports
      */
     private function getClosingStock(int $sidingId, DateTimeImmutable $date): float
     {
-        $latestBalance = StockLedger::where('siding_id', $sidingId)
+        $latestBalance = StockLedger::query()->where('siding_id', $sidingId)
             ->where('created_at', '<=', $date->endOfDay())
             ->latest('created_at')
             ->first();

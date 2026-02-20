@@ -95,8 +95,7 @@ final class IndentsController extends Controller
             $indent->addMediaFromRequest('pdf')->toMediaCollection('indent_confirmation_pdf');
         }
 
-        return redirect()
-            ->route('indents.show', $indent)
+        return to_route('indents.show', $indent)
             ->with('success', 'Indent created.');
     }
 
@@ -169,8 +168,7 @@ final class IndentsController extends Controller
             $indent->addMediaFromRequest('pdf')->toMediaCollection('indent_confirmation_pdf');
         }
 
-        return redirect()
-            ->route('indents.show', $indent)
+        return to_route('indents.show', $indent)
             ->with('success', 'Indent updated.');
     }
 }

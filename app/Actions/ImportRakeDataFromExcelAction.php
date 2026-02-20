@@ -28,11 +28,9 @@ use Throwable;
  */
 final readonly class ImportRakeDataFromExcelAction
 {
-    public function __construct() {}
-
     public function handle(?int $userId = null): array
     {
-        $userId = $userId ?? \App\Models\User::first()?->id;
+        $userId ??= \App\Models\User::query()->first()?->id;
         $basePath = config('rrmcs.prd_import.base_path');
         $stats = ['rakes' => 0, 'penalties' => 0, 'weighments' => 0, 'rr_documents' => 0, 'wagons' => 0, 'skipped_sheets' => 0, 'errors' => []];
 
@@ -45,9 +43,9 @@ final readonly class ImportRakeDataFromExcelAction
         $basePath = base_path($basePath);
 
         DB::transaction(function () use ($basePath, $userId, &$stats): void {
-            $sidingPakur = Siding::where('code', 'PKUR')->first();
-            $sidingDumka = Siding::where('code', 'DUMK')->first();
-            $sidingKurwa = Siding::where('code', 'KURWA')->first();
+            $sidingPakur = Siding::query()->where('code', 'PKUR')->first();
+            $sidingDumka = Siding::query()->where('code', 'DUMK')->first();
+            $sidingKurwa = Siding::query()->where('code', 'KURWA')->first();
 
             $pakurFile = config('rrmcs.prd_import.pakur_monthly');
             if ($pakurFile && $sidingPakur && is_file($basePath.'/'.$pakurFile)) {
@@ -77,7 +75,7 @@ final readonly class ImportRakeDataFromExcelAction
 
             $imwbFile = config('rrmcs.prd_import.imwb_sensor');
             $imwbSidingCode = config('rrmcs.imwb_default_siding_code', 'DUMK');
-            $sidingImwb = Siding::where('code', $imwbSidingCode)->first();
+            $sidingImwb = Siding::query()->where('code', $imwbSidingCode)->first();
             if ($imwbFile && $sidingImwb && is_file($basePath.'/'.$imwbFile)) {
                 $result = $this->importImwbSensorReport($basePath.'/'.$imwbFile, $sidingImwb->id, $userId, $imwbSidingCode);
                 $stats['rakes'] += $result['rakes'];
@@ -126,16 +124,25 @@ final readonly class ImportRakeDataFromExcelAction
 
             for ($row = 3; $row <= $highestRow; $row++) {
                 $rakeNo = $this->cellValue($sheet, 'C', $row);
-                if ($rakeNo === null || $rakeNo === '' || mb_stripos((string) $rakeNo, 'TOTAL') !== false) {
+                if ($rakeNo === null) {
+                    continue;
+                }
+                if ($rakeNo === '') {
+                    continue;
+                }
+                if (mb_stripos((string) $rakeNo, 'TOTAL') !== false) {
                     continue;
                 }
                 $rakeNoStr = mb_trim((string) $rakeNo);
-                if (mb_strlen($rakeNoStr) > 15 || (! is_numeric($rakeNoStr) && mb_strlen($rakeNoStr) > 10)) {
+                if (mb_strlen($rakeNoStr) > 15) {
+                    continue;
+                }
+                if (! is_numeric($rakeNoStr) && mb_strlen($rakeNoStr) > 10) {
                     continue;
                 }
 
                 $loadingDate = $this->cellDate($sheet, 'B', $row);
-                if (! $loadingDate) {
+                if (! $loadingDate instanceof Carbon) {
                     continue;
                 }
                 $rrNumber = $this->cellValue($sheet, 'E', $row);
@@ -146,44 +153,38 @@ final readonly class ImportRakeDataFromExcelAction
                 $overloadCharge = $this->cellNumeric($sheet, 'K', $row);
 
                 $rakeNumber = 'PKUR-'.$rakeNoStr;
-                $rake = Rake::firstOrCreate(
-                    [
-                        'siding_id' => $sidingId,
-                        'rake_number' => $rakeNumber,
-                    ],
-                    [
-                        'rake_type' => 'BOBRN',
-                        'wagon_count' => $wagonCount,
-                        'loading_end_time' => $loadingDate,
-                        'loaded_weight_mt' => $netWeight > 0 ? round((float) $netWeight, 2) : null,
-                        'state' => 'delivered',
-                        'free_time_minutes' => 180,
-                        'demurrage_hours' => $detentionHours > 0 ? round((float) $detentionHours, 2) : 0,
-                        'demurrage_penalty_amount' => $detentionCharges > 0 ? round((float) $detentionCharges, 2) : 0,
-                        'rr_expected_date' => $loadingDate,
-                        'rr_actual_date' => $loadingDate,
-                        'created_by' => $userId,
-                        'updated_by' => $userId,
-                    ]
-                );
+                $rake = Rake::query()->firstOrCreate([
+                    'siding_id' => $sidingId,
+                    'rake_number' => $rakeNumber,
+                ], [
+                    'rake_type' => 'BOBRN',
+                    'wagon_count' => $wagonCount,
+                    'loading_end_time' => $loadingDate,
+                    'loaded_weight_mt' => $netWeight > 0 ? round($netWeight, 2) : null,
+                    'state' => 'delivered',
+                    'free_time_minutes' => 180,
+                    'demurrage_hours' => $detentionHours > 0 ? round($detentionHours, 2) : 0,
+                    'demurrage_penalty_amount' => $detentionCharges > 0 ? round($detentionCharges, 2) : 0,
+                    'rr_expected_date' => $loadingDate,
+                    'rr_actual_date' => $loadingDate,
+                    'created_by' => $userId,
+                    'updated_by' => $userId,
+                ]);
                 if ($rake->wasRecentlyCreated) {
                     $stats['rakes']++;
                 }
 
                 if ($rrNumber && mb_trim((string) $rrNumber) !== '' && mb_stripos((string) $rrNumber, 'TOTAL') === false) {
                     $rrNum = mb_trim((string) $rrNumber);
-                    $doc = RrDocument::firstOrCreate(
-                        ['rr_number' => $rrNum],
-                        [
-                            'rake_id' => $rake->id,
-                            'rr_received_date' => $loadingDate,
-                            'rr_weight_mt' => $netWeight > 0 ? round((float) $netWeight, 2) : null,
-                            'document_status' => 'verified',
-                            'has_discrepancy' => false,
-                            'created_by' => $userId,
-                            'updated_by' => $userId,
-                        ]
-                    );
+                    $doc = RrDocument::query()->firstOrCreate(['rr_number' => $rrNum], [
+                        'rake_id' => $rake->id,
+                        'rr_received_date' => $loadingDate,
+                        'rr_weight_mt' => $netWeight > 0 ? round($netWeight, 2) : null,
+                        'document_status' => 'verified',
+                        'has_discrepancy' => false,
+                        'created_by' => $userId,
+                        'updated_by' => $userId,
+                    ]);
                     if ($doc->wasRecentlyCreated) {
                         $stats['rr_documents']++;
                     }
@@ -191,26 +192,23 @@ final readonly class ImportRakeDataFromExcelAction
 
                 if ($detentionCharges > 0) {
                     $penaltyDate = $loadingDate instanceof Carbon ? $loadingDate->toDateString() : ($loadingDate ? (string) $loadingDate : now()->toDateString());
-                    $pen = Penalty::firstOrCreate(
-                        [
-                            'rake_id' => $rake->id,
-                            'penalty_type' => 'DEM',
-                            'penalty_date' => $penaltyDate,
+                    $pen = Penalty::query()->firstOrCreate([
+                        'rake_id' => $rake->id,
+                        'penalty_type' => 'DEM',
+                        'penalty_date' => $penaltyDate,
+                    ], [
+                        'penalty_amount' => round($detentionCharges, 2),
+                        'penalty_status' => 'incurred',
+                        'description' => sprintf('Demurrage: %s h × %s MT × ₹%s/MT/h (imported)', $detentionHours, $netWeight, $rate),
+                        'calculation_breakdown' => [
+                            'formula' => 'demurrage_hours × weight_mt × rate_per_mt_hour',
+                            'demurrage_hours' => round((float) $detentionHours, 2),
+                            'weight_mt' => round((float) $netWeight, 2),
+                            'rate_per_mt_hour' => $rate,
+                            'free_hours' => 3,
+                            'dwell_hours' => round(3 + (float) $detentionHours, 2),
                         ],
-                        [
-                            'penalty_amount' => round((float) $detentionCharges, 2),
-                            'penalty_status' => 'incurred',
-                            'description' => sprintf('Demurrage: %s h × %s MT × ₹%s/MT/h (imported)', $detentionHours, $netWeight, $rate),
-                            'calculation_breakdown' => [
-                                'formula' => 'demurrage_hours × weight_mt × rate_per_mt_hour',
-                                'demurrage_hours' => round((float) $detentionHours, 2),
-                                'weight_mt' => round((float) $netWeight, 2),
-                                'rate_per_mt_hour' => $rate,
-                                'free_hours' => 3,
-                                'dwell_hours' => round(3 + (float) $detentionHours, 2),
-                            ],
-                        ]
-                    );
+                    ]);
                     if ($pen->wasRecentlyCreated) {
                         $stats['penalties']++;
                     }
@@ -218,18 +216,15 @@ final readonly class ImportRakeDataFromExcelAction
 
                 if ($overloadCharge > 0) {
                     $penaltyDate = $loadingDate instanceof Carbon ? $loadingDate->toDateString() : ($loadingDate ? (string) $loadingDate : now()->toDateString());
-                    $pen = Penalty::firstOrCreate(
-                        [
-                            'rake_id' => $rake->id,
-                            'penalty_type' => 'POL1',
-                            'penalty_date' => $penaltyDate,
-                        ],
-                        [
-                            'penalty_amount' => round((float) $overloadCharge, 2),
-                            'penalty_status' => 'incurred',
-                            'description' => 'Overload charge (imported)',
-                        ]
-                    );
+                    $pen = Penalty::query()->firstOrCreate([
+                        'rake_id' => $rake->id,
+                        'penalty_type' => 'POL1',
+                        'penalty_date' => $penaltyDate,
+                    ], [
+                        'penalty_amount' => round($overloadCharge, 2),
+                        'penalty_status' => 'incurred',
+                        'description' => 'Overload charge (imported)',
+                    ]);
                     if ($pen->wasRecentlyCreated) {
                         $stats['penalties']++;
                     }
@@ -268,25 +263,28 @@ final readonly class ImportRakeDataFromExcelAction
             for ($row = 2; $row <= $highestRow; $row++) {
                 $rakeNoRaw = $this->cellValue($sheet, 'C', $row);
                 $wagonNumber = mb_trim((string) ($this->cellValue($sheet, 'D', $row) ?? ''));
-                if ($rakeNoRaw === null || $rakeNoRaw === '' || $wagonNumber === '') {
+                if ($rakeNoRaw === null) {
+                    continue;
+                }
+                if ($rakeNoRaw === '') {
+                    continue;
+                }
+                if ($wagonNumber === '') {
                     continue;
                 }
 
                 $rakeNumber = $sidingCode.'-'.mb_trim((string) $rakeNoRaw);
-                $rake = Rake::firstOrCreate(
-                    [
-                        'siding_id' => $sidingId,
-                        'rake_number' => $rakeNumber,
-                    ],
-                    [
-                        'rake_type' => 'BOBRN',
-                        'wagon_count' => 0,
-                        'state' => 'delivered',
-                        'free_time_minutes' => 180,
-                        'created_by' => $userId,
-                        'updated_by' => $userId,
-                    ]
-                );
+                $rake = Rake::query()->firstOrCreate([
+                    'siding_id' => $sidingId,
+                    'rake_number' => $rakeNumber,
+                ], [
+                    'rake_type' => 'BOBRN',
+                    'wagon_count' => 0,
+                    'state' => 'delivered',
+                    'free_time_minutes' => 180,
+                    'created_by' => $userId,
+                    'updated_by' => $userId,
+                ]);
                 if ($rake->wasRecentlyCreated) {
                     $stats['rakes']++;
                 }
@@ -297,22 +295,19 @@ final readonly class ImportRakeDataFromExcelAction
                 $loaderCode = $loaderNumberRaw !== null && $loaderNumberRaw !== '' ? (string) $loaderNumberRaw : null;
                 $loaderId = null;
                 if ($loaderCode !== null) {
-                    $loader = Loader::where('siding_id', $sidingId)->where('code', $loaderCode)->first();
+                    $loader = Loader::query()->where('siding_id', $sidingId)->where('code', $loaderCode)->first();
                     $loaderId = $loader?->id;
                 }
 
                 $wagon = Wagon::query()->where('wagon_number', $wagonNumber)->first();
                 $wasNew = $wagon === null;
-                $wagon = Wagon::updateOrCreate(
-                    ['wagon_number' => $wagonNumber],
-                    [
-                        'rake_id' => $rake->id,
-                        'wagon_sequence' => $wagon?->wagon_sequence ?? 0,
-                        'weighment_qty_mt' => $imwbWeight !== null ? round($imwbWeight, 2) : null,
-                        'loader_recorded_qty_mt' => $loaderSensorWeight !== null ? round($loaderSensorWeight, 2) : null,
-                        'loader_id' => $loaderId,
-                    ]
-                );
+                $wagon = Wagon::query()->updateOrCreate(['wagon_number' => $wagonNumber], [
+                    'rake_id' => $rake->id,
+                    'wagon_sequence' => $wagon?->wagon_sequence ?? 0,
+                    'weighment_qty_mt' => $imwbWeight !== null ? round($imwbWeight, 2) : null,
+                    'loader_recorded_qty_mt' => $loaderSensorWeight !== null ? round($loaderSensorWeight, 2) : null,
+                    'loader_id' => $loaderId,
+                ]);
                 if ($wasNew) {
                     $stats['wagons']++;
                 }
@@ -348,7 +343,10 @@ final readonly class ImportRakeDataFromExcelAction
 
             for ($row = 3; $row <= $highestRow; $row++) {
                 $rakeNo = $this->cellValue($sheet, 'B', $row);
-                if ($rakeNo === null || $rakeNo === '') {
+                if ($rakeNo === null) {
+                    continue;
+                }
+                if ($rakeNo === '') {
                     continue;
                 }
 
@@ -358,38 +356,32 @@ final readonly class ImportRakeDataFromExcelAction
                 $netWt = $this->cellNumeric($sheet, 'H', $row) ?: $this->cellNumeric($sheet, 'G', $row);
 
                 $rakeNumber = $sidingCode.'-'.mb_trim((string) $rakeNo);
-                $rake = Rake::firstOrCreate(
-                    [
-                        'siding_id' => $sidingId,
-                        'rake_number' => $rakeNumber,
-                    ],
-                    [
-                        'rake_type' => str_starts_with(mb_strtoupper((string) $wagonType), 'BOX') ? 'BOXN' : 'BOBRN',
-                        'wagon_count' => 59,
-                        'loading_start_time' => $placementTime,
-                        'loading_end_time' => $loadingCompleteTime,
-                        'loaded_weight_mt' => $netWt > 0 ? round((float) $netWt, 2) : null,
-                        'state' => 'delivered',
-                        'free_time_minutes' => 180,
-                        'created_by' => $userId,
-                        'updated_by' => $userId,
-                    ]
-                );
+                $rake = Rake::query()->firstOrCreate([
+                    'siding_id' => $sidingId,
+                    'rake_number' => $rakeNumber,
+                ], [
+                    'rake_type' => str_starts_with(mb_strtoupper((string) $wagonType), 'BOX') ? 'BOXN' : 'BOBRN',
+                    'wagon_count' => 59,
+                    'loading_start_time' => $placementTime,
+                    'loading_end_time' => $loadingCompleteTime,
+                    'loaded_weight_mt' => $netWt > 0 ? round($netWt, 2) : null,
+                    'state' => 'delivered',
+                    'free_time_minutes' => 180,
+                    'created_by' => $userId,
+                    'updated_by' => $userId,
+                ]);
                 if ($rake->wasRecentlyCreated) {
                     $stats['rakes']++;
                 }
 
                 $weighTime = $loadingCompleteTime ?? $placementTime;
                 if ($weighTime && $netWt > 0) {
-                    $weigh = Weighment::firstOrCreate(
-                        ['rake_id' => $rake->id],
-                        [
-                            'weighment_time' => $weighTime,
-                            'total_weight_mt' => round((float) $netWt, 2),
-                            'average_wagon_weight_mt' => $rake->wagon_count > 0 ? round((float) $netWt / $rake->wagon_count, 2) : null,
-                            'weighment_status' => 'verified',
-                        ]
-                    );
+                    $weigh = Weighment::query()->firstOrCreate(['rake_id' => $rake->id], [
+                        'weighment_time' => $weighTime,
+                        'total_weight_mt' => round($netWt, 2),
+                        'average_wagon_weight_mt' => $rake->wagon_count > 0 ? round($netWt / $rake->wagon_count, 2) : null,
+                        'weighment_status' => 'verified',
+                    ]);
                     if ($weigh->wasRecentlyCreated) {
                         $stats['weighments']++;
                     }
@@ -402,9 +394,7 @@ final readonly class ImportRakeDataFromExcelAction
 
     private function cellValue($sheet, string $col, int $row): mixed
     {
-        $v = $sheet->getCell($col.$row)->getValue();
-
-        return $v;
+        return $sheet->getCell($col.$row)->getValue();
     }
 
     private function cellNumeric($sheet, string $col, int $row): ?float
@@ -430,14 +420,14 @@ final readonly class ImportRakeDataFromExcelAction
             try {
                 $date = ExcelDate::excelToDateTimeObject($v);
 
-                return Carbon::instance($date);
+                return \Illuminate\Support\Facades\Date::instance($date);
             } catch (Throwable) {
                 return null;
             }
         }
         if (is_string($v)) {
             try {
-                return Carbon::parse($v);
+                return \Illuminate\Support\Facades\Date::parse($v);
             } catch (Throwable) {
                 return null;
             }

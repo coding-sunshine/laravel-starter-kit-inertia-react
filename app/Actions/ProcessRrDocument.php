@@ -27,8 +27,6 @@ use function Laravel\Ai\agent;
  */
 final readonly class ProcessRrDocument
 {
-    public function __construct() {}
-
     /**
      * Process an uploaded RR document
      *
@@ -41,7 +39,7 @@ final readonly class ProcessRrDocument
     public function handle(array $data, int $userId): RrDocument
     {
         return DB::transaction(function () use ($data, $userId): RrDocument {
-            $rake = Rake::findOrFail($data['rake_id']);
+            $rake = Rake::query()->findOrFail($data['rake_id']);
             $file = $data['document'];
 
             // Store document temporarily
@@ -56,13 +54,13 @@ final readonly class ProcessRrDocument
                     : now()->toDateTimeString();
                 if (is_string($rrReceivedDate)) {
                     try {
-                        $rrReceivedDate = \Carbon\Carbon::parse($rrReceivedDate);
+                        $rrReceivedDate = \Illuminate\Support\Facades\Date::parse($rrReceivedDate);
                     } catch (Throwable) {
                         $rrReceivedDate = now();
                     }
                 }
 
-                $rrDocument = RrDocument::create([
+                $rrDocument = RrDocument::query()->create([
                     'rake_id' => $rake->id,
                     'rr_number' => $data['rr_number'] ?? $extractedData['rr_number'] ?? 'RR-'.now()->timestamp,
                     'rr_received_date' => $rrReceivedDate,
@@ -82,7 +80,7 @@ final readonly class ProcessRrDocument
                 // Clean up on failure
                 Storage::disk('local')->delete($storedPath);
 
-                throw new InvalidArgumentException("Failed to process RR document: {$e->getMessage()}");
+                throw new InvalidArgumentException("Failed to process RR document: {$e->getMessage()}", $e->getCode(), $e);
             }
         });
     }
@@ -117,7 +115,7 @@ final readonly class ProcessRrDocument
                 $out['rr_received_date'] = $extracted['receipt_date'];
             }
 
-            return array_filter($out, fn ($v, $k) => $k === 'rr_details' || ($v !== null && $v !== ''), ARRAY_FILTER_USE_BOTH);
+            return array_filter($out, fn ($v, $k): bool => $k === 'rr_details' || ($v !== null && $v !== ''), ARRAY_FILTER_USE_BOTH);
         } catch (Exception $e) {
             Log::warning('RR document extraction failed', ['error' => $e->getMessage()]);
 
@@ -146,7 +144,7 @@ final readonly class ProcessRrDocument
      */
     public function getPendingRrDocuments(int $sidingId): \Illuminate\Database\Eloquent\Collection
     {
-        return RrDocument::whereHas('rake', function ($query) use ($sidingId) {
+        return RrDocument::query()->whereHas('rake', function ($query) use ($sidingId): void {
             $query->where('siding_id', $sidingId);
         })
             ->where('document_status', 'received')
@@ -159,7 +157,7 @@ final readonly class ProcessRrDocument
      */
     public function getDocumentsWithDiscrepancies(int $sidingId): \Illuminate\Database\Eloquent\Collection
     {
-        return RrDocument::whereHas('rake', function ($query) use ($sidingId) {
+        return RrDocument::query()->whereHas('rake', function ($query) use ($sidingId): void {
             $query->where('siding_id', $sidingId);
         })
             ->where('has_discrepancy', true)
@@ -174,7 +172,7 @@ final readonly class ProcessRrDocument
     {
         // Read file content for processing
         $fileContent = Storage::disk('local')->get($filePath);
-        $base64Content = base64_encode($fileContent);
+        $base64Content = base64_encode((string) $fileContent);
 
         // Determine media type for AI processing
         $mediaType = $this->getMediaType($mimeType);
@@ -206,14 +204,14 @@ final readonly class ProcessRrDocument
             Return only valid JSON. Use null for any field you cannot find.
             PROMPT
         )->prompt(
-            message: 'Extract all header and wagon-table data from this Railway Receipt. Return one JSON object.',
             attachments: [
                 [
                     'type' => 'image',
                     'media_type' => $mediaType,
                     'data' => $base64Content,
                 ],
-            ]
+            ],
+            message: 'Extract all header and wagon-table data from this Railway Receipt. Return one JSON object.'
         );
 
         // Parse the response
@@ -243,7 +241,7 @@ final readonly class ProcessRrDocument
                 if (is_array($parsed)) {
                     $wagons = $parsed['wagons'] ?? null;
                     if (is_array($wagons)) {
-                        $wagons = array_values(array_map(function ($w) {
+                        $wagons = array_values(array_map(function ($w): ?array {
                             if (! is_array($w)) {
                                 return null;
                             }
@@ -268,7 +266,7 @@ final readonly class ProcessRrDocument
                             'POL1' => isset($charges['POL1']) ? (float) $charges['POL1'] : null,
                             'OTC' => isset($charges['OTC']) ? (float) $charges['OTC'] : null,
                             'GST' => isset($charges['GST']) ? (float) $charges['GST'] : null,
-                        ], fn ($v) => $v !== null);
+                        ], fn (?float $v): bool => $v !== null);
                     }
 
                     return array_filter([
@@ -285,12 +283,12 @@ final readonly class ProcessRrDocument
                         'to_station_code' => $parsed['to_station_code'] ?? null,
                         'freight_total' => is_numeric($parsed['freight_total'] ?? null) ? (float) $parsed['freight_total'] : null,
                         'charges' => $charges,
-                        'wagons' => ! empty($wagons) ? $wagons : null,
+                        'wagons' => empty($wagons) ? null : $wagons,
                         'coal_grade' => $parsed['coal_grade'] ?? $parsed['quality'] ?? null,
                         'origin_siding' => $parsed['origin_siding'] ?? $parsed['sender'] ?? null,
                         'destination_siding' => $parsed['destination_siding'] ?? $parsed['receiver'] ?? null,
                         'raw_extraction' => $text,
-                    ], fn ($v) => $v !== null && $v !== '');
+                    ], fn ($v): bool => $v !== null && $v !== '');
                 }
             }
 

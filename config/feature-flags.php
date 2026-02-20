@@ -25,7 +25,7 @@ return [
      * When disabled, Pennant is not consulted; the feature is always off.
      */
     'globally_disabled' => array_filter(
-        array_map('trim', explode(',', env('GLOBALLY_DISABLED_MODULES', '')))
+        array_map(trim(...), explode(',', (string) env('GLOBALLY_DISABLED_MODULES', '')))
     ),
 
     /*

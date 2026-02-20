@@ -17,8 +17,6 @@ use InvalidArgumentException;
  */
 final readonly class CreateRake
 {
-    public function __construct() {}
-
     /**
      * Create a new rake
      *
@@ -38,7 +36,7 @@ final readonly class CreateRake
             $rakeNumber = $data['rake_number'] ?? $this->generateRakeNumber($data['siding_id']);
 
             // Create rake record
-            $rake = Rake::create([
+            $rake = Rake::query()->create([
                 'siding_id' => $data['siding_id'],
                 'rake_number' => $rakeNumber,
                 'rake_type' => $data['rake_type'] ?? 'Coal',
@@ -60,9 +58,7 @@ final readonly class CreateRake
      */
     public function startLoading(Rake $rake, int $userId): Rake
     {
-        if ($rake->state !== 'pending') {
-            throw new InvalidArgumentException('Can only start loading rakes in pending state');
-        }
+        throw_if($rake->state !== 'pending', InvalidArgumentException::class, 'Can only start loading rakes in pending state');
 
         return DB::transaction(function () use ($rake, $userId): Rake {
             $rake->update([
@@ -80,9 +76,7 @@ final readonly class CreateRake
      */
     public function stageRake(Rake $rake, float $loadedWeight, int $userId): Rake
     {
-        if (! in_array($rake->state, ['loading', 'pending'])) {
-            throw new InvalidArgumentException('Can only stage rakes in loading or pending state');
-        }
+        throw_unless(in_array($rake->state, ['loading', 'pending']), InvalidArgumentException::class, 'Can only stage rakes in loading or pending state');
 
         return DB::transaction(function () use ($rake, $loadedWeight, $userId): Rake {
             $rake->update([
@@ -101,9 +95,7 @@ final readonly class CreateRake
      */
     public function depart(Rake $rake, int $userId): Rake
     {
-        if ($rake->state !== 'staged') {
-            throw new InvalidArgumentException('Can only depart rakes in staged state');
-        }
+        throw_if($rake->state !== 'staged', InvalidArgumentException::class, 'Can only depart rakes in staged state');
 
         return DB::transaction(function () use ($rake, $userId): Rake {
             $rake->update([
@@ -120,9 +112,7 @@ final readonly class CreateRake
      */
     public function markInTransit(Rake $rake, int $userId): Rake
     {
-        if (! in_array($rake->state, ['departed', 'staged'])) {
-            throw new InvalidArgumentException('Can only mark staged/departed rakes as in transit');
-        }
+        throw_unless(in_array($rake->state, ['departed', 'staged']), InvalidArgumentException::class, 'Can only mark staged/departed rakes as in transit');
 
         return DB::transaction(function () use ($rake, $userId): Rake {
             $rake->update([
@@ -139,9 +129,7 @@ final readonly class CreateRake
      */
     public function markDelivered(Rake $rake, int $userId): Rake
     {
-        if ($rake->state !== 'in_transit') {
-            throw new InvalidArgumentException('Can only mark in_transit rakes as delivered');
-        }
+        throw_if($rake->state !== 'in_transit', InvalidArgumentException::class, 'Can only mark in_transit rakes as delivered');
 
         return DB::transaction(function () use ($rake, $userId): Rake {
             $rake->update([
@@ -157,11 +145,9 @@ final readonly class CreateRake
     /**
      * Assign a wagon to a rake
      */
-    public function assignWagon(Rake $rake, int $wagonId, int $position, int $userId): void
+    public function assignWagon(Rake $rake, int $wagonId, int $position): void
     {
-        if ($rake->state !== 'loading' && $rake->state !== 'pending') {
-            throw new InvalidArgumentException('Can only assign wagons to pending/loading rakes');
-        }
+        throw_if($rake->state !== 'loading' && $rake->state !== 'pending', InvalidArgumentException::class, 'Can only assign wagons to pending/loading rakes');
 
         $rake->wagons()->updateOrCreate(
             ['wagon_id' => $wagonId],
@@ -186,7 +172,7 @@ final readonly class CreateRake
     public function getAvailableWagons(int $sidingId): Collection
     {
         // Get wagons not currently assigned to any rake
-        return Rake::where('siding_id', $sidingId)
+        return Rake::query()->where('siding_id', $sidingId)
             ->whereNotIn('state', ['departed', 'in_transit', 'delivered'])
             ->with('wagons')
             ->get()
@@ -254,11 +240,11 @@ final readonly class CreateRake
      */
     private function generateRakeNumber(int $sidingId): string
     {
-        $siding = \App\Models\Siding::find($sidingId);
+        $siding = \App\Models\Siding::query()->find($sidingId);
         $sidingCode = $siding?->code ?? 'UNK';
 
         // Format: RAKE-CODE-NNNN (e.g., RAKE-PKR-0001)
-        $count = Rake::where('siding_id', $sidingId)->count() + 1;
+        $count = Rake::query()->where('siding_id', $sidingId)->count() + 1;
 
         return sprintf('RAKE-%s-%04d', $sidingCode, $count);
     }

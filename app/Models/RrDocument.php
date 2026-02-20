@@ -12,6 +12,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 
 final class RrDocument extends Model implements HasMedia
 {
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use InteractsWithMedia, Userstamps;
 
     protected $fillable = [

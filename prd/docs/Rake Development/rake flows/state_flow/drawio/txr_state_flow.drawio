@@ -1,0 +1,39 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0" version="29.3.8">
+  <diagram name="Rake TXR State Transition" id="1-cvhJ8wWn8Rt98ZcABu">
+    <mxGraphModel dx="1426" dy="798" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="wmJFVI75Het05oc6HsWX-1" parent="1" style="rounded=1;" value="TXR_Start" vertex="1">
+          <mxGeometry height="60" width="200" x="325" y="250" as="geometry" />
+        </mxCell>
+        <mxCell id="wmJFVI75Het05oc6HsWX-3" parent="1" style="rounded=1;" value="TXR_PENDING" vertex="1">
+          <mxGeometry height="60" width="200" x="325" y="380" as="geometry" />
+        </mxCell>
+        <mxCell id="wmJFVI75Het05oc6HsWX-4" parent="1" style="rounded=1;" value="TXR_IN_PROGRESS" vertex="1">
+          <mxGeometry height="60" width="240" x="305" y="500" as="geometry" />
+        </mxCell>
+        <mxCell id="wmJFVI75Het05oc6HsWX-5" parent="1" style="rounded=1;fillColor=#d5e8d4;" value="TXR_COMPLETED\n(Wagons Marked + Memo Stored)" vertex="1">
+          <mxGeometry height="80" width="300" x="275" y="620" as="geometry" />
+        </mxCell>
+        <mxCell id="wmJFVI75Het05oc6HsWX-6" edge="1" parent="1" source="wmJFVI75Het05oc6HsWX-1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="425" y="380" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="wmJFVI75Het05oc6HsWX-8" edge="1" parent="1" source="wmJFVI75Het05oc6HsWX-3" target="wmJFVI75Het05oc6HsWX-4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="wmJFVI75Het05oc6HsWX-9" edge="1" parent="1" source="wmJFVI75Het05oc6HsWX-4" target="wmJFVI75Het05oc6HsWX-5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="wmJFVI75Het05oc6HsWX-13" edge="1" parent="1" source="wmJFVI75Het05oc6HsWX-10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="wmJFVI75Het05oc6HsWX-1" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="wmJFVI75Het05oc6HsWX-10" parent="1" style="rounded=1;" value="Rake Arrive" vertex="1">
+          <mxGeometry height="60" width="200" x="325" y="130" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

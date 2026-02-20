@@ -49,21 +49,18 @@ final class RouteSeeder extends Seeder
 
         foreach ($routes as $route) {
             $stationCode = $route['siding'];
-            $siding = \App\Models\Siding::where('station_code', $stationCode)->first();
+            $siding = \App\Models\Siding::query()->where('station_code', $stationCode)->first();
             if ($siding) {
-                \App\Models\Route::firstOrCreate(
-                    ['route_name' => $route['route_name']],
-                    [
-                        'siding_id' => $siding->id,
-                        'start_location' => $route['start_location'],
-                        'end_location' => $route['end_location'],
-                        'expected_distance_km' => $route['expected_distance_km'],
-                        'geo_json_path_data' => json_encode([
-                            'type' => 'LineString',
-                            'coordinates' => $route['coordinates'],
-                        ]),
-                    ]
-                );
+                \App\Models\Route::query()->firstOrCreate(['route_name' => $route['route_name']], [
+                    'siding_id' => $siding->id,
+                    'start_location' => $route['start_location'],
+                    'end_location' => $route['end_location'],
+                    'expected_distance_km' => $route['expected_distance_km'],
+                    'geo_json_path_data' => json_encode([
+                        'type' => 'LineString',
+                        'coordinates' => $route['coordinates'],
+                    ]),
+                ]);
             }
         }
     }

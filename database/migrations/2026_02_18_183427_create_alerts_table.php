@@ -10,7 +10,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('alerts', function (Blueprint $table) {
+        Schema::create('alerts', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('user_id')->nullable()->constrained('users')->onDelete('set null');
             $table->foreignId('siding_id')->nullable()->constrained('sidings')->onDelete('cascade');

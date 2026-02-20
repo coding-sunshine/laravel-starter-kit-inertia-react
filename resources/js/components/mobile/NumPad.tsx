@@ -25,7 +25,7 @@ export function NumPad({
   const [focused, setFocused] = useState(false);
 
   const handleDigit = (digit: string) => {
-    let newValue = value + digit;
+    const newValue = value + digit;
 
     // Limit decimal places
     if (decimal && newValue.includes('.')) {

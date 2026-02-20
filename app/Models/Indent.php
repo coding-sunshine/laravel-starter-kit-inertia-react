@@ -13,6 +13,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 
 final class Indent extends Model implements HasMedia
 {
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use InteractsWithMedia, SoftDeletes, Userstamps;
 
     protected $fillable = [
@@ -35,13 +36,6 @@ final class Indent extends Model implements HasMedia
 
     protected $appends = ['indent_confirmation_pdf_url'];
 
-    public function getIndentConfirmationPdfUrlAttribute(): ?string
-    {
-        $media = $this->getFirstMedia('indent_confirmation_pdf');
-
-        return $media ? $media->getUrl() : null;
-    }
-
     public function registerMediaCollections(): void
     {
         $this->addMediaCollection('indent_confirmation_pdf')
@@ -62,5 +56,12 @@ final class Indent extends Model implements HasMedia
     public function updatedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    protected function getIndentConfirmationPdfUrlAttribute(): ?string
+    {
+        $media = $this->getFirstMedia('indent_confirmation_pdf');
+
+        return $media instanceof \Spatie\MediaLibrary\MediaCollections\Models\Media ? $media->getUrl() : null;
     }
 }

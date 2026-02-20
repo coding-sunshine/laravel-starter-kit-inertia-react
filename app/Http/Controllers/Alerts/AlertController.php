@@ -55,9 +55,7 @@ final class AlertController extends Controller
         $sidingIds = $user->isSuperAdmin()
             ? Siding::query()->pluck('id')->all()
             : $user->accessibleSidings()->get()->pluck('id')->all();
-        if ($alert->siding_id !== null && ! in_array($alert->siding_id, $sidingIds, true)) {
-            abort(403);
-        }
+        abort_if($alert->siding_id !== null && ! in_array($alert->siding_id, $sidingIds, true), 403);
 
         $alert->update([
             'status' => 'resolved',

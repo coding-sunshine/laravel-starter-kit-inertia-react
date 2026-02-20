@@ -28,12 +28,12 @@ final class ChatController extends Controller
         $user = $request->user();
         $conversations = DB::table('agent_conversations')
             ->where('user_id', $user->getAuthIdentifier())
-            ->orderByDesc('updated_at')
+            ->latest('updated_at')
             ->limit(50)
             ->get(['id', 'title', 'updated_at']);
 
         return response()->json([
-            'conversations' => $conversations->map(fn ($c) => [
+            'conversations' => $conversations->map(fn ($c): array => [
                 'id' => $c->id,
                 'title' => $c->title,
                 'updated_at' => $c->updated_at,
@@ -60,7 +60,7 @@ final class ChatController extends Controller
 
         return response()->json([
             'conversation_id' => $id,
-            'messages' => $messages->map(fn ($m) => [
+            'messages' => $messages->map(fn ($m): array => [
                 'role' => $m->role->value,
                 'content' => $m->content ?? '',
             ])->all(),
@@ -128,7 +128,7 @@ final class ChatController extends Controller
         } catch (Throwable $e) {
             // #region agent log
             $logPath = base_path('.cursor/debug.log');
-            file_put_contents($logPath, json_encode(['location' => 'ChatController.php:message', 'message' => 'message_catch', 'data' => ['exception' => get_class($e), 'msg' => $e->getMessage(), 'code' => $e->getCode()], 'timestamp' => (int) (microtime(true) * 1000), 'hypothesisId' => 'C'])."\n", FILE_APPEND | LOCK_EX);
+            file_put_contents($logPath, json_encode(['location' => 'ChatController.php:message', 'message' => 'message_catch', 'data' => ['exception' => $e::class, 'msg' => $e->getMessage(), 'code' => $e->getCode()], 'timestamp' => (int) (microtime(true) * 1000), 'hypothesisId' => 'C'])."\n", FILE_APPEND | LOCK_EX);
             // #endregion
 
             Log::warning('Chat message failed', ['error' => $e->getMessage()]);

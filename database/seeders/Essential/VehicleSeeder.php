@@ -22,10 +22,7 @@ final class VehicleSeeder extends Seeder
         ];
 
         foreach ($vehicles as $vehicle) {
-            \App\Models\Vehicle::firstOrCreate(
-                ['vehicle_number' => $vehicle['vehicle_number']],
-                $vehicle
-            );
+            \App\Models\Vehicle::query()->firstOrCreate(['vehicle_number' => $vehicle['vehicle_number']], $vehicle);
         }
     }
 }

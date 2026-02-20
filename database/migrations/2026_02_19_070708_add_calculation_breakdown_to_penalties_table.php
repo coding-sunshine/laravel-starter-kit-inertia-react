@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('penalties', function (Blueprint $table) {
+        Schema::table('penalties', function (Blueprint $table): void {
             $table->json('calculation_breakdown')->nullable()->after('remediation_notes');
         });
     }
@@ -23,7 +23,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('penalties', function (Blueprint $table) {
+        Schema::table('penalties', function (Blueprint $table): void {
             $table->dropColumn('calculation_breakdown');
         });
     }

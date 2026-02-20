@@ -33,7 +33,7 @@ final readonly class CreateIndent
     public function handle(array $data, int $userId): Indent
     {
         return DB::transaction(function () use ($data, $userId): Indent {
-            $siding = Siding::findOrFail($data['siding_id']);
+            $siding = Siding::query()->findOrFail($data['siding_id']);
 
             // Check stock availability
             $currentStock = $this->stockLedger->getCurrentBalance($siding->id);
@@ -47,7 +47,7 @@ final readonly class CreateIndent
             $indentNumber = $this->generateIndentNumber($siding->id);
 
             // Create indent record
-            $indent = Indent::create([
+            $indent = Indent::query()->create([
                 'siding_id' => $siding->id,
                 'indent_number' => $indentNumber,
                 'target_quantity_mt' => $data['target_quantity_mt'],
@@ -69,9 +69,7 @@ final readonly class CreateIndent
     public function approve(Indent $indent, int $userId): Indent
     {
         return DB::transaction(function () use ($indent, $userId): Indent {
-            if ($indent->state !== 'pending') {
-                throw new InvalidArgumentException('Only pending indents can be approved');
-            }
+            throw_if($indent->state !== 'pending', InvalidArgumentException::class, 'Only pending indents can be approved');
 
             $indent->update([
                 'state' => 'approved',
@@ -88,9 +86,7 @@ final readonly class CreateIndent
     public function reject(Indent $indent, string $reason, int $userId): Indent
     {
         return DB::transaction(function () use ($indent, $reason, $userId): Indent {
-            if ($indent->state !== 'pending') {
-                throw new InvalidArgumentException('Only pending indents can be rejected');
-            }
+            throw_if($indent->state !== 'pending', InvalidArgumentException::class, 'Only pending indents can be rejected');
 
             $indent->update([
                 'state' => 'cancelled',
@@ -135,9 +131,7 @@ final readonly class CreateIndent
     public function close(Indent $indent, int $userId): Indent
     {
         return DB::transaction(function () use ($indent, $userId): Indent {
-            if ($indent->state !== 'fulfilled') {
-                throw new InvalidArgumentException('Only fulfilled indents can be closed');
-            }
+            throw_if($indent->state !== 'fulfilled', InvalidArgumentException::class, 'Only fulfilled indents can be closed');
 
             $indent->update([
                 'state' => 'closed',
@@ -153,7 +147,7 @@ final readonly class CreateIndent
      */
     public function getPendingIndents(int $sidingId): Collection
     {
-        return Indent::where('siding_id', $sidingId)
+        return Indent::query()->where('siding_id', $sidingId)
             ->whereIn('state', ['pending', 'approved'])
             ->orderBy('required_by_date', 'asc')
             ->get();
@@ -164,7 +158,7 @@ final readonly class CreateIndent
      */
     public function getOpenIndents(int $sidingId): Collection
     {
-        return Indent::where('siding_id', $sidingId)
+        return Indent::query()->where('siding_id', $sidingId)
             ->whereIn('state', ['approved', 'partial'])
             ->orderBy('required_by_date', 'asc')
             ->get();
@@ -192,11 +186,11 @@ final readonly class CreateIndent
      */
     private function generateIndentNumber(int $sidingId): string
     {
-        $siding = Siding::find($sidingId);
+        $siding = Siding::query()->find($sidingId);
         $sidingCode = $siding?->code ?? 'UNK';
 
         // Format: INDENT-CODE-YYYY-NNNN (e.g., INDENT-PKR-2026-0001)
-        $count = Indent::where('siding_id', $sidingId)
+        $count = Indent::query()->where('siding_id', $sidingId)
             ->whereYear('indent_date', now()->year)
             ->count() + 1;
 

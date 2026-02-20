@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('loader_performance', function (Blueprint $table) {
+        Schema::create('loader_performances', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('loader_id')->constrained('loaders')->onDelete('cascade');
             $table->date('as_of_date');
@@ -33,6 +33,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('loader_performance');
+        Schema::dropIfExists('loader_performances');
     }
 };

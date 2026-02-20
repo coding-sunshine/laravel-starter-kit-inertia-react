@@ -42,9 +42,7 @@ final class EnsureSidingAccess
         }
 
         // Check if user can access this siding
-        if (! $user->canAccessSiding($siding->id)) {
-            abort(403, 'You do not have access to this siding.');
-        }
+        abort_unless($user->canAccessSiding($siding->id), 403, 'You do not have access to this siding.');
 
         return $next($request);
     }

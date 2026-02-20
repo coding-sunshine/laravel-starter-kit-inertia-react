@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\DB;
 
 final readonly class RunReportAction
 {
-    public const REPORT_KEYS = [
+    public const array REPORT_KEYS = [
         'siding_coal_receipt' => ['name' => 'Siding Coal Receipt', 'description' => 'Shift-wise receipt report'],
         'rake_indent' => ['name' => 'Rake Indent', 'description' => 'Indent history report'],
         'txr' => ['name' => 'Rake Placement & TXR', 'description' => 'TXR performance report'],
@@ -75,7 +75,7 @@ final readonly class RunReportAction
         }
         $rows = $query->get();
 
-        return $rows->map(fn ($r) => [
+        return $rows->map(fn ($r): array => [
             'siding_id' => $r->siding_id,
             'date' => $r->dt,
             'shift' => $groupByShift ? ($r->shift ?? 'unspecified') : null,
@@ -96,9 +96,9 @@ final readonly class RunReportAction
         if (! empty($params['siding_id'])) {
             $query->where('siding_id', $params['siding_id']);
         }
-        $rows = $query->orderByDesc('created_at')->limit(500)->get();
+        $rows = $query->latest()->limit(500)->get();
 
-        return $rows->map(fn ($r) => [
+        return $rows->map(fn ($r): array => [
             'id' => $r->id,
             'siding' => $r->siding?->name,
             'state' => $r->state,
@@ -122,7 +122,7 @@ final readonly class RunReportAction
         }
         $rows = $query->orderByDesc('inspection_time')->limit(500)->get();
 
-        return $rows->map(fn ($r) => [
+        return $rows->map(fn ($r): array => [
             'rake_number' => $r->rake?->rake_number,
             'siding' => $r->rake?->siding?->name,
             'inspection_time' => $r->inspection_time?->toIso8601String(),
@@ -145,9 +145,9 @@ final readonly class RunReportAction
         if (! empty($params['siding_id'])) {
             $query->whereHas('rake', fn ($q) => $q->where('siding_id', $params['siding_id']));
         }
-        $rows = $query->orderByDesc('created_at')->limit(500)->get();
+        $rows = $query->latest()->limit(500)->get();
 
-        return $rows->map(fn ($r) => [
+        return $rows->map(fn ($r): array => [
             'wagon_number' => $r->wagon_number,
             'rake_number' => $r->rake?->rake_number,
             'siding' => $r->rake?->siding?->name,
@@ -165,11 +165,11 @@ final readonly class RunReportAction
             ->with('rake.siding:id,name', 'loader:id,loader_name')
             ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
         if (! empty($params['date_from']) || ! empty($params['date_to'])) {
-            $query->whereHas('rake', function ($q) use ($params) {
-                if (! empty($params['date_from'])) {
+            $query->whereHas('rake', function ($q) use ($params): void {
+                if (isset($params['date_from']) && ($params['date_from'] !== '' && $params['date_from'] !== '0')) {
                     $q->where('loading_start_time', '>=', $params['date_from']);
                 }
-                if (! empty($params['date_to'])) {
+                if (isset($params['date_to']) && ($params['date_to'] !== '' && $params['date_to'] !== '0')) {
                     $q->where('loading_start_time', '<=', $params['date_to'].' 23:59:59');
                 }
             });
@@ -177,9 +177,9 @@ final readonly class RunReportAction
         if (! empty($params['siding_id'])) {
             $query->whereHas('rake', fn ($q) => $q->where('siding_id', $params['siding_id']));
         }
-        $rows = $query->orderByDesc('wagons.created_at')->limit(500)->get();
+        $rows = $query->latest('wagons.created_at')->limit(500)->get();
 
-        return $rows->map(fn ($r) => [
+        return $rows->map(fn ($r): array => [
             'wagon_number' => $r->wagon_number,
             'rake_number' => $r->rake?->rake_number,
             'loader' => $r->loader?->loader_name,
@@ -204,7 +204,7 @@ final readonly class RunReportAction
         }
         $rows = $query->orderByDesc('weighment_time')->limit(500)->get();
 
-        return $rows->map(fn ($r) => [
+        return $rows->map(fn ($r): array => [
             'rake_number' => $r->rake?->rake_number,
             'weighment_time' => $r->weighment_time?->toIso8601String(),
             'total_weight_mt' => $r->total_weight_mt,
@@ -228,18 +228,18 @@ final readonly class RunReportAction
             $query->whereHas('rake', fn ($q) => $q->where('siding_id', $params['siding_id']));
         }
         if (! empty($params['date_from']) || ! empty($params['date_to'])) {
-            $query->whereHas('rake', function ($q) use ($params) {
-                if (! empty($params['date_from'])) {
+            $query->whereHas('rake', function ($q) use ($params): void {
+                if (isset($params['date_from']) && ($params['date_from'] !== '' && $params['date_from'] !== '0')) {
                     $q->where('loading_end_time', '>=', $params['date_from']);
                 }
-                if (! empty($params['date_to'])) {
+                if (isset($params['date_to']) && ($params['date_to'] !== '' && $params['date_to'] !== '0')) {
                     $q->where('loading_end_time', '<=', $params['date_to'].' 23:59:59');
                 }
             });
         }
         $rows = $query->limit(500)->get();
 
-        return $rows->map(fn ($r) => [
+        return $rows->map(fn ($r): array => [
             'wagon_number' => $r->wagon_number,
             'rake_number' => $r->rake?->rake_number,
             'loader_qty' => (float) $r->loader_recorded_qty_mt,
@@ -267,7 +267,7 @@ final readonly class RunReportAction
         }
         $rows = $query->orderByDesc('loading_end_time')->limit(500)->get();
 
-        return $rows->map(function ($r) {
+        return $rows->map(function ($r): array {
             $start = $r->loading_start_time;
             $end = $r->loading_end_time;
             $minutes = $start && $end ? $start->diffInMinutes($end) : null;
@@ -296,9 +296,9 @@ final readonly class RunReportAction
         if (! empty($params['siding_id'])) {
             $query->whereHas('rake', fn ($q) => $q->where('siding_id', $params['siding_id']));
         }
-        $rows = $query->orderByDesc('rr_received_date')->limit(500)->get();
+        $rows = $query->latest('rr_received_date')->limit(500)->get();
 
-        return $rows->map(fn ($r) => [
+        return $rows->map(fn ($r): array => [
             'rr_number' => $r->rr_number,
             'rake_number' => $r->rake?->rake_number,
             'siding' => $r->rake?->siding?->name,
@@ -322,9 +322,9 @@ final readonly class RunReportAction
         if (! empty($params['siding_id'])) {
             $query->whereHas('rake', fn ($q) => $q->where('siding_id', $params['siding_id']));
         }
-        $rows = $query->orderByDesc('penalty_date')->limit(500)->get();
+        $rows = $query->latest('penalty_date')->limit(500)->get();
 
-        return $rows->map(fn ($r) => [
+        return $rows->map(fn ($r): array => [
             'rake_number' => $r->rake?->rake_number,
             'siding' => $r->rake?->siding?->name,
             'penalty_type' => $r->penalty_type,

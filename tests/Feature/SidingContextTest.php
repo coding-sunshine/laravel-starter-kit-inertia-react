@@ -19,7 +19,7 @@ afterEach(function (): void {
 
 test('set and get returns the siding', function (): void {
     $org = Organization::factory()->create();
-    $siding = Siding::create([
+    $siding = Siding::query()->create([
         'organization_id' => $org->id,
         'name' => 'Test Siding',
         'code' => 'TST',
@@ -37,7 +37,7 @@ test('set and get returns the siding', function (): void {
 
 test('set null clears context', function (): void {
     $org = Organization::factory()->create();
-    $siding = Siding::create([
+    $siding = Siding::query()->create([
         'organization_id' => $org->id,
         'name' => 'Test Siding',
         'code' => 'TST',
@@ -56,7 +56,7 @@ test('set null clears context', function (): void {
 
 test('forget clears context', function (): void {
     $org = Organization::factory()->create();
-    $siding = Siding::create([
+    $siding = Siding::query()->create([
         'organization_id' => $org->id,
         'name' => 'Test Siding',
         'code' => 'TST',
@@ -73,7 +73,7 @@ test('forget clears context', function (): void {
 
 test('activeSidingIds returns current siding when set', function (): void {
     $org = Organization::factory()->create();
-    $siding = Siding::create([
+    $siding = Siding::query()->create([
         'organization_id' => $org->id,
         'name' => 'Siding A',
         'code' => 'SA',
@@ -81,7 +81,7 @@ test('activeSidingIds returns current siding when set', function (): void {
         'station_code' => 'SA',
         'is_active' => true,
     ]);
-    $siding2 = Siding::create([
+    $siding2 = Siding::query()->create([
         'organization_id' => $org->id,
         'name' => 'Siding B',
         'code' => 'SB',
@@ -102,7 +102,7 @@ test('activeSidingIds returns current siding when set', function (): void {
 
 test('activeSidingIds returns all user sidings when no context set', function (): void {
     $org = Organization::factory()->create();
-    $siding = Siding::create([
+    $siding = Siding::query()->create([
         'organization_id' => $org->id,
         'name' => 'Siding A',
         'code' => 'SA',
@@ -110,7 +110,7 @@ test('activeSidingIds returns all user sidings when no context set', function ()
         'station_code' => 'SA',
         'is_active' => true,
     ]);
-    $siding2 = Siding::create([
+    $siding2 = Siding::query()->create([
         'organization_id' => $org->id,
         'name' => 'Siding B',
         'code' => 'SB',
@@ -132,7 +132,7 @@ test('activeSidingIds returns all user sidings when no context set', function ()
 
 test('siding switch endpoint changes context', function (): void {
     $org = Organization::factory()->create();
-    $siding = Siding::create([
+    $siding = Siding::query()->create([
         'organization_id' => $org->id,
         'name' => 'Target Siding',
         'code' => 'TGT',
@@ -153,7 +153,7 @@ test('siding switch endpoint changes context', function (): void {
 
 test('siding switch rejects inaccessible siding', function (): void {
     $org = Organization::factory()->create();
-    $siding = Siding::create([
+    $siding = Siding::query()->create([
         'organization_id' => $org->id,
         'name' => 'Restricted Siding',
         'code' => 'RST',
@@ -174,7 +174,7 @@ test('siding switch rejects inaccessible siding', function (): void {
 
 test('switching to all sidings persists and restores correctly', function (): void {
     $org = Organization::factory()->create();
-    $siding = Siding::create([
+    $siding = Siding::query()->create([
         'organization_id' => $org->id,
         'name' => 'Siding A',
         'code' => 'SA',
@@ -182,7 +182,7 @@ test('switching to all sidings persists and restores correctly', function (): vo
         'station_code' => 'SA',
         'is_active' => true,
     ]);
-    $siding2 = Siding::create([
+    $siding2 = Siding::query()->create([
         'organization_id' => $org->id,
         'name' => 'Siding B',
         'code' => 'SB',
@@ -213,7 +213,7 @@ test('switching to all sidings persists and restores correctly', function (): vo
 
 test('initForUser auto-locks single siding user', function (): void {
     $org = Organization::factory()->create();
-    $siding = Siding::create([
+    $siding = Siding::query()->create([
         'organization_id' => $org->id,
         'name' => 'Only Siding',
         'code' => 'ONL',

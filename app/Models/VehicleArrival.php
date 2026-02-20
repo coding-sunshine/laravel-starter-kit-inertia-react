@@ -132,48 +132,6 @@ final class VehicleArrival extends Model
     }
 
     /**
-     * Scope: pending arrivals
-     */
-    public function scopePending(Builder $query): Builder
-    {
-        return $query->where('status', 'pending');
-    }
-
-    /**
-     * Scope: currently unloading
-     */
-    public function scopeUnloading(Builder $query): Builder
-    {
-        return $query->where('status', 'unloading');
-    }
-
-    /**
-     * Scope: completed unloading
-     */
-    public function scopeUnloaded(Builder $query): Builder
-    {
-        return $query->where('status', 'unloaded');
-    }
-
-    /**
-     * Scope: by siding
-     */
-    public function scopeBySiding(Builder $query, int|Siding $siding): Builder
-    {
-        $sidingId = $siding instanceof Siding ? $siding->id : $siding;
-
-        return $query->where('siding_id', $sidingId);
-    }
-
-    /**
-     * Scope: recent arrivals (last 7 days)
-     */
-    public function scopeRecent(Builder $query): Builder
-    {
-        return $query->where('arrived_at', '>=', now()->subDays(7));
-    }
-
-    /**
      * Start unloading this vehicle
      */
     public function startUnloading(): void
@@ -241,5 +199,52 @@ final class VehicleArrival extends Model
     public function isUnloaded(): bool
     {
         return $this->status === 'unloaded';
+    }
+
+    /**
+     * Scope: pending arrivals
+     */
+    #[\Illuminate\Database\Eloquent\Attributes\Scope]
+    protected function pending(Builder $query): Builder
+    {
+        return $query->where('status', 'pending');
+    }
+
+    /**
+     * Scope: currently unloading
+     */
+    #[\Illuminate\Database\Eloquent\Attributes\Scope]
+    protected function unloading(Builder $query): Builder
+    {
+        return $query->where('status', 'unloading');
+    }
+
+    /**
+     * Scope: completed unloading
+     */
+    #[\Illuminate\Database\Eloquent\Attributes\Scope]
+    protected function unloaded(Builder $query): Builder
+    {
+        return $query->where('status', 'unloaded');
+    }
+
+    /**
+     * Scope: by siding
+     */
+    #[\Illuminate\Database\Eloquent\Attributes\Scope]
+    protected function bySiding(Builder $query, int|Siding $siding): Builder
+    {
+        $sidingId = $siding instanceof Siding ? $siding->id : $siding;
+
+        return $query->where('siding_id', $sidingId);
+    }
+
+    /**
+     * Scope: recent arrivals (last 7 days)
+     */
+    #[\Illuminate\Database\Eloquent\Attributes\Scope]
+    protected function recent(Builder $query): Builder
+    {
+        return $query->where('arrived_at', '>=', now()->subDays(7));
     }
 }

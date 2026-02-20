@@ -34,9 +34,9 @@ final class RealDataImportSeeder extends Seeder
             return;
         }
 
-        $userId = User::where('email', 'superadmin@rrmcs.local')->first()?->id ?? User::first()?->id;
+        $userId = User::query()->where('email', 'superadmin@rrmcs.local')->first()?->id ?? User::query()->first()?->id;
 
-        $result = app(ImportRakeDataFromExcelAction::class)->handle($userId);
+        $result = resolve(ImportRakeDataFromExcelAction::class)->handle($userId);
 
         $this->command?->info(sprintf(
             'Real data import: %d rakes, %d penalties, %d weighments, %d RR documents, %d wagons.',

@@ -12,6 +12,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 
 final class Weighment extends Model implements HasMedia
 {
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use InteractsWithMedia, Userstamps;
 
     protected $fillable = [
@@ -29,13 +30,6 @@ final class Weighment extends Model implements HasMedia
 
     protected $appends = ['weighment_slip_url'];
 
-    public function getWeighmentSlipUrlAttribute(): ?string
-    {
-        $media = $this->getFirstMedia('weighment_slip_pdf');
-
-        return $media ? $media->getUrl() : null;
-    }
-
     public function registerMediaCollections(): void
     {
         $this->addMediaCollection('weighment_slip_pdf')
@@ -51,5 +45,12 @@ final class Weighment extends Model implements HasMedia
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    protected function getWeighmentSlipUrlAttribute(): ?string
+    {
+        $media = $this->getFirstMedia('weighment_slip_pdf');
+
+        return $media instanceof \Spatie\MediaLibrary\MediaCollections\Models\Media ? $media->getUrl() : null;
     }
 }

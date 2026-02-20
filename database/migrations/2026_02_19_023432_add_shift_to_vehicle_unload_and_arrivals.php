@@ -14,10 +14,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('vehicle_unload', function (Blueprint $table) {
+        Schema::table('vehicle_unload', function (Blueprint $table): void {
             $table->string('shift', 20)->nullable()->after('arrival_time');
         });
-        Schema::table('vehicle_arrivals', function (Blueprint $table) {
+        Schema::table('vehicle_arrivals', function (Blueprint $table): void {
             $table->string('shift', 20)->nullable()->after('arrived_at');
         });
     }
@@ -27,10 +27,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('vehicle_unload', function (Blueprint $table) {
+        Schema::table('vehicle_unload', function (Blueprint $table): void {
             $table->dropColumn('shift');
         });
-        Schema::table('vehicle_arrivals', function (Blueprint $table) {
+        Schema::table('vehicle_arrivals', function (Blueprint $table): void {
             $table->dropColumn('shift');
         });
     }

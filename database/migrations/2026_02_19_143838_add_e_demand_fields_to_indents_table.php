@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('indents', function (Blueprint $table) {
+        Schema::table('indents', function (Blueprint $table): void {
             $table->string('e_demand_reference_id', 100)->nullable()->after('remarks');
             $table->string('fnr_number', 50)->nullable()->after('e_demand_reference_id');
         });
@@ -24,7 +24,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('indents', function (Blueprint $table) {
+        Schema::table('indents', function (Blueprint $table): void {
             $table->dropColumn(['e_demand_reference_id', 'fnr_number']);
         });
     }

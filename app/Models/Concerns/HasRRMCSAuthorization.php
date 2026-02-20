@@ -28,7 +28,11 @@ trait HasRRMCSAuthorization
      */
     public function isManagement(): bool
     {
-        return $this->hasRole('management') || $this->isSuperAdmin();
+        if ($this->hasRole('management')) {
+            return true;
+        }
+
+        return (bool) $this->isSuperAdmin();
     }
 
     /**
@@ -36,7 +40,11 @@ trait HasRRMCSAuthorization
      */
     public function isFinance(): bool
     {
-        return $this->hasRole('finance') || $this->isSuperAdmin();
+        if ($this->hasRole('finance')) {
+            return true;
+        }
+
+        return (bool) $this->isSuperAdmin();
     }
 
     /**
@@ -44,7 +52,11 @@ trait HasRRMCSAuthorization
      */
     public function isSidingInCharge(): bool
     {
-        return $this->hasRole('siding_in_charge') || $this->isSuperAdmin();
+        if ($this->hasRole('siding_in_charge')) {
+            return true;
+        }
+
+        return (bool) $this->isSuperAdmin();
     }
 
     /**
@@ -52,7 +64,11 @@ trait HasRRMCSAuthorization
      */
     public function isSidingOperator(): bool
     {
-        return $this->hasRole('siding_operator') || $this->isSidingInCharge();
+        if ($this->hasRole('siding_operator')) {
+            return true;
+        }
+
+        return (bool) $this->isSidingInCharge();
     }
 
     /**

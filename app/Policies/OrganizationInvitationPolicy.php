@@ -20,7 +20,7 @@ final class OrganizationInvitationPolicy
      */
     public function viewAny(User $user, ?Organization $organization = null): bool
     {
-        if ($organization === null) {
+        if (! $organization instanceof Organization) {
             return $user->can('access admin panel');
         }
 

@@ -22,8 +22,6 @@ use Illuminate\Support\Facades\DB;
  */
 final readonly class OptimizePerformance
 {
-    public function __construct() {}
-
     /**
      * Get sidingmetrics with optimized queries and caching
      */
@@ -31,9 +29,7 @@ final readonly class OptimizePerformance
     {
         $cacheKey = "siding.metrics.{$sidingId}";
 
-        return Cache::remember($cacheKey, $cacheTtlSeconds, function () use ($sidingId) {
-            return $this->calculateSidingMetrics($sidingId);
-        });
+        return Cache::remember($cacheKey, $cacheTtlSeconds, fn (): array => $this->calculateSidingMetrics($sidingId));
     }
 
     /**
@@ -41,7 +37,7 @@ final readonly class OptimizePerformance
      */
     public function loadRakesOptimized(int $sidingId): Collection
     {
-        return Rake::where('siding_id', $sidingId)
+        return Rake::query()->where('siding_id', $sidingId)
             ->with([
                 'guardInspection',           // One-to-one: no N+1
                 'weighments' => fn ($q) => $q->latest('weighment_time')->limit(3),
@@ -78,7 +74,7 @@ final readonly class OptimizePerformance
         // Use raw SQL for better performance on large batches
         $updated = 0;
 
-        DB::transaction(function () use ($rakeStateMap, &$updated) {
+        DB::transaction(function () use ($rakeStateMap, &$updated): void {
             foreach ($rakeStateMap as $rakeId => $state) {
                 $updated += DB::table('rakes')
                     ->where('id', $rakeId)
@@ -119,7 +115,7 @@ final readonly class OptimizePerformance
         // Run common queries
         Siding::all();
         Rake::with('weighments', 'guardInspection', 'penalties')->get();
-        StockLedger::latest('created_at')->limit(100)->get();
+        StockLedger::query()->latest('created_at')->limit(100)->get();
 
         $endTime = microtime(true);
         $queries = DB::getQueryLog();
@@ -127,7 +123,7 @@ final readonly class OptimizePerformance
         return [
             'total_queries' => count($queries),
             'execution_time_ms' => round(($endTime - $startTime) * 1000, 2),
-            'slow_queries' => array_filter($queries, fn ($q) => $q['time'] > 100),
+            'slow_queries' => array_filter($queries, fn (array $q): bool => $q['time'] > 100),
             'recommendations' => $this->generateOptimizationRecommendations($queries),
         ];
     }
@@ -181,7 +177,7 @@ final readonly class OptimizePerformance
             ->first();
 
         // Stock levels in single query
-        $lastStock = StockLedger::where('siding_id', $sidingId)
+        $lastStock = StockLedger::query()->where('siding_id', $sidingId)
             ->latest('created_at')
             ->first();
 
@@ -247,14 +243,14 @@ final readonly class OptimizePerformance
         $recommendations = [];
 
         // Check for N+1 patterns
-        $selectQueries = array_filter($queries, fn ($q) => str_contains($q['query'], 'SELECT'));
+        $selectQueries = array_filter($queries, fn (array $q): bool => str_contains((string) $q['query'], 'SELECT'));
         if (count($selectQueries) > 10) {
             $recommendations[] = 'High query count detected - Consider implementing caching';
         }
 
         // Check for slow queries
-        $slowQueries = array_filter($queries, fn ($q) => $q['time'] > 100);
-        if (! empty($slowQueries)) {
+        $slowQueries = array_filter($queries, fn (array $q): bool => $q['time'] > 100);
+        if ($slowQueries !== []) {
             $recommendations[] = 'Slow queries detected - Add database indexes or optimize query conditions';
         }
 

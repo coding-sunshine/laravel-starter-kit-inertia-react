@@ -13,6 +13,7 @@ use Mattiverse\Userstamps\Traits\Userstamps;
 
 final class Rake extends Model
 {
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use SoftDeletes, Userstamps;
 
     protected $fillable = [

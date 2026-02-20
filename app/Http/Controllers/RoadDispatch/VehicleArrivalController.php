@@ -86,8 +86,7 @@ final class VehicleArrivalController extends Controller
 
         $this->createVehicleArrival->handle($data, (int) $request->user()->id);
 
-        return redirect()
-            ->route('road-dispatch.arrivals.index')
+        return to_route('road-dispatch.arrivals.index')
             ->with('success', 'Vehicle arrival recorded.');
     }
 }

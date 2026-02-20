@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 final class SyncQueue extends Model
 {
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
+
     protected $table = 'sync_queue';
 
     protected $fillable = [

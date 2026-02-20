@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('wagons', function (Blueprint $table) {
+        Schema::create('wagons', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('rake_id')->constrained('rakes')->onDelete('cascade');
             $table->integer('wagon_sequence')->default(0); // Position in rake (1-60)

@@ -21,8 +21,6 @@ use InvalidArgumentException;
  */
 final readonly class UpdateStockLedger
 {
-    public function __construct() {}
-
     /**
      * Record a stock receipt (coal arrival)
      */
@@ -40,7 +38,7 @@ final readonly class UpdateStockLedger
             $newBalance = $currentBalance + $quantity;
 
             // Create ledger entry
-            $ledger = StockLedger::create([
+            $ledger = StockLedger::query()->create([
                 'siding_id' => $siding->id,
                 'transaction_type' => 'receipt',
                 'vehicle_arrival_id' => $vehicleArrival->id,
@@ -73,7 +71,7 @@ final readonly class UpdateStockLedger
             $currentBalance = $this->getCurrentBalance($siding->id);
             $newBalance = $currentBalance + $quantity;
 
-            $ledger = StockLedger::create([
+            $ledger = StockLedger::query()->create([
                 'siding_id' => $siding->id,
                 'transaction_type' => 'receipt',
                 'vehicle_arrival_id' => null,
@@ -104,16 +102,12 @@ final readonly class UpdateStockLedger
         return DB::transaction(function () use ($siding, $quantity, $rakeId, $remarks, $userId): StockLedger {
             // Validate sufficient stock
             $currentBalance = $this->getCurrentBalance($siding->id);
-            if ($currentBalance < $quantity) {
-                throw new InvalidArgumentException(
-                    "Insufficient stock. Available: {$currentBalance} MT, Required: {$quantity} MT"
-                );
-            }
+            throw_if($currentBalance < $quantity, InvalidArgumentException::class, "Insufficient stock. Available: {$currentBalance} MT, Required: {$quantity} MT");
 
             $newBalance = $currentBalance - $quantity;
 
             // Create ledger entry
-            $ledger = StockLedger::create([
+            $ledger = StockLedger::query()->create([
                 'siding_id' => $siding->id,
                 'transaction_type' => 'dispatch',
                 'rake_id' => $rakeId,
@@ -146,7 +140,7 @@ final readonly class UpdateStockLedger
             $newBalance = $currentBalance - abs($correctionQuantity);
 
             // Create ledger entry
-            $ledger = StockLedger::create([
+            $ledger = StockLedger::query()->create([
                 'siding_id' => $siding->id,
                 'transaction_type' => 'correction',
                 'quantity_mt' => abs($correctionQuantity),
@@ -170,7 +164,7 @@ final readonly class UpdateStockLedger
     public function getCurrentBalance(int $sidingId): float
     {
         // Get last ledger entry's closing balance
-        $lastLedger = StockLedger::where('siding_id', $sidingId)
+        $lastLedger = StockLedger::query()->where('siding_id', $sidingId)
             ->latest('created_at')
             ->first();
 
@@ -182,12 +176,12 @@ final readonly class UpdateStockLedger
      */
     public function getStockSummary(int $sidingId): array
     {
-        $receipts = StockLedger::where('siding_id', $sidingId)
+        $receipts = StockLedger::query()->where('siding_id', $sidingId)
             ->receipts()
             ->recent()
             ->sum('quantity_mt');
 
-        $dispatches = StockLedger::where('siding_id', $sidingId)
+        $dispatches = StockLedger::query()->where('siding_id', $sidingId)
             ->dispatches()
             ->recent()
             ->sum('quantity_mt');
@@ -199,7 +193,7 @@ final readonly class UpdateStockLedger
             'receipts_30_days' => $receipts,
             'dispatches_30_days' => $dispatches,
             'net_change_30_days' => $receipts - $dispatches,
-            'last_updated' => StockLedger::where('siding_id', $sidingId)
+            'last_updated' => StockLedger::query()->where('siding_id', $sidingId)
                 ->latest('created_at')
                 ->value('created_at'),
         ];
@@ -210,7 +204,7 @@ final readonly class UpdateStockLedger
      */
     public function getLedgerHistory(int $sidingId, int $limit = 50): \Illuminate\Pagination\Paginate
     {
-        return StockLedger::where('siding_id', $sidingId)
+        return StockLedger::query()->where('siding_id', $sidingId)
             ->with('vehicleArrival.vehicle', 'rake', 'creator')
             ->latest('created_at')
             ->paginate($limit);
@@ -224,14 +218,11 @@ final readonly class UpdateStockLedger
         $today = now()->toDateString();
 
         // Upsert today's coal stock record
-        \App\Models\CoalStock::updateOrCreate(
-            [
-                'siding_id' => $sidingId,
-                'as_of_date' => $today,
-            ],
-            [
-                'closing_balance_mt' => $balance,
-            ]
-        );
+        \App\Models\CoalStock::query()->updateOrCreate([
+            'siding_id' => $sidingId,
+            'as_of_date' => $today,
+        ], [
+            'closing_balance_mt' => $balance,
+        ]);
     }
 }

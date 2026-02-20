@@ -32,7 +32,7 @@ final class ReconciliationController extends Controller
         }
 
         $rakes = $query->paginate(15)->withQueryString();
-        $reconcile = app(ReconcileRakeAction::class);
+        $reconcile = resolve(ReconcileRakeAction::class);
         $rows = [];
         foreach ($rakes->items() as $rake) {
             $points = $reconcile->handle($rake);
@@ -74,7 +74,7 @@ final class ReconciliationController extends Controller
     {
         $this->authorize('view', $rake);
 
-        $points = app(ReconcileRakeAction::class)->handle($rake);
+        $points = resolve(ReconcileRakeAction::class)->handle($rake);
         $rake->load('siding:id,name,code');
 
         return Inertia::render('reconciliation/show', [

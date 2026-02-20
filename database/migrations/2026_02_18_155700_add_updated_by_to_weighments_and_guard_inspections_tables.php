@@ -13,10 +13,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('weighments', function (Blueprint $table) {
+        Schema::table('weighments', function (Blueprint $table): void {
             $table->foreignId('updated_by')->nullable()->after('created_by')->constrained('users')->onDelete('set null');
         });
-        Schema::table('guard_inspections', function (Blueprint $table) {
+        Schema::table('guard_inspections', function (Blueprint $table): void {
             $table->foreignId('updated_by')->nullable()->after('created_by')->constrained('users')->onDelete('set null');
         });
     }
@@ -26,10 +26,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('weighments', function (Blueprint $table) {
+        Schema::table('weighments', function (Blueprint $table): void {
             $table->dropForeign(['updated_by']);
         });
-        Schema::table('guard_inspections', function (Blueprint $table) {
+        Schema::table('guard_inspections', function (Blueprint $table): void {
             $table->dropForeign(['updated_by']);
         });
     }

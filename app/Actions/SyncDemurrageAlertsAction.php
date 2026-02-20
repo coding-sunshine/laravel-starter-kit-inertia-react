@@ -6,7 +6,6 @@ namespace App\Actions;
 
 use App\Models\Alert;
 use App\Models\Rake;
-use Carbon\Carbon;
 
 final readonly class SyncDemurrageAlertsAction
 {
@@ -35,7 +34,7 @@ final readonly class SyncDemurrageAlertsAction
         $rakeIdsInDemurrage = [];
         foreach ($rakes as $rake) {
             $end = $rake->loading_start_time->copy()->addMinutes((int) $rake->free_time_minutes);
-            $remainingMinutes = (int) Carbon::now()->diffInMinutes($end, false);
+            $remainingMinutes = (int) \Illuminate\Support\Facades\Date::now()->diffInMinutes($end, false);
 
             if ($remainingMinutes > 60) {
                 continue;

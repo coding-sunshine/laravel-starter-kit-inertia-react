@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('vehicles', function (Blueprint $table) {
+        Schema::create('vehicles', function (Blueprint $table): void {
             $table->id();
             $table->string('vehicle_number', 20)->unique();
             $table->string('rfid_tag', 50)->nullable()->unique();

@@ -11,9 +11,9 @@ use Illuminate\Support\Facades\DB;
 
 final readonly class ReconcileRakeAction
 {
-    private const VARIANCE_MATCH_PCT = 1.0;
+    private const float VARIANCE_MATCH_PCT = 1.0;
 
-    private const VARIANCE_MINOR_PCT = 5.0;
+    private const float VARIANCE_MINOR_PCT = 5.0;
 
     /**
      * Compute five-point reconciliation for a rake. Returns array of comparison points.
@@ -31,15 +31,15 @@ final readonly class ReconcileRakeAction
         if ($weighmentTotal === 0.0) {
             $weighmentTotal = (float) $rake->wagons()->sum('weighment_qty_mt');
         }
-        $rrWeight = $rake->rrDocuments()->orderByDesc('rr_received_date')->value('rr_weight_mt');
+        $rrWeight = $rake->rrDocuments()->latest('rr_received_date')->value('rr_weight_mt');
         $rrWeight = $rrWeight !== null ? (float) $rrWeight : null;
-        $ppReceipt = $rake->powerPlantReceipts()->orderByDesc('receipt_date')->first();
+        $ppReceipt = $rake->powerPlantReceipts()->latest('receipt_date')->first();
         $ppWeight = $ppReceipt ? (float) $ppReceipt->weight_mt : null;
 
         $points = [];
 
         $points[] = $this->pointMineVsSiding($sidingId, $loadingStart, $loadingEnd);
-        $points[] = $this->pointSidingVsRake($sidingId, $rake, $loadingStart, $weighmentTotal);
+        $points[] = $this->pointSidingVsRake($sidingId, $loadingStart, $weighmentTotal);
         $points[] = $this->pointRakeVsWeighment($loaderTotal, $weighmentTotal);
         $points[] = $this->pointWeighmentVsRr($weighmentTotal, $rrWeight);
         $points[] = $this->pointRrVsPowerPlant($rrWeight, $ppWeight);
@@ -74,12 +74,11 @@ final readonly class ReconcileRakeAction
     /**
      * @return array{point: string, value_a: float|null, value_b: float|null, variance_mt: float|null, variance_pct: float|null, status: string}
      */
-    private function pointSidingVsRake(int $sidingId, Rake $rake, ?string $before, float $rakeLoaded): array
+    private function pointSidingVsRake(int $sidingId, ?string $before, float $rakeLoaded): array
     {
         $closing = StockLedger::query()
             ->where('siding_id', $sidingId)
-            ->when($before, fn ($q) => $q->where('created_at', '<', $before))
-            ->orderByDesc('created_at')
+            ->when($before, fn ($q) => $q->where('created_at', '<', $before))->latest()
             ->value('closing_balance_mt');
         $valueA = $closing !== null ? (float) $closing : null;
         $valueB = $rakeLoaded > 0 ? $rakeLoaded : null;

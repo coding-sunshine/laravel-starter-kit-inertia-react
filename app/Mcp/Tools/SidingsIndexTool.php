@@ -33,7 +33,7 @@ final class SidingsIndexTool extends Tool
             ->orderBy('name')
             ->get();
 
-        $data = $sidings->map(fn ($siding) => [
+        $data = $sidings->map(fn ($siding): array => [
             'id' => $siding->id,
             'name' => $siding->name,
             'code' => $siding->code,
@@ -41,7 +41,7 @@ final class SidingsIndexTool extends Tool
             'station_code' => $siding->station_code,
             'is_active' => $siding->is_active,
             'created_at' => $siding->created_at->toIso8601String(),
-        ])->toArray();
+        ])->all();
 
         return Response::json([
             'data' => $data,

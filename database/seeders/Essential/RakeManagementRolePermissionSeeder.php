@@ -22,12 +22,12 @@ final class RakeManagementRolePermissionSeeder extends Seeder
     public function run(): void
     {
         // Create roles (SOW §3: Mine Operator, Siding Operator, Siding In-Charge, Management, System Admin)
-        $superAdmin = \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
-        $management = \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'management', 'guard_name' => 'web']);
-        $inCharge = \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'siding_in_charge', 'guard_name' => 'web']);
-        $operator = \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'siding_operator', 'guard_name' => 'web']);
-        $mineOperator = \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'mine_operator', 'guard_name' => 'web']);
-        $finance = \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'finance', 'guard_name' => 'web']);
+        $superAdmin = \Spatie\Permission\Models\Role::query()->firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
+        $management = \Spatie\Permission\Models\Role::query()->firstOrCreate(['name' => 'management', 'guard_name' => 'web']);
+        $inCharge = \Spatie\Permission\Models\Role::query()->firstOrCreate(['name' => 'siding_in_charge', 'guard_name' => 'web']);
+        $operator = \Spatie\Permission\Models\Role::query()->firstOrCreate(['name' => 'siding_operator', 'guard_name' => 'web']);
+        $mineOperator = \Spatie\Permission\Models\Role::query()->firstOrCreate(['name' => 'mine_operator', 'guard_name' => 'web']);
+        $finance = \Spatie\Permission\Models\Role::query()->firstOrCreate(['name' => 'finance', 'guard_name' => 'web']);
 
         // Define permissions for RRMCS
         $permissions = [
@@ -64,7 +64,7 @@ final class RakeManagementRolePermissionSeeder extends Seeder
 
         // Create all permissions
         foreach ($permissions as $permission) {
-            \Spatie\Permission\Models\Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'web']);
+            \Spatie\Permission\Models\Permission::query()->firstOrCreate(['name' => $permission, 'guard_name' => 'web']);
         }
 
         // Assign permissions to roles

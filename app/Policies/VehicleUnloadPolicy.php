@@ -9,29 +9,41 @@ use App\Models\VehicleUnload;
 
 final class VehicleUnloadPolicy
 {
-    public function viewAny(User $user): bool
+    public function viewAny(): bool
     {
         return true;
     }
 
     public function view(User $user, VehicleUnload $vehicleUnload): bool
     {
-        return $user->isSuperAdmin() || $user->canAccessSiding($vehicleUnload->siding_id);
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        return $user->canAccessSiding($vehicleUnload->siding_id);
     }
 
-    public function create(User $user): bool
+    public function create(): bool
     {
         return true;
     }
 
     public function update(User $user, VehicleUnload $vehicleUnload): bool
     {
-        return $user->isSuperAdmin() || $user->canAccessSiding($vehicleUnload->siding_id);
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        return $user->canAccessSiding($vehicleUnload->siding_id);
     }
 
     public function delete(User $user, VehicleUnload $vehicleUnload): bool
     {
-        return $user->isSuperAdmin() || $user->canAccessSiding($vehicleUnload->siding_id);
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        return $user->canAccessSiding($vehicleUnload->siding_id);
     }
 
     public function restore(User $user, VehicleUnload $vehicleUnload): bool
@@ -39,7 +51,7 @@ final class VehicleUnloadPolicy
         return $this->delete($user, $vehicleUnload);
     }
 
-    public function forceDelete(User $user, VehicleUnload $vehicleUnload): bool
+    public function forceDelete(User $user): bool
     {
         return $user->isSuperAdmin();
     }

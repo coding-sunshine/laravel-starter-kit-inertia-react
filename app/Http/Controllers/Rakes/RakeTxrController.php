@@ -37,8 +37,7 @@ final class RakeTxrController extends Controller
             ]);
         }
 
-        return redirect()
-            ->route('rakes.show', $rake)
+        return to_route('rakes.show', $rake)
             ->with('success', 'TXR updated.');
     }
 }

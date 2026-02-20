@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coal Dispatch Flow - Complete Journey</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #fff;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            padding: 30px 0;
+            background: rgba(0,0,0,0.3);
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .controls {
+            position: sticky;
+            top: 5px;
+            z-index: 999;
+            text-align: center;
+            margin-bottom: 30px;
+            background: rgba(30, 60, 114, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 15px 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.1em;
+            border-radius: 50px;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn.reset {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        
+        .journey-container {
+            position: relative;
+            padding: 40px 0;
+        }
+        
+        .phase-section {
+            margin-bottom: 60px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .phase-title {
+            font-size: 2em;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            border-left: 5px solid #ffd700;
+        }
+        
+        .step-card {
+            background: rgba(255,255,255,0.15);
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+            position: relative;
+            opacity: 0.3;
+            transform: translateX(-20px);
+            transition: all 0.5s ease;
+            border-left: 5px solid transparent;
+        }
+        
+        .step-card.active {
+            opacity: 1;
+            transform: translateX(0);
+            border-left-color: #4ade80;
+            box-shadow: 0 10px 30px rgba(74, 222, 128, 0.3);
+        }
+        
+        .step-card.completed {
+            opacity: 0.7;
+            border-left-color: #60a5fa;
+        }
+        
+        .step-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .step-number {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-right: 20px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+        
+        .step-card.active .step-number {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .step-title {
+            font-size: 1.4em;
+            font-weight: bold;
+        }
+        
+        .step-description {
+            margin: 15px 0;
+            line-height: 1.6;
+            font-size: 1.05em;
+        }
+        
+        .step-details {
+            background: rgba(0,0,0,0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+        }
+        
+        .detail-item {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+        }
+        
+        .icon {
+            margin-right: 10px;
+            font-size: 1.2em;
+        }
+        
+        .critical-alert {
+            background: rgba(239, 68, 68, 0.2);
+            border: 2px solid #ef4444;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            animation: blink 2s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .data-capture {
+            background: rgba(34, 197, 94, 0.2);
+            border: 2px solid #22c55e;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+        }
+        
+        .data-capture-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #4ade80;
+        }
+        
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 0%;
+            height: 5px;
+            background: linear-gradient(90deg, #4ade80, #22c55e);
+            transition: width 0.5s ease;
+            z-index: 1000;
+        }
+        
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            background: rgba(255,255,255,0.1);
+            padding: 10px 20px;
+            border-radius: 25px;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        
+        .vehicle-animation {
+            position: relative;
+            height: 60px;
+            margin: 20px 0;
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .vehicle {
+            position: absolute;
+            left: -100px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 2em;
+            transition: left 2s ease;
+        }
+        
+        .vehicle.moving {
+            left: 100%;
+        }
+        
+        .timer-display {
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 1.3em;
+            text-align: center;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .timer-display.warning {
+            background: rgba(239, 68, 68, 0.3);
+            animation: blink 1s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="progress-bar" id="progressBar"></div>
+    
+    <div class="container">
+        <div class="header">
+            <h1>🚂 Coal Dispatch Flow Journey</h1>
+            <p>Mine → Road Transport → Railway Siding → Rake Loading → Weighment → RR Generation</p>
+        </div>
+        
+        <div class="controls">
+            <button class="btn" onclick="startJourney()">▶️ Start Journey</button>
+            <button class="btn" onclick="nextStep()">⏭️ Next Step</button>
+            <button class="btn reset" onclick="resetJourney()">🔄 Reset</button>
+        </div>
+        
+        <div class="journey-container">
+            <!-- PHASE 1: MINE OPERATIONS -->
+            <div class="phase-section">
+                <div class="phase-title">📍 PHASE 1: MINE OPERATIONS</div>
+                
+                <div class="step-card" data-step="1">
+                    <div class="step-header">
+                        <div class="step-number">1</div>
+                        <div class="step-title">Vehicle Authorization & RFID Entry</div>
+                    </div>
+                    <div class="step-description">
+                        All vehicles are pre-authorized and GPS-enabled. Entry allowed only after system validation.
+                    </div>
+                    <div class="data-capture">
+                        <div class="data-capture-title">📊 DATA TO CAPTURE:</div>
+                        <div class="detail-item"><span class="icon">🚛</span> Vehicle Number</div>
+                        <div class="detail-item"><span class="icon">🔖</span> RFID Tag</div>
+                        <div class="detail-item"><span class="icon">⏰</span> Entry Timestamp</div>
+                        <div class="detail-item"><span class="icon">📡</span> GPS Coordinates</div>
+                    </div>
+                </div>
+                
+                <div class="step-card" data-step="2">
+                    <div class="step-header">
+                        <div class="step-number">2</div>
+                        <div class="step-title">Gate Pass / Loading Slip Issue</div>
+                    </div>
+                    <div class="step-description">
+                        Vehicle must handover previous trip gate pass. New gate pass issued only after verification.
+                    </div>
+                    <div class="step-details">
+                        <div class="detail-item"><span class="icon">🎫</span> Previous trip gate pass verification</div>
+                        <div class="detail-item"><span class="icon">⚖️</span> Tare weight taken at entry (or fortnightly)</div>
+                    </div>
+                    <div class="data-capture">
+                        <div class="data-capture-title">📊 DATA TO CAPTURE:</div>
+                        <div class="detail-item"><span class="icon">🎫</span> Previous Gate Pass Number</div>
+                        <div class="detail-item"><span class="icon">📝</span> New Gate Pass Number</div>
+                        <div class="detail-item"><span class="icon">⚖️</span> Tare Weight (kg)</div>
+                        <div class="detail-item"><span class="icon">⏰</span> Issue Timestamp</div>
+                    </div>
+                </div>
+                
+                <div class="step-card" data-step="3">
+                    <div class="step-header">
+                        <div class="step-number">3</div>
+                        <div class="step-title">Movement to Loading Point</div>
+                    </div>
+                    <div class="step-description">
+                        Vehicle proceeds to coal loading point and waits in queue.
+                    </div>
+                    <div class="vehicle-animation" id="vehicleAnim1">
+                        <div class="vehicle">🚛</div>
+                    </div>
+                </div>
+                
+                <div class="step-card" data-step="4">
+                    <div class="step-header">
+                        <div class="step-number">4</div>
+                        <div class="step-title">Coal Loading at Mine</div>
+                    </div>
+                    <div class="step-description">
+                        Coal loaded by operators. No overloading/underloading - strictly as per carrying capacity.
+                    </div>
+                    <div class="data-capture">
+                        <div class="data-capture-title">📊 DATA TO CAPTURE:</div>
+                        <div class="detail-item"><span class="icon">👷</span> Loader Operator ID</div>
+                        <div class="detail-item"><span class="icon">🏗️</span> Loader Equipment ID</div>
+                        <div class="detail-item"><span class="icon">⏰</span> Loading Start Time</div>
+                        <div class="detail-item"><span class="icon">⏰</span> Loading End Time</div>
+                    </div>
+                </div>
+                
+                <div class="step-card" data-step="5">
+                    <div class="step-header">
+                        <div class="step-number">5</div>
+                        <div class="step-title">Weighbridge & Weighment</div>
+                    </div>
+                    <div class="step-description">
+                        Vehicle moves to weighbridge. If overloaded, returns to stockyard to drop excess load.
+                    </div>
+                    <div class="data-capture">
+                        <div class="data-capture-title">📊 DATA TO CAPTURE:</div>
+                        <div class="detail-item"><span class="icon">⚖️</span> Gross Weight (kg)</div>
+                        <div class="detail-item"><span class="icon">⚖️</span> Tare Weight (kg)</div>
+                        <div class="detail-item"><span class="icon">⚖️</span> Net Weight (kg)</div>
+                        <div class="detail-item"><span class="icon">📄</span> Weighment Slip Number</div>
+                        <div class="detail-item"><span class="icon">⏰</span> Weighment Timestamp</div>
+                    </div>
+                    <div class="critical-alert">
+                        ⚠️ <strong>VALIDATION:</strong> If overloaded → Go back to stockyard → Re-weigh
+                    </div>
+                </div>
+                
+                <div class="step-card" data-step="6">
+                    <div class="step-header">
+                        <div class="step-number">6</div>
+                        <div class="step-title">JIMMS Challan Generation</div>
+                    </div>
+                    <div class="step-description">
+                        Mining challan generated based on weighment slip and approved route.
+                    </div>
+                    <div class="data-capture">
+                        <div class="data-capture-title">📊 DATA TO CAPTURE:</div>
+                        <div class="detail-item"><span class="icon">📋</span> JIMMS Challan Number</div>
+                        <div class="detail-item"><span class="icon">🛣️</span> Approved Route</div>
+                        <div class="detail-item"><span class="icon">⏰</span> Challan Issue Time</div>
+                    </div>
+                </div>
+                
+                <div class="step-card" data-step="7">
+                    <div class="step-header">
+                        <div class="step-number">7</div>
+                        <div class="step-title">Dust Suppression & Safety</div>
+                    </div>
+                    <div class="step-description">
+                        Vehicle passes through water sprinklers. Entire body covered with tarpaulin.
+                    </div>
+                    <div class="step-details">
+                        <div class="detail-item"><span class="icon">💧</span> Water sprinkling</div>
+                        <div class="detail-item"><span class="icon">🛡️</span> Tarpaulin covering</div>
+                    </div>
+                </div>
+                
+                <div class="step-card" data-step="8">
+                    <div class="step-header">
+                        <div class="step-number">8</div>
+                        <div class="step-title">Exit Inspection & Verification</div>
+                    </div>
+                    <div class="step-description">
+                        Physical inspection at exit point. Verify weighment slip, challan, tarpaulin, and no spillage risk.
+                    </div>
+                    <div class="step-details">
+                        <div class="detail-item"><span class="icon">✅</span> Weighment slip verified</div>
+                        <div class="detail-item"><span class="icon">✅</span> Mining challan verified</div>
+                        <div class="detail-item"><span class="icon">✅</span> Tarpaulin covering checked</div>
+                        <div class="detail-item"><span class="icon">✅</span> No spillage risk confirmed</div>
+                    </div>
+                    <div class="data-capture">
+                        <div class="data-capture-title">📊 DATA TO CAPTURE:</div>
+                        <div class="detail-item"><span class="icon">👮</span> Inspector ID</div>
+                        <div class="detail-item"><span class="icon">⏰</span> Exit Timestamp</div>
+                        <div class="detail-item"><span class="icon">✅</span> Verification Status</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- PHASE 2: ROAD TRANSIT -->
+            <div class="phase-section">
+                <div class="phase-title">🛣️ PHASE 2: ROAD TRANSIT MONITORING</div>
+                
+                <div class="step-card" data-step="9">
+                    <div class="step-header">
+                        <div class="step-number">9</div>
+                        <div class="step-title">GPS-Based Transit Monitoring</div>
+                    </div>
+                    <div class="step-description">
+                        Live vehicle tracking from control room. Monitor route, stoppages, speed, and delays.
+                    </div>
+                    <div class="vehicle-animation" id="vehicleAnim2">
+                        <div class="vehicle">🚛💨</div>
+                    </div>
+                    <div class="data-capture">
+                        <div class="data-capture-title">📊 DATA TO CAPTURE:</div>
+                        <div class="detail-item"><span class="icon">📍</span> Real-time GPS Coordinates</div>
+                        <div class="detail-item"><span class="icon">🛣️</span> Route Adherence Status</div>
+                        <div class="detail-item"><span class="icon">🚦</span> Stoppage Events</div>
+                        <div class="detail-item"><span class="icon">📏</span> Deviation Distance (if any)</div>
+                        <div class="detail-item"><span class="icon">⚡</span> Speed Data</div>
+                    </div>
+                </div>
+                
+                <div class="step-card" data-step="10">
+                    <div class="step-header">
+                        <div class="step-number">10</div>
+                        <div class="step-title">Road Patrolling</div>
+                    </div>
+                    <div class="step-description">
+                        Dedicated patrol teams monitor vehicle movement. Ensure timely arrival, no pilferage, no deviations.
+                    </div>
+                    <div class="critical-alert">
+                        ⚠️ <strong>ALERT CONDITIONS:</strong> Route deviation, Unscheduled stops, Speed anomalies
+                    </div>
+                </div>
+            </div>
+            
+            <!-- PHASE 3: RAILWAY SIDING RECEIPT -->
+            <div class="phase-section">
+                <div class="phase-title">🏭 PHASE 3: RAILWAY SIDING COAL RECEIPT</div>
+                
+                <div class="step-card" data-step="11">
+                    <div class="step-header">
+                        <div class="step-number">11</div>
+                        <div class="step-title">Coal Receipt at Railway Siding</div>
+                    </div>
+                    <div class="step-description">
+                        Loaded trucks go directly to weighbridge at siding. Verify same load received.
+                    </div>
+                    <div class="data-capture">
+                        <div class="data-capture-title">📊 DATA TO CAPTURE:</div>
+                        <div class="detail-item"><span class="icon">⚖️</span> Siding Gross Weight</div>
+                        <div class="detail-item"><span class="icon">⏰</span> Receipt Timestamp</div>
+                        <div class="detail-item"><span class="icon">🏭</span> Siding Name (Pakur/Dumka/Kurwa)</div>
+                        <div class="detail-item"><span class="icon">👷</span> WB Operator ID</div>
+                        <div class="detail-item"><span class="icon">📦</span> Stock Update (+)</div>
+                    </div>
+                    <div class="critical-alert">
+                        ⚠️ <strong>VALIDATION:</strong> Cannot receive without dispatch reference from mine
+                    </div>
+                </div>
+                
+                <div class="step-card" data-step="12">
+                    <div class="step-header">
+                        <div class="step-number">12</div>
+                        <div class="step-title">Unloaded Truck Weighment</div>
+                    </div>
+                    <div class="step-description">
+                        After unloading, truck moves to weighbridge for tare weight. Ensures complete unloading.
+                    </div>
+                    <div class="data-capture">
+                        <div class="data-capture-title">📊 DATA TO CAPTURE:</div>
+                        <div class="detail-item"><span class="icon">⚖️</span> Tare Weight at Siding</div>
+                        <div class="detail-item"><span class="icon">⏰</span> Tare Timestamp</div>
+                        <div class="detail-item"><span class="icon">✅</span> Trip Completion Status</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- PHASE 4: RAKE INDENT & PLANNING -->
+            <div class="phase-section">
+                <div class="phase-title">📋 PHASE 4: RAKE INDENT & PLANNING</div>
+                
+                <div class="step-card" data-step="13">
+                    <div class="step-header">
+                        <div class="step-number">13</div>
+                        <div class="step-title">Indent for Rake Placement</div>
+                    </div>
+                    <div class="step-description">
+                        Siding In-Charge checks available stock and raises indent to Railways.
+                    </div>
+                    <div class="step-details">
+                        <div class="detail-item"><span class="icon">📦</span> Check siding stock availability</div>
+                        <div class="detail-item"><span class="icon">🎯</span> Determine target rake quantity</div>
+                    </div>
+                    <div class="data-capture">
+                        <div class="data-capture-title">📊 DATA TO CAPTURE:</div>
+                        <div class="detail-item"><span class="icon">📋</span> Indent Number</div>
+                        <div class="detail-item"><span class="icon">⏰</span> Indent Date & Time</div>
+                        <div class="detail-item"><span class="icon">🏭</span> Siding Name</div>
+                        <div class="detail-item"><span class="icon">🎯</span> Target Quantity (MT)</div>
+                        <div class="detail-item"><span class="icon">📦</span> Available Stock (MT)</div>
+                        <div class="detail-item"><span class="icon">🔢</span> Railway Reference Number</div>
+                    </div>
+                    <div class="critical-alert">
+                        ⚠️ <strong>IMPORTANT:</strong> Indent is STOCK-DRIVEN, not time-driven. Cannot raise indent without sufficient stock!
+                    </div>
+                </div>
+                
+                <div class="step-card" data-step="14">
+                    <div class="step-header">
+                        <div class="step-number">14</div>
+                        <div class="step-title">Rake Availability & Placement</div>
+                    </div>
+                    <div class="step-description">
+                        Railways place rake based on availability after receiving indent.
+                    </div>
+                    <div class="data-capture">
+                        <div class="data-capture-title">📊 DATA TO CAPTURE:</div>
+                        <div class="detail-item"><span class="icon">🚂</span> Rake Number</div>
+                        <div class="detail-item"><span class="icon">⏰</span> Rake Placement Timestamp</div>
+                        <div class="detail-item"><span class="icon">🔢</span> Total Wagons</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- PHASE 5: TXR & LOADING -->
+            <div class="phase-section">
+                <div class="phase-title">🔧 PHASE 5: TXR INSPECTION & LOADING</div>
+                
+                <div class="step-card" data-step="15">
+                    <div class="step-header">
+                        <div class="step-number">15</div>
+                        <div class="step-title">TXR Inspection (Before Loading)</div>
+                    </div>
+                    <div class="step-description">
+                        Train Examiner inspection by Railway staff. Check all wagon doors and conditions.
+                    </div>
+                    <div class="data-capture">
+                        <div class="data-capture-title">📊 DATA TO CAPTURE:</div>
+                        <div class="detail-item"><span class="icon">⏰</span> TXR Start Time</div>
+                        <div class="detail-item"><span class="icon">⏰</span> TXR End Time</div>
+                        <div class="detail-item"><span class="icon">⏱️</span> TXR Duration (Auto-calculated)</div>
+                        <div class="detail-item"><span class="icon">✅</span> Fit Wagon Count</div>
+                        <div class="detail-item"><span class="icon">❌</span> Unfit Wagon Count</div>
+                    </div>
+                </div>
+                
+                <div class="step-card" data-step="16">
+                    <div class="step-header">
+                        <div class="step-number">16</div>
+                        <div class="step-title">Marking of Unfit Wagons</div>
+                    </div>
+                    <div class="step-description">
+                        Unfit wagons marked clearly with radium reflectors/red lights (night) or red flags (day).
+                    </div>
+                    <div class="data-capture">
+                        <div class="data-capture-title">📊 DATA TO CAPTURE (Per Unfit Wagon):</div>
+                        <div class="detail-item"><span class="icon">🚃</span> Wagon Number</div>
+                        <div class="detail-item"><span class="icon">❌</span> Reason for Unfit</div>
+                        <div class="detail-item"><span class="icon">🏷️</span> Marking Method (Flag/Reflector/Light)</div>
+                        <div class="detail-item"><span class="icon">📋</span> Railway Memo Reference</div>
+                    </div>
+                    <div class="critical-alert">
+                        ⚠️ <strong>AUTO-EXCLUSION:</strong> These wagons must be excluded from loading screens!
+                    </div>
+                </div>
+                
+                <div class="step-card" data-step="17">
+                    <div class="step-header">
+                        <div class="step-number">17</div>
+                        <div class="step-title">⏰ CRITICAL: Loading Time Starts!</div>
+                    </div>
+                    <div class="step-description">
+                        Loading time starts from rake placement. Maximum FREE time: 3 HOURS.
+                    </div>
+                    <div class="timer-display" id="loadingTimer">
+                        ⏱️ FREE TIME REMAINING: 3:00:00
+                    </div>
+                    <div class="critical-alert">
+                        🚨 <strong>PENALTY RULE:</strong> Even 5 minutes extra beyond 3 hours = Railway charges 1 FULL HOUR penalty!
+                    </div>
+                </div>
+                
+                <div class="step-card" data-step="18">
+                    <div class="step-header">
+                        <div class="step-number">18</div>
+                        <div class="step-title">Wagon Loading Process</div>
+                    </div>
+                    <div class="step-description">
+                        Loader operators load wagons one by one using inbuilt load cells. No overloading/underloading.
+                    </div>
+                    <div class="data-capture">
+                        <div class="data-capture-title">📊 DATA TO CAPTURE (Per Wagon):</div>
+                        <div class="detail-item"><span class="icon">🚃</span> Wagon Number</div>
+                        <div class="detail-item"><span class="icon">🏗️</span> Loader ID</div>
+                        <div class="detail-item"><span class="icon">👷</span> Loader Operator ID</div>
+                        <div class="detail-item"><span class="icon">📦</span> CC Capacity (MT)</div>
+                        <div class="detail-item"><span class="icon">⚖️</span> Loaded Quantity (MT)</div>
+                        <div class="detail-item"><span class="icon">⏰</span> Loading Timestamp</div>
+                    </div>
+                    <div class="critical-alert">
+                        ⚠️ <strong>AUTO-ALERT:</strong> System must flag overload/underload risk in real-time!
+                    </div>
+                </div>
+                
+                <div class="step-card" data-step="19">
+                    <div class="step-header">
+                        <div class="step-number">19</div>
+                        <div class="step-title">Post-Loading Inspection by Guard</div>
+                    </div>
+                    <div class="step-description">
+                        Railway Guard inspects for coal spillage on tracks and between wagons. Must be cleared before movement.
+                    </div>
+                    <div class="data-capture">
+                        <div class="data-capture-title">📊 DATA TO CAPTURE:</div>
+                        <div class="detail-item"><span class="icon">⏰</span> Loading Completion Time</div>
+                        <div class="detail-item"><span class="icon">✅</span> Guard Inspection Status</div>
+                        <div class="detail-item"><span class="icon">🧹</span> Spillage Clearance (Yes/No)</div>
+                    </div>
+                </div>
+                
+                <div class="step-card" data-step="20">
+                    <div class="step-header">
+                        <div class="step-number">20</div>
+                        <div class="step-title">Clearance for Movement</div>
+                    </div>
+                    <div class="step-description">
+                        After clearance, Guard informs Loco Pilot and gives permission to move rake.
+                    </div>
+                    <div class="data-capture">
+                        <div class="data-capture-title">📊 DATA TO CAPTURE:</div>
+                        <div class="detail-item"><span class="icon">⏰</span> Movement Permission Time</div>
+                        <div class="detail-item"><span class="icon">👮</span> Guard ID</div>
+                        <div class="detail-item"><span class="icon">✅</span> Clearance Status</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- PHASE 6: IN-MOTION WEIGHMENT -->
+            <div class="phase-section">
+                <div class="phase-title">⚖️ PHASE 6: IN-MOTION WEIGHMENT (VERY SENSITIVE!)</div>
+                
+                <div class="step-card" data-step="21">
+                    <div class="step-header">
+                        <div class="step-number">21</div>
+                        <div class="step-title">🚨 In-Motion Weighment</div>
+                    </div>
+                    <div class="step-description">
+                        Loco pilot moves rake from loading track to weighment track. CRITICAL PROCESS!
+                    </div>
+                    <div class="step-details">
+                        <div class="detail-item"><span class="icon">⏱️</span> Time Limit: 20 minutes (included in 3-hour free time)</div>
+                        <div class="detail-item"><span class="icon">🚄</span> Speed: Must be 5-7 kmph</div>
+                        <div class="detail-item"><span class="icon">⚠️</span> If weighment fails → Take forward → Bring back → Re-weigh</div>
+                    </div>
+                    <div class="data-capture">
+                        <div class="data-capture-title">📊 DATA TO CAPTURE (Per Wagon):</div>
+                        <div class="detail-item"><span class="icon">🚃</span> Wagon Number</div>
+                        <div class="detail-item"><span class="icon">⚖️</span> In-Motion Weight (MT)</div>
+                        <div class="detail-item"><span class="icon">📄</span> Weighment Slip Number</div>
+                        <div class="detail-item"><span class="icon">⏰</span> Weighment Timestamp</div>
+                    </div>
+                    <div class="critical-alert">
+                        🚨 <strong>EXTREME SENSITIVITY:</strong> Wrong speed or jerks can cause wrong weighment & false overloading indication!
+                    </div>
+                </div>
+                
+                <div class="step-card" data-step="22">
+                    <div class="step-header">
+                        <div class="step-number">22</div>
+                        <div class="step-title">🔍 Loader vs Weighment Comparison</div>
+                    </div>
+                    <div class="step-description">
+                        AUTOMATIC comparison by system. This is your PENALTY PREDICTION engine!
+                    </div>
+                    <div class="step-details">
+                        <div class="detail-item"><span class="icon">📊</span> Compare: Loader Quantity vs In-Motion Weight</div>
+                        <div class="detail-item"><span class="icon">➖</span> Calculate: Difference per wagon</div>
+                        <div class="detail-item"><span class="icon">🏷️</span> Classify: Overload / Underload / OK</div>
+                        <div class="detail-item"><span class="icon">🚨</span> Generate: Pre-RR Early Warning Alerts</div>
+                    </div>
+                    <div class="critical-alert">
+                        🎯 <strong>KEY OUTPUT:</strong> EARLY WARNING DASHBOARD - Predict penalties BEFORE RR arrives!
+                    </div>
+                </div>
+            </div>
+            
+            <!-- PHASE 7: RAILWAY RECEIPT -->
+            <div class="phase-section">
+                <div class="phase-title">📄 PHASE 7: RAILWAY RECEIPT (FINAL & BINDING)</div>
+                
+                <div class="step-card" data-step="23">
+                    <div class="step-header">
+                        <div class="step-number">23</div>
+                        <div class="step-title">Generation of Commercial RR</div>
+                    </div>
+                    <div class="step-description">
+                        After successful weighment, Commercial Railway Receipt (RR) is generated. THIS IS THE FINAL AUTHORITY DOCUMENT!
+                    </div>
+                    <div class="step-details">
+                        <div class="detail-item"><span class="icon">⚖️</span> Charged Weight</div>
+                        <div class="detail-item"><span class="icon">⚠️</span> Overloading / Underloading</div>
+                        <div class="detail-item"><span class="icon">⏱️</span> Time Taken</div>
+                        <div class="detail-item"><span class="icon">💰</span> Demurrage</div>
+                        <div class="detail-item"><span class="icon">🚫</span> Penalties</div>
+                        <div class="detail-item"><span class="icon">💵</span> Freight & GST</div>
+                    </div>
+                </div>
+                
+                <div class="step-card" data-step="24">
+                    <div class="step-header">
+                        <div class="step-number">24</div>
+                        <div class="step-title">Receipt of RR & Documents</div>
+                    </div>
+                    <div class="step-description">
+                        At Railway Siding, we receive in-motion weighment slip, TXR unfit memo, and forwarding copy.
+                    </div>
+                    <div class="data-capture">
+                        <div class="data-capture-title">📊 DATA TO CAPTURE:</div>
+                        <div class="detail-item"><span class="icon">📄</span> RR Number</div>
+                        <div class="detail-item"><span class="icon">📤</span> Upload RR PDF</div>
+                        <div class="detail-item"><span class="icon">🤖</span> Auto-extract RR data (OCR)</div>
+                        <div class="detail-item"><span class="icon">✍️</span> Manual entry fields (backup)</div>
+                        <div class="detail-item"><span class="icon">💰</span> Freight Amount</div>
+                        <div class="detail-item"><span class="icon">🚫</span> Penalty Amount</div>
+                        <div class="detail-item"><span class="icon">📊</span> GST Amount</div>
+                    </div>
+                    <div class="critical-alert">
+                        🔍 <strong>RECONCILIATION:</strong> Compare RR data with system's loader & weighment data!
+                    </div>
+                </div>
+                
+                <div class="step-card" data-step="25">
+                    <div class="step-header">
+                        <div class="step-number">25</div>
+                        <div class="step-title">🔄 End-to-End Reconciliation</div>
+                    </div>
+                    <div class="step-description">
+                        Final reconciliation across all stages to ensure data integrity and identify discrepancies.
+                    </div>
+                    <div class="step-details">
+                        <div class="detail-item"><span class="icon">1️⃣</span> Mine vs Siding (Road dispatch quantities)</div>
+                        <div class="detail-item"><span class="icon">2️⃣</span> Siding vs Rake (Stock utilization)</div>
+                        <div class="detail-item"><span class="icon">3️⃣</span> Rake vs Weighment (Loading accuracy)</div>
+                        <div class="detail-item"><span class="icon">4️⃣</span> Weighment vs RR (Railway official record)</div>
+                        <div class="detail-item"><span class="icon">5️⃣</span> RR vs Power Plant receipt (Final delivery)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background: #4ade80;"></div>
+                <span>Active Step</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #60a5fa;"></div>
+                <span>Completed Step</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #22c55e; border: 2px solid #fff;"></div>
+                <span>Data Capture Point</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #ef4444;"></div>
+                <span>Critical Alert</span>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let currentStep = 0;
+        const totalSteps = 25;
+        let autoPlayInterval = null;
+        
+        function updateProgress() {
+            const progress = (currentStep / totalSteps) * 100;
+            document.getElementById('progressBar').style.width = progress + '%';
+        }
+        
+        function activateStep(stepNumber) {
+            const steps = document.querySelectorAll('.step-card');
+            steps.forEach((step, index) => {
+                const stepNum = parseInt(step.dataset.step);
+                if (stepNum < stepNumber) {
+                    step.classList.add('completed');
+                    step.classList.remove('active');
+                } else if (stepNum === stepNumber) {
+                    step.classList.add('active');
+                    step.classList.remove('completed');
+                    step.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                } else {
+                    step.classList.remove('active', 'completed');
+                }
+            });
+            
+            // Trigger vehicle animations at specific steps
+            if (stepNumber === 3) {
+                const vehicle = document.querySelector('#vehicleAnim1 .vehicle');
+                vehicle.classList.add('moving');
+                setTimeout(() => vehicle.classList.remove('moving'), 2000);
+            }
+            if (stepNumber === 9) {
+                const vehicle = document.querySelector('#vehicleAnim2 .vehicle');
+                vehicle.classList.add('moving');
+                setTimeout(() => vehicle.classList.remove('moving'), 2000);
+            }
+            
+            // Simulate loading timer
+            if (stepNumber === 17) {
+                startLoadingTimer();
+            }
+        }
+        
+        function startLoadingTimer() {
+            let timeLeft = 180; // 3 hours in minutes
+            const timerDisplay = document.getElementById('loadingTimer');
+            
+            const timerInterval = setInterval(() => {
+                const hours = Math.floor(timeLeft / 60);
+                const minutes = timeLeft % 60;
+                timerDisplay.textContent = `⏱️ FREE TIME REMAINING: ${hours}:${minutes.toString().padStart(2, '0')}:00`;
+                
+                if (timeLeft <= 30) {
+                    timerDisplay.classList.add('warning');
+                }
+                
+                timeLeft -= 15; // Simulate faster
+                
+                if (timeLeft <= 0 || currentStep > 17) {
+                    clearInterval(timerInterval);
+                    if (timeLeft <= 0) {
+                        timerDisplay.textContent = '🚨 PENALTY ZONE! Time exceeded!';
+                    }
+                }
+            }, 1000);
+        }
+        
+        function startJourney() {
+            currentStep = 1;
+            activateStep(currentStep);
+            updateProgress();
+            
+            // Auto-play mode
+            if (autoPlayInterval) clearInterval(autoPlayInterval);
+            autoPlayInterval = setInterval(() => {
+                if (currentStep < totalSteps) {
+                    nextStep();
+                } else {
+                    clearInterval(autoPlayInterval);
+                }
+            }, 3000);
+        }
+        
+        function nextStep() {
+            if (currentStep < totalSteps) {
+                currentStep++;
+                activateStep(currentStep);
+                updateProgress();
+            }
+        }
+        
+        function resetJourney() {
+            if (autoPlayInterval) clearInterval(autoPlayInterval);
+            currentStep = 0;
+            const steps = document.querySelectorAll('.step-card');
+            steps.forEach(step => step.classList.remove('active', 'completed'));
+            updateProgress();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>

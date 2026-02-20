@@ -11,6 +11,7 @@ use Mattiverse\Userstamps\Traits\Userstamps;
 
 final class Txr extends Model
 {
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use SoftDeletes, Userstamps;
 
     protected $table = 'txr';

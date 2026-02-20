@@ -92,7 +92,7 @@ final class IndentPolicy
     /**
      * Determine if the user can permanently delete an indent
      */
-    public function forceDelete(User $user, Indent $indent): bool
+    public function forceDelete(User $user): bool
     {
         // Only super admin can force delete
         return $user->isSuperAdmin();

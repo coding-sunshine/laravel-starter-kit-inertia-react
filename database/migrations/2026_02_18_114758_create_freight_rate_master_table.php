@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('freight_rate_master', function (Blueprint $table) {
+        Schema::create('freight_rate_master', function (Blueprint $table): void {
             $table->id();
             $table->string('commodity_code', 20); // e.g., "COAL-BOBRN"
             $table->string('commodity_name');

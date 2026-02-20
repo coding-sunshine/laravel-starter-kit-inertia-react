@@ -40,7 +40,7 @@ final readonly class ReconcileRrData
             $point2 = $this->validateWagonCount($rake, $rrData);
             $point3 = $this->validateWeightPerWagon($rake, $rrData);
             $point4 = $this->validateTiming($rake, $rrDocument);
-            $point5 = $this->validatePenalties($rake, $rrData);
+            $point5 = $this->validatePenalties($rake);
 
             // Determine overall status
             $hasDiscrepancies = ! $point1['passed'] || ! $point2['passed']
@@ -82,7 +82,7 @@ final readonly class ReconcileRrData
      */
     public function getReconciliationSummary(int $sidingId): array
     {
-        $documents = RrDocument::whereHas('rake', function ($query) use ($sidingId) {
+        $documents = RrDocument::query()->whereHas('rake', function ($query) use ($sidingId): void {
             $query->where('siding_id', $sidingId);
         })->get();
 
@@ -107,9 +107,9 @@ final readonly class ReconcileRrData
      */
     public function getPendingRrVerificationRakes(int $sidingId): Collection
     {
-        return Rake::where('siding_id', $sidingId)
+        return Rake::query()->where('siding_id', $sidingId)
             ->whereIn('state', ['in_transit', 'delivered'])
-            ->whereDoesntHave('rrDocument', function ($query) {
+            ->whereDoesntHave('rrDocument', function ($query): void {
                 $query->where('document_status', 'verified');
             })
             ->with('rrDocument')
@@ -121,7 +121,7 @@ final readonly class ReconcileRrData
      */
     public function getDiscrepanciesByType(int $sidingId): array
     {
-        $documents = RrDocument::whereHas('rake', function ($query) use ($sidingId) {
+        $documents = RrDocument::query()->whereHas('rake', function ($query) use ($sidingId): void {
             $query->where('siding_id', $sidingId);
         })
             ->where('has_discrepancy', true)
@@ -130,7 +130,7 @@ final readonly class ReconcileRrData
         $discrepanciesByType = [];
 
         foreach ($documents as $doc) {
-            $details = json_decode($doc->discrepancy_details, true) ?? [];
+            $details = json_decode((string) $doc->discrepancy_details, true) ?? [];
 
             foreach ($details as $pointKey => $point) {
                 if (! $point['passed']) {
@@ -221,7 +221,7 @@ final readonly class ReconcileRrData
         if (is_array($rrWagons) && count($rrWagons) > 0) {
             $overloaded = [];
             $wagonNumberMismatches = [];
-            $rakeWagonNumbers = $rake->wagons->pluck('wagon_number')->map(fn ($n) => (string) $n)->all();
+            $rakeWagonNumbers = $rake->wagons->pluck('wagon_number')->map(fn ($n): string => (string) $n)->all();
             $rrWagonNumbers = [];
 
             foreach ($rrWagons as $w) {
@@ -330,14 +330,14 @@ final readonly class ReconcileRrData
     /**
      * Point 5: Penalty Cross-Check (±₹1000 tolerance)
      */
-    private function validatePenalties(Rake $rake, array $rrData): array
+    private function validatePenalties(Rake $rake): array
     {
         // Calculate expected demurrage
         $demurrageCalc = $this->demurrageCalculator->calculateForRake($rake);
         $expectedDemurrage = $demurrageCalc['demurrage_charge'] ?? 0;
 
         // Get actual penalties from database
-        $actualPenalties = Penalty::where('rake_id', $rake->id)
+        $actualPenalties = Penalty::query()->where('rake_id', $rake->id)
             ->where('penalty_status', '!=', 'waived')
             ->sum('penalty_amount');
 

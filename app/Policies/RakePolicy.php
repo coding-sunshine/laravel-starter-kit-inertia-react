@@ -92,7 +92,7 @@ final class RakePolicy
     /**
      * Determine if the user can permanently delete a rake
      */
-    public function forceDelete(User $user, Rake $rake): bool
+    public function forceDelete(User $user): bool
     {
         // Only super admin can force delete
         return $user->isSuperAdmin();

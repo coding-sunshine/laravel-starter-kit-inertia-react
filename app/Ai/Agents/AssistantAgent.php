@@ -11,7 +11,6 @@ use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\HasMiddleware;
 use Laravel\Ai\Contracts\HasTools;
 use Laravel\Ai\Promptable;
-use Stringable;
 
 /**
  * Example agent with semantic memory (store/recall) and WithMemory middleware.
@@ -24,11 +23,11 @@ final class AssistantAgent implements Agent, HasMiddleware, HasTools
     use Promptable;
 
     public function __construct(
-        protected array $context = [],
-        protected int $recallLimit = 10,
+        private array $context = [],
+        private int $recallLimit = 10,
     ) {}
 
-    public function instructions(): Stringable|string
+    public function instructions(): string
     {
         return 'You are a helpful assistant with memory. You can store and recall information from previous conversations. '
             .'Use the Store Memory tool to save important facts the user shares (e.g. preferences, decisions). '

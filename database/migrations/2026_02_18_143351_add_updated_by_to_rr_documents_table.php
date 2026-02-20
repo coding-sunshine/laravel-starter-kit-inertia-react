@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('rr_documents', function (Blueprint $table) {
+        Schema::table('rr_documents', function (Blueprint $table): void {
             $table->foreignId('updated_by')->nullable()->constrained('users')->onDelete('set null');
         });
     }
@@ -23,7 +23,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('rr_documents', function (Blueprint $table) {
+        Schema::table('rr_documents', function (Blueprint $table): void {
             $table->dropForeignIdFor('updated_by');
         });
     }

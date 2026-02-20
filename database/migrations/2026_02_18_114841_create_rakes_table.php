@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('rakes', function (Blueprint $table) {
+        Schema::create('rakes', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('siding_id')->constrained('sidings')->onDelete('cascade');
             $table->string('rake_number', 20)->unique();

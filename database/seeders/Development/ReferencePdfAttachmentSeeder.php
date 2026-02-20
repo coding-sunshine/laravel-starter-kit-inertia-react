@@ -25,10 +25,10 @@ use Throwable;
  */
 final class ReferencePdfAttachmentSeeder extends Seeder
 {
-    private const BASE = 'prd/docs/Rake Management Application - references';
+    private const string BASE = 'prd/docs/Rake Management Application - references';
 
     /** RR sample paths (relative to base_path). Cycled when attaching to multiple RRs. */
-    private const RR_SAMPLES = [
+    private const array RR_SAMPLES = [
         self::BASE.'/RR Samples (Kurwa)/RAKE-1.pdf',
         self::BASE.'/RR Samples (Kurwa)/RAKE-2.pdf',
         self::BASE.'/RR Samples (Kurwa)/RAKE-3.pdf',
@@ -41,15 +41,15 @@ final class ReferencePdfAttachmentSeeder extends Seeder
         self::BASE.'/RR Samples (Dumka)-RR Nov.-2025/RAKE-12.pdf',
     ];
 
-    private const WEIGHMENT_SAMPLE = self::BASE.'/Weighment & Indent/Weighment - RAKE NO-29.pdf';
+    private const string WEIGHMENT_SAMPLE = self::BASE.'/Weighment & Indent/Weighment - RAKE NO-29.pdf';
 
-    private const INDENT_SAMPLE = self::BASE.'/Weighment & Indent/PN-302 PSPM (Indent).pdf';
+    private const string INDENT_SAMPLE = self::BASE.'/Weighment & Indent/PN-302 PSPM (Indent).pdf';
 
-    private const MAX_RR_ATTACHMENTS = 15;
+    private const int MAX_RR_ATTACHMENTS = 15;
 
-    private const MAX_WEIGHMENT_ATTACHMENTS = 5;
+    private const int MAX_WEIGHMENT_ATTACHMENTS = 5;
 
-    private const MAX_INDENT_ATTACHMENTS = 3;
+    private const int MAX_INDENT_ATTACHMENTS = 3;
 
     public array $dependencies = [
         'RakeManagementDemoSeeder',
@@ -71,8 +71,8 @@ final class ReferencePdfAttachmentSeeder extends Seeder
             ->get();
 
         $paths = array_values(array_filter(
-            array_map(fn ($rel) => base_path($rel), self::RR_SAMPLES),
-            'is_file'
+            array_map(base_path(...), self::RR_SAMPLES),
+            is_file(...)
         ));
 
         if ($paths === []) {

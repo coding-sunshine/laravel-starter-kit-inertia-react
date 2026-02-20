@@ -9,7 +9,7 @@ use App\Models\User;
 
 final class AlertPolicy
 {
-    public function viewAny(User $user): bool
+    public function viewAny(): bool
     {
         return true;
     }
@@ -19,8 +19,11 @@ final class AlertPolicy
         if ($alert->siding_id === null) {
             return $user->isSuperAdmin();
         }
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
 
-        return $user->isSuperAdmin() || $user->canAccessSiding($alert->siding_id);
+        return $user->canAccessSiding($alert->siding_id);
     }
 
     public function update(User $user, Alert $alert): bool

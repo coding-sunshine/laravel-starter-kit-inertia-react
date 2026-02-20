@@ -34,8 +34,7 @@ final class RakeGuardInspectionController extends Controller
             ]);
         }
 
-        return redirect()
-            ->route('rakes.show', $rake)
+        return to_route('rakes.show', $rake)
             ->with('success', 'Guard inspection recorded.');
     }
 }

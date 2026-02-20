@@ -234,7 +234,7 @@ final class SyncDocumentationManifest extends Command
             return $actions;
         }
 
-        $files = collect(File::allFiles($actionsPath))->filter(fn ($f) => $f->getExtension() === 'php');
+        $files = collect(File::allFiles($actionsPath))->filter(fn ($f): bool => $f->getExtension() === 'php');
 
         foreach ($files as $file) {
             $className = $file->getFilenameWithoutExtension();
@@ -300,7 +300,7 @@ final class SyncDocumentationManifest extends Command
             return $controllers;
         }
 
-        $files = collect(File::allFiles($controllersPath))->filter(fn ($f) => $f->getExtension() === 'php');
+        $files = collect(File::allFiles($controllersPath))->filter(fn ($f): bool => $f->getExtension() === 'php');
 
         foreach ($files as $file) {
             $className = $file->getFilenameWithoutExtension();

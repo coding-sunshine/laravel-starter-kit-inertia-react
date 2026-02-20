@@ -56,7 +56,7 @@ final class ReportsController extends Controller
             'date_to' => $validated['date_to'] ?? null,
         ]);
 
-        $data = app(RunReportAction::class)->handle($validated['key'], $sidingIds, $params);
+        $data = resolve(RunReportAction::class)->handle($validated['key'], $sidingIds, $params);
 
         if ($request->boolean('export_csv')) {
             return $this->exportCsv($validated['key'], $data);
@@ -73,12 +73,12 @@ final class ReportsController extends Controller
         $name = RunReportAction::REPORT_KEYS[$key]['name'] ?? $key;
         $filename = str_replace(' ', '_', $name).'_'.date('Y-m-d').'.csv';
 
-        return response()->streamDownload(function () use ($data) {
+        return response()->streamDownload(function () use ($data): void {
             $out = fopen('php://output', 'w');
             if ($data !== []) {
-                fputcsv($out, array_keys((array) $data[0]));
+                fputcsv($out, array_keys($data[0]), escape: '\\');
                 foreach ($data as $row) {
-                    fputcsv($out, (array) $row);
+                    fputcsv($out, (array) $row, escape: '\\');
                 }
             }
             fclose($out);

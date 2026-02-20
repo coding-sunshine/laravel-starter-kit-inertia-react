@@ -19,8 +19,6 @@ use Illuminate\Support\Facades\DB;
  */
 final readonly class CalculateDemurrageCharges
 {
-    public function __construct() {}
-
     /**
      * Calculate demurrage for a single rake
      *
@@ -89,11 +87,11 @@ final readonly class CalculateDemurrageCharges
      */
     public function calculateForSiding(int $sidingId, array $options = []): Collection
     {
-        $rakes = Rake::where('siding_id', $sidingId)
+        $rakes = Rake::query()->where('siding_id', $sidingId)
             ->whereIn('state', ['in_transit', 'delivered'])
             ->get();
 
-        return $rakes->map(fn (Rake $rake) => $this->calculateForRake($rake, $options));
+        return $rakes->map(fn (Rake $rake): array => $this->calculateForRake($rake, $options));
     }
 
     /**
@@ -101,7 +99,7 @@ final readonly class CalculateDemurrageCharges
      */
     public function getPendingPenalties(int $sidingId): Collection
     {
-        return Penalty::whereHas('rake', function ($query) use ($sidingId) {
+        return Penalty::query()->whereHas('rake', function ($query) use ($sidingId): void {
             $query->where('siding_id', $sidingId);
         })
             ->where('penalty_status', 'pending')
@@ -114,7 +112,7 @@ final readonly class CalculateDemurrageCharges
      */
     public function getTotalPendingCharges(int $sidingId): float
     {
-        return (float) Penalty::whereHas('rake', function ($query) use ($sidingId) {
+        return (float) Penalty::query()->whereHas('rake', function ($query) use ($sidingId): void {
             $query->where('siding_id', $sidingId);
         })
             ->where('penalty_status', 'pending')
@@ -127,7 +125,7 @@ final readonly class CalculateDemurrageCharges
     public function markAsCollected(int $penaltyId, string $reference = ''): Penalty
     {
         return DB::transaction(function () use ($penaltyId, $reference): Penalty {
-            $penalty = Penalty::findOrFail($penaltyId);
+            $penalty = Penalty::query()->findOrFail($penaltyId);
 
             $penalty->update([
                 'penalty_status' => 'incurred',
@@ -146,7 +144,7 @@ final readonly class CalculateDemurrageCharges
         $fromDate ??= DateTimeImmutable::createFromMutable(now()->subMonths(1));
         $toDate ??= DateTimeImmutable::createFromMutable(now());
 
-        $penalties = Penalty::whereHas('rake', function ($query) use ($sidingId) {
+        $penalties = Penalty::query()->whereHas('rake', function ($query) use ($sidingId): void {
             $query->where('siding_id', $sidingId);
         })
             ->whereBetween('penalty_date', [$fromDate->format('Y-m-d'), $toDate->format('Y-m-d')])
@@ -160,7 +158,7 @@ final readonly class CalculateDemurrageCharges
             'collected' => (float) $penalties->where('penalty_status', 'incurred')->sum('penalty_amount'),
             'pending' => (float) $penalties->where('penalty_status', 'pending')->sum('penalty_amount'),
             'charge_breakdown' => $penalties->groupBy('penalty_type')
-                ->map(fn ($group) => [
+                ->map(fn ($group): array => [
                     'count' => $group->count(),
                     'total' => (float) $group->sum('penalty_amount'),
                 ])->all(),
@@ -186,7 +184,7 @@ final readonly class CalculateDemurrageCharges
             $breakdown['dwell_hours'] = round($rake->loading_end_time->diffInHours($rake->rr_expected_date), 2);
         }
 
-        return Penalty::create([
+        return Penalty::query()->create([
             'rake_id' => $rake->id,
             'penalty_type' => $type,
             'penalty_amount' => $amount,

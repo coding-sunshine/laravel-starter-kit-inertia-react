@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('siding_user', function (Blueprint $table) {
+        Schema::table('siding_user', function (Blueprint $table): void {
             $table->boolean('is_primary')->default(false)->after('siding_id');
         });
     }
@@ -23,7 +23,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('siding_user', function (Blueprint $table) {
+        Schema::table('siding_user', function (Blueprint $table): void {
             $table->dropColumn('is_primary');
         });
     }

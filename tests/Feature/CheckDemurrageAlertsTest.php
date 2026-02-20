@@ -15,7 +15,7 @@ beforeEach(function (): void {
     $this->seed(RakeManagementRolePermissionSeeder::class);
 
     $org = Organization::factory()->create();
-    $this->siding = Siding::create([
+    $this->siding = Siding::query()->create([
         'organization_id' => $org->id,
         'name' => 'Test Siding',
         'code' => 'TST',
@@ -28,7 +28,7 @@ beforeEach(function (): void {
 test('fires event when rake crosses 60 minute threshold', function (): void {
     Event::fake([DemurrageThresholdCrossed::class]);
 
-    Rake::create([
+    Rake::query()->create([
         'siding_id' => $this->siding->id,
         'rake_number' => 'DEM-001',
         'state' => 'loading',
@@ -40,15 +40,13 @@ test('fires event when rake crosses 60 minute threshold', function (): void {
 
     $this->artisan('rrmcs:check-demurrage')->assertSuccessful();
 
-    Event::assertDispatched(DemurrageThresholdCrossed::class, function (DemurrageThresholdCrossed $event): bool {
-        return $event->threshold === 'demurrage_60';
-    });
+    Event::assertDispatched(DemurrageThresholdCrossed::class, fn (DemurrageThresholdCrossed $event): bool => $event->threshold === 'demurrage_60');
 });
 
 test('fires event when rake crosses 0 minute threshold (free time exceeded)', function (): void {
     Event::fake([DemurrageThresholdCrossed::class]);
 
-    Rake::create([
+    Rake::query()->create([
         'siding_id' => $this->siding->id,
         'rake_number' => 'DEM-002',
         'state' => 'loading',
@@ -60,17 +58,15 @@ test('fires event when rake crosses 0 minute threshold (free time exceeded)', fu
 
     $this->artisan('rrmcs:check-demurrage')->assertSuccessful();
 
-    Event::assertDispatched(DemurrageThresholdCrossed::class, function (DemurrageThresholdCrossed $event): bool {
-        return $event->threshold === 'demurrage_0'
-            && $event->remainingMinutes === 0
-            && $event->projectedPenalty > 0;
-    });
+    Event::assertDispatched(DemurrageThresholdCrossed::class, fn (DemurrageThresholdCrossed $event): bool => $event->threshold === 'demurrage_0'
+        && $event->remainingMinutes === 0
+        && $event->projectedPenalty > 0);
 });
 
 test('does not fire event for rakes with plenty of free time remaining', function (): void {
     Event::fake([DemurrageThresholdCrossed::class]);
 
-    Rake::create([
+    Rake::query()->create([
         'siding_id' => $this->siding->id,
         'rake_number' => 'DEM-003',
         'state' => 'loading',
@@ -88,7 +84,7 @@ test('does not fire event for rakes with plenty of free time remaining', functio
 test('does not fire duplicate event within cache TTL', function (): void {
     Event::fake([DemurrageThresholdCrossed::class]);
 
-    $rake = Rake::create([
+    $rake = Rake::query()->create([
         'siding_id' => $this->siding->id,
         'rake_number' => 'DEM-004',
         'state' => 'loading',
@@ -109,7 +105,7 @@ test('does not fire duplicate event within cache TTL', function (): void {
 test('ignores rakes not in loading state', function (): void {
     Event::fake([DemurrageThresholdCrossed::class]);
 
-    Rake::create([
+    Rake::query()->create([
         'siding_id' => $this->siding->id,
         'rake_number' => 'DEM-005',
         'state' => 'dispatched',
@@ -127,7 +123,7 @@ test('ignores rakes not in loading state', function (): void {
 test('syncs in-app alerts via SyncDemurrageAlertsAction', function (): void {
     Event::fake([DemurrageThresholdCrossed::class]);
 
-    Rake::create([
+    Rake::query()->create([
         'siding_id' => $this->siding->id,
         'rake_number' => 'DEM-006',
         'state' => 'loading',
@@ -139,13 +135,13 @@ test('syncs in-app alerts via SyncDemurrageAlertsAction', function (): void {
 
     $this->artisan('rrmcs:check-demurrage')->assertSuccessful();
 
-    expect(Alert::query()->where('rake_id', '!=', null)->count())->toBeGreaterThanOrEqual(1);
+    expect(Alert::query()->where('rake_id', '!=')->count())->toBeGreaterThanOrEqual(1);
 });
 
 test('fires multiple threshold events for a single deeply overdue rake', function (): void {
     Event::fake([DemurrageThresholdCrossed::class]);
 
-    Rake::create([
+    Rake::query()->create([
         'siding_id' => $this->siding->id,
         'rake_number' => 'DEM-007',
         'state' => 'loading',

@@ -31,14 +31,14 @@ final class ExecutiveDashboardController extends Controller
         $summary = $this->buildSummary($sidingIds);
         $sidingStocks = $this->buildSidingStocks($sidingIds);
         $activeRakes = $this->buildActiveRakes($sidingIds);
-        app(SyncDemurrageAlertsAction::class)->handle($sidingIds);
+        resolve(SyncDemurrageAlertsAction::class)->handle($sidingIds);
         $alerts = $this->buildAlerts($sidingIds);
         $penaltyChartData = $this->buildPenaltyChartData($sidingIds);
         $sidings = Siding::query()
             ->whereIn('id', $sidingIds)
             ->orderBy('name')
             ->get(['id', 'name', 'code'])
-            ->map(fn (Siding $s) => ['id' => $s->id, 'name' => $s->name, 'code' => $s->code]);
+            ->map(fn (Siding $s): array => ['id' => $s->id, 'name' => $s->name, 'code' => $s->code]);
 
         return Inertia::render('dashboard', [
             'summary' => $summary,
@@ -131,7 +131,7 @@ final class ExecutiveDashboardController extends Controller
 
         $byCoalStock = CoalStock::query()
             ->whereIn('siding_id', $sidingIds)
-            ->orderByDesc('as_of_date')
+            ->latest('as_of_date')
             ->get()
             ->unique('siding_id')
             ->keyBy('siding_id');
@@ -205,7 +205,7 @@ final class ExecutiveDashboardController extends Controller
             ->orderByDesc('created_at')
             ->limit(20)
             ->get(['id', 'type', 'title', 'severity', 'rake_id', 'siding_id', 'created_at'])
-            ->map(fn (Alert $a) => [
+            ->map(fn (Alert $a): array => [
                 'id' => $a->id,
                 'type' => $a->type,
                 'title' => $a->title,
@@ -242,7 +242,7 @@ final class ExecutiveDashboardController extends Controller
             ->orderBy('m')
             ->get();
 
-        return $rows->map(fn ($r) => [
+        return $rows->map(fn ($r): array => [
             'month' => sprintf('%04d-%02d', (int) $r->y, (int) $r->m),
             'total' => (float) $r->total,
         ])->values()->all();

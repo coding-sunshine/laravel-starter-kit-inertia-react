@@ -8,7 +8,6 @@ use App\Actions\SyncDemurrageAlertsAction;
 use App\Events\DemurrageThresholdCrossed;
 use App\Models\Rake;
 use App\Models\Siding;
-use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 
@@ -42,7 +41,7 @@ final class CheckDemurrageAlerts extends Command
 
         foreach ($rakes as $rake) {
             $end = $rake->loading_start_time->copy()->addMinutes((int) $rake->free_time_minutes);
-            $remainingMinutes = (int) Carbon::now()->diffInMinutes($end, false);
+            $remainingMinutes = (int) \Illuminate\Support\Facades\Date::now()->diffInMinutes($end, false);
 
             $weight = $rake->loaded_weight_mt ?? $rake->predicted_weight_mt ?? 0;
 
@@ -64,12 +63,7 @@ final class CheckDemurrageAlerts extends Command
                     : 1;
                 $projectedPenalty = $demurrageHours * $weight * $rate;
 
-                DemurrageThresholdCrossed::dispatch(
-                    $rake,
-                    $thresholdKey,
-                    max(0, $remainingMinutes),
-                    $projectedPenalty,
-                );
+                event(new DemurrageThresholdCrossed($rake, $thresholdKey, max(0, $remainingMinutes), $projectedPenalty));
 
                 Cache::put($cacheKey, true, now()->addHour());
                 $eventsFired++;

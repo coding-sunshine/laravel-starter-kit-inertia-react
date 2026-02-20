@@ -10,7 +10,6 @@ use App\Models\Penalty;
 use App\Models\Rake;
 use App\Models\Siding;
 use App\Models\User;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -114,7 +113,7 @@ final class ChatContextBuilder
         $segments = [];
         foreach ($rakes->take(10) as $rake) {
             $end = $rake->loading_start_time->copy()->addMinutes((int) $rake->free_time_minutes);
-            $remaining = (int) Carbon::now()->diffInMinutes($end, false);
+            $remaining = (int) \Illuminate\Support\Facades\Date::now()->diffInMinutes($end, false);
             $segments[] = "{$rake->rake_number}: ".($remaining <= 0 ? 'exceeded' : "{$remaining} min left");
         }
         if ($rakes->count() > 10) {
@@ -188,9 +187,7 @@ final class ChatContextBuilder
             ? Siding::query()->select('code', 'name')
             : $user->sidings()->select('sidings.code', 'sidings.name');
 
-        $list = $query->get()->map(fn ($s) => $s->code.' ('.$s->name.')')->take(20)->implode(', ');
-
-        return $list;
+        return $query->get()->map(fn ($s): string => $s->code.' ('.$s->name.')')->take(20)->implode(', ');
     }
 
     private function rakeSummary(User $user): string

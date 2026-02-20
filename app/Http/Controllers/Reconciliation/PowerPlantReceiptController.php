@@ -64,14 +64,14 @@ final class PowerPlantReceiptController extends Controller
             'rr_reference' => ['nullable', 'string', 'max:50'],
             'status' => ['nullable', 'string', 'in:pending,verified,discrepancy'],
         ]);
-        $rake = Rake::findOrFail($validated['rake_id']);
+        $rake = Rake::query()->findOrFail($validated['rake_id']);
         $this->authorize('view', $rake);
 
-        PowerPlantReceipt::create([
+        PowerPlantReceipt::query()->create([
             ...$validated,
             'created_by' => $request->user()->id,
         ]);
 
-        return redirect()->route('reconciliation.power-plant-receipts.index')->with('success', 'Power plant receipt saved.');
+        return to_route('reconciliation.power-plant-receipts.index')->with('success', 'Power plant receipt saved.');
     }
 }

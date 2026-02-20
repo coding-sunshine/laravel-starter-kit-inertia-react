@@ -37,8 +37,7 @@ final class RakeWeighmentController extends Controller
             $weighment->addMediaFromRequest('pdf')->toMediaCollection('weighment_slip_pdf');
         }
 
-        return redirect()
-            ->route('rakes.show', $rake)
+        return to_route('rakes.show', $rake)
             ->with('success', 'Weighment recorded.');
     }
 }

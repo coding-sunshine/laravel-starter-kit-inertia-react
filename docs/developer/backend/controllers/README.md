@@ -61,6 +61,6 @@ All Controllers:
 | [VehicleArrivalController](./vehiclearrivalcontroller.md) | N/A | ✅ |
 | [VehicleUnloadController](./vehicleunloadcontroller.md) | N/A | ✅ |
 | [AchievementsController](./achievementscontroller.md) | N/A | ✅ |
-| SidingSwitchController | N/A | ❌ |
+| [SidingSwitchController](./sidingswitchcontroller.md) | N/A | ✅ |
 
 

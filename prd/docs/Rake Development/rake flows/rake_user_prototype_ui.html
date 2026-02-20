@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Siding to RR - Functional Flow Prototype</title>
+<style>
+body { font-family: Arial; margin:0; display:flex; height:100vh; }
+.sidebar { width:220px; background:#f0f0f0; padding:15px; }
+.sidebar button { width:100%; margin-bottom:8px; padding:8px; }
+.main { flex:1; padding:20px; overflow:auto; }
+.section { display:none; }
+.section.active { display:block; }
+.card { border:1px solid #ccc; padding:10px; margin-bottom:15px; }
+.table { width:100%; border-collapse:collapse; }
+.table th,.table td { border:1px solid #ccc; padding:5px; text-align:center; }
+.status { font-weight:bold; }
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+<h3>Navigation</h3>
+<button onclick="show('dashboard')">Dashboard</button>
+<button onclick="show('truck')">Truck Unloading</button>
+<button onclick="show('stock')">Stock Ledger</button>
+<button onclick="show('indent')">Indents</button>
+<button onclick="show('rakes')">Rakes</button>
+<button onclick="show('rr')">RR & Finance</button>
+</div>
+
+<div class="main">
+
+<!-- DASHBOARD -->
+<div id="dashboard" class="section active">
+<div class="card">
+<h2>Dashboard</h2>
+<p>Active Rakes: 1</p>
+<p>Available Stock: 10,500 MT</p>
+<p>Pending Indents: 1</p>
+</div>
+</div>
+
+<!-- TRUCK UNLOADING -->
+<div id="truck" class="section">
+
+<div class="card">
+<h2>Truck Unloading - Today</h2>
+
+<table class="table">
+<tr>
+<th>Vehicle</th>
+<th>Challan</th>
+<th>Mine Net</th>
+<th>Status</th>
+<th>Action</th>
+</tr>
+<tbody id="truckTable"></tbody>
+</table>
+
+</div>
+
+<div id="truckDetail" class="card" style="display:none;">
+<h3>Truck Detail</h3>
+
+<p><strong>Vehicle:</strong> <span id="detailVehicle"></span></p>
+<p><strong>Challan:</strong> <span id="detailChallan"></span></p>
+<p><strong>Mine Net Weight:</strong> <span id="detailWeight"></span> MT</p>
+<p><strong>Status:</strong> <span id="detailStatus"></span></p>
+
+<div id="truckActions"></div>
+
+</div>
+
+</div>
+
+
+<!-- STOCK -->
+<div id="stock" class="section">
+<div class="card">
+<h2>Stock Ledger</h2>
+<table class="table">
+<tr><th>Date</th><th>Vehicle</th><th>Quantity</th><th>Balance</th></tr>
+<tr><td>Today</td><td>GJ01AB1234</td><td>25 MT</td><td>10500 MT</td></tr>
+</table>
+</div>
+</div>
+
+<!-- INDENT -->
+<div id="indent" class="section">
+
+<div class="card">
+<h2>Indent Management</h2>
+<button onclick="createIndent()">Create New Indent</button>
+</div>
+
+<div class="card">
+<h3>Indent List</h3>
+
+<table class="table">
+<tr>
+<th>Indent No</th>
+<th>Status</th>
+<th>Start Time</th>
+<th>End Time</th>
+<th>Action</th>
+</tr>
+<tbody id="indentTable"></tbody>
+</table>
+
+</div>
+
+<div id="indentDetail" class="card" style="display:none;">
+<h3>Indent Detail</h3>
+
+<p><strong>Indent No:</strong> <span id="detailIndentNo"></span></p>
+<p><strong>Status:</strong> <span id="detailIndentStatus"></span></p>
+<p><strong>Start Time:</strong> <span id="detailStartTime"></span></p>
+<p><strong>End Time:</strong> <span id="detailEndTime"></span></p>
+
+<div id="indentActions"></div>
+
+<div id="txrSection" style="margin-top:15px; display:none;">
+<h4>TXR Inspection (Rake Arrived)</h4>
+<p>Wagons Inspected: 58</p>
+<p>Unfit Wagons: 3</p>
+<p>Memo No: TXR-M-2025-01</p>
+<button>View Unfit Wagons</button>
+<button>View Rake Info</button>
+</div>
+
+</div>
+
+</div>
+
+
+<!-- RAKES -->
+<div id="rakes" class="section">
+
+<div class="card">
+<h2>Rake List</h2>
+
+<table class="table">
+<tr>
+<th>Rake No</th>
+<th>Status</th>
+<th>Weighments</th>
+<th>Elapsed Time</th>
+<th>Action</th>
+</tr>
+<tbody id="rakeTable"></tbody>
+</table>
+
+</div>
+
+<div id="rakeDetail" class="card" style="display:none;">
+<h3>Rake Detail</h3>
+
+<p><strong>Rake No:</strong> <span id="detailRakeNo"></span></p>
+<p><strong>Status:</strong> <span id="detailRakeStatus"></span></p>
+<p><strong>Weighment Count:</strong> <span id="detailWeighCount"></span></p>
+<p><strong>Elapsed Time:</strong> <span id="detailTimer">00:00:00</span></p>
+
+<hr>
+
+<h4>Rake Stage Progress</h4>
+<p id="rakeStageDisplay"></p>
+
+<hr>
+
+<h4>Wagon Theatre View</h4>
+<div id="wagonGrid" style="display:grid; grid-template-columns:repeat(10,1fr); gap:6px;"></div>
+
+<hr>
+
+<h4>Wagon Detail</h4>
+<div id="wagonDetailBox">
+Select a wagon to view details.
+</div>
+<hr>
+
+<button onclick="predictRR()">Predict RR</button>
+
+<div id="rrPredictionBox" style="margin-top:15px;"></div>
+</div>
+
+</div>
+
+
+<!-- RR -->
+<div id="rr" class="section">
+<div class="card">
+<h2>RR Prediction</h2>
+<p>Chargeable Weight: 3500 MT</p>
+<p>Freight: ₹ 525,000</p>
+<p>Demurrage: ₹ 20,000</p>
+<p>Total: ₹ 545,000</p>
+<button onclick="uploadRR()">Upload Actual RR</button>
+</div>
+
+<div class="card">
+<h3>Reconciliation</h3>
+<p>Predicted: ₹ 545,000</p>
+<p>Actual: ₹ 550,000</p>
+<p>Difference: ₹ 5,000</p>
+</div>
+</div>
+
+</div>
+
+<script>
+function show(id){
+document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+document.getElementById(id).classList.add('active');
+}
+/* =======================
+   TRUCK MODULE LOGIC
+======================= */
+
+let trucks = [
+    {id:1, vehicle:"GJ01AB1234", challan:"CH101", weight:25, status:"ARRIVED"},
+    {id:2, vehicle:"GJ02CD5678", challan:"CH102", weight:28, status:"UNLOADING"},
+    {id:3, vehicle:"GJ03EF9999", challan:"CH103", weight:30, status:"COMPLETED"}
+];
+
+function getTruckStatusBadge(status){
+    return "<span class='status'>" + status + "</span>";
+}
+
+function renderTruckTable(){
+    let table = document.getElementById("truckTable");
+    table.innerHTML = "";
+
+    trucks.forEach(t => {
+        table.innerHTML += `
+        <tr>
+            <td>${t.vehicle}</td>
+            <td>${t.challan}</td>
+            <td>${t.weight} MT</td>
+            <td>${getTruckStatusBadge(t.status)}</td>
+            <td><button onclick="openTruckDetail(${t.id})">Open</button></td>
+        </tr>`;
+    });
+}
+
+function openTruckDetail(id){
+    let truck = trucks.find(t => t.id === id);
+
+    document.getElementById("truckDetail").style.display = "block";
+    document.getElementById("detailVehicle").innerText = truck.vehicle;
+    document.getElementById("detailChallan").innerText = truck.challan;
+    document.getElementById("detailWeight").innerText = truck.weight;
+    document.getElementById("detailStatus").innerText = truck.status;
+
+    renderTruckActions(truck);
+}
+
+function renderTruckActions(truck){
+    let container = document.getElementById("truckActions");
+    container.innerHTML = "";
+
+    switch(truck.status){
+
+        case "ARRIVED":
+            container.innerHTML = `<button onclick="updateTruckStatus(${truck.id}, 'UNDER_VALIDATION')">Start Validation</button>`;
+            break;
+
+        case "UNDER_VALIDATION":
+            container.innerHTML = `
+                <button onclick="updateTruckStatus(${truck.id}, 'READY_FOR_UNLOAD')">Approve Validation</button>
+                <button onclick="updateTruckStatus(${truck.id}, 'CANCELLED')">Cancel Truck</button>
+            `;
+            break;
+
+        case "READY_FOR_UNLOAD":
+            container.innerHTML = `<button onclick="updateTruckStatus(${truck.id}, 'UNLOADING')">Start Unloading</button>`;
+            break;
+
+        case "UNLOADING":
+            container.innerHTML = `<button onclick="updateTruckStatus(${truck.id}, 'TARE_VALIDATION')">Complete Unloading</button>`;
+            break;
+
+        case "TARE_VALIDATION":
+            container.innerHTML = `<button onclick="updateTruckStatus(${truck.id}, 'COMPLETED')">Validate Tare</button>`;
+            break;
+
+        case "COMPLETED":
+            container.innerHTML = `<button onclick="updateTruckStatus(${truck.id}, 'STOCK_ADDED')">Add to Stock</button>`;
+            break;
+
+        case "STOCK_ADDED":
+            container.innerHTML = `<p>Stock Updated Successfully</p>`;
+            break;
+
+        case "CANCELLED":
+            container.innerHTML = `<p>Truck Cancelled</p>`;
+            break;
+    }
+}
+
+function updateTruckStatus(id, newStatus){
+    let truck = trucks.find(t => t.id === id);
+    truck.status = newStatus;
+
+    renderTruckTable();
+    openTruckDetail(id);
+}
+
+/* Initialize table when page loads */
+renderTruckTable();
+/* =======================
+   INDENT MODULE
+======================= */
+
+let indents = [
+    { id:1, number:"IND102", status:"RAISED", start:"10:00 AM", end:"--" },
+    { id:2, number:"IND103", status:"REJECTED", start:"09:30 AM", end:"10:15 AM" },
+    { id:3, number:"IND104", status:"RAKE_ARRIVED", start:"08:00 AM", end:"--" },
+    { id:4, number:"IND105", status:"RAKE_CREATED", start:"07:30 AM", end:"--" }
+];
+
+function renderIndentTable(){
+    let table = document.getElementById("indentTable");
+    table.innerHTML = "";
+
+    indents.forEach(i=>{
+        table.innerHTML += `
+        <tr>
+            <td>${i.number}</td>
+            <td>${i.status}</td>
+            <td>${i.start}</td>
+            <td>${i.end}</td>
+            <td><button onclick="openIndentDetail(${i.id})">Open</button></td>
+        </tr>`;
+    });
+}
+
+function openIndentDetail(id){
+    let indent = indents.find(i=>i.id===id);
+
+    document.getElementById("indentDetail").style.display="block";
+    document.getElementById("detailIndentNo").innerText = indent.number;
+    document.getElementById("detailIndentStatus").innerText = indent.status;
+    document.getElementById("detailStartTime").innerText = indent.start;
+    document.getElementById("detailEndTime").innerText = indent.end;
+
+    renderIndentActions(indent);
+}
+
+function renderIndentActions(indent){
+    let container = document.getElementById("indentActions");
+    container.innerHTML = "";
+    document.getElementById("txrSection").style.display="none";
+
+    switch(indent.status){
+
+        case "RAISED":
+            container.innerHTML = `
+                <button onclick="updateIndentStatus(${indent.id}, 'APPROVED')">Approve</button>
+                <button onclick="updateIndentStatus(${indent.id}, 'REJECTED')">Reject</button>
+                <button onclick="updateIndentStatus(${indent.id}, 'CANCELLED')">Cancel</button>
+            `;
+            break;
+
+        case "APPROVED":
+            container.innerHTML = `
+                <button onclick="updateIndentStatus(${indent.id}, 'RAKE_ARRIVED')">Mark Rake Arrived</button>
+            `;
+            break;
+
+        case "RAKE_ARRIVED":
+            container.innerHTML = `
+                <button>Create Rake</button>
+                <button>View Rake Info</button>
+                <button>View TXR Info</button>
+            `;
+            document.getElementById("txrSection").style.display="block";
+            break;
+
+        case "RAKE_CREATED":
+            container.innerHTML = `
+                <button>Open Rake Panel</button>
+                <button>View Rake Info</button>
+            `;
+            break;
+
+        case "REJECTED":
+        case "CANCELLED":
+            container.innerHTML = `<p>No actions available</p>`;
+            break;
+    }
+}
+
+function updateIndentStatus(id, newStatus){
+    let indent = indents.find(i=>i.id===id);
+    indent.status = newStatus;
+    renderIndentTable();
+    openIndentDetail(id);
+}
+
+function createIndent(){
+    let newId = indents.length + 1;
+    indents.push({
+        id:newId,
+        number:"IND10" + newId,
+        status:"RAISED",
+        start:"Now",
+        end:"--"
+    });
+    renderIndentTable();
+}
+
+renderIndentTable();
+/* =======================
+   RAKE MODULE
+======================= */
+
+let rakes = [
+    {
+        id:1,
+        number:"RAKE-101",
+        status:"LOADING",
+        weighments:1,
+        startTime:Date.now(),
+        wagons:generateWagons(50)
+    },
+    {
+        id:2,
+        number:"RAKE-102",
+        status:"TXR",
+        weighments:0,
+        startTime:null,
+        wagons:generateWagons(40)
+    },
+    {
+        id:3,
+        number:"RAKE-103",
+        status:"IN_MOTION_WEIGHMENT",
+        weighments:2,
+        startTime:Date.now()-600000,
+        wagons:generateWagons(60)
+    }
+];
+
+function generateWagons(count){
+    let arr = [];
+    for(let i=1;i<=count;i++){
+        arr.push({
+            number:"W"+i,
+            capacity:60,
+            loaded:Math.floor(Math.random()*65),
+            isFit:Math.random() > 0.1
+        });
+    }
+    return arr;
+}
+
+function renderRakeTable(){
+    let table = document.getElementById("rakeTable");
+    table.innerHTML="";
+
+    rakes.forEach(r=>{
+        table.innerHTML += `
+        <tr>
+            <td>${r.number}</td>
+            <td>${r.status}</td>
+            <td>${r.weighments}</td>
+            <td>${r.startTime ? formatElapsed(r.startTime) : "--"}</td>
+            <td><button onclick="openRake(${r.id})">Open</button></td>
+        </tr>`;
+    });
+}
+
+function openRake(id){
+    let rake = rakes.find(r=>r.id===id);
+
+    document.getElementById("rakeDetail").style.display="block";
+    document.getElementById("detailRakeNo").innerText=rake.number;
+    document.getElementById("detailRakeStatus").innerText=rake.status;
+    document.getElementById("detailWeighCount").innerText=rake.weighments;
+
+    displayStage(rake.status);
+    renderWagonGrid(rake);
+    startTimer(rake);
+}
+
+function renderWagonGrid(rake){
+    let grid = document.getElementById("wagonGrid");
+    grid.innerHTML="";
+
+    rake.wagons.forEach(w=>{
+        let div = document.createElement("div");
+        div.style.padding="6px";
+        div.style.textAlign="center";
+        div.style.border="1px solid #ccc";
+        div.style.cursor="pointer";
+        div.innerText=w.number;
+
+        if(!w.isFit){
+            div.style.background="red";
+            div.style.color="white";
+        } else if(w.loaded > w.capacity){
+            div.style.background="orange";
+        } else {
+            div.style.background="#dbeafe";
+        }
+
+        div.onclick=function(){
+            showWagonDetail(w);
+        };
+
+        grid.appendChild(div);
+    });
+}
+
+function showWagonDetail(w){
+    document.getElementById("wagonDetailBox").innerHTML=`
+        <p><strong>Wagon:</strong> ${w.number}</p>
+        <p><strong>Capacity:</strong> ${w.capacity} MT</p>
+        <p><strong>Loaded:</strong> ${w.loaded} MT</p>
+        <p><strong>Status:</strong> ${w.isFit ? "Fit" : "Unfit"}</p>
+        <p><strong>Overload:</strong> ${w.loaded > w.capacity ? (w.loaded - w.capacity)+" MT" : "No"}</p>
+    `;
+}
+
+function displayStage(status){
+    let display = document.getElementById("rakeStageDisplay");
+
+    switch(status){
+        case "TXR":
+            display.innerText="Currently in TXR Inspection";
+            break;
+        case "LOADING":
+            display.innerText="Currently Loading Wagons";
+            break;
+        case "GUARD_INSPECTION":
+            display.innerText="Under Guard Inspection";
+            break;
+        case "IN_MOTION_WEIGHMENT":
+            display.innerText="In-Motion Weighment in Progress";
+            break;
+        case "COMPLETED":
+            display.innerText="Rake Completed and Dispatched";
+            break;
+        default:
+            display.innerText=status;
+    }
+}
+
+let timerInterval;
+
+function startTimer(rake){
+    clearInterval(timerInterval);
+
+    if(!rake.startTime){
+        document.getElementById("detailTimer").innerText="--";
+        return;
+    }
+
+    timerInterval = setInterval(()=>{
+        document.getElementById("detailTimer").innerText=
+            formatElapsed(rake.startTime);
+    },1000);
+}
+
+function formatElapsed(start){
+    let diff = Date.now() - start;
+    let sec = Math.floor(diff/1000);
+    let hrs = String(Math.floor(sec/3600)).padStart(2,'0');
+    let mins = String(Math.floor((sec%3600)/60)).padStart(2,'0');
+    let secs = String(sec%60).padStart(2,'0');
+    return hrs+":"+mins+":"+secs;
+}
+
+renderRakeTable();
+
+function predictRR(){
+    let rakeNo = document.getElementById("detailRakeNo").innerText;
+    let rake = rakes.find(r=>r.number===rakeNo);
+
+    let totalWeight = 0;
+    rake.wagons.forEach(w=>{
+        if(w.isFit){
+            totalWeight += w.loaded;
+        }
+    });
+
+    let ratePerMT = 150; // demo rate
+    let freight = totalWeight * ratePerMT;
+    let gst = freight * 0.05;
+    let total = freight + gst;
+
+    document.getElementById("rrPredictionBox").innerHTML = `
+        <h4>RR Prediction</h4>
+        <p><strong>Total Weight:</strong> ${totalWeight} MT</p>
+        <p><strong>Rate per MT:</strong> ₹ ${ratePerMT}</p>
+        <p><strong>Freight:</strong> ₹ ${freight.toLocaleString()}</p>
+        <p><strong>GST (5%):</strong> ₹ ${gst.toLocaleString()}</p>
+        <p><strong>Total Payable:</strong> ₹ ${total.toLocaleString()}</p>
+    `;
+}
+
+</script>
+
+</body>
+</html>

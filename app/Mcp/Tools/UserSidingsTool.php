@@ -48,7 +48,7 @@ final class UserSidingsTool extends Tool
                 'email' => $user->email,
                 'roles' => $user->getRoleNames()->toArray(),
             ],
-            'sidings' => $user->sidings->map(fn ($siding) => [
+            'sidings' => $user->sidings->map(fn ($siding): array => [
                 'id' => $siding->id,
                 'name' => $siding->name,
                 'code' => $siding->code,

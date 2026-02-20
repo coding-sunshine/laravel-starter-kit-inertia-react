@@ -9,7 +9,6 @@ use Laravel\Ai\Concerns\RemembersConversations;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\Conversational;
 use Laravel\Ai\Promptable;
-use Stringable;
 
 /**
  * In-app AI chatbot with persistent conversation history.
@@ -25,7 +24,7 @@ final class ChatbotAgent implements Agent, Conversational
         return config('ai.chat_model', 'stepfun/step-3.5-flash:free');
     }
 
-    public function instructions(): Stringable|string
+    public function instructions(): string
     {
         return 'You are a helpful assistant for the Railway Rake Management Control System (RRMCS) application. '
             .'Answer questions about rakes, indents, sidings, demurrage, penalties, weighments, alerts, and general usage. '

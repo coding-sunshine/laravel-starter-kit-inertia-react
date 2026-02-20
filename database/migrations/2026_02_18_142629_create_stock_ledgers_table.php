@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('stock_ledgers', function (Blueprint $table) {
+        Schema::create('stock_ledgers', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('siding_id')->constrained();
             $table->enum('transaction_type', ['receipt', 'dispatch', 'correction']);

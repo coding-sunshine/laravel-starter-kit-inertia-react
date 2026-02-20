@@ -84,7 +84,7 @@ final class VehicleUnloadController extends Controller
         ) {
             $variance = (float) $data['weighment_weight_mt'] - (float) $data['mine_weight_mt'];
         }
-        VehicleUnload::create([
+        VehicleUnload::query()->create([
             'siding_id' => $data['siding_id'],
             'vehicle_id' => $data['vehicle_id'],
             'jimms_challan_number' => $data['jimms_challan_number'] ?? null,
@@ -98,8 +98,7 @@ final class VehicleUnloadController extends Controller
             'created_by' => $request->user()->id,
         ]);
 
-        return redirect()
-            ->route('road-dispatch.unloads.index')
+        return to_route('road-dispatch.unloads.index')
             ->with('success', 'Vehicle unload recorded.');
     }
 
@@ -109,8 +108,7 @@ final class VehicleUnloadController extends Controller
 
         $this->confirmVehicleUnload->handle($unload, (int) $request->user()->id);
 
-        return redirect()
-            ->back()
+        return back()
             ->with('success', 'Receipt confirmed and stock updated.');
     }
 }

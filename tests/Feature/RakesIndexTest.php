@@ -20,7 +20,7 @@ test('unauthenticated user cannot access rakes index', function (): void {
 
 test('authenticated user with sidings can access rakes index without ambiguous column error', function (): void {
     $org = Organization::factory()->create();
-    $siding = Siding::create([
+    $siding = Siding::query()->create([
         'organization_id' => $org->id,
         'name' => 'Test Siding',
         'code' => 'TEST',
@@ -35,7 +35,7 @@ test('authenticated user with sidings can access rakes index without ambiguous c
     $user->assignRole('siding_operator');
     $user->sidings()->attach($siding->id, ['is_primary' => true]);
 
-    Rake::create([
+    Rake::query()->create([
         'siding_id' => $siding->id,
         'rake_number' => 'TEST-001',
         'state' => 'pending',
@@ -53,7 +53,7 @@ test('authenticated user with sidings can access rakes index without ambiguous c
 });
 
 test('super admin sees all rakes', function (): void {
-    Role::firstOrCreate(['name' => 'super-admin', 'guard_name' => 'web']);
+    Role::query()->firstOrCreate(['name' => 'super-admin', 'guard_name' => 'web']);
 
     $user = User::factory()->withoutTwoFactor()->create([
         'onboarding_completed' => true,
@@ -61,7 +61,7 @@ test('super admin sees all rakes', function (): void {
     $user->assignRole('super-admin');
 
     $org = Organization::factory()->create();
-    $siding = Siding::create([
+    $siding = Siding::query()->create([
         'organization_id' => $org->id,
         'name' => 'Test Siding',
         'code' => 'T2',
@@ -70,13 +70,13 @@ test('super admin sees all rakes', function (): void {
         'is_active' => true,
     ]);
 
-    Rake::create([
+    Rake::query()->create([
         'siding_id' => $siding->id,
         'rake_number' => 'SA-001',
         'state' => 'pending',
         'wagon_count' => 10,
     ]);
-    Rake::create([
+    Rake::query()->create([
         'siding_id' => $siding->id,
         'rake_number' => 'SA-002',
         'state' => 'loading',
@@ -89,6 +89,6 @@ test('super admin sees all rakes', function (): void {
         ->assertInertia(fn ($page) => $page
             ->component('rakes/index')
             ->has('rakes.data')
-            ->where('rakes.data', fn ($data) => count($data) === 2)
+            ->where('rakes.data', fn ($data): bool => count($data) === 2)
         );
 });

@@ -49,18 +49,15 @@ final class LoaderSeeder extends Seeder
 
         foreach ($loaders as $loader) {
             $stationCode = $loader['siding'];
-            $siding = \App\Models\Siding::where('station_code', $stationCode)->first();
+            $siding = \App\Models\Siding::query()->where('station_code', $stationCode)->first();
             if ($siding) {
-                \App\Models\Loader::firstOrCreate(
-                    ['code' => $loader['code']],
-                    [
-                        'siding_id' => $siding->id,
-                        'loader_name' => $loader['loader_name'],
-                        'loader_type' => $loader['loader_type'],
-                        'make_model' => $loader['make_model'],
-                        'last_calibration_date' => $loader['last_calibration_date'],
-                    ]
-                );
+                \App\Models\Loader::query()->firstOrCreate(['code' => $loader['code']], [
+                    'siding_id' => $siding->id,
+                    'loader_name' => $loader['loader_name'],
+                    'loader_type' => $loader['loader_type'],
+                    'make_model' => $loader['make_model'],
+                    'last_calibration_date' => $loader['last_calibration_date'],
+                ]);
             }
         }
     }

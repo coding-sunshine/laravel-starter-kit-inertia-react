@@ -10,6 +10,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 final class Alert extends Model
 {
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
+
     protected $fillable = [
         'user_id',
         'siding_id',
@@ -48,22 +51,26 @@ final class Alert extends Model
         return $this->belongsTo(User::class, 'resolved_by');
     }
 
-    public function scopeActive(Builder $query): Builder
+    #[\Illuminate\Database\Eloquent\Attributes\Scope]
+    protected function active(Builder $query): Builder
     {
         return $query->where('status', 'active');
     }
 
-    public function scopeForSiding(Builder $query, int $sidingId): Builder
+    #[\Illuminate\Database\Eloquent\Attributes\Scope]
+    protected function forSiding(Builder $query, int $sidingId): Builder
     {
         return $query->where('siding_id', $sidingId);
     }
 
-    public function scopeForRake(Builder $query, int $rakeId): Builder
+    #[\Illuminate\Database\Eloquent\Attributes\Scope]
+    protected function forRake(Builder $query, int $rakeId): Builder
     {
         return $query->where('rake_id', $rakeId);
     }
 
-    public function scopeForSidings(Builder $query, array $sidingIds): Builder
+    #[\Illuminate\Database\Eloquent\Attributes\Scope]
+    protected function forSidings(Builder $query, array $sidingIds): Builder
     {
         return $query->whereIn('siding_id', $sidingIds);
     }

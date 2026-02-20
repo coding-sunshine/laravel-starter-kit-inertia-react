@@ -96,10 +96,10 @@ final class RrDocumentController extends Controller
             'document_status' => ['nullable', 'string', 'in:received,verified,discrepancy'],
             'pdf' => ['nullable', 'file', 'mimes:pdf', 'max:10240'],
         ]);
-        $rake = Rake::findOrFail($validated['rake_id']);
+        $rake = Rake::query()->findOrFail($validated['rake_id']);
         $this->authorize('update', $rake);
 
-        $doc = RrDocument::create([
+        $doc = RrDocument::query()->create([
             'rake_id' => $validated['rake_id'],
             'rr_number' => $validated['rr_number'],
             'rr_received_date' => $validated['rr_received_date'],
@@ -117,13 +117,13 @@ final class RrDocumentController extends Controller
             $extracted = $processRrDocument->extractFromUpload($request->file('pdf'));
             if ($extracted !== null && $extracted !== []) {
                 $update = [];
-                if (! empty($extracted['rr_number'])) {
+                if (isset($extracted['rr_number']) && ($extracted['rr_number'] !== '' && $extracted['rr_number'] !== '0')) {
                     $update['rr_number'] = $extracted['rr_number'];
                 }
                 if (isset($extracted['rr_weight_mt'])) {
                     $update['rr_weight_mt'] = $extracted['rr_weight_mt'];
                 }
-                if (! empty($extracted['rr_received_date'])) {
+                if (isset($extracted['rr_received_date']) && ($extracted['rr_received_date'] !== '' && $extracted['rr_received_date'] !== '0')) {
                     $update['rr_received_date'] = $extracted['rr_received_date'];
                 }
                 if (array_key_exists('fnr', $extracted)) {
@@ -150,8 +150,7 @@ final class RrDocumentController extends Controller
             }
         }
 
-        return redirect()
-            ->route('railway-receipts.index')
+        return to_route('railway-receipts.index')
             ->with('success', $message);
     }
 
@@ -177,8 +176,7 @@ final class RrDocumentController extends Controller
             'updated_by' => $request->user()->id,
         ]);
 
-        return redirect()
-            ->back()
+        return back()
             ->with('success', 'RR document updated.');
     }
 }

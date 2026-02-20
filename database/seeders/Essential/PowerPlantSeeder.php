@@ -37,10 +37,7 @@ final class PowerPlantSeeder extends Seeder
         ];
 
         foreach ($plants as $plant) {
-            PowerPlant::firstOrCreate(
-                ['code' => $plant['code']],
-                $plant
-            );
+            PowerPlant::query()->firstOrCreate(['code' => $plant['code']], $plant);
         }
     }
 }
