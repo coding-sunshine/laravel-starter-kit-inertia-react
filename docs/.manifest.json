@@ -162,9 +162,7 @@
             "relationships": {
                 "usedBy": [],
                 "usesModels": [],
-                "relatedRoutes": [
-                    "two-factor.enable"
-                ]
+                "relatedRoutes": []
             }
         },
         "LoggingDisableTwoFactorAuthentication": {
@@ -173,9 +171,7 @@
             "relationships": {
                 "usedBy": [],
                 "usesModels": [],
-                "relatedRoutes": [
-                    "two-factor.disable"
-                ]
+                "relatedRoutes": []
             }
         },
         "LoggingConfirmTwoFactorAuthentication": {
@@ -184,9 +180,7 @@
             "relationships": {
                 "usedBy": [],
                 "usesModels": [],
-                "relatedRoutes": [
-                    "two-factor.confirm"
-                ]
+                "relatedRoutes": []
             }
         },
         "LoggingGenerateNewRecoveryCodes": {
@@ -195,9 +189,7 @@
             "relationships": {
                 "usedBy": [],
                 "usesModels": [],
-                "relatedRoutes": [
-                    "two-factor.regenerate-recovery-codes"
-                ]
+                "relatedRoutes": []
             }
         },
         "StoreContactSubmission": {
@@ -649,6 +641,62 @@
                 ],
                 "relatedRoutes": []
             }
+        },
+        "PurchaseCreditsAction": {
+            "documented": true,
+            "path": "./purchasecreditsaction.md",
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [
+                    "Organization",
+                    "CreditPack"
+                ],
+                "relatedRoutes": []
+            }
+        },
+        "SyncSubscriptionSeatsAction": {
+            "documented": true,
+            "path": "./syncsubscriptionseatsaction.md",
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [
+                    "Organization"
+                ],
+                "relatedRoutes": []
+            }
+        },
+        "CreateNewUser": {
+            "documented": true,
+            "path": "./createnewuser.md",
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [
+                    "User"
+                ],
+                "relatedRoutes": []
+            }
+        },
+        "ResetUserPassword": {
+            "documented": true,
+            "path": "./resetuserpassword.md",
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [
+                    "User"
+                ],
+                "relatedRoutes": []
+            }
+        },
+        "UpdateUserProfileInformation": {
+            "documented": true,
+            "path": "./updateuserprofileinformation.md",
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [
+                    "User"
+                ],
+                "relatedRoutes": []
+            }
         }
     },
     "controllers": {
@@ -658,10 +706,7 @@
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
-                "relatedRoutes": [
-                    "blog.index",
-                    "blog.show"
-                ],
+                "relatedRoutes": [],
                 "rendersPages": [
                     "blog/index",
                     "blog/show"
@@ -674,9 +719,7 @@
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
-                "relatedRoutes": [
-                    "changelog.index"
-                ],
+                "relatedRoutes": [],
                 "rendersPages": [
                     "changelog/index"
                 ]
@@ -688,10 +731,7 @@
             "relationships": {
                 "usesActions": [],
                 "usesFormRequests": [],
-                "relatedRoutes": [
-                    "help.index",
-                    "help.show"
-                ],
+                "relatedRoutes": [],
                 "rendersPages": [
                     "help/index",
                     "help/show"
@@ -706,9 +746,7 @@
                     "RateHelpArticleAction"
                 ],
                 "usesFormRequests": [],
-                "relatedRoutes": [
-                    "help.rate"
-                ],
+                "relatedRoutes": [],
                 "rendersPages": []
             }
         },
@@ -1084,6 +1122,270 @@
                     "chat.message"
                 ],
                 "rendersPages": []
+            }
+        },
+        "AlertController": {
+            "documented": true,
+            "path": "./alertcontroller.md",
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": [
+                    "alerts/index"
+                ]
+            }
+        },
+        "BillingDashboardController": {
+            "documented": true,
+            "path": "./billingdashboardcontroller.md",
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": [
+                    "billing/index"
+                ]
+            }
+        },
+        "CreditController": {
+            "documented": true,
+            "path": "./creditcontroller.md",
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": [
+                    "billing/credits"
+                ]
+            }
+        },
+        "InvoiceController": {
+            "documented": true,
+            "path": "./invoicecontroller.md",
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": [
+                    "billing/invoices"
+                ]
+            }
+        },
+        "PaddleWebhookController": {
+            "documented": true,
+            "path": "./paddlewebhookcontroller.md",
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": []
+            }
+        },
+        "PricingController": {
+            "documented": true,
+            "path": "./pricingcontroller.md",
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": [
+                    "pricing"
+                ]
+            }
+        },
+        "StripeWebhookController": {
+            "documented": true,
+            "path": "./stripewebhookcontroller.md",
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": []
+            }
+        },
+        "ExecutiveDashboardController": {
+            "documented": true,
+            "path": "./executivedashboardcontroller.md",
+            "relationships": {
+                "usesActions": [
+                    "SyncDemurrageAlertsAction"
+                ],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": [
+                    "dashboard"
+                ]
+            }
+        },
+        "IndentsController": {
+            "documented": true,
+            "path": "./indentscontroller.md",
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": [
+                    "indents/index",
+                    "indents/create",
+                    "indents/show",
+                    "indents/edit"
+                ]
+            }
+        },
+        "PenaltyController": {
+            "documented": true,
+            "path": "./penaltycontroller.md",
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": [
+                    "penalties/index"
+                ]
+            }
+        },
+        "RrDocumentController": {
+            "documented": true,
+            "path": "./rrdocumentcontroller.md",
+            "relationships": {
+                "usesActions": [
+                    "ProcessRrDocument"
+                ],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": [
+                    "railway-receipts/index",
+                    "railway-receipts/show",
+                    "railway-receipts/create"
+                ]
+            }
+        },
+        "RakeGuardInspectionController": {
+            "documented": true,
+            "path": "./rakeguardinspectioncontroller.md",
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": []
+            }
+        },
+        "RakeTxrController": {
+            "documented": true,
+            "path": "./raketxrcontroller.md",
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": []
+            }
+        },
+        "RakeWeighmentController": {
+            "documented": true,
+            "path": "./rakeweighmentcontroller.md",
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": []
+            }
+        },
+        "RakesController": {
+            "documented": true,
+            "path": "./rakescontroller.md",
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": [
+                    "rakes/index",
+                    "rakes/show"
+                ]
+            }
+        },
+        "PowerPlantReceiptController": {
+            "documented": true,
+            "path": "./powerplantreceiptcontroller.md",
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": [
+                    "reconciliation/power-plant-receipts/index",
+                    "reconciliation/power-plant-receipts/create"
+                ]
+            }
+        },
+        "ReconciliationController": {
+            "documented": true,
+            "path": "./reconciliationcontroller.md",
+            "relationships": {
+                "usesActions": [
+                    "ReconcileRakeAction"
+                ],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": [
+                    "reconciliation/index",
+                    "reconciliation/show"
+                ]
+            }
+        },
+        "ReportsController": {
+            "documented": true,
+            "path": "./reportscontroller.md",
+            "relationships": {
+                "usesActions": [
+                    "RunReportAction"
+                ],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": [
+                    "reports/index"
+                ]
+            }
+        },
+        "VehicleArrivalController": {
+            "documented": true,
+            "path": "./vehiclearrivalcontroller.md",
+            "relationships": {
+                "usesActions": [
+                    "CreateVehicleArrival"
+                ],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": [
+                    "road-dispatch/arrivals/index",
+                    "road-dispatch/arrivals/create"
+                ]
+            }
+        },
+        "VehicleUnloadController": {
+            "documented": true,
+            "path": "./vehicleunloadcontroller.md",
+            "relationships": {
+                "usesActions": [
+                    "ConfirmVehicleUnload"
+                ],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": [
+                    "road-dispatch/unloads/index",
+                    "road-dispatch/unloads/create"
+                ]
+            }
+        },
+        "AchievementsController": {
+            "documented": true,
+            "path": "./achievementscontroller.md",
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": [
+                    "settings/achievements"
+                ]
             }
         }
     },
