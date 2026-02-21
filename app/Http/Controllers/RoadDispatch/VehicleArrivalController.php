@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace App\Http\Controllers\RoadDispatch;
 
 use App\Actions\CreateVehicleArrival;
+use App\DataTables\VehicleArrivalDataTable;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\RoadDispatch\StoreVehicleArrivalRequest;
 use App\Models\Siding;
-use App\Models\VehicleArrival;
+use App\Models\Vehicle;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -27,29 +28,13 @@ final class VehicleArrivalController extends Controller
             ? Siding::query()->pluck('id')->all()
             : $user->accessibleSidings()->get()->pluck('id')->all();
 
-        $query = VehicleArrival::query()
-            ->with(['siding:id,name,code', 'vehicle:id,vehicle_number,owner_name'])
-            ->whereIn('siding_id', $sidingIds)
-            ->latest('arrived_at');
-
-        if ($request->filled('siding_id')) {
-            $query->where('siding_id', $request->input('siding_id'));
-        }
-        if ($request->filled('date_from')) {
-            $query->whereDate('arrived_at', '>=', $request->input('date_from'));
-        }
-        if ($request->filled('date_to')) {
-            $query->whereDate('arrived_at', '<=', $request->input('date_to'));
-        }
-
-        $arrivals = $query->paginate(15)->withQueryString();
         $sidings = Siding::query()
             ->whereIn('id', $sidingIds)
             ->orderBy('name')
             ->get(['id', 'name', 'code']);
 
         return Inertia::render('road-dispatch/arrivals/index', [
-            'arrivals' => $arrivals,
+            'tableData' => VehicleArrivalDataTable::makeTable($request),
             'sidings' => $sidings,
         ]);
     }
@@ -65,7 +50,7 @@ final class VehicleArrivalController extends Controller
             ->whereIn('id', $sidingIds)
             ->orderBy('name')
             ->get(['id', 'name', 'code']);
-        $vehicles = \App\Models\Vehicle::query()
+        $vehicles = Vehicle::query()
             ->where('is_active', true)
             ->orderBy('vehicle_number')
             ->get(['id', 'vehicle_number', 'owner_name']);

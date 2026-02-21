@@ -40,6 +40,14 @@ final readonly class PrismService
     }
 
     /**
+     * Get the fast model for latency-sensitive operations (deferred props, briefings).
+     */
+    public function fastModel(): string
+    {
+        return config('prism.defaults.fast_model', 'openai/gpt-4o-mini');
+    }
+
+    /**
      * Get the default model for a specific provider.
      */
     public function defaultModelForProvider(Provider $provider): string

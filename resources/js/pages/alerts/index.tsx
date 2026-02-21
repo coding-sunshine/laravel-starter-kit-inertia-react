@@ -1,3 +1,5 @@
+import { DataTable } from 'laravel-data-table';
+import type { DataTableResponse } from 'laravel-data-table';
 import Heading from '@/components/heading';
 import { RrmcsGuidance } from '@/components/rrmcs-guidance';
 import { Button } from '@/components/ui/button';
@@ -10,7 +12,7 @@ import {
 } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, router, usePage } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { AlertTriangle } from 'lucide-react';
 
 interface Siding {
@@ -19,12 +21,7 @@ interface Siding {
     code: string;
 }
 
-interface Rake {
-    id: number;
-    rake_number: string;
-}
-
-interface AlertItem {
+interface AlertRow {
     id: number;
     type: string;
     title: string;
@@ -32,32 +29,18 @@ interface AlertItem {
     severity: string;
     status: string;
     created_at: string;
-    resolved_at: string | null;
     rake_id: number | null;
     siding_id: number | null;
-    rake?: Rake | null;
-    siding?: Siding | null;
-}
-
-interface PaginatorLink {
-    url: string | null;
-    label: string;
-    active: boolean;
+    rake_number: string | null;
+    siding_name: string | null;
 }
 
 interface Props {
-    alerts: {
-        data: AlertItem[];
-        current_page: number;
-        last_page: number;
-        links: PaginatorLink[];
-    };
+    tableData: DataTableResponse<AlertRow>;
     sidings: Siding[];
 }
 
-export default function AlertsIndex({ alerts, sidings }: Props) {
-    const { url } = usePage();
-    const q = new URLSearchParams(url.split('?')[1] || '');
+export default function AlertsIndex({ tableData }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: '/dashboard' },
         { title: 'Alerts', href: '/alerts' },
@@ -84,175 +67,43 @@ export default function AlertsIndex({ alerts, sidings }: Props) {
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <form
-                            method="get"
-                            className="mb-6 flex flex-wrap items-end gap-3"
-                            onSubmit={(e) => {
-                                e.preventDefault();
-                                const form = e.currentTarget;
-                                const siding = (
-                                    form.querySelector(
-                                        '[name=siding_id]',
-                                    ) as HTMLSelectElement
-                                )?.value;
-                                const status = (
-                                    form.querySelector(
-                                        '[name=status]',
-                                    ) as HTMLSelectElement
-                                )?.value;
-                                const params = new URLSearchParams();
-                                if (siding) params.set('siding_id', siding);
-                                if (status) params.set('status', status);
-                                router.get(
-                                    '/alerts',
-                                    Object.fromEntries(params),
-                                );
+                        <DataTable<AlertRow>
+                            tableData={tableData}
+                            tableName="alerts"
+                            actions={[
+                                {
+                                    label: 'Resolve',
+                                    onClick: (row) =>
+                                        router.put(
+                                            `/alerts/${row.id}/resolve`,
+                                            { redirect: '/alerts' },
+                                        ),
+                                    visible: (row) => row.status === 'active',
+                                },
+                            ]}
+                            renderCell={(columnId, _value, row) => {
+                                if (columnId === 'rake_number') {
+                                    return row.rake_number
+                                        ? row.rake_number
+                                        : row.siding_name ?? '—';
+                                }
+                                if (columnId === 'severity') {
+                                    return (
+                                        <span className="capitalize">
+                                            {row.severity}
+                                        </span>
+                                    );
+                                }
+                                if (columnId === 'status') {
+                                    return (
+                                        <span className="capitalize">
+                                            {row.status}
+                                        </span>
+                                    );
+                                }
+                                return undefined;
                             }}
-                        >
-                            <div className="grid gap-2">
-                                <label className="text-sm font-medium">
-                                    Siding
-                                </label>
-                                <select
-                                    name="siding_id"
-                                    defaultValue={q.get('siding_id') ?? ''}
-                                    className="rounded-md border border-input bg-background px-4 py-2.5 text-sm"
-                                >
-                                    <option value="">All</option>
-                                    {sidings.map((s) => (
-                                        <option key={s.id} value={s.id}>
-                                            {s.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="grid gap-2">
-                                <label className="text-sm font-medium">
-                                    Status
-                                </label>
-                                <select
-                                    name="status"
-                                    defaultValue={q.get('status') ?? ''}
-                                    className="rounded-md border border-input bg-background px-4 py-2.5 text-sm"
-                                >
-                                    <option value="">All</option>
-                                    <option value="active">Active</option>
-                                    <option value="resolved">Resolved</option>
-                                </select>
-                            </div>
-                            <Button type="submit" variant="secondary">
-                                Filter
-                            </Button>
-                        </form>
-                        {alerts.data.length === 0 ? (
-                            <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-                                <AlertTriangle className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-                                <p>No alerts found.</p>
-                            </div>
-                        ) : (
-                            <>
-                                <div className="overflow-x-auto rounded-md border">
-                                    <table className="w-full text-sm">
-                                        <thead>
-                                            <tr className="border-b bg-muted/50">
-                                                <th className="px-5 py-3.5 text-left font-medium">
-                                                    Type
-                                                </th>
-                                                <th className="px-5 py-3.5 text-left font-medium">
-                                                    Title
-                                                </th>
-                                                <th className="px-5 py-3.5 text-left font-medium">
-                                                    Rake / Siding
-                                                </th>
-                                                <th className="px-5 py-3.5 text-left font-medium">
-                                                    Severity
-                                                </th>
-                                                <th className="px-5 py-3.5 text-left font-medium">
-                                                    Status
-                                                </th>
-                                                <th className="px-5 py-3.5 text-left font-medium">
-                                                    Created
-                                                </th>
-                                                <th className="px-5 py-3.5 text-right font-medium">
-                                                    Actions
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {alerts.data.map((alert) => (
-                                                <tr
-                                                    key={alert.id}
-                                                    className="border-b last:border-0 hover:bg-muted/30"
-                                                >
-                                                    <td className="px-5 py-3.5">
-                                                        {alert.type}
-                                                    </td>
-                                                    <td className="px-5 py-3.5 font-medium">
-                                                        {alert.title}
-                                                    </td>
-                                                    <td className="px-5 py-3.5">
-                                                        {alert.rake
-                                                            ? alert.rake
-                                                                  .rake_number
-                                                            : alert.siding
-                                                              ? alert.siding
-                                                                    .name
-                                                              : '—'}
-                                                    </td>
-                                                    <td className="px-5 py-3.5 capitalize">
-                                                        {alert.severity}
-                                                    </td>
-                                                    <td className="px-5 py-3.5 capitalize">
-                                                        {alert.status}
-                                                    </td>
-                                                    <td className="px-5 py-3.5">
-                                                        {alert.created_at}
-                                                    </td>
-                                                    <td className="px-5 py-3.5 text-right">
-                                                        {alert.status ===
-                                                            'active' && (
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                onClick={() =>
-                                                                    router.put(
-                                                                        `/alerts/${alert.id}/resolve`,
-                                                                        {
-                                                                            redirect:
-                                                                                '/alerts',
-                                                                        },
-                                                                    )
-                                                                }
-                                                            >
-                                                                Resolve
-                                                            </Button>
-                                                        )}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                                {alerts.last_page > 1 && (
-                                    <nav className="mt-6 flex flex-wrap items-center justify-center gap-4 pt-2">
-                                        {alerts.links.map((link) => (
-                                            <button
-                                                key={link.label}
-                                                type="button"
-                                                disabled={!link.url}
-                                                className="rounded-md border border-input px-4 py-2.5 text-sm disabled:opacity-50"
-                                                onClick={() =>
-                                                    link.url &&
-                                                    router.get(link.url)
-                                                }
-                                            >
-                                                {link.label}
-                                            </button>
-                                        ))}
-                                    </nav>
-                                )}
-                            </>
-                        )}
+                        />
                     </CardContent>
                 </Card>
             </div>

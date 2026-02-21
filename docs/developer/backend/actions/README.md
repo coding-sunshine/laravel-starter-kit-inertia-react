@@ -62,5 +62,6 @@ All Actions:
 | [AggregateSidingPerformance](./aggregatesidingperformance.md) | N/A | ✅ |
 | [GenerateDailyBriefingAction](./generatedailybriefingaction.md) | N/A | ✅ |
 | [GeneratePenaltyInsightsAction](./generatepenaltyinsightsaction.md) | N/A | ✅ |
+| [BuildPenaltyChartDataAction](./BuildPenaltyChartDataAction.md) | N/A | ✅ |
 
 

@@ -47,8 +47,8 @@ test('authenticated user with sidings can access rakes index without ambiguous c
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('rakes/index')
-            ->has('rakes')
-            ->has('rakes.data')
+            ->has('tableData')
+            ->has('tableData.data')
         );
 });
 
@@ -88,7 +88,7 @@ test('super admin sees all rakes', function (): void {
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('rakes/index')
-            ->has('rakes.data')
-            ->where('rakes.data', fn ($data): bool => count($data) === 2)
+            ->has('tableData.data')
+            ->where('tableData.data', fn ($data): bool => count($data) === 2)
         );
 });

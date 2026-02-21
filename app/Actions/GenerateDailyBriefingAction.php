@@ -30,23 +30,32 @@ final readonly class GenerateDailyBriefingAction
 
         $cacheKey = "daily_briefing:{$user->id}";
 
-        return Cache::remember($cacheKey, 3600, function () use ($sidingIds): ?string {
-            if (! $this->prism->isAvailable()) {
-                return null;
-            }
+        if (Cache::has($cacheKey)) {
+            $cached = Cache::get($cacheKey);
 
-            $data = $this->collectData($sidingIds);
+            return $cached === '__unavailable__' ? null : $cached;
+        }
 
-            $prompt = $this->buildPrompt($data);
+        if (! $this->prism->isAvailable()) {
+            Cache::put($cacheKey, '__unavailable__', 3600);
 
-            try {
-                $response = $this->prism->generate($prompt);
+            return null;
+        }
 
-                return mb_trim($response->text);
-            } catch (Throwable) {
-                return null;
-            }
-        });
+        $data = $this->collectData($sidingIds);
+        $prompt = $this->buildPrompt($data);
+
+        try {
+            $response = $this->prism->generate($prompt, $this->prism->fastModel());
+            $text = mb_trim($response->text);
+            Cache::put($cacheKey, $text, 3600);
+
+            return $text;
+        } catch (Throwable) {
+            Cache::put($cacheKey, '__unavailable__', 900);
+
+            return null;
+        }
     }
 
     /**

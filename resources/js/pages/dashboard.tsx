@@ -17,6 +17,7 @@ import {
     ArrowUp,
     BarChart3,
     ClipboardList,
+    DollarSign,
     FileText,
     LifeBuoy,
     Mail,
@@ -101,6 +102,11 @@ interface CostAvoidance {
     money_lost: number;
 }
 
+interface DisputeOpportunity {
+    potential_savings: number;
+    undisputed_count: number;
+}
+
 interface FinancialImpact {
     ytd_total: number;
     projected_annual: number;
@@ -138,6 +144,7 @@ type DashboardProps = SharedData & {
     penaltyStatusBreakdown?: NameValueCountPoint[];
     responsiblePartyBreakdown?: NameValueCountPoint[];
     sidingPerformance?: SidingPerformanceItem[];
+    disputeOpportunity?: DisputeOpportunity;
     sidings?: SidingOption[];
     aiBriefing?: string | null;
 };
@@ -217,8 +224,6 @@ function TrendIcon({ direction }: { direction: string }) {
 function AiBriefingCard() {
     const { aiBriefing } = usePage<DashboardProps>().props;
 
-    if (!aiBriefing) return null;
-
     return (
         <div className="rounded-lg border bg-card p-5">
             <div className="flex items-center gap-2.5">
@@ -227,9 +232,15 @@ function AiBriefingCard() {
                 </div>
                 <h3 className="text-sm font-medium">AI Daily Briefing</h3>
             </div>
-            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                {aiBriefing}
-            </p>
+            {aiBriefing ? (
+                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                    {aiBriefing}
+                </p>
+            ) : (
+                <p className="mt-3 text-sm text-muted-foreground/60">
+                    AI briefing is temporarily unavailable. It will retry automatically.
+                </p>
+            )}
         </div>
     );
 }
@@ -251,6 +262,7 @@ export default function Dashboard() {
     const penaltyStatusBreakdown = props.penaltyStatusBreakdown ?? [];
     const responsiblePartyBreakdown = props.responsiblePartyBreakdown ?? [];
     const sidingPerformance = props.sidingPerformance ?? [];
+    const disputeOpportunity = props.disputeOpportunity ?? null;
     const sidings = props.sidings ?? [];
 
     const f = features ?? {};
@@ -502,6 +514,20 @@ export default function Dashboard() {
                                         Proj. {formatCurrency(financialImpact.projected_annual)}/yr
                                     </p>
                                 </div>
+                            )}
+                            {disputeOpportunity && disputeOpportunity.potential_savings > 0 && (
+                                <Link href="/penalties/analytics" className="rounded-lg border bg-card p-4 transition-colors hover:bg-muted/50" data-pan="penalty-cost-savings">
+                                    <div className="flex items-center gap-2 text-muted-foreground">
+                                        <DollarSign className="size-4" />
+                                        <span className="text-xs">Potential savings</span>
+                                    </div>
+                                    <p className="mt-1 text-2xl font-semibold text-green-600 dark:text-green-400">
+                                        {formatCurrency(disputeOpportunity.potential_savings)}
+                                    </p>
+                                    <p className="mt-0.5 text-xs text-muted-foreground">
+                                        {disputeOpportunity.undisputed_count} undisputed
+                                    </p>
+                                </Link>
                             )}
                         </div>
 

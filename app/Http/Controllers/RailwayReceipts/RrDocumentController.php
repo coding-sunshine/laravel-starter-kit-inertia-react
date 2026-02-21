@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\RailwayReceipts;
 
 use App\Actions\ProcessRrDocument;
+use App\DataTables\RrDocumentDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\Rake;
 use App\Models\RrDocument;
@@ -23,26 +24,13 @@ final class RrDocumentController extends Controller
             ? Siding::query()->pluck('id')->all()
             : $user->accessibleSidings()->get()->pluck('id')->all();
 
-        $query = RrDocument::query()
-            ->with('rake.siding:id,name,code')
-            ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds))
-            ->latest('rr_received_date');
-
-        if ($request->filled('rake_id')) {
-            $query->where('rake_id', $request->input('rake_id'));
-        }
-        if ($request->filled('siding_id')) {
-            $query->whereHas('rake', fn ($q) => $q->where('siding_id', $request->input('siding_id')));
-        }
-
-        $rrDocuments = $query->paginate(15)->withQueryString();
         $sidings = Siding::query()
             ->whereIn('id', $sidingIds)
             ->orderBy('name')
             ->get(['id', 'name', 'code']);
 
         return Inertia::render('railway-receipts/index', [
-            'rrDocuments' => $rrDocuments,
+            'tableData' => RrDocumentDataTable::makeTable($request),
             'sidings' => $sidings,
         ]);
     }

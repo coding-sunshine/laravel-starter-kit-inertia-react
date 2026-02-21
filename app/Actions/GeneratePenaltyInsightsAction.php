@@ -29,23 +29,33 @@ final readonly class GeneratePenaltyInsightsAction
 
         $cacheKey = 'penalty_insights:'.implode(',', $sidingIds);
 
-        return Cache::remember($cacheKey, 86400, function () use ($sidingIds): ?array {
-            if (! $this->prism->isAvailable()) {
-                return null;
-            }
+        if (Cache::has($cacheKey)) {
+            $cached = Cache::get($cacheKey);
 
-            $data = $this->aggregateData($sidingIds);
-            $prompt = $this->buildPrompt($data);
+            return $cached === '__unavailable__' ? null : $cached;
+        }
 
-            try {
-                $response = $this->prism->generate($prompt);
-                $text = mb_trim($response->text);
+        if (! $this->prism->isAvailable()) {
+            Cache::put($cacheKey, '__unavailable__', 86400);
 
-                return $this->parseInsights($text);
-            } catch (Throwable) {
-                return null;
-            }
-        });
+            return null;
+        }
+
+        $data = $this->aggregateData($sidingIds);
+        $prompt = $this->buildPrompt($data);
+
+        try {
+            $response = $this->prism->generate($prompt, $this->prism->fastModel());
+            $text = mb_trim($response->text);
+            $insights = $this->parseInsights($text);
+            Cache::put($cacheKey, $insights, 86400);
+
+            return $insights;
+        } catch (Throwable) {
+            Cache::put($cacheKey, '__unavailable__', 3600);
+
+            return null;
+        }
     }
 
     /**
@@ -137,6 +147,53 @@ final readonly class GeneratePenaltyInsightsAction
         $disputed = $baseQuery()->where('penalty_status', 'disputed')->count();
         $waived = $baseQuery()->where('penalty_status', 'waived')->count();
 
+        // By root cause (top 10)
+        $like = $driver === 'pgsql' ? 'ILIKE' : 'LIKE';
+        $caseSql = "CASE
+            WHEN root_cause {$like} '%equipment%' OR root_cause {$like} '%breakdown%' THEN 'Equipment Failure'
+            WHEN root_cause {$like} '%labour%' OR root_cause {$like} '%crew%' THEN 'Labour Shortage'
+            WHEN root_cause {$like} '%weather%' OR root_cause {$like} '%rain%' OR root_cause {$like} '%fog%' THEN 'Weather/Environmental'
+            WHEN root_cause {$like} '%communication%' OR root_cause {$like} '%miscommuni%' THEN 'Communication Gap'
+            WHEN root_cause {$like} '%scheduling%' THEN 'Scheduling Error'
+            WHEN root_cause {$like} '%documentation%' OR root_cause {$like} '%paperwork%' THEN 'Documentation Delay'
+            WHEN root_cause {$like} '%infrastructure%' OR root_cause {$like} '%track%' THEN 'Infrastructure Issue'
+            WHEN root_cause {$like} '%operational%' OR root_cause {$like} '%shunting%' THEN 'Operational Delay'
+            ELSE 'Other'
+        END";
+
+        $byRootCause = $baseQuery()
+            ->whereNotNull('root_cause')
+            ->where('root_cause', '!=', '')
+            ->selectRaw("{$caseSql} as cause, count(*) as cnt, sum(penalty_amount) as total")
+            ->groupBy('cause')
+            ->orderByDesc('total')
+            ->limit(10)
+            ->get()
+            ->map(fn ($r): array => [
+                'cause' => (string) $r->cause,
+                'count' => (int) $r->cnt,
+                'total' => (float) $r->total,
+            ])
+            ->all();
+
+        // Average resolution days
+        $diffSql = $driver === 'pgsql'
+            ? 'AVG(EXTRACT(EPOCH FROM (resolved_at - disputed_at)) / 86400)'
+            : 'AVG(DATEDIFF(resolved_at, disputed_at))';
+
+        $avgResolutionDays = (float) $baseQuery()
+            ->whereNotNull('disputed_at')
+            ->whereNotNull('resolved_at')
+            ->selectRaw("{$diffSql} as avg_days")
+            ->value('avg_days');
+
+        // Undisputed penalties (never challenged)
+        $undisputed = $baseQuery()
+            ->whereIn('penalty_status', ['incurred', 'pending'])
+            ->whereNull('disputed_at')
+            ->selectRaw('count(*) as cnt, sum(penalty_amount) as total')
+            ->first();
+
         return [
             'by_type' => $byType,
             'by_responsible' => $byResponsible,
@@ -145,6 +202,10 @@ final readonly class GeneratePenaltyInsightsAction
             'monthly_trend' => $monthTotals,
             'disputed' => $disputed,
             'waived' => $waived,
+            'by_root_cause' => $byRootCause,
+            'avg_resolution_days' => round($avgResolutionDays, 1),
+            'undisputed_count' => (int) ($undisputed->cnt ?? 0),
+            'undisputed_amount' => (float) ($undisputed->total ?? 0),
         ];
     }
 
@@ -156,7 +217,7 @@ final readonly class GeneratePenaltyInsightsAction
         $json = json_encode($data, JSON_PRETTY_PRINT);
 
         return <<<PROMPT
-        You are RRMCS AI, a railway operations analyst. Analyze these penalty patterns from the last 3 months and provide exactly 5 actionable recommendations.
+        You are RRMCS AI, a cost-reduction analyst for railway coal operations. Analyze these penalty patterns from the last 3 months and provide exactly 5 actionable cost-saving recommendations.
 
         Penalty data:
         {$json}
@@ -166,16 +227,16 @@ final readonly class GeneratePenaltyInsightsAction
 
         Where SEVERITY is one of: HIGH, MEDIUM, LOW
         Title is a short actionable heading (under 60 chars).
-        Description is 1-2 sentences explaining the insight and what to do about it.
+        Description is 1-2 sentences explaining the insight and what to do about it. MUST include a projected savings figure (₹).
 
-        Focus on:
-        - Which penalty types cost the most money and how to reduce them
-        - Which sidings need attention and what they can do differently
-        - Day-of-week patterns that suggest operational scheduling improvements
-        - Dispute success rate and whether more penalties should be contested
-        - Trend direction and whether things are improving or worsening
+        Focus your analysis on these cost-saving opportunities:
+        1. ROOT CAUSES: Which root causes are preventable? What is the projected savings from reducing equipment failures, labour issues, or scheduling errors?
+        2. DISPUTE STRATEGY: There are {$data['undisputed_count']} undisputed penalties worth ₹{$data['undisputed_amount']}. Should more be contested? What is the projected savings based on current dispute success rate?
+        3. RESPONSIBLE PARTY PATTERNS: Which parties cause the most expensive penalties? What accountability measures would reduce costs?
+        4. PENALTY TYPE TRENDS: Which types are growing? What specific operational changes would reduce them?
+        5. SIDING HOTSPOTS: Which sidings need intervention? What would bringing the worst siding to median performance save?
 
-        Be specific with numbers and percentages. Use ₹ for currency.
+        Be specific with numbers, percentages, and projected ₹ savings. Every recommendation must include a savings estimate.
         PROMPT;
     }
 

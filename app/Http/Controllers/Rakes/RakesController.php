@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Rakes;
 
+use App\DataTables\RakeDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\Rake;
 use Illuminate\Http\Request;
@@ -14,21 +15,8 @@ final class RakesController extends Controller
 {
     public function index(Request $request): Response
     {
-        $user = $request->user();
-
-        $query = Rake::query()
-            ->with('siding:id,code,name')
-            ->latest('loading_start_time');
-
-        if (! $user->isSuperAdmin()) {
-            $sidingIds = $user->sidings()->get()->pluck('id')->all();
-            $query->whereIn('siding_id', $sidingIds);
-        }
-
-        $rakes = $query->paginate(15)->withQueryString();
-
         return Inertia::render('rakes/index', [
-            'rakes' => $rakes,
+            'tableData' => RakeDataTable::makeTable($request),
         ]);
     }
 

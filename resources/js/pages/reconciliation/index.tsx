@@ -1,3 +1,5 @@
+import { DataTable } from 'laravel-data-table';
+import type { DataTableResponse } from 'laravel-data-table';
 import Heading from '@/components/heading';
 import { RrmcsGuidance } from '@/components/rrmcs-guidance';
 import { Button } from '@/components/ui/button';
@@ -10,7 +12,7 @@ import {
 } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { Scale } from 'lucide-react';
 
 interface Siding {
@@ -19,48 +21,30 @@ interface Siding {
     code: string;
 }
 
-interface Rake {
+interface ReconciliationRow {
     id: number;
     rake_number: string;
-    siding?: Siding | null;
-}
-
-interface Point {
-    point: string;
-    value_a: number | null;
-    value_b: number | null;
-    variance_mt: number | null;
-    variance_pct: number | null;
-    status: string;
-}
-
-interface Row {
-    rake: Rake;
+    siding_name: string | null;
     overall_status: string;
-    points: Point[];
-}
-
-interface PaginatorLink {
-    url: string | null;
-    label: string;
-    active: boolean;
 }
 
 interface Props {
-    rakes: { data: Rake[]; links: PaginatorLink[]; last_page: number };
-    rows: Row[];
-    summary: { pending: number; matched: number; mismatched: number };
+    tableData: DataTableResponse<ReconciliationRow>;
+    summary: { pending: number };
     sidings: Siding[];
 }
 
 export default function ReconciliationIndex({
-    rakes,
-    rows,
+    tableData,
     summary,
-    sidings,
 }: Props) {
-    const { url } = usePage();
-    const q = new URLSearchParams(url.split('?')[1] || '');
+    const matched = tableData.data.filter(
+        (r) => r.overall_status === 'MATCH',
+    ).length;
+    const mismatched = tableData.data.filter((r) =>
+        ['MINOR_DIFF', 'MAJOR_DIFF'].includes(r.overall_status),
+    ).length;
+
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: '/dashboard' },
         { title: 'Reconciliation', href: '/reconciliation' },
@@ -102,7 +86,7 @@ export default function ReconciliationIndex({
                         <CardHeader className="pb-2">
                             <CardDescription>Matched this page</CardDescription>
                             <CardTitle className="text-lg">
-                                {summary.matched}
+                                {matched}
                             </CardTitle>
                         </CardHeader>
                     </Card>
@@ -112,7 +96,7 @@ export default function ReconciliationIndex({
                                 Mismatched this page
                             </CardDescription>
                             <CardTitle className="text-lg">
-                                {summary.mismatched}
+                                {mismatched}
                             </CardTitle>
                         </CardHeader>
                     </Card>
@@ -123,136 +107,42 @@ export default function ReconciliationIndex({
                         <CardDescription>Filter by siding</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <form
-                            method="get"
-                            className="mb-6 flex flex-wrap items-end gap-3"
-                            onSubmit={(e) => {
-                                e.preventDefault();
-                                const form = e.currentTarget;
-                                const siding = (
-                                    form.querySelector(
-                                        '[name=siding_id]',
-                                    ) as HTMLSelectElement
-                                )?.value;
-                                const params = new URLSearchParams();
-                                if (siding) params.set('siding_id', siding);
-                                router.get(
-                                    '/reconciliation',
-                                    Object.fromEntries(params),
-                                );
+                        <DataTable<ReconciliationRow>
+                            tableData={tableData}
+                            tableName="reconciliation"
+                            actions={[
+                                {
+                                    label: 'Detail',
+                                    onClick: (row) =>
+                                        router.visit(
+                                            `/reconciliation/${row.id}`,
+                                        ),
+                                },
+                            ]}
+                            renderCell={(columnId, _value, row) => {
+                                if (columnId === 'siding_name') {
+                                    return row.siding_name ?? '—';
+                                }
+                                if (columnId === 'overall_status') {
+                                    return (
+                                        <span
+                                            className={
+                                                row.overall_status ===
+                                                'MAJOR_DIFF'
+                                                    ? 'text-red-600 dark:text-red-400'
+                                                    : row.overall_status ===
+                                                        'MINOR_DIFF'
+                                                      ? 'text-amber-600 dark:text-amber-400'
+                                                      : ''
+                                            }
+                                        >
+                                            {row.overall_status}
+                                        </span>
+                                    );
+                                }
+                                return undefined;
                             }}
-                        >
-                            <div className="grid gap-2">
-                                <label className="text-sm font-medium">
-                                    Siding
-                                </label>
-                                <select
-                                    name="siding_id"
-                                    defaultValue={q.get('siding_id') ?? ''}
-                                    className="rounded-md border border-input bg-background px-4 py-2.5 text-sm"
-                                >
-                                    <option value="">All</option>
-                                    {sidings.map((s) => (
-                                        <option key={s.id} value={s.id}>
-                                            {s.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                            <Button type="submit" variant="secondary">
-                                Filter
-                            </Button>
-                        </form>
-                        {rows.length === 0 ? (
-                            <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-                                <Scale className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-                                <p>No rakes with weighment found.</p>
-                            </div>
-                        ) : (
-                            <>
-                                <div className="overflow-x-auto rounded-md border">
-                                    <table className="w-full text-sm">
-                                        <thead>
-                                            <tr className="border-b bg-muted/50">
-                                                <th className="px-5 py-3.5 text-left font-medium">
-                                                    Rake
-                                                </th>
-                                                <th className="px-5 py-3.5 text-left font-medium">
-                                                    Siding
-                                                </th>
-                                                <th className="px-5 py-3.5 text-left font-medium">
-                                                    Status
-                                                </th>
-                                                <th className="px-5 py-3.5 text-right font-medium">
-                                                    Actions
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {rows.map((row) => (
-                                                <tr
-                                                    key={row.rake.id}
-                                                    className="border-b last:border-0 hover:bg-muted/30"
-                                                >
-                                                    <td className="px-5 py-3.5 font-medium">
-                                                        {row.rake.rake_number}
-                                                    </td>
-                                                    <td className="px-5 py-3.5">
-                                                        {row.rake.siding
-                                                            ?.name ?? '—'}
-                                                    </td>
-                                                    <td className="px-5 py-3.5">
-                                                        <span
-                                                            className={
-                                                                row.overall_status ===
-                                                                'MAJOR_DIFF'
-                                                                    ? 'text-red-600 dark:text-red-400'
-                                                                    : row.overall_status ===
-                                                                        'MINOR_DIFF'
-                                                                      ? 'text-amber-600 dark:text-amber-400'
-                                                                      : ''
-                                                            }
-                                                        >
-                                                            {row.overall_status}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-5 py-3.5 text-right">
-                                                        <Link
-                                                            href={`/reconciliation/${row.rake.id}`}
-                                                        >
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                            >
-                                                                Detail
-                                                            </Button>
-                                                        </Link>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                                {rakes.last_page > 1 && (
-                                    <nav className="mt-6 flex flex-wrap items-center justify-center gap-4 pt-2">
-                                        {rakes.links.map((link) => (
-                                            <button
-                                                key={link.label}
-                                                type="button"
-                                                disabled={!link.url}
-                                                className="rounded-md border border-input px-4 py-2.5 text-sm disabled:opacity-50"
-                                                onClick={() =>
-                                                    link.url &&
-                                                    router.get(link.url)
-                                                }
-                                            >
-                                                {link.label}
-                                            </button>
-                                        ))}
-                                    </nav>
-                                )}
-                            </>
-                        )}
+                        />
                     </CardContent>
                 </Card>
             </div>

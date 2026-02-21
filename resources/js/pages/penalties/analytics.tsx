@@ -1,6 +1,7 @@
 import { AreaChart } from '@/components/charts/area-chart';
 import { BarChart } from '@/components/charts/bar-chart';
 import { PieChart } from '@/components/charts/pie-chart';
+import { StackedBarChart } from '@/components/charts/stacked-bar-chart';
 import Heading from '@/components/heading';
 import { RrmcsGuidance } from '@/components/rrmcs-guidance';
 import { Button } from '@/components/ui/button';
@@ -19,11 +20,24 @@ import {
     ArrowDown,
     ArrowUp,
     BarChart3,
+    DollarSign,
     Scale,
+    SearchCheck,
     ShieldCheck,
     Sparkles,
+    Target,
     TrendingDown,
 } from 'lucide-react';
+import {
+    CartesianGrid,
+    Legend,
+    Line,
+    LineChart,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis,
+    YAxis,
+} from 'recharts';
 
 interface StatusBreakdown {
     status: string;
@@ -86,6 +100,52 @@ interface AiInsight {
     severity: 'high' | 'medium' | 'low';
 }
 
+interface RootCauseItem {
+    category: string;
+    count: number;
+    total: number;
+}
+
+interface DisputeByType {
+    type: string;
+    disputed: number;
+    waived: number;
+    disputed_amount: number;
+    waived_amount: number;
+    success_rate: number;
+}
+
+interface DisputeByParty {
+    party: string;
+    disputed: number;
+    waived: number;
+    waived_amount: number;
+    success_rate: number;
+}
+
+interface DisputeAnalysis {
+    by_type: DisputeByType[];
+    by_party: DisputeByParty[];
+    avg_resolution_days: number;
+}
+
+interface CostSavingOpportunities {
+    total_12m_spend: number;
+    undisputed_count: number;
+    undisputed_amount: number;
+    projected_dispute_savings: number;
+    root_cause_reduction_potential: number;
+    siding_improvement_savings: number;
+    total_potential_savings: number;
+}
+
+interface ResponsiblePartyDetailItem {
+    party: string;
+    total: number;
+    count: number;
+    [type: string]: string | number;
+}
+
 interface Props {
     summaryCards: SummaryCards;
     byResponsibleParty: NameValueCount[];
@@ -94,6 +154,11 @@ interface Props {
     monthlyTrend: MonthlyPoint[];
     topOffenders: TopOffender[];
     weekdayHeatmap: WeekdayPoint[];
+    rootCauseBreakdown: RootCauseItem[];
+    disputeAnalysis: DisputeAnalysis;
+    penaltyTypeTrend: Record<string, unknown>[];
+    costSavingOpportunities: CostSavingOpportunities;
+    responsiblePartyDetail: ResponsiblePartyDetailItem[];
     sidings: Siding[];
     aiInsights?: AiInsight[] | null;
 }
@@ -110,20 +175,45 @@ const SEVERITY_DOT: Record<string, string> = {
     low: 'bg-blue-500',
 };
 
+const TYPE_LINE_COLORS: Record<string, string> = {
+    DEM: 'var(--chart-1)',
+    POL1: 'var(--chart-2)',
+    POLA: 'var(--chart-3)',
+    PLO: 'var(--chart-4)',
+    ULC: 'var(--chart-5)',
+    SPL: '#8b5cf6',
+    WMC: '#ec4899',
+    MCF: '#14b8a6',
+};
+
 function AiInsightsCard() {
     const { aiInsights } = usePage<Props>().props;
 
-    if (!aiInsights || aiInsights.length === 0) return null;
+    if (!aiInsights || aiInsights.length === 0) {
+        return (
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Sparkles className="h-5 w-5 text-primary" />
+                        AI-Powered Insights
+                    </CardTitle>
+                    <CardDescription>
+                        AI insights are temporarily unavailable. They will retry automatically.
+                    </CardDescription>
+                </CardHeader>
+            </Card>
+        );
+    }
 
     return (
         <Card>
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                     <Sparkles className="h-5 w-5 text-primary" />
-                    AI Penalty Insights
+                    AI Cost-Reduction Insights
                 </CardTitle>
                 <CardDescription>
-                    AI-generated recommendations based on penalty patterns (last 3 months)
+                    AI-generated cost-saving recommendations based on penalty patterns (last 3 months)
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -178,6 +268,11 @@ export default function PenaltyAnalytics({
     monthlyTrend,
     topOffenders,
     weekdayHeatmap,
+    rootCauseBreakdown,
+    disputeAnalysis,
+    penaltyTypeTrend,
+    costSavingOpportunities,
+    responsiblePartyDetail,
 }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: '/dashboard' },
@@ -212,6 +307,37 @@ export default function PenaltyAnalytics({
         name: s.name,
         total: s.total,
     }));
+
+    // Prepare root cause data for charts
+    const rootCauseBarData = rootCauseBreakdown.map((r) => ({
+        name: r.category,
+        total: r.total,
+        count: r.count,
+    }));
+
+    const rootCausePieData = rootCauseBreakdown.map((r) => ({
+        name: r.category,
+        value: r.count,
+    }));
+
+    // Penalty type trend: extract unique types from data
+    const penaltyTypes = penaltyTypeTrend.length > 0
+        ? Object.keys(penaltyTypeTrend[0]).filter((k) => k !== 'month')
+        : [];
+
+    // Dispute analysis: stacked bar data
+    const disputeStackData = disputeAnalysis.by_type.map((d) => ({
+        type: d.type,
+        disputed: d.disputed,
+        waived: d.waived,
+    }));
+
+    // Responsible party detail: extract stack keys
+    const partyStackKeys = responsiblePartyDetail.length > 0
+        ? Object.keys(responsiblePartyDetail[0]).filter((k) => !['party', 'total', 'count'].includes(k))
+        : [];
+
+    const costs = costSavingOpportunities;
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -337,6 +463,65 @@ export default function PenaltyAnalytics({
                     </Card>
                 </div>
 
+                {/* Cost Saving Opportunities */}
+                {costs.total_12m_spend > 0 && (
+                    <Card data-pan="penalty-cost-savings">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <DollarSign className="h-5 w-5 text-green-600 dark:text-green-400" />
+                                Cost Saving Opportunities
+                            </CardTitle>
+                            <CardDescription>
+                                Actionable savings identified from 12-month penalty data
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                                <div className="rounded-md border bg-muted/30 p-3">
+                                    <p className="text-sm text-muted-foreground">Total 12M Spend</p>
+                                    <p className="mt-1 text-xl font-semibold text-red-600 dark:text-red-400">
+                                        {formatCurrency(costs.total_12m_spend)}
+                                    </p>
+                                </div>
+                                <div className="rounded-md border bg-muted/30 p-3">
+                                    <p className="text-sm text-muted-foreground">Dispute Opportunity</p>
+                                    <p className="mt-1 text-xl font-semibold">
+                                        {formatCurrency(costs.projected_dispute_savings)}
+                                    </p>
+                                    <p className="mt-0.5 text-xs text-muted-foreground">
+                                        {costs.undisputed_count} undisputed penalties
+                                    </p>
+                                </div>
+                                <div className="rounded-md border bg-muted/30 p-3">
+                                    <p className="text-sm text-muted-foreground">Root Cause Reduction</p>
+                                    <p className="mt-1 text-xl font-semibold">
+                                        {formatCurrency(costs.root_cause_reduction_potential)}
+                                    </p>
+                                    <p className="mt-0.5 text-xs text-muted-foreground">
+                                        40% reduction on preventable causes
+                                    </p>
+                                </div>
+                                <div className="rounded-md border bg-muted/30 p-3">
+                                    <p className="text-sm text-muted-foreground">Siding Improvement</p>
+                                    <p className="mt-1 text-xl font-semibold">
+                                        {formatCurrency(costs.siding_improvement_savings)}
+                                    </p>
+                                    <p className="mt-0.5 text-xs text-muted-foreground">
+                                        Worst siding to median
+                                    </p>
+                                </div>
+                            </div>
+                            {costs.total_potential_savings > 0 && (
+                                <div className="mt-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 dark:border-green-800 dark:bg-green-950/30">
+                                    <p className="text-sm font-medium text-green-700 dark:text-green-400">
+                                        Total potential savings: {formatCurrency(costs.total_potential_savings)}
+                                    </p>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                )}
+
                 {/* Penalty Trend Chart */}
                 <Card>
                     <CardHeader>
@@ -362,6 +547,72 @@ export default function PenaltyAnalytics({
                         />
                     </CardContent>
                 </Card>
+
+                {/* Penalty Type Trend (multi-line) */}
+                {penaltyTypes.length > 0 && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <BarChart3 className="h-5 w-5" />
+                                Penalty Type Trend (12 Months)
+                            </CardTitle>
+                            <CardDescription>
+                                Monthly breakdown by penalty type
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="w-full">
+                                <ResponsiveContainer width="100%" height={300}>
+                                    <LineChart
+                                        data={penaltyTypeTrend}
+                                        margin={{ top: 4, right: 4, bottom: 0, left: -12 }}
+                                    >
+                                        <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
+                                        <XAxis
+                                            dataKey="month"
+                                            tick={{ fontSize: 11 }}
+                                            className="fill-muted-foreground"
+                                            tickLine={false}
+                                            axisLine={false}
+                                            interval="preserveStartEnd"
+                                        />
+                                        <YAxis
+                                            tick={{ fontSize: 12 }}
+                                            className="fill-muted-foreground"
+                                            tickLine={false}
+                                            axisLine={false}
+                                            tickFormatter={formatCurrency}
+                                        />
+                                        <Tooltip
+                                            contentStyle={{
+                                                backgroundColor: 'var(--card)',
+                                                borderColor: 'var(--border)',
+                                                borderRadius: 8,
+                                                fontSize: 12,
+                                            }}
+                                            formatter={(value: number, name: string) => [
+                                                formatCurrency(value),
+                                                name,
+                                            ]}
+                                        />
+                                        <Legend wrapperStyle={{ fontSize: 12 }} />
+                                        {penaltyTypes.map((type) => (
+                                            <Line
+                                                key={type}
+                                                type="monotone"
+                                                dataKey={type}
+                                                stroke={TYPE_LINE_COLORS[type] ?? 'var(--chart-1)'}
+                                                strokeWidth={2}
+                                                dot={{ r: 2 }}
+                                                activeDot={{ r: 4 }}
+                                            />
+                                        ))}
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* Two-column: Type Distribution + Responsible Party */}
                 <div className="grid gap-4 lg:grid-cols-2">
@@ -455,6 +706,147 @@ export default function PenaltyAnalytics({
                         </CardContent>
                     </Card>
                 </div>
+
+                {/* Root Cause Analysis */}
+                {rootCauseBarData.length > 0 && (
+                    <div className="grid gap-4 lg:grid-cols-2" data-pan="penalty-root-cause-drill">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <SearchCheck className="h-5 w-5" />
+                                    Root Cause Analysis
+                                </CardTitle>
+                                <CardDescription>
+                                    Why penalties happen — categorised by root cause
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <BarChart
+                                    data={rootCauseBarData}
+                                    xKey="name"
+                                    yKey="total"
+                                    layout="vertical"
+                                    formatY={formatCurrency}
+                                    formatTooltip={formatCurrency}
+                                    color="var(--chart-4)"
+                                    height={Math.max(200, rootCauseBarData.length * 40)}
+                                />
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Root Cause Distribution</CardTitle>
+                                <CardDescription>
+                                    Penalty count by root cause category
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <PieChart
+                                    data={rootCausePieData}
+                                    nameKey="name"
+                                    valueKey="value"
+                                    formatTooltip={(v) => `${v} penalties`}
+                                    height={Math.max(260, rootCauseBarData.length * 30)}
+                                />
+                            </CardContent>
+                        </Card>
+                    </div>
+                )}
+
+                {/* Dispute Strategy Analysis */}
+                {disputeAnalysis.by_type.length > 0 && (
+                    <div className="grid gap-4 lg:grid-cols-2" data-pan="penalty-dispute-drill">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <Target className="h-5 w-5" />
+                                    Dispute Strategy by Type
+                                </CardTitle>
+                                <CardDescription>
+                                    Disputed vs waived per penalty type
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <StackedBarChart
+                                    data={disputeStackData}
+                                    xKey="type"
+                                    stackKeys={['disputed', 'waived']}
+                                    stackLabels={{ disputed: 'Disputed', waived: 'Waived' }}
+                                    stackColors={{ disputed: 'var(--chart-2)', waived: 'var(--chart-1)' }}
+                                    yLabel="Count"
+                                    height={280}
+                                />
+                                <div className="mt-3 space-y-1">
+                                    {disputeAnalysis.by_type.map((d) => (
+                                        <div key={d.type} className="flex items-center justify-between rounded px-2 py-1 text-xs">
+                                            <span className="font-medium">{d.type}</span>
+                                            <span className="text-muted-foreground">
+                                                {d.success_rate}% success &middot; {formatCurrency(d.waived_amount)} saved
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Dispute Summary</CardTitle>
+                                <CardDescription>
+                                    Resolution metrics and success rates
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="rounded-md border bg-muted/30 p-3">
+                                    <p className="text-sm text-muted-foreground">Avg Resolution Time</p>
+                                    <p className="mt-1 text-xl font-semibold">
+                                        {disputeAnalysis.avg_resolution_days} days
+                                    </p>
+                                </div>
+                                <div className="rounded-md border bg-muted/30 p-3">
+                                    <p className="text-sm text-muted-foreground">Total Savings from Disputes</p>
+                                    <p className="mt-1 text-xl font-semibold text-green-600 dark:text-green-400">
+                                        {formatCurrency(
+                                            disputeAnalysis.by_type.reduce((sum, d) => sum + d.waived_amount, 0),
+                                        )}
+                                    </p>
+                                </div>
+                                {disputeAnalysis.by_party.length > 0 && (
+                                    <div>
+                                        <p className="mb-2 text-sm font-medium">Success Rate by Party</p>
+                                        <div className="overflow-x-auto rounded-md border">
+                                            <table className="w-full text-xs">
+                                                <thead>
+                                                    <tr className="border-b bg-muted/50">
+                                                        <th className="px-3 py-2 text-left font-medium">Party</th>
+                                                        <th className="px-3 py-2 text-right font-medium">Disputed</th>
+                                                        <th className="px-3 py-2 text-right font-medium">Waived</th>
+                                                        <th className="px-3 py-2 text-right font-medium">Rate</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {disputeAnalysis.by_party.map((p) => (
+                                                        <tr key={p.party} className="border-b last:border-0">
+                                                            <td className="px-3 py-2 font-medium">{p.party}</td>
+                                                            <td className="px-3 py-2 text-right tabular-nums">{p.disputed}</td>
+                                                            <td className="px-3 py-2 text-right tabular-nums">{p.waived}</td>
+                                                            <td className="px-3 py-2 text-right">
+                                                                <span className={p.success_rate >= 50 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+                                                                    {p.success_rate}%
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </div>
+                )}
 
                 {/* Two-column: Siding Comparison + Weekday Heatmap */}
                 <div className="grid gap-4 lg:grid-cols-2">

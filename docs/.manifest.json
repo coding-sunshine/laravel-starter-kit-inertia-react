@@ -745,6 +745,19 @@
                     "penalties.update"
                 ]
             }
+        },
+        "BuildPenaltyChartDataAction": {
+            "documented": true,
+            "path": "./BuildPenaltyChartDataAction.md",
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [],
+                "relatedRoutes": [
+                    "penalties.index",
+                    "penalties.analytics",
+                    "penalties.update"
+                ]
+            }
         }
     },
     "controllers": {
@@ -1288,6 +1301,7 @@
             "path": "./penaltycontroller.md",
             "relationships": {
                 "usesActions": [
+                    "BuildPenaltyChartDataAction",
                     "GeneratePenaltyInsightsAction"
                 ],
                 "usesFormRequests": [
@@ -1376,9 +1390,7 @@
             "documented": true,
             "path": "./reconciliationcontroller.md",
             "relationships": {
-                "usesActions": [
-                    "ReconcileRakeAction"
-                ],
+                "usesActions": [],
                 "usesFormRequests": [],
                 "relatedRoutes": [],
                 "rendersPages": [

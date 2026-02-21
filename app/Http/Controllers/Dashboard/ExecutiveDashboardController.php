@@ -50,6 +50,7 @@ final class ExecutiveDashboardController extends Controller
         $penaltyStatusBreakdown = $this->buildPenaltyStatusBreakdown($sidingIds);
         $responsiblePartyBreakdown = $this->buildResponsiblePartyBreakdown($sidingIds);
         $sidingPerformance = $this->buildSidingPerformance($sidingIds);
+        $disputeOpportunity = $this->buildDisputeOpportunity($sidingIds);
 
         return Inertia::render('dashboard', [
             'summary' => $summary,
@@ -66,6 +67,7 @@ final class ExecutiveDashboardController extends Controller
             'penaltyStatusBreakdown' => $penaltyStatusBreakdown,
             'responsiblePartyBreakdown' => $responsiblePartyBreakdown,
             'sidingPerformance' => $sidingPerformance,
+            'disputeOpportunity' => $disputeOpportunity,
             'sidings' => $sidings,
             'aiBriefing' => Inertia::defer(fn (): ?string => resolve(GenerateDailyBriefingAction::class)->handle($user, $sidingIds)),
         ]);
@@ -612,5 +614,41 @@ final class ExecutiveDashboardController extends Controller
         usort($result, fn ($a, $b) => $b['penalty_amount'] <=> $a['penalty_amount']);
 
         return $result;
+    }
+
+    /**
+     * Undisputed penalties that represent a savings opportunity.
+     *
+     * @param  array<int>  $sidingIds
+     * @return array{potential_savings: float, undisputed_count: int}
+     */
+    private function buildDisputeOpportunity(array $sidingIds): array
+    {
+        if ($sidingIds === []) {
+            return ['potential_savings' => 0, 'undisputed_count' => 0];
+        }
+
+        $baseQuery = fn () => Penalty::query()
+            ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds))
+            ->where('penalty_date', '>=', now()->subMonths(12));
+
+        $undisputed = $baseQuery()
+            ->whereIn('penalty_status', ['incurred', 'pending'])
+            ->whereNull('disputed_at')
+            ->selectRaw('count(*) as count, sum(penalty_amount) as total')
+            ->first();
+
+        $undisputedCount = (int) ($undisputed->count ?? 0);
+        $undisputedAmount = (float) ($undisputed->total ?? 0);
+
+        // Apply estimated success rate
+        $disputedTotal = $baseQuery()->whereIn('penalty_status', ['disputed', 'waived'])->count();
+        $waivedCount = $baseQuery()->where('penalty_status', 'waived')->count();
+        $successRate = $disputedTotal > 0 ? $waivedCount / $disputedTotal : 0.3;
+
+        return [
+            'potential_savings' => round($undisputedAmount * $successRate, 2),
+            'undisputed_count' => $undisputedCount,
+        ];
     }
 }

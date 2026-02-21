@@ -177,12 +177,16 @@ final class AppServiceProvider extends ServiceProvider
             'penalty-assign-responsibility',
             'penalty-set-root-cause',
             'penalty-analytics-tab',
+            'penalty-index-charts',
             'penalty-drill-down',
             'report-select-type',
             'report-generate',
             'report-download-csv',
             'siding-switcher',
             'penalty-ask-ai',
+            'penalty-root-cause-drill',
+            'penalty-dispute-drill',
+            'penalty-cost-savings',
         ]);
     }
 

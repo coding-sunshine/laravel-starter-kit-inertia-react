@@ -109,7 +109,8 @@
         "skipLibCheck": true /* Skip type checking all .d.ts files. */,
         "baseUrl": ".",
         "paths": {
-            "@/*": ["./resources/js/*"]
+            "@/*": ["./resources/js/*"],
+            "laravel-data-table": ["./resources/js/components/data-table/index.ts"]
         },
         "jsx": "react-jsx"
     },

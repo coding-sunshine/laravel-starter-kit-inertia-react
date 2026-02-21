@@ -296,6 +296,14 @@ final class RakeManagementDemoSeeder extends Seeder
                 )
                 : 'Demo '.$types[$idx].' penalty';
 
+            $responsibleParties = ['siding', 'railway', 'transporter', 'plant'];
+            $rootCauses = [
+                'Equipment breakdown: payloader hydraulic failure during loading',
+                'Communication gap: rake placement notice received late',
+                'Operational delay: slow loading rate due to coal quality issues',
+                'Documentation delay: RR processing delayed by missing paperwork',
+            ];
+
             Penalty::query()->updateOrCreate([
                 'rake_id' => $rake->id,
                 'penalty_type' => $types[$idx],
@@ -303,6 +311,8 @@ final class RakeManagementDemoSeeder extends Seeder
             ], [
                 'penalty_amount' => $amount,
                 'penalty_status' => $idx === 0 ? 'incurred' : 'pending',
+                'responsible_party' => $responsibleParties[$idx + ($r - 3)],
+                'root_cause' => $rootCauses[$idx + ($r - 3)],
                 'description' => $description,
                 'remediation_notes' => null,
                 'calculation_breakdown' => $breakdown,

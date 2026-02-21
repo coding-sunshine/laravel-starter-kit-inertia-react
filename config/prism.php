@@ -8,12 +8,14 @@ return [
         'middleware' => [],
         'enabled' => env('PRISM_SERVER_ENABLED', false),
     ],
-    'request_timeout' => env('PRISM_REQUEST_TIMEOUT', 30), // The timeout for requests in seconds.
+    'request_timeout' => env('PRISM_REQUEST_TIMEOUT', 120), // The timeout for requests in seconds.
     'defaults' => [
         'provider' => env('PRISM_DEFAULT_PROVIDER', 'openrouter'),
         // Using DeepSeek R1 0528 (free) - best free thinking model with performance on par with OpenAI o1
         // Alternative free options: deepseek/deepseek-r1:free, tng/deepseek-r1t2-chimera:free
         'model' => env('PRISM_DEFAULT_MODEL', 'deepseek/deepseek-r1-0528:free'),
+        // Fast model for latency-sensitive operations (deferred props, briefings, insights)
+        'fast_model' => env('PRISM_FAST_MODEL', 'openai/gpt-4o-mini'),
         // Provider-specific model defaults (used when provider doesn't match default)
         'models' => [
             'openrouter' => env('PRISM_DEFAULT_MODEL', 'deepseek/deepseek-r1-0528:free'),
