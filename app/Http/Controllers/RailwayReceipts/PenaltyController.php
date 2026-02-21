@@ -256,15 +256,27 @@ final class PenaltyController extends Controller
     }
 
     /**
-     * Monthly trend for last 12 months.
+     * Monthly trend for last 12 months (backfilled with zeros).
      *
      * @param  array<int>  $sidingIds
      * @return array<int, array{month: string, total: float, count: int}>
      */
     private function buildMonthlyTrend(array $sidingIds): array
     {
+        // Build all 12 months with zeros as baseline
+        $months = [];
+        for ($i = 11; $i >= 0; $i--) {
+            $date = now()->subMonths($i);
+            $key = $date->format('Y-m');
+            $months[$key] = [
+                'month' => $date->format('M Y'),
+                'total' => 0.0,
+                'count' => 0,
+            ];
+        }
+
         if ($sidingIds === []) {
-            return [];
+            return array_values($months);
         }
 
         $driver = DB::getDriverName();
@@ -272,21 +284,22 @@ final class PenaltyController extends Controller
             ? 'EXTRACT(YEAR FROM penalty_date)::int as y, EXTRACT(MONTH FROM penalty_date)::int as m'
             : 'YEAR(penalty_date) as y, MONTH(penalty_date) as m';
 
-        return Penalty::query()
+        $rows = Penalty::query()
             ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds))
             ->where('penalty_date', '>=', now()->subMonths(12))
             ->selectRaw("{$yearMonthSql}, sum(penalty_amount) as total, count(*) as count")
             ->groupBy('y', 'm')
-            ->orderBy('y')
-            ->orderBy('m')
-            ->get()
-            ->map(fn ($r): array => [
-                'month' => sprintf('%04d-%02d', (int) $r->y, (int) $r->m),
-                'total' => (float) $r->total,
-                'count' => (int) $r->count,
-            ])
-            ->values()
-            ->all();
+            ->get();
+
+        foreach ($rows as $r) {
+            $key = sprintf('%04d-%02d', (int) $r->y, (int) $r->m);
+            if (isset($months[$key])) {
+                $months[$key]['total'] = (float) $r->total;
+                $months[$key]['count'] = (int) $r->count;
+            }
+        }
+
+        return array_values($months);
     }
 
     /**
@@ -301,12 +314,17 @@ final class PenaltyController extends Controller
             return [];
         }
 
+        $driver = DB::getDriverName();
+        $groupConcatSql = $driver === 'pgsql'
+            ? "STRING_AGG(DISTINCT penalties.penalty_type, ',')"
+            : 'GROUP_CONCAT(DISTINCT penalties.penalty_type)';
+
         return Penalty::query()
             ->join('rakes', 'penalties.rake_id', '=', 'rakes.id')
             ->join('sidings', 'rakes.siding_id', '=', 'sidings.id')
             ->whereIn('rakes.siding_id', $sidingIds)
             ->where('penalty_date', '>=', now()->subMonths(12))
-            ->selectRaw('rakes.rake_number, sidings.name as siding_name, sum(penalty_amount) as total, count(*) as count, GROUP_CONCAT(DISTINCT penalties.penalty_type) as types')
+            ->selectRaw("rakes.rake_number, sidings.name as siding_name, sum(penalty_amount) as total, count(*) as count, {$groupConcatSql} as types")
             ->groupBy('rakes.rake_number', 'sidings.name')
             ->orderByDesc('total')
             ->limit(10)

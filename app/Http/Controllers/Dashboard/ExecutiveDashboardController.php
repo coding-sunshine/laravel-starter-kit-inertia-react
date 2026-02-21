@@ -45,6 +45,11 @@ final class ExecutiveDashboardController extends Controller
         $penaltyBySiding = $this->buildPenaltyBySiding($sidingIds);
         $costAvoidance = $this->buildCostAvoidance($sidingIds);
         $financialImpact = $this->buildFinancialImpact($sidingIds);
+        $rakeStateChart = $this->buildRakeStateChart($sidingIds);
+        $indentPipeline = $this->buildIndentPipeline($sidingIds);
+        $penaltyStatusBreakdown = $this->buildPenaltyStatusBreakdown($sidingIds);
+        $responsiblePartyBreakdown = $this->buildResponsiblePartyBreakdown($sidingIds);
+        $sidingPerformance = $this->buildSidingPerformance($sidingIds);
 
         return Inertia::render('dashboard', [
             'summary' => $summary,
@@ -56,6 +61,11 @@ final class ExecutiveDashboardController extends Controller
             'penaltyBySiding' => $penaltyBySiding,
             'costAvoidance' => $costAvoidance,
             'financialImpact' => $financialImpact,
+            'rakeStateChart' => $rakeStateChart,
+            'indentPipeline' => $indentPipeline,
+            'penaltyStatusBreakdown' => $penaltyStatusBreakdown,
+            'responsiblePartyBreakdown' => $responsiblePartyBreakdown,
+            'sidingPerformance' => $sidingPerformance,
             'sidings' => $sidings,
             'aiBriefing' => Inertia::defer(fn (): ?string => resolve(GenerateDailyBriefingAction::class)->handle($user, $sidingIds)),
         ]);
@@ -230,13 +240,26 @@ final class ExecutiveDashboardController extends Controller
     }
 
     /**
+     * Monthly penalty trend for last 12 months (backfilled with zeros).
+     *
      * @param  array<int>  $sidingIds
-     * @return array<int, array{month: string, total: float}>
+     * @return array<int, array{month: string, total: float, count: int}>
      */
     private function buildPenaltyChartData(array $sidingIds): array
     {
+        $months = [];
+        for ($i = 11; $i >= 0; $i--) {
+            $date = now()->subMonths($i);
+            $key = $date->format('Y-m');
+            $months[$key] = [
+                'month' => $date->format('M Y'),
+                'total' => 0.0,
+                'count' => 0,
+            ];
+        }
+
         if ($sidingIds === []) {
-            return [];
+            return array_values($months);
         }
 
         $driver = DB::getDriverName();
@@ -247,16 +270,19 @@ final class ExecutiveDashboardController extends Controller
         $rows = Penalty::query()
             ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds))
             ->where('penalty_date', '>=', now()->subMonths(12))
-            ->selectRaw("{$yearMonthSql}, sum(penalty_amount) as total")
+            ->selectRaw("{$yearMonthSql}, sum(penalty_amount) as total, count(*) as count")
             ->groupBy('y', 'm')
-            ->orderBy('y')
-            ->orderBy('m')
             ->get();
 
-        return $rows->map(fn ($r): array => [
-            'month' => sprintf('%04d-%02d', (int) $r->y, (int) $r->m),
-            'total' => (float) $r->total,
-        ])->values()->all();
+        foreach ($rows as $r) {
+            $key = sprintf('%04d-%02d', (int) $r->y, (int) $r->m);
+            if (isset($months[$key])) {
+                $months[$key]['total'] = (float) $r->total;
+                $months[$key]['count'] = (int) $r->count;
+            }
+        }
+
+        return array_values($months);
     }
 
     /**
@@ -426,5 +452,165 @@ final class ExecutiveDashboardController extends Controller
             'worst_siding' => $worstSiding,
             'trend_direction' => $trendDirection,
         ];
+    }
+
+    /**
+     * Rake distribution by state for donut chart.
+     *
+     * @param  array<int>  $sidingIds
+     * @return array<int, array{name: string, value: int}>
+     */
+    private function buildRakeStateChart(array $sidingIds): array
+    {
+        if ($sidingIds === []) {
+            return [];
+        }
+
+        return Rake::query()
+            ->whereIn('siding_id', $sidingIds)
+            ->selectRaw('state as name, count(*) as value')
+            ->groupBy('state')
+            ->orderByDesc('value')
+            ->get()
+            ->map(fn ($r): array => [
+                'name' => ucfirst(str_replace('_', ' ', (string) $r->name)),
+                'value' => (int) $r->value,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Indent pipeline breakdown by state.
+     *
+     * @param  array<int>  $sidingIds
+     * @return array<int, array{name: string, value: int}>
+     */
+    private function buildIndentPipeline(array $sidingIds): array
+    {
+        if ($sidingIds === []) {
+            return [];
+        }
+
+        return Indent::query()
+            ->whereIn('siding_id', $sidingIds)
+            ->selectRaw('state as name, count(*) as value')
+            ->groupBy('state')
+            ->orderByDesc('value')
+            ->get()
+            ->map(fn ($r): array => [
+                'name' => ucfirst(str_replace('_', ' ', (string) $r->name)),
+                'value' => (int) $r->value,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Penalty status breakdown (paid, disputed, waived, pending, etc.).
+     *
+     * @param  array<int>  $sidingIds
+     * @return array<int, array{name: string, value: float, count: int}>
+     */
+    private function buildPenaltyStatusBreakdown(array $sidingIds): array
+    {
+        if ($sidingIds === []) {
+            return [];
+        }
+
+        return Penalty::query()
+            ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds))
+            ->where('penalty_date', '>=', now()->subMonths(12))
+            ->selectRaw('penalty_status as name, sum(penalty_amount) as value, count(*) as count')
+            ->groupBy('penalty_status')
+            ->orderByDesc('value')
+            ->get()
+            ->map(fn ($r): array => [
+                'name' => ucfirst((string) $r->name),
+                'value' => (float) $r->value,
+                'count' => (int) $r->count,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Penalties by responsible party for bar chart.
+     *
+     * @param  array<int>  $sidingIds
+     * @return array<int, array{name: string, value: float, count: int}>
+     */
+    private function buildResponsiblePartyBreakdown(array $sidingIds): array
+    {
+        if ($sidingIds === []) {
+            return [];
+        }
+
+        return Penalty::query()
+            ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds))
+            ->where('penalty_date', '>=', now()->subMonths(12))
+            ->whereNotNull('responsible_party')
+            ->selectRaw('responsible_party as name, sum(penalty_amount) as value, count(*) as count')
+            ->groupBy('responsible_party')
+            ->orderByDesc('value')
+            ->get()
+            ->map(fn ($r): array => [
+                'name' => ucfirst((string) $r->name),
+                'value' => (float) $r->value,
+                'count' => (int) $r->count,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Per-siding performance: rakes handled, penalties incurred, penalty rate.
+     *
+     * @param  array<int>  $sidingIds
+     * @return array<int, array{name: string, rakes: int, penalties: int, penalty_amount: float, penalty_rate: float}>
+     */
+    private function buildSidingPerformance(array $sidingIds): array
+    {
+        if ($sidingIds === []) {
+            return [];
+        }
+
+        $rakesBySiding = Rake::query()
+            ->join('sidings', 'rakes.siding_id', '=', 'sidings.id')
+            ->whereIn('rakes.siding_id', $sidingIds)
+            ->where('rakes.created_at', '>=', now()->subMonths(12))
+            ->selectRaw('sidings.name, count(*) as total_rakes')
+            ->groupBy('sidings.name')
+            ->pluck('total_rakes', 'name')
+            ->all();
+
+        $penaltiesBySiding = Penalty::query()
+            ->join('rakes', 'penalties.rake_id', '=', 'rakes.id')
+            ->join('sidings', 'rakes.siding_id', '=', 'sidings.id')
+            ->whereIn('rakes.siding_id', $sidingIds)
+            ->where('penalty_date', '>=', now()->subMonths(12))
+            ->selectRaw('sidings.name, count(*) as penalty_count, count(DISTINCT penalties.rake_id) as penalised_rakes, sum(penalty_amount) as penalty_total')
+            ->groupBy('sidings.name')
+            ->get()
+            ->keyBy('name');
+
+        $result = [];
+        foreach ($rakesBySiding as $name => $rakeCount) {
+            $penaltyData = $penaltiesBySiding->get($name);
+            $penaltyCount = $penaltyData ? (int) $penaltyData->penalty_count : 0;
+            $penalisedRakes = $penaltyData ? (int) $penaltyData->penalised_rakes : 0;
+            $penaltyAmount = $penaltyData ? (float) $penaltyData->penalty_total : 0.0;
+            $result[] = [
+                'name' => (string) $name,
+                'rakes' => (int) $rakeCount,
+                'penalties' => $penaltyCount,
+                'penalty_amount' => round($penaltyAmount, 2),
+                'penalty_rate' => $rakeCount > 0 ? round(($penalisedRakes / $rakeCount) * 100, 1) : 0,
+            ];
+        }
+
+        usort($result, fn ($a, $b) => $b['penalty_amount'] <=> $a['penalty_amount']);
+
+        return $result;
     }
 }

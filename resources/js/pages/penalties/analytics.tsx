@@ -353,6 +353,8 @@ export default function PenaltyAnalytics({
                             data={trendWithAvg}
                             xKey="month"
                             yKey="total"
+                            secondaryYKey="rollingAvg"
+                            secondaryLabel="3-month avg"
                             yLabel="Amount (₹)"
                             formatY={formatCurrency}
                             formatTooltip={(v) => formatCurrency(v)}

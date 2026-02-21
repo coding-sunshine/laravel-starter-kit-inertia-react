@@ -16,6 +16,7 @@ import {
     ArrowDown,
     ArrowUp,
     BarChart3,
+    ClipboardList,
     FileText,
     LifeBuoy,
     Mail,
@@ -26,8 +27,9 @@ import {
     Train,
     Truck,
     UserPen,
+    Wallet,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -72,11 +74,19 @@ interface AlertItem {
 interface PenaltyChartPoint {
     month: string;
     total: number;
+    count: number;
+    rollingAvg?: number;
 }
 
-interface PenaltyByTypePoint {
+interface NameValuePoint {
     name: string;
     value: number;
+}
+
+interface NameValueCountPoint {
+    name: string;
+    value: number;
+    count: number;
 }
 
 interface PenaltyBySidingPoint {
@@ -99,6 +109,14 @@ interface FinancialImpact {
     trend_direction: 'up' | 'down' | 'flat';
 }
 
+interface SidingPerformanceItem {
+    name: string;
+    rakes: number;
+    penalties: number;
+    penalty_amount: number;
+    penalty_rate: number;
+}
+
 interface SidingOption {
     id: number;
     name: string;
@@ -111,10 +129,15 @@ type DashboardProps = SharedData & {
     activeRakes?: ActiveRake[];
     alerts?: AlertItem[];
     penaltyChartData?: PenaltyChartPoint[];
-    penaltyByType?: PenaltyByTypePoint[];
+    penaltyByType?: NameValuePoint[];
     penaltyBySiding?: PenaltyBySidingPoint[];
     costAvoidance?: CostAvoidance;
     financialImpact?: FinancialImpact;
+    rakeStateChart?: NameValuePoint[];
+    indentPipeline?: NameValuePoint[];
+    penaltyStatusBreakdown?: NameValueCountPoint[];
+    responsiblePartyBreakdown?: NameValueCountPoint[];
+    sidingPerformance?: SidingPerformanceItem[];
     sidings?: SidingOption[];
     aiBriefing?: string | null;
 };
@@ -223,6 +246,11 @@ export default function Dashboard() {
     const penaltyBySiding = props.penaltyBySiding ?? [];
     const costAvoidance = props.costAvoidance ?? null;
     const financialImpact = props.financialImpact ?? null;
+    const rakeStateChart = props.rakeStateChart ?? [];
+    const indentPipeline = props.indentPipeline ?? [];
+    const penaltyStatusBreakdown = props.penaltyStatusBreakdown ?? [];
+    const responsiblePartyBreakdown = props.responsiblePartyBreakdown ?? [];
+    const sidingPerformance = props.sidingPerformance ?? [];
     const sidings = props.sidings ?? [];
 
     const f = features ?? {};
@@ -235,6 +263,16 @@ export default function Dashboard() {
         auth.can_bypass === true;
 
     const hasRrmcs = sidings.length > 0;
+
+    const penaltyTrendWithAvg = useMemo(() => {
+        if (penaltyChartData.length === 0) return [];
+        return penaltyChartData.map((point, i, arr) => {
+            const window = arr.slice(Math.max(0, i - 2), i + 1);
+            const avg =
+                window.reduce((sum, p) => sum + p.total, 0) / window.length;
+            return { ...point, rollingAvg: Math.round(avg) };
+        });
+    }, [penaltyChartData]);
 
     const quickActions = [
         {
@@ -367,14 +405,12 @@ export default function Dashboard() {
 
                 {hasRrmcs && summary && (
                     <>
-                        {/* Row 1: Stat cards */}
-                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+                        {/* KPI stat cards */}
+                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
                             <div className="rounded-lg border bg-card p-4">
                                 <div className="flex items-center gap-2 text-muted-foreground">
                                     <Train className="size-4" />
-                                    <span className="text-sm">
-                                        Active rakes
-                                    </span>
+                                    <span className="text-xs">Active rakes</span>
                                 </div>
                                 <p className="mt-1 text-2xl font-semibold">
                                     {summary.totalRakes}
@@ -382,9 +418,8 @@ export default function Dashboard() {
                             </div>
                             <div className="rounded-lg border bg-card p-4">
                                 <div className="flex items-center gap-2 text-muted-foreground">
-                                    <span className="text-sm">
-                                        Pending indents
-                                    </span>
+                                    <ClipboardList className="size-4" />
+                                    <span className="text-xs">Pending indents</span>
                                 </div>
                                 <p className="mt-1 text-2xl font-semibold">
                                     {summary.indentsPending}
@@ -393,22 +428,16 @@ export default function Dashboard() {
                             <div className="rounded-lg border bg-card p-4">
                                 <div className="flex items-center gap-2 text-muted-foreground">
                                     <AlertTriangle className="size-4" />
-                                    <span className="text-sm">
-                                        Penalties (month)
-                                    </span>
+                                    <span className="text-xs">Penalties (month)</span>
                                 </div>
                                 <p className="mt-1 text-2xl font-semibold">
-                                    {formatCurrency(
-                                        summary.penaltiesThisMonth,
-                                    )}
+                                    {formatCurrency(summary.penaltiesThisMonth)}
                                 </p>
                             </div>
                             <div className="rounded-lg border bg-card p-4">
                                 <div className="flex items-center gap-2 text-muted-foreground">
                                     <Truck className="size-4" />
-                                    <span className="text-sm">
-                                        Vehicles today
-                                    </span>
+                                    <span className="text-xs">Vehicles today</span>
                                 </div>
                                 <p className="mt-1 text-2xl font-semibold">
                                     {summary.vehiclesReceivedToday}
@@ -418,77 +447,125 @@ export default function Dashboard() {
                                 <div className="rounded-lg border bg-card p-4">
                                     <div className="flex items-center gap-2 text-muted-foreground">
                                         <ShieldCheck className="size-4" />
-                                        <span className="text-sm">
-                                            Money saved
-                                        </span>
+                                        <span className="text-xs">Money saved</span>
                                     </div>
                                     <p className="mt-1 text-2xl font-semibold text-green-600 dark:text-green-400">
-                                        {formatCurrency(
-                                            costAvoidance.money_saved,
-                                        )}
+                                        {formatCurrency(costAvoidance.money_saved)}
                                     </p>
                                     <p className="mt-0.5 text-xs text-muted-foreground">
-                                        {costAvoidance.rakes_within_free_time}{' '}
-                                        rakes within free time
+                                        {costAvoidance.rakes_within_free_time} rakes in free time
+                                    </p>
+                                </div>
+                            )}
+                            {costAvoidance && (
+                                <div className="rounded-lg border bg-card p-4">
+                                    <div className="flex items-center gap-2 text-muted-foreground">
+                                        <Wallet className="size-4" />
+                                        <span className="text-xs">Money lost</span>
+                                    </div>
+                                    <p className="mt-1 text-2xl font-semibold text-red-600 dark:text-red-400">
+                                        {formatCurrency(costAvoidance.money_lost)}
+                                    </p>
+                                    <p className="mt-0.5 text-xs text-muted-foreground">
+                                        {costAvoidance.rakes_with_penalties} penalised rakes
                                     </p>
                                 </div>
                             )}
                             {financialImpact && (
                                 <div className="rounded-lg border bg-card p-4">
                                     <div className="flex items-center gap-2 text-muted-foreground">
-                                        <span className="text-sm">
-                                            Avg cost/rake
-                                        </span>
-                                        <TrendIcon
-                                            direction={
-                                                financialImpact.trend_direction
-                                            }
-                                        />
+                                        <span className="text-xs">Avg cost/rake</span>
+                                        <TrendIcon direction={financialImpact.trend_direction} />
                                     </div>
                                     <p className="mt-1 text-2xl font-semibold">
-                                        {formatCurrency(
-                                            financialImpact.cost_per_rake,
-                                        )}
+                                        {formatCurrency(financialImpact.cost_per_rake)}
                                     </p>
                                     <p className="mt-0.5 text-xs text-muted-foreground">
-                                        {financialImpact.trend_direction ===
-                                        'down'
+                                        {financialImpact.trend_direction === 'down'
                                             ? 'Improving'
-                                            : financialImpact.trend_direction ===
-                                                'up'
+                                            : financialImpact.trend_direction === 'up'
                                               ? 'Worsening'
                                               : 'Stable'}{' '}
                                         vs last month
                                     </p>
                                 </div>
                             )}
+                            {financialImpact && financialImpact.ytd_total > 0 && (
+                                <div className="rounded-lg border bg-card p-4">
+                                    <div className="flex items-center gap-2 text-muted-foreground">
+                                        <span className="text-xs">YTD penalties</span>
+                                    </div>
+                                    <p className="mt-1 text-2xl font-semibold text-red-600 dark:text-red-400">
+                                        {formatCurrency(financialImpact.ytd_total)}
+                                    </p>
+                                    <p className="mt-0.5 text-xs text-muted-foreground">
+                                        Proj. {formatCurrency(financialImpact.projected_annual)}/yr
+                                    </p>
+                                </div>
+                            )}
                         </div>
 
-                        {/* Row 2: Penalty trend area chart */}
-                        {penaltyChartData.length > 0 && (
-                            <div className="rounded-lg border bg-card p-6">
-                                <Link href="/penalties/analytics" className="font-medium hover:underline" data-pan="penalty-drill-down">
-                                    Penalty trend (last 12 months)
-                                </Link>
-                                <div className="mt-4">
-                                    <AreaChart
-                                        data={penaltyChartData}
-                                        xKey="month"
-                                        yKey="total"
-                                        yLabel="Amount (₹)"
-                                        height={260}
-                                        formatY={formatCurrency}
-                                        formatTooltip={(v) =>
-                                            `₹${v.toLocaleString()}`
-                                        }
-                                    />
-                                </div>
+                        {/* Operational overview: Rake state + Indent pipeline */}
+                        {(rakeStateChart.length > 0 || indentPipeline.length > 0) && (
+                            <div className="grid gap-4 lg:grid-cols-2">
+                                {rakeStateChart.length > 0 && (
+                                    <div className="rounded-lg border bg-card p-6">
+                                        <h3 className="font-medium">Rake distribution by state</h3>
+                                        <div className="mt-4">
+                                            <PieChart
+                                                data={rakeStateChart}
+                                                nameKey="name"
+                                                valueKey="value"
+                                                height={240}
+                                                formatTooltip={(v) => `${v} rakes`}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+                                {indentPipeline.length > 0 && (
+                                    <div className="rounded-lg border bg-card p-6">
+                                        <h3 className="font-medium">Indent pipeline</h3>
+                                        <div className="mt-4">
+                                            <PieChart
+                                                data={indentPipeline}
+                                                nameKey="name"
+                                                valueKey="value"
+                                                height={240}
+                                                formatTooltip={(v) => `${v} indents`}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
 
-                        {/* Row 3: Penalty by type (pie) + Penalty by siding (bar) */}
-                        {(penaltyByType.length > 0 ||
-                            penaltyBySiding.length > 0) && (
+                        {/* Penalty trend: amount + count + 3-month rolling avg */}
+                        <div className="rounded-lg border bg-card p-6">
+                            <div className="flex items-center justify-between">
+                                <Link href="/penalties/analytics" className="font-medium hover:underline" data-pan="penalty-drill-down">
+                                    Penalty trend (last 12 months)
+                                </Link>
+                                <span className="text-xs text-muted-foreground">
+                                    Dashed line = 3-month rolling average
+                                </span>
+                            </div>
+                            <div className="mt-4">
+                                <AreaChart
+                                    data={penaltyTrendWithAvg}
+                                    xKey="month"
+                                    yKey="total"
+                                    secondaryYKey="rollingAvg"
+                                    secondaryLabel="3-month avg"
+                                    yLabel="Amount (₹)"
+                                    height={280}
+                                    formatY={formatCurrency}
+                                    formatTooltip={(v) => `₹${v.toLocaleString()}`}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Penalty by type + Penalty status */}
+                        {(penaltyByType.length > 0 || penaltyStatusBreakdown.length > 0) && (
                             <div className="grid gap-4 lg:grid-cols-2">
                                 {penaltyByType.length > 0 && (
                                     <div className="rounded-lg border bg-card p-6">
@@ -501,13 +578,31 @@ export default function Dashboard() {
                                                 nameKey="name"
                                                 valueKey="value"
                                                 height={260}
-                                                formatTooltip={(v) =>
-                                                    `₹${v.toLocaleString()}`
-                                                }
+                                                formatTooltip={(v) => `₹${v.toLocaleString()}`}
                                             />
                                         </div>
                                     </div>
                                 )}
+                                {penaltyStatusBreakdown.length > 0 && (
+                                    <div className="rounded-lg border bg-card p-6">
+                                        <h3 className="font-medium">Penalty resolution status</h3>
+                                        <div className="mt-4">
+                                            <PieChart
+                                                data={penaltyStatusBreakdown}
+                                                nameKey="name"
+                                                valueKey="value"
+                                                height={260}
+                                                formatTooltip={(v) => `₹${v.toLocaleString()}`}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Penalty by siding + Responsible party */}
+                        {(penaltyBySiding.length > 0 || responsiblePartyBreakdown.length > 0) && (
+                            <div className="grid gap-4 lg:grid-cols-2">
                                 {penaltyBySiding.length > 0 && (
                                     <div className="rounded-lg border bg-card p-6">
                                         <Link href="/penalties/analytics" className="font-medium hover:underline" data-pan="penalty-drill-down">
@@ -521,9 +616,22 @@ export default function Dashboard() {
                                                 height={260}
                                                 layout="vertical"
                                                 formatY={formatCurrency}
-                                                formatTooltip={(v) =>
-                                                    `₹${v.toLocaleString()}`
-                                                }
+                                                formatTooltip={(v) => `₹${v.toLocaleString()}`}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+                                {responsiblePartyBreakdown.length > 0 && (
+                                    <div className="rounded-lg border bg-card p-6">
+                                        <h3 className="font-medium">Penalties by responsible party</h3>
+                                        <div className="mt-4">
+                                            <BarChart
+                                                data={responsiblePartyBreakdown}
+                                                xKey="name"
+                                                yKey="value"
+                                                height={260}
+                                                formatY={formatCurrency}
+                                                formatTooltip={(v) => `₹${v.toLocaleString()}`}
                                             />
                                         </div>
                                     </div>
@@ -531,103 +639,114 @@ export default function Dashboard() {
                             </div>
                         )}
 
-                        {/* Row 4: Financial impact summary */}
-                        {financialImpact &&
-                            financialImpact.ytd_total > 0 && (
-                                <div className="rounded-lg border bg-card p-6">
-                                    <h3 className="font-medium">
-                                        Financial impact (YTD)
-                                    </h3>
-                                    <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                                        <div className="rounded-md border bg-muted/30 p-3">
-                                            <p className="text-sm text-muted-foreground">
-                                                Total penalties YTD
-                                            </p>
-                                            <p className="mt-1 text-xl font-semibold text-red-600 dark:text-red-400">
-                                                {formatCurrency(
-                                                    financialImpact.ytd_total,
-                                                )}
-                                            </p>
-                                        </div>
-                                        <div className="rounded-md border bg-muted/30 p-3">
-                                            <p className="text-sm text-muted-foreground">
-                                                Projected annual
-                                            </p>
-                                            <p className="mt-1 text-xl font-semibold">
-                                                {formatCurrency(
-                                                    financialImpact.projected_annual,
-                                                )}
-                                            </p>
-                                        </div>
-                                        <div className="rounded-md border bg-muted/30 p-3">
-                                            <p className="text-sm text-muted-foreground">
-                                                Cost per rake
-                                            </p>
-                                            <p className="mt-1 flex items-center gap-1.5 text-xl font-semibold">
-                                                {formatCurrency(
-                                                    financialImpact.cost_per_rake,
-                                                )}
-                                                <TrendIcon
-                                                    direction={
-                                                        financialImpact.trend_direction
-                                                    }
-                                                />
-                                            </p>
-                                        </div>
-                                        <div className="rounded-md border bg-muted/30 p-3">
-                                            <p className="text-sm text-muted-foreground">
-                                                Worst siding
-                                            </p>
-                                            <p className="mt-1 text-xl font-semibold">
-                                                {financialImpact.worst_siding ??
-                                                    '—'}
-                                            </p>
-                                        </div>
+                        {/* Siding performance comparison */}
+                        {sidingPerformance.length > 0 && (
+                            <div className="rounded-lg border bg-card p-6">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="font-medium">Siding performance (last 12 months)</h3>
+                                    {financialImpact?.worst_siding && (
+                                        <span className="rounded-md bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-950/50 dark:text-red-400">
+                                            Worst: {financialImpact.worst_siding}
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="mt-4 overflow-x-auto">
+                                    <table className="w-full text-sm">
+                                        <thead>
+                                            <tr className="border-b text-left text-muted-foreground">
+                                                <th className="pb-2 pr-4 font-medium">Siding</th>
+                                                <th className="pb-2 pr-4 text-right font-medium">Rakes</th>
+                                                <th className="pb-2 pr-4 text-right font-medium">Penalties</th>
+                                                <th className="pb-2 pr-4 text-right font-medium">Amount</th>
+                                                <th className="pb-2 text-right font-medium">Penalty rate</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {sidingPerformance.map((s) => (
+                                                <tr key={s.name} className="border-b border-border/50">
+                                                    <td className="py-2.5 pr-4 font-medium">{s.name}</td>
+                                                    <td className="py-2.5 pr-4 text-right tabular-nums">{s.rakes}</td>
+                                                    <td className="py-2.5 pr-4 text-right tabular-nums">{s.penalties}</td>
+                                                    <td className="py-2.5 pr-4 text-right tabular-nums text-red-600 dark:text-red-400">
+                                                        {formatCurrency(s.penalty_amount)}
+                                                    </td>
+                                                    <td className="py-2.5 text-right">
+                                                        <span
+                                                            className={
+                                                                'inline-flex rounded-full px-2 py-0.5 text-xs font-medium ' +
+                                                                (s.penalty_rate > 50
+                                                                    ? 'bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400'
+                                                                    : s.penalty_rate > 25
+                                                                      ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400'
+                                                                      : 'bg-green-100 text-green-700 dark:bg-green-950/50 dark:text-green-400')
+                                                            }
+                                                        >
+                                                            {s.penalty_rate}%
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Financial impact summary */}
+                        {financialImpact && financialImpact.ytd_total > 0 && (
+                            <div className="rounded-lg border bg-card p-6">
+                                <h3 className="font-medium">Financial impact (YTD)</h3>
+                                <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                                    <div className="rounded-md border bg-muted/30 p-3">
+                                        <p className="text-sm text-muted-foreground">Total penalties YTD</p>
+                                        <p className="mt-1 text-xl font-semibold text-red-600 dark:text-red-400">
+                                            {formatCurrency(financialImpact.ytd_total)}
+                                        </p>
+                                    </div>
+                                    <div className="rounded-md border bg-muted/30 p-3">
+                                        <p className="text-sm text-muted-foreground">Projected annual</p>
+                                        <p className="mt-1 text-xl font-semibold">
+                                            {formatCurrency(financialImpact.projected_annual)}
+                                        </p>
+                                    </div>
+                                    <div className="rounded-md border bg-muted/30 p-3">
+                                        <p className="text-sm text-muted-foreground">Cost per rake</p>
+                                        <p className="mt-1 flex items-center gap-1.5 text-xl font-semibold">
+                                            {formatCurrency(financialImpact.cost_per_rake)}
+                                            <TrendIcon direction={financialImpact.trend_direction} />
+                                        </p>
+                                    </div>
+                                    <div className="rounded-md border bg-muted/30 p-3">
+                                        <p className="text-sm text-muted-foreground">Worst siding</p>
+                                        <p className="mt-1 text-xl font-semibold">
+                                            {financialImpact.worst_siding ?? '—'}
+                                        </p>
                                     </div>
                                 </div>
-                            )}
+                            </div>
+                        )}
 
                         {/* Siding stock */}
                         {Object.keys(sidingStocks).length > 0 && (
                             <div className="rounded-lg border bg-card p-6">
-                                <h3 className="font-medium">
-                                    Siding stock (closing balance MT)
-                                </h3>
+                                <h3 className="font-medium">Siding stock (closing balance MT)</h3>
                                 <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                                     {sidings.map((s) => {
                                         const stock = sidingStocks[s.id];
-                                        const balance = stock
-                                            ? stock.closing_balance_mt
-                                            : 0;
+                                        const balance = stock ? stock.closing_balance_mt : 0;
                                         return (
-                                            <div
-                                                key={s.id}
-                                                className="rounded-md border bg-muted/30 p-3"
-                                            >
+                                            <div key={s.id} className="rounded-md border bg-muted/30 p-3">
                                                 <div className="flex justify-between text-sm">
-                                                    <span className="font-medium">
-                                                        {s.name}
-                                                    </span>
+                                                    <span className="font-medium">{s.name}</span>
                                                     <span className="text-muted-foreground tabular-nums">
-                                                        {balance.toLocaleString(
-                                                            undefined,
-                                                            {
-                                                                maximumFractionDigits: 2,
-                                                            },
-                                                        )}{' '}
-                                                        MT
+                                                        {balance.toLocaleString(undefined, { maximumFractionDigits: 2 })} MT
                                                     </span>
                                                 </div>
                                                 <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
                                                     <div
                                                         className="h-full rounded-full bg-primary"
                                                         style={{
-                                                            width: `${Math.min(
-                                                                100,
-                                                                (balance /
-                                                                    1000) *
-                                                                    10,
-                                                            )}%`,
+                                                            width: `${Math.min(100, (balance / 1000) * 10)}%`,
                                                         }}
                                                     />
                                                 </div>
@@ -641,22 +760,15 @@ export default function Dashboard() {
                         {/* Live demurrage timers */}
                         {activeRakes.length > 0 && (
                             <div className="rounded-lg border bg-card p-6">
-                                <h3 className="font-medium">
-                                    Live demurrage timers
-                                </h3>
+                                <h3 className="font-medium">Live demurrage timers</h3>
                                 <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                                     {activeRakes.map((rake) => (
-                                        <DemurrageTimer
-                                            key={rake.id}
-                                            rake={rake}
-                                        />
+                                        <DemurrageTimer key={rake.id} rake={rake} />
                                     ))}
                                 </div>
                                 <div className="mt-3">
                                     <Button variant="outline" size="sm" asChild>
-                                        <Link href={rakes().url}>
-                                            View all rakes
-                                        </Link>
+                                        <Link href={rakes().url}>View all rakes</Link>
                                     </Button>
                                 </div>
                             </div>
@@ -682,16 +794,12 @@ export default function Dashboard() {
                                     }
                                 >
                                     <action.icon className="size-5 text-muted-foreground" />
-                                    <span className="text-sm">
-                                        {action.label}
-                                    </span>
+                                    <span className="text-sm">{action.label}</span>
                                 </a>
                             ) : (
                                 <Link href={action.href}>
                                     <action.icon className="size-5 text-muted-foreground" />
-                                    <span className="text-sm">
-                                        {action.label}
-                                    </span>
+                                    <span className="text-sm">{action.label}</span>
                                 </Link>
                             )}
                         </Button>
@@ -702,20 +810,14 @@ export default function Dashboard() {
                     <div className="rounded-lg border bg-card p-6">
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                             <div>
-                                <h3 className="font-medium">
-                                    Product analytics
-                                </h3>
+                                <h3 className="font-medium">Product analytics</h3>
                                 <p className="mt-1 text-sm text-muted-foreground">
-                                    App-wide impressions, hovers, and clicks for
-                                    tracked UI elements. View full table and
-                                    stats in the admin panel.
+                                    App-wide impressions, hovers, and clicks for tracked UI elements.
+                                    View full table and stats in the admin panel.
                                 </p>
                             </div>
                             <Button variant="outline" size="sm" asChild>
-                                <a
-                                    href="/admin/analytics/product"
-                                    data-pan="dashboard-card-view-analytics"
-                                >
+                                <a href="/admin/analytics/product" data-pan="dashboard-card-view-analytics">
                                     View analytics
                                 </a>
                             </Button>

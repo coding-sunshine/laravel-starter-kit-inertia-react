@@ -3,6 +3,7 @@ import {
     Area,
     AreaChart as RechartsAreaChart,
     CartesianGrid,
+    Line,
     ResponsiveContainer,
     Tooltip,
     XAxis,
@@ -13,9 +14,12 @@ interface AreaChartProps<T extends Record<string, unknown>> {
     data: T[];
     xKey: keyof T & string;
     yKey: keyof T & string;
+    secondaryYKey?: keyof T & string;
+    secondaryLabel?: string;
     yLabel?: string;
     height?: number;
     color?: string;
+    secondaryColor?: string;
     gradientOpacity?: number;
     formatY?: (value: number) => string;
     formatTooltip?: (value: number) => string;
@@ -26,9 +30,12 @@ export function AreaChart<T extends Record<string, unknown>>({
     data,
     xKey,
     yKey,
+    secondaryYKey,
+    secondaryLabel,
     yLabel,
     height = 280,
     color = 'var(--chart-1)',
+    secondaryColor = 'var(--chart-3)',
     gradientOpacity = 0.15,
     formatY,
     formatTooltip,
@@ -69,10 +76,11 @@ export function AreaChart<T extends Record<string, unknown>>({
                     />
                     <XAxis
                         dataKey={xKey}
-                        tick={{ fontSize: 12 }}
+                        tick={{ fontSize: 11 }}
                         className="fill-muted-foreground"
                         tickLine={false}
                         axisLine={false}
+                        interval="preserveStartEnd"
                     />
                     <YAxis
                         tick={{ fontSize: 12 }}
@@ -99,11 +107,13 @@ export function AreaChart<T extends Record<string, unknown>>({
                             borderRadius: 8,
                             fontSize: 12,
                         }}
-                        formatter={(value: number) => [
+                        formatter={(value: number, name: string) => [
                             formatTooltip
                                 ? formatTooltip(value)
                                 : value.toLocaleString(),
-                            yLabel ?? yKey,
+                            name === yKey
+                                ? (yLabel ?? yKey)
+                                : (secondaryLabel ?? name),
                         ]}
                     />
                     <Area
@@ -112,7 +122,19 @@ export function AreaChart<T extends Record<string, unknown>>({
                         stroke={color}
                         strokeWidth={2}
                         fill={`url(#${gradientId})`}
+                        dot={{ r: 3, fill: color, strokeWidth: 0 }}
+                        activeDot={{ r: 5, fill: color, strokeWidth: 2, stroke: 'var(--card)' }}
                     />
+                    {secondaryYKey && (
+                        <Line
+                            type="monotone"
+                            dataKey={secondaryYKey}
+                            stroke={secondaryColor}
+                            strokeWidth={1.5}
+                            strokeDasharray="5 5"
+                            dot={false}
+                        />
+                    )}
                 </RechartsAreaChart>
             </ResponsiveContainer>
         </div>
