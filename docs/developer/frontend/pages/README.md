@@ -31,7 +31,7 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | [user-two-factor-authentication-challenge/show](./user-two-factor-authentication-challenge-show.md) | N/A | ✅ |
 | [user-two-factor-authentication/show](./user-two-factor-authentication-show.md) | two-factor.show | ✅ |
 | [user/create](./user-create.md) | user.destroy, register | ✅ |
-| [welcome](./welcome.md) | filament.exports.download, filament.imports.failed-rows.download | ✅ |
+| [welcome](./welcome.md) | N/A | ✅ |
 | [contact/create](./contact-create.md) | contact.create, contact.store | ✅ |
 | [blog/index](./blog-index.md) | blog.index, blog.show | ✅ |
 | [blog/show](./blog-show.md) | blog.index, blog.show | ✅ |

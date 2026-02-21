@@ -1,0 +1,69 @@
+{
+    "model": "PenaltyPrediction",
+    "table": "penalty_predictions",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "siding_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "prediction_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "risk_level": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "predicted_types": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "predicted_amount_min": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "predicted_amount_max": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "factors": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "recommendations": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "siding": {
+            "type": "belongsTo",
+            "model": "Siding"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

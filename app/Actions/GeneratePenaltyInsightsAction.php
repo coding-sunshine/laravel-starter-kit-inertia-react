@@ -8,6 +8,11 @@ use App\Models\Penalty;
 use App\Services\PrismService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Prism\Prism\Schema\ArraySchema;
+use Prism\Prism\Schema\EnumSchema;
+use Prism\Prism\Schema\NumberSchema;
+use Prism\Prism\Schema\ObjectSchema;
+use Prism\Prism\Schema\StringSchema;
 use Throwable;
 
 final readonly class GeneratePenaltyInsightsAction
@@ -19,7 +24,7 @@ final readonly class GeneratePenaltyInsightsAction
      * Cached for 24 hours; called weekly by scheduled command.
      *
      * @param  array<int>  $sidingIds
-     * @return array<int, array{title: string, description: string, severity: string}>|null
+     * @return array<int, array{title: string, description: string, severity: string, estimated_savings_inr: float, category: string}>|null
      */
     public function handle(array $sidingIds): ?array
     {
@@ -45,9 +50,15 @@ final readonly class GeneratePenaltyInsightsAction
         $prompt = $this->buildPrompt($data);
 
         try {
-            $response = $this->prism->generate($prompt, $this->prism->fastModel());
-            $text = mb_trim($response->text);
-            $insights = $this->parseInsights($text);
+            $response = $this->prism->structured($this->prism->fastModel())
+                ->withPrompt($prompt)
+                ->withSchema($this->buildSchema())
+                ->asStructured();
+
+            /** @var array{insights: array<int, array{severity: string, title: string, description: string, estimated_savings_inr: float, category: string}>} $structured */
+            $structured = $response->structured;
+
+            $insights = array_slice($structured['insights'] ?? [], 0, 5);
             Cache::put($cacheKey, $insights, 86400);
 
             return $insights;
@@ -56,6 +67,49 @@ final readonly class GeneratePenaltyInsightsAction
 
             return null;
         }
+    }
+
+    private function buildSchema(): ObjectSchema
+    {
+        return new ObjectSchema(
+            name: 'penalty_insights',
+            description: 'AI-generated penalty insights with actionable recommendations',
+            properties: [
+                new ArraySchema(
+                    name: 'insights',
+                    description: 'List of 5 actionable cost-saving recommendations',
+                    items: new ObjectSchema(
+                        name: 'insight',
+                        description: 'A single insight/recommendation',
+                        properties: [
+                            new EnumSchema(
+                                name: 'severity',
+                                description: 'Impact severity level',
+                                options: ['high', 'medium', 'low'],
+                            ),
+                            new StringSchema(
+                                name: 'title',
+                                description: 'Short actionable heading under 60 characters',
+                            ),
+                            new StringSchema(
+                                name: 'description',
+                                description: '1-2 sentences explaining the insight with projected savings in INR',
+                            ),
+                            new NumberSchema(
+                                name: 'estimated_savings_inr',
+                                description: 'Estimated annual savings in INR',
+                            ),
+                            new StringSchema(
+                                name: 'category',
+                                description: 'Category: root_cause, dispute_strategy, responsible_party, penalty_type, siding_hotspot',
+                            ),
+                        ],
+                        requiredFields: ['severity', 'title', 'description', 'estimated_savings_inr', 'category'],
+                    ),
+                ),
+            ],
+            requiredFields: ['insights'],
+        );
     }
 
     /**
@@ -222,13 +276,6 @@ final readonly class GeneratePenaltyInsightsAction
         Penalty data:
         {$json}
 
-        For each recommendation, output it on its own line in this exact format:
-        [SEVERITY] Title | Description
-
-        Where SEVERITY is one of: HIGH, MEDIUM, LOW
-        Title is a short actionable heading (under 60 chars).
-        Description is 1-2 sentences explaining the insight and what to do about it. MUST include a projected savings figure (₹).
-
         Focus your analysis on these cost-saving opportunities:
         1. ROOT CAUSES: Which root causes are preventable? What is the projected savings from reducing equipment failures, labour issues, or scheduling errors?
         2. DISPUTE STRATEGY: There are {$data['undisputed_count']} undisputed penalties worth ₹{$data['undisputed_amount']}. Should more be contested? What is the projected savings based on current dispute success rate?
@@ -238,28 +285,5 @@ final readonly class GeneratePenaltyInsightsAction
 
         Be specific with numbers, percentages, and projected ₹ savings. Every recommendation must include a savings estimate.
         PROMPT;
-    }
-
-    /**
-     * Parse AI response into structured insights.
-     *
-     * @return array<int, array{title: string, description: string, severity: string}>
-     */
-    private function parseInsights(string $text): array
-    {
-        $lines = array_filter(array_map('trim', explode("\n", $text)));
-        $insights = [];
-
-        foreach ($lines as $line) {
-            if (preg_match('/^\[?(HIGH|MEDIUM|LOW)\]?\s*(.+?)\s*\|\s*(.+)$/i', $line, $matches)) {
-                $insights[] = [
-                    'severity' => mb_strtolower($matches[1]),
-                    'title' => mb_trim($matches[2]),
-                    'description' => mb_trim($matches[3]),
-                ];
-            }
-        }
-
-        return array_slice($insights, 0, 5);
     }
 }

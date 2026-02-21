@@ -28,6 +28,7 @@
         "devrabiul/laravel-geo-genius": "^1.5",
         "essa/api-tool-kit": "^2.2",
         "eznix86/laravel-ai-memory": "^1.0.1",
+        "fakerphp/faker": "^1.24.1",
         "filament/filament": "^5.2.1",
         "filament/spatie-laravel-settings-plugin": "^5.2.1",
         "inertiajs/inertia-laravel": "^2.0.20",
@@ -90,7 +91,6 @@
     },
     "require-dev": {
         "driftingly/rector-laravel": "^2.1.9",
-        "fakerphp/faker": "^1.24.1",
         "filament/blueprint": "^2.1",
         "larastan/larastan": "^3.9.2",
         "laravel/boost": "^2.1.6",

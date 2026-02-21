@@ -19,10 +19,10 @@ final class ContactSubmissionFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->name(),
-            'email' => fake()->unique()->safeEmail(),
-            'subject' => fake()->sentence(),
-            'message' => fake()->paragraphs(2, true),
+            'name' => $this->faker->name(),
+            'email' => $this->faker->unique()->safeEmail(),
+            'subject' => $this->faker->sentence(),
+            'message' => $this->faker->paragraphs(2, true),
             'status' => 'new',
         ];
     }

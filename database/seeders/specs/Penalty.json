@@ -3,12 +3,12 @@
     "table": "penalties",
     "fields": {
         "id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
         "rake_id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
@@ -58,7 +58,7 @@
             "default": null
         },
         "calculation_breakdown": {
-            "type": "text",
+            "type": "json",
             "nullable": true,
             "default": null
         },
@@ -91,6 +91,21 @@
             "type": "text",
             "nullable": true,
             "default": null
+        },
+        "root_cause_category": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "is_preventable": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "suggested_remediation": {
+            "type": "text",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {
@@ -107,6 +122,10 @@
         "resolved_at": {
             "type": "datetime",
             "example": "2024-01-01 00:00:00"
+        },
+        "is_preventable": {
+            "type": "boolean",
+            "example": true
         }
     },
     "scenarios": []

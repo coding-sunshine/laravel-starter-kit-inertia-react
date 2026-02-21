@@ -63,5 +63,9 @@ All Actions:
 | [GenerateDailyBriefingAction](./generatedailybriefingaction.md) | N/A | ✅ |
 | [GeneratePenaltyInsightsAction](./generatepenaltyinsightsaction.md) | N/A | ✅ |
 | [BuildPenaltyChartDataAction](./BuildPenaltyChartDataAction.md) | N/A | ✅ |
+| CalculateSidingRiskScoresAction | N/A | ❌ |
+| ClassifyPenaltyRootCauseAction | N/A | ❌ |
+| GeneratePenaltyPredictionsAction | N/A | ❌ |
+| RecommendDisputeAction | N/A | ❌ |
 
 

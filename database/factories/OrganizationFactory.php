@@ -21,7 +21,7 @@ final class OrganizationFactory extends Factory
      */
     public function definition(): array
     {
-        $name = fake()->company();
+        $name = $this->faker->company();
         $slug = Str::slug($name);
 
         return [

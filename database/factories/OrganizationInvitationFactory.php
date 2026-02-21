@@ -25,7 +25,7 @@ final class OrganizationInvitationFactory extends Factory
 
         return [
             'organization_id' => Organization::factory(),
-            'email' => fake()->unique()->safeEmail(),
+            'email' => $this->faker->unique()->safeEmail(),
             'role' => 'member',
             'invited_by' => User::factory(),
             'expires_at' => now()->addDays($days),

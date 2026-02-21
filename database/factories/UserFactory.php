@@ -21,8 +21,8 @@ final class UserFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->name(),
-            'email' => fake()->unique()->safeEmail(),
+            'name' => $this->faker->name(),
+            'email' => $this->faker->unique()->safeEmail(),
             'email_verified_at' => now(),
             'password' => self::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
@@ -60,8 +60,8 @@ final class UserFactory extends Factory
     public function admin(): self
     {
         return $this->state(fn (array $attributes): array => [
-            'name' => fake()->name().' (Admin)',
-            'email' => 'admin@'.fake()->domainName(),
+            'name' => $this->faker->name().' (Admin)',
+            'email' => 'admin@'.$this->faker->domainName(),
         ]);
     }
 
@@ -69,7 +69,7 @@ final class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes): array => [
             'name' => 'Demo User',
-            'email' => 'demo@'.fake()->domainName(),
+            'email' => 'demo@'.$this->faker->domainName(),
         ]);
     }
 }

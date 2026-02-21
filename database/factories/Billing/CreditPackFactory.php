@@ -20,12 +20,12 @@ final class CreditPackFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->words(3, true),
-            'slug' => fake()->unique()->slug(),
-            'description' => fake()->sentence(),
-            'credits' => fake()->numberBetween(10, 500),
+            'name' => $this->faker->words(3, true),
+            'slug' => $this->faker->unique()->slug(),
+            'description' => $this->faker->sentence(),
+            'credits' => $this->faker->numberBetween(10, 500),
             'bonus_credits' => 0,
-            'price' => fake()->numberBetween(500, 50000),
+            'price' => $this->faker->numberBetween(500, 50000),
             'currency' => 'usd',
             'validity_days' => 365,
             'is_active' => true,

@@ -1,7 +1,63 @@
 {
     "model": "SidingPerformance",
     "table": "siding_performances",
-    "fields": [],
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "siding_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "as_of_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "rakes_processed": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "total_penalty_amount": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "penalty_incidents": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "average_demurrage_hours": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "overload_incidents": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "closing_stock_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
     "relationships": {
         "siding": {
             "type": "belongsTo",

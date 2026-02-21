@@ -20,14 +20,14 @@ final class HelpArticleFactory extends Factory
      */
     public function definition(): array
     {
-        $title = fake()->sentence();
+        $title = $this->faker->sentence();
         $slug = Str::slug($title);
 
         return [
             'title' => $title,
             'slug' => $slug,
-            'excerpt' => fake()->paragraph(),
-            'content' => fake()->paragraphs(4, true),
+            'excerpt' => $this->faker->paragraph(),
+            'content' => $this->faker->paragraphs(4, true),
             'category' => null,
             'views' => 0,
             'helpful_count' => 0,

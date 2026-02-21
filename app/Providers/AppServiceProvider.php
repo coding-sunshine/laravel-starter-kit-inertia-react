@@ -19,6 +19,7 @@ use App\Listeners\SendSlackAlertOnJobFailed;
 use App\Models\Shareable;
 use App\Models\User;
 use App\Observers\ActivityLogObserver;
+use App\Observers\PenaltyObserver;
 use App\Observers\PermissionActivityObserver;
 use App\Observers\RoleActivityObserver;
 use App\Observers\UserObserver;
@@ -95,6 +96,7 @@ final class AppServiceProvider extends ServiceProvider
         Event::listen(OrderCreated::class, AddCreditsFromLemonSqueezyOrder::class);
         Event::listen(DemurrageThresholdCrossed::class, SendDemurrageEscalation::class);
         User::observe(UserObserver::class);
+        \App\Models\Penalty::observe(PenaltyObserver::class);
     }
 
     private function userHasBypassPermissions(object $user): bool

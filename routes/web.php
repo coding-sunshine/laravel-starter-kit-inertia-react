@@ -201,6 +201,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('penalties', [PenaltyController::class, 'index'])->name('penalties.index');
     Route::get('penalties/analytics', [PenaltyController::class, 'analytics'])->name('penalties.analytics');
     Route::patch('penalties/{penalty}', [PenaltyController::class, 'update'])->name('penalties.update');
+    Route::get('penalties/{penalty}/dispute-recommendation', [PenaltyController::class, 'disputeRecommendation'])->name('penalties.dispute-recommendation');
 
     // Alerts
     Route::get('alerts', [AlertController::class, 'index'])->name('alerts.index');
@@ -222,6 +223,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('chat/conversations/{id}', [ChatController::class, 'show'])->name('chat.conversations.show');
     Route::get('chat/demurrage-warnings', [ChatController::class, 'demurrageWarnings'])->name('chat.demurrage-warnings');
     Route::post('chat', [ChatController::class, 'message'])->name('chat.message');
+    Route::post('chat/stream', [ChatController::class, 'stream'])->name('chat.stream');
 
     Route::get('profile/export-pdf', App\Http\Controllers\ProfileExportPdfController::class)
         ->middleware('feature:profile_pdf_export')

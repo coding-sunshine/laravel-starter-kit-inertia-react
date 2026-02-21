@@ -93,18 +93,18 @@ final class PenaltyFactory extends Factory
      */
     public function definition(): array
     {
-        $rootCause = fake()->optional(0.7)->passthrough($this->randomRootCause());
+        $rootCause = $this->faker->optional(0.7)->passthrough($this->randomRootCause());
 
         return [
-            'rake_id' => fake()->numberBetween(1, 100),
-            'penalty_type' => fake()->randomElement(['DEM', 'POL1', 'POLA', 'PLO', 'ULC', 'SPL', 'WMC', 'MCF']),
-            'penalty_amount' => fake()->randomFloat(2, 500, 100000),
-            'penalty_status' => fake()->randomElement(['pending', 'incurred', 'waived', 'disputed']),
-            'responsible_party' => fake()->optional(0.7)->randomElement(['railway', 'siding', 'transporter', 'plant', 'other']),
+            'rake_id' => $this->faker->numberBetween(1, 100),
+            'penalty_type' => $this->faker->randomElement(['DEM', 'POL1', 'POLA', 'PLO', 'ULC', 'SPL', 'WMC', 'MCF']),
+            'penalty_amount' => $this->faker->randomFloat(2, 500, 100000),
+            'penalty_status' => $this->faker->randomElement(['pending', 'incurred', 'waived', 'disputed']),
+            'responsible_party' => $this->faker->optional(0.7)->randomElement(['railway', 'siding', 'transporter', 'plant', 'other']),
             'root_cause' => $rootCause,
-            'description' => fake()->optional(0.6)->sentence(),
+            'description' => $this->faker->optional(0.6)->sentence(),
             'remediation_notes' => null,
-            'penalty_date' => fake()->dateTimeBetween('-6 months', 'now'),
+            'penalty_date' => $this->faker->dateTimeBetween('-6 months', 'now'),
             'calculation_breakdown' => null,
         ];
     }
@@ -115,8 +115,8 @@ final class PenaltyFactory extends Factory
             'penalty_type' => 'DEM',
             'calculation_breakdown' => [
                 'formula' => 'demurrage_hours × weight_mt × rate_per_mt_hour',
-                'demurrage_hours' => $hours = fake()->randomFloat(1, 0.5, 24),
-                'weight_mt' => $weight = fake()->randomFloat(0, 500, 3000),
+                'demurrage_hours' => $hours = $this->faker->randomFloat(1, 0.5, 24),
+                'weight_mt' => $weight = $this->faker->randomFloat(0, 500, 3000),
                 'rate_per_mt_hour' => 50,
                 'free_hours' => 3.0,
                 'dwell_hours' => $hours + 3.0,
@@ -128,8 +128,8 @@ final class PenaltyFactory extends Factory
     {
         return $this->state(fn (): array => [
             'penalty_status' => 'disputed',
-            'disputed_at' => fake()->dateTimeBetween('-30 days', 'now'),
-            'dispute_reason' => fake()->sentence(),
+            'disputed_at' => $this->faker->dateTimeBetween('-30 days', 'now'),
+            'dispute_reason' => $this->faker->sentence(),
         ]);
     }
 
@@ -137,29 +137,29 @@ final class PenaltyFactory extends Factory
     {
         return $this->state(fn (): array => [
             'penalty_status' => 'waived',
-            'disputed_at' => fake()->dateTimeBetween('-60 days', '-30 days'),
-            'dispute_reason' => fake()->sentence(),
-            'resolved_at' => fake()->dateTimeBetween('-30 days', 'now'),
-            'resolution_notes' => fake()->sentence(),
+            'disputed_at' => $this->faker->dateTimeBetween('-60 days', '-30 days'),
+            'dispute_reason' => $this->faker->sentence(),
+            'resolved_at' => $this->faker->dateTimeBetween('-30 days', 'now'),
+            'resolution_notes' => $this->faker->sentence(),
         ]);
     }
 
     public function withResponsibility(): self
     {
         return $this->state(function (): array {
-            $category = fake()->randomElement(array_keys(self::ROOT_CAUSES));
+            $category = $this->faker->randomElement(array_keys(self::ROOT_CAUSES));
 
             return [
                 'responsible_party' => self::CAUSE_TO_PARTY[$category],
-                'root_cause' => fake()->randomElement(self::ROOT_CAUSES[$category]),
+                'root_cause' => $this->faker->randomElement(self::ROOT_CAUSES[$category]),
             ];
         });
     }
 
     private function randomRootCause(): string
     {
-        $category = fake()->randomElement(array_keys(self::ROOT_CAUSES));
+        $category = $this->faker->randomElement(array_keys(self::ROOT_CAUSES));
 
-        return fake()->randomElement(self::ROOT_CAUSES[$category]);
+        return $this->faker->randomElement(self::ROOT_CAUSES[$category]);
     }
 }

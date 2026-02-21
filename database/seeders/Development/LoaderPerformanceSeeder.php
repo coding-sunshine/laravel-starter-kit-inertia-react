@@ -7,4 +7,10 @@ namespace Database\Seeders\Development;
 use Illuminate\Database\Seeder;
 
 /** LoaderPerformance seeder. Placeholder for pre-commit. */
-final class LoaderPerformanceSeeder extends Seeder {}
+final class LoaderPerformanceSeeder extends Seeder
+{
+    public function run(): void
+    {
+        // Placeholder: seed when required
+    }
+}

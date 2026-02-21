@@ -59,6 +59,7 @@ interface DemurrageWarning {
 }
 
 const CHAT_URL = '/chat';
+const CHAT_STREAM_URL = '/chat/stream';
 const CONVERSATIONS_URL = '/chat/conversations';
 const DEMURRAGE_WARNING_URL = '/chat/demurrage-warnings';
 
@@ -282,6 +283,127 @@ function formatConversationDate(updatedAt: string): string {
     }
 }
 
+/**
+ * Stream a chat response via SSE, appending tokens in real-time.
+ * Falls back to sync endpoint on error.
+ */
+async function streamChat(
+    message: string,
+    conversationId: string | null,
+    currentPage: string,
+    onToken: (token: string) => void,
+    onDone: (conversationId: string | null) => void,
+    onError: (error: string) => void,
+): Promise<void> {
+    try {
+        const response = await fetch(CHAT_STREAM_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'text/event-stream',
+                'X-Requested-With': 'XMLHttpRequest',
+                ...getCsrfHeaders(),
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+                message,
+                conversation_id: conversationId,
+                current_page: currentPage,
+            }),
+        });
+
+        if (!response.ok) {
+            // Try to parse JSON error
+            const contentType = response.headers.get('content-type') ?? '';
+            if (contentType.includes('application/json')) {
+                const data = await response.json();
+                onError(
+                    data?.error ??
+                        (response.status === 419
+                            ? 'Session may have expired. Please refresh the page and try again.'
+                            : 'Something went wrong.'),
+                );
+                return;
+            }
+            onError('Something went wrong. Please try again.');
+            return;
+        }
+
+        const reader = response.body?.getReader();
+        if (!reader) {
+            onError('Streaming not supported. Please try again.');
+            return;
+        }
+
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let finalConversationId: string | null = null;
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            // Keep the last potentially incomplete line
+            buffer = lines.pop() ?? '';
+
+            for (const line of lines) {
+                if (!line.startsWith('data: ')) continue;
+                const jsonStr = line.slice(6).trim();
+                if (!jsonStr) continue;
+
+                try {
+                    const event = JSON.parse(jsonStr);
+                    if (event.type === 'text' && event.content) {
+                        onToken(event.content);
+                    } else if (event.type === 'done') {
+                        finalConversationId =
+                            event.conversation_id ?? conversationId;
+                    }
+                } catch {
+                    // Skip malformed SSE lines
+                }
+            }
+        }
+
+        onDone(finalConversationId);
+    } catch {
+        // Fall back to sync endpoint
+        try {
+            const response = await fetch(CHAT_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    ...getCsrfHeaders(),
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                    message,
+                    conversation_id: conversationId,
+                    current_page: currentPage,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                onError(data?.error ?? 'Something went wrong.');
+                return;
+            }
+
+            if (data.message?.content) {
+                onToken(data.message.content);
+            }
+            onDone(data.conversation_id ?? conversationId);
+        } catch {
+            onError('Failed to send message. Please try again.');
+        }
+    }
+}
+
 export function ChatWidget() {
     const [open, setOpen] = useState(false);
     const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -416,54 +538,69 @@ export function ChatWidget() {
                 textareaRef.current.style.height = 'auto';
             }
 
-            try {
-                const response = await fetch(CHAT_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Accept: 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest',
-                        ...getCsrfHeaders(),
-                    },
-                    credentials: 'same-origin',
-                    body: JSON.stringify({
-                        message: text,
-                        conversation_id: conversationId,
-                        current_page: getCurrentPage(),
-                    }),
-                });
+            // Add an empty assistant message that we'll stream into
+            setMessages((prev) => [
+                ...prev,
+                { role: 'assistant', content: '' },
+            ]);
 
-                const data = await response.json();
-
-                if (!response.ok) {
-                    const message =
-                        data?.error ??
-                        (response.status === 419
-                            ? 'Session may have expired. Please refresh the page and try again.'
-                            : 'Something went wrong.');
-                    const detail = data?.debug_error
-                        ? ` (${data.debug_error})`
-                        : '';
-                    setError(message + detail);
-                    return;
-                }
-
-                if (data.conversation_id) {
-                    setConversationId(data.conversation_id);
-                    fetchConversations();
-                }
-                if (data.message?.content) {
-                    setMessages((prev) => [
-                        ...prev,
-                        { role: 'assistant', content: data.message.content },
-                    ]);
+            await streamChat(
+                text,
+                conversationId,
+                getCurrentPage(),
+                // onToken: append text to the last assistant message
+                (token: string) => {
+                    setMessages((prev) => {
+                        const updated = [...prev];
+                        const last = updated[updated.length - 1];
+                        if (last && last.role === 'assistant') {
+                            updated[updated.length - 1] = {
+                                ...last,
+                                content: last.content + token,
+                            };
+                        }
+                        return updated;
+                    });
                     scrollToBottom();
-                }
-            } catch {
-                setError('Failed to send message. Please try again.');
-            } finally {
-                setLoading(false);
-            }
+                },
+                // onDone: update conversation ID and refresh list
+                (newConversationId: string | null) => {
+                    if (newConversationId) {
+                        setConversationId(newConversationId);
+                        fetchConversations();
+                    }
+                    // Remove empty assistant message if no content was streamed
+                    setMessages((prev) => {
+                        const last = prev[prev.length - 1];
+                        if (
+                            last &&
+                            last.role === 'assistant' &&
+                            !last.content
+                        ) {
+                            return prev.slice(0, -1);
+                        }
+                        return prev;
+                    });
+                    setLoading(false);
+                },
+                // onError
+                (errorMsg: string) => {
+                    // Remove the empty assistant message on error
+                    setMessages((prev) => {
+                        const last = prev[prev.length - 1];
+                        if (
+                            last &&
+                            last.role === 'assistant' &&
+                            !last.content
+                        ) {
+                            return prev.slice(0, -1);
+                        }
+                        return prev;
+                    });
+                    setError(errorMsg);
+                    setLoading(false);
+                },
+            );
         },
         [input, loading, conversationId, scrollToBottom, fetchConversations],
     );
@@ -641,11 +778,14 @@ export function ChatWidget() {
                             </div>
                         </div>
                     ))}
-                    {loading && (
-                        <div className="flex justify-start">
-                            <TypingIndicator />
-                        </div>
-                    )}
+                    {loading &&
+                        (messages.length === 0 ||
+                            messages[messages.length - 1]?.role !== 'assistant' ||
+                            !messages[messages.length - 1]?.content) && (
+                            <div className="flex justify-start">
+                                <TypingIndicator />
+                            </div>
+                        )}
                     <div ref={messagesEndRef} />
                 </div>
             </div>

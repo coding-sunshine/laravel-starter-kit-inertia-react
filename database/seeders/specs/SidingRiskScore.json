@@ -1,0 +1,59 @@
+{
+    "model": "SidingRiskScore",
+    "table": "siding_risk_scores",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "siding_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "score": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "risk_factors": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "trend": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "calculated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "siding": {
+            "type": "belongsTo",
+            "model": "Siding"
+        }
+    },
+    "value_hints": {
+        "calculated_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        }
+    },
+    "scenarios": []
+}

@@ -8,11 +8,13 @@ use App\Ai\Agents\ChatbotAgent;
 use App\Ai\ChatContextBuilder;
 use App\Models\Rake;
 use App\Models\Siding;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Laravel\Ai\Contracts\ConversationStore;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
 
 final class ChatController extends Controller
@@ -75,9 +77,7 @@ final class ChatController extends Controller
     public function demurrageWarnings(Request $request): JsonResponse
     {
         $user = $request->user();
-        $sidingIds = $user->isSuperAdmin()
-            ? Siding::query()->pluck('id')->all()
-            : $user->accessibleSidings()->get()->pluck('id')->all();
+        $sidingIds = $this->sidingIdsForUser($user);
 
         if ($sidingIds === []) {
             return response()->json(['warnings' => []]);
@@ -112,7 +112,7 @@ final class ChatController extends Controller
     }
 
     /**
-     * Send a message and get the assistant reply.
+     * Send a message and get the assistant reply (synchronous).
      */
     public function message(Request $request): JsonResponse
     {
@@ -127,19 +127,16 @@ final class ChatController extends Controller
         $conversationId = $validated['conversation_id'] ?? null;
         $currentPage = $validated['current_page'] ?? null;
 
-        $defaultProvider = config('ai.default');
-        $apiKey = config("ai.providers.{$defaultProvider}.key");
-        if (empty($apiKey)) {
-            $keyName = $defaultProvider === 'openrouter' ? 'OPENROUTER_API_KEY' : 'OPENAI_API_KEY';
-
+        if (! $this->isAiConfigured()) {
             return response()->json([
-                'error' => "AI chat is not configured. Add {$keyName} to your .env file (see .env.example).",
+                'error' => $this->configErrorMessage(),
             ], 503);
         }
 
         try {
             $context = $this->contextBuilder->build($user, $currentPage);
-            $agent = new ChatbotAgent;
+            $sidingIds = $this->sidingIdsForUser($user);
+            $agent = new ChatbotAgent($sidingIds);
 
             if ($conversationId) {
                 $agent->continue($conversationId, $user);
@@ -161,45 +158,149 @@ final class ChatController extends Controller
                 ],
             ]);
         } catch (Throwable $e) {
-            Log::warning('Chat message failed', ['error' => $e->getMessage()]);
-
-            $message = $e->getMessage();
-            $lower = mb_strtolower($message);
-            $isConfigError = $message === ''
-                || str_contains($lower, 'api key')
-                || str_contains($lower, 'api_key')
-                || str_contains($lower, 'authentication')
-                || str_contains($lower, 'invalid_api_key')
-                || str_contains($lower, 'no api key');
-            $isQuotaExceeded = str_contains($lower, 'quota')
-                || str_contains($lower, 'resource_exhausted')
-                || str_contains($lower, 'insufficient_quota')
-                || str_contains($lower, 'billing')
-                || str_contains($lower, 'usage limit')
-                || str_contains($lower, 'usage_limit')
-                || (str_contains($lower, 'rate limit') && (str_contains($lower, 'daily') || str_contains($lower, 'monthly') || str_contains($lower, 'exceeded')));
-            $isRateLimited = str_contains($lower, 'rate limit') && ! $isQuotaExceeded;
-
-            $defaultProvider = config('ai.default');
-            $keyName = $defaultProvider === 'openrouter' ? 'OPENROUTER_API_KEY' : 'OPENAI_API_KEY';
-            if ($isConfigError || empty(config("ai.providers.{$defaultProvider}.key"))) {
-                $userMessage = "AI chat is not configured. Add {$keyName} to your .env file (see .env.example).";
-            } elseif ($isQuotaExceeded) {
-                $userMessage = 'The AI provider quota or usage limit has been exceeded. Check your '
-                    .($defaultProvider === 'openrouter' ? 'OpenRouter' : 'OpenAI')
-                    .' account balance and usage limits, then try again.';
-            } elseif ($isRateLimited) {
-                $userMessage = 'The AI provider is temporarily rate limiting requests. Please wait a minute and try again.';
-            } else {
-                $userMessage = 'Sorry, I could not process that. Please try again.';
-            }
-
-            $payload = ['error' => $userMessage];
-            if (config('app.debug')) {
-                $payload['debug_error'] = $message;
-            }
-
-            return response()->json($payload, 502);
+            return $this->handleChatError($e);
         }
+    }
+
+    /**
+     * Stream a chat response via SSE for real-time token display.
+     */
+    public function stream(Request $request): StreamedResponse|JsonResponse
+    {
+        $validated = $request->validate([
+            'message' => ['required', 'string', 'max:10000'],
+            'conversation_id' => ['nullable', 'string', 'uuid'],
+            'current_page' => ['nullable', 'string', 'max:200'],
+        ]);
+
+        $user = $request->user();
+        $message = mb_trim((string) $validated['message']);
+        $conversationId = $validated['conversation_id'] ?? null;
+        $currentPage = $validated['current_page'] ?? null;
+
+        if (! $this->isAiConfigured()) {
+            return response()->json([
+                'error' => $this->configErrorMessage(),
+            ], 503);
+        }
+
+        try {
+            $context = $this->contextBuilder->build($user, $currentPage);
+            $sidingIds = $this->sidingIdsForUser($user);
+            $agent = new ChatbotAgent($sidingIds);
+
+            if ($conversationId) {
+                $agent->continue($conversationId, $user);
+            } else {
+                $agent->forUser($user);
+            }
+
+            $promptWithContext = $context !== ''
+                ? $context."\n\nUser message: ".$message
+                : $message;
+
+            $streamResponse = $agent->stream($promptWithContext);
+
+            return new StreamedResponse(function () use ($streamResponse): void {
+                $conversationId = null;
+
+                foreach ($streamResponse as $event) {
+                    if (property_exists($event, 'conversationId') && $event->conversationId) {
+                        $conversationId = $event->conversationId;
+                    }
+
+                    if (property_exists($event, 'text') && $event->text !== '') {
+                        echo 'data: '.json_encode(['type' => 'text', 'content' => $event->text])."\n\n";
+                        ob_flush();
+                        flush();
+                    }
+                }
+
+                // Send completion event with conversation ID
+                $finalData = ['type' => 'done'];
+                if ($conversationId) {
+                    $finalData['conversation_id'] = $conversationId;
+                }
+                echo 'data: '.json_encode($finalData)."\n\n";
+                ob_flush();
+                flush();
+            }, 200, [
+                'Content-Type' => 'text/event-stream',
+                'Cache-Control' => 'no-cache',
+                'Connection' => 'keep-alive',
+                'X-Accel-Buffering' => 'no',
+            ]);
+        } catch (Throwable $e) {
+            return $this->handleChatError($e);
+        }
+    }
+
+    /**
+     * @return array<int>
+     */
+    private function sidingIdsForUser(User $user): array
+    {
+        if ($user->isSuperAdmin()) {
+            return Siding::query()->pluck('id')->all();
+        }
+
+        return $user->accessibleSidings()->get()->pluck('id')->all();
+    }
+
+    private function isAiConfigured(): bool
+    {
+        $defaultProvider = config('ai.default');
+
+        return ! empty(config("ai.providers.{$defaultProvider}.key"));
+    }
+
+    private function configErrorMessage(): string
+    {
+        $defaultProvider = config('ai.default');
+        $keyName = $defaultProvider === 'openrouter' ? 'OPENROUTER_API_KEY' : 'OPENAI_API_KEY';
+
+        return "AI chat is not configured. Add {$keyName} to your .env file (see .env.example).";
+    }
+
+    private function handleChatError(Throwable $e): JsonResponse
+    {
+        Log::warning('Chat message failed', ['error' => $e->getMessage()]);
+
+        $message = $e->getMessage();
+        $lower = mb_strtolower($message);
+        $isConfigError = $message === ''
+            || str_contains($lower, 'api key')
+            || str_contains($lower, 'api_key')
+            || str_contains($lower, 'authentication')
+            || str_contains($lower, 'invalid_api_key')
+            || str_contains($lower, 'no api key');
+        $isQuotaExceeded = str_contains($lower, 'quota')
+            || str_contains($lower, 'resource_exhausted')
+            || str_contains($lower, 'insufficient_quota')
+            || str_contains($lower, 'billing')
+            || str_contains($lower, 'usage limit')
+            || str_contains($lower, 'usage_limit')
+            || (str_contains($lower, 'rate limit') && (str_contains($lower, 'daily') || str_contains($lower, 'monthly') || str_contains($lower, 'exceeded')));
+        $isRateLimited = str_contains($lower, 'rate limit') && ! $isQuotaExceeded;
+
+        $defaultProvider = config('ai.default');
+        if ($isConfigError || ! $this->isAiConfigured()) {
+            $userMessage = $this->configErrorMessage();
+        } elseif ($isQuotaExceeded) {
+            $userMessage = 'The AI provider quota or usage limit has been exceeded. Check your '
+                .($defaultProvider === 'openrouter' ? 'OpenRouter' : 'OpenAI')
+                .' account balance and usage limits, then try again.';
+        } elseif ($isRateLimited) {
+            $userMessage = 'The AI provider is temporarily rate limiting requests. Please wait a minute and try again.';
+        } else {
+            $userMessage = 'Sorry, I could not process that. Please try again.';
+        }
+
+        $payload = ['error' => $userMessage];
+        if (config('app.debug')) {
+            $payload['debug_error'] = $message;
+        }
+
+        return response()->json($payload, 502);
     }
 }

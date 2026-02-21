@@ -6,11 +6,13 @@ namespace App\Http\Controllers\RailwayReceipts;
 
 use App\Actions\BuildPenaltyChartDataAction;
 use App\Actions\GeneratePenaltyInsightsAction;
+use App\Actions\RecommendDisputeAction;
 use App\DataTables\PenaltyDataTable;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UpdatePenaltyRequest;
 use App\Models\Penalty;
 use App\Models\Siding;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -83,6 +85,22 @@ final class PenaltyController extends Controller
             'sidings' => $sidings,
             'aiInsights' => Inertia::defer(fn () => resolve(GeneratePenaltyInsightsAction::class)->handle($sidingIds)),
         ]);
+    }
+
+    /**
+     * Get AI dispute recommendation for a penalty.
+     */
+    public function disputeRecommendation(Penalty $penalty, RecommendDisputeAction $action): JsonResponse
+    {
+        $recommendation = $action->handle($penalty);
+
+        if ($recommendation === null) {
+            return response()->json([
+                'error' => 'Unable to generate dispute recommendation. AI service may be unavailable.',
+            ], 503);
+        }
+
+        return response()->json($recommendation);
     }
 
     /**

@@ -3,7 +3,7 @@
     "table": "freight_rate_master",
     "fields": {
         "id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },

@@ -11,6 +11,8 @@ final class SidingPerformance extends Model
 {
     use \Illuminate\Database\Eloquent\Factories\HasFactory;
 
+    protected $table = 'siding_performance';
+
     protected $fillable = [
         'siding_id',
         'as_of_date',

@@ -7,4 +7,10 @@ namespace Database\Seeders\Development;
 use Illuminate\Database\Seeder;
 
 /** SyncQueue seeder. Populated at runtime. Exists for pre-commit. */
-final class SyncQueueSeeder extends Seeder {}
+final class SyncQueueSeeder extends Seeder
+{
+    public function run(): void
+    {
+        // Placeholder: populated at runtime
+    }
+}

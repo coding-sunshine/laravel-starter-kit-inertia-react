@@ -7,4 +7,10 @@ namespace Database\Seeders\Development;
 use Illuminate\Database\Seeder;
 
 /** Indent seeder. Demo data from RakeManagementDemoSeeder. Exists for pre-commit. */
-final class IndentSeeder extends Seeder {}
+final class IndentSeeder extends Seeder
+{
+    public function run(): void
+    {
+        // Placeholder: demo data seeded by RakeManagementDemoSeeder
+    }
+}

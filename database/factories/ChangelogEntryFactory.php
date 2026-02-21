@@ -21,10 +21,10 @@ final class ChangelogEntryFactory extends Factory
     public function definition(): array
     {
         return [
-            'title' => fake()->sentence(),
-            'description' => fake()->paragraphs(2, true),
-            'version' => fake()->optional(0.8)->numerify('#.#.#'),
-            'type' => fake()->randomElement(ChangelogType::cases()),
+            'title' => $this->faker->sentence(),
+            'description' => $this->faker->paragraphs(2, true),
+            'version' => $this->faker->optional(0.8)->numerify('#.#.#'),
+            'type' => $this->faker->randomElement(ChangelogType::cases()),
             'is_published' => false,
             'released_at' => null,
         ];

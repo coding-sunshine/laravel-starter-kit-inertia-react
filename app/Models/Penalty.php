@@ -20,6 +20,9 @@ final class Penalty extends Model
         'penalty_status',
         'responsible_party',
         'root_cause',
+        'root_cause_category',
+        'is_preventable',
+        'suggested_remediation',
         'description',
         'remediation_notes',
         'disputed_at',
@@ -42,6 +45,7 @@ final class Penalty extends Model
             'disputed_at' => 'datetime',
             'resolved_at' => 'datetime',
             'calculation_breakdown' => 'array',
+            'is_preventable' => 'boolean',
         ];
     }
 }
