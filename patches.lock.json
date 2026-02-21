@@ -1,0 +1,17 @@
+{
+    "_hash": "a48f3fc11d1bd4664f7d773df2a2cee727fc39e9a519f8ebbbd82ebccfc23806",
+    "patches": {
+        "jijunair/laravel-referral": [
+            {
+                "package": "jijunair/laravel-referral",
+                "description": "PHP 8.4: Fix implicit nullable parameter deprecation",
+                "url": "patches/jijunair-laravel-referral-php84-nullable.patch",
+                "sha256": "1d1335cdc9ab2de3d6d84cfb5ca22f2baac985fe4b2c097bbc657ca19dfdcf65",
+                "depth": 0,
+                "extra": {
+                    "provenance": "root"
+                }
+            }
+        ]
+    }
+}

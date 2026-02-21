@@ -145,10 +145,14 @@
             "@php artisan docs:sync || true",
             "@php artisan filament:upgrade"
         ],
+        "post-install-cmd": [
+            "@fix-referral-php84"
+        ],
         "post-update-cmd": [
             "@php artisan vendor:publish --tag=laravel-assets --ansi --force",
             "@php artisan clear",
             "@update:requirements",
+            "@fix-referral-php84",
             "@php artisan boost:update --ansi || true",
             "@php artisan docs:sync || true"
         ],
@@ -162,7 +166,8 @@
         ],
         "update:requirements": [
             "composer bump",
-            "bunx npm-check-updates -u"
+            "bunx npm-check-updates -u",
+            "npm install"
         ],
         "lint": [
             "rector",
@@ -188,6 +193,7 @@
             "@test:lint",
             "@test:types"
         ],
+        "fix-referral-php84": "php scripts/fix-referral-php84.php",
         "docs:check": "php artisan docs:sync --check",
         "docs:sync": "php artisan docs:sync",
         "docs:generate": "php artisan docs:sync --generate"

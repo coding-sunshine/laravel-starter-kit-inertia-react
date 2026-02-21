@@ -63,9 +63,9 @@ All Actions:
 | [GenerateDailyBriefingAction](./generatedailybriefingaction.md) | N/A | ✅ |
 | [GeneratePenaltyInsightsAction](./generatepenaltyinsightsaction.md) | N/A | ✅ |
 | [BuildPenaltyChartDataAction](./BuildPenaltyChartDataAction.md) | N/A | ✅ |
-| CalculateSidingRiskScoresAction | N/A | ❌ |
-| ClassifyPenaltyRootCauseAction | N/A | ❌ |
-| GeneratePenaltyPredictionsAction | N/A | ❌ |
-| RecommendDisputeAction | N/A | ❌ |
+| [CalculateSidingRiskScoresAction](./CalculateSidingRiskScoresAction.md) | N/A | ✅ |
+| [ClassifyPenaltyRootCauseAction](./ClassifyPenaltyRootCauseAction.md) | N/A | ✅ |
+| [GeneratePenaltyPredictionsAction](./GeneratePenaltyPredictionsAction.md) | N/A | ✅ |
+| [RecommendDisputeAction](./RecommendDisputeAction.md) | N/A | ✅ |
 
 
