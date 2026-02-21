@@ -58,6 +58,7 @@ final class PenaltySummaryTool implements Tool
                 ->groupBy('sidings.name')
                 ->orderByDesc('total_amount')
                 ->limit(20)
+                ->toBase()
                 ->get();
         } elseif ($groupBy === 'type') {
             $results = (clone $query)
@@ -65,12 +66,14 @@ final class PenaltySummaryTool implements Tool
                 ->groupBy('penalty_type')
                 ->orderByDesc('total_amount')
                 ->limit(20)
+                ->toBase()
                 ->get();
         } elseif ($groupBy === 'status') {
             $results = (clone $query)
                 ->select('penalty_status as group_key', DB::raw('count(*) as count'), DB::raw('sum(penalty_amount) as total_amount'))
                 ->groupBy('penalty_status')
                 ->orderByDesc('total_amount')
+                ->toBase()
                 ->get();
         } elseif ($groupBy === 'month') {
             $results = (clone $query)
@@ -78,6 +81,7 @@ final class PenaltySummaryTool implements Tool
                 ->groupBy('group_key')
                 ->orderBy('group_key')
                 ->limit(12)
+                ->toBase()
                 ->get();
         } elseif ($groupBy === 'responsible_party') {
             $results = (clone $query)
@@ -86,6 +90,7 @@ final class PenaltySummaryTool implements Tool
                 ->groupBy('responsible_party')
                 ->orderByDesc('total_amount')
                 ->limit(20)
+                ->toBase()
                 ->get();
         } else {
             $count = (clone $query)->count();

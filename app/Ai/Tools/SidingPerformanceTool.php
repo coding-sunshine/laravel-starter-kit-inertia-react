@@ -49,6 +49,7 @@ final class SidingPerformanceTool implements Tool
             )
             ->groupBy('sidings.name')
             ->orderByDesc('total_penalties')
+            ->toBase()
             ->get();
 
         return json_encode([

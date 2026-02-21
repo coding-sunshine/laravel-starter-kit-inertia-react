@@ -268,6 +268,7 @@ final class ChatContextBuilder
             )
             ->groupBy('sidings.name', 'penalties.penalty_type')
             ->orderByDesc('total')
+            ->toBase()
             ->get();
 
         if ($rows->isEmpty()) {
@@ -333,6 +334,7 @@ final class ChatContextBuilder
             ->selectRaw('penalty_type, count(*) as cnt, sum(penalty_amount) as total')
             ->groupBy('penalty_type')
             ->orderByDesc('total')
+            ->toBase()
             ->first();
 
         if (! $top) {
@@ -358,6 +360,7 @@ final class ChatContextBuilder
             ->selectRaw('sidings.name, count(*) as cnt, sum(penalty_amount) as total')
             ->groupBy('sidings.name')
             ->orderByDesc('total')
+            ->toBase()
             ->first();
 
         if (! $top) {
@@ -415,6 +418,7 @@ final class ChatContextBuilder
                 DB::raw('sum(penalty_incidents) as incidents')
             )
             ->groupBy('sidings.name')
+            ->toBase()
             ->get();
 
         if ($rows->isEmpty()) {

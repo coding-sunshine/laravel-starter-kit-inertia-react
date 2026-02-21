@@ -46,6 +46,7 @@ final class IndentStatusTool implements Tool
                 ->join('sidings', 'indents.siding_id', '=', 'sidings.id')
                 ->select('sidings.name as siding_name', 'state', DB::raw('count(*) as count'))
                 ->groupBy('sidings.name', 'state')
+                ->toBase()
                 ->get()
                 ->groupBy('siding_name')
                 ->map(fn ($group) => $group->pluck('count', 'state')->all())

@@ -50,6 +50,7 @@ final class DisputeAnalysisTool implements Tool
             )
             ->groupBy('penalty_type')
             ->orderByDesc('waived_amount')
+            ->toBase()
             ->get()
             ->map(fn ($r): array => [
                 'type' => $r->penalty_type,
