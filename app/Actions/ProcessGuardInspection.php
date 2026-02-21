@@ -56,7 +56,7 @@ final readonly class ProcessGuardInspection
 
             // Check for overload if requested
             if ($data['check_overload'] ?? false) {
-                $this->checkOverload($rake, $data['actual_weight_mt'] ?? $rake->loaded_weight_mt ?? 0);
+                $this->checkOverload($rake, (float) ($data['actual_weight_mt'] ?? $rake->loaded_weight_mt ?? 0));
             }
 
             // Update rake state based on inspection result
@@ -117,7 +117,7 @@ final readonly class ProcessGuardInspection
             'inspection_by' => $inspection?->createdBy->name,
             'weighment_count' => $weighments->count(),
             'last_weighment' => $weighments->last()?->weighment_time,
-            'net_weight_mt' => $weighments->last()?->net_weight_mt ?? $rake->loaded_weight_mt ?? 0,
+            'net_weight_mt' => (float) ($weighments->last()?->net_weight_mt ?? $rake->loaded_weight_mt ?? 0),
         ];
     }
 

@@ -155,8 +155,8 @@ final readonly class ReconcileRrData
      */
     private function validateCoalQuantity(Rake $rake, array $rrData, RrDocument $rrDocument): array
     {
-        $rakeWeight = $rake->loaded_weight_mt ?? 0;
-        $rrWeight = $rrData['rr_weight_mt'] ?? $rrDocument->rr_weight_mt ?? 0;
+        $rakeWeight = (float) ($rake->loaded_weight_mt ?? 0);
+        $rrWeight = (float) ($rrData['rr_weight_mt'] ?? $rrDocument->rr_weight_mt ?? 0);
 
         if (! $rrWeight) {
             return [
@@ -213,7 +213,7 @@ final readonly class ReconcileRrData
      */
     private function validateWeightPerWagon(Rake $rake, array $rrData): array
     {
-        $totalWeight = $rrData['rr_weight_mt'] ?? $rake->loaded_weight_mt ?? 0;
+        $totalWeight = (float) ($rrData['rr_weight_mt'] ?? $rake->loaded_weight_mt ?? 0);
         $wagonCount = $rrData['wagon_count'] ?? $rake->wagon_count ?? 1;
         $maxWeightPerWagon = 50; // MT fallback cap
 

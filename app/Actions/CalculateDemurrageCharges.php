@@ -30,7 +30,7 @@ final readonly class CalculateDemurrageCharges
      */
     public function calculateForRake(Rake $rake, array $options = []): array
     {
-        $rate = $options['rate_per_mt_hour'] ?? config('rrmcs.demurrage_rate_per_mt_hour', 50);
+        $rate = (float) ($options['rate_per_mt_hour'] ?? config('rrmcs.demurrage_rate_per_mt_hour', 50));
 
         // Must have loading end time and expected RR date
         if (! $rake->loading_end_time || ! $rake->rr_expected_date) {
@@ -38,7 +38,7 @@ final readonly class CalculateDemurrageCharges
                 'rake_id' => $rake->id,
                 'rake_number' => $rake->rake_number,
                 'demurrage_hours' => 0,
-                'gross_weight_mt' => $rake->loaded_weight_mt ?? 0,
+                'gross_weight_mt' => (float) ($rake->loaded_weight_mt ?? 0),
                 'demurrage_charge' => 0,
                 'status' => 'incomplete',
                 'reason' => 'Missing RR date or loading end time',
@@ -51,7 +51,7 @@ final readonly class CalculateDemurrageCharges
         $demurrageHours = max(0, $dwellHours - $freeHours);
 
         // Calculate charges
-        $weight = $rake->loaded_weight_mt ?? 0;
+        $weight = (float) ($rake->loaded_weight_mt ?? 0);
         $totalCharge = $demurrageHours * $weight * $rate;
 
         $calculation = [
@@ -170,8 +170,8 @@ final readonly class CalculateDemurrageCharges
      */
     private function createPenalty(Rake $rake, float $amount, float $hours, string $type): Penalty
     {
-        $rate = config('rrmcs.demurrage_rate_per_mt_hour', 50);
-        $weight = $rake->loaded_weight_mt ?? 0;
+        $rate = (float) config('rrmcs.demurrage_rate_per_mt_hour', 50);
+        $weight = (float) ($rake->loaded_weight_mt ?? 0);
         $breakdown = [
             'formula' => 'demurrage_hours × weight_mt × rate_per_mt_hour',
             'demurrage_hours' => round($hours, 2),

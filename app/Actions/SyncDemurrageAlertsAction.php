@@ -40,7 +40,7 @@ final readonly class SyncDemurrageAlertsAction
                 continue;
             }
 
-            $weight = $rake->loaded_weight_mt ?? $rake->predicted_weight_mt ?? 0;
+            $weight = (float) ($rake->loaded_weight_mt ?? $rake->predicted_weight_mt ?? 0);
             $demurrageHoursIfExceeded = $remainingMinutes <= 0
                 ? abs($remainingMinutes) / 60
                 : 1;

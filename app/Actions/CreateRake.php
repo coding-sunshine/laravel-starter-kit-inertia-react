@@ -225,7 +225,7 @@ final readonly class CreateRake
         $demurrageHours = max(0, $dwellHours - $freeHours);
 
         // Standard demurrage penalty: ₹50 per MT per hour
-        $demurragePenalty = $demurrageHours * ($rake->loaded_weight_mt ?? 0) * 50;
+        $demurragePenalty = $demurrageHours * (float) ($rake->loaded_weight_mt ?? 0) * 50;
 
         return [
             'free_hours' => $freeHours,

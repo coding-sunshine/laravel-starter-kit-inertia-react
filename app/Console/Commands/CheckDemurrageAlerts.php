@@ -43,7 +43,7 @@ final class CheckDemurrageAlerts extends Command
             $end = $rake->loading_start_time->copy()->addMinutes((int) $rake->free_time_minutes);
             $remainingMinutes = (int) \Illuminate\Support\Facades\Date::now()->diffInMinutes($end, false);
 
-            $weight = $rake->loaded_weight_mt ?? $rake->predicted_weight_mt ?? 0;
+            $weight = (float) ($rake->loaded_weight_mt ?? $rake->predicted_weight_mt ?? 0);
 
             foreach ($thresholds as $thresholdMinutes) {
                 if ($remainingMinutes > $thresholdMinutes) {
