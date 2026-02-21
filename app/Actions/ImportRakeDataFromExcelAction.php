@@ -30,6 +30,8 @@ final readonly class ImportRakeDataFromExcelAction
 {
     public function handle(?int $userId = null): array
     {
+        ini_set('memory_limit', (string) config('rrmcs.prd_import.memory_limit', '512M'));
+
         $userId ??= \App\Models\User::query()->first()?->id;
         $basePath = config('rrmcs.prd_import.base_path');
         $stats = ['rakes' => 0, 'penalties' => 0, 'weighments' => 0, 'rr_documents' => 0, 'wagons' => 0, 'skipped_sheets' => 0, 'errors' => []];

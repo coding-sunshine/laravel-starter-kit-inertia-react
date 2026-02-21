@@ -28,6 +28,7 @@ return [
     */
     'prd_import' => [
         'base_path' => 'prd/docs',
+        'memory_limit' => env('RRMCS_IMPORT_MEMORY_LIMIT', '512M'),
         'pakur_monthly' => 'Rake Management Application - references/Rake Data Nov19-Dec24/RAKE NOV-19 TO DEC-24 (Pakur).xlsx',
         'dumka_loading' => 'Requirements/Rake Loading Data Dumka.xlsx',
         'kurwa_loading' => 'Requirements/RAKE LOADING DATA KURWA.xlsx',
