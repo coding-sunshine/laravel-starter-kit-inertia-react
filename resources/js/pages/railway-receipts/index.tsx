@@ -155,7 +155,11 @@ export default function RailwayReceiptsIndex({ rrDocuments, sidings }: Props) {
                                                     Received date
                                                 </th>
                                                 <th className="px-5 py-3.5 text-right font-medium">
-                                                    Weight (<GlossaryTerm term="MT">MT</GlossaryTerm>)
+                                                    Weight (
+                                                    <GlossaryTerm term="MT">
+                                                        MT
+                                                    </GlossaryTerm>
+                                                    )
                                                 </th>
                                                 <th className="px-5 py-3.5 text-left font-medium">
                                                     Status

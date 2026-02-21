@@ -185,7 +185,14 @@ export default function RoadDispatchUnloadsIndex({ unloads, sidings }: Props) {
                                                 Mine (MT)
                                             </th>
                                             <th className="px-5 py-3.5 text-right font-medium">
-                                                <GlossaryTerm term="Weighment">Weighment</GlossaryTerm> (<GlossaryTerm term="MT">MT</GlossaryTerm>)
+                                                <GlossaryTerm term="Weighment">
+                                                    Weighment
+                                                </GlossaryTerm>{' '}
+                                                (
+                                                <GlossaryTerm term="MT">
+                                                    MT
+                                                </GlossaryTerm>
+                                                )
                                             </th>
                                             <th className="px-5 py-3.5 text-right font-medium">
                                                 Action

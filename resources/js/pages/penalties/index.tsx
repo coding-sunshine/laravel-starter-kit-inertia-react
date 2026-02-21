@@ -96,8 +96,12 @@ export default function PenaltiesIndex({
                     <CardHeader>
                         <CardTitle>Penalty register</CardTitle>
                         <CardDescription>
-                            Filter by siding or status. <GlossaryTerm term="Demurrage">Demurrage</GlossaryTerm> formula: hours
-                            over free time × weight (<GlossaryTerm term="MT">MT</GlossaryTerm>) × ₹
+                            Filter by siding or status.{' '}
+                            <GlossaryTerm term="Demurrage">
+                                Demurrage
+                            </GlossaryTerm>{' '}
+                            formula: hours over free time × weight (
+                            <GlossaryTerm term="MT">MT</GlossaryTerm>) × ₹
                             {demurrage_rate_per_mt_hour}/MT/h.
                         </CardDescription>
                     </CardHeader>

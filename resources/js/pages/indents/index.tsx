@@ -111,10 +111,15 @@ export default function IndentsIndex({ indents }: Props) {
                                                 Indent date
                                             </th>
                                             <th className="pr-4 pb-2 font-medium">
-                                                <GlossaryTerm term="e-Demand">e-Demand</GlossaryTerm> ref
+                                                <GlossaryTerm term="e-Demand">
+                                                    e-Demand
+                                                </GlossaryTerm>{' '}
+                                                ref
                                             </th>
                                             <th className="pr-4 pb-2 font-medium">
-                                                <GlossaryTerm term="FNR">FNR</GlossaryTerm>
+                                                <GlossaryTerm term="FNR">
+                                                    FNR
+                                                </GlossaryTerm>
                                             </th>
                                             <th className="pb-2 font-medium">
                                                 Actions

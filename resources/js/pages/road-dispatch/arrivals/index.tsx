@@ -191,7 +191,11 @@ export default function RoadDispatchArrivalsIndex({
                                                 Status
                                             </th>
                                             <th className="px-6 py-4 text-right font-medium">
-                                                Net (<GlossaryTerm term="MT">MT</GlossaryTerm>)
+                                                Net (
+                                                <GlossaryTerm term="MT">
+                                                    MT
+                                                </GlossaryTerm>
+                                                )
                                             </th>
                                         </tr>
                                     </thead>

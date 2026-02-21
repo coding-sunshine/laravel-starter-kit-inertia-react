@@ -116,7 +116,10 @@ export default function RakesIndex({ rakes }: Props) {
                                                     Loading window
                                                 </th>
                                                 <th className="px-5 py-3.5 text-right font-medium">
-                                                    <GlossaryTerm term="Demurrage">Demurrage</GlossaryTerm> (h)
+                                                    <GlossaryTerm term="Demurrage">
+                                                        Demurrage
+                                                    </GlossaryTerm>{' '}
+                                                    (h)
                                                 </th>
                                                 <th className="px-5 py-3.5 text-right font-medium">
                                                     Penalty

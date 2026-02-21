@@ -173,6 +173,7 @@ final class AppServiceProvider extends ServiceProvider
             'chat-new-chat',
             'chat-send',
             'chat-conversation-item',
+            'chat-suggested-question',
             'siding-switcher',
         ]);
     }
