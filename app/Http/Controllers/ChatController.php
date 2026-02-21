@@ -136,7 +136,8 @@ final class ChatController extends Controller
         try {
             $context = $this->contextBuilder->build($user, $currentPage);
             $sidingIds = $this->sidingIdsForUser($user);
-            $agent = new ChatbotAgent($sidingIds);
+            $memoryContext = ['user_id' => $user->getAuthIdentifier()];
+            $agent = new ChatbotAgent($sidingIds, $memoryContext);
 
             if ($conversationId) {
                 $agent->continue($conversationId, $user);
@@ -187,7 +188,8 @@ final class ChatController extends Controller
         try {
             $context = $this->contextBuilder->build($user, $currentPage);
             $sidingIds = $this->sidingIdsForUser($user);
-            $agent = new ChatbotAgent($sidingIds);
+            $memoryContext = ['user_id' => $user->getAuthIdentifier()];
+            $agent = new ChatbotAgent($sidingIds, $memoryContext);
 
             if ($conversationId) {
                 $agent->continue($conversationId, $user);

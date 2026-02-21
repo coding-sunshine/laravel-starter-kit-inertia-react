@@ -6,33 +6,43 @@ namespace App\Ai\Agents;
 
 use App\Ai\Tools\AlertsTool;
 use App\Ai\Tools\DisputeAnalysisTool;
+use App\Ai\Tools\HelpArticleSearchTool;
 use App\Ai\Tools\IndentStatusTool;
 use App\Ai\Tools\PenaltySummaryTool;
 use App\Ai\Tools\PredictionsTool;
 use App\Ai\Tools\RakeStatusTool;
 use App\Ai\Tools\SidingPerformanceTool;
+use Eznix86\AI\Memory\Middleware\WithMemory;
+use Eznix86\AI\Memory\Tools\RecallMemory;
+use Eznix86\AI\Memory\Tools\StoreMemory;
 use Laravel\Ai\Attributes\MaxSteps;
 use Laravel\Ai\Attributes\Timeout;
 use Laravel\Ai\Concerns\RemembersConversations;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\Conversational;
+use Laravel\Ai\Contracts\HasMiddleware;
 use Laravel\Ai\Contracts\HasTools;
 use Laravel\Ai\Promptable;
 
 /**
  * In-app AI chatbot with persistent conversation history and database tools.
  * Uses OpenRouter or OpenAI model (configurable via config ai.chat_model / AI_CHAT_MODEL).
+ * Includes semantic memory (store/recall) when PostgreSQL + pgvector + embeddings are configured.
  */
 #[MaxSteps(5)]
 #[Timeout(120)]
-final class ChatbotAgent implements Agent, Conversational, HasTools
+final class ChatbotAgent implements Agent, Conversational, HasMiddleware, HasTools
 {
     use Promptable, RemembersConversations;
 
     /**
      * @param  array<int>  $sidingIds  The siding IDs the user has access to (security boundary)
+     * @param  array<string, mixed>  $memoryContext  Context for semantic memory (e.g. ['user_id' => $userId])
      */
-    public function __construct(private readonly array $sidingIds = []) {}
+    public function __construct(
+        private readonly array $sidingIds = [],
+        private readonly array $memoryContext = [],
+    ) {}
 
     public function model(): string
     {
@@ -41,9 +51,10 @@ final class ChatbotAgent implements Agent, Conversational, HasTools
 
     public function instructions(): string
     {
-        return 'You are a helpful RRMCS (Railway Rake Management Control System) assistant with access to real-time database tools. '
+        return 'You are a helpful RRMCS (Railway Rake Management Control System) assistant with access to real-time database tools and help documentation. '
             .'IMPORTANT: When users ask specific questions about penalties, rakes, sidings, indents, alerts, disputes, or performance metrics, '
-            .'USE YOUR TOOLS to query real data instead of guessing. Tools give you live data scoped to the user\'s accessible sidings. '
+            .'USE YOUR TOOLS to query real data instead of guessing. Use the help_article_search tool when users ask "how do I...", "where do I find...", or need documentation. '
+            .'Tools give you live data scoped to the user\'s accessible sidings. '
             .'Answer in terms of users\' old Excel/paper workflow when explaining features. '
             .'Workflow map: indent register → Indents page; rake status Excel → Rakes page (live state tracking); '
             .'penalty calculation worksheet → Penalties page (auto-calculation); RR filing cabinet → Railway Receipts (PDF upload); '
@@ -63,7 +74,8 @@ final class ChatbotAgent implements Agent, Conversational, HasTools
      */
     public function tools(): iterable
     {
-        return [
+        $tools = [
+            new HelpArticleSearchTool,
             new PenaltySummaryTool($this->sidingIds),
             new RakeStatusTool($this->sidingIds),
             new SidingPerformanceTool($this->sidingIds),
@@ -71,6 +83,28 @@ final class ChatbotAgent implements Agent, Conversational, HasTools
             new DisputeAnalysisTool($this->sidingIds),
             new IndentStatusTool($this->sidingIds),
             new PredictionsTool($this->sidingIds),
+        ];
+
+        if ($this->memoryContext !== []) {
+            $limit = (int) config('memory.middleware_recall_limit', 5);
+            $tools[] = (new RecallMemory)->context($this->memoryContext)->limit($limit);
+            $tools[] = (new StoreMemory)->context($this->memoryContext);
+        }
+
+        return $tools;
+    }
+
+    /**
+     * @return array<\Laravel\Ai\Contracts\Middleware>
+     */
+    public function middleware(): array
+    {
+        if ($this->memoryContext === []) {
+            return [];
+        }
+
+        return [
+            new WithMemory($this->memoryContext, limit: (int) config('memory.middleware_recall_limit', 5)),
         ];
     }
 }

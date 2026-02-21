@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Mcp\Servers;
 
+use App\Mcp\Tools\IndentsIndexTool;
+use App\Mcp\Tools\PenaltiesIndexTool;
+use App\Mcp\Tools\RakesIndexTool;
 use App\Mcp\Tools\SidingsIndexTool;
 use App\Mcp\Tools\UserSidingsTool;
 use App\Mcp\Tools\UsersIndexTool;
@@ -31,8 +34,11 @@ final class ApiServer extends Server
         Available tools:
         - users_index: List users with optional filters/sort
         - users_show: Get a single user by ID
-        - sidings_index: List all railway sidings (Pakur, Dumka, Kurwa)
+        - sidings_index: List all railway sidings
         - user_sidings: Get sidings that a specific user can access
+        - penalties_index: List penalties (scoped to user's sidings)
+        - rakes_index: List rakes (scoped to user's sidings)
+        - indents_index: List indents (scoped to user's sidings)
 
         All tools require authenticated session (Sanctum).
     MARKDOWN;
@@ -47,6 +53,9 @@ final class ApiServer extends Server
         UsersShowTool::class,
         SidingsIndexTool::class,
         UserSidingsTool::class,
+        PenaltiesIndexTool::class,
+        RakesIndexTool::class,
+        IndentsIndexTool::class,
     ];
 
     /**
