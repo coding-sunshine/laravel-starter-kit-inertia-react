@@ -204,7 +204,8 @@ PHP;
     private function createSeeder(string $name, SeederCategory $category): void
     {
         $seederName = "{$name}Seeder";
-        $categoryPath = database_path("seeders/{$category->value}");
+        $folder = ucfirst($category->value);
+        $categoryPath = database_path("seeders/{$folder}");
 
         // Ensure category directory exists
         if (! File::isDirectory($categoryPath)) {
@@ -229,9 +230,10 @@ PHP;
      */
     private function updateSeederFile(string $modelName, string $seederName, SeederCategory $category): void
     {
-        $seederPath = database_path("seeders/{$category->value}/{$seederName}.php");
+        $folder = ucfirst($category->value);
+        $seederPath = database_path("seeders/{$folder}/{$seederName}.php");
         $modelClass = "App\\Models\\{$modelName}";
-        $namespace = "Database\\Seeders\\{$category->value}";
+        $namespace = "Database\\Seeders\\{$folder}";
         Str::snake(Str::plural($modelName));
 
         // Analyze relationships using enhanced analyzer

@@ -138,8 +138,9 @@ final class DatabaseSeeder extends Seeder
         $seeders = [];
 
         foreach ($categories as $category) {
-            $path = database_path("seeders/{$category->value}");
-            $namespace = "Database\\Seeders\\{$category->value}";
+            $folder = ucfirst($category->value);
+            $path = database_path("seeders/{$folder}");
+            $namespace = "Database\\Seeders\\{$folder}";
 
             if (! File::isDirectory($path)) {
                 continue;

@@ -91,7 +91,11 @@ Route::get('up', function (): Illuminate\Http\JsonResponse {
     return response()->json(['status' => $ok ? 'ok' : 'degraded', 'checks' => $checks], $ok ? 200 : 503);
 })->name('up');
 
-Route::get('/', fn () => Inertia::render('welcome'))->name('home');
+Route::get('/', function (): RedirectResponse {
+    return auth()->check()
+        ? redirect()->route('dashboard')
+        : redirect()->route('login');
+})->name('home');
 
 // Invitation accept (public show, auth store)
 Route::get('invitations/{token}', [InvitationAcceptController::class, 'show'])->name('invitations.show');

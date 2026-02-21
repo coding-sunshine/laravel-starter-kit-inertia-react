@@ -38,7 +38,8 @@ final class SeedersListCommand extends Command
         $seeders = [];
 
         foreach ($categories as $cat) {
-            $path = database_path("seeders/{$cat->value}");
+            $folder = ucfirst($cat->value);
+            $path = database_path("seeders/{$folder}");
 
             if (! File::isDirectory($path)) {
                 continue;
