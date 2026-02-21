@@ -49,6 +49,7 @@ final class AlertsTool implements Tool
             $byType = (clone $query)
                 ->select('type', 'severity', DB::raw('count(*) as count'))
                 ->groupBy('type', 'severity')
+                ->toBase()
                 ->get()
                 ->map(fn ($r): array => [
                     'type' => $r->type,
