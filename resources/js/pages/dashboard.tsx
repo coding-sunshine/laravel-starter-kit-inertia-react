@@ -1,3 +1,6 @@
+import { AreaChart } from '@/components/charts/area-chart';
+import { BarChart } from '@/components/charts/bar-chart';
+import { PieChart } from '@/components/charts/pie-chart';
 import { RrmcsGuidance } from '@/components/rrmcs-guidance';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
@@ -7,14 +10,19 @@ import { exportPdf } from '@/routes/profile';
 import { index as rakes } from '@/routes/rakes';
 import { edit as editProfile } from '@/routes/user-profile';
 import { type BreadcrumbItem, type SharedData } from '@/types';
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Deferred, Head, Link, router, usePage } from '@inertiajs/react';
 import {
     AlertTriangle,
+    ArrowDown,
+    ArrowUp,
     BarChart3,
     FileText,
     LifeBuoy,
     Mail,
+    Minus,
     Settings,
+    ShieldCheck,
+    Sparkles,
     Train,
     Truck,
     UserPen,
@@ -66,6 +74,31 @@ interface PenaltyChartPoint {
     total: number;
 }
 
+interface PenaltyByTypePoint {
+    name: string;
+    value: number;
+}
+
+interface PenaltyBySidingPoint {
+    name: string;
+    total: number;
+}
+
+interface CostAvoidance {
+    rakes_within_free_time: number;
+    rakes_with_penalties: number;
+    money_saved: number;
+    money_lost: number;
+}
+
+interface FinancialImpact {
+    ytd_total: number;
+    projected_annual: number;
+    cost_per_rake: number;
+    worst_siding: string | null;
+    trend_direction: 'up' | 'down' | 'flat';
+}
+
 interface SidingOption {
     id: number;
     name: string;
@@ -78,7 +111,12 @@ type DashboardProps = SharedData & {
     activeRakes?: ActiveRake[];
     alerts?: AlertItem[];
     penaltyChartData?: PenaltyChartPoint[];
+    penaltyByType?: PenaltyByTypePoint[];
+    penaltyBySiding?: PenaltyBySidingPoint[];
+    costAvoidance?: CostAvoidance;
+    financialImpact?: FinancialImpact;
     sidings?: SidingOption[];
+    aiBriefing?: string | null;
 };
 
 function formatRemainingMinutes(m: number): string {
@@ -87,6 +125,12 @@ function formatRemainingMinutes(m: number): string {
     const min = m % 60;
     if (h > 0) return `${h}h ${min}m`;
     return `${min}m`;
+}
+
+function formatCurrency(n: number): string {
+    if (n >= 100000) return `₹${(n / 100000).toFixed(1)}L`;
+    if (n >= 1000) return `₹${(n / 1000).toFixed(1)}K`;
+    return `₹${n.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
 }
 
 function DemurrageTimer({ rake }: { rake: ActiveRake }) {
@@ -139,6 +183,34 @@ function DemurrageTimer({ rake }: { rake: ActiveRake }) {
     );
 }
 
+function TrendIcon({ direction }: { direction: string }) {
+    if (direction === 'up')
+        return <ArrowUp className="size-4 text-red-500" />;
+    if (direction === 'down')
+        return <ArrowDown className="size-4 text-green-500" />;
+    return <Minus className="size-4 text-muted-foreground" />;
+}
+
+function AiBriefingCard() {
+    const { aiBriefing } = usePage<DashboardProps>().props;
+
+    if (!aiBriefing) return null;
+
+    return (
+        <div className="rounded-lg border bg-card p-5">
+            <div className="flex items-center gap-2.5">
+                <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10">
+                    <Sparkles className="size-4 text-primary" />
+                </div>
+                <h3 className="text-sm font-medium">AI Daily Briefing</h3>
+            </div>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                {aiBriefing}
+            </p>
+        </div>
+    );
+}
+
 export default function Dashboard() {
     const props = usePage<DashboardProps>().props;
     const { auth, features } = props;
@@ -147,6 +219,10 @@ export default function Dashboard() {
     const activeRakes = props.activeRakes ?? [];
     const alerts = props.alerts ?? [];
     const penaltyChartData = props.penaltyChartData ?? [];
+    const penaltyByType = props.penaltyByType ?? [];
+    const penaltyBySiding = props.penaltyBySiding ?? [];
+    const costAvoidance = props.costAvoidance ?? null;
+    const financialImpact = props.financialImpact ?? null;
     const sidings = props.sidings ?? [];
 
     const f = features ?? {};
@@ -159,7 +235,6 @@ export default function Dashboard() {
         auth.can_bypass === true;
 
     const hasRrmcs = sidings.length > 0;
-    const maxPenalty = Math.max(...penaltyChartData.map((d) => d.total), 1);
 
     const quickActions = [
         {
@@ -270,9 +345,30 @@ export default function Dashboard() {
                     </div>
                 )}
 
+                {hasRrmcs && (
+                    <Deferred data="aiBriefing" fallback={
+                        <div className="animate-pulse rounded-lg border bg-card p-5">
+                            <div className="flex items-center gap-2.5">
+                                <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10">
+                                    <Sparkles className="size-4 text-primary/50" />
+                                </div>
+                                <div className="h-4 w-24 rounded bg-muted" />
+                            </div>
+                            <div className="mt-3 space-y-2">
+                                <div className="h-3 w-full rounded bg-muted" />
+                                <div className="h-3 w-4/5 rounded bg-muted" />
+                                <div className="h-3 w-3/5 rounded bg-muted" />
+                            </div>
+                        </div>
+                    }>
+                        <AiBriefingCard />
+                    </Deferred>
+                )}
+
                 {hasRrmcs && summary && (
                     <>
-                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
+                        {/* Row 1: Stat cards */}
+                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
                             <div className="rounded-lg border bg-card p-4">
                                 <div className="flex items-center gap-2 text-muted-foreground">
                                     <Train className="size-4" />
@@ -296,16 +392,14 @@ export default function Dashboard() {
                             </div>
                             <div className="rounded-lg border bg-card p-4">
                                 <div className="flex items-center gap-2 text-muted-foreground">
+                                    <AlertTriangle className="size-4" />
                                     <span className="text-sm">
-                                        Penalties (this month)
+                                        Penalties (month)
                                     </span>
                                 </div>
                                 <p className="mt-1 text-2xl font-semibold">
-                                    {summary.penaltiesThisMonth.toLocaleString(
-                                        undefined,
-                                        {
-                                            maximumFractionDigits: 0,
-                                        },
+                                    {formatCurrency(
+                                        summary.penaltiesThisMonth,
                                     )}
                                 </p>
                             </div>
@@ -313,15 +407,187 @@ export default function Dashboard() {
                                 <div className="flex items-center gap-2 text-muted-foreground">
                                     <Truck className="size-4" />
                                     <span className="text-sm">
-                                        Vehicles received today
+                                        Vehicles today
                                     </span>
                                 </div>
                                 <p className="mt-1 text-2xl font-semibold">
                                     {summary.vehiclesReceivedToday}
                                 </p>
                             </div>
+                            {costAvoidance && (
+                                <div className="rounded-lg border bg-card p-4">
+                                    <div className="flex items-center gap-2 text-muted-foreground">
+                                        <ShieldCheck className="size-4" />
+                                        <span className="text-sm">
+                                            Money saved
+                                        </span>
+                                    </div>
+                                    <p className="mt-1 text-2xl font-semibold text-green-600 dark:text-green-400">
+                                        {formatCurrency(
+                                            costAvoidance.money_saved,
+                                        )}
+                                    </p>
+                                    <p className="mt-0.5 text-xs text-muted-foreground">
+                                        {costAvoidance.rakes_within_free_time}{' '}
+                                        rakes within free time
+                                    </p>
+                                </div>
+                            )}
+                            {financialImpact && (
+                                <div className="rounded-lg border bg-card p-4">
+                                    <div className="flex items-center gap-2 text-muted-foreground">
+                                        <span className="text-sm">
+                                            Avg cost/rake
+                                        </span>
+                                        <TrendIcon
+                                            direction={
+                                                financialImpact.trend_direction
+                                            }
+                                        />
+                                    </div>
+                                    <p className="mt-1 text-2xl font-semibold">
+                                        {formatCurrency(
+                                            financialImpact.cost_per_rake,
+                                        )}
+                                    </p>
+                                    <p className="mt-0.5 text-xs text-muted-foreground">
+                                        {financialImpact.trend_direction ===
+                                        'down'
+                                            ? 'Improving'
+                                            : financialImpact.trend_direction ===
+                                                'up'
+                                              ? 'Worsening'
+                                              : 'Stable'}{' '}
+                                        vs last month
+                                    </p>
+                                </div>
+                            )}
                         </div>
 
+                        {/* Row 2: Penalty trend area chart */}
+                        {penaltyChartData.length > 0 && (
+                            <div className="rounded-lg border bg-card p-6">
+                                <Link href="/penalties/analytics" className="font-medium hover:underline" data-pan="penalty-drill-down">
+                                    Penalty trend (last 12 months)
+                                </Link>
+                                <div className="mt-4">
+                                    <AreaChart
+                                        data={penaltyChartData}
+                                        xKey="month"
+                                        yKey="total"
+                                        yLabel="Amount (₹)"
+                                        height={260}
+                                        formatY={formatCurrency}
+                                        formatTooltip={(v) =>
+                                            `₹${v.toLocaleString()}`
+                                        }
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Row 3: Penalty by type (pie) + Penalty by siding (bar) */}
+                        {(penaltyByType.length > 0 ||
+                            penaltyBySiding.length > 0) && (
+                            <div className="grid gap-4 lg:grid-cols-2">
+                                {penaltyByType.length > 0 && (
+                                    <div className="rounded-lg border bg-card p-6">
+                                        <Link href="/penalties/analytics" className="font-medium hover:underline" data-pan="penalty-drill-down">
+                                            Penalties by type
+                                        </Link>
+                                        <div className="mt-4">
+                                            <PieChart
+                                                data={penaltyByType}
+                                                nameKey="name"
+                                                valueKey="value"
+                                                height={260}
+                                                formatTooltip={(v) =>
+                                                    `₹${v.toLocaleString()}`
+                                                }
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+                                {penaltyBySiding.length > 0 && (
+                                    <div className="rounded-lg border bg-card p-6">
+                                        <Link href="/penalties/analytics" className="font-medium hover:underline" data-pan="penalty-drill-down">
+                                            Penalties by siding
+                                        </Link>
+                                        <div className="mt-4">
+                                            <BarChart
+                                                data={penaltyBySiding}
+                                                xKey="name"
+                                                yKey="total"
+                                                height={260}
+                                                layout="vertical"
+                                                formatY={formatCurrency}
+                                                formatTooltip={(v) =>
+                                                    `₹${v.toLocaleString()}`
+                                                }
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Row 4: Financial impact summary */}
+                        {financialImpact &&
+                            financialImpact.ytd_total > 0 && (
+                                <div className="rounded-lg border bg-card p-6">
+                                    <h3 className="font-medium">
+                                        Financial impact (YTD)
+                                    </h3>
+                                    <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                                        <div className="rounded-md border bg-muted/30 p-3">
+                                            <p className="text-sm text-muted-foreground">
+                                                Total penalties YTD
+                                            </p>
+                                            <p className="mt-1 text-xl font-semibold text-red-600 dark:text-red-400">
+                                                {formatCurrency(
+                                                    financialImpact.ytd_total,
+                                                )}
+                                            </p>
+                                        </div>
+                                        <div className="rounded-md border bg-muted/30 p-3">
+                                            <p className="text-sm text-muted-foreground">
+                                                Projected annual
+                                            </p>
+                                            <p className="mt-1 text-xl font-semibold">
+                                                {formatCurrency(
+                                                    financialImpact.projected_annual,
+                                                )}
+                                            </p>
+                                        </div>
+                                        <div className="rounded-md border bg-muted/30 p-3">
+                                            <p className="text-sm text-muted-foreground">
+                                                Cost per rake
+                                            </p>
+                                            <p className="mt-1 flex items-center gap-1.5 text-xl font-semibold">
+                                                {formatCurrency(
+                                                    financialImpact.cost_per_rake,
+                                                )}
+                                                <TrendIcon
+                                                    direction={
+                                                        financialImpact.trend_direction
+                                                    }
+                                                />
+                                            </p>
+                                        </div>
+                                        <div className="rounded-md border bg-muted/30 p-3">
+                                            <p className="text-sm text-muted-foreground">
+                                                Worst siding
+                                            </p>
+                                            <p className="mt-1 text-xl font-semibold">
+                                                {financialImpact.worst_siding ??
+                                                    '—'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                        {/* Siding stock */}
                         {Object.keys(sidingStocks).length > 0 && (
                             <div className="rounded-lg border bg-card p-6">
                                 <h3 className="font-medium">
@@ -372,6 +638,7 @@ export default function Dashboard() {
                             </div>
                         )}
 
+                        {/* Live demurrage timers */}
                         {activeRakes.length > 0 && (
                             <div className="rounded-lg border bg-card p-6">
                                 <h3 className="font-medium">
@@ -391,42 +658,6 @@ export default function Dashboard() {
                                             View all rakes
                                         </Link>
                                     </Button>
-                                </div>
-                            </div>
-                        )}
-
-                        {penaltyChartData.length > 0 && (
-                            <div className="rounded-lg border bg-card p-6">
-                                <h3 className="font-medium">
-                                    Penalties (last 12 months)
-                                </h3>
-                                <div className="mt-4 space-y-2">
-                                    {penaltyChartData.map((d) => (
-                                        <div
-                                            key={d.month}
-                                            className="flex items-center gap-3"
-                                        >
-                                            <span className="w-24 text-sm text-muted-foreground">
-                                                {d.month}
-                                            </span>
-                                            <div className="h-6 flex-1 overflow-hidden rounded bg-muted">
-                                                <div
-                                                    className="h-full rounded bg-primary"
-                                                    style={{
-                                                        width: `${(d.total / maxPenalty) * 100}%`,
-                                                    }}
-                                                />
-                                            </div>
-                                            <span className="w-20 text-right text-sm tabular-nums">
-                                                {d.total.toLocaleString(
-                                                    undefined,
-                                                    {
-                                                        maximumFractionDigits: 0,
-                                                    },
-                                                )}
-                                            </span>
-                                        </div>
-                                    ))}
                                 </div>
                             </div>
                         )}

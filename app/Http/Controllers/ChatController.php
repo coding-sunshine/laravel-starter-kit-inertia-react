@@ -6,6 +6,8 @@ namespace App\Http\Controllers;
 
 use App\Ai\Agents\ChatbotAgent;
 use App\Ai\ChatContextBuilder;
+use App\Models\Rake;
+use App\Models\Siding;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -65,6 +67,48 @@ final class ChatController extends Controller
                 'content' => $m->content ?? '',
             ])->all(),
         ]);
+    }
+
+    /**
+     * Return loading rakes with ≤30 min free time remaining for proactive warnings.
+     */
+    public function demurrageWarnings(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $sidingIds = $user->isSuperAdmin()
+            ? Siding::query()->pluck('id')->all()
+            : $user->accessibleSidings()->get()->pluck('id')->all();
+
+        if ($sidingIds === []) {
+            return response()->json(['warnings' => []]);
+        }
+
+        $rakes = Rake::query()
+            ->with('siding:id,name')
+            ->whereIn('siding_id', $sidingIds)
+            ->where('state', 'loading')
+            ->whereNotNull('loading_start_time')
+            ->whereNotNull('free_time_minutes')
+            ->get();
+
+        $warnings = [];
+        foreach ($rakes as $rake) {
+            $end = $rake->loading_start_time->copy()->addMinutes((int) $rake->free_time_minutes);
+            $remaining = (int) now()->diffInMinutes($end, false);
+
+            if ($remaining <= 30) {
+                $warnings[] = [
+                    'rake_number' => $rake->rake_number,
+                    'siding_name' => $rake->siding?->name ?? 'Unknown',
+                    'remaining_minutes' => max(0, $remaining),
+                ];
+            }
+        }
+
+        // Sort by most urgent first
+        usort($warnings, fn ($a, $b) => $a['remaining_minutes'] <=> $b['remaining_minutes']);
+
+        return response()->json(['warnings' => array_slice($warnings, 0, 5)]);
     }
 
     /**

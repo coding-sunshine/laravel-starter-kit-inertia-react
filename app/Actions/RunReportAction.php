@@ -27,6 +27,11 @@ final readonly class RunReportAction
         'rake_movement' => ['name' => 'Rake Movement', 'description' => 'Movement delays report'],
         'rr_summary' => ['name' => 'Railway Receipt (RR)', 'description' => 'RR summary report'],
         'penalty_register' => ['name' => 'Penalty Register', 'description' => 'Penalty breakdown report'],
+        'daily_operations' => ['name' => 'Daily Operations Summary', 'description' => 'Stock, rakes, alerts overview'],
+        'demurrage_analysis' => ['name' => 'Demurrage Analysis', 'description' => 'Demurrage charges by month'],
+        'financial_impact' => ['name' => 'Financial Impact', 'description' => 'Revenue impact and savings'],
+        'rake_lifecycle' => ['name' => 'Rake Lifecycle', 'description' => 'Rake processing timeline'],
+        'indent_fulfillment' => ['name' => 'Indent Fulfillment', 'description' => 'Indent allocation progress'],
     ];
 
     /**
@@ -47,6 +52,7 @@ final readonly class RunReportAction
             'rake_movement' => $this->rakeMovement($sidingIds, $params),
             'rr_summary' => $this->rrSummary($sidingIds, $params),
             'penalty_register' => $this->penaltyRegister($sidingIds, $params),
+            'daily_operations', 'demurrage_analysis', 'financial_impact', 'rake_lifecycle', 'indent_fulfillment' => $this->delegateToGenerateReports($key, $sidingIds, $params),
             default => [],
         };
     }
@@ -332,6 +338,40 @@ final readonly class RunReportAction
             'penalty_status' => $r->penalty_status,
             'penalty_date' => $r->penalty_date?->toDateString(),
         ])->values()->all();
+    }
+
+    /**
+     * Delegate to the GenerateReports action for rich analytical reports.
+     * Returns flattened summary rows suitable for CSV export.
+     *
+     * @param  array<int>  $sidingIds
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string}  $params
+     * @return array<int, array<string, mixed>>
+     */
+    private function delegateToGenerateReports(string $key, array $sidingIds, array $params): array
+    {
+        $generator = resolve(GenerateReports::class);
+        $sidingId = $params['siding_id'] ?? ($sidingIds[0] ?? null);
+
+        if ($sidingId === null) {
+            return [];
+        }
+
+        $result = match ($key) {
+            'daily_operations' => $generator->dailyOperationsSummary((int) $sidingId),
+            'demurrage_analysis' => $generator->demurrageAnalysisReport((int) $sidingId),
+            'financial_impact' => $generator->financialImpactReport((int) $sidingId),
+            'rake_lifecycle' => $generator->rakeLifecycleReport((int) $sidingId),
+            'indent_fulfillment' => $generator->indentFulfillmentReport((int) $sidingId),
+            default => [],
+        };
+
+        // Wrap structured report in a single-row array for consistent CSV export
+        if (! is_array($result) || ! array_is_list($result)) {
+            return [$result];
+        }
+
+        return $result;
     }
 
     /**

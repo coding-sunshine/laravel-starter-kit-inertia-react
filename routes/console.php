@@ -33,6 +33,12 @@ Schedule::command('model:prune', [
 // RRMCS: check loading rakes for demurrage threshold crossings.
 Schedule::command('rrmcs:check-demurrage')->everyFiveMinutes();
 
+// RRMCS: aggregate daily siding performance metrics (penalties, demurrage, stock).
+Schedule::command('rrmcs:aggregate-performance')->daily()->at('00:30');
+
+// RRMCS: generate AI-powered penalty insights weekly.
+Schedule::command('rrmcs:generate-penalty-insights')->weekly()->mondays()->at('06:00');
+
 // Billing jobs: metrics, credit expiration, trial reminders.
 Schedule::job(new App\Jobs\Billing\GenerateBillingMetrics)->daily()->at('02:00');
 Schedule::job(new App\Jobs\Billing\ExpireCredits)->daily()->at('03:00');

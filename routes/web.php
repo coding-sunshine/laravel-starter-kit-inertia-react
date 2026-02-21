@@ -195,6 +195,8 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('railway-receipts/{rrDocument}', [RrDocumentController::class, 'show'])->name('railway-receipts.show');
     Route::put('railway-receipts/{rrDocument}', [RrDocumentController::class, 'update'])->name('railway-receipts.update');
     Route::get('penalties', [PenaltyController::class, 'index'])->name('penalties.index');
+    Route::get('penalties/analytics', [PenaltyController::class, 'analytics'])->name('penalties.analytics');
+    Route::patch('penalties/{penalty}', [PenaltyController::class, 'update'])->name('penalties.update');
 
     // Alerts
     Route::get('alerts', [AlertController::class, 'index'])->name('alerts.index');
@@ -214,6 +216,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     // AI Chatbot
     Route::get('chat/conversations', [ChatController::class, 'index'])->name('chat.conversations.index');
     Route::get('chat/conversations/{id}', [ChatController::class, 'show'])->name('chat.conversations.show');
+    Route::get('chat/demurrage-warnings', [ChatController::class, 'demurrageWarnings'])->name('chat.demurrage-warnings');
     Route::post('chat', [ChatController::class, 'message'])->name('chat.message');
 
     Route::get('profile/export-pdf', App\Http\Controllers\ProfileExportPdfController::class)

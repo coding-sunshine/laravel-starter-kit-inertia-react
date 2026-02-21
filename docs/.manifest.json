@@ -1,6 +1,6 @@
 {
     "version": "1.0.0",
-    "lastGenerated": "2026-02-20",
+    "lastGenerated": "2026-02-21",
     "actions": {
         "CreateUser": {
             "documented": true,
@@ -697,6 +697,54 @@
                 ],
                 "relatedRoutes": []
             }
+        },
+        "AggregateSidingPerformance": {
+            "documented": true,
+            "path": "./aggregatesidingperformance.md",
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [
+                    "CoalStock",
+                    "Penalty",
+                    "Rake",
+                    "Siding",
+                    "SidingPerformance",
+                    "Wagon"
+                ],
+                "relatedRoutes": []
+            }
+        },
+        "GenerateDailyBriefingAction": {
+            "documented": true,
+            "path": "./generatedailybriefingaction.md",
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [
+                    "User",
+                    "Alert",
+                    "Indent",
+                    "Penalty",
+                    "Rake"
+                ],
+                "relatedRoutes": [
+                    "dashboard"
+                ]
+            }
+        },
+        "GeneratePenaltyInsightsAction": {
+            "documented": true,
+            "path": "./generatepenaltyinsightsaction.md",
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [
+                    "Penalty"
+                ],
+                "relatedRoutes": [
+                    "penalties.index",
+                    "penalties.analytics",
+                    "penalties.update"
+                ]
+            }
         }
     },
     "controllers": {
@@ -1119,6 +1167,7 @@
                 "relatedRoutes": [
                     "chat.conversations.index",
                     "chat.conversations.show",
+                    "chat.demurrage-warnings",
                     "chat.message"
                 ],
                 "rendersPages": []
@@ -1209,6 +1258,7 @@
             "path": "./executivedashboardcontroller.md",
             "relationships": {
                 "usesActions": [
+                    "GenerateDailyBriefingAction",
                     "SyncDemurrageAlertsAction"
                 ],
                 "usesFormRequests": [],
@@ -1237,11 +1287,16 @@
             "documented": true,
             "path": "./penaltycontroller.md",
             "relationships": {
-                "usesActions": [],
-                "usesFormRequests": [],
+                "usesActions": [
+                    "GeneratePenaltyInsightsAction"
+                ],
+                "usesFormRequests": [
+                    "UpdatePenaltyRequest"
+                ],
                 "relatedRoutes": [],
                 "rendersPages": [
-                    "penalties/index"
+                    "penalties/index",
+                    "penalties/analytics"
                 ]
             }
         },
@@ -1601,6 +1656,8 @@
                     "railway-receipts.show",
                     "railway-receipts.update",
                     "penalties.index",
+                    "penalties.analytics",
+                    "penalties.update",
                     "alerts.index",
                     "alerts.resolve",
                     "reconciliation.index",
@@ -1612,6 +1669,7 @@
                     "reports.generate",
                     "chat.conversations.index",
                     "chat.conversations.show",
+                    "chat.demurrage-warnings",
                     "chat.message",
                     "profile.export-pdf",
                     "webhooks.stripe",
@@ -1985,6 +2043,8 @@
                     "railway-receipts.show",
                     "railway-receipts.update",
                     "penalties.index",
+                    "penalties.analytics",
+                    "penalties.update",
                     "alerts.index",
                     "alerts.resolve",
                     "reconciliation.index",
@@ -1996,6 +2056,7 @@
                     "reports.generate",
                     "chat.conversations.index",
                     "chat.conversations.show",
+                    "chat.demurrage-warnings",
                     "chat.message",
                     "profile.export-pdf",
                     "webhooks.stripe",
@@ -2296,6 +2357,8 @@
                     "railway-receipts.show",
                     "railway-receipts.update",
                     "penalties.index",
+                    "penalties.analytics",
+                    "penalties.update",
                     "alerts.index",
                     "alerts.resolve",
                     "reconciliation.index",
@@ -2307,6 +2370,7 @@
                     "reports.generate",
                     "chat.conversations.index",
                     "chat.conversations.show",
+                    "chat.demurrage-warnings",
                     "chat.message",
                     "profile.export-pdf",
                     "webhooks.stripe",
@@ -2548,6 +2612,8 @@
                     "railway-receipts.show",
                     "railway-receipts.update",
                     "penalties.index",
+                    "penalties.analytics",
+                    "penalties.update",
                     "alerts.index",
                     "alerts.resolve",
                     "reconciliation.index",
@@ -2559,6 +2625,7 @@
                     "reports.generate",
                     "chat.conversations.index",
                     "chat.conversations.show",
+                    "chat.demurrage-warnings",
                     "chat.message",
                     "profile.export-pdf",
                     "webhooks.stripe",
@@ -2786,6 +2853,8 @@
                     "railway-receipts.show",
                     "railway-receipts.update",
                     "penalties.index",
+                    "penalties.analytics",
+                    "penalties.update",
                     "alerts.index",
                     "alerts.resolve",
                     "reconciliation.index",
@@ -2797,6 +2866,7 @@
                     "reports.generate",
                     "chat.conversations.index",
                     "chat.conversations.show",
+                    "chat.demurrage-warnings",
                     "chat.message",
                     "profile.export-pdf",
                     "webhooks.stripe",
@@ -3042,7 +3112,9 @@
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
-                    "penalties.index"
+                    "penalties.index",
+                    "penalties.analytics",
+                    "penalties.update"
                 ]
             }
         },
@@ -3276,6 +3348,19 @@
                     "indents.show",
                     "indents.edit",
                     "indents.update"
+                ]
+            }
+        },
+        "penalties/analytics": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./penalties/analytics.md",
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": [
+                    "penalties.index",
+                    "penalties.analytics",
+                    "penalties.update"
                 ]
             }
         }

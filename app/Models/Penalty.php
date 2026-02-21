@@ -18,8 +18,14 @@ final class Penalty extends Model
         'penalty_type',
         'penalty_amount',
         'penalty_status',
+        'responsible_party',
+        'root_cause',
         'description',
         'remediation_notes',
+        'disputed_at',
+        'dispute_reason',
+        'resolved_at',
+        'resolution_notes',
         'penalty_date',
         'calculation_breakdown',
     ];
@@ -33,6 +39,8 @@ final class Penalty extends Model
     {
         return [
             'penalty_date' => 'date',
+            'disputed_at' => 'datetime',
+            'resolved_at' => 'datetime',
             'calculation_breakdown' => 'array',
         ];
     }

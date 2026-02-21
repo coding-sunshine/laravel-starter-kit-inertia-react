@@ -52,8 +52,15 @@ interface SuggestedQuestion {
     text: string;
 }
 
+interface DemurrageWarning {
+    rake_number: string;
+    siding_name: string;
+    remaining_minutes: number;
+}
+
 const CHAT_URL = '/chat';
 const CONVERSATIONS_URL = '/chat/conversations';
+const DEMURRAGE_WARNING_URL = '/chat/demurrage-warnings';
 
 /**
  * CSRF token for request headers. Prefers XSRF-TOKEN cookie (stays current after
@@ -289,6 +296,9 @@ export function ChatWidget() {
     const [mobileView, setMobileView] = useState<'chat' | 'conversations'>(
         'chat',
     );
+    const [demurrageWarnings, setDemurrageWarnings] = useState<
+        DemurrageWarning[]
+    >([]);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -322,6 +332,48 @@ export function ChatWidget() {
             fetchConversations();
         }
     }, [open, fetchConversations]);
+
+    // Fetch demurrage warnings when opening chat on /rakes page
+    useEffect(() => {
+        if (!open) return;
+        const pageKey = getPageKey();
+        if (pageKey !== 'rakes' && pageKey !== 'dashboard') {
+            setDemurrageWarnings([]);
+            return;
+        }
+        (async () => {
+            try {
+                const res = await fetch(DEMURRAGE_WARNING_URL, {
+                    headers: {
+                        Accept: 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    credentials: 'same-origin',
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    setDemurrageWarnings(data.warnings ?? []);
+                }
+            } catch {
+                setDemurrageWarnings([]);
+            }
+        })();
+    }, [open]);
+
+    // Listen for external chat triggers (e.g. "Ask AI about this penalty")
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const detail = (e as CustomEvent<{ message: string }>).detail;
+            if (detail?.message) {
+                startNewChat();
+                setOpen(true);
+                // Small delay to ensure widget is open before sending
+                setTimeout(() => sendMessage(detail.message), 150);
+            }
+        };
+        window.addEventListener('chat:ask', handler);
+        return () => window.removeEventListener('chat:ask', handler);
+    }, [startNewChat, sendMessage]);
 
     const startNewChat = useCallback(() => {
         setMessages([]);
@@ -507,6 +559,30 @@ export function ChatWidget() {
 
     const chatPanel = (
         <div className="flex min-h-0 flex-1 flex-col">
+            {/* Proactive demurrage warnings */}
+            {demurrageWarnings.length > 0 && messages.length === 0 && (
+                <div className="flex-shrink-0 border-b border-amber-200 bg-amber-50 px-4 py-2.5 dark:border-amber-800 dark:bg-amber-950/30">
+                    {demurrageWarnings.map((w) => (
+                        <button
+                            key={w.rake_number}
+                            type="button"
+                            onClick={() =>
+                                sendMessage(
+                                    `Rake ${w.rake_number} at ${w.siding_name} has only ${w.remaining_minutes} minutes of free time left. What can we do to avoid demurrage penalties?`,
+                                )
+                            }
+                            className="flex w-full items-start gap-2 rounded px-1 py-1 text-left text-xs text-amber-800 transition-colors hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-900/40"
+                        >
+                            <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                            <span>
+                                <strong>{w.rake_number}</strong> has{' '}
+                                {w.remaining_minutes} min of free time left at{' '}
+                                {w.siding_name} — tap to ask AI for help
+                            </span>
+                        </button>
+                    ))}
+                </div>
+            )}
             <div className="flex-1 overflow-y-auto px-4 py-4">
                 <div className="mx-auto max-w-2xl space-y-5">
                     {messages.length === 0 && (

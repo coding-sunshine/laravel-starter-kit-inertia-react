@@ -61,6 +61,36 @@
             "type": "json",
             "nullable": true,
             "default": null
+        },
+        "responsible_party": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "root_cause": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "disputed_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "dispute_reason": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "resolved_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "resolution_notes": {
+            "type": "text",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {
@@ -69,6 +99,15 @@
             "model": "Rake"
         }
     },
-    "value_hints": [],
+    "value_hints": {
+        "disputed_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        },
+        "resolved_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        }
+    },
     "scenarios": []
 }

@@ -174,7 +174,15 @@ final class AppServiceProvider extends ServiceProvider
             'chat-send',
             'chat-conversation-item',
             'chat-suggested-question',
+            'penalty-assign-responsibility',
+            'penalty-set-root-cause',
+            'penalty-analytics-tab',
+            'penalty-drill-down',
+            'report-select-type',
+            'report-generate',
+            'report-download-csv',
             'siding-switcher',
+            'penalty-ask-ai',
         ]);
     }
 

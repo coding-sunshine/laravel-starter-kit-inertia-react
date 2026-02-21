@@ -59,5 +59,8 @@ All Actions:
 | [CreateNewUser](./createnewuser.md) | N/A | ✅ |
 | [ResetUserPassword](./resetuserpassword.md) | N/A | ✅ |
 | [UpdateUserProfileInformation](./updateuserprofileinformation.md) | N/A | ✅ |
+| [AggregateSidingPerformance](./aggregatesidingperformance.md) | N/A | ✅ |
+| [GenerateDailyBriefingAction](./generatedailybriefingaction.md) | N/A | ✅ |
+| [GeneratePenaltyInsightsAction](./generatepenaltyinsightsaction.md) | N/A | ✅ |
 
 

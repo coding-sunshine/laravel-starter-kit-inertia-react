@@ -42,7 +42,9 @@
       "mcp__playwright__browser_evaluate",
       "mcp__playwright__browser_type",
       "mcp__playwright__browser_press_key",
-      "mcp__playwright__browser_wait_for"
+      "mcp__playwright__browser_wait_for",
+      "Bash(npm install:*)",
+      "mcp__laravel-boost__database-schema"
     ]
   },
   "enableAllProjectMcpServers": true,

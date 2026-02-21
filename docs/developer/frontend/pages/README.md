@@ -57,7 +57,7 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | [alerts/index](./alerts/index.md) | alerts.index, alerts.resolve | ✅ |
 | [indents/index](./indents/index.md) | indents.index, indents.create | ✅ |
 | [mobile/SidingDashboard](./mobile/SidingDashboard.md) | N/A | ✅ |
-| [penalties/index](./penalties/index.md) | penalties.index | ✅ |
+| [penalties/index](./penalties/index.md) | penalties.index, penalties.analytics | ✅ |
 | [railway-receipts/create](./railway-receipts/create.md) | railway-receipts.index, railway-receipts.create | ✅ |
 | [railway-receipts/index](./railway-receipts/index.md) | railway-receipts.index, railway-receipts.create | ✅ |
 | [railway-receipts/show](./railway-receipts/show.md) | railway-receipts.index, railway-receipts.create | ✅ |
@@ -75,5 +75,6 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | [indents/create](./indents/create.md) | indents.index, indents.create | ✅ |
 | [indents/edit](./indents/edit.md) | indents.index, indents.create | ✅ |
 | [indents/show](./indents/show.md) | indents.index, indents.create | ✅ |
+| [penalties/analytics](./penalties/analytics.md) | penalties.index, penalties.analytics | ✅ |
 
 
