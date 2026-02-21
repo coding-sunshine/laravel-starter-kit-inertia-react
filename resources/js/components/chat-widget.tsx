@@ -360,21 +360,6 @@ export function ChatWidget() {
         })();
     }, [open]);
 
-    // Listen for external chat triggers (e.g. "Ask AI about this penalty")
-    useEffect(() => {
-        const handler = (e: Event) => {
-            const detail = (e as CustomEvent<{ message: string }>).detail;
-            if (detail?.message) {
-                startNewChat();
-                setOpen(true);
-                // Small delay to ensure widget is open before sending
-                setTimeout(() => sendMessage(detail.message), 150);
-            }
-        };
-        window.addEventListener('chat:ask', handler);
-        return () => window.removeEventListener('chat:ask', handler);
-    }, [startNewChat, sendMessage]);
-
     const startNewChat = useCallback(() => {
         setMessages([]);
         setConversationId(null);
@@ -482,6 +467,21 @@ export function ChatWidget() {
         },
         [input, loading, conversationId, scrollToBottom, fetchConversations],
     );
+
+    // Listen for external chat triggers (e.g. "Ask AI about this penalty")
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const detail = (e as CustomEvent<{ message: string }>).detail;
+            if (detail?.message) {
+                startNewChat();
+                setOpen(true);
+                // Small delay to ensure widget is open before sending
+                setTimeout(() => sendMessage(detail.message), 150);
+            }
+        };
+        window.addEventListener('chat:ask', handler);
+        return () => window.removeEventListener('chat:ask', handler);
+    }, [startNewChat, sendMessage]);
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (e.key === 'Enter' && !e.shiftKey) {
