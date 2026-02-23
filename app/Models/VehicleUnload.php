@@ -14,9 +14,10 @@ final class VehicleUnload extends Model
     use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use SoftDeletes, Userstamps;
 
-    protected $table = 'vehicle_unload';
+    protected $table = 'vehicle_unloads';
 
     protected $fillable = [
+        'vehicle_arrival_id',
         'siding_id',
         'vehicle_id',
         'jimms_challan_number',
@@ -47,6 +48,11 @@ final class VehicleUnload extends Model
         return $this->belongsTo(Vehicle::class);
     }
 
+    public function vehicleArrival(): BelongsTo
+    {
+        return $this->belongsTo(VehicleArrival::class);
+    }
+
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
@@ -55,5 +61,15 @@ final class VehicleUnload extends Model
     public function updatedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    public function steps(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(VehicleUnloadStep::class);
+    }
+
+    public function weighments(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(VehicleUnloadWeighment::class);
     }
 }

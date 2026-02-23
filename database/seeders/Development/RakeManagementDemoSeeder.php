@@ -347,24 +347,31 @@ final class RakeManagementDemoSeeder extends Seeder
                 'updated_by' => $this->demoUser->id,
             ]);
 
-            if ($idx === 0) {
-                VehicleUnload::query()->firstOrCreate([
+            if ($idx === 0 || $idx === 1) {
+                $unload = VehicleUnload::query()->firstOrCreate([
+                    'vehicle_arrival_id' => $arrival->id,
+                ], [
                     'siding_id' => $siding->id,
                     'vehicle_id' => $vehicle->id,
                     'arrival_time' => $arrivedAt,
-                ], [
-                    'jimms_challan_number' => 'DEMO-CH-'.$siding->code.'-1',
-                    'shift' => 'morning',
+                    'jimms_challan_number' => 'DEMO-CH-'.$siding->code.'-'.$idx,
+                    'shift' => ['morning', 'evening', 'night'][$idx % 3],
                     'unload_start_time' => $arrivedAt->copy()->addMinutes(10),
-                    'unload_end_time' => $arrivedAt->copy()->addMinutes(45),
+                    'unload_end_time' => $idx === 0 ? $arrivedAt->copy()->addMinutes(45) : null,
                     'mine_weight_mt' => 30.0,
                     'weighment_weight_mt' => 30.2,
                     'variance_mt' => 0.2,
-                    'state' => 'completed',
+                    'state' => $idx === 0 ? 'completed' : 'unloading',
                     'remarks' => 'Demo unload',
                     'created_by' => $this->demoUser->id,
                     'updated_by' => $this->demoUser->id,
                 ]);
+
+                // Create steps for unload (completed or in progress)
+                $this->createUnloadSteps($unload, new Carbon($arrivedAt), $idx === 0);
+                
+                // Create weighments for unload
+                $this->createUnloadWeighments($unload, new Carbon($arrivedAt), $arrival, $idx === 0);
             }
         }
     }
@@ -524,6 +531,62 @@ final class RakeManagementDemoSeeder extends Seeder
                 'variance_pct' => 0,
                 'status' => 'received',
                 'created_by' => $this->demoUser->id,
+            ]);
+        }
+    }
+
+    private function createUnloadSteps(VehicleUnload $unload, Carbon $arrivedAt, bool $isCompleted = true): void
+    {
+        $steps = [
+            1 => ['Truck Arrived at Siding', 'completed', $arrivedAt],
+            2 => ['Gross Weighment', 'completed', $arrivedAt->copy()->addMinutes(5)],
+            3 => ['Unloading Started', 'completed', $arrivedAt->copy()->addMinutes(10)],
+            4 => ['Tare Weighment', $isCompleted ? 'completed' : 'in_progress', $isCompleted ? $arrivedAt->copy()->addMinutes(40) : $arrivedAt->copy()->addMinutes(40)],
+            5 => ['Unload Completed & Stock Updated', $isCompleted ? 'completed' : 'pending', $isCompleted ? $arrivedAt->copy()->addMinutes(45) : null],
+        ];
+
+        foreach ($steps as $stepNumber => [$stepName, $status, $timestamp]) {
+            \App\Models\VehicleUnloadStep::query()->firstOrCreate([
+                'vehicle_unload_id' => $unload->id,
+                'step_number' => $stepNumber,
+            ], [
+                'status' => $status,
+                'started_at' => $timestamp,
+                'completed_at' => $status === 'completed' ? $timestamp : null,
+                'updated_by' => $this->demoUser->id,
+            ]);
+        }
+    }
+
+    private function createUnloadWeighments(VehicleUnload $unload, Carbon $arrivedAt, VehicleArrival $arrival, bool $isCompleted = true): void
+    {
+        // Create gross weighment (matches arrival weight)
+        \App\Models\VehicleUnloadWeighment::query()->firstOrCreate([
+            'vehicle_unload_id' => $unload->id,
+            'weighment_type' => 'GROSS',
+            'weighment_time' => $arrivedAt->copy()->addMinutes(5),
+        ], [
+            'gross_weight_mt' => $arrival->gross_weight,
+            'tare_weight_mt' => null,
+            'net_weight_mt' => $arrival->gross_weight,
+            'weighment_status' => 'PASS',
+            'data_source' => 'weighbridge',
+            'weighment_time' => $arrivedAt->copy()->addMinutes(5),
+        ]);
+
+        // Create tare weighment (matches arrival tare weight) - only if completed or in progress
+        if ($isCompleted) {
+            \App\Models\VehicleUnloadWeighment::query()->firstOrCreate([
+                'vehicle_unload_id' => $unload->id,
+                'weighment_type' => 'TARE',
+                'weighment_time' => $arrivedAt->copy()->addMinutes(40),
+            ], [
+                'gross_weight_mt' => $arrival->gross_weight,
+                'tare_weight_mt' => $arrival->tare_weight,
+                'net_weight_mt' => (float) $arrival->gross_weight - (float) $arrival->tare_weight,
+                'weighment_status' => 'PASS',
+                'data_source' => 'weighbridge',
+                'weighment_time' => $arrivedAt->copy()->addMinutes(40),
             ]);
         }
     }

@@ -13,10 +13,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('vehicle_unload', function (Blueprint $table): void {
+        Schema::create('vehicle_unloads', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('siding_id')->constrained('sidings')->onDelete('cascade');
             $table->foreignId('vehicle_id')->constrained('vehicles')->onDelete('cascade');
+
             $table->string('jimms_challan_number', 30)->nullable();
             $table->dateTime('arrival_time');
             $table->dateTime('unload_start_time')->nullable();

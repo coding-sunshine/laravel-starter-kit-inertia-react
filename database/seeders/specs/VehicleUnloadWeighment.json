@@ -1,0 +1,74 @@
+{
+    "model": "VehicleUnloadWeighment",
+    "table": "vehicle_unload_weighments",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "vehicle_unload_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "gross_weight_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "tare_weight_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "net_weight_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "weighment_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "weighment_status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "data_source": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "external_reference": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "raw_payload": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "weighment_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": [],
+    "value_hints": [],
+    "scenarios": []
+}

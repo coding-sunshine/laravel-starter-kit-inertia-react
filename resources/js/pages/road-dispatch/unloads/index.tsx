@@ -234,27 +234,41 @@ export default function RoadDispatchUnloadsIndex({ unloads, sidings }: Props) {
                                                         '—'}
                                                 </td>
                                                 <td className="px-5 py-3.5 text-right">
-                                                    {u.state === 'pending' ||
-                                                    u.state === 'unloading' ? (
-                                                        <Button
-                                                            type="button"
-                                                            size="sm"
-                                                            variant="secondary"
-                                                            onClick={() =>
-                                                                handleConfirm(
-                                                                    u.id,
-                                                                )
-                                                            }
+                                                    <div className="flex flex-wrap items-center justify-end gap-2">
+                                                        <Link
+                                                            href={`/road-dispatch/unloads/${u.id}`}
                                                         >
-                                                            Confirm receipt
-                                                        </Button>
-                                                    ) : u.unload_end_time ? (
-                                                        new Date(
-                                                            u.unload_end_time,
-                                                        ).toLocaleString()
-                                                    ) : (
-                                                        '—'
-                                                    )}
+                                                            <Button
+                                                                type="button"
+                                                                size="sm"
+                                                                variant="outline"
+                                                            >
+                                                                View
+                                                            </Button>
+                                                        </Link>
+                                                        {(u.state === 'pending' ||
+                                                            u.state === 'unloading') && (
+                                                            <Button
+                                                                type="button"
+                                                                size="sm"
+                                                                variant="secondary"
+                                                                onClick={() =>
+                                                                    handleConfirm(
+                                                                        u.id,
+                                                                    )
+                                                                }
+                                                            >
+                                                                Confirm receipt
+                                                            </Button>
+                                                        )}
+                                                        {u.unload_end_time && (
+                                                            <span className="text-sm text-muted-foreground">
+                                                                {new Date(
+                                                                    u.unload_end_time,
+                                                                ).toLocaleString()}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}

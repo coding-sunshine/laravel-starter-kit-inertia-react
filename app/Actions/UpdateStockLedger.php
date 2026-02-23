@@ -168,7 +168,7 @@ final readonly class UpdateStockLedger
             ->latest('created_at')
             ->first();
 
-        return $lastLedger?->closing_balance_mt ?? 0;
+        return (float) ($lastLedger?->closing_balance_mt ?? 0);
     }
 
     /**

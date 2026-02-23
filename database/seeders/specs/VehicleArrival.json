@@ -113,6 +113,10 @@
         "updater": {
             "type": "belongsTo",
             "model": "Updater"
+        },
+        "vehicleUnload": {
+            "type": "hasOne",
+            "model": "VehicleUnload"
         }
     },
     "value_hints": [],

@@ -24,8 +24,8 @@ final class StoreVehicleUnloadRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'arrival_id' => ['required', 'integer', 'exists:vehicle_arrivals,id'],
             'siding_id' => ['required', 'integer', 'exists:sidings,id'],
-            'vehicle_id' => ['required', 'integer', 'exists:vehicles,id'],
             'jimms_challan_number' => ['nullable', 'string', 'max:30'],
             'arrival_time' => ['required', 'date'],
             'shift' => ['nullable', 'string', 'in:morning,evening,night'],

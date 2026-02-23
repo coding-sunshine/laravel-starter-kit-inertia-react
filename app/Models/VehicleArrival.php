@@ -132,6 +132,16 @@ final class VehicleArrival extends Model
     }
 
     /**
+     * Vehicle unload relationship (one unload per arrival)
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasOne<VehicleUnload, $this>
+     */
+    public function vehicleUnload(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(VehicleUnload::class, 'vehicle_arrival_id');
+    }
+
+    /**
      * Start unloading this vehicle
      */
     public function startUnloading(): void

@@ -107,6 +107,10 @@
             "type": "belongsTo",
             "model": "Vehicle"
         },
+        "vehicleArrival": {
+            "type": "belongsTo",
+            "model": "VehicleArrival"
+        },
         "createdBy": {
             "type": "belongsTo",
             "model": "CreatedBy"
@@ -114,6 +118,14 @@
         "updatedBy": {
             "type": "belongsTo",
             "model": "UpdatedBy"
+        },
+        "steps": {
+            "type": "hasMany",
+            "model": "Step"
+        },
+        "weighments": {
+            "type": "hasMany",
+            "model": "Weighment"
         }
     },
     "value_hints": [],

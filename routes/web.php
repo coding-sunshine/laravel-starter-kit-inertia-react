@@ -187,9 +187,16 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('road-dispatch/arrivals', [VehicleArrivalController::class, 'index'])->name('road-dispatch.arrivals.index');
     Route::get('road-dispatch/arrivals/create', [VehicleArrivalController::class, 'create'])->name('road-dispatch.arrivals.create');
     Route::post('road-dispatch/arrivals', [VehicleArrivalController::class, 'store'])->name('road-dispatch.arrivals.store');
+    Route::get('road-dispatch/arrivals/{arrival}', [VehicleArrivalController::class, 'show'])->name('road-dispatch.arrivals.show');
+    Route::get('road-dispatch/arrivals/{arrival}/unload', [VehicleArrivalController::class, 'unload'])->name('road-dispatch.arrivals.unload');
     Route::get('road-dispatch/unloads', [VehicleUnloadController::class, 'index'])->name('road-dispatch.unloads.index');
     Route::get('road-dispatch/unloads/create', [VehicleUnloadController::class, 'create'])->name('road-dispatch.unloads.create');
     Route::post('road-dispatch/unloads', [VehicleUnloadController::class, 'store'])->name('road-dispatch.unloads.store');
+    Route::get('road-dispatch/unloads/{unload}', [VehicleUnloadController::class, 'show'])->name('road-dispatch.unloads.show');
+    Route::post('road-dispatch/unloads/{unload}/gross-weighment', [VehicleUnloadController::class, 'recordGrossWeighment'])->name('road-dispatch.unloads.gross-weighment');
+    Route::post('road-dispatch/unloads/{unload}/start-unload', [VehicleUnloadController::class, 'startUnload'])->name('road-dispatch.unloads.start-unload');
+    Route::post('road-dispatch/unloads/{unload}/tare-weighment', [VehicleUnloadController::class, 'recordTareWeighment'])->name('road-dispatch.unloads.tare-weighment');
+    Route::post('road-dispatch/unloads/{unload}/complete', [VehicleUnloadController::class, 'complete'])->name('road-dispatch.unloads.complete');
     Route::put('road-dispatch/unloads/{unload}/confirm', [VehicleUnloadController::class, 'confirm'])->name('road-dispatch.unloads.confirm');
 
     // Railway Receipts (RR) and Penalties
