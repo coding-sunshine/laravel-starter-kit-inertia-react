@@ -3,22 +3,22 @@
     "table": "siding_risk_scores",
     "fields": {
         "id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
         "siding_id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
         "score": {
-            "type": "integer",
+            "type": "int2",
             "nullable": true,
             "default": null
         },
         "risk_factors": {
-            "type": "text",
+            "type": "json",
             "nullable": true,
             "default": null
         },
