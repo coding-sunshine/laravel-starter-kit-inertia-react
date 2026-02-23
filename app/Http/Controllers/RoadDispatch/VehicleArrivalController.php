@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\RoadDispatch;
 
+use App\Actions\CreateUnloadFromArrival;
 use App\Actions\CreateVehicleArrival;
 use App\DataTables\VehicleArrivalDataTable;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\RoadDispatch\StoreVehicleArrivalRequest;
 use App\Models\Siding;
 use App\Models\Vehicle;
+use App\Models\VehicleArrival;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -18,7 +20,8 @@ use Inertia\Response;
 final class VehicleArrivalController extends Controller
 {
     public function __construct(
-        private readonly CreateVehicleArrival $createVehicleArrival
+        private readonly CreateVehicleArrival $createVehicleArrival,
+        private readonly CreateUnloadFromArrival $createUnloadFromArrival
     ) {}
 
     public function index(Request $request): Response
@@ -73,5 +76,44 @@ final class VehicleArrivalController extends Controller
 
         return to_route('road-dispatch.arrivals.index')
             ->with('success', 'Vehicle arrival recorded.');
+    }
+
+    public function show(Request $request, VehicleArrival $arrival): Response
+    {
+        $this->authorize('view', $arrival);
+
+        $arrival->load([
+            'siding:id,name,code',
+            'vehicle:id,vehicle_number,owner_name',
+            'vehicleUnload' => function ($query) {
+                $query->select('id', 'vehicle_arrival_id', 'unload_start_time', 'unload_end_time', 'state');
+            },
+            'creator:id,name',
+            'updater:id,name',
+        ]);
+
+        // Debug logging
+        \Log::info('Arrival data for show:', [
+            'arrival_id' => $arrival->id,
+            'vehicle_unload' => $arrival->vehicleUnload,
+            'vehicle_unload_id' => $arrival->vehicleUnload?->id,
+            'unload_state' => $arrival->vehicleUnload?->state,
+        ]);
+        
+        return Inertia::render('road-dispatch/arrivals/show', [
+            'arrival' => $arrival->toArray(),
+        ]);
+    }
+
+    public function unload(Request $request, VehicleArrival $arrival): RedirectResponse
+    {
+        $this->authorize('view', $arrival);
+
+        $unload = $this->createUnloadFromArrival->handle(
+            $arrival,
+            (int) $request->user()->id
+        );
+
+        return to_route('road-dispatch.unloads.show', $unload);
     }
 }

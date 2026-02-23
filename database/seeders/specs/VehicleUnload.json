@@ -3,17 +3,17 @@
     "table": "vehicle_unload",
     "fields": {
         "id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
         "siding_id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
         "vehicle_id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
@@ -63,12 +63,12 @@
             "default": null
         },
         "created_by": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
         "updated_by": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
@@ -91,6 +91,11 @@
             "type": "string",
             "nullable": true,
             "default": null
+        },
+        "vehicle_arrival_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {
@@ -102,6 +107,10 @@
             "type": "belongsTo",
             "model": "Vehicle"
         },
+        "vehicleArrival": {
+            "type": "belongsTo",
+            "model": "VehicleArrival"
+        },
         "createdBy": {
             "type": "belongsTo",
             "model": "CreatedBy"
@@ -109,6 +118,14 @@
         "updatedBy": {
             "type": "belongsTo",
             "model": "UpdatedBy"
+        },
+        "steps": {
+            "type": "hasMany",
+            "model": "Step"
+        },
+        "weighments": {
+            "type": "hasMany",
+            "model": "Weighment"
         }
     },
     "value_hints": [],

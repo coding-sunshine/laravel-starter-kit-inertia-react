@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { Truck } from 'lucide-react';
 
 interface Siding {
@@ -83,6 +83,22 @@ export default function RoadDispatchArrivalsIndex({
                         <DataTable<ArrivalRow>
                             tableData={tableData}
                             tableName="road-dispatch-arrivals"
+                            actions={[
+                                {
+                                    label: 'View',
+                                    onClick: (row) =>
+                                        router.visit(
+                                            `/road-dispatch/arrivals/${row.id}`,
+                                        ),
+                                },
+                                {
+                                    label: 'Unload',
+                                    onClick: (row) =>
+                                        router.visit(
+                                            `/road-dispatch/arrivals/${row.id}/unload`,
+                                        ),
+                                },
+                            ]}
                             renderCell={(columnId, value, row) => {
                                 if (columnId === 'siding_code') {
                                     return row.siding_code && row.siding_name

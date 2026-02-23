@@ -3,22 +3,22 @@
     "table": "vehicle_arrivals",
     "fields": {
         "id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
         "siding_id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
         "vehicle_id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
         "indent_id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
@@ -68,12 +68,12 @@
             "default": null
         },
         "created_by": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
         "updated_by": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
@@ -113,6 +113,10 @@
         "updater": {
             "type": "belongsTo",
             "model": "Updater"
+        },
+        "vehicleUnload": {
+            "type": "hasOne",
+            "model": "VehicleUnload"
         }
     },
     "value_hints": [],
