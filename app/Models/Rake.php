@@ -18,24 +18,23 @@ final class Rake extends Model
 
     protected $fillable = [
         'siding_id',
+        'indent_id',
         'rake_number',
         'rake_type',
         'wagon_count',
-        'loading_start_time',
-        'loading_end_time',
         'loaded_weight_mt',
         'predicted_weight_mt',
         'state',
         'free_time_minutes',
-        'demurrage_hours',
-        'demurrage_penalty_amount',
         'rr_expected_date',
         'rr_actual_date',
+        'placement_time',
+        'dispatch_time',
     ];
 
     protected $casts = [
-        'loading_start_time' => 'datetime',
-        'loading_end_time' => 'datetime',
+        'placement_time' => 'datetime',
+        'dispatch_time' => 'datetime',
         'rr_expected_date' => 'datetime',
         'rr_actual_date' => 'datetime',
     ];
@@ -43,6 +42,11 @@ final class Rake extends Model
     public function siding(): BelongsTo
     {
         return $this->belongsTo(Siding::class);
+    }
+
+    public function indent(): BelongsTo
+    {
+        return $this->belongsTo(Indent::class);
     }
 
     public function wagons(): HasMany
@@ -93,5 +97,20 @@ final class Rake extends Model
     public function updatedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    public function rakeLoad(): HasOne
+    {
+        return $this->hasOne(RakeLoad::class);
+    }
+
+    public function rakeLoads(): HasMany
+    {
+        return $this->hasMany(RakeLoad::class);
+    }
+
+    public function appliedPenalties(): HasMany
+    {
+        return $this->hasMany(AppliedPenalty::class);
     }
 }

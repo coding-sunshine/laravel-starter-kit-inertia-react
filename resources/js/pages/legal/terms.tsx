@@ -1,4 +1,3 @@
-import AppLogoIcon from '@/components/app-logo-icon';
 import TextLink from '@/components/text-link';
 import { home } from '@/routes';
 import { Head, Link } from '@inertiajs/react';
@@ -14,7 +13,7 @@ export default function LegalTerms() {
                             href={home()}
                             className="flex items-center gap-2 font-medium text-foreground"
                         >
-                            <AppLogoIcon className="size-8 fill-current" />
+                            <span className="text-lg font-bold">RMMS</span>
                             <span className="sr-only">Home</span>
                         </Link>
                         <TextLink href={home()}>Back to home</TextLink>

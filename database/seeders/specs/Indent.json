@@ -88,6 +88,10 @@
             "type": "belongsTo",
             "model": "Siding"
         },
+        "rake": {
+            "type": "hasOne",
+            "model": "Rake"
+        },
         "createdBy": {
             "type": "belongsTo",
             "model": "CreatedBy"

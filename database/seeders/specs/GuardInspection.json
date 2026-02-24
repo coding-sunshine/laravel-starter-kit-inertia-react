@@ -46,6 +46,11 @@
             "type": "bigint",
             "nullable": true,
             "default": null
+        },
+        "rake_load_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {

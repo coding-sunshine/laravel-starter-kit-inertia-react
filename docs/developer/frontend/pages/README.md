@@ -76,5 +76,10 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | [indents/edit](./indents/edit.md) | indents.index, indents.create | ✅ |
 | [indents/show](./indents/show.md) | indents.index, indents.create | ✅ |
 | [penalties/analytics](./penalties/analytics.md) | penalties.index, penalties.analytics | ✅ |
+| rakes/create-from-indent | indents.index, indents.create | ❌ |
+| road-dispatch/arrivals/show | road-dispatch.arrivals.index, road-dispatch.arrivals.create | ❌ |
+| road-dispatch/components/WeighmentHistory | N/A | ❌ |
+| road-dispatch/stepper/track-timeline | N/A | ❌ |
+| road-dispatch/unloads/show | road-dispatch.unloads.index, road-dispatch.unloads.create | ❌ |
 
 

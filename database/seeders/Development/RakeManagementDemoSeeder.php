@@ -14,6 +14,7 @@ use App\Models\Penalty;
 use App\Models\PowerPlant;
 use App\Models\PowerPlantReceipt;
 use App\Models\Rake;
+use App\Models\RakeLoad;
 use App\Models\RrDocument;
 use App\Models\RrPrediction;
 use App\Models\Siding;
@@ -99,15 +100,15 @@ final class RakeManagementDemoSeeder extends Seeder
     private function seedIndentsForSiding(Siding $siding): void
     {
         $base = 'DEMO-IND-'.$siding->code.'-';
-        $states = ['pending', 'pending', 'allocated', 'allocated', 'completed'];
+        $indentStates = ['pending', 'pending', 'allocated', 'allocated', 'completed'];
         $now = \Illuminate\Support\Facades\Date::now();
 
         for ($i = 1; $i <= 5; $i++) {
             Indent::query()->firstOrCreate(['indent_number' => $base.$i], [
                 'siding_id' => $siding->id,
                 'target_quantity_mt' => 2500 + ($i * 100),
-                'allocated_quantity_mt' => $states[$i - 1] === 'completed' ? 2600 : ($states[$i - 1] === 'allocated' ? 2500 : 0),
-                'state' => $states[$i - 1],
+                'allocated_quantity_mt' => $indentStates[$i - 1] === 'completed' ? 2600 : ($indentStates[$i - 1] === 'allocated' ? 2500 : 0),
+                'state' => $indentStates[$i - 1],
                 'indent_date' => $now->copy()->subDays(10 - $i),
                 'required_by_date' => $now->copy()->addDays($i),
                 'remarks' => 'Demo indent for '.$siding->name,
@@ -121,29 +122,58 @@ final class RakeManagementDemoSeeder extends Seeder
     {
         $loaders = Loader::query()->where('siding_id', $siding->id)->get();
         $loader = $loaders->first();
+        $indents = Indent::query()->where('siding_id', $siding->id)->whereIn('state', ['allocated', 'completed'])->get();
         $base = 'DEMO-RK-'.$siding->code.'-';
         $now = \Illuminate\Support\Facades\Date::now();
-        $states = [
-            ['state' => 'pending', 'loading_start' => null, 'loading_end' => null, 'demurrage' => 0],
-            ['state' => 'loading', 'loading_start' => $now->copy()->subMinutes(90), 'loading_end' => null, 'demurrage' => 0],
-            ['state' => 'loaded', 'loading_start' => $now->copy()->subHours(3), 'loading_end' => $now->copy()->subMinutes(30), 'demurrage' => 0],
-            ['state' => 'dispatched', 'loading_start' => $now->copy()->subHours(5), 'loading_end' => $now->copy()->subHours(2), 'demurrage' => 1],
+        $rakeStates = [
+            1 => ['pending', 'allocated'],
+            2 => ['loading', 'loaded', 'dispatched'],
+            3 => ['completed'],
+            4 => ['pending', 'allocated'],
+            5 => ['pending', 'allocated'],
         ];
 
         for ($r = 1; $r <= 4; $r++) {
-            $cfg = $states[$r - 1];
+            // Explicitly define states to avoid array key issues
+            $rakeConfig = null;
+            if ($r === 1) {
+                $loadingStart = $now->copy()->subHours(6);
+                $loadingEnd = $now->copy()->subHours(2);
+                $rakeState = 'pending';
+                $rakeAllocated = 'allocated';
+            } elseif ($r === 2) {
+                $loadingStart = $now->copy()->subHours(6);
+                $loadingEnd = $now->copy()->subHours(2);
+                $rakeState = 'loading';
+                $rakeAllocated = 'loaded';
+            } elseif ($r === 3) {
+                $loadingStart = $now->copy()->subHours(6);
+                $loadingEnd = $now->copy()->subHours(2);
+                $rakeState = 'completed';
+                $rakeAllocated = null;
+            } elseif ($r === 4) {
+                $loadingStart = $now->copy()->subHours(6);
+                $loadingEnd = $now->copy()->subHours(2);
+                $rakeState = 'pending';
+                $rakeAllocated = 'allocated';
+            } else {
+                $loadingStart = $now->copy()->subHours(6);
+                $loadingEnd = $now->copy()->subHours(2);
+                $rakeState = 'pending';
+                $rakeAllocated = 'allocated';
+            }
+
             $rake = Rake::query()->firstOrCreate(['rake_number' => $base.$r], [
                 'siding_id' => $siding->id,
+                'indent_id' => ($r - 1) < $indents->count() ? $indents->get($r - 1)?->id : null, // Assign indent for 1:1 relationship
                 'rake_type' => 'BOBRN',
                 'wagon_count' => 58,
-                'loading_start_time' => $cfg['loading_start'],
-                'loading_end_time' => $cfg['loading_end'],
-                'loaded_weight_mt' => $cfg['loading_end'] instanceof Carbon ? 2900 + $r * 20 : null,
+                'loaded_weight_mt' => $loadingEnd instanceof Carbon ? 2900 + $r * 20 : null,
                 'predicted_weight_mt' => 2920,
-                'state' => $cfg['state'],
+                'state' => $rakeState,
                 'free_time_minutes' => 180,
-                'demurrage_hours' => $cfg['demurrage'],
-                'demurrage_penalty_amount' => $cfg['demurrage'] * 15440,
+                'placement_time' => $loadingStart,
+                'dispatch_time' => $rakeState === 'completed' ? $loadingEnd : null,
                 'rr_expected_date' => $now->copy()->addDays(2),
                 'rr_actual_date' => null,
                 'created_by' => $this->demoUser->id,
@@ -151,6 +181,7 @@ final class RakeManagementDemoSeeder extends Seeder
             ]);
 
             $this->seedWagonsForRake($rake, $loader);
+            $this->seedRakeLoadForRake($rake);
             $this->seedWeighmentForRake($rake);
             $this->seedGuardInspectionForRake($rake);
             $this->seedTxrForRake($rake);
@@ -182,11 +213,23 @@ final class RakeManagementDemoSeeder extends Seeder
                 'loader_recorded_qty_mt' => in_array($rake->state, ['loaded', 'dispatched'], true) ? 50.0 : null,
                 'weighment_qty_mt' => in_array($rake->state, ['loaded', 'dispatched'], true) ? 50.2 : null,
                 'is_unfit' => $seq === 10 && $rake->state !== 'pending',
-                'is_overloaded' => false,
                 'state' => $rake->state === 'pending' ? 'pending' : ($seq === 10 ? 'unfit' : 'loaded'),
-                'loader_id' => $loader?->id,
             ]);
         }
+    }
+
+    private function seedRakeLoadForRake(Rake $rake): void
+    {
+        // Only create rake loads for rakes that are in loading/loaded/dispatched states
+        if (! in_array($rake->state, ['loading', 'loaded', 'dispatched'], true)) {
+            return;
+        }
+
+        RakeLoad::query()->firstOrCreate(['rake_id' => $rake->id], [
+            'placement_time' => $rake->placement_time,
+            'free_time_minutes' => $rake->free_time_minutes ?? 180,
+            'status' => $rake->state === 'completed' ? 'completed' : 'in_progress',
+        ]);
     }
 
     private function seedWeighmentForRake(Rake $rake): void
@@ -194,15 +237,23 @@ final class RakeManagementDemoSeeder extends Seeder
         if (! in_array($rake->state, ['loaded', 'dispatched'], true)) {
             return;
         }
-        $weighmentTime = $rake->loading_end_time?->copy()->addMinutes(15) ?? \Illuminate\Support\Facades\Date::now()->subHour();
+
+        $rakeLoad = $rake->rakeLoad;
+        if (! $rakeLoad) {
+            return; // Skip if no rake load exists
+        }
+
+        $weighmentTime = $rake->placement_time?->copy()->addMinutes(15) ?? \Illuminate\Support\Facades\Date::now()->subHour();
         Weighment::query()->firstOrCreate([
             'rake_id' => $rake->id,
             'weighment_time' => $weighmentTime,
         ], [
             'weighment_time' => $weighmentTime,
+            'rake_load_id' => $rakeLoad->id,
             'total_weight_mt' => (float) ($rake->loaded_weight_mt ?? 2920),
-            'average_wagon_weight_mt' => round((float) ($rake->loaded_weight_mt ?? 2920) / 58, 2),
-            'weighment_status' => 'verified',
+            'status' => 'verified',
+            'attempt_no' => 1,
+            'train_speed_kmph' => 45.50,
             'remarks' => 'Demo weighment',
             'created_by' => $this->demoUser->id,
         ]);
@@ -213,8 +264,12 @@ final class RakeManagementDemoSeeder extends Seeder
         if (! in_array($rake->state, ['loaded', 'dispatched'], true)) {
             return;
         }
+
+        $rakeLoad = $rake->rakeLoad;
+
         GuardInspection::query()->firstOrCreate(['rake_id' => $rake->id], [
-            'inspection_time' => $rake->loading_end_time ?? \Illuminate\Support\Facades\Date::now(),
+            'rake_load_id' => $rakeLoad?->id,
+            'inspection_time' => $rake->placement_time ?? \Illuminate\Support\Facades\Date::now(),
             'is_approved' => true,
             'remarks' => 'Demo guard inspection',
             'created_by' => $this->demoUser->id,
@@ -224,10 +279,8 @@ final class RakeManagementDemoSeeder extends Seeder
     private function seedTxrForRake(Rake $rake): void
     {
         Txr::query()->firstOrCreate(['rake_id' => $rake->id], [
-            'inspection_time' => $rake->loading_start_time ?? \Illuminate\Support\Facades\Date::now()->subHour(),
-            'state' => 'approved',
-            'unfit_wagons_count' => $rake->state !== 'pending' ? 1 : 0,
-            'unfit_wagon_numbers' => $rake->state !== 'pending' ? '["W-'.str_replace('DEMO-RK-', 'D', $rake->rake_number).'-10"]' : null,
+            'inspection_time' => $rake->placement_time ?? \Illuminate\Support\Facades\Date::now()->subHour(),
+            'status' => 'approved',
             'remarks' => 'Demo TXR',
             'created_by' => $this->demoUser->id,
         ]);
@@ -323,7 +376,7 @@ final class RakeManagementDemoSeeder extends Seeder
     private function seedVehicleArrivalsAndUnloadsForSiding(Siding $siding): void
     {
         $vehicles = Vehicle::query()->limit(4)->get();
-        $indents = Indent::query()->where('siding_id', $siding->id)->whereIn('state', ['allocated', 'completed'])->limit(2)->get();
+        $indents = Indent::query()->where('siding_id', $siding->id)->whereIn('state', ['allocated', 'completed'])->limit(4)->get();
         $now = \Illuminate\Support\Facades\Date::now();
 
         foreach ($vehicles->take(3) as $idx => $vehicle) {
@@ -333,7 +386,7 @@ final class RakeManagementDemoSeeder extends Seeder
                 'vehicle_id' => $vehicle->id,
                 'arrived_at' => $arrivedAt,
             ], [
-                'indent_id' => $indents->get($idx % 2)?->id,
+                'indent_id' => ($idx % 2) < $indents->count() ? $indents->get($idx % 2)?->id : null,
                 'status' => $idx === 0 ? 'completed' : ($idx === 1 ? 'unloading' : 'pending'),
                 'shift' => ['morning', 'evening', 'night'][$idx % 3],
                 'unloading_started_at' => $idx <= 1 ? $arrivedAt->copy()->addMinutes(10) : null,
@@ -369,7 +422,7 @@ final class RakeManagementDemoSeeder extends Seeder
 
                 // Create steps for unload (completed or in progress)
                 $this->createUnloadSteps($unload, new Carbon($arrivedAt), $idx === 0);
-                
+
                 // Create weighments for unload
                 $this->createUnloadWeighments($unload, new Carbon($arrivedAt), $arrival, $idx === 0);
             }

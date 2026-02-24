@@ -19,9 +19,7 @@ final class Txr extends Model
     protected $fillable = [
         'rake_id',
         'inspection_time',
-        'state',
-        'unfit_wagons_count',
-        'unfit_wagon_numbers',
+        'status',
         'remarks',
     ];
 

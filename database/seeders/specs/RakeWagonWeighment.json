@@ -1,0 +1,57 @@
+{
+    "model": "RakeWagonWeighment",
+    "table": "rake_wagon_weighments",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "rake_weighment_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "wagon_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "gross_weight_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "is_overloaded": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "weighment": {
+            "type": "belongsTo",
+            "model": "Weighment"
+        },
+        "wagon": {
+            "type": "belongsTo",
+            "model": "Wagon"
+        },
+        "rakeWagonLoading": {
+            "type": "belongsTo",
+            "model": "RakeWagonLoading"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

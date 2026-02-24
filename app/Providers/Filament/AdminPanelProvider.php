@@ -36,7 +36,6 @@ final class AdminPanelProvider extends PanelProvider
             ->authGuard('web')
             ->login()
             ->brandName(config('app.name'))
-            ->brandLogo(asset('logo.svg'))
             ->favicon(asset('favicon.svg'))
             ->font('Inter Variable', null, null, [])
             ->colors([

@@ -6,7 +6,10 @@ namespace App\Http\Controllers\Indents;
 
 use App\Http\Controllers\Controller;
 use App\Models\Indent;
+use App\Models\Rake;
 use App\Models\Siding;
+use App\Models\Wagon;
+use DateTimeImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -103,10 +106,18 @@ final class IndentsController extends Controller
     {
         $this->authorize('view', $indent);
 
-        $indent->load('siding:id,name,code');
+        $indent->load([
+            'siding:id,name,code',
+        ]);
+
+        // Load rake relationship safely without causing attribute errors
+        $rake = Rake::where('indent_id', $indent->id)
+            ->select('id', 'rake_number', 'state')
+            ->first();
 
         return Inertia::render('indents/show', [
             'indent' => $indent,
+            'rake' => $rake,
         ]);
     }
 
@@ -170,5 +181,90 @@ final class IndentsController extends Controller
 
         return to_route('indents.show', $indent)
             ->with('success', 'Indent updated.');
+    }
+
+    /**
+     * Show the form to create a rake from this indent
+     */
+    public function createRake(Request $request, Indent $indent): Response
+    {
+        $this->authorize('createRake', $indent);
+
+        // Check if rake already exists for this indent
+        if ($indent->rake) {
+            return to_route('indents.show', $indent)
+                ->with('error', 'A rake already exists for this indent.');
+        }
+
+        $user = $request->user();
+        $sidingIds = $user->isSuperAdmin()
+            ? Siding::query()->pluck('id')->all()
+            : $user->accessibleSidings()->get()->pluck('id')->all();
+
+        $sidings = Siding::query()
+            ->whereIn('id', $sidingIds)
+            ->orderBy('name')
+            ->get(['id', 'name', 'code']);
+
+        return Inertia::render('rakes/create-from-indent', [
+            'indent' => $indent->load('siding:id,name,code'),
+            'sidings' => $sidings,
+        ]);
+    }
+
+    /**
+     * Store a new rake created from an indent
+     */
+    public function storeRakeFromIndent(Request $request, Indent $indent): RedirectResponse
+    {
+        $this->authorize('createRake', $indent);
+
+        // Check if rake already exists for this indent
+        if ($indent->rake) {
+            return to_route('indents.show', $indent)
+                ->with('error', 'A rake already exists for this indent.');
+        }
+
+        $validated = $request->validate([
+            'rake_type' => ['nullable', 'string', 'max:50'],
+            'wagon_count' => ['nullable', 'integer', 'min:0'],
+            'free_time_minutes' => ['nullable', 'integer', 'min:0'],
+            'rr_expected_date' => ['nullable', 'date'],
+            'placement_time' => ['nullable', 'date'],
+            'remarks' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        // Create rake from indent with form data
+        $rake = new Rake;
+        $rake->indent_id = $indent->id;
+        $rake->siding_id = $indent->siding_id; // Use indent's siding
+        $rake->rake_number = 'RK-'.$indent->indent_number;
+        $rake->rake_type = $validated['rake_type'] ?? 'standard';
+        $rake->wagon_count = $validated['wagon_count'] ?? 0;
+        $rake->loaded_weight_mt = 0;
+        $rake->predicted_weight_mt = $indent->target_quantity_mt;
+        $rake->state = 'pending';
+        $rake->free_time_minutes = $validated['free_time_minutes'] ?? config('rrmcs.default_free_time_minutes', 180);
+        $rake->rr_expected_date = $validated['rr_expected_date'] ?? $indent->required_by_date;
+        $rake->placement_time = $validated['placement_time'] ? new DateTimeImmutable($validated['placement_time']) : null;
+        $rake->created_by = $request->user()->id;
+        $rake->updated_by = $request->user()->id;
+        $rake->save();
+
+        // Create wagons based on wagon count
+        $wagonCount = (int) ($validated['wagon_count'] ?? 0);
+        if ($wagonCount > 0) {
+            for ($i = 1; $i <= $wagonCount; $i++) {
+                $wagon = new Wagon;
+                $wagon->rake_id = $rake->id;
+                $wagon->wagon_number = "W{$i}"; // W1, W2, W3, etc.
+                $wagon->wagon_sequence = $i;
+                $wagon->state = 'pending';
+                $wagon->save();
+            }
+        }
+
+        return to_route('rakes.show', $rake)
+            ->with('success', 'Rake created from completed indent successfully.');
     }
 }

@@ -15,17 +15,23 @@ final class Weighment extends Model implements HasMedia
     use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use InteractsWithMedia, Userstamps;
 
+    protected $table = 'rake_weighments';
+
     protected $fillable = [
         'rake_id',
+        'rake_load_id',
         'weighment_time',
         'total_weight_mt',
-        'average_wagon_weight_mt',
-        'weighment_status',
+        'status',
+        'attempt_no',
+        'train_speed_kmph',
         'remarks',
     ];
 
     protected $casts = [
         'weighment_time' => 'datetime',
+        'total_weight_mt' => 'decimal:2',
+        'train_speed_kmph' => 'decimal:2',
     ];
 
     protected $appends = ['weighment_slip_url'];
@@ -40,6 +46,16 @@ final class Weighment extends Model implements HasMedia
     public function rake(): BelongsTo
     {
         return $this->belongsTo(Rake::class);
+    }
+
+    public function rakeLoad(): BelongsTo
+    {
+        return $this->belongsTo(RakeLoad::class);
+    }
+
+    public function wagonWeighments(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(RakeWagonWeighment::class, 'rake_weighment_id');
     }
 
     public function createdBy(): BelongsTo

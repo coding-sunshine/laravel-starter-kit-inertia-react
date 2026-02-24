@@ -6,6 +6,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Mattiverse\Userstamps\Traits\Userstamps;
 use Spatie\MediaLibrary\HasMedia;
@@ -46,6 +47,11 @@ final class Indent extends Model implements HasMedia
     public function siding(): BelongsTo
     {
         return $this->belongsTo(Siding::class);
+    }
+
+    public function rake(): HasOne
+    {
+        return $this->hasOne(Rake::class);
     }
 
     public function createdBy(): BelongsTo

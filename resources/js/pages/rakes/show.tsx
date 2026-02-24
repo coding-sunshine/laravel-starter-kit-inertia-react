@@ -10,10 +10,12 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, router, usePage } from '@inertiajs/react';
-import { Clock, FileText, Scale, Train } from 'lucide-react';
+import { Head, Link, router, usePage, useForm } from '@inertiajs/react';
+import { useState, useEffect } from 'react';
+import { Clock, FileText, Scale, Train, Edit, Package } from 'lucide-react';
 
 interface Siding {
     id: number;
@@ -22,23 +24,19 @@ interface Siding {
     loaders?: { id: number; loader_name: string; code: string }[];
 }
 
-interface Loader {
-    id: number;
-    loader_name: string;
-    code: string;
-}
-
 interface Wagon {
     id: number;
     wagon_sequence: number;
     wagon_number: string;
     wagon_type: string | null;
+    tare_weight_mt: string | null;
+    loaded_weight_mt: string | null;
+    pcc_weight_mt: string | null;
     loader_recorded_qty_mt: string | null;
     weighment_qty_mt: string | null;
     is_unfit: boolean;
     is_overloaded: boolean;
     state: string | null;
-    loader?: Loader | null;
 }
 
 interface TxrRecord {
@@ -98,14 +96,14 @@ interface RakeData {
     rake_type: string | null;
     wagon_count: number;
     state: string;
-    loading_start_time: string | null;
-    loading_end_time: string | null;
+    placement_time: string | null;
+    dispatch_time: string | null;
     free_time_minutes: number | null;
     siding?: Siding | null;
     wagons: Wagon[];
     txr: TxrRecord | null;
     weighments: WeighmentRecord[];
-    guard_inspection: GuardInspectionRecord | null;
+    guardInspection: GuardInspectionRecord | null;
     rr_documents?: RrDocumentRecord[];
     penalties?: PenaltyRecord[];
 }
@@ -133,6 +131,7 @@ function WeighmentForm({ rakeId }: { rakeId: number }) {
         const formData = new FormData(form);
         router.post(`/rakes/${rakeId}/weighments`, formData, {
             forceFormData: true,
+            preserveScroll: true,
         });
     };
 
@@ -188,6 +187,36 @@ export default function RakesShow({
     demurrageRemainingMinutes,
     demurrage_rate_per_mt_hour,
 }: Props) {
+    const [selectedWagon, setSelectedWagon] = useState<Wagon | null>(null);
+    const [wagonDialogOpen, setWagonDialogOpen] = useState(false);
+    const { data, setData, put, processing, errors, reset } = useForm({
+        wagon_type: '',
+        is_unfit: false,
+        tare_weight_mt: '',
+        loaded_weight_mt: '',
+        pcc_weight_mt: '',
+        loader_recorded_qty_mt: '',
+        weighment_qty_mt: '',
+    });
+
+    useEffect(() => {
+        if (rake.wagons.length === 0 && rake.wagon_count > 0) {
+            router.visit(`/rakes/${rake.id}/edit`);
+        }
+    }, [rake.id, rake.wagons.length, rake.wagon_count]);
+
+    useEffect(() => {
+        if (selectedWagon) {
+            setData((prev) => ({
+                ...prev,
+                wagon_type: selectedWagon.wagon_type ?? '',
+                tare_weight_mt: selectedWagon.tare_weight_mt ?? '',
+                pcc_weight_mt: selectedWagon.pcc_weight_mt ?? '',
+                is_unfit: selectedWagon.is_unfit ?? false,
+            }));
+        }
+    }, [selectedWagon, setData]);
+
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: '/dashboard' },
         { title: 'Rakes', href: '/rakes' },
@@ -320,84 +349,180 @@ export default function RakesShow({
                         <CardHeader>
                             <CardTitle>Wagons</CardTitle>
                             <CardDescription>
-                                Loader and weighment quantities per wagon
+                                Click on any wagon to upload details
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="overflow-x-auto rounded-md border">
-                                <table className="w-full text-sm">
-                                    <thead>
-                                        <tr className="border-b bg-muted/50">
-                                            <th className="px-5 py-3.5 text-left font-medium">
-                                                #
-                                            </th>
-                                            <th className="px-5 py-3.5 text-left font-medium">
-                                                Wagon number
-                                            </th>
-                                            <th className="px-5 py-3.5 text-left font-medium">
-                                                Type
-                                            </th>
-                                            <th className="px-5 py-3.5 text-left font-medium">
-                                                Loader
-                                            </th>
-                                            <th className="px-5 py-3.5 text-right font-medium">
-                                                Loader qty (MT)
-                                            </th>
-                                            <th className="px-5 py-3.5 text-right font-medium">
-                                                Weighment (MT)
-                                            </th>
-                                            <th className="px-5 py-3.5 text-center font-medium">
-                                                Unfit
-                                            </th>
-                                            <th className="px-5 py-3.5 text-center font-medium">
-                                                Overload
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {rake.wagons.map((w) => (
-                                            <tr
-                                                key={w.id}
-                                                className="border-b last:border-0"
+                            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+                                {rake.wagons.map((wagon) => (
+                                    <Dialog 
+                                        key={wagon.id}
+                                        open={wagonDialogOpen && selectedWagon?.id === wagon.id}
+                                        onOpenChange={(open) => {
+                                            setWagonDialogOpen(open);
+                                            if (!open) setSelectedWagon(null);
+                                        }}
+                                    >
+                                        <DialogTrigger asChild>
+                                            <div 
+                                                className={`cursor-pointer rounded-lg border-2 p-6 hover:bg-muted/50 transition-colors ${
+                                                    wagon.is_unfit 
+                                                        ? 'border-red-500 bg-red-50/50' 
+                                                        : 'border-green-500 bg-green-50/50'
+                                                }`}
+                                                onClick={() => {
+                                                    setSelectedWagon(wagon);
+                                                    setWagonDialogOpen(true);
+                                                }}
                                             >
-                                                <td className="px-5 py-3.5">
-                                                    {w.wagon_sequence}
-                                                </td>
-                                                <td className="px-5 py-3.5 font-medium">
-                                                    {w.wagon_number}
-                                                </td>
-                                                <td className="px-5 py-3.5 text-muted-foreground">
-                                                    {w.wagon_type ?? '—'}
-                                                </td>
-                                                <td className="px-5 py-3.5">
-                                                    {w.loader
-                                                        ? w.loader.loader_name
-                                                        : '—'}
-                                                </td>
-                                                <td className="px-5 py-3.5 text-right">
-                                                    {w.loader_recorded_qty_mt ??
-                                                        '—'}
-                                                </td>
-                                                <td className="px-5 py-3.5 text-right">
-                                                    {w.weighment_qty_mt ?? '—'}
-                                                </td>
-                                                <td className="px-5 py-3.5 text-center">
-                                                    {w.is_unfit ? 'Yes' : '—'}
-                                                </td>
-                                                <td className="px-5 py-3.5 text-center">
-                                                    {w.is_overloaded ? (
-                                                        <span className="text-amber-600 dark:text-amber-400">
-                                                            Yes
-                                                        </span>
-                                                    ) : (
-                                                        '—'
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                                <div className="text-center space-y-3">
+                                                    <Package className="mx-auto h-12 w-12 text-muted-foreground" />
+                                                    <div>
+                                                        <div className="font-semibold text-lg">
+                                                            {wagon.wagon_number}
+                                                        </div>
+                                                        <div className="text-sm text-muted-foreground">
+                                                            Position {wagon.wagon_sequence}
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-1 text-xs">
+                                                        <div className="flex justify-between">
+                                                            <span className="text-muted-foreground">Type:</span>
+                                                            <span className="font-medium">
+                                                                {wagon.wagon_type || 'Not set'}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex justify-between">
+                                                            <span className="text-muted-foreground">Tare Weight:</span>
+                                                            <span className="font-medium">
+                                                                {wagon.tare_weight_mt ? `${wagon.tare_weight_mt} MT` : 'Not set'}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex justify-between">
+                                                            <span className="text-muted-foreground">PCC Weight:</span>
+                                                            <span className="font-medium">
+                                                                {wagon.pcc_weight_mt ? `${wagon.pcc_weight_mt} MT` : 'Not set'}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex justify-between">
+                                                            <span className="text-muted-foreground">Status:</span>
+                                                            <span className={`font-medium ${
+                                                                wagon.is_unfit ? 'text-red-600' : 'text-green-600'
+                                                            }`}>
+                                                                {wagon.is_unfit ? 'Unfit' : 'Fit'}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </DialogTrigger>
+                                        <DialogContent className="max-w-md">
+                                            <DialogHeader>
+                                                <DialogTitle>
+                                                    Edit Wagon {wagon.wagon_number}
+                                                </DialogTitle>
+                                            </DialogHeader>
+                                            <form onSubmit={(e) => {
+                                                e.preventDefault();
+                                                put(`/rakes/${rake.id}/wagons/${wagon.id}`, {
+                                                    preserveScroll: true,
+                                                });
+                                            }}>
+                                                <div className="space-y-4">
+                                                    <div>
+                                                        <Label htmlFor="wagon_type">Wagon Type</Label>
+                                                        <Input
+                                                            id="wagon_type"
+                                                            value={data.wagon_type}
+                                                            onChange={(e) => setData('wagon_type', e.target.value)}
+                                                            placeholder="e.g., BOXN, BOBRN"
+                                                        />
+                                                        <InputError message={errors?.wagon_type} />
+                                                    </div>
+                                                    <div>
+                                                        <Label htmlFor="tare_weight_mt">Tare Weight (MT)</Label>
+                                                        <Input
+                                                            id="tare_weight_mt"
+                                                            value={data.tare_weight_mt}
+                                                            onChange={(e) => setData('tare_weight_mt', e.target.value)}
+                                                            type="number"
+                                                            step="0.01"
+                                                        />
+                                                        <InputError message={errors?.tare_weight_mt} />
+                                                    </div>
+                                                    <div>
+                                                        <Label htmlFor="pcc_weight_mt">PCC Weight (MT)</Label>
+                                                        <Input
+                                                            id="pcc_weight_mt"
+                                                            value={data.pcc_weight_mt}
+                                                            onChange={(e) => setData('pcc_weight_mt', e.target.value)}
+                                                            type="number"
+                                                            step="0.01"
+                                                        />
+                                                        <InputError message={errors?.pcc_weight_mt} />
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <input
+                                                            type="checkbox"
+                                                            id="is_unfit"
+                                                            checked={data.is_unfit}
+                                                            onChange={(e) => setData('is_unfit', e.target.checked)}
+                                                            className="rounded"
+                                                        />
+                                                        <Label htmlFor="is_unfit">Mark as unfit</Label>
+                                                    </div>
+                                                    <div className="flex justify-end space-x-2 pt-4">
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            onClick={() => {
+                                                                setWagonDialogOpen(false);
+                                                                setSelectedWagon(null);
+                                                                reset();
+                                                            }}
+                                                        >
+                                                            Cancel
+                                                        </Button>
+                                                        <Button type="submit" disabled={processing}>
+                                                            Save Changes
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </DialogContent>
+                                    </Dialog>
+                                ))}
                             </div>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {rake.wagons.length === 0 && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>No Wagons</CardTitle>
+                            <CardDescription>
+                                This rake doesn't have any wagons yet. Generate wagons based on the rake's wagon count.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="p-8 text-center">
+                            <Button 
+                                onClick={() => {
+                                    router.post(`/rakes/${rake.id}/generate-wagons`, {}, {
+                                        preserveScroll: true,
+                                        onSuccess: () => {
+                                            router.reload();
+                                        },
+                                        onError: (errors) => {
+                                            console.error('Error generating wagons:', errors);
+                                        },
+                                    });
+                                }}
+                                disabled={processing}
+                            >
+                                <Package className="mr-2 h-4 w-4" />
+                                Generate {rake.wagon_count} Wagons
+                            </Button>
                         </CardContent>
                     </Card>
                 )}
@@ -448,8 +573,7 @@ export default function RakesShow({
                         <WeighmentForm rakeId={rake.id} />
                     </CardContent>
                 </Card>
-
-                {rake.guard_inspection && (
+                {rake.guardInspection?.inspection_time && (
                     <Card>
                         <CardHeader>
                             <CardTitle>Guard inspection</CardTitle>
@@ -460,16 +584,16 @@ export default function RakesShow({
                         <CardContent className="text-sm">
                             <p>
                                 {new Date(
-                                    rake.guard_inspection.inspection_time,
+                                    rake.guardInspection?.inspection_time || '',
                                 ).toLocaleString()}{' '}
                                 —{' '}
-                                {rake.guard_inspection.is_approved
+                                {rake.guardInspection?.is_approved
                                     ? 'Approved'
                                     : 'Not approved'}
                             </p>
-                            {rake.guard_inspection.remarks && (
+                            {rake.guardInspection?.remarks && (
                                 <p className="mt-2 text-muted-foreground">
-                                    {rake.guard_inspection.remarks}
+                                    {rake.guardInspection.remarks}
                                 </p>
                             )}
                         </CardContent>

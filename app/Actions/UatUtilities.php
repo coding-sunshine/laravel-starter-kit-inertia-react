@@ -45,8 +45,8 @@ final readonly class UatUtilities
                     'rake_type' => 'Coal',
                     'wagon_count' => 60,
                     'state' => ['pending', 'loading', 'staged', 'in_transit', 'delivered'][random_int(0, 4)],
-                    'loading_start_time' => now()->subHours(random_int(1, 48)),
-                    'loading_end_time' => now()->subHours(random_int(0, 24)),
+                    'placement_time' => now()->subHours(random_int(1, 48)),
+                    'dispatch_time' => now()->subHours(random_int(0, 24)),
                     'free_time_minutes' => 144 * 60,
                     'rr_expected_date' => now()->addDays(random_int(1, 10)),
                     'rr_actual_date' => random_int(0, 1) !== 0 ? now()->addDays(random_int(0, 5)) : null,
@@ -179,7 +179,7 @@ final readonly class UatUtilities
                 'rake_number' => 'UAT-RAKE-'.time(),
                 'wagon_count' => 60,
                 'state' => 'loading',
-                'loading_start_time' => now(),
+                'placement_time' => now(),
                 'free_time_minutes' => 144 * 60,
                 'created_by' => User::query()->first()->id,
             ]);
@@ -314,7 +314,7 @@ final readonly class UatUtilities
         // Check for invalid state transitions
         $invalidRakes = Rake::query()->where('siding_id', $sidingId)
             ->where('state', 'loading')
-            ->whereNull('loading_start_time')
+            ->whereNull('placement_time')
             ->count();
 
         if ($invalidRakes > 0) {

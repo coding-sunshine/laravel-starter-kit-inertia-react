@@ -57,18 +57,8 @@
             "nullable": true,
             "default": null
         },
-        "is_overloaded": {
-            "type": "boolean",
-            "nullable": true,
-            "default": null
-        },
         "state": {
             "type": "string",
-            "nullable": true,
-            "default": null
-        },
-        "loader_id": {
-            "type": "bigint",
             "nullable": true,
             "default": null
         },
@@ -88,9 +78,17 @@
             "type": "belongsTo",
             "model": "Rake"
         },
-        "loader": {
-            "type": "belongsTo",
-            "model": "Loader"
+        "loadings": {
+            "type": "hasMany",
+            "model": "Loading"
+        },
+        "wagonWeighments": {
+            "type": "hasMany",
+            "model": "WagonWeighment"
+        },
+        "rakeWagonWeighments": {
+            "type": "hasMany",
+            "model": "RakeWagonWeighment"
         }
     },
     "value_hints": [],

@@ -27,16 +27,6 @@
             "nullable": true,
             "default": null
         },
-        "loading_start_time": {
-            "type": "timestamp",
-            "nullable": true,
-            "default": null
-        },
-        "loading_end_time": {
-            "type": "timestamp",
-            "nullable": true,
-            "default": null
-        },
         "loaded_weight_mt": {
             "type": "numeric",
             "nullable": true,
@@ -54,16 +44,6 @@
         },
         "free_time_minutes": {
             "type": "integer",
-            "nullable": true,
-            "default": null
-        },
-        "demurrage_hours": {
-            "type": "integer",
-            "nullable": true,
-            "default": null
-        },
-        "demurrage_penalty_amount": {
-            "type": "numeric",
             "nullable": true,
             "default": null
         },
@@ -101,12 +81,31 @@
             "type": "timestamp",
             "nullable": true,
             "default": null
+        },
+        "indent_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "placement_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "dispatch_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {
         "siding": {
             "type": "belongsTo",
             "model": "Siding"
+        },
+        "indent": {
+            "type": "belongsTo",
+            "model": "Indent"
         },
         "wagons": {
             "type": "hasMany",
@@ -147,6 +146,18 @@
         "updatedBy": {
             "type": "belongsTo",
             "model": "UpdatedBy"
+        },
+        "rakeLoad": {
+            "type": "hasOne",
+            "model": "RakeLoad"
+        },
+        "rakeLoads": {
+            "type": "hasMany",
+            "model": "RakeLoad"
+        },
+        "appliedPenalties": {
+            "type": "hasMany",
+            "model": "AppliedPenalty"
         }
     },
     "value_hints": [],

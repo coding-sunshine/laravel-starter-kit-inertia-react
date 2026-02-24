@@ -17,18 +17,8 @@
             "nullable": true,
             "default": null
         },
-        "state": {
+        "status": {
             "type": "string",
-            "nullable": true,
-            "default": null
-        },
-        "unfit_wagons_count": {
-            "type": "integer",
-            "nullable": true,
-            "default": null
-        },
-        "unfit_wagon_numbers": {
-            "type": "text",
             "nullable": true,
             "default": null
         },

@@ -34,4 +34,9 @@ final class GuardInspection extends Model
     {
         return $this->belongsTo(User::class, 'created_by');
     }
+
+    public function rakeLoad()
+    {
+        return $this->belongsTo(RakeLoad::class);
+    }
 }

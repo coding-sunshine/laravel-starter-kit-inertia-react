@@ -36,6 +36,7 @@ use App\Http\Controllers\RailwayReceipts\RrDocumentController;
 use App\Http\Controllers\Rakes\RakeGuardInspectionController;
 use App\Http\Controllers\Rakes\RakesController;
 use App\Http\Controllers\Rakes\RakeTxrController;
+use App\Http\Controllers\Rakes\RakeWagonController;
 use App\Http\Controllers\Rakes\RakeWeighmentController;
 use App\Http\Controllers\Reconciliation\PowerPlantReceiptController;
 use App\Http\Controllers\Reconciliation\ReconciliationController;
@@ -173,6 +174,10 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     // RRMCS Routes (Railway Rake Management Control System)
     Route::get('rakes', [RakesController::class, 'index'])->name('rakes.index');
     Route::get('rakes/{rake}', [RakesController::class, 'show'])->name('rakes.show');
+    Route::get('rakes/{rake}/edit', [RakesController::class, 'edit'])->name('rakes.edit');
+    Route::put('rakes/{rake}', [RakesController::class, 'update'])->name('rakes.update');
+    Route::post('rakes/{rake}/generate-wagons', [RakesController::class, 'generateWagons'])->name('rakes.generate-wagons');
+    Route::put('rakes/{rake}/wagons/{wagon}', [RakeWagonController::class, 'update'])->name('rakes.wagons.update');
     Route::put('rakes/{rake}/txr', [RakeTxrController::class, 'update'])->name('rakes.txr.update');
     Route::post('rakes/{rake}/weighments', [RakeWeighmentController::class, 'store'])->name('rakes.weighments.store');
     Route::post('rakes/{rake}/guard-inspection', [RakeGuardInspectionController::class, 'store'])->name('rakes.guard-inspection.store');
@@ -182,6 +187,8 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('indents/{indent}', [IndentsController::class, 'show'])->name('indents.show');
     Route::get('indents/{indent}/edit', [IndentsController::class, 'edit'])->name('indents.edit');
     Route::put('indents/{indent}', [IndentsController::class, 'update'])->name('indents.update');
+    Route::get('indents/{indent}/create-rake', [IndentsController::class, 'createRake'])->name('indents.create-rake');
+    Route::post('indents/{indent}/store-rake', [IndentsController::class, 'storeRakeFromIndent'])->name('indents.store-rake');
 
     // Road Dispatch (vehicle arrivals and unloads)
     Route::get('road-dispatch/arrivals', [VehicleArrivalController::class, 'index'])->name('road-dispatch.arrivals.index');

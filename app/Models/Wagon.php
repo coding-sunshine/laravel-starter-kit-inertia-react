@@ -22,14 +22,11 @@ final class Wagon extends Model
         'loader_recorded_qty_mt',
         'weighment_qty_mt',
         'is_unfit',
-        'is_overloaded',
         'state',
-        'loader_id',
     ];
 
     protected $casts = [
         'is_unfit' => 'boolean',
-        'is_overloaded' => 'boolean',
     ];
 
     public function rake(): BelongsTo
@@ -37,8 +34,8 @@ final class Wagon extends Model
         return $this->belongsTo(Rake::class);
     }
 
-    public function loader(): BelongsTo
+    public function wagonWeighments(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
-        return $this->belongsTo(Loader::class);
+        return $this->hasMany(RakeWagonWeighment::class);
     }
 }

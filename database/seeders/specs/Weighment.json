@@ -22,12 +22,7 @@
             "nullable": true,
             "default": null
         },
-        "average_wagon_weight_mt": {
-            "type": "numeric",
-            "nullable": true,
-            "default": null
-        },
-        "weighment_status": {
+        "status": {
             "type": "string",
             "nullable": true,
             "default": null
@@ -56,12 +51,35 @@
             "type": "bigint",
             "nullable": true,
             "default": null
+        },
+        "attempt_no": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "rake_load_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "train_speed_kmph": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {
         "rake": {
             "type": "belongsTo",
             "model": "Rake"
+        },
+        "rakeLoad": {
+            "type": "belongsTo",
+            "model": "RakeLoad"
+        },
+        "wagonWeighments": {
+            "type": "hasMany",
+            "model": "WagonWeighment"
         },
         "createdBy": {
             "type": "belongsTo",

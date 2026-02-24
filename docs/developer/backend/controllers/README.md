@@ -62,5 +62,6 @@ All Controllers:
 | [VehicleUnloadController](./vehicleunloadcontroller.md) | N/A | ✅ |
 | [AchievementsController](./achievementscontroller.md) | N/A | ✅ |
 | [SidingSwitchController](./sidingswitchcontroller.md) | N/A | ✅ |
+| RakeWagonController | N/A | ❌ |
 
 

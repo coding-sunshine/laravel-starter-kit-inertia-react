@@ -19,14 +19,14 @@ return new class extends Migration
             $table->string('rake_number', 20)->unique();
             $table->string('rake_type')->nullable(); // e.g., "BOBRN", "BOXN"
             $table->integer('wagon_count')->default(0);
-            $table->dateTime('loading_start_time')->nullable();
-            $table->dateTime('loading_end_time')->nullable();
+            $table->dateTime('loading_start_time')->nullable(); // removed
+            $table->dateTime('loading_end_time')->nullable(); // removed
             $table->decimal('loaded_weight_mt', 12, 2)->nullable();
             $table->decimal('predicted_weight_mt', 12, 2)->nullable();
             $table->string('state')->default('pending'); // pending, loading, loaded, dispatched, in_transit, received, completed
             $table->integer('free_time_minutes')->default(180); // 3 hours default
-            $table->integer('demurrage_hours')->default(0);
-            $table->decimal('demurrage_penalty_amount', 12, 2)->default(0);
+            $table->integer('demurrage_hours')->default(0); // removed
+            $table->decimal('demurrage_penalty_amount', 12, 2)->default(0); // removed
             $table->dateTime('rr_expected_date')->nullable();
             $table->dateTime('rr_actual_date')->nullable();
             $table->foreignId('created_by')->nullable()->constrained('users')->onDelete('set null');

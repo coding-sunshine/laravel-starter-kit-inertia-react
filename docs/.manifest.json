@@ -1,6 +1,6 @@
 {
     "version": "1.0.0",
-    "lastGenerated": "2026-02-23",
+    "lastGenerated": "2026-02-24",
     "actions": {
         "CreateUser": {
             "documented": true,
@@ -429,6 +429,11 @@
                     "road-dispatch.unloads.index",
                     "road-dispatch.unloads.create",
                     "road-dispatch.unloads.store",
+                    "road-dispatch.unloads.show",
+                    "road-dispatch.unloads.gross-weighment",
+                    "road-dispatch.unloads.start-unload",
+                    "road-dispatch.unloads.tare-weighment",
+                    "road-dispatch.unloads.complete",
                     "road-dispatch.unloads.confirm"
                 ]
             }
@@ -467,7 +472,9 @@
                 "relatedRoutes": [
                     "road-dispatch.arrivals.index",
                     "road-dispatch.arrivals.create",
-                    "road-dispatch.arrivals.store"
+                    "road-dispatch.arrivals.store",
+                    "road-dispatch.arrivals.show",
+                    "road-dispatch.arrivals.unload"
                 ]
             }
         },
@@ -816,6 +823,25 @@
                     "penalties.analytics",
                     "penalties.update",
                     "penalties.dispute-recommendation"
+                ]
+            }
+        },
+        "CreateUnloadFromArrival": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usedBy": [],
+                "usesModels": {
+                    "0": "VehicleArrival",
+                    "2": "VehicleUnload",
+                    "3": "VehicleUnloadStep"
+                },
+                "relatedRoutes": [
+                    "road-dispatch.arrivals.index",
+                    "road-dispatch.arrivals.create",
+                    "road-dispatch.arrivals.store",
+                    "road-dispatch.arrivals.show",
+                    "road-dispatch.arrivals.unload"
                 ]
             }
         }
@@ -1353,7 +1379,8 @@
                     "indents/index",
                     "indents/create",
                     "indents/show",
-                    "indents/edit"
+                    "indents/edit",
+                    "rakes/create-from-indent"
                 ]
             }
         },
@@ -1431,7 +1458,8 @@
                 "relatedRoutes": [],
                 "rendersPages": [
                     "rakes/index",
-                    "rakes/show"
+                    "rakes/show",
+                    "rakes/edit"
                 ]
             }
         },
@@ -1480,13 +1508,15 @@
             "path": "./vehiclearrivalcontroller.md",
             "relationships": {
                 "usesActions": [
+                    "CreateUnloadFromArrival",
                     "CreateVehicleArrival"
                 ],
                 "usesFormRequests": [],
                 "relatedRoutes": [],
                 "rendersPages": [
                     "road-dispatch/arrivals/index",
-                    "road-dispatch/arrivals/create"
+                    "road-dispatch/arrivals/create",
+                    "road-dispatch/arrivals/show"
                 ]
             }
         },
@@ -1501,6 +1531,7 @@
                 "relatedRoutes": [],
                 "rendersPages": [
                     "road-dispatch/unloads/index",
+                    "road-dispatch/unloads/show",
                     "road-dispatch/unloads/create"
                 ]
             }
@@ -1526,6 +1557,16 @@
                 "relatedRoutes": [
                     "siding.switch"
                 ],
+                "rendersPages": []
+            }
+        },
+        "RakeWagonController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
                 "rendersPages": []
             }
         }
@@ -1708,6 +1749,10 @@
                     "siding.switch",
                     "rakes.index",
                     "rakes.show",
+                    "rakes.edit",
+                    "rakes.update",
+                    "rakes.generate-wagons",
+                    "rakes.wagons.update",
                     "rakes.txr.update",
                     "rakes.weighments.store",
                     "rakes.guard-inspection.store",
@@ -1717,12 +1762,21 @@
                     "indents.show",
                     "indents.edit",
                     "indents.update",
+                    "indents.create-rake",
+                    "indents.store-rake",
                     "road-dispatch.arrivals.index",
                     "road-dispatch.arrivals.create",
                     "road-dispatch.arrivals.store",
+                    "road-dispatch.arrivals.show",
+                    "road-dispatch.arrivals.unload",
                     "road-dispatch.unloads.index",
                     "road-dispatch.unloads.create",
                     "road-dispatch.unloads.store",
+                    "road-dispatch.unloads.show",
+                    "road-dispatch.unloads.gross-weighment",
+                    "road-dispatch.unloads.start-unload",
+                    "road-dispatch.unloads.tare-weighment",
+                    "road-dispatch.unloads.complete",
                     "road-dispatch.unloads.confirm",
                     "railway-receipts.index",
                     "railway-receipts.create",
@@ -2179,6 +2233,10 @@
                     "siding.switch",
                     "rakes.index",
                     "rakes.show",
+                    "rakes.edit",
+                    "rakes.update",
+                    "rakes.generate-wagons",
+                    "rakes.wagons.update",
                     "rakes.txr.update",
                     "rakes.weighments.store",
                     "rakes.guard-inspection.store",
@@ -2188,12 +2246,21 @@
                     "indents.show",
                     "indents.edit",
                     "indents.update",
+                    "indents.create-rake",
+                    "indents.store-rake",
                     "road-dispatch.arrivals.index",
                     "road-dispatch.arrivals.create",
                     "road-dispatch.arrivals.store",
+                    "road-dispatch.arrivals.show",
+                    "road-dispatch.arrivals.unload",
                     "road-dispatch.unloads.index",
                     "road-dispatch.unloads.create",
                     "road-dispatch.unloads.store",
+                    "road-dispatch.unloads.show",
+                    "road-dispatch.unloads.gross-weighment",
+                    "road-dispatch.unloads.start-unload",
+                    "road-dispatch.unloads.tare-weighment",
+                    "road-dispatch.unloads.complete",
                     "road-dispatch.unloads.confirm",
                     "railway-receipts.index",
                     "railway-receipts.create",
@@ -2436,6 +2503,10 @@
                     "siding.switch",
                     "rakes.index",
                     "rakes.show",
+                    "rakes.edit",
+                    "rakes.update",
+                    "rakes.generate-wagons",
+                    "rakes.wagons.update",
                     "rakes.txr.update",
                     "rakes.weighments.store",
                     "rakes.guard-inspection.store",
@@ -2445,12 +2516,21 @@
                     "indents.show",
                     "indents.edit",
                     "indents.update",
+                    "indents.create-rake",
+                    "indents.store-rake",
                     "road-dispatch.arrivals.index",
                     "road-dispatch.arrivals.create",
                     "road-dispatch.arrivals.store",
+                    "road-dispatch.arrivals.show",
+                    "road-dispatch.arrivals.unload",
                     "road-dispatch.unloads.index",
                     "road-dispatch.unloads.create",
                     "road-dispatch.unloads.store",
+                    "road-dispatch.unloads.show",
+                    "road-dispatch.unloads.gross-weighment",
+                    "road-dispatch.unloads.start-unload",
+                    "road-dispatch.unloads.tare-weighment",
+                    "road-dispatch.unloads.complete",
                     "road-dispatch.unloads.confirm",
                     "railway-receipts.index",
                     "railway-receipts.create",
@@ -2679,6 +2759,10 @@
                     "siding.switch",
                     "rakes.index",
                     "rakes.show",
+                    "rakes.edit",
+                    "rakes.update",
+                    "rakes.generate-wagons",
+                    "rakes.wagons.update",
                     "rakes.txr.update",
                     "rakes.weighments.store",
                     "rakes.guard-inspection.store",
@@ -2688,12 +2772,21 @@
                     "indents.show",
                     "indents.edit",
                     "indents.update",
+                    "indents.create-rake",
+                    "indents.store-rake",
                     "road-dispatch.arrivals.index",
                     "road-dispatch.arrivals.create",
                     "road-dispatch.arrivals.store",
+                    "road-dispatch.arrivals.show",
+                    "road-dispatch.arrivals.unload",
                     "road-dispatch.unloads.index",
                     "road-dispatch.unloads.create",
                     "road-dispatch.unloads.store",
+                    "road-dispatch.unloads.show",
+                    "road-dispatch.unloads.gross-weighment",
+                    "road-dispatch.unloads.start-unload",
+                    "road-dispatch.unloads.tare-weighment",
+                    "road-dispatch.unloads.complete",
                     "road-dispatch.unloads.confirm",
                     "railway-receipts.index",
                     "railway-receipts.create",
@@ -2942,7 +3035,9 @@
                     "indents.store",
                     "indents.show",
                     "indents.edit",
-                    "indents.update"
+                    "indents.update",
+                    "indents.create-rake",
+                    "indents.store-rake"
                 ]
             }
         },
@@ -3022,7 +3117,10 @@
                 "renderedBy": [],
                 "relatedRoutes": [
                     "rakes.index",
-                    "rakes.show"
+                    "rakes.show",
+                    "rakes.edit",
+                    "rakes.update",
+                    "rakes.generate-wagons"
                 ]
             }
         },
@@ -3034,7 +3132,10 @@
                 "renderedBy": [],
                 "relatedRoutes": [
                     "rakes.index",
-                    "rakes.show"
+                    "rakes.show",
+                    "rakes.edit",
+                    "rakes.update",
+                    "rakes.generate-wagons"
                 ]
             }
         },
@@ -3109,7 +3210,9 @@
                 "relatedRoutes": [
                     "road-dispatch.arrivals.index",
                     "road-dispatch.arrivals.create",
-                    "road-dispatch.arrivals.store"
+                    "road-dispatch.arrivals.store",
+                    "road-dispatch.arrivals.show",
+                    "road-dispatch.arrivals.unload"
                 ]
             }
         },
@@ -3122,7 +3225,9 @@
                 "relatedRoutes": [
                     "road-dispatch.arrivals.index",
                     "road-dispatch.arrivals.create",
-                    "road-dispatch.arrivals.store"
+                    "road-dispatch.arrivals.store",
+                    "road-dispatch.arrivals.show",
+                    "road-dispatch.arrivals.unload"
                 ]
             }
         },
@@ -3136,6 +3241,11 @@
                     "road-dispatch.unloads.index",
                     "road-dispatch.unloads.create",
                     "road-dispatch.unloads.store",
+                    "road-dispatch.unloads.show",
+                    "road-dispatch.unloads.gross-weighment",
+                    "road-dispatch.unloads.start-unload",
+                    "road-dispatch.unloads.tare-weighment",
+                    "road-dispatch.unloads.complete",
                     "road-dispatch.unloads.confirm"
                 ]
             }
@@ -3150,6 +3260,11 @@
                     "road-dispatch.unloads.index",
                     "road-dispatch.unloads.create",
                     "road-dispatch.unloads.store",
+                    "road-dispatch.unloads.show",
+                    "road-dispatch.unloads.gross-weighment",
+                    "road-dispatch.unloads.start-unload",
+                    "road-dispatch.unloads.tare-weighment",
+                    "road-dispatch.unloads.complete",
                     "road-dispatch.unloads.confirm"
                 ]
             }
@@ -3166,7 +3281,9 @@
                     "indents.store",
                     "indents.show",
                     "indents.edit",
-                    "indents.update"
+                    "indents.update",
+                    "indents.create-rake",
+                    "indents.store-rake"
                 ]
             }
         },
@@ -3182,7 +3299,9 @@
                     "indents.store",
                     "indents.show",
                     "indents.edit",
-                    "indents.update"
+                    "indents.update",
+                    "indents.create-rake",
+                    "indents.store-rake"
                 ]
             }
         },
@@ -3198,7 +3317,9 @@
                     "indents.store",
                     "indents.show",
                     "indents.edit",
-                    "indents.update"
+                    "indents.update",
+                    "indents.create-rake",
+                    "indents.store-rake"
                 ]
             }
         },
@@ -3213,6 +3334,76 @@
                     "penalties.analytics",
                     "penalties.update",
                     "penalties.dispute-recommendation"
+                ]
+            }
+        },
+        "rakes/create-from-indent": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": [
+                    "indents.index",
+                    "indents.create",
+                    "indents.store",
+                    "indents.show",
+                    "indents.edit",
+                    "indents.update",
+                    "indents.create-rake",
+                    "indents.store-rake"
+                ]
+            }
+        },
+        "road-dispatch/arrivals/show": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": [
+                    "road-dispatch.arrivals.index",
+                    "road-dispatch.arrivals.create",
+                    "road-dispatch.arrivals.store",
+                    "road-dispatch.arrivals.show",
+                    "road-dispatch.arrivals.unload"
+                ]
+            }
+        },
+        "road-dispatch/components/WeighmentHistory": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": []
+            }
+        },
+        "road-dispatch/stepper/track-timeline": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": []
+            }
+        },
+        "road-dispatch/unloads/show": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": [
+                    "road-dispatch.unloads.index",
+                    "road-dispatch.unloads.create",
+                    "road-dispatch.unloads.store",
+                    "road-dispatch.unloads.show",
+                    "road-dispatch.unloads.gross-weighment",
+                    "road-dispatch.unloads.start-unload",
+                    "road-dispatch.unloads.tare-weighment",
+                    "road-dispatch.unloads.complete",
+                    "road-dispatch.unloads.confirm"
                 ]
             }
         }

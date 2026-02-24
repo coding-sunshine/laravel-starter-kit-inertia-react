@@ -18,10 +18,8 @@ final class RakeDataTable extends AbstractDataTable
         public ?string $rake_type,
         public int $wagon_count,
         public string $state,
-        public ?string $loading_start_time,
-        public ?string $loading_end_time,
-        public int $demurrage_hours,
-        public string $demurrage_penalty_amount,
+        public ?string $placement_time,
+        public ?string $dispatch_time,
         public ?int $siding_id,
         public ?string $siding_code,
         public ?string $siding_name,
@@ -35,10 +33,8 @@ final class RakeDataTable extends AbstractDataTable
             rake_type: $model->rake_type,
             wagon_count: $model->wagon_count,
             state: $model->state,
-            loading_start_time: $model->loading_start_time?->toIso8601String(),
-            loading_end_time: $model->loading_end_time?->toIso8601String(),
-            demurrage_hours: (int) $model->demurrage_hours,
-            demurrage_penalty_amount: (string) $model->demurrage_penalty_amount,
+            placement_time: $model->placement_time?->toIso8601String(),
+            dispatch_time: $model->dispatch_time?->toIso8601String(),
             siding_id: $model->siding_id,
             siding_code: $model->siding?->code,
             siding_name: $model->siding?->name,
@@ -58,9 +54,7 @@ final class RakeDataTable extends AbstractDataTable
                 ['label' => 'Dispatched', 'value' => 'dispatched'],
                 ['label' => 'Arrived', 'value' => 'arrived'],
             ]),
-            new Column(id: 'loading_start_time', label: 'Loading window', type: 'date', sortable: true, filterable: true),
-            new Column(id: 'demurrage_hours', label: 'Demurrage (h)', type: 'number', sortable: true, filterable: false),
-            new Column(id: 'demurrage_penalty_amount', label: 'Penalty', type: 'number', sortable: true, filterable: false),
+            new Column(id: 'placement_time', label: 'Loading window', type: 'date', sortable: true, filterable: true),
         ];
     }
 
@@ -81,7 +75,7 @@ final class RakeDataTable extends AbstractDataTable
             new QuickView(
                 id: 'recent',
                 label: 'Last 7 days',
-                params: ['filter[loading_start_time]' => 'after:'.now()->subDays(7)->toDateString()],
+                params: ['filter[placement_time]' => 'after:'.now()->subDays(7)->toDateString()],
                 icon: 'calendar',
             ),
         ];
@@ -102,16 +96,16 @@ final class RakeDataTable extends AbstractDataTable
 
     public static function tableDefaultSort(): string
     {
-        return '-loading_start_time';
+        return '-placement_time';
     }
 
     public static function tableAllowedFilters(): array
     {
-        return ['rake_number', 'state', 'rake_type', 'siding_id', 'loading_start_time'];
+        return ['rake_number', 'state', 'rake_type', 'siding_id', 'placement_time'];
     }
 
     public static function tableAllowedSorts(): array
     {
-        return ['rake_number', 'rake_type', 'wagon_count', 'state', 'loading_start_time', 'demurrage_hours', 'demurrage_penalty_amount'];
+        return ['rake_number', 'rake_type', 'wagon_count', 'state', 'placement_time'];
     }
 }

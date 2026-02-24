@@ -56,7 +56,7 @@ final readonly class GenerateReports
                     ->sum('quantity_mt') ?? 0,
                 'rakes_loaded' => Rake::query()->where('siding_id', $sidingId)
                     ->where('state', 'staged')
-                    ->whereDate('loading_end_time', $today)
+                    ->whereDate('dispatch_time', $today)
                     ->count(),
                 'rakes_departed' => Rake::query()->where('siding_id', $sidingId)
                     ->where('state', '!=', 'pending')
@@ -136,16 +136,16 @@ final readonly class GenerateReports
                 'in_transit' => $rakes->where('state', 'in_transit')->count(),
                 'staged' => $rakes->where('state', 'staged')->count(),
                 'avg_dwell_time_hours' => $rakes
-                    ->filter(fn ($r): bool => $r->loading_end_time && $r->rr_actual_date)
-                    ->avg(fn ($r) => $r->loading_end_time->diffInHours($r->rr_actual_date ?? now())),
+                    ->filter(fn ($r): bool => $r->dispatch_time && $r->rr_actual_date)
+                    ->avg(fn ($r) => $r->dispatch_time->diffInHours($r->rr_actual_date ?? now())),
             ],
             'rakes' => $rakes->map(fn ($r): array => [
                 'rake_number' => $r->rake_number,
                 'state' => $r->state,
                 'wagon_count' => $r->wagon_count,
                 'loaded_weight_mt' => $r->loaded_weight_mt,
-                'loading_start' => $r->loading_start_time?->toDateTimeString(),
-                'loading_end' => $r->loading_end_time?->toDateTimeString(),
+                'loading_start' => $r->placement_time?->toDateTimeString(),
+                'loading_end' => $r->dispatch_time?->toDateTimeString(),
                 'departure_date' => $r->rr_expected_date?->toDateString(),
                 'delivery_date' => $r->rr_actual_date?->toDateString(),
                 'inspection_status' => $r->guardInspection?->is_approved ? 'Approved' : 'Pending/Rejected',

@@ -1,0 +1,76 @@
+{
+    "model": "RakeWagonLoading",
+    "table": "rake_wagon_loading",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "rake_load_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "wagon_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "loader_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "loaded_quantity_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "attempt_no": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "started_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "completed_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "rakeLoad": {
+            "type": "belongsTo",
+            "model": "RakeLoad"
+        },
+        "wagon": {
+            "type": "belongsTo",
+            "model": "Wagon"
+        },
+        "loader": {
+            "type": "belongsTo",
+            "model": "Loader"
+        },
+        "weighments": {
+            "type": "hasMany",
+            "model": "Weighment"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

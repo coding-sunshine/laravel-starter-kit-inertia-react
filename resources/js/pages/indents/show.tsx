@@ -8,13 +8,19 @@ import {
 } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link } from '@inertiajs/react';
-import { FileText } from 'lucide-react';
+import { Head, Link, router } from '@inertiajs/react';
+import { FileText, Train, Plus } from 'lucide-react';
 
 interface Siding {
     id: number;
     name: string;
     code: string;
+}
+
+interface Rake {
+    id: number;
+    rake_number: string;
+    state: string;
 }
 
 interface Indent {
@@ -34,14 +40,19 @@ interface Indent {
 
 interface Props {
     indent: Indent;
+    rake?: Rake | null;
 }
 
-export default function IndentsShow({ indent }: Props) {
+export default function IndentsShow({ indent, rake }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: '/dashboard' },
         { title: 'Indents', href: '/indents' },
         { title: indent.indent_number, href: `/indents/${indent.id}` },
     ];
+
+    const handleCreateRake = () => {
+        router.visit(`/indents/${indent.id}/create-rake`);
+    };
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -51,11 +62,31 @@ export default function IndentsShow({ indent }: Props) {
                     <h2 className="text-lg font-medium">
                         Indent {indent.indent_number}
                     </h2>
-                    <Link href={`/indents/${indent.id}/edit`}>
-                        <Button variant="outline" size="sm">
-                            Edit
-                        </Button>
-                    </Link>
+                    <div className="flex gap-2">
+                        {rake ? (
+                            <Link href={`/rakes/${rake.id}`}>
+                                <Button variant="outline" size="sm">
+                                    <Train className="mr-2 h-4 w-4" />
+                                    View Rake
+                                </Button>
+                            </Link>
+                        ) : (
+                            <Button 
+                                variant="default" 
+                                size="sm"
+                                onClick={handleCreateRake}
+                                disabled={indent.state !== 'completed'}
+                            >
+                                <Plus className="mr-2 h-4 w-4" />
+                                Create Rake
+                            </Button>
+                        )}
+                        <Link href={`/indents/${indent.id}/edit`}>
+                            <Button variant="outline" size="sm">
+                                Edit
+                            </Button>
+                        </Link>
+                    </div>
                 </div>
 
                 <Card>
@@ -168,6 +199,44 @@ export default function IndentsShow({ indent }: Props) {
                         )}
                     </CardContent>
                 </Card>
+
+                {rake && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <Train className="size-5" />
+                                Associated Rake
+                            </CardTitle>
+                            <CardDescription>
+                                Rake created from this indent
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <dl className="grid gap-3 text-sm sm:grid-cols-2">
+                                <div>
+                                    <dt className="text-muted-foreground">
+                                        Rake number
+                                    </dt>
+                                    <dd className="font-medium">
+                                        {rake.rake_number}
+                                    </dd>
+                                </div>
+                                <div>
+                                    <dt className="text-muted-foreground">State</dt>
+                                    <dd className="capitalize">{rake.state}</dd>
+                                </div>
+                            </dl>
+                            <div className="mt-4">
+                                <Link href={`/rakes/${rake.id}`}>
+                                    <Button variant="outline" size="sm">
+                                        <Train className="mr-2 h-4 w-4" />
+                                        View Rake Details
+                                    </Button>
+                                </Link>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
             </div>
         </AppLayout>
     );

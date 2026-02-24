@@ -189,13 +189,13 @@ final class ExecutiveDashboardController extends Controller
             ->with('siding:id,name,code')
             ->whereIn('siding_id', $sidingIds)
             ->where('state', 'loading')
-            ->whereNotNull('loading_start_time')
+            ->whereNotNull('placement_time')
             ->whereNotNull('free_time_minutes')
             ->get();
 
         $list = [];
         foreach ($rakes as $rake) {
-            $start = $rake->loading_start_time;
+            $start = $rake->placement_time;
             $freeMinutes = (int) $rake->free_time_minutes;
             $end = $start->copy()->addMinutes($freeMinutes);
             $remainingMinutes = max(0, (int) now()->diffInMinutes($end, false));
@@ -203,7 +203,7 @@ final class ExecutiveDashboardController extends Controller
                 'id' => $rake->id,
                 'rake_number' => $rake->rake_number,
                 'siding' => $rake->siding ? ['id' => $rake->siding->id, 'name' => $rake->siding->name, 'code' => $rake->siding->code] : null,
-                'loading_start_time' => $rake->loading_start_time->toIso8601String(),
+                'placement_time' => $rake->placement_time->toIso8601String(),
                 'free_time_minutes' => $freeMinutes,
                 'remaining_minutes' => $remainingMinutes,
             ];
@@ -365,9 +365,9 @@ final class ExecutiveDashboardController extends Controller
 
         $totalRakesThisMonth = Rake::query()
             ->whereIn('siding_id', $sidingIds)
-            ->whereNotNull('loading_end_time')
-            ->whereMonth('loading_end_time', $thisMonth->month)
-            ->whereYear('loading_end_time', $thisMonth->year)
+            ->whereNotNull('dispatch_time')
+            ->whereMonth('dispatch_time', $thisMonth->month)
+            ->whereYear('dispatch_time', $thisMonth->year)
             ->count();
 
         $rakesWithPenalties = $rakeIdsWithPenalties->count();

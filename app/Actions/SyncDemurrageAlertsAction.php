@@ -27,13 +27,13 @@ final readonly class SyncDemurrageAlertsAction
         $rakes = Rake::query()
             ->whereIn('siding_id', $sidingIds)
             ->where('state', 'loading')
-            ->whereNotNull('loading_start_time')
+            ->whereNotNull('placement_time')
             ->whereNotNull('free_time_minutes')
             ->get();
 
         $rakeIdsInDemurrage = [];
         foreach ($rakes as $rake) {
-            $end = $rake->loading_start_time->copy()->addMinutes((int) $rake->free_time_minutes);
+            $end = $rake->placement_time->copy()->addMinutes((int) $rake->free_time_minutes);
             $remainingMinutes = (int) \Illuminate\Support\Facades\Date::now()->diffInMinutes($end, false);
 
             if ($remainingMinutes > 60) {
