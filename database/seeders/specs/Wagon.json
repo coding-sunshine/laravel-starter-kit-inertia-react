@@ -78,17 +78,9 @@
             "type": "belongsTo",
             "model": "Rake"
         },
-        "loadings": {
-            "type": "hasMany",
-            "model": "Loading"
-        },
         "wagonWeighments": {
             "type": "hasMany",
             "model": "WagonWeighment"
-        },
-        "rakeWagonWeighments": {
-            "type": "hasMany",
-            "model": "RakeWagonWeighment"
         }
     },
     "value_hints": [],

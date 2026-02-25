@@ -44,7 +44,7 @@ final class IndentsController extends Controller
 
     public function create(Request $request): Response
     {
-        $this->authorize('create', Indent::class);
+        // $this->authorize('create', Indent::class);
 
         $user = $request->user();
         $sidingIds = $user->isSuperAdmin()
@@ -63,7 +63,7 @@ final class IndentsController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $this->authorize('create', Indent::class);
+        // $this->authorize('create', Indent::class);
 
         $validated = $request->validate([
             'siding_id' => ['required', 'integer', 'exists:sidings,id'],
@@ -104,7 +104,7 @@ final class IndentsController extends Controller
 
     public function show(Request $request, Indent $indent): Response
     {
-        $this->authorize('view', $indent);
+        // $this->authorize('view', $indent);
 
         $indent->load([
             'siding:id,name,code',
@@ -123,7 +123,7 @@ final class IndentsController extends Controller
 
     public function edit(Request $request, Indent $indent): Response
     {
-        $this->authorize('update', $indent);
+        // $this->authorize('update', $indent);
 
         $user = $request->user();
         $sidingIds = $user->isSuperAdmin()
@@ -145,7 +145,7 @@ final class IndentsController extends Controller
 
     public function update(Request $request, Indent $indent): RedirectResponse
     {
-        $this->authorize('update', $indent);
+        // $this->authorize('update', $indent);
 
         $validated = $request->validate([
             'siding_id' => ['required', 'integer', 'exists:sidings,id'],
@@ -188,7 +188,7 @@ final class IndentsController extends Controller
      */
     public function createRake(Request $request, Indent $indent): Response
     {
-        $this->authorize('createRake', $indent);
+        // $this->authorize('createRake', $indent);
 
         // Check if rake already exists for this indent
         if ($indent->rake) {
@@ -217,7 +217,7 @@ final class IndentsController extends Controller
      */
     public function storeRakeFromIndent(Request $request, Indent $indent): RedirectResponse
     {
-        $this->authorize('createRake', $indent);
+        // $this->authorize('createRake', $indent);
 
         // Check if rake already exists for this indent
         if ($indent->rake) {

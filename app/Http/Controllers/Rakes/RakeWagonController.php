@@ -17,7 +17,7 @@ final class RakeWagonController extends Controller
      */
     public function update(Request $request, Rake $rake, Wagon $wagon): RedirectResponse
     {
-        $this->authorize('update', $rake);
+        // $this->authorize('update', $rake);
 
         // Ensure wagon belongs to this rake
         if ($wagon->rake_id !== $rake->id) {

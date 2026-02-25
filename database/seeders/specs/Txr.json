@@ -51,6 +51,11 @@
             "type": "bigint",
             "nullable": true,
             "default": null
+        },
+        "inspection_end_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {

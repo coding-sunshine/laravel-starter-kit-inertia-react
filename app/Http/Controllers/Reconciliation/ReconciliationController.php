@@ -40,7 +40,7 @@ final class ReconciliationController extends Controller
 
     public function show(Request $request, Rake $rake): Response
     {
-        $this->authorize('view', $rake);
+        // $this->authorize('view', $rake);
 
         $points = resolve(ReconcileRakeAction::class)->handle($rake);
         $rake->load('siding:id,name,code');

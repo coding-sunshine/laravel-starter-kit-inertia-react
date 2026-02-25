@@ -45,13 +45,13 @@ const mainNavItems: NavItem[] = [
         icon: LayoutGrid,
         dataPan: 'nav-dashboard',
     },
-    {
-        title: 'Organizations',
-        href: organizations.index.url(),
-        icon: Building2,
-        tenancyRequired: true,
-        dataPan: 'nav-organizations',
-    },
+    // {
+    //     title: 'Organizations',
+    //     href: organizations.index.url(),
+    //     icon: Building2,
+    //     tenancyRequired: true,
+    //     dataPan: 'nav-organizations',
+    // },
     {
         title: 'Billing',
         href: '/billing',
@@ -134,25 +134,25 @@ const mainNavItems: NavItem[] = [
 ];
 
 const footerNavItems: NavItem[] = [
-    {
-        title: 'API docs',
-        href: '/docs/api',
-        icon: BookOpen,
-        feature: 'scramble_api_docs',
-        dataPan: 'nav-api-docs',
-    },
-    {
-        title: 'Repository',
-        href: 'https://github.com/laravel/react-starter-kit',
-        icon: Folder,
-        dataPan: 'nav-repository',
-    },
-    {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#react',
-        icon: BookOpen,
-        dataPan: 'nav-documentation',
-    },
+    // {
+    //     title: 'API docs',
+    //     href: '/docs/api',
+    //     icon: BookOpen,
+    //     feature: 'scramble_api_docs',
+    //     dataPan: 'nav-api-docs',
+    // },
+    // {
+    //     title: 'Repository',
+    //     href: 'https://github.com/laravel/react-starter-kit',
+    //     icon: Folder,
+    //     dataPan: 'nav-repository',
+    // },
+    // {
+    //     title: 'Documentation',
+    //     href: 'https://laravel.com/docs/starter-kits#react',
+    //     icon: BookOpen,
+    //     dataPan: 'nav-documentation',
+    // },
 ];
 
 /** Hide item when it has a feature key and that feature is inactive (shared from server). */

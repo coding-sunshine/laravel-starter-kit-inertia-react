@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     App\Providers\AppServiceProvider::class,
+    // App\Providers\AuthServiceProvider::class, // Disabled - permissions disabled
     App\Providers\FakerServiceProvider::class,
     App\Providers\MemoryServiceProvider::class,
     App\Providers\PermissionServiceProvider::class,

@@ -59,7 +59,7 @@ final class VehicleUnloadController extends Controller
 
     public function show(Request $request, VehicleUnload $unload): Response
     {
-        $this->authorize('view', $unload);
+        // $this->authorize('view', $unload);
 
         $unload->load([
             'steps' => fn ($q) => $q->orderBy('step_number'),
@@ -140,7 +140,7 @@ final class VehicleUnloadController extends Controller
 
     public function confirm(Request $request, VehicleUnload $unload): RedirectResponse
     {
-        $this->authorize('update', $unload);
+        // $this->authorize('update', $unload);
 
         $this->confirmVehicleUnload->handle($unload, (int) $request->user()->id);
 
@@ -165,7 +165,7 @@ final class VehicleUnloadController extends Controller
 
     public function startUnload(Request $request, VehicleUnload $unload): RedirectResponse
     {
-        $this->authorize('update', $unload);
+        // $this->authorize('update', $unload);
         $this->stepTransition->startUnload($unload, (int) $request->user()->id);
 
         return back()->with('success', 'Unloading started.');
@@ -189,7 +189,7 @@ final class VehicleUnloadController extends Controller
 
     public function complete(Request $request, VehicleUnload $unload): RedirectResponse
     {
-        $this->authorize('update', $unload);
+        // $this->authorize('update', $unload);
         $this->stepTransition->completeUnload($unload, (int) $request->user()->id);
 
         return back()->with('success', 'Unload completed and stock updated.');

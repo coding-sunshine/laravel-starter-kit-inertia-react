@@ -51,6 +51,16 @@
             "type": "bigint",
             "nullable": true,
             "default": null
+        },
+        "movement_permission_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "attempt_no": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {
@@ -61,8 +71,25 @@
         "createdBy": {
             "type": "belongsTo",
             "model": "CreatedBy"
+        },
+        "rakeLoad": {
+            "type": "belongsTo",
+            "model": "RakeLoad"
         }
     },
-    "value_hints": [],
+    "value_hints": {
+        "inspection_time": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        },
+        "movement_permission_time": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        },
+        "is_approved": {
+            "type": "boolean",
+            "example": true
+        }
+    },
     "scenarios": []
 }

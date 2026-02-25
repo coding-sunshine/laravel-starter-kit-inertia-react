@@ -19,12 +19,14 @@ final class Txr extends Model
     protected $fillable = [
         'rake_id',
         'inspection_time',
+        'inspection_end_time',
         'status',
         'remarks',
     ];
 
     protected $casts = [
         'inspection_time' => 'datetime',
+        'inspection_end_time' => 'datetime',
     ];
 
     public function rake(): BelongsTo
