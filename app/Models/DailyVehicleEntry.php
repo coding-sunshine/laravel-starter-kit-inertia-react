@@ -1,0 +1,66 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+final class DailyVehicleEntry extends Model
+{
+    protected $table = 'daily_vehicle_entries';
+
+    /**
+     * Mass assignable attributes.
+     */
+    protected $fillable = [
+        'siding_id',
+        'entry_date',
+        'shift',
+        'e_challan_no',
+        'vehicle_no',
+        'gross_wt',
+        'tare_wt',
+        'reached_at',
+        'wb_no',
+        'd_challan_no',
+        'challan_mode',
+        'status',
+        'created_by',
+        'updated_by',
+    ];
+
+    /**
+     * Attribute casting.
+     */
+    protected $casts = [
+        'entry_date' => 'date',
+        'reached_at' => 'datetime',
+        'gross_wt'   => 'decimal:2',
+        'tare_wt'    => 'decimal:2',
+        'shift'      => 'integer',
+        'vehicle_no' => 'string',
+    ];
+
+    /*
+    |--------------------------------------------------------------------------
+    | Relationships
+    |--------------------------------------------------------------------------
+    */
+
+    public function siding(): BelongsTo
+    {
+        return $this->belongsTo(Siding::class);
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function updater(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'updated_by');
+    }
+}

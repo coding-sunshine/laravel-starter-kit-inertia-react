@@ -41,8 +41,11 @@ return [
             env('APP_ENV') === 'local' ? 'wss://localhost:5173' : null,
             env('APP_ENV') === 'local' ? 'ws://localhost:5174' : null,
             env('APP_ENV') === 'local' ? 'wss://localhost:5174' : null,
+            env('APP_ENV') === 'local' ? 'ws://localhost:8080' : null,
+            env('APP_ENV') === 'local' ? 'wss://localhost:8080' : null,
             env('APP_ENV') === 'local' ? 'http://localhost:5173' : null,
             env('APP_ENV') === 'local' ? 'http://localhost:5174' : null,
+            env('APP_ENV') === 'local' ? 'http://localhost:8080' : null,
         ])],
 
         in_array(env('APP_ENV'), ['local', 'testing'], true)

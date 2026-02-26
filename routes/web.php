@@ -44,6 +44,7 @@ use App\Http\Controllers\Reconciliation\ReconciliationController;
 use App\Http\Controllers\Reports\ReportsController;
 use App\Http\Controllers\RoadDispatch\VehicleArrivalController;
 use App\Http\Controllers\RoadDispatch\VehicleUnloadController;
+use App\Http\Controllers\DailyVehicleEntryController;
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\Settings\AchievementsController;
 use App\Http\Controllers\SidingSwitchController;
@@ -214,6 +215,13 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::post('road-dispatch/unloads/{unload}/tare-weighment', [VehicleUnloadController::class, 'recordTareWeighment'])->name('road-dispatch.unloads.tare-weighment');
     Route::post('road-dispatch/unloads/{unload}/complete', [VehicleUnloadController::class, 'complete'])->name('road-dispatch.unloads.complete');
     Route::put('road-dispatch/unloads/{unload}/confirm', [VehicleUnloadController::class, 'confirm'])->name('road-dispatch.unloads.confirm');
+
+    // Daily Vehicle Entries
+    Route::get('road-dispatch/daily-vehicle-entries', [DailyVehicleEntryController::class, 'index'])->name('road-dispatch.daily-vehicle-entries.index');
+    Route::post('road-dispatch/daily-vehicle-entries', [DailyVehicleEntryController::class, 'store'])->name('road-dispatch.daily-vehicle-entries.store');
+    Route::patch('road-dispatch/daily-vehicle-entries/{entry}', [DailyVehicleEntryController::class, 'update'])->name('road-dispatch.daily-vehicle-entries.update');
+    Route::delete('road-dispatch/daily-vehicle-entries/{entry}', [DailyVehicleEntryController::class, 'destroy'])->name('road-dispatch.daily-vehicle-entries.destroy');
+    Route::post('road-dispatch/daily-vehicle-entries/{entry}/complete', [DailyVehicleEntryController::class, 'markCompleted'])->name('road-dispatch.daily-vehicle-entries.complete');
 
     // Railway Receipts (RR) and Penalties
     Route::get('railway-receipts', [RrDocumentController::class, 'index'])->name('railway-receipts.index');

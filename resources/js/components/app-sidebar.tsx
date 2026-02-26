@@ -73,7 +73,7 @@ const mainNavItems: NavItem[] = [
     },
     {
         title: 'Road Dispatch',
-        href: '/road-dispatch/arrivals',
+        href: '/road-dispatch/daily-vehicle-entries',
         icon: Truck,
         dataPan: 'nav-road-dispatch',
     },
