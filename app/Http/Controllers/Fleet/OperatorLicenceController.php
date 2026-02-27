@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Fleet;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Fleet\StoreOperatorLicenceRequest;
+use App\Http\Requests\Fleet\UpdateOperatorLicenceRequest;
 use App\Models\Fleet\OperatorLicence;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -36,24 +38,10 @@ final class OperatorLicenceController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(StoreOperatorLicenceRequest $request): RedirectResponse
     {
         $this->authorize('create', OperatorLicence::class);
-        $validated = $request->validate([
-            'license_number' => ['required', 'string', 'max:50'],
-            'license_type' => ['required', 'string', 'in:standard_national,standard_international,restricted'],
-            'traffic_commissioner_area' => ['required', 'string', 'in:north_eastern,north_western,west_midlands,eastern,western,southern,scottish'],
-            'issue_date' => ['required', 'date'],
-            'effective_date' => ['required', 'date'],
-            'expiry_date' => ['required', 'date'],
-            'authorized_vehicles' => ['required', 'integer', 'min:0'],
-            'authorized_trailers' => ['nullable', 'integer', 'min:0'],
-            'operating_centres' => ['required', 'array'],
-            'operating_centres.*.name' => ['required', 'string'],
-            'operating_centres.*.address' => ['required', 'string'],
-            'status' => ['required', 'string', 'in:active,suspended,revoked,surrendered,applied,pending_review'],
-        ]);
-        OperatorLicence::create($validated);
+        OperatorLicence::create($request->validated());
         return to_route('fleet.operator-licences.index')->with('flash', ['status' => 'success', 'message' => 'Operator licence created.']);
     }
 
@@ -72,22 +60,10 @@ final class OperatorLicenceController extends Controller
         ]);
     }
 
-    public function update(Request $request, OperatorLicence $operatorLicence): RedirectResponse
+    public function update(UpdateOperatorLicenceRequest $request, OperatorLicence $operatorLicence): RedirectResponse
     {
         $this->authorize('update', $operatorLicence);
-        $validated = $request->validate([
-            'license_number' => ['required', 'string', 'max:50'],
-            'license_type' => ['required', 'string', 'in:standard_national,standard_international,restricted'],
-            'traffic_commissioner_area' => ['required', 'string', 'in:north_eastern,north_western,west_midlands,eastern,western,southern,scottish'],
-            'issue_date' => ['required', 'date'],
-            'effective_date' => ['required', 'date'],
-            'expiry_date' => ['required', 'date'],
-            'authorized_vehicles' => ['required', 'integer', 'min:0'],
-            'authorized_trailers' => ['nullable', 'integer', 'min:0'],
-            'operating_centres' => ['required', 'array'],
-            'status' => ['required', 'string', 'in:active,suspended,revoked,surrendered,applied,pending_review'],
-        ]);
-        $operatorLicence->update($validated);
+        $operatorLicence->update($request->validated());
         return to_route('fleet.operator-licences.show', $operatorLicence)->with('flash', ['status' => 'success', 'message' => 'Operator licence updated.']);
     }
 

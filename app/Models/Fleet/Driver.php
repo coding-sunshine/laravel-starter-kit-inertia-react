@@ -116,6 +116,24 @@ class Driver extends Model
         return $this->hasMany(Vehicle::class, 'current_driver_id');
     }
 
+    /**
+     * @return HasMany<DriverVehicleAssignment, $this>
+     */
+    public function vehicleAssignments(): HasMany
+    {
+        return $this->hasMany(DriverVehicleAssignment::class);
+    }
+
+    /**
+     * Current assignment (is_current = true), if any.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasOne<DriverVehicleAssignment, $this>
+     */
+    public function currentAssignment()
+    {
+        return $this->hasOne(DriverVehicleAssignment::class)->where('is_current', true);
+    }
+
     public function getFullNameAttribute(): string
     {
         return trim("{$this->first_name} {$this->last_name}");

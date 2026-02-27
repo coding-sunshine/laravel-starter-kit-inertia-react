@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Fleet;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Fleet\StoreDriverRequest;
+use App\Http\Requests\Fleet\UpdateDriverRequest;
 use App\Models\Fleet\Driver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -39,31 +41,24 @@ final class DriverController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(StoreDriverRequest $request): RedirectResponse
     {
         $this->authorize('create', Driver::class);
-        $validated = $request->validate([
-            'first_name' => ['required', 'string', 'max:255'],
-            'last_name' => ['required', 'string', 'max:255'],
-            'email' => ['nullable', 'email'],
-            'phone' => ['nullable', 'string', 'max:20'],
-            'employee_id' => ['nullable', 'string', 'max:255'],
-            'license_number' => ['required', 'string', 'max:50'],
-            'license_expiry_date' => ['required', 'date'],
-            'license_status' => ['required', 'string', 'in:valid,expired,suspended,revoked'],
-            'status' => ['required', 'string', 'in:active,suspended,terminated,on_leave'],
-            'compliance_status' => ['nullable', 'string', 'in:compliant,expiring_soon,expired'],
-            'risk_category' => ['nullable', 'string', 'in:low,medium,high,critical'],
-        ]);
-        Driver::create($validated);
+        Driver::create($request->validated());
         return to_route('fleet.drivers.index')->with('flash', ['status' => 'success', 'message' => 'Driver created.']);
     }
 
     public function show(Driver $driver): Response
     {
         $this->authorize('view', $driver);
-        $driver->load('user');
-        return Inertia::render('Fleet/Drivers/Show', ['driver' => $driver]);
+        $driver->load([
+            'user',
+            'vehicleAssignments' => fn ($q) => $q->with('vehicle')->orderByDesc('assigned_date'),
+            'currentAssignment' => fn ($q) => $q->with('vehicle'),
+        ]);
+        return Inertia::render('Fleet/Drivers/Show', [
+            'driver' => $driver,
+        ]);
     }
 
     public function edit(Driver $driver): Response
@@ -78,23 +73,10 @@ final class DriverController extends Controller
         ]);
     }
 
-    public function update(Request $request, Driver $driver): RedirectResponse
+    public function update(UpdateDriverRequest $request, Driver $driver): RedirectResponse
     {
         $this->authorize('update', $driver);
-        $validated = $request->validate([
-            'first_name' => ['required', 'string', 'max:255'],
-            'last_name' => ['required', 'string', 'max:255'],
-            'email' => ['nullable', 'email'],
-            'phone' => ['nullable', 'string', 'max:20'],
-            'employee_id' => ['nullable', 'string', 'max:255'],
-            'license_number' => ['required', 'string', 'max:50'],
-            'license_expiry_date' => ['required', 'date'],
-            'license_status' => ['required', 'string', 'in:valid,expired,suspended,revoked'],
-            'status' => ['required', 'string', 'in:active,suspended,terminated,on_leave'],
-            'compliance_status' => ['nullable', 'string', 'in:compliant,expiring_soon,expired'],
-            'risk_category' => ['nullable', 'string', 'in:low,medium,high,critical'],
-        ]);
-        $driver->update($validated);
+        $driver->update($request->validated());
         return to_route('fleet.drivers.show', $driver)->with('flash', ['status' => 'success', 'message' => 'Driver updated.']);
     }
 

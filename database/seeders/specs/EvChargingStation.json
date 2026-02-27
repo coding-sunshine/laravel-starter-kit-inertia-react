@@ -1,0 +1,153 @@
+{
+    "model": "EvChargingStation",
+    "table": "ev_charging_stations",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "external_id": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "operator": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "network": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "location_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "address": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "lat": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "lng": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "access_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "connector_types": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "charging_speeds": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "total_connectors": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "available_connectors": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "pricing_structure": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "operating_hours": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "amenities": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "last_status_update": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "location": {
+            "type": "belongsTo",
+            "model": "Location"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": {
+        "name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    },
+    "scenarios": []
+}

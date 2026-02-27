@@ -1,0 +1,119 @@
+{
+    "model": "FuelStation",
+    "table": "fuel_stations",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "external_id": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "brand": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "address": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "postcode": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "city": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "country": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "lat": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "lng": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "fuel_types_available": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "facilities": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "operating_hours": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "phone": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "website": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "price_quality_rating": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "is_active": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": {
+        "name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    },
+    "scenarios": []
+}

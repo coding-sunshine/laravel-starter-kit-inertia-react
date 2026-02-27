@@ -1,0 +1,161 @@
+{
+    "model": "Garage",
+    "table": "garages",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "specializations": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "address": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "postcode": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "city": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "lat": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "lng": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "contact_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "contact_phone": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "contact_email": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "operating_hours": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "capacity": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "certification_level": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "hourly_rate": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "preferred_supplier": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "quality_rating": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "is_active": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": {
+        "name": {
+            "type": "name",
+            "example": "John Doe"
+        },
+        "contact_name": {
+            "type": "name",
+            "example": "John Doe"
+        },
+        "contact_email": {
+            "type": "email",
+            "example": "user@example.com"
+        },
+        "hourly_rate": {
+            "type": "url",
+            "example": "https://example.com"
+        }
+    },
+    "scenarios": []
+}

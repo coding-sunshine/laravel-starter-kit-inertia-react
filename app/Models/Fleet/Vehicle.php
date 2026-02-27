@@ -8,6 +8,7 @@ use App\Models\Concerns\BelongsToOrganization;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Mattiverse\Userstamps\Traits\Userstamps;
 
@@ -139,5 +140,21 @@ class Vehicle extends Model
     public function homeLocation(): BelongsTo
     {
         return $this->belongsTo(Location::class, 'home_location_id');
+    }
+
+    /**
+     * @return HasMany<DriverVehicleAssignment, $this>
+     */
+    public function driverAssignments(): HasMany
+    {
+        return $this->hasMany(DriverVehicleAssignment::class);
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasOne<DriverVehicleAssignment, $this>
+     */
+    public function currentAssignment()
+    {
+        return $this->hasOne(DriverVehicleAssignment::class)->where('is_current', true);
     }
 }

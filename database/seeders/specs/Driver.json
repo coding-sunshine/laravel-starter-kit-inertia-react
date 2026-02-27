@@ -1,0 +1,228 @@
+{
+    "model": "Driver",
+    "table": "drivers",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "user_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "employee_id": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "first_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "last_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "email": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "phone": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "date_of_birth": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "hire_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "termination_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "license_number": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "license_expiry_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "license_status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "license_categories": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "cpc_number": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "cpc_expiry_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "medical_certificate_expiry": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "emergency_contact_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "emergency_contact_phone": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "address": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "postcode": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "safety_score": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "risk_category": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "accidents_count": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "violations_count": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "training_completed_count": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "last_incident_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "compliance_status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "last_dvla_check": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "user": {
+            "type": "belongsTo",
+            "model": "User"
+        },
+        "vehiclesAssigned": {
+            "type": "hasMany",
+            "model": "VehiclesAssigned"
+        },
+        "vehicleAssignments": {
+            "type": "hasMany",
+            "model": "VehicleAssignment"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": {
+        "first_name": {
+            "type": "name",
+            "example": "John Doe"
+        },
+        "last_name": {
+            "type": "name",
+            "example": "John Doe"
+        },
+        "email": {
+            "type": "email",
+            "example": "user@example.com"
+        },
+        "emergency_contact_name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    },
+    "scenarios": []
+}

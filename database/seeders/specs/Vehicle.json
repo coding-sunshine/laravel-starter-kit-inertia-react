@@ -1,0 +1,251 @@
+{
+    "model": "Vehicle",
+    "table": "vehicles",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "registration": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "vin": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "fleet_number": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "make": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "model": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "year": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "fuel_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "vehicle_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "weight_kg": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "max_payload_kg": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "seating_capacity": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "current_driver_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "home_location_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "current_lat": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "current_lng": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "location_updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "location_accuracy_meters": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "odometer_reading": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "odometer_updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "monthly_distance_km": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "monthly_fuel_cost": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "purchase_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "purchase_price": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "current_value": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "depreciation_rate": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "insurance_group": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "mot_expiry_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "insurance_expiry_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "tax_expiry_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "compliance_status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "co2_emissions": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "euro_standard": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "maintenance_risk_score": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "efficiency_score": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "safety_score": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "scores_updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "currentDriver": {
+            "type": "belongsTo",
+            "model": "CurrentDriver"
+        },
+        "homeLocation": {
+            "type": "belongsTo",
+            "model": "HomeLocation"
+        },
+        "driverAssignments": {
+            "type": "hasMany",
+            "model": "DriverAssignment"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

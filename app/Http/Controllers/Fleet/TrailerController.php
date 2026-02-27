@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Fleet;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Fleet\StoreTrailerRequest;
+use App\Http\Requests\Fleet\UpdateTrailerRequest;
 use App\Models\Fleet\Trailer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -39,21 +41,10 @@ final class TrailerController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(StoreTrailerRequest $request): RedirectResponse
     {
         $this->authorize('create', Trailer::class);
-        $validated = $request->validate([
-            'registration' => ['nullable', 'string', 'max:50'],
-            'fleet_number' => ['nullable', 'string', 'max:50'],
-            'type' => ['required', 'string', 'in:flatbed,box,tank,refrigerated,lowloader,other'],
-            'make' => ['nullable', 'string', 'max:100'],
-            'model' => ['nullable', 'string', 'max:100'],
-            'year' => ['nullable', 'integer', 'min:1900', 'max:2100'],
-            'home_location_id' => ['nullable', 'exists:locations,id'],
-            'status' => ['required', 'string', 'in:active,maintenance,vor,disposed'],
-            'compliance_status' => ['nullable', 'string', 'in:compliant,expiring_soon,expired'],
-        ]);
-        Trailer::create($validated);
+        Trailer::create($request->validated());
         return to_route('fleet.trailers.index')->with('flash', ['status' => 'success', 'message' => 'Trailer created.']);
     }
 
@@ -75,21 +66,10 @@ final class TrailerController extends Controller
         ]);
     }
 
-    public function update(Request $request, Trailer $trailer): RedirectResponse
+    public function update(UpdateTrailerRequest $request, Trailer $trailer): RedirectResponse
     {
         $this->authorize('update', $trailer);
-        $validated = $request->validate([
-            'registration' => ['nullable', 'string', 'max:50'],
-            'fleet_number' => ['nullable', 'string', 'max:50'],
-            'type' => ['required', 'string', 'in:flatbed,box,tank,refrigerated,lowloader,other'],
-            'make' => ['nullable', 'string', 'max:100'],
-            'model' => ['nullable', 'string', 'max:100'],
-            'year' => ['nullable', 'integer', 'min:1900', 'max:2100'],
-            'home_location_id' => ['nullable', 'exists:locations,id'],
-            'status' => ['required', 'string', 'in:active,maintenance,vor,disposed'],
-            'compliance_status' => ['nullable', 'string', 'in:compliant,expiring_soon,expired'],
-        ]);
-        $trailer->update($validated);
+        $trailer->update($request->validated());
         return to_route('fleet.trailers.show', $trailer)->with('flash', ['status' => 'success', 'message' => 'Trailer updated.']);
     }
 

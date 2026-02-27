@@ -1,0 +1,188 @@
+{
+    "model": "Geofence",
+    "table": "geofences",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "location_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "description": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "geofence_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "center_lat": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "center_lng": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "radius_meters": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "polygon_coordinates": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "location_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "alert_on_entry": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "alert_on_exit": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "alert_on_speeding": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "speed_limit_kmh": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "time_restrictions_apply": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "allowed_hours_start": {
+            "type": "time",
+            "nullable": true,
+            "default": null
+        },
+        "allowed_hours_end": {
+            "type": "time",
+            "nullable": true,
+            "default": null
+        },
+        "allowed_days": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "is_active": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "monitoring_start_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "monitoring_end_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "total_entries": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "total_exits": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "total_violations": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "last_activity_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "notes": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "location": {
+            "type": "belongsTo",
+            "model": "Location"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": {
+        "name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    },
+    "scenarios": []
+}

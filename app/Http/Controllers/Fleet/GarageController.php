@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Fleet;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Fleet\StoreGarageRequest;
+use App\Http\Requests\Fleet\UpdateGarageRequest;
 use App\Models\Fleet\Garage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -37,19 +39,10 @@ final class GarageController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(StoreGarageRequest $request): RedirectResponse
     {
         $this->authorize('create', Garage::class);
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:200'],
-            'type' => ['required', 'string', 'in:internal,external,mobile'],
-            'address' => ['nullable', 'string'],
-            'contact_name' => ['nullable', 'string', 'max:200'],
-            'contact_phone' => ['nullable', 'string', 'max:20'],
-            'contact_email' => ['nullable', 'email'],
-            'is_active' => ['nullable', 'boolean'],
-        ]);
-        Garage::create($validated);
+        Garage::create($request->validated());
         return to_route('fleet.garages.index')->with('flash', ['status' => 'success', 'message' => 'Garage created.']);
     }
 
@@ -68,19 +61,10 @@ final class GarageController extends Controller
         ]);
     }
 
-    public function update(Request $request, Garage $garage): RedirectResponse
+    public function update(UpdateGarageRequest $request, Garage $garage): RedirectResponse
     {
         $this->authorize('update', $garage);
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:200'],
-            'type' => ['required', 'string', 'in:internal,external,mobile'],
-            'address' => ['nullable', 'string'],
-            'contact_name' => ['nullable', 'string', 'max:200'],
-            'contact_phone' => ['nullable', 'string', 'max:20'],
-            'contact_email' => ['nullable', 'email'],
-            'is_active' => ['nullable', 'boolean'],
-        ]);
-        $garage->update($validated);
+        $garage->update($request->validated());
         return to_route('fleet.garages.show', $garage)->with('flash', ['status' => 'success', 'message' => 'Garage updated.']);
     }
 

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Fleet;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Fleet\StoreCostCenterRequest;
+use App\Http\Requests\Fleet\UpdateCostCenterRequest;
 use App\Models\Fleet\CostCenter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -40,21 +42,10 @@ final class CostCenterController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(StoreCostCenterRequest $request): RedirectResponse
     {
         $this->authorize('create', CostCenter::class);
-        $validated = $request->validate([
-            'code' => ['required', 'string', 'max:50'],
-            'name' => ['required', 'string', 'max:200'],
-            'description' => ['nullable', 'string'],
-            'parent_cost_center_id' => ['nullable', 'exists:cost_centers,id'],
-            'cost_center_type' => ['required', 'string', 'in:department,project,location,vehicle_type'],
-            'manager_user_id' => ['nullable', 'exists:users,id'],
-            'budget_annual' => ['nullable', 'numeric', 'min:0'],
-            'budget_monthly' => ['nullable', 'numeric', 'min:0'],
-            'is_active' => ['nullable', 'boolean'],
-        ]);
-        CostCenter::create($validated);
+        CostCenter::create($request->validated());
         return to_route('fleet.cost-centers.index')->with('flash', ['status' => 'success', 'message' => 'Cost center created.']);
     }
 
@@ -76,21 +67,10 @@ final class CostCenterController extends Controller
         ]);
     }
 
-    public function update(Request $request, CostCenter $costCenter): RedirectResponse
+    public function update(UpdateCostCenterRequest $request, CostCenter $costCenter): RedirectResponse
     {
         $this->authorize('update', $costCenter);
-        $validated = $request->validate([
-            'code' => ['required', 'string', 'max:50'],
-            'name' => ['required', 'string', 'max:200'],
-            'description' => ['nullable', 'string'],
-            'parent_cost_center_id' => ['nullable', 'exists:cost_centers,id'],
-            'cost_center_type' => ['required', 'string', 'in:department,project,location,vehicle_type'],
-            'manager_user_id' => ['nullable', 'exists:users,id'],
-            'budget_annual' => ['nullable', 'numeric', 'min:0'],
-            'budget_monthly' => ['nullable', 'numeric', 'min:0'],
-            'is_active' => ['nullable', 'boolean'],
-        ]);
-        $costCenter->update($validated);
+        $costCenter->update($request->validated());
         return to_route('fleet.cost-centers.show', $costCenter)->with('flash', ['status' => 'success', 'message' => 'Cost center updated.']);
     }
 

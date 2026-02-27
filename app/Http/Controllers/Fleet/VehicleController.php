@@ -5,7 +5,11 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Fleet;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Fleet\StoreVehicleRequest;
+use App\Http\Requests\Fleet\UpdateVehicleRequest;
+use App\Models\Fleet\DriverVehicleAssignment;
 use App\Models\Fleet\Vehicle;
+use App\Services\TenantContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -41,32 +45,71 @@ final class VehicleController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(StoreVehicleRequest $request): RedirectResponse
     {
         $this->authorize('create', Vehicle::class);
-        $validated = $request->validate([
-            'registration' => ['required', 'string', 'max:50'],
-            'vin' => ['nullable', 'string', 'size:17'],
-            'fleet_number' => ['nullable', 'string', 'max:50'],
-            'make' => ['required', 'string', 'max:100'],
-            'model' => ['required', 'string', 'max:100'],
-            'year' => ['nullable', 'integer', 'min:1900', 'max:2100'],
-            'fuel_type' => ['required', 'string', 'in:petrol,diesel,electric,hybrid'],
-            'vehicle_type' => ['required', 'string', 'in:car,van,truck,bus,motorcycle'],
-            'home_location_id' => ['nullable', 'exists:locations,id'],
-            'current_driver_id' => ['nullable', 'exists:drivers,id'],
-            'status' => ['required', 'string', 'in:active,maintenance,vor,disposed'],
-            'compliance_status' => ['nullable', 'string', 'in:compliant,expiring_soon,expired'],
-        ]);
-        Vehicle::create($validated);
+        Vehicle::create($request->validated());
         return to_route('fleet.vehicles.index')->with('flash', ['status' => 'success', 'message' => 'Vehicle created.']);
     }
 
     public function show(Vehicle $vehicle): Response
     {
         $this->authorize('view', $vehicle);
-        $vehicle->load(['homeLocation', 'currentDriver']);
-        return Inertia::render('Fleet/Vehicles/Show', ['vehicle' => $vehicle]);
+        $vehicle->load(['homeLocation', 'currentDriver', 'driverAssignments' => fn ($q) => $q->with('driver')->orderByDesc('assigned_date')]);
+        return Inertia::render('Fleet/Vehicles/Show', [
+            'vehicle' => $vehicle,
+            'drivers' => \App\Models\Fleet\Driver::query()->orderBy('last_name')->get(['id', 'first_name', 'last_name']),
+            'assignmentTypes' => array_map(fn ($c) => ['name' => $c->name, 'value' => $c->value], \App\Enums\Fleet\AssignmentType::cases()),
+        ]);
+    }
+
+    public function assignDriver(Request $request, Vehicle $vehicle): RedirectResponse
+    {
+        $this->authorize('update', $vehicle);
+        $validated = $request->validate([
+            'driver_id' => ['required', 'integer', 'exists:drivers,id'],
+            'assignment_type' => ['required', 'string', 'in:primary,secondary,temporary'],
+            'assigned_date' => ['required', 'date'],
+            'notes' => ['nullable', 'string', 'max:65535'],
+        ]);
+        $orgId = TenantContext::id();
+
+        DriverVehicleAssignment::query()
+            ->where('organization_id', $orgId)
+            ->where('is_current', true)
+            ->where(function ($q) use ($vehicle, $validated) {
+                $q->where('vehicle_id', $vehicle->id)->orWhere('driver_id', $validated['driver_id']);
+            })
+            ->update(['is_current' => false, 'unassigned_date' => $validated['assigned_date']]);
+
+        DriverVehicleAssignment::create([
+            'organization_id' => $orgId,
+            'driver_id' => $validated['driver_id'],
+            'vehicle_id' => $vehicle->id,
+            'assignment_type' => $validated['assignment_type'],
+            'assigned_date' => $validated['assigned_date'],
+            'is_current' => true,
+            'notes' => $validated['notes'] ?? null,
+            'assigned_by' => $request->user()->id,
+        ]);
+
+        $vehicle->update(['current_driver_id' => $validated['driver_id']]);
+
+        return redirect()->route('fleet.vehicles.show', $vehicle)->with('flash', ['status' => 'success', 'message' => 'Driver assigned.']);
+    }
+
+    public function unassignDriver(Vehicle $vehicle): RedirectResponse
+    {
+        $this->authorize('update', $vehicle);
+        $assignment = DriverVehicleAssignment::query()
+            ->where('vehicle_id', $vehicle->id)
+            ->where('is_current', true)
+            ->first();
+        if ($assignment) {
+            $assignment->update(['is_current' => false, 'unassigned_date' => now()->toDateString()]);
+        }
+        $vehicle->update(['current_driver_id' => null]);
+        return redirect()->route('fleet.vehicles.show', $vehicle)->with('flash', ['status' => 'success', 'message' => 'Driver unassigned.']);
     }
 
     public function edit(Vehicle $vehicle): Response
@@ -82,24 +125,10 @@ final class VehicleController extends Controller
         ]);
     }
 
-    public function update(Request $request, Vehicle $vehicle): RedirectResponse
+    public function update(UpdateVehicleRequest $request, Vehicle $vehicle): RedirectResponse
     {
         $this->authorize('update', $vehicle);
-        $validated = $request->validate([
-            'registration' => ['required', 'string', 'max:50'],
-            'vin' => ['nullable', 'string', 'size:17'],
-            'fleet_number' => ['nullable', 'string', 'max:50'],
-            'make' => ['required', 'string', 'max:100'],
-            'model' => ['required', 'string', 'max:100'],
-            'year' => ['nullable', 'integer', 'min:1900', 'max:2100'],
-            'fuel_type' => ['required', 'string', 'in:petrol,diesel,electric,hybrid'],
-            'vehicle_type' => ['required', 'string', 'in:car,van,truck,bus,motorcycle'],
-            'home_location_id' => ['nullable', 'exists:locations,id'],
-            'current_driver_id' => ['nullable', 'exists:drivers,id'],
-            'status' => ['required', 'string', 'in:active,maintenance,vor,disposed'],
-            'compliance_status' => ['nullable', 'string', 'in:compliant,expiring_soon,expired'],
-        ]);
-        $vehicle->update($validated);
+        $vehicle->update($request->validated());
         return to_route('fleet.vehicles.show', $vehicle)->with('flash', ['status' => 'success', 'message' => 'Vehicle updated.']);
     }
 

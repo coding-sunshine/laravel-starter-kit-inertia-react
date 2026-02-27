@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Fleet;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Fleet\StoreFuelStationRequest;
+use App\Http\Requests\Fleet\UpdateFuelStationRequest;
 use App\Models\Fleet\FuelStation;
 use App\Services\TenantContext;
 use Illuminate\Http\RedirectResponse;
@@ -37,22 +39,10 @@ final class FuelStationController extends Controller
         return Inertia::render('Fleet/FuelStations/Create');
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(StoreFuelStationRequest $request): RedirectResponse
     {
         $this->authorize('create', FuelStation::class);
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:200'],
-            'brand' => ['nullable', 'string', 'max:100'],
-            'address' => ['required', 'string'],
-            'postcode' => ['nullable', 'string', 'max:20'],
-            'city' => ['nullable', 'string', 'max:100'],
-            'country' => ['nullable', 'string', 'max:50'],
-            'lat' => ['nullable', 'numeric'],
-            'lng' => ['nullable', 'numeric'],
-            'phone' => ['nullable', 'string', 'max:20'],
-            'website' => ['nullable', 'string', 'max:255'],
-            'is_active' => ['nullable', 'boolean'],
-        ]);
+        $validated = $request->validated();
         $validated['organization_id'] = TenantContext::id();
         FuelStation::create($validated);
         return to_route('fleet.fuel-stations.index')->with('flash', ['status' => 'success', 'message' => 'Fuel station created.']);
@@ -70,23 +60,10 @@ final class FuelStationController extends Controller
         return Inertia::render('Fleet/FuelStations/Edit', ['fuelStation' => $fuelStation]);
     }
 
-    public function update(Request $request, FuelStation $fuelStation): RedirectResponse
+    public function update(UpdateFuelStationRequest $request, FuelStation $fuelStation): RedirectResponse
     {
         $this->authorize('update', $fuelStation);
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:200'],
-            'brand' => ['nullable', 'string', 'max:100'],
-            'address' => ['required', 'string'],
-            'postcode' => ['nullable', 'string', 'max:20'],
-            'city' => ['nullable', 'string', 'max:100'],
-            'country' => ['nullable', 'string', 'max:50'],
-            'lat' => ['nullable', 'numeric'],
-            'lng' => ['nullable', 'numeric'],
-            'phone' => ['nullable', 'string', 'max:20'],
-            'website' => ['nullable', 'string', 'max:255'],
-            'is_active' => ['nullable', 'boolean'],
-        ]);
-        $fuelStation->update($validated);
+        $fuelStation->update($request->validated());
         return to_route('fleet.fuel-stations.show', $fuelStation)->with('flash', ['status' => 'success', 'message' => 'Fuel station updated.']);
     }
 

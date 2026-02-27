@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Fleet;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Fleet\StoreGeofenceRequest;
+use App\Http\Requests\Fleet\UpdateGeofenceRequest;
 use App\Models\Fleet\Geofence;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -38,20 +40,10 @@ final class GeofenceController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(StoreGeofenceRequest $request): RedirectResponse
     {
         $this->authorize('create', Geofence::class);
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:200'],
-            'description' => ['nullable', 'string'],
-            'geofence_type' => ['required', 'string', 'in:circle,polygon,administrative_boundary'],
-            'location_id' => ['nullable', 'exists:locations,id'],
-            'center_lat' => ['nullable', 'numeric'],
-            'center_lng' => ['nullable', 'numeric'],
-            'radius_meters' => ['nullable', 'integer', 'min:0'],
-            'is_active' => ['nullable', 'boolean'],
-        ]);
-        Geofence::create($validated);
+        Geofence::create($request->validated());
         return to_route('fleet.geofences.index')->with('flash', ['status' => 'success', 'message' => 'Geofence created.']);
     }
 
@@ -72,20 +64,10 @@ final class GeofenceController extends Controller
         ]);
     }
 
-    public function update(Request $request, Geofence $geofence): RedirectResponse
+    public function update(UpdateGeofenceRequest $request, Geofence $geofence): RedirectResponse
     {
         $this->authorize('update', $geofence);
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:200'],
-            'description' => ['nullable', 'string'],
-            'geofence_type' => ['required', 'string', 'in:circle,polygon,administrative_boundary'],
-            'location_id' => ['nullable', 'exists:locations,id'],
-            'center_lat' => ['nullable', 'numeric'],
-            'center_lng' => ['nullable', 'numeric'],
-            'radius_meters' => ['nullable', 'integer', 'min:0'],
-            'is_active' => ['nullable', 'boolean'],
-        ]);
-        $geofence->update($validated);
+        $geofence->update($request->validated());
         return to_route('fleet.geofences.show', $geofence)->with('flash', ['status' => 'success', 'message' => 'Geofence updated.']);
     }
 

@@ -205,12 +205,15 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         Route::resource('cost-centers', App\Http\Controllers\Fleet\CostCenterController::class)->names('cost-centers');
         Route::resource('drivers', App\Http\Controllers\Fleet\DriverController::class)->names('drivers');
         Route::resource('trailers', App\Http\Controllers\Fleet\TrailerController::class)->names('trailers');
+        Route::post('vehicles/{vehicle}/assign-driver', [App\Http\Controllers\Fleet\VehicleController::class, 'assignDriver'])->name('vehicles.assign-driver');
+        Route::post('vehicles/{vehicle}/unassign-driver', [App\Http\Controllers\Fleet\VehicleController::class, 'unassignDriver'])->name('vehicles.unassign-driver');
         Route::resource('vehicles', App\Http\Controllers\Fleet\VehicleController::class)->names('vehicles');
         Route::resource('geofences', App\Http\Controllers\Fleet\GeofenceController::class)->names('geofences');
         Route::resource('garages', App\Http\Controllers\Fleet\GarageController::class)->names('garages');
         Route::resource('fuel-stations', App\Http\Controllers\Fleet\FuelStationController::class)->names('fuel-stations');
         Route::resource('ev-charging-stations', App\Http\Controllers\Fleet\EvChargingStationController::class)->names('ev-charging-stations');
         Route::resource('operator-licences', App\Http\Controllers\Fleet\OperatorLicenceController::class)->names('operator-licences');
+        Route::resource('driver-vehicle-assignments', App\Http\Controllers\Fleet\DriverVehicleAssignmentController::class)->only(['index', 'store', 'update', 'destroy'])->names('driver-vehicle-assignments');
     });
 
     Route::middleware('tenant')->group(function (): void {

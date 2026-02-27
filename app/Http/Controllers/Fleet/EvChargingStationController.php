@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Fleet;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Fleet\StoreEvChargingStationRequest;
+use App\Http\Requests\Fleet\UpdateEvChargingStationRequest;
 use App\Models\Fleet\EvChargingStation;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -37,23 +39,10 @@ final class EvChargingStationController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(StoreEvChargingStationRequest $request): RedirectResponse
     {
         $this->authorize('create', EvChargingStation::class);
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:200'],
-            'operator' => ['nullable', 'string', 'max:100'],
-            'network' => ['nullable', 'string', 'max:100'],
-            'location_id' => ['nullable', 'exists:locations,id'],
-            'address' => ['nullable', 'string'],
-            'lat' => ['nullable', 'numeric'],
-            'lng' => ['nullable', 'numeric'],
-            'access_type' => ['required', 'string', 'in:public,private,restricted'],
-            'total_connectors' => ['nullable', 'integer', 'min:1'],
-            'available_connectors' => ['nullable', 'integer', 'min:0'],
-            'status' => ['required', 'string', 'in:operational,maintenance,out_of_service'],
-        ]);
-        EvChargingStation::create($validated);
+        EvChargingStation::create($request->validated());
         return to_route('fleet.ev-charging-stations.index')->with('flash', ['status' => 'success', 'message' => 'EV charging station created.']);
     }
 
@@ -73,23 +62,10 @@ final class EvChargingStationController extends Controller
         ]);
     }
 
-    public function update(Request $request, EvChargingStation $evChargingStation): RedirectResponse
+    public function update(UpdateEvChargingStationRequest $request, EvChargingStation $evChargingStation): RedirectResponse
     {
         $this->authorize('update', $evChargingStation);
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:200'],
-            'operator' => ['nullable', 'string', 'max:100'],
-            'network' => ['nullable', 'string', 'max:100'],
-            'location_id' => ['nullable', 'exists:locations,id'],
-            'address' => ['nullable', 'string'],
-            'lat' => ['nullable', 'numeric'],
-            'lng' => ['nullable', 'numeric'],
-            'access_type' => ['required', 'string', 'in:public,private,restricted'],
-            'total_connectors' => ['nullable', 'integer', 'min:1'],
-            'available_connectors' => ['nullable', 'integer', 'min:0'],
-            'status' => ['required', 'string', 'in:operational,maintenance,out_of_service'],
-        ]);
-        $evChargingStation->update($validated);
+        $evChargingStation->update($request->validated());
         return to_route('fleet.ev-charging-stations.show', $evChargingStation)->with('flash', ['status' => 'success', 'message' => 'EV charging station updated.']);
     }
 
