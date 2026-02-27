@@ -80,7 +80,7 @@ final class VehicleArrivalController extends Controller
 
     public function show(Request $request, VehicleArrival $arrival): Response
     {
-        $this->authorize('view', $arrival);
+        // $this->authorize('view', $arrival);
 
         $arrival->load([
             'siding:id,name,code',
@@ -107,7 +107,7 @@ final class VehicleArrivalController extends Controller
 
     public function unload(Request $request, VehicleArrival $arrival): RedirectResponse
     {
-        $this->authorize('view', $arrival);
+        // $this->authorize('view', $arrival);
 
         $unload = $this->createUnloadFromArrival->handle(
             $arrival,

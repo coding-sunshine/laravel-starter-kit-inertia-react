@@ -15,14 +15,12 @@ final class GuardInspection extends Model
 
     protected $fillable = [
         'rake_id',
-        'inspection_time',
+        'inspection_start_time',
+        'inspection_end_time',
+        'movement_permission_time',
         'is_approved',
         'remarks',
-    ];
-
-    protected $casts = [
-        'inspection_time' => 'datetime',
-        'is_approved' => 'boolean',
+        'created_by',
     ];
 
     public function rake(): BelongsTo
@@ -33,5 +31,15 @@ final class GuardInspection extends Model
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    protected function casts(): array
+    {
+        return [
+            'inspection_start_time' => 'datetime',
+            'inspection_end_time' => 'datetime',
+            'movement_permission_time' => 'datetime',
+            'is_approved' => 'boolean',
+        ];
     }
 }

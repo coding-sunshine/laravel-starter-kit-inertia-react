@@ -13,8 +13,12 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasColumn('txr', 'updated_by')) {
+            return;
+        }
+
         Schema::table('txr', function (Blueprint $table): void {
-            $table->foreignId('updated_by')->nullable()->after('created_by')->constrained('users')->onDelete('set null');
+            $table->foreignId('updated_by')->nullable()->after('created_by')->constrained('users')->nullOnDelete();
         });
     }
 
@@ -23,8 +27,13 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (! Schema::hasColumn('txr', 'updated_by')) {
+            return;
+        }
+
         Schema::table('txr', function (Blueprint $table): void {
             $table->dropForeign(['updated_by']);
+            $table->dropColumn('updated_by');
         });
     }
 };

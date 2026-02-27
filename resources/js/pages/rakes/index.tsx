@@ -21,12 +21,10 @@ interface RakeRow {
     id: number;
     rake_number: string;
     rake_type: string | null;
-    wagon_count: number;
+    wagon_count: number | null;
     state: string;
-    loading_start_time: string | null;
-    loading_end_time: string | null;
-    demurrage_hours: number;
-    demurrage_penalty_amount: string;
+    placement_time: string | null;
+    dispatch_time: string | null;
     siding_code: string | null;
     siding_name: string | null;
 }
@@ -87,10 +85,9 @@ export default function RakesIndex({ tableData }: Props) {
                                 if (columnId === 'state') {
                                     return <StatusPill status={row.state} />;
                                 }
-                                if (columnId === 'loading_start_time') {
-                                    return row.loading_start_time &&
-                                        row.loading_end_time
-                                        ? `${new Date(row.loading_start_time).toLocaleString()} – ${new Date(row.loading_end_time).toLocaleString()}`
+                                if (columnId === 'placement_time') {
+                                    return row.placement_time
+                                        ? new Date(row.placement_time).toLocaleString()
                                         : '—';
                                 }
                                 return undefined;

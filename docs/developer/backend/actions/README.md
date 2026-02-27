@@ -67,5 +67,6 @@ All Actions:
 | [ClassifyPenaltyRootCauseAction](./ClassifyPenaltyRootCauseAction.md) | N/A | ✅ |
 | [GeneratePenaltyPredictionsAction](./GeneratePenaltyPredictionsAction.md) | N/A | ✅ |
 | [RecommendDisputeAction](./RecommendDisputeAction.md) | N/A | ✅ |
+| CreateUnloadFromArrival | N/A | ❌ |
 
 

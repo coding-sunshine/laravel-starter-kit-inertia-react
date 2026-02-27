@@ -57,7 +57,7 @@ interface ActiveRake {
     id: number;
     rake_number: string;
     siding: { id: number; name: string; code: string } | null;
-    loading_start_time: string;
+    placement_time: string;
     free_time_minutes: number;
     remaining_minutes: number;
 }

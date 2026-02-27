@@ -14,22 +14,54 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('indents', function (Blueprint $table): void {
+
             $table->id();
-            $table->foreignId('siding_id')->constrained('sidings')->onDelete('cascade');
-            $table->string('indent_number', 20)->unique();
-            $table->decimal('target_quantity_mt', 12, 2);
-            $table->decimal('allocated_quantity_mt', 12, 2)->default(0);
-            $table->string('state')->default('pending'); // pending, allocated, partial, completed, cancelled
-            $table->dateTime('indent_date');
+
+            $table->foreignId('siding_id')
+                ->constrained('sidings')
+                ->cascadeOnDelete();
+
+            // Official indent reference
+            $table->string('indent_number', 20)->nullable();
+
+            // Official demand details
+            $table->string('demanded_stock', 100)->nullable();   // Rake / wagon type
+            $table->integer('total_units')->nullable();          // Number of wagons requested
+
+            // Quantities
+            $table->decimal('target_quantity_mt', 12, 2)->nullable();
+            $table->decimal('allocated_quantity_mt', 12, 2)->nullable();
+            $table->decimal('available_stock_mt', 12, 2)->nullable();
+
+            // Dates & timing
+            $table->dateTime('indent_date')->nullable();
+            $table->dateTime('indent_time')->nullable();
+            $table->date('expected_loading_date')->nullable();
             $table->dateTime('required_by_date')->nullable();
-            $table->string('remarks')->nullable();
-            $table->foreignId('created_by')->nullable()->constrained('users')->onDelete('set null');
-            $table->foreignId('updated_by')->nullable()->constrained('users')->onDelete('set null');
+
+            // Railway references
+            $table->string('railway_reference_no', 100)->nullable();
+            $table->string('e_demand_reference_id', 100)->nullable();
+            $table->string('fnr_number', 50)->nullable();
+
+            // Workflow state
+            $table->string('state')->nullable();
+
+            // Notes
+            $table->text('remarks')->nullable();
+
+            // Audit
+            $table->foreignId('created_by')->nullable()
+                ->constrained('users')
+                ->nullOnDelete();
+
+            $table->foreignId('updated_by')->nullable()
+                ->constrained('users')
+                ->nullOnDelete();
+
             $table->timestamps();
             $table->softDeletes();
-
             $table->index(['siding_id', 'state']);
-            $table->index('indent_number');
         });
     }
 

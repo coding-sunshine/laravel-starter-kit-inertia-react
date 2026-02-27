@@ -34,6 +34,13 @@ import {
     Scale,
     Train,
     Truck,
+    Settings,
+    Database,
+    Factory,
+    MapPin,
+    Package,
+    Timer,
+    Route,
 } from 'lucide-react';
 import { useMemo } from 'react';
 import AppLogo from './app-logo';
@@ -46,12 +53,48 @@ const mainNavItems: NavItem[] = [
         dataPan: 'nav-dashboard',
     },
     {
-        title: 'Organizations',
-        href: organizations.index.url(),
-        icon: Building2,
-        tenancyRequired: true,
-        dataPan: 'nav-organizations',
+        title: 'Power Plants',
+        href: '/master-data/power-plants',
+        icon: Factory,
+        dataPan: 'nav-power-plants',
     },
+    {
+        title: 'Sidings',
+        href: '/master-data/sidings',
+        icon: MapPin,
+        dataPan: 'nav-sidings',
+    },
+    {
+        title: 'Loaders',
+        href: '/master-data/loaders',
+        icon: Package,
+        dataPan: 'nav-loaders',
+    },
+    {
+        title: 'Penalty Types',
+        href: '/master-data/penalty-types',
+        icon: AlertTriangle,
+        dataPan: 'nav-penalty-types',
+    },
+    {
+        title: 'Section Timers',
+        href: '/master-data/section-timers',
+        icon: Timer,
+        dataPan: 'nav-section-timers',
+    },
+    {
+        title: 'Distance Matrix',
+        href: '/master-data/distance-matrix',
+        icon: Route,
+        dataPan: 'nav-distance-matrix',
+    },
+    // {
+    //     title: 'Organizations',
+    //     href: organizations.index.url(),
+    //     icon: Building2,
+    //     tenancyRequired: true,
+    //     dataPan: 'nav-organizations',
+    // },
     {
         title: 'Billing',
         href: '/billing',
@@ -73,7 +116,7 @@ const mainNavItems: NavItem[] = [
     },
     {
         title: 'Road Dispatch',
-        href: '/road-dispatch/arrivals',
+        href: '/road-dispatch/daily-vehicle-entries',
         icon: Truck,
         dataPan: 'nav-road-dispatch',
     },
@@ -134,25 +177,25 @@ const mainNavItems: NavItem[] = [
 ];
 
 const footerNavItems: NavItem[] = [
-    {
-        title: 'API docs',
-        href: '/docs/api',
-        icon: BookOpen,
-        feature: 'scramble_api_docs',
-        dataPan: 'nav-api-docs',
-    },
-    {
-        title: 'Repository',
-        href: 'https://github.com/laravel/react-starter-kit',
-        icon: Folder,
-        dataPan: 'nav-repository',
-    },
-    {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#react',
-        icon: BookOpen,
-        dataPan: 'nav-documentation',
-    },
+    // {
+    //     title: 'API docs',
+    //     href: '/docs/api',
+    //     icon: BookOpen,
+    //     feature: 'scramble_api_docs',
+    //     dataPan: 'nav-api-docs',
+    // },
+    // {
+    //     title: 'Repository',
+    //     href: 'https://github.com/laravel/react-starter-kit',
+    //     icon: Folder,
+    //     dataPan: 'nav-repository',
+    // },
+    // {
+    //     title: 'Documentation',
+    //     href: 'https://laravel.com/docs/starter-kits#react',
+    //     icon: BookOpen,
+    //     dataPan: 'nav-documentation',
+    // },
 ];
 
 /** Hide item when it has a feature key and that feature is inactive (shared from server). */

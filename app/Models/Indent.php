@@ -6,6 +6,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Mattiverse\Userstamps\Traits\Userstamps;
 use Spatie\MediaLibrary\HasMedia;
@@ -27,11 +28,15 @@ final class Indent extends Model implements HasMedia
         'remarks',
         'e_demand_reference_id',
         'fnr_number',
+        'expected_loading_date',
+        'demanded_stock',
+        'total_units',
     ];
 
     protected $casts = [
         'indent_date' => 'datetime',
         'required_by_date' => 'datetime',
+        'expected_loading_date' => 'datetime',
     ];
 
     protected $appends = ['indent_confirmation_pdf_url'];
@@ -46,6 +51,11 @@ final class Indent extends Model implements HasMedia
     public function siding(): BelongsTo
     {
         return $this->belongsTo(Siding::class);
+    }
+
+    public function rake(): HasOne
+    {
+        return $this->hasOne(Rake::class);
     }
 
     public function createdBy(): BelongsTo

@@ -12,7 +12,17 @@
             "nullable": true,
             "default": null
         },
-        "inspection_time": {
+        "inspection_start_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "inspection_end_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "movement_permission_time": {
             "type": "timestamp",
             "nullable": true,
             "default": null
@@ -41,11 +51,6 @@
             "type": "timestamp",
             "nullable": true,
             "default": null
-        },
-        "updated_by": {
-            "type": "bigint",
-            "nullable": true,
-            "default": null
         }
     },
     "relationships": {
@@ -58,6 +63,27 @@
             "model": "CreatedBy"
         }
     },
-    "value_hints": [],
+    "value_hints": {
+        "inspection_time": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        },
+        "movement_permission_time": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        },
+        "is_approved": {
+            "type": "boolean",
+            "example": true
+        },
+        "inspection_start_time": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        },
+        "inspection_end_time": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        }
+    },
     "scenarios": []
 }

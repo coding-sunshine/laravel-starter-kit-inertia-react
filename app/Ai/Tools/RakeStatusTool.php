@@ -42,13 +42,13 @@ final class RakeStatusTool implements Tool
         if ($mode === 'demurrage_risk') {
             $rakes = (clone $query)
                 ->where('state', 'loading')
-                ->whereNotNull('loading_start_time')
+                ->whereNotNull('placement_time')
                 ->whereNotNull('free_time_minutes')
                 ->get();
 
             $atRisk = [];
             foreach ($rakes as $rake) {
-                $end = $rake->loading_start_time->copy()->addMinutes((int) $rake->free_time_minutes);
+                $end = $rake->placement_time->copy()->addMinutes((int) $rake->free_time_minutes);
                 $remaining = (int) now()->diffInMinutes($end, false);
                 $atRisk[] = [
                     'rake_number' => $rake->rake_number,
@@ -72,11 +72,9 @@ final class RakeStatusTool implements Tool
                     'rake_number' => $r->rake_number,
                     'siding' => $r->siding?->name,
                     'state' => $r->state,
-                    'loading_start' => $r->loading_start_time?->toDateTimeString(),
-                    'loading_end' => $r->loading_end_time?->toDateTimeString(),
+                    'loading_start' => $r->placement_time?->toDateTimeString(),
+                    'loading_end' => $r->dispatch_time?->toDateTimeString(),
                     'free_time_minutes' => $r->free_time_minutes,
-                    'demurrage_hours' => $r->demurrage_hours,
-                    'demurrage_amount' => $r->demurrage_penalty_amount,
                 ])->all(),
             ], JSON_THROW_ON_ERROR);
         }

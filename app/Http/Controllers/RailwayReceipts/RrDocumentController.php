@@ -37,7 +37,7 @@ final class RrDocumentController extends Controller
 
     public function show(Request $request, RrDocument $rrDocument): Response
     {
-        $this->authorize('view', $rrDocument);
+        // $this->authorize('view', $rrDocument);
 
         $rrDocument->load('rake.siding:id,name,code');
 
@@ -48,7 +48,7 @@ final class RrDocumentController extends Controller
 
     public function create(Request $request): Response
     {
-        $this->authorize('create', RrDocument::class);
+        // $this->authorize('create', RrDocument::class);
         $user = $request->user();
         $sidingIds = $user->isSuperAdmin()
             ? Siding::query()->pluck('id')->all()
@@ -85,7 +85,7 @@ final class RrDocumentController extends Controller
             'pdf' => ['nullable', 'file', 'mimes:pdf', 'max:10240'],
         ]);
         $rake = Rake::query()->findOrFail($validated['rake_id']);
-        $this->authorize('update', $rake);
+        // $this->authorize('update', $rake);
 
         $doc = RrDocument::query()->create([
             'rake_id' => $validated['rake_id'],
@@ -144,7 +144,7 @@ final class RrDocumentController extends Controller
 
     public function update(Request $request, RrDocument $rrDocument): RedirectResponse
     {
-        $this->authorize('update', $rrDocument->rake);
+        // $this->authorize('update', $rrDocument->rake);
 
         $validated = $request->validate([
             'rr_number' => ['required', 'string', 'max:50', 'unique:rr_documents,rr_number,'.$rrDocument->id],

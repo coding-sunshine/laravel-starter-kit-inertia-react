@@ -33,7 +33,7 @@ final readonly class CalculateDemurrageCharges
         $rate = (float) ($options['rate_per_mt_hour'] ?? config('rrmcs.demurrage_rate_per_mt_hour', 50));
 
         // Must have loading end time and expected RR date
-        if (! $rake->loading_end_time || ! $rake->rr_expected_date) {
+        if (! $rake->dispatch_time || ! $rake->rr_expected_date) {
             return [
                 'rake_id' => $rake->id,
                 'rake_number' => $rake->rake_number,
@@ -46,8 +46,8 @@ final readonly class CalculateDemurrageCharges
         }
 
         // Calculate dwell time
-        $freeHours = $rake->free_time_minutes / 60;
-        $dwellHours = $rake->loading_end_time->diffInHours($rake->rr_expected_date);
+        $freeHours = $rake->loading_free_minutes / 60;
+        $dwellHours = $rake->dispatch_time->diffInHours($rake->rr_expected_date);
         $demurrageHours = max(0, $dwellHours - $freeHours);
 
         // Calculate charges
@@ -64,7 +64,7 @@ final readonly class CalculateDemurrageCharges
             'gross_weight_mt' => $weight,
             'rate_per_mt_hour' => $rate,
             'demurrage_charge' => $totalCharge,
-            'loading_end_time' => $rake->loading_end_time,
+            'dispatch_time' => $rake->dispatch_time,
             'rr_expected_date' => $rake->rr_expected_date,
             'status' => $demurrageHours > 0 ? 'charged' : 'free',
         ];
@@ -177,11 +177,11 @@ final readonly class CalculateDemurrageCharges
             'demurrage_hours' => round($hours, 2),
             'weight_mt' => round($weight, 2),
             'rate_per_mt_hour' => $rate,
-            'free_hours' => $rake->free_time_minutes ? round($rake->free_time_minutes / 60, 2) : null,
+            'free_hours' => $rake->loading_free_minutes ? round($rake->loading_free_minutes / 60, 2) : null,
             'dwell_hours' => null,
         ];
-        if ($rake->loading_end_time && $rake->rr_expected_date) {
-            $breakdown['dwell_hours'] = round($rake->loading_end_time->diffInHours($rake->rr_expected_date), 2);
+        if ($rake->dispatch_time && $rake->rr_expected_date) {
+            $breakdown['dwell_hours'] = round($rake->dispatch_time->diffInHours($rake->rr_expected_date), 2);
         }
 
         return Penalty::query()->create([

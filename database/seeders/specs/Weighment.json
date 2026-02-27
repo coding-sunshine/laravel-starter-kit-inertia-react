@@ -12,28 +12,58 @@
             "nullable": true,
             "default": null
         },
-        "weighment_time": {
+        "attempt_no": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "gross_weighment_datetime": {
             "type": "timestamp",
             "nullable": true,
             "default": null
         },
-        "total_weight_mt": {
-            "type": "numeric",
+        "tare_weighment_datetime": {
+            "type": "timestamp",
             "nullable": true,
             "default": null
         },
-        "average_wagon_weight_mt": {
-            "type": "numeric",
-            "nullable": true,
-            "default": null
-        },
-        "weighment_status": {
+        "train_name": {
             "type": "string",
             "nullable": true,
             "default": null
         },
-        "remarks": {
-            "type": "text",
+        "direction": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "commodity": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "from_station": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "to_station": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "priority_number": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "pdf_file_path": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
             "nullable": true,
             "default": null
         },
@@ -51,11 +81,6 @@
             "type": "timestamp",
             "nullable": true,
             "default": null
-        },
-        "updated_by": {
-            "type": "bigint",
-            "nullable": true,
-            "default": null
         }
     },
     "relationships": {
@@ -63,11 +88,20 @@
             "type": "belongsTo",
             "model": "Rake"
         },
+        "rakeWagonWeighments": {
+            "type": "hasMany",
+            "model": "RakeWagonWeighment"
+        },
         "createdBy": {
             "type": "belongsTo",
             "model": "CreatedBy"
         }
     },
-    "value_hints": [],
+    "value_hints": {
+        "train_name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    },
     "scenarios": []
 }

@@ -29,7 +29,7 @@ final class PermissionService
             return false;
         }
 
-        if ($user->hasRole('super-admin')) {
+        if ($user->hasRole('super-admin') || $user->hasRole('super_admin')) {
             return true;
         }
 
@@ -76,7 +76,7 @@ final class PermissionService
             return collect();
         }
 
-        if ($user->hasRole('super-admin') || $organization->owner_id === $user->id) {
+        if ($user->hasRole('super-admin') || $user->hasRole('super_admin') || $organization->owner_id === $user->id) {
             return $this->getAllOrganizationPermissions();
         }
 
@@ -97,10 +97,23 @@ final class PermissionService
      */
     public function getAllOrganizationPermissions(): Collection
     {
-        return Permission::query()
+        $orgPermissions = Permission::query()
             ->where('name', 'like', 'org.%')
             ->orderBy('name')
             ->pluck('name');
+
+        // Also include rakes and indents permissions for super admins in organization context
+        $rakePermissions = Permission::query()
+            ->where('name', 'like', 'rakes:%')
+            ->orderBy('name')
+            ->pluck('name');
+
+        $indentPermissions = Permission::query()
+            ->where('name', 'like', 'indents:%')
+            ->orderBy('name')
+            ->pluck('name');
+
+        return $orgPermissions->merge($rakePermissions)->merge($indentPermissions);
     }
 
     public function clearCache(): void

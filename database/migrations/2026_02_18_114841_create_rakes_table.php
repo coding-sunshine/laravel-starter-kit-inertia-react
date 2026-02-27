@@ -14,29 +14,66 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('rakes', function (Blueprint $table): void {
+
             $table->id();
-            $table->foreignId('siding_id')->constrained('sidings')->onDelete('cascade');
+
+            // Relationships
+            $table->foreignId('siding_id')
+                ->constrained('sidings')
+                ->cascadeOnDelete();
+
+            $table->foreignId('indent_id')
+                ->nullable()
+                ->index();
+
+            // Identification
             $table->string('rake_number', 20)->unique();
-            $table->string('rake_type')->nullable(); // e.g., "BOBRN", "BOXN"
-            $table->integer('wagon_count')->default(0);
-            $table->dateTime('loading_start_time')->nullable();
-            $table->dateTime('loading_end_time')->nullable();
+            $table->string('rake_type', 50)->nullable();
+
+            // Composition
+            $table->integer('wagon_count')->nullable();
+
+            // Process timestamps
+            $table->dateTime('placement_time')->nullable();
+            $table->dateTime('dispatch_time')->nullable();
+
+            // Weights
             $table->decimal('loaded_weight_mt', 12, 2)->nullable();
             $table->decimal('predicted_weight_mt', 12, 2)->nullable();
-            $table->string('state')->default('pending'); // pending, loading, loaded, dispatched, in_transit, received, completed
-            $table->integer('free_time_minutes')->default(180); // 3 hours default
-            $table->integer('demurrage_hours')->default(0);
-            $table->decimal('demurrage_penalty_amount', 12, 2)->default(0);
+
+            // RR related
             $table->dateTime('rr_expected_date')->nullable();
             $table->dateTime('rr_actual_date')->nullable();
-            $table->foreignId('created_by')->nullable()->constrained('users')->onDelete('set null');
-            $table->foreignId('updated_by')->nullable()->constrained('users')->onDelete('set null');
+
+            // Lifecycle
+            $table->string('state')->nullable();
+
+            // Timers
+            $table->dateTime('loading_start_time')->nullable();
+            $table->dateTime('loading_end_time')->nullable();
+            $table->integer('loading_free_minutes')->default(180);
+            $table->dateTime('guard_start_time')->nullable();
+            $table->dateTime('guard_end_time')->nullable();
+            $table->dateTime('weighment_start_time')->nullable();
+            $table->dateTime('weighment_end_time')->nullable();
+            // Audit
+            $table->foreignId('created_by')->nullable()
+                ->constrained('users')
+                ->nullOnDelete();
+
+            $table->foreignId('updated_by')->nullable()
+                ->constrained('users')
+                ->nullOnDelete();
+
+            $table->foreignId('deleted_by')->nullable()
+                ->constrained('users')
+                ->nullOnDelete();
+
             $table->timestamps();
             $table->softDeletes();
 
+            // Optional minimal index
             $table->index(['siding_id', 'state']);
-            $table->index('rake_number');
-            $table->index('loading_start_time');
         });
     }
 

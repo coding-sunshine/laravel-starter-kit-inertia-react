@@ -1,0 +1,113 @@
+{
+    "model": "RakeWagonWeighment",
+    "table": "rake_wagon_weighments",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "rake_weighment_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "wagon_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "wagon_sequence": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "wagon_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "axles": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "cc_capacity_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "printed_tare_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "actual_gross_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "actual_tare_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "net_weight_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "under_load_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "over_load_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "speed_kmph": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "weighment_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "slip_number": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "action_taken": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "rakeWeighment": {
+            "type": "belongsTo",
+            "model": "RakeWeighment"
+        },
+        "wagon": {
+            "type": "belongsTo",
+            "model": "Wagon"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

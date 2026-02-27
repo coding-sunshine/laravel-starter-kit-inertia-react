@@ -13,9 +13,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('indents', function (Blueprint $table): void {
-            $table->string('e_demand_reference_id', 100)->nullable()->after('remarks');
-            $table->string('fnr_number', 50)->nullable()->after('e_demand_reference_id');
+        Schema::table('loaders', function (Blueprint $table): void {
+            $table->decimal('capacity_mt', 8, 2)->nullable()->after('loader_type'); // capacity in metric tons
         });
     }
 
@@ -24,8 +23,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('indents', function (Blueprint $table): void {
-            $table->dropColumn(['e_demand_reference_id', 'fnr_number']);
+        Schema::table('loaders', function (Blueprint $table): void {
+            $table->dropColumn('capacity_mt');
         });
     }
 };

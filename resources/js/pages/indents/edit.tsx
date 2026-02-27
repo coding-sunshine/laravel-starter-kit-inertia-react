@@ -14,15 +14,18 @@ interface Siding {
 
 interface Indent {
     id: number;
-    indent_number: string;
-    target_quantity_mt: string;
+    indent_number: string | null;
+    target_quantity_mt: string | null;
     allocated_quantity_mt: string;
     state: string;
-    indent_date: string;
+    indent_date: string | null;
     required_by_date: string | null;
     remarks: string | null;
     e_demand_reference_id: string | null;
     fnr_number: string | null;
+    expected_loading_date: string | null;
+    demanded_stock: string | null;
+    total_units: string | null;
     siding_id: number;
 }
 
@@ -36,7 +39,7 @@ export default function IndentsEdit({ indent, sidings }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: '/dashboard' },
         { title: 'Indents', href: '/indents' },
-        { title: indent.indent_number, href: `/indents/${indent.id}` },
+        { title: indent.indent_number || 'N/A', href: `/indents/${indent.id}` },
         { title: 'Edit', href: `/indents/${indent.id}/edit` },
     ];
 
@@ -52,10 +55,10 @@ export default function IndentsEdit({ indent, sidings }: Props) {
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title={`Edit indent ${indent.indent_number}`} />
+            <Head title={`Edit indent ${indent.indent_number || 'N/A'}`} />
             <div className="space-y-6">
                 <h2 className="text-lg font-medium">
-                    Edit indent {indent.indent_number}
+                    Edit indent {indent.indent_number || 'N/A'}
                 </h2>
                 <form
                     onSubmit={handleSubmit}
@@ -80,50 +83,14 @@ export default function IndentsEdit({ indent, sidings }: Props) {
                         <InputError message={errors?.siding_id} />
                     </div>
                     <div className="grid gap-2">
-                        <Label htmlFor="indent_number">Indent number *</Label>
+                        <Label htmlFor="indent_number">Indent number</Label>
                         <Input
                             id="indent_number"
                             name="indent_number"
-                            required
-                            defaultValue={indent.indent_number}
+                            defaultValue={indent.indent_number ?? ''}
                             className="text-sm"
                         />
                         <InputError message={errors?.indent_number} />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="grid gap-2">
-                            <Label htmlFor="target_quantity_mt">
-                                Target quantity (MT) *
-                            </Label>
-                            <Input
-                                id="target_quantity_mt"
-                                name="target_quantity_mt"
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                required
-                                defaultValue={indent.target_quantity_mt}
-                                className="text-sm"
-                            />
-                            <InputError message={errors?.target_quantity_mt} />
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="allocated_quantity_mt">
-                                Allocated (MT)
-                            </Label>
-                            <Input
-                                id="allocated_quantity_mt"
-                                name="allocated_quantity_mt"
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                defaultValue={indent.allocated_quantity_mt}
-                                className="text-sm"
-                            />
-                            <InputError
-                                message={errors?.allocated_quantity_mt}
-                            />
-                        </div>
                     </div>
                     <div className="grid gap-2">
                         <Label htmlFor="state">State</Label>
@@ -141,38 +108,7 @@ export default function IndentsEdit({ indent, sidings }: Props) {
                         </select>
                         <InputError message={errors?.state} />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="grid gap-2">
-                            <Label htmlFor="indent_date">Indent date *</Label>
-                            <Input
-                                id="indent_date"
-                                name="indent_date"
-                                type="date"
-                                required
-                                defaultValue={
-                                    indent.indent_date?.slice(0, 10) ?? ''
-                                }
-                                className="text-sm"
-                            />
-                            <InputError message={errors?.indent_date} />
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="required_by_date">
-                                Required by date
-                            </Label>
-                            <Input
-                                id="required_by_date"
-                                name="required_by_date"
-                                type="date"
-                                defaultValue={
-                                    indent.required_by_date?.slice(0, 10) ?? ''
-                                }
-                                className="text-sm"
-                            />
-                            <InputError message={errors?.required_by_date} />
-                        </div>
-                    </div>
-                    <div className="grid gap-2">
+                                        <div className="grid gap-2">
                         <Label htmlFor="e_demand_reference_id">
                             e-Demand reference ID
                         </Label>
@@ -193,6 +129,45 @@ export default function IndentsEdit({ indent, sidings }: Props) {
                             className="text-sm"
                         />
                         <InputError message={errors?.fnr_number} />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="expected_loading_date">
+                            Expected Loading Date
+                        </Label>
+                        <Input
+                            id="expected_loading_date"
+                            name="expected_loading_date"
+                            type="date"
+                            defaultValue={
+                                indent.expected_loading_date?.slice(0, 10) ?? ''
+                            }
+                            className="text-sm"
+                        />
+                        <InputError message={errors?.expected_loading_date} />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="demanded_stock">
+                            Demanded Stock
+                        </Label>
+                        <Input
+                            id="demanded_stock"
+                            name="demanded_stock"
+                            defaultValue={indent.demanded_stock ?? ''}
+                            className="text-sm"
+                        />
+                        <InputError message={errors?.demanded_stock} />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="total_units">
+                            Total Units
+                        </Label>
+                        <Input
+                            id="total_units"
+                            name="total_units"
+                            defaultValue={indent.total_units ?? ''}
+                            className="text-sm"
+                        />
+                        <InputError message={errors?.total_units} />
                     </div>
                     <div className="grid gap-2">
                         <Label htmlFor="indent_pdf">

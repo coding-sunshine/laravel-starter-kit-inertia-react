@@ -41,6 +41,11 @@ final class RakePolicy
      */
     public function create(User $user): bool
     {
+        // If tenant context is active, use organization-scoped permission check
+        if (\App\Services\TenantContext::check()) {
+            return $user->canInCurrentOrganization('rakes:create') || $user->hasPermissionTo('rakes:create');
+        }
+
         return $user->hasPermissionTo('rakes:create');
     }
 

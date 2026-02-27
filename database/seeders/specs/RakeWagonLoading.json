@@ -1,0 +1,82 @@
+{
+    "model": "RakeWagonLoading",
+    "table": "rake_wagon_loading",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "rake_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "wagon_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "loader_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "loader_operator_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "cc_capacity_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "loaded_quantity_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "loading_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "remarks": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "rake": {
+            "type": "belongsTo",
+            "model": "Rake"
+        },
+        "wagon": {
+            "type": "belongsTo",
+            "model": "Wagon"
+        },
+        "loader": {
+            "type": "belongsTo",
+            "model": "Loader"
+        }
+    },
+    "value_hints": {
+        "loader_operator_name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    },
+    "scenarios": []
+}

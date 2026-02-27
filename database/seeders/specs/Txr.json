@@ -17,18 +17,13 @@
             "nullable": true,
             "default": null
         },
-        "state": {
+        "inspection_end_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
             "type": "string",
-            "nullable": true,
-            "default": null
-        },
-        "unfit_wagons_count": {
-            "type": "integer",
-            "nullable": true,
-            "default": null
-        },
-        "unfit_wagon_numbers": {
-            "type": "text",
             "nullable": true,
             "default": null
         },
@@ -42,6 +37,11 @@
             "nullable": true,
             "default": null
         },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
         "created_at": {
             "type": "timestamp",
             "nullable": true,
@@ -51,22 +51,16 @@
             "type": "timestamp",
             "nullable": true,
             "default": null
-        },
-        "deleted_at": {
-            "type": "timestamp",
-            "nullable": true,
-            "default": null
-        },
-        "updated_by": {
-            "type": "bigint",
-            "nullable": true,
-            "default": null
         }
     },
     "relationships": {
         "rake": {
             "type": "belongsTo",
             "model": "Rake"
+        },
+        "wagonUnfitLogs": {
+            "type": "hasMany",
+            "model": "WagonUnfitLog"
         },
         "createdBy": {
             "type": "belongsTo",

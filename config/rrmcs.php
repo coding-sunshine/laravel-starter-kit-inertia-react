@@ -21,6 +21,15 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Default free time minutes for rakes
+    |--------------------------------------------------------------------------
+    | Default free time in minutes allocated to each rake before demurrage
+    | charges start. This can be overridden per rake as needed.
+    */
+    'default_free_time_minutes' => (int) env('RRMCS_DEFAULT_FREE_TIME_MINUTES', 180),
+
+    /*
+    |--------------------------------------------------------------------------
     | PRD / real data import paths (Excel)
     |--------------------------------------------------------------------------
     | Paths relative to project base for seeding historical rake/penalty data.

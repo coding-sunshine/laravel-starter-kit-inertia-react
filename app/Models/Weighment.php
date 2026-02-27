@@ -6,6 +6,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Mattiverse\Userstamps\Traits\Userstamps;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
@@ -15,17 +16,27 @@ final class Weighment extends Model implements HasMedia
     use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use InteractsWithMedia, Userstamps;
 
+    protected $table = 'rake_weighments';
+
     protected $fillable = [
         'rake_id',
-        'weighment_time',
-        'total_weight_mt',
-        'average_wagon_weight_mt',
-        'weighment_status',
-        'remarks',
+        'attempt_no',
+        'gross_weighment_datetime',
+        'tare_weighment_datetime',
+        'train_name',
+        'direction',
+        'commodity',
+        'from_station',
+        'to_station',
+        'priority_number',
+        'pdf_file_path',
+        'status',
+        'created_by',
     ];
 
     protected $casts = [
-        'weighment_time' => 'datetime',
+        'gross_weighment_datetime' => 'datetime',
+        'tare_weighment_datetime' => 'datetime',
     ];
 
     protected $appends = ['weighment_slip_url'];
@@ -40,6 +51,11 @@ final class Weighment extends Model implements HasMedia
     public function rake(): BelongsTo
     {
         return $this->belongsTo(Rake::class);
+    }
+
+    public function rakeWagonWeighments(): HasMany
+    {
+        return $this->hasMany(RakeWagonWeighment::class, 'rake_weighment_id');
     }
 
     public function createdBy(): BelongsTo

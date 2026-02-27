@@ -41,7 +41,30 @@ final class IndentPolicy
      */
     public function create(User $user): bool
     {
+        // If tenant context is active, use organization-scoped permission check
+        if (\App\Services\TenantContext::check()) {
+            return $user->canInCurrentOrganization('indents:create') || $user->hasPermissionTo('indents:create');
+        }
+
         return $user->hasPermissionTo('indents:create');
+    }
+
+    /**
+     * Determine if the user can create a rake from this indent
+     */
+    public function createRake(User $user, Indent $indent): bool
+    {
+        // Only completed indents can have rakes created
+        if ($indent->state !== 'completed') {
+            return false;
+        }
+
+        // If tenant context is active, use organization-scoped permission check
+        if (\App\Services\TenantContext::check()) {
+            return $user->canInCurrentOrganization('rakes:create') || $user->hasPermissionTo('rakes:create');
+        }
+
+        return $user->hasPermissionTo('rakes:create');
     }
 
     /**

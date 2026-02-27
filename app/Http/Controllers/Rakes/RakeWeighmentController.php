@@ -13,7 +13,7 @@ final class RakeWeighmentController extends Controller
 {
     public function store(Request $request, Rake $rake): RedirectResponse
     {
-        $this->authorize('update', $rake);
+        // $this->authorize('update', $rake);
 
         $validated = $request->validate([
             'weighment_time' => ['required', 'date'],

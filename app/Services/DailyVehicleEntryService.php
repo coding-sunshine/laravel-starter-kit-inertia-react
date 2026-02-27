@@ -1,0 +1,236 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Services;
+
+use App\Models\DailyVehicleEntry;
+use App\Models\Siding;
+use Illuminate\Support\Collection;
+
+final readonly class DailyVehicleEntryService
+{
+    public function getEntriesByDateAndShift(string $date, int $shift): Collection
+    {
+        return DailyVehicleEntry::query()
+            ->with(['siding', 'creator', 'updater'])
+            ->where('entry_date', $date)
+            ->where('shift', $shift)
+            ->orderBy('created_at', 'desc') // Newest first
+            ->get();
+    }
+
+    public function createEntry(array $data): DailyVehicleEntry
+    {
+        return DailyVehicleEntry::create([
+            ...$data,
+            'reached_at' => now(),
+            'created_by' => auth()->id(),
+        ]);
+    }
+
+    public function updateEntry(DailyVehicleEntry $entry, array $data): DailyVehicleEntry
+    {
+        $entry->update([
+            ...$data,
+            'updated_by' => auth()->id(),
+        ]);
+
+        return $entry->fresh();
+    }
+
+    public function markCompleted(DailyVehicleEntry $entry): DailyVehicleEntry
+    {
+        $entry->update([
+            'status' => 'completed',
+            'updated_by' => auth()->id(),
+        ]);
+
+        return $entry->fresh();
+    }
+
+    public function getShiftSummary(string $date): array
+    {
+        $summary = [];
+
+        for ($shift = 1; $shift <= 3; $shift++) {
+            $count = DailyVehicleEntry::where('entry_date', $date)
+                ->where('shift', $shift)
+                ->count();
+
+            $summary[$shift] = $count;
+        }
+
+        return $summary;
+    }
+
+    public function exportEntries(string $date, int $sidingId, string $shift): string
+    {
+        $siding = Siding::findOrFail($sidingId);
+
+        if ($shift === 'all') {
+            return $this->exportAllShifts($date, $siding);
+        }
+
+        return $this->exportSingleShift($date, $siding, (int) $shift);
+
+    }
+
+    private function exportAllShifts(string $date, Siding $siding): string
+    {
+        $filename = "{$siding->name}_{$date}_AllShifts.xlsx";
+        $filepath = storage_path("app/public/{$filename}");
+
+        $handle = fopen($filepath, 'w');
+
+        // Create HTML table that Excel can open
+        $html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>'.$filename.'</title></head><body>';
+        $html .= '<table border="1">';
+
+        // Get entries for all shifts
+        $shift1Entries = $this->getEntriesForExport($date, $siding->id, 1);
+        $shift2Entries = $this->getEntriesForExport($date, $siding->id, 2);
+        $shift3Entries = $this->getEntriesForExport($date, $siding->id, 3);
+
+        $maxRows = max(count($shift1Entries), count($shift2Entries), count($shift3Entries));
+
+        // Write shift headers (Row 1)
+        $html .= '<tr>';
+        $shiftNames = ['1ST SHIFT', '2ND SHIFT', '3RD SHIFT'];
+        for ($i = 0; $i < 3; $i++) {
+            $html .= '<td colspan="10" style="font-weight:bold; text-align:center; background-color:#f0f0f0;">'.$shiftNames[$i].'</td>';
+        }
+        $html .= '</tr>';
+
+        // Write column headers (Row 2)
+        $headers = ['SL NO', 'E CHALLAN NO', 'VEHICLE NO', 'GROSS WT', 'TARE WT', 'REACHED AT', 'WB NO', 'D-CHALLAN NO', 'CHALLAN MODE', 'STATUS'];
+        $html .= '<tr>';
+        for ($i = 0; $i < 3; $i++) {
+            foreach ($headers as $header) {
+                $html .= '<td style="font-weight:bold; background-color:#e0e0e0; border:1px solid #ccc;">'.$header.'</td>';
+            }
+        }
+        $html .= '</tr>';
+
+        // Write data rows
+        for ($rowIndex = 0; $rowIndex < $maxRows; $rowIndex++) {
+            $html .= '<tr>';
+
+            // Shift 1 data
+            $shift1Data = $this->getShiftData($shift1Entries, $rowIndex);
+            foreach ($shift1Data as $cell) {
+                $html .= '<td style="border:1px solid #ccc;">'.$cell.'</td>';
+            }
+
+            // Shift 2 data
+            $shift2Data = $this->getShiftData($shift2Entries, $rowIndex);
+            foreach ($shift2Data as $cell) {
+                $html .= '<td style="border:1px solid #ccc;">'.$cell.'</td>';
+            }
+
+            // Shift 3 data
+            $shift3Data = $this->getShiftData($shift3Entries, $rowIndex);
+            foreach ($shift3Data as $cell) {
+                $html .= '<td style="border:1px solid #ccc;">'.$cell.'</td>';
+            }
+
+            $html .= '</tr>';
+        }
+
+        $html .= '</table></body></html>';
+
+        fwrite($handle, $html);
+        fclose($handle);
+
+        return $filepath;
+    }
+
+    private function exportSingleShift(string $date, Siding $siding, int $shift): string
+    {
+        $filename = "{$siding->name}_{$date}_Shift{$shift}.xlsx";
+        $filepath = storage_path("app/public/{$filename}");
+
+        $handle = fopen($filepath, 'w');
+
+        // Create HTML table that Excel can open
+        $html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>'.$filename.'</title></head><body>';
+        $html .= '<table border="1">';
+
+        $entries = $this->getEntriesForExport($date, $siding->id, $shift);
+
+        // Write title row
+        $html .= '<tr><td colspan="10" style="font-weight:bold; text-align:center; background-color:#f0f0f0;">SHIFT '.$shift.' - '.$date.' - '.$siding->name.'</td></tr>';
+
+        // Write headers
+        $headers = ['SL NO', 'E CHALLAN NO', 'VEHICLE NO', 'GROSS WT', 'TARE WT', 'REACHED AT', 'WB NO', 'D-CHALLAN NO', 'CHALLAN MODE', 'STATUS'];
+        $html .= '<tr>';
+        foreach ($headers as $header) {
+            $html .= '<td style="font-weight:bold; background-color:#e0e0e0; border:1px solid #ccc;">'.$header.'</td>';
+        }
+        $html .= '</tr>';
+
+        // Write data
+        foreach ($entries as $index => $entry) {
+            $row = [
+                $index + 1, // SL NO
+                $entry->e_challan_no ?? '',
+                $entry->vehicle_no ?? '',
+                $entry->gross_wt ?? '',
+                $entry->tare_wt ?? '',
+                $entry->reached_at?->format('Y-m-d H:i:s') ?? '',
+                $entry->wb_no ?? '',
+                $entry->d_challan_no ?? '',
+                $entry->challan_mode ?? '',
+                $entry->status ?? '',
+            ];
+
+            $html .= '<tr>';
+            foreach ($row as $cell) {
+                $html .= '<td style="border:1px solid #ccc;">'.$cell.'</td>';
+            }
+            $html .= '</tr>';
+        }
+
+        $html .= '</table></body></html>';
+
+        fwrite($handle, $html);
+        fclose($handle);
+
+        return $filepath;
+    }
+
+    private function getEntriesForExport(string $date, int $sidingId, int $shift): Collection
+    {
+        return DailyVehicleEntry::query()
+            ->where('entry_date', $date)
+            ->where('siding_id', $sidingId)
+            ->where('shift', $shift)
+            ->orderBy('reached_at', 'asc')
+            ->get();
+    }
+
+    private function getShiftData(Collection $entries, int $rowIndex): array
+    {
+        if ($rowIndex < $entries->count()) {
+            $entry = $entries[$rowIndex];
+            $slNo = $rowIndex + 1;
+
+            return [
+                $slNo,
+                $entry->e_challan_no ?? '',
+                $entry->vehicle_no ?? '',
+                $entry->gross_wt ?? '',
+                $entry->tare_wt ?? '',
+                $entry->reached_at?->format('Y-m-d H:i:s') ?? '',
+                $entry->wb_no ?? '',
+                $entry->d_challan_no ?? '',
+                $entry->challan_mode ?? '',
+                $entry->status ?? '',
+            ];
+        }
+
+        // Return empty cells
+        return array_fill(0, 10, '');
+
+    }
+}

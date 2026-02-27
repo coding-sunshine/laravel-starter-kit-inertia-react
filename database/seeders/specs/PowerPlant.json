@@ -42,6 +42,10 @@
         "powerPlantReceipts": {
             "type": "hasMany",
             "model": "PowerPlantReceipt"
+        },
+        "powerplantSidingDistances": {
+            "type": "hasMany",
+            "model": "PowerplantSidingDistance"
         }
     },
     "value_hints": {

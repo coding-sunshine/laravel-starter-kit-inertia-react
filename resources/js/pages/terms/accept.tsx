@@ -1,5 +1,4 @@
 import TermsAcceptController from '@/actions/App/Http/Controllers/TermsAcceptController';
-import AppLogoIcon from '@/components/app-logo-icon';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { home } from '@/routes';
@@ -49,7 +48,7 @@ export default function TermsAccept({
                         href={home()}
                         className="flex items-center gap-2 font-medium text-foreground"
                     >
-                        <AppLogoIcon className="size-8 fill-current" />
+                        <span className="text-lg font-bold">RMMS</span>
                         <span className="sr-only">Home</span>
                     </Link>
                 </div>
@@ -67,10 +66,6 @@ export default function TermsAccept({
                     <Form
                         {...TermsAcceptController.store.form()}
                         className="space-y-6"
-                        data={{
-                            accepted_ids: acceptedIds,
-                            intended,
-                        }}
                     >
                         <input type="hidden" name="intended" value={intended} />
                         {acceptedIds.map((id) => (
@@ -130,13 +125,11 @@ export default function TermsAccept({
                                 disabled={!allAccepted}
                                 className="min-w-[120px]"
                             >
-                                {({ processing }) =>
-                                    processing ? (
-                                        <LoaderCircle className="size-4 animate-spin" />
-                                    ) : (
-                                        'I accept'
-                                    )
-                                }
+                                {processing ? (
+                                    <LoaderCircle className="size-4 animate-spin" />
+                                ) : (
+                                    'I accept'
+                                )}
                             </Button>
                         </div>
                     </Form>

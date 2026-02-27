@@ -173,10 +173,10 @@ final readonly class RunReportAction
         if (! empty($params['date_from']) || ! empty($params['date_to'])) {
             $query->whereHas('rake', function ($q) use ($params): void {
                 if (isset($params['date_from']) && ($params['date_from'] !== '' && $params['date_from'] !== '0')) {
-                    $q->where('loading_start_time', '>=', $params['date_from']);
+                    $q->where('placement_time', '>=', $params['date_from']);
                 }
                 if (isset($params['date_to']) && ($params['date_to'] !== '' && $params['date_to'] !== '0')) {
-                    $q->where('loading_start_time', '<=', $params['date_to'].' 23:59:59');
+                    $q->where('placement_time', '<=', $params['date_to'].' 23:59:59');
                 }
             });
         }
@@ -236,10 +236,10 @@ final readonly class RunReportAction
         if (! empty($params['date_from']) || ! empty($params['date_to'])) {
             $query->whereHas('rake', function ($q) use ($params): void {
                 if (isset($params['date_from']) && ($params['date_from'] !== '' && $params['date_from'] !== '0')) {
-                    $q->where('loading_end_time', '>=', $params['date_from']);
+                    $q->where('dispatch_time', '>=', $params['date_from']);
                 }
                 if (isset($params['date_to']) && ($params['date_to'] !== '' && $params['date_to'] !== '0')) {
-                    $q->where('loading_end_time', '<=', $params['date_to'].' 23:59:59');
+                    $q->where('dispatch_time', '<=', $params['date_to'].' 23:59:59');
                 }
             });
         }
@@ -265,17 +265,17 @@ final readonly class RunReportAction
         $query = Rake::query()
             ->with('siding:id,name')
             ->whereIn('siding_id', $sidingIds)
-            ->whereNotNull('loading_start_time')
-            ->whereNotNull('loading_end_time');
-        $this->applyDateFilter($query, $params, 'loading_end_time');
+            ->whereNotNull('placement_time')
+            ->whereNotNull('dispatch_time');
+        $this->applyDateFilter($query, $params, 'dispatch_time');
         if (! empty($params['siding_id'])) {
             $query->where('siding_id', $params['siding_id']);
         }
-        $rows = $query->orderByDesc('loading_end_time')->limit(500)->get();
+        $rows = $query->orderByDesc('dispatch_time')->limit(500)->get();
 
         return $rows->map(function ($r): array {
-            $start = $r->loading_start_time;
-            $end = $r->loading_end_time;
+            $start = $r->placement_time;
+            $end = $r->dispatch_time;
             $minutes = $start && $end ? $start->diffInMinutes($end) : null;
 
             return [

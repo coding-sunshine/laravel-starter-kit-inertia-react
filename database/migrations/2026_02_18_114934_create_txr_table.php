@@ -14,18 +14,34 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('txr', function (Blueprint $table): void {
-            $table->id();
-            $table->foreignId('rake_id')->constrained('rakes')->onDelete('cascade');
-            $table->dateTime('inspection_time');
-            $table->string('state')->default('pending'); // pending, approved, rejected
-            $table->integer('unfit_wagons_count')->default(0);
-            $table->text('unfit_wagon_numbers')->nullable(); // JSON array or comma-separated
-            $table->text('remarks')->nullable();
-            $table->foreignId('created_by')->nullable()->constrained('users')->onDelete('set null');
-            $table->timestamps();
-            $table->softDeletes();
 
-            $table->index(['rake_id', 'state']);
+            $table->id();
+
+            $table->foreignId('rake_id')
+                ->constrained('rakes')
+                ->cascadeOnDelete();
+
+            // Inspection timing
+            $table->dateTime('inspection_time')->nullable();
+            $table->dateTime('inspection_end_time')->nullable();
+
+            // Status: in_progress, completed, rejected
+            $table->string('status')->default('in_progress');
+
+            // Notes
+            $table->text('remarks')->nullable();
+
+            // Audit
+            $table->foreignId('created_by')->nullable()
+                ->constrained('users')->nullOnDelete();
+
+            $table->foreignId('updated_by')->nullable()
+                ->constrained('users')->nullOnDelete();
+
+            $table->timestamps();
+
+            // Enforce 1:1 TXR per rake
+            $table->unique('rake_id');
         });
     }
 

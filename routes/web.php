@@ -20,6 +20,7 @@ use App\Http\Controllers\Changelog\ChangelogController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ContactSubmissionController;
 use App\Http\Controllers\CookieConsentController;
+use App\Http\Controllers\DailyVehicleEntryController;
 use App\Http\Controllers\EnterpriseInquiryController;
 use App\Http\Controllers\HelpCenter\HelpCenterController;
 use App\Http\Controllers\HelpCenter\RateHelpArticleController;
@@ -34,8 +35,10 @@ use App\Http\Controllers\PersonalDataExportController;
 use App\Http\Controllers\RailwayReceipts\PenaltyController;
 use App\Http\Controllers\RailwayReceipts\RrDocumentController;
 use App\Http\Controllers\Rakes\RakeGuardInspectionController;
+use App\Http\Controllers\Rakes\RakeLoadController;
 use App\Http\Controllers\Rakes\RakesController;
 use App\Http\Controllers\Rakes\RakeTxrController;
+use App\Http\Controllers\Rakes\RakeWagonController;
 use App\Http\Controllers\Rakes\RakeWeighmentController;
 use App\Http\Controllers\Reconciliation\PowerPlantReceiptController;
 use App\Http\Controllers\Reconciliation\ReconciliationController;
@@ -45,6 +48,7 @@ use App\Http\Controllers\RoadDispatch\VehicleUnloadController;
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\Settings\AchievementsController;
 use App\Http\Controllers\SidingSwitchController;
+use App\Http\Controllers\TxrController;
 use App\Http\Controllers\TermsAcceptController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserEmailResetNotificationController;
@@ -53,6 +57,13 @@ use App\Http\Controllers\UserEmailVerificationNotificationController;
 use App\Http\Controllers\UserPasswordController;
 use App\Http\Controllers\UserProfileController;
 use App\Http\Controllers\UserTwoFactorAuthenticationController;
+use App\Http\Controllers\WagonUnfitController;
+use App\Http\Controllers\LoadersController;
+use App\Http\Controllers\PenaltyTypesController;
+use App\Http\Controllers\PowerPlantController;
+use App\Http\Controllers\PowerplantSidingDistancesController;
+use App\Http\Controllers\SidingsController;
+use App\Http\Controllers\SectionTimersController;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
@@ -173,8 +184,28 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     // RRMCS Routes (Railway Rake Management Control System)
     Route::get('rakes', [RakesController::class, 'index'])->name('rakes.index');
     Route::get('rakes/{rake}', [RakesController::class, 'show'])->name('rakes.show');
+    Route::get('rakes/{rake}/edit', [RakesController::class, 'edit'])->name('rakes.edit');
+    Route::put('rakes/{rake}', [RakesController::class, 'update'])->name('rakes.update');
+    Route::delete('rakes/{rake}', [RakesController::class, 'destroy'])->name('rakes.destroy');
+    Route::post('rakes/{rake}/generate-wagons', [RakesController::class, 'generateWagons'])->name('rakes.generate-wagons');
+    Route::put('rakes/{rake}/wagons/{wagon}', [RakeWagonController::class, 'update'])->name('rakes.wagons.update');
     Route::put('rakes/{rake}/txr', [RakeTxrController::class, 'update'])->name('rakes.txr.update');
+    Route::post('rakes/{rake}/txr/start', [RakeTxrController::class, 'start'])->name('rakes.txr.start');
+    Route::post('rakes/{rake}/txr/end', [RakeTxrController::class, 'end'])->name('rakes.txr.end');
+    Route::post('rakes/{rake}/txr/unfit-logs', [RakeTxrController::class, 'storeUnfitLogs'])->name('rakes.txr.unfit-logs');
+    // New TXR header routes
+    Route::post('rakes/{rake}/txr', [TxrController::class, 'store'])->name('rakes.txr.store');
+    // Unfit wagon routes
+    Route::post('txr/{txr}/unfit-wagons', [WagonUnfitController::class, 'store'])->name('txr.unfit-wagons.store');
+    Route::get('rakes/{rake}/load', [RakeLoadController::class, 'show'])->name('rakes.load.show');
+    Route::post('rakes/{rake}/load/confirm-placement', [RakeLoadController::class, 'confirmPlacement'])->name('rakes.load.confirm-placement');
+    Route::post('rakes/{rake}/load/wagon', [RakeLoadController::class, 'loadWagon'])->name('rakes.load.wagon');
+    Route::post('rakes/{rake}/load/wagons', [RakeLoadController::class, 'storeWagonLoadings'])->name('rakes.load.wagons');
+    Route::post('rakes/{rake}/load/guard-inspection', [RakeLoadController::class, 'recordGuardInspection'])->name('rakes.load.guard-inspection');
+    Route::post('rakes/{rake}/load/weighment', [RakeLoadController::class, 'recordWeighment'])->name('rakes.load.weighment');
+    Route::post('rakes/{rake}/load/confirm-dispatch', [RakeLoadController::class, 'confirmDispatch'])->name('rakes.load.confirm-dispatch');
     Route::post('rakes/{rake}/weighments', [RakeWeighmentController::class, 'store'])->name('rakes.weighments.store');
+    Route::get('rakes/{rake}/comparison', [RakesController::class, 'comparison'])->name('rakes.comparison');
     Route::post('rakes/{rake}/guard-inspection', [RakeGuardInspectionController::class, 'store'])->name('rakes.guard-inspection.store');
     Route::get('indents', [IndentsController::class, 'index'])->name('indents.index');
     Route::get('indents/create', [IndentsController::class, 'create'])->name('indents.create');
@@ -182,6 +213,26 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('indents/{indent}', [IndentsController::class, 'show'])->name('indents.show');
     Route::get('indents/{indent}/edit', [IndentsController::class, 'edit'])->name('indents.edit');
     Route::put('indents/{indent}', [IndentsController::class, 'update'])->name('indents.update');
+    Route::get('indents/{indent}/create-rake', [IndentsController::class, 'createRake'])->name('indents.create-rake');
+    Route::post('indents/{indent}/store-rake', [IndentsController::class, 'storeRakeFromIndent'])->name('indents.store-rake');
+
+    // Master Data
+    Route::prefix('master-data')->name('master-data.')->group(function (): void {
+        Route::resource('power-plants', PowerPlantController::class);
+        Route::resource('sidings', SidingsController::class);
+        Route::resource('loaders', LoadersController::class);
+        Route::resource('penalty-types', PenaltyTypesController::class);
+        Route::resource('section-timers', SectionTimersController::class);
+        Route::resource('distance-matrix', PowerplantSidingDistancesController::class)->names([
+            'index' => 'master-data.distance-matrix.index',
+            'create' => 'master-data.distance-matrix.create',
+            'store' => 'master-data.distance-matrix.store',
+            'show' => 'master-data.distance-matrix.show',
+            'edit' => 'master-data.distance-matrix.edit',
+            'update' => 'master-data.distance-matrix.update',
+            'destroy' => 'master-data.distance-matrix.destroy',
+        ]);
+    });
 
     // Road Dispatch (vehicle arrivals and unloads)
     Route::get('road-dispatch/arrivals', [VehicleArrivalController::class, 'index'])->name('road-dispatch.arrivals.index');
@@ -198,6 +249,14 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::post('road-dispatch/unloads/{unload}/tare-weighment', [VehicleUnloadController::class, 'recordTareWeighment'])->name('road-dispatch.unloads.tare-weighment');
     Route::post('road-dispatch/unloads/{unload}/complete', [VehicleUnloadController::class, 'complete'])->name('road-dispatch.unloads.complete');
     Route::put('road-dispatch/unloads/{unload}/confirm', [VehicleUnloadController::class, 'confirm'])->name('road-dispatch.unloads.confirm');
+
+    // Daily Vehicle Entries
+    Route::get('road-dispatch/daily-vehicle-entries', [DailyVehicleEntryController::class, 'index'])->name('road-dispatch.daily-vehicle-entries.index');
+    Route::post('road-dispatch/daily-vehicle-entries', [DailyVehicleEntryController::class, 'store'])->name('road-dispatch.daily-vehicle-entries.store');
+    Route::patch('road-dispatch/daily-vehicle-entries/{entry}', [DailyVehicleEntryController::class, 'update'])->name('road-dispatch.daily-vehicle-entries.update');
+    Route::delete('road-dispatch/daily-vehicle-entries/{entry}', [DailyVehicleEntryController::class, 'destroy'])->name('road-dispatch.daily-vehicle-entries.destroy');
+    Route::post('road-dispatch/daily-vehicle-entries/{entry}/complete', [DailyVehicleEntryController::class, 'markCompleted'])->name('road-dispatch.daily-vehicle-entries.complete');
+    Route::get('road-dispatch/daily-vehicle-entries/export', [DailyVehicleEntryController::class, 'export'])->name('road-dispatch.daily-vehicle-entries.export');
 
     // Railway Receipts (RR) and Penalties
     Route::get('railway-receipts', [RrDocumentController::class, 'index'])->name('railway-receipts.index');
