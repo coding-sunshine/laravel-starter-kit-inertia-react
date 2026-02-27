@@ -64,8 +64,8 @@ return Application::configure(basePath: dirname(__DIR__))
             AdditionalSecurityHeaders::class,
             ActivityLogContextMiddleware::class,
             HandleAppearance::class,
+            SetTenantContext::class, // Must run before HandleInertiaRequests
             HandleInertiaRequests::class,
-            SetTenantContext::class,
             ApplyOrganizationSettings::class,
             AddLinkHeadersForPreloadedAssets::class,
             CacheResponse::class,

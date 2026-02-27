@@ -34,9 +34,10 @@ final class TrailerController extends Controller
     public function create(): Response
     {
         $this->authorize('create', Trailer::class);
+        $enum = fn ($cases) => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], $cases);
         return Inertia::render('Fleet/Trailers/Create', [
-            'types' => \App\Enums\Fleet\TrailerType::cases(),
-            'statuses' => \App\Enums\Fleet\TrailerStatus::cases(),
+            'types' => $enum(\App\Enums\Fleet\TrailerType::cases()),
+            'statuses' => $enum(\App\Enums\Fleet\TrailerStatus::cases()),
             'locations' => \App\Models\Fleet\Location::query()->orderBy('name')->get(['id', 'name']),
         ]);
     }
@@ -58,10 +59,11 @@ final class TrailerController extends Controller
     public function edit(Trailer $trailer): Response
     {
         $this->authorize('update', $trailer);
+        $enum = fn ($cases) => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], $cases);
         return Inertia::render('Fleet/Trailers/Edit', [
             'trailer' => $trailer,
-            'types' => \App\Enums\Fleet\TrailerType::cases(),
-            'statuses' => \App\Enums\Fleet\TrailerStatus::cases(),
+            'types' => $enum(\App\Enums\Fleet\TrailerType::cases()),
+            'statuses' => $enum(\App\Enums\Fleet\TrailerStatus::cases()),
             'locations' => \App\Models\Fleet\Location::query()->orderBy('name')->get(['id', 'name']),
         ]);
     }

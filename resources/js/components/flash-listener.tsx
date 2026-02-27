@@ -2,7 +2,7 @@ import { usePage } from '@inertiajs/react';
 import { useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 
-type Flash = { success?: string; error?: string };
+type Flash = { success?: string; error?: string; status?: string; message?: string };
 
 declare module '@inertiajs/react' {
     interface PageProps {
@@ -28,6 +28,12 @@ export function FlashListener(): null {
             shownRef.current = true;
         } else if (flash?.error) {
             toast.error(flash.error);
+            shownRef.current = true;
+        } else if (flash?.status === 'success' && flash?.message) {
+            toast.success(flash.message);
+            shownRef.current = true;
+        } else if (flash?.status === 'error' && flash?.message) {
+            toast.error(flash.message);
             shownRef.current = true;
         } else if (status) {
             toast.success(status);

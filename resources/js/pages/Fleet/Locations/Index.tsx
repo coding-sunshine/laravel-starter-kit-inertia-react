@@ -1,7 +1,7 @@
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
-import type { BreadcrumbItem } from '@/types';
-import { Form, Head, Link } from '@inertiajs/react';
+import type { BreadcrumbItem, SharedData } from '@/types';
+import { Form, Head, Link, usePage } from '@inertiajs/react';
 import { MapPin, Pencil, Plus, Trash2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -34,6 +34,9 @@ interface Props {
 }
 
 export default function FleetLocationsIndex({ locations, filters }: Props) {
+    const { auth } = usePage<SharedData>().props;
+    const hasOrganization = Boolean(auth?.current_organization);
+
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard().url },
         { title: 'Fleet', href: '/fleet/locations' },
@@ -46,15 +49,25 @@ export default function FleetLocationsIndex({ locations, filters }: Props) {
             <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-4">
                 <div className="flex items-center justify-between">
                     <h1 className="text-2xl font-semibold">Locations</h1>
-                    <Button asChild>
-                        <Link href="/fleet/locations/create">
-                            <Plus className="mr-2 size-4" />
-                            New location
-                        </Link>
-                    </Button>
+                    {hasOrganization && (
+                        <Button asChild>
+                            <Link href="/fleet/locations/create">
+                                <Plus className="mr-2 size-4" />
+                                New location
+                            </Link>
+                        </Button>
+                    )}
                 </div>
 
-                {locations.data.length === 0 ? (
+                {!hasOrganization ? (
+                    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16 text-center">
+                        <MapPin className="size-10 text-muted-foreground" />
+                        <p className="mt-2 text-sm font-medium text-muted-foreground">Select an organization to view locations</p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                            Use &quot;Select organization&quot; in the sidebar to choose an organization. Locations are listed per organization.
+                        </p>
+                    </div>
+                ) : locations.data.length === 0 ? (
                     <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16 text-center">
                         <MapPin className="size-10 text-muted-foreground" />
                         <p className="mt-2 text-sm font-medium text-muted-foreground">No locations yet</p>

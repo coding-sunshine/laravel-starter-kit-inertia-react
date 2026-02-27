@@ -30,6 +30,7 @@ use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -66,6 +67,7 @@ final class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configurePan();
+        $this->registerFleetModelBindings();
 
         $this->registerSeoViewComposer();
         $this->registerActivityLogTaps();
@@ -131,6 +133,31 @@ final class AppServiceProvider extends ServiceProvider
         $model = $arguments[0] ?? null;
 
         return $model instanceof User;
+    }
+
+    /**
+     * Resolve fleet models by id without organization scope so policy returns 403 (not 404) when org mismatches.
+     */
+    private function registerFleetModelBindings(): void
+    {
+        $scope = \App\Models\Scopes\OrganizationScope::class;
+        $bindings = [
+            'location' => \App\Models\Fleet\Location::class,
+            'cost_center' => \App\Models\Fleet\CostCenter::class,
+            'driver' => \App\Models\Fleet\Driver::class,
+            'trailer' => \App\Models\Fleet\Trailer::class,
+            'vehicle' => \App\Models\Fleet\Vehicle::class,
+            'geofence' => \App\Models\Fleet\Geofence::class,
+            'garage' => \App\Models\Fleet\Garage::class,
+            'fuel_station' => \App\Models\Fleet\FuelStation::class,
+            'ev_charging_station' => \App\Models\Fleet\EvChargingStation::class,
+            'operator_licence' => \App\Models\Fleet\OperatorLicence::class,
+        ];
+        foreach ($bindings as $key => $modelClass) {
+            Route::bind($key, function (string $value) use ($modelClass, $scope) {
+                return $modelClass::withoutGlobalScope($scope)->findOrFail($value);
+            });
+        }
     }
 
     private function configurePan(): void

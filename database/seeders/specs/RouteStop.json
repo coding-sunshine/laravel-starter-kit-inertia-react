@@ -1,0 +1,74 @@
+{
+    "model": "RouteStop",
+    "table": "route_stops",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "route_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "location_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "sort_order": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "planned_arrival_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "planned_departure_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "actual_arrival_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "actual_departure_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "notes": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": [],
+    "value_hints": {
+        "name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    },
+    "scenarios": []
+}

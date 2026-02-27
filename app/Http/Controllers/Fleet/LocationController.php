@@ -21,7 +21,7 @@ final class LocationController extends Controller
 
         $locations = Location::query()
             ->when($request->input('type'), fn ($q, $type) => $q->where('type', $type))
-            ->when($request->boolean('is_active') !== null, fn ($q) => $q->where('is_active', $request->boolean('is_active')))
+            ->when($request->has('is_active'), fn ($q) => $q->where('is_active', $request->boolean('is_active')))
             ->orderBy('name')
             ->paginate(15)
             ->withQueryString();

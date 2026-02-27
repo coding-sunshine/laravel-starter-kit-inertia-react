@@ -20,7 +20,7 @@ final class GeofenceController extends Controller
         $this->authorize('viewAny', Geofence::class);
         $geofences = Geofence::query()
             ->with('location')
-            ->when($request->boolean('is_active') !== null, fn ($q) => $q->where('is_active', $request->boolean('is_active')))
+            ->when($request->has('is_active'), fn ($q) => $q->where('is_active', $request->boolean('is_active')))
             ->orderBy('name')
             ->paginate(15)
             ->withQueryString();
@@ -35,7 +35,7 @@ final class GeofenceController extends Controller
     {
         $this->authorize('create', Geofence::class);
         return Inertia::render('Fleet/Geofences/Create', [
-            'types' => \App\Enums\Fleet\GeofenceType::cases(),
+            'types' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\GeofenceType::cases()),
             'locations' => \App\Models\Fleet\Location::query()->orderBy('name')->get(['id', 'name']),
         ]);
     }
@@ -59,7 +59,7 @@ final class GeofenceController extends Controller
         $this->authorize('update', $geofence);
         return Inertia::render('Fleet/Geofences/Edit', [
             'geofence' => $geofence,
-            'types' => \App\Enums\Fleet\GeofenceType::cases(),
+            'types' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\GeofenceType::cases()),
             'locations' => \App\Models\Fleet\Location::query()->orderBy('name')->get(['id', 'name']),
         ]);
     }

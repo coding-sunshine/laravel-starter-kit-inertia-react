@@ -36,10 +36,11 @@ final class VehicleController extends Controller
     public function create(): Response
     {
         $this->authorize('create', Vehicle::class);
+        $enum = fn ($cases) => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], $cases);
         return Inertia::render('Fleet/Vehicles/Create', [
-            'fuelTypes' => \App\Enums\Fleet\VehicleFuelType::cases(),
-            'vehicleTypes' => \App\Enums\Fleet\VehicleType::cases(),
-            'statuses' => \App\Enums\Fleet\VehicleStatus::cases(),
+            'fuelTypes' => $enum(\App\Enums\Fleet\VehicleFuelType::cases()),
+            'vehicleTypes' => $enum(\App\Enums\Fleet\VehicleType::cases()),
+            'statuses' => $enum(\App\Enums\Fleet\VehicleStatus::cases()),
             'locations' => \App\Models\Fleet\Location::query()->orderBy('name')->get(['id', 'name']),
             'drivers' => \App\Models\Fleet\Driver::query()->orderBy('last_name')->get(['id', 'first_name', 'last_name']),
         ]);
@@ -47,8 +48,8 @@ final class VehicleController extends Controller
 
     public function store(StoreVehicleRequest $request): RedirectResponse
     {
-        $this->authorize('create', Vehicle::class);
         Vehicle::create($request->validated());
+
         return to_route('fleet.vehicles.index')->with('flash', ['status' => 'success', 'message' => 'Vehicle created.']);
     }
 
@@ -115,11 +116,12 @@ final class VehicleController extends Controller
     public function edit(Vehicle $vehicle): Response
     {
         $this->authorize('update', $vehicle);
+        $enum = fn ($cases) => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], $cases);
         return Inertia::render('Fleet/Vehicles/Edit', [
             'vehicle' => $vehicle,
-            'fuelTypes' => \App\Enums\Fleet\VehicleFuelType::cases(),
-            'vehicleTypes' => \App\Enums\Fleet\VehicleType::cases(),
-            'statuses' => \App\Enums\Fleet\VehicleStatus::cases(),
+            'fuelTypes' => $enum(\App\Enums\Fleet\VehicleFuelType::cases()),
+            'vehicleTypes' => $enum(\App\Enums\Fleet\VehicleType::cases()),
+            'statuses' => $enum(\App\Enums\Fleet\VehicleStatus::cases()),
             'locations' => \App\Models\Fleet\Location::query()->orderBy('name')->get(['id', 'name']),
             'drivers' => \App\Models\Fleet\Driver::query()->orderBy('last_name')->get(['id', 'first_name', 'last_name']),
         ]);

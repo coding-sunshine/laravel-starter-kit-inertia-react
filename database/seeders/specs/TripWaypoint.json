@@ -1,0 +1,74 @@
+{
+    "model": "TripWaypoint",
+    "table": "trip_waypoints",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "trip_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "lat": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "lng": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "recorded_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "sequence": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "speed_kmh": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "heading": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "altitude_m": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "accuracy_m": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "raw_payload": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": [],
+    "value_hints": [],
+    "scenarios": []
+}

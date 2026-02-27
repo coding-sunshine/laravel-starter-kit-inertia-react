@@ -14,11 +14,14 @@ use Spatie\Csp\Presets\Basic;
 $vitePorts = [5173, 5174, 5175, 5176, 5177];
 $viteHttp = env('APP_ENV') === 'local' ? array_merge(
     array_map(fn (int $p) => "http://localhost:{$p}", $vitePorts),
+    array_map(fn (int $p) => "http://127.0.0.1:{$p}", $vitePorts),
     array_map(fn (int $p) => "http://[::1]:{$p}", $vitePorts)
 ) : [];
 $viteWs = env('APP_ENV') === 'local' ? array_merge(
     array_map(fn (int $p) => "ws://localhost:{$p}", $vitePorts),
+    array_map(fn (int $p) => "ws://127.0.0.1:{$p}", $vitePorts),
     array_map(fn (int $p) => "wss://localhost:{$p}", $vitePorts),
+    array_map(fn (int $p) => "wss://127.0.0.1:{$p}", $vitePorts),
     array_map(fn (int $p) => "ws://[::1]:{$p}", $vitePorts),
     array_map(fn (int $p) => "wss://[::1]:{$p}", $vitePorts)
 ) : [];

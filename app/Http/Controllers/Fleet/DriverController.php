@@ -33,11 +33,12 @@ final class DriverController extends Controller
     public function create(): Response
     {
         $this->authorize('create', Driver::class);
+        $enum = fn ($cases) => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], $cases);
         return Inertia::render('Fleet/Drivers/Create', [
-            'statuses' => \App\Enums\Fleet\DriverStatus::cases(),
-            'licenseStatuses' => \App\Enums\Fleet\DriverLicenseStatus::cases(),
-            'riskCategories' => \App\Enums\Fleet\DriverRiskCategory::cases(),
-            'complianceStatuses' => \App\Enums\Fleet\DriverComplianceStatus::cases(),
+            'statuses' => $enum(\App\Enums\Fleet\DriverStatus::cases()),
+            'licenseStatuses' => $enum(\App\Enums\Fleet\DriverLicenseStatus::cases()),
+            'riskCategories' => $enum(\App\Enums\Fleet\DriverRiskCategory::cases()),
+            'complianceStatuses' => $enum(\App\Enums\Fleet\DriverComplianceStatus::cases()),
         ]);
     }
 
@@ -64,12 +65,13 @@ final class DriverController extends Controller
     public function edit(Driver $driver): Response
     {
         $this->authorize('update', $driver);
+        $enum = fn ($cases) => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], $cases);
         return Inertia::render('Fleet/Drivers/Edit', [
             'driver' => $driver,
-            'statuses' => \App\Enums\Fleet\DriverStatus::cases(),
-            'licenseStatuses' => \App\Enums\Fleet\DriverLicenseStatus::cases(),
-            'riskCategories' => \App\Enums\Fleet\DriverRiskCategory::cases(),
-            'complianceStatuses' => \App\Enums\Fleet\DriverComplianceStatus::cases(),
+            'statuses' => $enum(\App\Enums\Fleet\DriverStatus::cases()),
+            'licenseStatuses' => $enum(\App\Enums\Fleet\DriverLicenseStatus::cases()),
+            'riskCategories' => $enum(\App\Enums\Fleet\DriverRiskCategory::cases()),
+            'complianceStatuses' => $enum(\App\Enums\Fleet\DriverComplianceStatus::cases()),
         ]);
     }
 

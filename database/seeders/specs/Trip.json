@@ -1,0 +1,94 @@
+{
+    "model": "Trip",
+    "table": "trips",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "vehicle_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "driver_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "route_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "start_location_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "end_location_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "planned_start_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "planned_end_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "started_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "ended_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "distance_km": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "duration_minutes": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "notes": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": [],
+    "value_hints": [],
+    "scenarios": []
+}

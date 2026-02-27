@@ -1,0 +1,69 @@
+{
+    "model": "GeofenceEvent",
+    "table": "geofence_events",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "geofence_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "vehicle_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "driver_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "trip_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "event_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "occurred_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "lat": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "lng": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": [],
+    "value_hints": [],
+    "scenarios": []
+}

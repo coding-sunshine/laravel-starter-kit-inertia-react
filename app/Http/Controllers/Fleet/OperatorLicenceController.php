@@ -34,7 +34,7 @@ final class OperatorLicenceController extends Controller
     {
         $this->authorize('create', OperatorLicence::class);
         return Inertia::render('Fleet/OperatorLicences/Create', [
-            'statuses' => \App\Enums\Fleet\OperatorLicenceStatus::cases(),
+            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\OperatorLicenceStatus::cases()),
         ]);
     }
 
@@ -56,7 +56,7 @@ final class OperatorLicenceController extends Controller
         $this->authorize('update', $operatorLicence);
         return Inertia::render('Fleet/OperatorLicences/Edit', [
             'operatorLicence' => $operatorLicence,
-            'statuses' => \App\Enums\Fleet\OperatorLicenceStatus::cases(),
+            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\OperatorLicenceStatus::cases()),
         ]);
     }
 

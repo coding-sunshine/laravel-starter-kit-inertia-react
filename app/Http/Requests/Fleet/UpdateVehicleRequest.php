@@ -20,7 +20,7 @@ final class UpdateVehicleRequest extends FormRequest
     {
         return [
             'registration' => ['required', 'string', 'max:50'],
-            'vin' => ['nullable', 'string', 'size:17'],
+            'vin' => ['nullable', 'string', 'max:17'],
             'fleet_number' => ['nullable', 'string', 'max:50'],
             'make' => ['required', 'string', 'max:100'],
             'model' => ['required', 'string', 'max:100'],

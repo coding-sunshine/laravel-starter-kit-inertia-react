@@ -34,6 +34,9 @@ final class SetTenantContext
         /** @var User $user */
         $user = Auth::user();
 
+        // First, try to initialize from session
+        TenantContext::initFromSession();
+
         if (TenantContext::check() && $user->belongsToOrganization(TenantContext::id())) {
             return $next($request);
         }

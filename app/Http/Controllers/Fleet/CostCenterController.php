@@ -21,7 +21,7 @@ final class CostCenterController extends Controller
         $costCenters = CostCenter::query()
             ->with('parent')
             ->when($request->input('type'), fn ($q, $type) => $q->where('cost_center_type', $type))
-            ->when($request->boolean('is_active') !== null, fn ($q) => $q->where('is_active', $request->boolean('is_active')))
+            ->when($request->has('is_active'), fn ($q) => $q->where('is_active', $request->boolean('is_active')))
             ->orderBy('code')
             ->paginate(15)
             ->withQueryString();
@@ -36,7 +36,7 @@ final class CostCenterController extends Controller
     {
         $this->authorize('create', CostCenter::class);
         return Inertia::render('Fleet/CostCenters/Create', [
-            'costCenterTypes' => \App\Enums\Fleet\CostCenterType::cases(),
+            'costCenterTypes' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\CostCenterType::cases()),
             'parents' => CostCenter::query()->orderBy('code')->get(['id', 'code', 'name']),
             'users' => \App\Models\User::query()->orderBy('name')->get(['id', 'name']),
         ]);
@@ -61,7 +61,7 @@ final class CostCenterController extends Controller
         $this->authorize('update', $costCenter);
         return Inertia::render('Fleet/CostCenters/Edit', [
             'costCenter' => $costCenter,
-            'costCenterTypes' => \App\Enums\Fleet\CostCenterType::cases(),
+            'costCenterTypes' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\CostCenterType::cases()),
             'parents' => CostCenter::query()->where('id', '!=', $costCenter->id)->orderBy('code')->get(['id', 'code', 'name']),
             'users' => \App\Models\User::query()->orderBy('name')->get(['id', 'name']),
         ]);
