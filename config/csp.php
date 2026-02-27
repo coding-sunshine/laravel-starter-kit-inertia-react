@@ -7,6 +7,22 @@ use Spatie\Csp\Keyword;
 use Spatie\Csp\Nonce\RandomString;
 use Spatie\Csp\Presets\Basic;
 
+/*
+ * Vite dev server origins (localhost + IPv6) for common ports so CSP allows scripts
+ * when Vite uses 5173, 5174, etc. Only used when APP_ENV=local.
+ */
+$vitePorts = [5173, 5174, 5175, 5176, 5177];
+$viteHttp = env('APP_ENV') === 'local' ? array_merge(
+    array_map(fn (int $p) => "http://localhost:{$p}", $vitePorts),
+    array_map(fn (int $p) => "http://[::1]:{$p}", $vitePorts)
+) : [];
+$viteWs = env('APP_ENV') === 'local' ? array_merge(
+    array_map(fn (int $p) => "ws://localhost:{$p}", $vitePorts),
+    array_map(fn (int $p) => "wss://localhost:{$p}", $vitePorts),
+    array_map(fn (int $p) => "ws://[::1]:{$p}", $vitePorts),
+    array_map(fn (int $p) => "wss://[::1]:{$p}", $vitePorts)
+) : [];
+
 return [
 
     /*
@@ -21,29 +37,30 @@ return [
      * Additional global CSP directives for Inertia + Vite compatibility.
      */
     'directives' => array_filter([
-        [Directive::STYLE, array_filter([
+        [Directive::STYLE, array_filter(array_merge([
             Keyword::SELF,
             Keyword::UNSAFE_INLINE,
             'https://fonts.bunny.net',
             'https://fonts.googleapis.com',
             'https://unpkg.com',
-            env('APP_ENV') === 'local' ? 'http://localhost:5173' : null,
-        ])],
+        ], $viteHttp))],
 
         [Directive::IMG, [Keyword::SELF, 'data:', 'blob:', 'https:']],
 
         [Directive::FONT, [Keyword::SELF, 'data:', 'https://fonts.bunny.net', 'https://fonts.gstatic.com']],
 
-        [Directive::CONNECT, array_filter([
+        [Directive::CONNECT, array_filter(array_merge([
             Keyword::SELF,
-            env('APP_ENV') === 'local' ? 'ws://localhost:5173' : null,
-            env('APP_ENV') === 'local' ? 'wss://localhost:5173' : null,
-            env('APP_ENV') === 'local' ? 'http://localhost:5173' : null,
-        ])],
+        ], $viteHttp, $viteWs))],
 
         in_array(env('APP_ENV'), ['local', 'testing'], true)
-            ? [Directive::SCRIPT, [Keyword::SELF, Keyword::UNSAFE_EVAL, Keyword::UNSAFE_INLINE, 'http://localhost:5173', 'https://unpkg.com']]
+            ? [Directive::SCRIPT, array_merge([Keyword::SELF, Keyword::UNSAFE_EVAL, Keyword::UNSAFE_INLINE, 'https://unpkg.com'], $viteHttp)]
             : [Directive::SCRIPT, [Keyword::SELF, Keyword::UNSAFE_INLINE, 'https://unpkg.com']],
+
+        // Chrome uses script-src-elem for <script> tags; set explicitly so Vite dev server is allowed.
+        in_array(env('APP_ENV'), ['local', 'testing'], true)
+            ? [Directive::SCRIPT_ELEM, array_merge([Keyword::SELF, Keyword::UNSAFE_EVAL, Keyword::UNSAFE_INLINE, 'https://unpkg.com'], $viteHttp)]
+            : null,
     ]),
 
     'report_only_presets' => [],

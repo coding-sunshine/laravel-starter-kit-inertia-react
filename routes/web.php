@@ -200,6 +200,19 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         Route::put('settings/branding', [BrandingController::class, 'update'])->name('settings.branding.update');
     });
 
+    Route::middleware('tenant')->prefix('fleet')->name('fleet.')->group(function (): void {
+        Route::resource('locations', App\Http\Controllers\Fleet\LocationController::class)->names('locations');
+        Route::resource('cost-centers', App\Http\Controllers\Fleet\CostCenterController::class)->names('cost-centers');
+        Route::resource('drivers', App\Http\Controllers\Fleet\DriverController::class)->names('drivers');
+        Route::resource('trailers', App\Http\Controllers\Fleet\TrailerController::class)->names('trailers');
+        Route::resource('vehicles', App\Http\Controllers\Fleet\VehicleController::class)->names('vehicles');
+        Route::resource('geofences', App\Http\Controllers\Fleet\GeofenceController::class)->names('geofences');
+        Route::resource('garages', App\Http\Controllers\Fleet\GarageController::class)->names('garages');
+        Route::resource('fuel-stations', App\Http\Controllers\Fleet\FuelStationController::class)->names('fuel-stations');
+        Route::resource('ev-charging-stations', App\Http\Controllers\Fleet\EvChargingStationController::class)->names('ev-charging-stations');
+        Route::resource('operator-licences', App\Http\Controllers\Fleet\OperatorLicenceController::class)->names('operator-licences');
+    });
+
     Route::middleware('tenant')->group(function (): void {
         Route::get('pages', [PageController::class, 'index'])->name('pages.index');
         Route::get('pages/create', [PageController::class, 'create'])->name('pages.create');

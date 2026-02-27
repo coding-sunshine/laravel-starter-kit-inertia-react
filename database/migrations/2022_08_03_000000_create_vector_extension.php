@@ -18,8 +18,11 @@ return new class extends Migration
             DB::statement('CREATE EXTENSION IF NOT EXISTS vector');
         } catch (Throwable $e) {
             // Managed Postgres (e.g. Laravel Cloud) may not allow CREATE EXTENSION for the app user.
+            // Skip when extension is not installed (e.g. pgvector not installed locally).
             // Skip so deploy succeeds; enable the vector extension at the infrastructure level if needed.
-            if (str_contains($e->getMessage(), 'permission denied') || str_contains($e->getMessage(), '42501')) {
+            $msg = $e->getMessage();
+            if (str_contains($msg, 'permission denied') || str_contains($msg, '42501')
+                || str_contains($msg, 'is not available') || str_contains($msg, 'Feature not supported')) {
                 return;
             }
             throw $e;

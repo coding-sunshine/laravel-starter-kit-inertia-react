@@ -60,7 +60,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $webAppend = [
             EnsureScrambleApiDocsVisible::class,
-            AddCspHeaders::class,
+            AddCspHeaders::class, // Always enabled for Vite compatibility
             AdditionalSecurityHeaders::class,
             ActivityLogContextMiddleware::class,
             HandleAppearance::class,
@@ -84,7 +84,7 @@ return Application::configure(basePath: dirname(__DIR__))
         );
 
         $middleware->api(append: [
-            AddCspHeaders::class,
+            AddCspHeaders::class, // Always enabled for Vite compatibility
             AdditionalSecurityHeaders::class,
             SetTenantContext::class,
             ApplyOrganizationSettings::class,

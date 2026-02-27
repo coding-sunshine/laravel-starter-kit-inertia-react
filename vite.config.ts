@@ -5,6 +5,9 @@ import laravel from 'laravel-vite-plugin';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
+    server: {
+        host: '127.0.0.1', // Use IPv4 so CSP/browsers don't block [::1] script sources
+    },
     plugins: [
         laravel({
             input: ['resources/css/app.css', 'resources/js/app.tsx'],
@@ -15,6 +18,8 @@ export default defineConfig({
         tailwindcss(),
         wayfinder({
             formVariants: true,
+            // Use wrapper so non-zero exit from wayfinder:generate does not fail the build
+            command: 'bash scripts/wayfinder-generate.sh',
         }),
     ],
     esbuild: {
