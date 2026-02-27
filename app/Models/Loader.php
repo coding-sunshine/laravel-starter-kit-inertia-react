@@ -20,6 +20,7 @@ final class Loader extends Model
         'code',
         'loader_type',
         'make_model',
+        'capacity_mt',
         'last_calibration_date',
         'is_active',
     ];
@@ -27,6 +28,7 @@ final class Loader extends Model
     protected $casts = [
         'is_active' => 'boolean',
         'last_calibration_date' => 'date',
+        'capacity_mt' => 'decimal:2',
     ];
 
     public function siding(): BelongsTo

@@ -32,22 +32,7 @@
             "nullable": true,
             "default": null
         },
-        "loaded_weight_mt": {
-            "type": "numeric",
-            "nullable": true,
-            "default": null
-        },
         "pcc_weight_mt": {
-            "type": "numeric",
-            "nullable": true,
-            "default": null
-        },
-        "loader_recorded_qty_mt": {
-            "type": "numeric",
-            "nullable": true,
-            "default": null
-        },
-        "weighment_qty_mt": {
             "type": "numeric",
             "nullable": true,
             "default": null
@@ -78,9 +63,17 @@
             "type": "belongsTo",
             "model": "Rake"
         },
-        "wagonWeighments": {
+        "wagonLoadings": {
             "type": "hasMany",
-            "model": "WagonWeighment"
+            "model": "WagonLoading"
+        },
+        "rakeWagonWeighments": {
+            "type": "hasMany",
+            "model": "RakeWagonWeighment"
+        },
+        "wagonUnfitLogs": {
+            "type": "hasMany",
+            "model": "WagonUnfitLog"
         }
     },
     "value_hints": [],

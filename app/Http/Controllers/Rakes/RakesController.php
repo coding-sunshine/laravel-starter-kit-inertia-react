@@ -31,11 +31,11 @@ final class RakesController extends Controller
             'siding:id,name,code',
             'siding.loaders:id,siding_id,loader_name,code',
             'wagons',
-            'txr',
-            'rakeLoad',
-            'weighments',
-            'guardInspection',
-            'rrDocuments',
+            'txr.wagonUnfitLogs.wagon:id,wagon_number,wagon_sequence,wagon_type',
+            'wagonLoadings.wagon:id,wagon_number,wagon_sequence,wagon_type,pcc_weight_mt',
+            'wagonLoadings.loader:id,loader_name,code',
+            'guardInspections',
+            'rrDocument',
             'penalties',
         ]);
 
@@ -43,9 +43,9 @@ final class RakesController extends Controller
         if (
             $rake->state === 'loading'
             && $rake->placement_time
-            && $rake->free_time_minutes !== null
+            && $rake->loading_free_minutes !== null
         ) {
-            $end = $rake->placement_time->copy()->addMinutes((int) $rake->free_time_minutes);
+            $end = $rake->placement_time->copy()->addMinutes((int) $rake->loading_free_minutes);
             $demurrageRemainingMinutes = max(0, (int) now()->diffInMinutes($end, false));
         }
 
@@ -131,7 +131,7 @@ final class RakesController extends Controller
         $rake->update([
             'rake_type' => $validated['rake_type'] ?? $rake->rake_type,
             'wagon_count' => $validated['wagon_count'] ?? $rake->wagon_count,
-            'free_time_minutes' => $validated['free_time_minutes'] ?? $rake->free_time_minutes,
+            'loading_free_minutes' => $validated['free_time_minutes'] ?? $rake->loading_free_minutes,
             'rr_expected_date' => $validated['rr_expected_date'] ?? $rake->rr_expected_date,
             'placement_time' => $validated['placement_time'] ? new DateTimeImmutable($validated['placement_time']) : $rake->placement_time,
             'updated_by' => $request->user()->id,
@@ -151,5 +151,31 @@ final class RakesController extends Controller
 
         return to_route('rakes.show', $rake)
             ->with('success', 'Rake updated successfully.');
+    }
+
+    /**
+     * Delete a rake if it has no wagons
+     */
+    public function destroy(Request $request, Rake $rake): RedirectResponse
+    {
+        // $this->authorize('delete', $rake);
+
+        // Check if rake has wagons
+        if ($rake->wagons()->count() > 0) {
+            return to_route('rakes.show', $rake)
+                ->with('error', 'Cannot delete rake with wagons. Delete all wagons first.');
+        }
+
+        // Check if rake has TXR
+        if ($rake->txr) {
+            return to_route('rakes.show', $rake)
+                ->with('error', 'Cannot delete rake with TXR records.');
+        }
+
+        $rakeNumber = $rake->rake_number;
+        $rake->delete();
+
+        return to_route('rakes.index')
+            ->with('success', "Rake {$rakeNumber} deleted successfully.");
     }
 }

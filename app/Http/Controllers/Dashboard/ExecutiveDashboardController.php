@@ -190,13 +190,13 @@ final class ExecutiveDashboardController extends Controller
             ->whereIn('siding_id', $sidingIds)
             ->where('state', 'loading')
             ->whereNotNull('placement_time')
-            ->whereNotNull('free_time_minutes')
+            ->whereNotNull('loading_free_minutes')
             ->get();
 
         $list = [];
         foreach ($rakes as $rake) {
             $start = $rake->placement_time;
-            $freeMinutes = (int) $rake->free_time_minutes;
+            $freeMinutes = (int) $rake->loading_free_minutes;
             $end = $start->copy()->addMinutes($freeMinutes);
             $remainingMinutes = max(0, (int) now()->diffInMinutes($end, false));
             $list[] = [

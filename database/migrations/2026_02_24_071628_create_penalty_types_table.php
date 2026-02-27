@@ -29,13 +29,12 @@ return new class extends Migration
 
             $table->text('description')->nullable();
 
-            $table->string('calculation_type');
-            // excess_mt_distance_rate
-            // average_overload
-            // proportionate_loading
-            // per_wagon_per_hour
-            // fixed
-            // custom
+            $table->enum('calculation_type', [
+                'formula_based',
+                'fixed',
+                'per_hour',
+                'per_mt',
+            ]);
 
             $table->decimal('default_rate', 12, 2)->nullable();
 

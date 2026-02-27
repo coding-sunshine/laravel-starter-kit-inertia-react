@@ -17,13 +17,73 @@
             "nullable": true,
             "default": null
         },
-        "gross_weight_mt": {
+        "wagon_sequence": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "wagon_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "axles": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "cc_capacity_mt": {
             "type": "numeric",
             "nullable": true,
             "default": null
         },
-        "is_overloaded": {
-            "type": "boolean",
+        "printed_tare_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "actual_gross_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "actual_tare_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "net_weight_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "under_load_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "over_load_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "speed_kmph": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "weighment_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "slip_number": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "action_taken": {
+            "type": "text",
             "nullable": true,
             "default": null
         },
@@ -39,17 +99,13 @@
         }
     },
     "relationships": {
-        "weighment": {
+        "rakeWeighment": {
             "type": "belongsTo",
-            "model": "Weighment"
+            "model": "RakeWeighment"
         },
         "wagon": {
             "type": "belongsTo",
             "model": "Wagon"
-        },
-        "rakeWagonLoading": {
-            "type": "belongsTo",
-            "model": "RakeWagonLoading"
         }
     },
     "value_hints": [],

@@ -10,33 +10,42 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('rake_wagon_loading', function (Blueprint $table) {
+        Schema::create('wagon_loading', function (Blueprint $table) {
+
             $table->id();
 
-            $table->foreignId('rake_load_id')
-                ->constrained('rake_loads')
+            // Link directly to rake
+            $table->foreignId('rake_id')
+                ->constrained('rakes')
                 ->cascadeOnDelete();
 
+            // Which wagon
             $table->foreignId('wagon_id')
                 ->constrained('wagons')
                 ->cascadeOnDelete();
 
+            // Loader used
             $table->foreignId('loader_id')
                 ->nullable()
                 ->constrained('loaders')
                 ->nullOnDelete();
 
-            $table->decimal('loaded_quantity_mt', 10, 2);
+            // Snapshot fields (important for audit)
+            $table->string('loader_operator_name')->nullable();
+            $table->decimal('cc_capacity_mt', 10, 2)->nullable();
 
-            $table->integer('attempt_no')->default(1);
-            // If overload & reload, attempt increases
+            // Actual loaded quantity
+            $table->decimal('loaded_quantity_mt', 10, 2)->nullable();
 
-            $table->dateTime('started_at')->nullable();
-            $table->dateTime('completed_at')->nullable();
+            // When loading was completed
+            $table->dateTime('loading_time')->nullable();
+
+            $table->text('remarks')->nullable();
 
             $table->timestamps();
 
-            $table->index(['rake_load_id', 'wagon_id']);
+            // One loading record per wagon per rake
+            $table->unique(['rake_id', 'wagon_id']);
         });
     }
 

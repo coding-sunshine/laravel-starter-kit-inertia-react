@@ -12,7 +12,17 @@
             "nullable": true,
             "default": null
         },
-        "inspection_time": {
+        "inspection_start_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "inspection_end_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "movement_permission_time": {
             "type": "timestamp",
             "nullable": true,
             "default": null
@@ -41,26 +51,6 @@
             "type": "timestamp",
             "nullable": true,
             "default": null
-        },
-        "updated_by": {
-            "type": "bigint",
-            "nullable": true,
-            "default": null
-        },
-        "rake_load_id": {
-            "type": "bigint",
-            "nullable": true,
-            "default": null
-        },
-        "movement_permission_time": {
-            "type": "timestamp",
-            "nullable": true,
-            "default": null
-        },
-        "attempt_no": {
-            "type": "integer",
-            "nullable": true,
-            "default": null
         }
     },
     "relationships": {
@@ -71,10 +61,6 @@
         "createdBy": {
             "type": "belongsTo",
             "model": "CreatedBy"
-        },
-        "rakeLoad": {
-            "type": "belongsTo",
-            "model": "RakeLoad"
         }
     },
     "value_hints": {
@@ -89,6 +75,14 @@
         "is_approved": {
             "type": "boolean",
             "example": true
+        },
+        "inspection_start_time": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        },
+        "inspection_end_time": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
         }
     },
     "scenarios": []

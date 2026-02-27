@@ -7,7 +7,7 @@
             "nullable": true,
             "default": null
         },
-        "rake_load_id": {
+        "rake_id": {
             "type": "bigint",
             "nullable": true,
             "default": null
@@ -22,23 +22,28 @@
             "nullable": true,
             "default": null
         },
+        "loader_operator_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "cc_capacity_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
         "loaded_quantity_mt": {
             "type": "numeric",
             "nullable": true,
             "default": null
         },
-        "attempt_no": {
-            "type": "integer",
-            "nullable": true,
-            "default": null
-        },
-        "started_at": {
+        "loading_time": {
             "type": "timestamp",
             "nullable": true,
             "default": null
         },
-        "completed_at": {
-            "type": "timestamp",
+        "remarks": {
+            "type": "text",
             "nullable": true,
             "default": null
         },
@@ -54,9 +59,9 @@
         }
     },
     "relationships": {
-        "rakeLoad": {
+        "rake": {
             "type": "belongsTo",
-            "model": "RakeLoad"
+            "model": "Rake"
         },
         "wagon": {
             "type": "belongsTo",
@@ -65,12 +70,13 @@
         "loader": {
             "type": "belongsTo",
             "model": "Loader"
-        },
-        "weighments": {
-            "type": "hasMany",
-            "model": "Weighment"
         }
     },
-    "value_hints": [],
+    "value_hints": {
+        "loader_operator_name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    },
     "scenarios": []
 }

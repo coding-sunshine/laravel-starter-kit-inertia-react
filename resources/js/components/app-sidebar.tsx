@@ -34,6 +34,13 @@ import {
     Scale,
     Train,
     Truck,
+    Settings,
+    Database,
+    Factory,
+    MapPin,
+    Package,
+    Timer,
+    Route,
 } from 'lucide-react';
 import { useMemo } from 'react';
 import AppLogo from './app-logo';
@@ -44,6 +51,42 @@ const mainNavItems: NavItem[] = [
         href: dashboard().url,
         icon: LayoutGrid,
         dataPan: 'nav-dashboard',
+    },
+    {
+        title: 'Power Plants',
+        href: '/master-data/power-plants',
+        icon: Factory,
+        dataPan: 'nav-power-plants',
+    },
+    {
+        title: 'Sidings',
+        href: '/master-data/sidings',
+        icon: MapPin,
+        dataPan: 'nav-sidings',
+    },
+    {
+        title: 'Loaders',
+        href: '/master-data/loaders',
+        icon: Package,
+        dataPan: 'nav-loaders',
+    },
+    {
+        title: 'Penalty Types',
+        href: '/master-data/penalty-types',
+        icon: AlertTriangle,
+        dataPan: 'nav-penalty-types',
+    },
+    {
+        title: 'Section Timers',
+        href: '/master-data/section-timers',
+        icon: Timer,
+        dataPan: 'nav-section-timers',
+    },
+    {
+        title: 'Distance Matrix',
+        href: '/master-data/distance-matrix',
+        icon: Route,
+        dataPan: 'nav-distance-matrix',
     },
     // {
     //     title: 'Organizations',

@@ -59,16 +59,15 @@ export default function IndentsCreate({ sidings }: Props) {
                         <InputError message={errors?.siding_id} />
                     </div>
                     <div className="grid gap-2">
-                        <Label htmlFor="indent_number">Indent number *</Label>
+                        <Label htmlFor="indent_number">Indent number</Label>
                         <Input
                             id="indent_number"
                             name="indent_number"
-                            required
                             className="text-sm"
                         />
                         <InputError message={errors?.indent_number} />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    {/* <div className="grid grid-cols-2 gap-4">
                         <div className="grid gap-2">
                             <Label htmlFor="target_quantity_mt">
                                 Target quantity (MT) *
@@ -95,8 +94,8 @@ export default function IndentsCreate({ sidings }: Props) {
                             />
                             <InputError message={errors?.indent_date} />
                         </div>
-                    </div>
-                    <div className="grid gap-2">
+                    </div> */}
+                    {/* <div className="grid gap-2">
                         <Label htmlFor="required_by_date">
                             Required by date
                         </Label>
@@ -107,7 +106,8 @@ export default function IndentsCreate({ sidings }: Props) {
                             className="text-sm"
                         />
                         <InputError message={errors?.required_by_date} />
-                    </div>
+                    </div> */}
+
                     <div className="grid gap-2">
                         <Label htmlFor="e_demand_reference_id">
                             e-Demand reference ID
@@ -118,6 +118,41 @@ export default function IndentsCreate({ sidings }: Props) {
                             className="text-sm"
                         />
                         <InputError message={errors?.e_demand_reference_id} />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="expected_loading_date">
+                            Expected Loading Date
+                        </Label>
+                        <Input
+                            id="expected_loading_date"
+                            name="expected_loading_date"
+                            type="date"
+                            className="text-sm"
+                        />
+                        <InputError message={errors?.e_demand_reference_id} />
+                    </div>
+
+                    <div className="grid gap-2">
+                        <Label htmlFor="demanded_stock">
+                            Demanded Stock
+                        </Label>
+                        <Input
+                            id="demanded_stock"
+                            name="demanded_stock"
+                            className="text-sm"
+                        />
+                        <InputError message={errors?.demanded_stock} />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="total_units">
+                            Total Units
+                        </Label>
+                        <Input
+                            id="total_units"
+                            name="total_units"
+                            className="text-sm"
+                        />
+                        <InputError message={errors?.total_units} />
                     </div>
                     <div className="grid gap-2">
                         <Label htmlFor="fnr_number">FNR number</Label>

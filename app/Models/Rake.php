@@ -25,11 +25,20 @@ final class Rake extends Model
         'loaded_weight_mt',
         'predicted_weight_mt',
         'state',
-        'free_time_minutes',
         'rr_expected_date',
         'rr_actual_date',
         'placement_time',
         'dispatch_time',
+        'loading_start_time',
+        'loading_end_time',
+        'loading_free_minutes',
+        'guard_start_time',
+        'guard_end_time',
+        'weighment_start_time',
+        'weighment_end_time',
+        'created_by',
+        'updated_by',
+        'deleted_by',
     ];
 
     protected $casts = [
@@ -37,6 +46,15 @@ final class Rake extends Model
         'dispatch_time' => 'datetime',
         'rr_expected_date' => 'datetime',
         'rr_actual_date' => 'datetime',
+        'loaded_weight_mt' => 'decimal:2',
+        'predicted_weight_mt' => 'decimal:2',
+        'loading_start_time' => 'datetime',
+        'loading_end_time' => 'datetime',
+        'loading_free_minutes' => 'integer',
+        'guard_start_time' => 'datetime',
+        'guard_end_time' => 'datetime',
+        'weighment_start_time' => 'datetime',
+        'weighment_end_time' => 'datetime',
     ];
 
     public function siding(): BelongsTo
@@ -54,9 +72,9 @@ final class Rake extends Model
         return $this->hasMany(Wagon::class);
     }
 
-    public function weighments(): HasMany
+    public function rakeWeighments(): HasMany
     {
-        return $this->hasMany(Weighment::class);
+        return $this->hasMany(RakeWeighment::class);
     }
 
     public function txr(): HasOne
@@ -64,29 +82,24 @@ final class Rake extends Model
         return $this->hasOne(Txr::class);
     }
 
-    public function guardInspection(): HasOne
+    public function wagonLoadings(): HasMany
     {
-        return $this->hasOne(GuardInspection::class);
+        return $this->hasMany(RakeWagonLoading::class);
     }
 
-    public function rrDocuments(): HasMany
+    public function guardInspections(): HasMany
     {
-        return $this->hasMany(RrDocument::class);
+        return $this->hasMany(GuardInspection::class);
     }
 
-    public function rrPrediction(): HasOne
+    public function rrDocument(): HasOne
     {
-        return $this->hasOne(RrPrediction::class);
+        return $this->hasOne(RrDocument::class);
     }
 
     public function penalties(): HasMany
     {
         return $this->hasMany(Penalty::class);
-    }
-
-    public function powerPlantReceipts(): HasMany
-    {
-        return $this->hasMany(PowerPlantReceipt::class);
     }
 
     public function createdBy(): BelongsTo
@@ -97,20 +110,5 @@ final class Rake extends Model
     public function updatedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by');
-    }
-
-    public function rakeLoad(): HasOne
-    {
-        return $this->hasOne(RakeLoad::class);
-    }
-
-    public function rakeLoads(): HasMany
-    {
-        return $this->hasMany(RakeLoad::class);
-    }
-
-    public function appliedPenalties(): HasMany
-    {
-        return $this->hasMany(AppliedPenalty::class);
     }
 }

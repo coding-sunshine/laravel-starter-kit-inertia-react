@@ -21,7 +21,7 @@ interface RakeRow {
     id: number;
     rake_number: string;
     rake_type: string | null;
-    wagon_count: number;
+    wagon_count: number | null;
     state: string;
     placement_time: string | null;
     dispatch_time: string | null;

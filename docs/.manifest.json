@@ -1,6 +1,6 @@
 {
     "version": "1.0.0",
-    "lastGenerated": "2026-02-24",
+    "lastGenerated": "2026-02-27",
     "actions": {
         "CreateUser": {
             "documented": true,
@@ -1569,6 +1569,201 @@
                 "relatedRoutes": [],
                 "rendersPages": []
             }
+        },
+        "DailyVehicleEntryController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "road-dispatch.daily-vehicle-entries.index",
+                    "road-dispatch.daily-vehicle-entries.store",
+                    "road-dispatch.daily-vehicle-entries.update",
+                    "road-dispatch.daily-vehicle-entries.destroy",
+                    "road-dispatch.daily-vehicle-entries.complete",
+                    "road-dispatch.daily-vehicle-entries.export"
+                ],
+                "rendersPages": [
+                    "road-dispatch/daily-vehicle-entries/index"
+                ]
+            }
+        },
+        "LoadersController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "master-data.loaders.index",
+                    "master-data.loaders.create",
+                    "master-data.loaders.store",
+                    "master-data.loaders.show",
+                    "master-data.loaders.edit",
+                    "master-data.loaders.update",
+                    "master-data.loaders.destroy"
+                ],
+                "rendersPages": [
+                    "MasterData/Loaders/Index",
+                    "MasterData/Loaders/Create",
+                    "MasterData/Loaders/Show",
+                    "MasterData/Loaders/Edit"
+                ]
+            }
+        },
+        "PenaltyTypesController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "master-data.penalty-types.index",
+                    "master-data.penalty-types.create",
+                    "master-data.penalty-types.store",
+                    "master-data.penalty-types.show",
+                    "master-data.penalty-types.edit",
+                    "master-data.penalty-types.update",
+                    "master-data.penalty-types.destroy"
+                ],
+                "rendersPages": [
+                    "MasterData/PenaltyTypes/Index",
+                    "MasterData/PenaltyTypes/Create",
+                    "MasterData/PenaltyTypes/Show",
+                    "MasterData/PenaltyTypes/Edit"
+                ]
+            }
+        },
+        "PowerPlantController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "master-data.power-plants.index",
+                    "master-data.power-plants.create",
+                    "master-data.power-plants.store",
+                    "master-data.power-plants.show",
+                    "master-data.power-plants.edit",
+                    "master-data.power-plants.update",
+                    "master-data.power-plants.destroy"
+                ],
+                "rendersPages": [
+                    "MasterData/PowerPlants/Index",
+                    "MasterData/PowerPlants/Create",
+                    "MasterData/PowerPlants/Show",
+                    "MasterData/PowerPlants/Edit"
+                ]
+            }
+        },
+        "PowerplantSidingDistancesController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "master-data.master-data.distance-matrix.index",
+                    "master-data.master-data.distance-matrix.create",
+                    "master-data.master-data.distance-matrix.store",
+                    "master-data.master-data.distance-matrix.show",
+                    "master-data.master-data.distance-matrix.edit",
+                    "master-data.master-data.distance-matrix.update",
+                    "master-data.master-data.distance-matrix.destroy"
+                ],
+                "rendersPages": [
+                    "MasterData/DistanceMatrix/Index",
+                    "MasterData/DistanceMatrix/Create",
+                    "MasterData/DistanceMatrix/Show",
+                    "MasterData/DistanceMatrix/Edit"
+                ]
+            }
+        },
+        "RakeLoadController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [],
+                "rendersPages": [
+                    "rakes/load"
+                ]
+            }
+        },
+        "SectionTimersController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "master-data.section-timers.index",
+                    "master-data.section-timers.create",
+                    "master-data.section-timers.store",
+                    "master-data.section-timers.show",
+                    "master-data.section-timers.edit",
+                    "master-data.section-timers.update",
+                    "master-data.section-timers.destroy"
+                ],
+                "rendersPages": [
+                    "MasterData/SectionTimers/Index",
+                    "MasterData/SectionTimers/Create",
+                    "MasterData/SectionTimers/Show",
+                    "MasterData/SectionTimers/Edit"
+                ]
+            }
+        },
+        "SidingsController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "master-data.sidings.index",
+                    "master-data.sidings.create",
+                    "master-data.sidings.store",
+                    "master-data.sidings.show",
+                    "master-data.sidings.edit",
+                    "master-data.sidings.update",
+                    "master-data.sidings.destroy"
+                ],
+                "rendersPages": [
+                    "MasterData/Sidings/Index",
+                    "MasterData/Sidings/Create",
+                    "MasterData/Sidings/Show",
+                    "MasterData/Sidings/Edit"
+                ]
+            }
+        },
+        "TxrController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [
+                    "StoreTxrRequest"
+                ],
+                "relatedRoutes": [
+                    "rakes.txr.store"
+                ],
+                "rendersPages": []
+            }
+        },
+        "WagonUnfitController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [
+                    "StoreWagonUnfitRequest"
+                ],
+                "relatedRoutes": [],
+                "rendersPages": []
+            }
         }
     },
     "pages": {
@@ -1751,10 +1946,24 @@
                     "rakes.show",
                     "rakes.edit",
                     "rakes.update",
+                    "rakes.destroy",
                     "rakes.generate-wagons",
                     "rakes.wagons.update",
                     "rakes.txr.update",
+                    "rakes.txr.start",
+                    "rakes.txr.end",
+                    "rakes.txr.unfit-logs",
+                    "rakes.txr.store",
+                    "txr.unfit-wagons.store",
+                    "rakes.load.show",
+                    "rakes.load.confirm-placement",
+                    "rakes.load.wagon",
+                    "rakes.load.wagons",
+                    "rakes.load.guard-inspection",
+                    "rakes.load.weighment",
+                    "rakes.load.confirm-dispatch",
                     "rakes.weighments.store",
+                    "rakes.comparison",
                     "rakes.guard-inspection.store",
                     "indents.index",
                     "indents.create",
@@ -1764,6 +1973,48 @@
                     "indents.update",
                     "indents.create-rake",
                     "indents.store-rake",
+                    "master-data.power-plants.index",
+                    "master-data.power-plants.create",
+                    "master-data.power-plants.store",
+                    "master-data.power-plants.show",
+                    "master-data.power-plants.edit",
+                    "master-data.power-plants.update",
+                    "master-data.power-plants.destroy",
+                    "master-data.sidings.index",
+                    "master-data.sidings.create",
+                    "master-data.sidings.store",
+                    "master-data.sidings.show",
+                    "master-data.sidings.edit",
+                    "master-data.sidings.update",
+                    "master-data.sidings.destroy",
+                    "master-data.loaders.index",
+                    "master-data.loaders.create",
+                    "master-data.loaders.store",
+                    "master-data.loaders.show",
+                    "master-data.loaders.edit",
+                    "master-data.loaders.update",
+                    "master-data.loaders.destroy",
+                    "master-data.penalty-types.index",
+                    "master-data.penalty-types.create",
+                    "master-data.penalty-types.store",
+                    "master-data.penalty-types.show",
+                    "master-data.penalty-types.edit",
+                    "master-data.penalty-types.update",
+                    "master-data.penalty-types.destroy",
+                    "master-data.section-timers.index",
+                    "master-data.section-timers.create",
+                    "master-data.section-timers.store",
+                    "master-data.section-timers.show",
+                    "master-data.section-timers.edit",
+                    "master-data.section-timers.update",
+                    "master-data.section-timers.destroy",
+                    "master-data.master-data.distance-matrix.index",
+                    "master-data.master-data.distance-matrix.create",
+                    "master-data.master-data.distance-matrix.store",
+                    "master-data.master-data.distance-matrix.show",
+                    "master-data.master-data.distance-matrix.edit",
+                    "master-data.master-data.distance-matrix.update",
+                    "master-data.master-data.distance-matrix.destroy",
                     "road-dispatch.arrivals.index",
                     "road-dispatch.arrivals.create",
                     "road-dispatch.arrivals.store",
@@ -1778,6 +2029,12 @@
                     "road-dispatch.unloads.tare-weighment",
                     "road-dispatch.unloads.complete",
                     "road-dispatch.unloads.confirm",
+                    "road-dispatch.daily-vehicle-entries.index",
+                    "road-dispatch.daily-vehicle-entries.store",
+                    "road-dispatch.daily-vehicle-entries.update",
+                    "road-dispatch.daily-vehicle-entries.destroy",
+                    "road-dispatch.daily-vehicle-entries.complete",
+                    "road-dispatch.daily-vehicle-entries.export",
                     "railway-receipts.index",
                     "railway-receipts.create",
                     "railway-receipts.store",
@@ -2235,10 +2492,24 @@
                     "rakes.show",
                     "rakes.edit",
                     "rakes.update",
+                    "rakes.destroy",
                     "rakes.generate-wagons",
                     "rakes.wagons.update",
                     "rakes.txr.update",
+                    "rakes.txr.start",
+                    "rakes.txr.end",
+                    "rakes.txr.unfit-logs",
+                    "rakes.txr.store",
+                    "txr.unfit-wagons.store",
+                    "rakes.load.show",
+                    "rakes.load.confirm-placement",
+                    "rakes.load.wagon",
+                    "rakes.load.wagons",
+                    "rakes.load.guard-inspection",
+                    "rakes.load.weighment",
+                    "rakes.load.confirm-dispatch",
                     "rakes.weighments.store",
+                    "rakes.comparison",
                     "rakes.guard-inspection.store",
                     "indents.index",
                     "indents.create",
@@ -2248,6 +2519,48 @@
                     "indents.update",
                     "indents.create-rake",
                     "indents.store-rake",
+                    "master-data.power-plants.index",
+                    "master-data.power-plants.create",
+                    "master-data.power-plants.store",
+                    "master-data.power-plants.show",
+                    "master-data.power-plants.edit",
+                    "master-data.power-plants.update",
+                    "master-data.power-plants.destroy",
+                    "master-data.sidings.index",
+                    "master-data.sidings.create",
+                    "master-data.sidings.store",
+                    "master-data.sidings.show",
+                    "master-data.sidings.edit",
+                    "master-data.sidings.update",
+                    "master-data.sidings.destroy",
+                    "master-data.loaders.index",
+                    "master-data.loaders.create",
+                    "master-data.loaders.store",
+                    "master-data.loaders.show",
+                    "master-data.loaders.edit",
+                    "master-data.loaders.update",
+                    "master-data.loaders.destroy",
+                    "master-data.penalty-types.index",
+                    "master-data.penalty-types.create",
+                    "master-data.penalty-types.store",
+                    "master-data.penalty-types.show",
+                    "master-data.penalty-types.edit",
+                    "master-data.penalty-types.update",
+                    "master-data.penalty-types.destroy",
+                    "master-data.section-timers.index",
+                    "master-data.section-timers.create",
+                    "master-data.section-timers.store",
+                    "master-data.section-timers.show",
+                    "master-data.section-timers.edit",
+                    "master-data.section-timers.update",
+                    "master-data.section-timers.destroy",
+                    "master-data.master-data.distance-matrix.index",
+                    "master-data.master-data.distance-matrix.create",
+                    "master-data.master-data.distance-matrix.store",
+                    "master-data.master-data.distance-matrix.show",
+                    "master-data.master-data.distance-matrix.edit",
+                    "master-data.master-data.distance-matrix.update",
+                    "master-data.master-data.distance-matrix.destroy",
                     "road-dispatch.arrivals.index",
                     "road-dispatch.arrivals.create",
                     "road-dispatch.arrivals.store",
@@ -2262,6 +2575,12 @@
                     "road-dispatch.unloads.tare-weighment",
                     "road-dispatch.unloads.complete",
                     "road-dispatch.unloads.confirm",
+                    "road-dispatch.daily-vehicle-entries.index",
+                    "road-dispatch.daily-vehicle-entries.store",
+                    "road-dispatch.daily-vehicle-entries.update",
+                    "road-dispatch.daily-vehicle-entries.destroy",
+                    "road-dispatch.daily-vehicle-entries.complete",
+                    "road-dispatch.daily-vehicle-entries.export",
                     "railway-receipts.index",
                     "railway-receipts.create",
                     "railway-receipts.store",
@@ -2505,10 +2824,24 @@
                     "rakes.show",
                     "rakes.edit",
                     "rakes.update",
+                    "rakes.destroy",
                     "rakes.generate-wagons",
                     "rakes.wagons.update",
                     "rakes.txr.update",
+                    "rakes.txr.start",
+                    "rakes.txr.end",
+                    "rakes.txr.unfit-logs",
+                    "rakes.txr.store",
+                    "txr.unfit-wagons.store",
+                    "rakes.load.show",
+                    "rakes.load.confirm-placement",
+                    "rakes.load.wagon",
+                    "rakes.load.wagons",
+                    "rakes.load.guard-inspection",
+                    "rakes.load.weighment",
+                    "rakes.load.confirm-dispatch",
                     "rakes.weighments.store",
+                    "rakes.comparison",
                     "rakes.guard-inspection.store",
                     "indents.index",
                     "indents.create",
@@ -2518,6 +2851,48 @@
                     "indents.update",
                     "indents.create-rake",
                     "indents.store-rake",
+                    "master-data.power-plants.index",
+                    "master-data.power-plants.create",
+                    "master-data.power-plants.store",
+                    "master-data.power-plants.show",
+                    "master-data.power-plants.edit",
+                    "master-data.power-plants.update",
+                    "master-data.power-plants.destroy",
+                    "master-data.sidings.index",
+                    "master-data.sidings.create",
+                    "master-data.sidings.store",
+                    "master-data.sidings.show",
+                    "master-data.sidings.edit",
+                    "master-data.sidings.update",
+                    "master-data.sidings.destroy",
+                    "master-data.loaders.index",
+                    "master-data.loaders.create",
+                    "master-data.loaders.store",
+                    "master-data.loaders.show",
+                    "master-data.loaders.edit",
+                    "master-data.loaders.update",
+                    "master-data.loaders.destroy",
+                    "master-data.penalty-types.index",
+                    "master-data.penalty-types.create",
+                    "master-data.penalty-types.store",
+                    "master-data.penalty-types.show",
+                    "master-data.penalty-types.edit",
+                    "master-data.penalty-types.update",
+                    "master-data.penalty-types.destroy",
+                    "master-data.section-timers.index",
+                    "master-data.section-timers.create",
+                    "master-data.section-timers.store",
+                    "master-data.section-timers.show",
+                    "master-data.section-timers.edit",
+                    "master-data.section-timers.update",
+                    "master-data.section-timers.destroy",
+                    "master-data.master-data.distance-matrix.index",
+                    "master-data.master-data.distance-matrix.create",
+                    "master-data.master-data.distance-matrix.store",
+                    "master-data.master-data.distance-matrix.show",
+                    "master-data.master-data.distance-matrix.edit",
+                    "master-data.master-data.distance-matrix.update",
+                    "master-data.master-data.distance-matrix.destroy",
                     "road-dispatch.arrivals.index",
                     "road-dispatch.arrivals.create",
                     "road-dispatch.arrivals.store",
@@ -2532,6 +2907,12 @@
                     "road-dispatch.unloads.tare-weighment",
                     "road-dispatch.unloads.complete",
                     "road-dispatch.unloads.confirm",
+                    "road-dispatch.daily-vehicle-entries.index",
+                    "road-dispatch.daily-vehicle-entries.store",
+                    "road-dispatch.daily-vehicle-entries.update",
+                    "road-dispatch.daily-vehicle-entries.destroy",
+                    "road-dispatch.daily-vehicle-entries.complete",
+                    "road-dispatch.daily-vehicle-entries.export",
                     "railway-receipts.index",
                     "railway-receipts.create",
                     "railway-receipts.store",
@@ -2761,10 +3142,24 @@
                     "rakes.show",
                     "rakes.edit",
                     "rakes.update",
+                    "rakes.destroy",
                     "rakes.generate-wagons",
                     "rakes.wagons.update",
                     "rakes.txr.update",
+                    "rakes.txr.start",
+                    "rakes.txr.end",
+                    "rakes.txr.unfit-logs",
+                    "rakes.txr.store",
+                    "txr.unfit-wagons.store",
+                    "rakes.load.show",
+                    "rakes.load.confirm-placement",
+                    "rakes.load.wagon",
+                    "rakes.load.wagons",
+                    "rakes.load.guard-inspection",
+                    "rakes.load.weighment",
+                    "rakes.load.confirm-dispatch",
                     "rakes.weighments.store",
+                    "rakes.comparison",
                     "rakes.guard-inspection.store",
                     "indents.index",
                     "indents.create",
@@ -2774,6 +3169,48 @@
                     "indents.update",
                     "indents.create-rake",
                     "indents.store-rake",
+                    "master-data.power-plants.index",
+                    "master-data.power-plants.create",
+                    "master-data.power-plants.store",
+                    "master-data.power-plants.show",
+                    "master-data.power-plants.edit",
+                    "master-data.power-plants.update",
+                    "master-data.power-plants.destroy",
+                    "master-data.sidings.index",
+                    "master-data.sidings.create",
+                    "master-data.sidings.store",
+                    "master-data.sidings.show",
+                    "master-data.sidings.edit",
+                    "master-data.sidings.update",
+                    "master-data.sidings.destroy",
+                    "master-data.loaders.index",
+                    "master-data.loaders.create",
+                    "master-data.loaders.store",
+                    "master-data.loaders.show",
+                    "master-data.loaders.edit",
+                    "master-data.loaders.update",
+                    "master-data.loaders.destroy",
+                    "master-data.penalty-types.index",
+                    "master-data.penalty-types.create",
+                    "master-data.penalty-types.store",
+                    "master-data.penalty-types.show",
+                    "master-data.penalty-types.edit",
+                    "master-data.penalty-types.update",
+                    "master-data.penalty-types.destroy",
+                    "master-data.section-timers.index",
+                    "master-data.section-timers.create",
+                    "master-data.section-timers.store",
+                    "master-data.section-timers.show",
+                    "master-data.section-timers.edit",
+                    "master-data.section-timers.update",
+                    "master-data.section-timers.destroy",
+                    "master-data.master-data.distance-matrix.index",
+                    "master-data.master-data.distance-matrix.create",
+                    "master-data.master-data.distance-matrix.store",
+                    "master-data.master-data.distance-matrix.show",
+                    "master-data.master-data.distance-matrix.edit",
+                    "master-data.master-data.distance-matrix.update",
+                    "master-data.master-data.distance-matrix.destroy",
                     "road-dispatch.arrivals.index",
                     "road-dispatch.arrivals.create",
                     "road-dispatch.arrivals.store",
@@ -2788,6 +3225,12 @@
                     "road-dispatch.unloads.tare-weighment",
                     "road-dispatch.unloads.complete",
                     "road-dispatch.unloads.confirm",
+                    "road-dispatch.daily-vehicle-entries.index",
+                    "road-dispatch.daily-vehicle-entries.store",
+                    "road-dispatch.daily-vehicle-entries.update",
+                    "road-dispatch.daily-vehicle-entries.destroy",
+                    "road-dispatch.daily-vehicle-entries.complete",
+                    "road-dispatch.daily-vehicle-entries.export",
                     "railway-receipts.index",
                     "railway-receipts.create",
                     "railway-receipts.store",
@@ -3120,7 +3563,9 @@
                     "rakes.show",
                     "rakes.edit",
                     "rakes.update",
-                    "rakes.generate-wagons"
+                    "rakes.destroy",
+                    "rakes.generate-wagons",
+                    "rakes.comparison"
                 ]
             }
         },
@@ -3135,7 +3580,9 @@
                     "rakes.show",
                     "rakes.edit",
                     "rakes.update",
-                    "rakes.generate-wagons"
+                    "rakes.destroy",
+                    "rakes.generate-wagons",
+                    "rakes.comparison"
                 ]
             }
         },
@@ -3405,6 +3852,315 @@
                     "road-dispatch.unloads.complete",
                     "road-dispatch.unloads.confirm"
                 ]
+            }
+        },
+        "MasterData/DistanceMatrix/Create": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "PowerplantSidingDistancesController"
+                ],
+                "relatedRoutes": [
+                    "master-data.master-data.distance-matrix.index",
+                    "master-data.master-data.distance-matrix.create",
+                    "master-data.master-data.distance-matrix.store",
+                    "master-data.master-data.distance-matrix.show",
+                    "master-data.master-data.distance-matrix.edit",
+                    "master-data.master-data.distance-matrix.update",
+                    "master-data.master-data.distance-matrix.destroy"
+                ]
+            }
+        },
+        "MasterData/DistanceMatrix/Index": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "PowerplantSidingDistancesController"
+                ],
+                "relatedRoutes": [
+                    "master-data.master-data.distance-matrix.index",
+                    "master-data.master-data.distance-matrix.create",
+                    "master-data.master-data.distance-matrix.store",
+                    "master-data.master-data.distance-matrix.show",
+                    "master-data.master-data.distance-matrix.edit",
+                    "master-data.master-data.distance-matrix.update",
+                    "master-data.master-data.distance-matrix.destroy"
+                ]
+            }
+        },
+        "MasterData/Loaders/Create": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "LoadersController"
+                ],
+                "relatedRoutes": [
+                    "master-data.loaders.index",
+                    "master-data.loaders.create",
+                    "master-data.loaders.store",
+                    "master-data.loaders.show",
+                    "master-data.loaders.edit",
+                    "master-data.loaders.update",
+                    "master-data.loaders.destroy"
+                ]
+            }
+        },
+        "MasterData/Loaders/Index": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "LoadersController"
+                ],
+                "relatedRoutes": [
+                    "master-data.loaders.index",
+                    "master-data.loaders.create",
+                    "master-data.loaders.store",
+                    "master-data.loaders.show",
+                    "master-data.loaders.edit",
+                    "master-data.loaders.update",
+                    "master-data.loaders.destroy"
+                ]
+            }
+        },
+        "MasterData/PenaltyTypes/Create": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "PenaltyTypesController"
+                ],
+                "relatedRoutes": [
+                    "master-data.penalty-types.index",
+                    "master-data.penalty-types.create",
+                    "master-data.penalty-types.store",
+                    "master-data.penalty-types.show",
+                    "master-data.penalty-types.edit",
+                    "master-data.penalty-types.update",
+                    "master-data.penalty-types.destroy"
+                ]
+            }
+        },
+        "MasterData/PenaltyTypes/Index": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "PenaltyTypesController"
+                ],
+                "relatedRoutes": [
+                    "master-data.penalty-types.index",
+                    "master-data.penalty-types.create",
+                    "master-data.penalty-types.store",
+                    "master-data.penalty-types.show",
+                    "master-data.penalty-types.edit",
+                    "master-data.penalty-types.update",
+                    "master-data.penalty-types.destroy"
+                ]
+            }
+        },
+        "MasterData/PowerPlants/Create": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "PowerPlantController"
+                ],
+                "relatedRoutes": [
+                    "master-data.power-plants.index",
+                    "master-data.power-plants.create",
+                    "master-data.power-plants.store",
+                    "master-data.power-plants.show",
+                    "master-data.power-plants.edit",
+                    "master-data.power-plants.update",
+                    "master-data.power-plants.destroy"
+                ]
+            }
+        },
+        "MasterData/PowerPlants/Edit": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "PowerPlantController"
+                ],
+                "relatedRoutes": [
+                    "master-data.power-plants.index",
+                    "master-data.power-plants.create",
+                    "master-data.power-plants.store",
+                    "master-data.power-plants.show",
+                    "master-data.power-plants.edit",
+                    "master-data.power-plants.update",
+                    "master-data.power-plants.destroy"
+                ]
+            }
+        },
+        "MasterData/PowerPlants/Index": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "PowerPlantController"
+                ],
+                "relatedRoutes": [
+                    "master-data.power-plants.index",
+                    "master-data.power-plants.create",
+                    "master-data.power-plants.store",
+                    "master-data.power-plants.show",
+                    "master-data.power-plants.edit",
+                    "master-data.power-plants.update",
+                    "master-data.power-plants.destroy"
+                ]
+            }
+        },
+        "MasterData/PowerPlants/Show": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "PowerPlantController"
+                ],
+                "relatedRoutes": [
+                    "master-data.power-plants.index",
+                    "master-data.power-plants.create",
+                    "master-data.power-plants.store",
+                    "master-data.power-plants.show",
+                    "master-data.power-plants.edit",
+                    "master-data.power-plants.update",
+                    "master-data.power-plants.destroy"
+                ]
+            }
+        },
+        "MasterData/SectionTimers/Create": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "SectionTimersController"
+                ],
+                "relatedRoutes": [
+                    "master-data.section-timers.index",
+                    "master-data.section-timers.create",
+                    "master-data.section-timers.store",
+                    "master-data.section-timers.show",
+                    "master-data.section-timers.edit",
+                    "master-data.section-timers.update",
+                    "master-data.section-timers.destroy"
+                ]
+            }
+        },
+        "MasterData/SectionTimers/Index": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "SectionTimersController"
+                ],
+                "relatedRoutes": [
+                    "master-data.section-timers.index",
+                    "master-data.section-timers.create",
+                    "master-data.section-timers.store",
+                    "master-data.section-timers.show",
+                    "master-data.section-timers.edit",
+                    "master-data.section-timers.update",
+                    "master-data.section-timers.destroy"
+                ]
+            }
+        },
+        "MasterData/Sidings/Index": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "SidingsController"
+                ],
+                "relatedRoutes": [
+                    "master-data.sidings.index",
+                    "master-data.sidings.create",
+                    "master-data.sidings.store",
+                    "master-data.sidings.show",
+                    "master-data.sidings.edit",
+                    "master-data.sidings.update",
+                    "master-data.sidings.destroy"
+                ]
+            }
+        },
+        "rakes/load": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": [
+                    "rakes.load.show",
+                    "rakes.load.confirm-placement",
+                    "rakes.load.wagon",
+                    "rakes.load.wagons",
+                    "rakes.load.guard-inspection",
+                    "rakes.load.weighment",
+                    "rakes.load.confirm-dispatch"
+                ]
+            }
+        },
+        "road-dispatch/daily-vehicle-entries/index": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "DailyVehicleEntryController"
+                ],
+                "relatedRoutes": [
+                    "road-dispatch.daily-vehicle-entries.index",
+                    "road-dispatch.daily-vehicle-entries.store",
+                    "road-dispatch.daily-vehicle-entries.update",
+                    "road-dispatch.daily-vehicle-entries.destroy",
+                    "road-dispatch.daily-vehicle-entries.complete",
+                    "road-dispatch.daily-vehicle-entries.export"
+                ]
+            }
+        },
+        "road-dispatch/daily-vehicle-entries/shift-tabs": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": []
+            }
+        },
+        "road-dispatch/daily-vehicle-entries/vehicle-entry-row": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": []
+            }
+        },
+        "road-dispatch/daily-vehicle-entries/vehicle-entry-table": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": []
             }
         }
     },

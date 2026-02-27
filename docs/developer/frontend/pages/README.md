@@ -81,5 +81,23 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | road-dispatch/components/WeighmentHistory | N/A | ❌ |
 | road-dispatch/stepper/track-timeline | N/A | ❌ |
 | road-dispatch/unloads/show | road-dispatch.unloads.index, road-dispatch.unloads.create | ❌ |
+| MasterData/DistanceMatrix/Create | master-data.master-data.distance-matrix.index, master-data.master-data.distance-matrix.create | ❌ |
+| MasterData/DistanceMatrix/Index | master-data.master-data.distance-matrix.index, master-data.master-data.distance-matrix.create | ❌ |
+| MasterData/Loaders/Create | master-data.loaders.index, master-data.loaders.create | ❌ |
+| MasterData/Loaders/Index | master-data.loaders.index, master-data.loaders.create | ❌ |
+| MasterData/PenaltyTypes/Create | master-data.penalty-types.index, master-data.penalty-types.create | ❌ |
+| MasterData/PenaltyTypes/Index | master-data.penalty-types.index, master-data.penalty-types.create | ❌ |
+| MasterData/PowerPlants/Create | master-data.power-plants.index, master-data.power-plants.create | ❌ |
+| MasterData/PowerPlants/Edit | master-data.power-plants.index, master-data.power-plants.create | ❌ |
+| MasterData/PowerPlants/Index | master-data.power-plants.index, master-data.power-plants.create | ❌ |
+| MasterData/PowerPlants/Show | master-data.power-plants.index, master-data.power-plants.create | ❌ |
+| MasterData/SectionTimers/Create | master-data.section-timers.index, master-data.section-timers.create | ❌ |
+| MasterData/SectionTimers/Index | master-data.section-timers.index, master-data.section-timers.create | ❌ |
+| MasterData/Sidings/Index | master-data.sidings.index, master-data.sidings.create | ❌ |
+| rakes/load | rakes.load.show, rakes.load.confirm-placement | ❌ |
+| road-dispatch/daily-vehicle-entries/index | road-dispatch.daily-vehicle-entries.index, road-dispatch.daily-vehicle-entries.store | ❌ |
+| road-dispatch/daily-vehicle-entries/shift-tabs | N/A | ❌ |
+| road-dispatch/daily-vehicle-entries/vehicle-entry-row | N/A | ❌ |
+| road-dispatch/daily-vehicle-entries/vehicle-entry-table | N/A | ❌ |
 
 

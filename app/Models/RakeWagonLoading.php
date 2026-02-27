@@ -9,22 +9,23 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 final class RakeWagonLoading extends Model
 {
-    protected $table = 'rake_wagon_loading';
+    protected $table = 'wagon_loading';
 
     protected $fillable = [
-        'rake_load_id',
+        'rake_id',
         'wagon_id',
         'loader_id',
+        'loader_operator_name',
+        'cc_capacity_mt',
         'loaded_quantity_mt',
-        'attempt_no',
-        'started_at',
-        'completed_at',
+        'loading_time',
+        'remarks',
     ];
 
     protected $casts = [
-        'started_at' => 'datetime',
-        'completed_at' => 'datetime',
+        'cc_capacity_mt' => 'decimal:2',
         'loaded_quantity_mt' => 'decimal:2',
+        'loading_time' => 'datetime',
     ];
 
     /*
@@ -33,9 +34,9 @@ final class RakeWagonLoading extends Model
     |--------------------------------------------------------------------------
     */
 
-    public function rakeLoad(): BelongsTo
+    public function rake(): BelongsTo
     {
-        return $this->belongsTo(RakeLoad::class);
+        return $this->belongsTo(Rake::class);
     }
 
     public function wagon(): BelongsTo
@@ -46,10 +47,5 @@ final class RakeWagonLoading extends Model
     public function loader(): BelongsTo
     {
         return $this->belongsTo(Loader::class);
-    }
-
-    public function weighments(): \Illuminate\Database\Eloquent\Relations\HasMany
-    {
-        return $this->hasMany(RakeWagonWeighment::class);
     }
 }

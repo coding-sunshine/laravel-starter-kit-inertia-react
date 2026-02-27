@@ -21,11 +21,11 @@ interface Siding {
 
 interface Indent {
     id: number;
-    indent_number: string;
-    target_quantity_mt: string;
+    indent_number: string | null;
     state: string;
-    indent_date: string;
-    required_by_date: string | null;
+    expected_loading_date: string | null;
+    demanded_stock: string | null;
+    total_units: string | null;
     siding?: Siding | null;
 }
 
@@ -38,15 +38,15 @@ export default function CreateRakeFromIndent({ indent, sidings }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: '/dashboard' },
         { title: 'Indents', href: '/indents' },
-        { title: indent.indent_number, href: `/indents/${indent.id}` },
+        { title: indent.indent_number || 'N/A', href: `/indents/${indent.id}` },
         { title: 'Create Rake', href: `/indents/${indent.id}/create-rake` },
     ];
 
     const { data, setData, post, processing, errors, reset } = useForm({
-        rake_type: 'standard',
-        wagon_count: '',
+        rake_type: indent.demanded_stock || '',
+        wagon_count: indent.total_units || '',
         free_time_minutes: '180',
-        rr_expected_date: indent.required_by_date || '',
+        rr_expected_date: '',
         placement_time: '',
         remarks: '',
     });
@@ -60,7 +60,7 @@ export default function CreateRakeFromIndent({ indent, sidings }: Props) {
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title={`Create Rake for ${indent.indent_number}`} />
+            <Head title={`Create Rake for ${indent.indent_number || 'N/A'}`} />
 
             <div className="space-y-6">
                 <div className="flex items-center gap-4">
@@ -71,7 +71,7 @@ export default function CreateRakeFromIndent({ indent, sidings }: Props) {
                         </Button>
                     </Link>
                     <h2 className="text-lg font-medium">
-                        Create Rake from Indent {indent.indent_number}
+                        Create Rake from Indent {indent.indent_number || 'N/A'}
                     </h2>
                 </div>
 
@@ -92,7 +92,7 @@ export default function CreateRakeFromIndent({ indent, sidings }: Props) {
                                     <Label htmlFor="indent_number">Indent Number</Label>
                                     <Input
                                         id="indent_number"
-                                        value={indent.indent_number}
+                                        value={indent.indent_number || 'N/A'}
                                         disabled
                                         className="bg-muted"
                                     />
@@ -101,7 +101,7 @@ export default function CreateRakeFromIndent({ indent, sidings }: Props) {
                                     <Label htmlFor="rake_number">Rake Number</Label>
                                     <Input
                                         id="rake_number"
-                                        value={`RK-${indent.indent_number}`}
+                                        value={indent.indent_number ? `RK-${indent.indent_number}` : 'RK-'}
                                         disabled
                                         className="bg-muted"
                                     />
@@ -116,10 +116,10 @@ export default function CreateRakeFromIndent({ indent, sidings }: Props) {
                                     />
                                 </div>
                                 <div>
-                                    <Label htmlFor="target_quantity">Target Quantity (MT)</Label>
+                                    <Label htmlFor="expected_loading_date">Expected Loading Date</Label>
                                     <Input
-                                        id="target_quantity"
-                                        value={indent.target_quantity_mt}
+                                        id="expected_loading_date"
+                                        value={indent.expected_loading_date ? new Date(indent.expected_loading_date).toLocaleDateString() : '—'}
                                         disabled
                                         className="bg-muted"
                                     />
@@ -135,7 +135,7 @@ export default function CreateRakeFromIndent({ indent, sidings }: Props) {
                                             id="rake_type"
                                             value={data.rake_type}
                                             onChange={(e) => setData('rake_type', e.target.value)}
-                                            placeholder="e.g., BOBRN, BOXN"
+                                            placeholder={indent.demanded_stock || 'e.g., BOBRN, BOXN'}
                                         />
                                         {errors.rake_type && (
                                             <p className="text-sm text-destructive mt-1">{errors.rake_type}</p>
@@ -149,7 +149,7 @@ export default function CreateRakeFromIndent({ indent, sidings }: Props) {
                                             min="0"
                                             value={data.wagon_count}
                                             onChange={(e) => setData('wagon_count', e.target.value)}
-                                            placeholder="Number of wagons"
+                                            placeholder={indent.total_units || 'Number of wagons'}
                                         />
                                         {errors.wagon_count && (
                                             <p className="text-sm text-destructive mt-1">{errors.wagon_count}</p>
@@ -167,30 +167,6 @@ export default function CreateRakeFromIndent({ indent, sidings }: Props) {
                                         />
                                         {errors.free_time_minutes && (
                                             <p className="text-sm text-destructive mt-1">{errors.free_time_minutes}</p>
-                                        )}
-                                    </div>
-                                    <div>
-                                        <Label htmlFor="rr_expected_date">RR Expected Date</Label>
-                                        <Input
-                                            id="rr_expected_date"
-                                            type="date"
-                                            value={data.rr_expected_date}
-                                            onChange={(e) => setData('rr_expected_date', e.target.value)}
-                                        />
-                                        {errors.rr_expected_date && (
-                                            <p className="text-sm text-destructive mt-1">{errors.rr_expected_date}</p>
-                                        )}
-                                    </div>
-                                    <div>
-                                        <Label htmlFor="placement_time">Placement Time</Label>
-                                        <Input
-                                            id="placement_time"
-                                            type="datetime-local"
-                                            value={data.placement_time}
-                                            onChange={(e) => setData('placement_time', e.target.value)}
-                                        />
-                                        {errors.placement_time && (
-                                            <p className="text-sm text-destructive mt-1">{errors.placement_time}</p>
                                         )}
                                     </div>
                                 </div>

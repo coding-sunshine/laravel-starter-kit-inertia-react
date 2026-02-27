@@ -44,7 +44,7 @@ final readonly class CreateRake
                 'state' => 'pending',
                 'placement_time' => null,
                 'dispatch_time' => null,
-                'free_time_minutes' => $data['free_time_minutes'] ?? 144, // 6 days default
+                'loading_free_minutes' => $data['free_time_minutes'] ?? 144, // 6 days default
                 'rr_expected_date' => $data['rr_expected_date'] ?? null,
                 'created_by' => $userId,
             ]);
@@ -210,7 +210,7 @@ final readonly class CreateRake
     {
         if (! $rake->dispatch_time || ! $rake->rr_expected_date) {
             return [
-                'free_hours' => $rake->free_time_minutes / 60,
+                'free_hours' => $rake->loading_free_minutes / 60,
                 'demurrage_hours' => 0,
                 'demurrage_penalty' => 0,
             ];
@@ -221,7 +221,7 @@ final readonly class CreateRake
             $rake->rr_expected_date ?: now()
         );
 
-        $freeHours = $rake->free_time_minutes / 60;
+        $freeHours = $rake->loading_free_minutes / 60;
         $demurrageHours = max(0, $dwellHours - $freeHours);
 
         // Standard demurrage penalty: ₹50 per MT per hour

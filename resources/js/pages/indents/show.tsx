@@ -25,15 +25,18 @@ interface Rake {
 
 interface Indent {
     id: number;
-    indent_number: string;
-    target_quantity_mt: string;
+    indent_number: string | null;
+    target_quantity_mt: string | null;
     allocated_quantity_mt: string;
     state: string;
-    indent_date: string;
+    indent_date: string | null;
     required_by_date: string | null;
     remarks: string | null;
     e_demand_reference_id: string | null;
     fnr_number: string | null;
+    expected_loading_date: string | null;
+    demanded_stock: string | null;
+    total_units: string | null;
     indent_confirmation_pdf_url?: string | null;
     siding?: Siding | null;
 }
@@ -47,39 +50,32 @@ export default function IndentsShow({ indent, rake }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: '/dashboard' },
         { title: 'Indents', href: '/indents' },
-        { title: indent.indent_number, href: `/indents/${indent.id}` },
+        { title: indent.indent_number || 'N/A', href: `/indents/${indent.id}` },
     ];
-
-    const handleCreateRake = () => {
-        router.visit(`/indents/${indent.id}/create-rake`);
-    };
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title={`Indent ${indent.indent_number}`} />
+            <Head title={`Indent ${indent.indent_number || 'N/A'}`} />
             <div className="space-y-6">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                     <h2 className="text-lg font-medium">
-                        Indent {indent.indent_number}
+                        Indent {indent.indent_number || 'N/A'}
                     </h2>
                     <div className="flex gap-2">
-                        {rake ? (
+                        {!rake ? (
+                            <Link href={`/indents/${indent.id}/create-rake`}>
+                                <Button variant="default" size="sm">
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    Create Rake
+                                </Button>
+                            </Link>
+                        ) : (
                             <Link href={`/rakes/${rake.id}`}>
                                 <Button variant="outline" size="sm">
                                     <Train className="mr-2 h-4 w-4" />
                                     View Rake
                                 </Button>
                             </Link>
-                        ) : (
-                            <Button 
-                                variant="default" 
-                                size="sm"
-                                onClick={handleCreateRake}
-                                disabled={indent.state !== 'completed'}
-                            >
-                                <Plus className="mr-2 h-4 w-4" />
-                                Create Rake
-                            </Button>
                         )}
                         <Link href={`/indents/${indent.id}/edit`}>
                             <Button variant="outline" size="sm">
@@ -106,7 +102,7 @@ export default function IndentsShow({ indent, rake }: Props) {
                                     Indent number
                                 </dt>
                                 <dd className="font-medium">
-                                    {indent.indent_number}
+                                    {indent.indent_number || '—'}
                                 </dd>
                             </div>
                             <div>
@@ -123,43 +119,9 @@ export default function IndentsShow({ indent, rake }: Props) {
                                 </dd>
                             </div>
                             <div>
-                                <dt className="text-muted-foreground">
-                                    Target quantity (MT)
-                                </dt>
-                                <dd>{indent.target_quantity_mt}</dd>
-                            </div>
-                            <div>
-                                <dt className="text-muted-foreground">
-                                    Allocated (MT)
-                                </dt>
-                                <dd>{indent.allocated_quantity_mt}</dd>
-                            </div>
-                            <div>
                                 <dt className="text-muted-foreground">State</dt>
                                 <dd className="capitalize">{indent.state}</dd>
                             </div>
-                            <div>
-                                <dt className="text-muted-foreground">
-                                    Indent date
-                                </dt>
-                                <dd>
-                                    {new Date(
-                                        indent.indent_date,
-                                    ).toLocaleDateString()}
-                                </dd>
-                            </div>
-                            {indent.required_by_date && (
-                                <div>
-                                    <dt className="text-muted-foreground">
-                                        Required by
-                                    </dt>
-                                    <dd>
-                                        {new Date(
-                                            indent.required_by_date,
-                                        ).toLocaleDateString()}
-                                    </dd>
-                                </div>
-                            )}
                             {indent.e_demand_reference_id && (
                                 <div>
                                     <dt className="text-muted-foreground">
@@ -174,6 +136,34 @@ export default function IndentsShow({ indent, rake }: Props) {
                                         FNR number
                                     </dt>
                                     <dd>{indent.fnr_number}</dd>
+                                </div>
+                            )}
+                            {indent.expected_loading_date && (
+                                <div>
+                                    <dt className="text-muted-foreground">
+                                        Expected Loading Date
+                                    </dt>
+                                    <dd>
+                                        {new Date(
+                                            indent.expected_loading_date,
+                                        ).toLocaleDateString()}
+                                    </dd>
+                                </div>
+                            )}
+                            {indent.demanded_stock && (
+                                <div>
+                                    <dt className="text-muted-foreground">
+                                        Rake Type
+                                    </dt>
+                                    <dd>{indent.demanded_stock}</dd>
+                                </div>
+                            )}
+                            {indent.total_units && (
+                                <div>
+                                    <dt className="text-muted-foreground">
+                                        Total Wagons
+                                    </dt>
+                                    <dd>{indent.total_units}</dd>
                                 </div>
                             )}
                         </dl>

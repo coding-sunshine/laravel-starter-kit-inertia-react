@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Plus } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Calendar, Plus, Download } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import ShiftTabs from './shift-tabs';
@@ -30,16 +31,25 @@ interface DailyVehicleEntry {
   updated_at: string;
 }
 
+interface Siding {
+  id: number;
+  name: string;
+}
+
 interface Props {
   entries: DailyVehicleEntry[];
   date: string;
   activeShift: number;
   shiftSummary: Record<number, number>;
+  sidings: Siding[];
 }
 
-export default function DailyVehicleEntriesIndex({ entries, date, activeShift, shiftSummary }: Props) {
+export default function DailyVehicleEntriesIndex({ entries, date, activeShift, shiftSummary, sidings }: Props) {
   const [selectedDate, setSelectedDate] = useState(date);
   const [activeShiftState, setActiveShiftState] = useState(activeShift);
+  const [exportShift, setExportShift] = useState<string>('all');
+  const [exportSiding, setExportSiding] = useState<number>(sidings[0]?.id || 1);
+  const [isExporting, setIsExporting] = useState(false);
 
   const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -92,6 +102,62 @@ export default function DailyVehicleEntriesIndex({ entries, date, activeShift, s
     );
   };
 
+  const handleExport = async () => {
+    setIsExporting(true);
+    
+    try {
+      // Create export URL with parameters
+      const exportUrl = `/road-dispatch/daily-vehicle-entries/export?date=${selectedDate}&siding=${exportSiding}&shift=${exportShift}`;
+      
+      // Use fetch to get the file with authentication cookies
+      const response = await fetch(exportUrl, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        credentials: 'same-origin', // Include cookies
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Export failed: ${response.statusText}`);
+      }
+      
+      // Get the filename from the Content-Disposition header or use a default
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = 'export.xlsx';
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+      
+      // Convert response to blob
+      const blob = await response.blob();
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+    } catch (error) {
+      console.error('Export error:', error);
+      // Show error message to user
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      alert('Export failed: ' + errorMessage);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
       <Head title="Daily Vehicle Entries" />
@@ -103,10 +169,47 @@ export default function DailyVehicleEntriesIndex({ entries, date, activeShift, s
             <h1 className="text-3xl font-bold text-gray-900">Daily Vehicle Entries</h1>
             <p className="text-gray-600 mt-1">Excel-style shift-based vehicle entry management</p>
           </div>
-          <Button onClick={handleAddRow} className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            Add Row
-          </Button>
+          <div className="flex gap-3">
+            {/* Export Controls */}
+            <div className="flex items-center gap-2">
+              <Select value={exportSiding.toString()} onValueChange={(value) => setExportSiding(Number(value))}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Select siding" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sidings.map((siding) => (
+                    <SelectItem key={siding.id} value={siding.id.toString()}>
+                      {siding.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={exportShift} onValueChange={setExportShift}>
+                <SelectTrigger className="w-32">
+                  <SelectValue placeholder="Export" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Shifts</SelectItem>
+                  <SelectItem value="1">Shift 1</SelectItem>
+                  <SelectItem value="2">Shift 2</SelectItem>
+                  <SelectItem value="3">Shift 3</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button 
+                onClick={handleExport} 
+                disabled={isExporting}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <Download className="h-4 w-4" />
+                {isExporting ? 'Exporting...' : 'Export'}
+              </Button>
+            </div>
+            <Button onClick={handleAddRow} className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              Add Row
+            </Button>
+          </div>
         </div>
 
         {/* Controls Section */}

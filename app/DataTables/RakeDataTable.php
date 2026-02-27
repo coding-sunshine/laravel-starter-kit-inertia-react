@@ -16,7 +16,7 @@ final class RakeDataTable extends AbstractDataTable
         public int $id,
         public string $rake_number,
         public ?string $rake_type,
-        public int $wagon_count,
+        public ?int $wagon_count,
         public string $state,
         public ?string $placement_time,
         public ?string $dispatch_time,
@@ -96,7 +96,7 @@ final class RakeDataTable extends AbstractDataTable
 
     public static function tableDefaultSort(): string
     {
-        return '-placement_time';
+        return '-id';
     }
 
     public static function tableAllowedFilters(): array

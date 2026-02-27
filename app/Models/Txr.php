@@ -6,13 +6,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Mattiverse\Userstamps\Traits\Userstamps;
 
 final class Txr extends Model
 {
     use \Illuminate\Database\Eloquent\Factories\HasFactory;
-    use SoftDeletes, Userstamps;
+    use Userstamps;
 
     protected $table = 'txr';
 
@@ -32,6 +32,11 @@ final class Txr extends Model
     public function rake(): BelongsTo
     {
         return $this->belongsTo(Rake::class);
+    }
+
+    public function wagonUnfitLogs(): HasMany
+    {
+        return $this->hasMany(WagonUnfitLog::class);
     }
 
     public function createdBy(): BelongsTo

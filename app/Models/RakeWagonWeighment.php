@@ -12,27 +12,41 @@ final class RakeWagonWeighment extends Model
     protected $fillable = [
         'rake_weighment_id',
         'wagon_id',
-        'gross_weight_mt',
-        'is_overloaded',
+        'wagon_sequence',
+        'wagon_type',
+        'axles',
+        'cc_capacity_mt',
+        'printed_tare_mt',
+        'actual_gross_mt',
+        'actual_tare_mt',
+        'net_weight_mt',
+        'under_load_mt',
+        'over_load_mt',
+        'speed_kmph',
+        'weighment_time',
+        'slip_number',
+        'action_taken',
     ];
 
     protected $casts = [
-        'gross_weight_mt' => 'decimal:2',
-        'is_overloaded' => 'boolean',
+        'cc_capacity_mt' => 'decimal:2',
+        'printed_tare_mt' => 'decimal:2',
+        'actual_gross_mt' => 'decimal:2',
+        'actual_tare_mt' => 'decimal:2',
+        'net_weight_mt' => 'decimal:2',
+        'under_load_mt' => 'decimal:2',
+        'over_load_mt' => 'decimal:2',
+        'speed_kmph' => 'decimal:2',
+        'weighment_time' => 'datetime',
     ];
 
-    public function weighment(): BelongsTo
+    public function rakeWeighment(): BelongsTo
     {
-        return $this->belongsTo(Weighment::class);
+        return $this->belongsTo(RakeWeighment::class);
     }
 
     public function wagon(): BelongsTo
     {
         return $this->belongsTo(Wagon::class);
-    }
-
-    public function rakeWagonLoading(): BelongsTo
-    {
-        return $this->belongsTo(RakeWagonLoading::class);
     }
 }

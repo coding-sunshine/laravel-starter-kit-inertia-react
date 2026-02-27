@@ -4,19 +4,18 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Rakes;
 
-use App\Http\Controllers\Controller;
+use App\Events\RakeGuardInspectionUpdated;
 use App\Events\RakeLoadUpdated;
 use App\Events\RakeWagonLoadingUpdated;
-use App\Events\RakeGuardInspectionUpdated;
 use App\Events\RakeWeighmentUpdated;
+use App\Http\Controllers\Controller;
 use App\Models\GuardInspection;
+use App\Models\PenaltyType;
 use App\Models\Rake;
 use App\Models\RakeLoad as RakeLoadModel;
 use App\Models\RakeWagonLoading;
 use App\Models\RakeWagonWeighment;
 use App\Models\Weighment;
-use App\Models\PenaltyType;
-use App\Models\Loader;
 use App\Services\RakeLoadStateResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -143,6 +142,59 @@ final class RakeLoadController extends Controller
             ->with('success', 'Wagon loaded successfully.');
     }
 
+    public function storeWagonLoadings(Request $request, Rake $rake): RedirectResponse
+    {
+        // $this->authorize('update', $rake);
+
+        if (! $rake->txr || $rake->txr->status !== 'completed') {
+            return to_route('rakes.show', $rake)
+                ->with('error', 'TXR must be completed before wagon loading.');
+        }
+
+        $validated = $request->validate([
+            'loadings' => ['required', 'array'],
+            'loadings.*.wagon_id' => ['required', 'exists:wagons,id'],
+            'loadings.*.loader_id' => ['required', 'exists:loaders,id'],
+            'loadings.*.loaded_quantity_mt' => ['required', 'numeric', 'min:0'],
+            'loadings.*.loading_time' => ['nullable', 'date'],
+            'loadings.*.remarks' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $rakeWagonIds = $rake->wagons()->where('is_unfit', false)->pluck('id')->all();
+        $seenWagonIds = [];
+
+        foreach ($validated['loadings'] as $loading) {
+            $wagonId = (int) $loading['wagon_id'];
+            if (in_array($wagonId, $seenWagonIds, true)) {
+                return to_route('rakes.show', $rake)
+                    ->with('error', 'Duplicate wagon in loading list.');
+            }
+            if (! in_array($wagonId, $rakeWagonIds, true)) {
+                return to_route('rakes.show', $rake)
+                    ->with('error', 'Invalid wagon for this rake.');
+            }
+            $seenWagonIds[] = $wagonId;
+        }
+
+        DB::transaction(function () use ($rake, $validated): void {
+            $rake->wagonLoadings()->delete();
+
+            foreach ($validated['loadings'] as $loading) {
+                RakeWagonLoading::create([
+                    'rake_id' => $rake->id,
+                    'wagon_id' => (int) $loading['wagon_id'],
+                    'loader_id' => (int) $loading['loader_id'],
+                    'loaded_quantity_mt' => $loading['loaded_quantity_mt'],
+                    'loading_time' => $loading['loading_time'] ?? now(),
+                    'remarks' => $loading['remarks'] ?? null,
+                ]);
+            }
+        });
+
+        return to_route('rakes.show', $rake)
+            ->with('success', 'Wagon loadings saved.');
+    }
+
     public function recordGuardInspection(Request $request, Rake $rake): RedirectResponse
     {
         // $this->authorize('update', $rake);
@@ -185,19 +237,6 @@ final class RakeLoadController extends Controller
             ->route('rakes.load.show', $rake)
             ->setStatusCode(303)
             ->with('success', 'Guard inspection recorded.');
-    }
-
-    private function currentAttemptNo(RakeLoadModel $rakeLoad): int
-    {
-        $latestWeighment = $rakeLoad->weighments()->latest('weighment_time')->first();
-
-        if ($latestWeighment && $latestWeighment->status === 'failed_overload') {
-            return $latestWeighment->attempt_no + 1;
-        }
-
-        $maxWagonAttempt = $rakeLoad->wagonLoadings()->max('attempt_no');
-
-        return max(1, (int) $maxWagonAttempt);
     }
 
     public function recordWeighment(Request $request, Rake $rake): RedirectResponse
@@ -372,5 +411,18 @@ final class RakeLoadController extends Controller
             ->route('rakes.show', $rake)
             ->setStatusCode(303)
             ->with('success', 'Rake dispatched successfully.');
+    }
+
+    private function currentAttemptNo(RakeLoadModel $rakeLoad): int
+    {
+        $latestWeighment = $rakeLoad->weighments()->latest('weighment_time')->first();
+
+        if ($latestWeighment && $latestWeighment->status === 'failed_overload') {
+            return $latestWeighment->attempt_no + 1;
+        }
+
+        $maxWagonAttempt = $rakeLoad->wagonLoadings()->max('attempt_no');
+
+        return max(1, (int) $maxWagonAttempt);
     }
 }

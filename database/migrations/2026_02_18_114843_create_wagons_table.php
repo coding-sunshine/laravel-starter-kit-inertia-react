@@ -14,24 +14,34 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('wagons', function (Blueprint $table): void {
+
             $table->id();
-            $table->foreignId('rake_id')->constrained('rakes')->onDelete('cascade');
-            $table->integer('wagon_sequence')->default(0); // Position in rake (1-60)
+
+            $table->foreignId('rake_id')
+                ->constrained('rakes')
+                ->cascadeOnDelete();
+
+            $table->integer('wagon_sequence')->nullable();
+            // Position inside rake
+
             $table->string('wagon_number', 20)->unique();
-            $table->string('wagon_type')->nullable(); // BOXN, BOBRN, etc.
+
+            $table->string('wagon_type')->nullable();
+
             $table->decimal('tare_weight_mt', 10, 2)->nullable();
-            $table->decimal('loaded_weight_mt', 10, 2)->nullable();
-            $table->decimal('pcc_weight_mt', 10, 2)->nullable(); // Permitted Carrying Capacity
-            $table->decimal('loader_recorded_qty_mt', 10, 2)->nullable();
-            $table->decimal('weighment_qty_mt', 10, 2)->nullable();
-            $table->boolean('is_unfit')->default(false); // TXR inspection result
-            $table->boolean('is_overloaded')->default(false); // Overload flag
-            $table->string('state')->default('pending'); // pending, loading, loaded, unfit, completed
-            $table->foreignId('loader_id')->nullable()->constrained('loaders')->onDelete('set null');
+
+            $table->decimal('pcc_weight_mt', 10, 2)->nullable();
+            // Permitted Carrying Capacity
+
+            // TXR result snapshot
+            $table->boolean('is_unfit')->default(false);
+
+            // Simple lifecycle indicator
+            $table->string('state')->default('pending');
+
             $table->timestamps();
 
             $table->index(['rake_id', 'wagon_sequence']);
-            $table->index('wagon_number');
         });
     }
 

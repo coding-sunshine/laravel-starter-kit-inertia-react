@@ -5,31 +5,34 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Services\DailyVehicleEntryService;
-use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Inertia\Inertia;
-use Inertia\Response;
+use Inertia\Response as InertiaResponse;
+use Throwable;
 
 final class DailyVehicleEntryController extends Controller
 {
-    public function __construct(private DailyVehicleEntryService $service)
-    {
-    }
+    public function __construct(private DailyVehicleEntryService $service) {}
 
-    public function index(Request $request): Response
+    public function index(Request $request): InertiaResponse
     {
         $date = $request->get('date', now()->format('Y-m-d'));
         $activeShift = (int) $request->get('shift', 1);
-        
+
         $entries = $this->service->getEntriesByDateAndShift($date, $activeShift);
         $shiftSummary = $this->service->getShiftSummary($date);
+
+        // Get available sidings for export dropdown
+        $sidings = \App\Models\Siding::orderBy('name')->get(['id', 'name']);
 
         return Inertia::render('road-dispatch/daily-vehicle-entries/index', [
             'entries' => $entries,
             'date' => $date,
             'activeShift' => $activeShift,
             'shiftSummary' => $shiftSummary,
+            'sidings' => $sidings,
         ]);
     }
 
@@ -69,11 +72,11 @@ final class DailyVehicleEntryController extends Controller
             'challan_mode' => 'nullable|in:offline,online',
         ]);
         try {
-            //code...
+            // code...
             $entry = \App\Models\DailyVehicleEntry::findOrFail($id);
             $updatedEntry = $this->service->updateEntry($entry, $data);
-        } catch (\Throwable $th) {
-            //throw $th;
+        } catch (Throwable $th) {
+            // throw $th;
             dd($th);
         }
 
@@ -99,19 +102,19 @@ final class DailyVehicleEntryController extends Controller
     public function destroy($id): RedirectResponse
     {
         $entry = \App\Models\DailyVehicleEntry::findOrFail($id);
-        
+
         // Only allow deletion of draft entries with no meaningful data
         if ($entry->status !== 'draft') {
             return back()->with('error', 'Cannot delete completed entries.');
         }
 
-        $hasData = !empty($entry->e_challan_no) || 
-                   !empty($entry->vehicle_no) || 
-                   !is_null($entry->gross_wt) || 
-                   !is_null($entry->tare_wt) || 
-                   !empty($entry->wb_no) || 
-                   !empty($entry->d_challan_no) || 
-                   !empty($entry->challan_mode);
+        $hasData = ! empty($entry->e_challan_no) ||
+                   ! empty($entry->vehicle_no) ||
+                   ! is_null($entry->gross_wt) ||
+                   ! is_null($entry->tare_wt) ||
+                   ! empty($entry->wb_no) ||
+                   ! empty($entry->d_challan_no) ||
+                   ! empty($entry->challan_mode);
 
         if ($hasData) {
             return back()->with('error', 'Cannot delete entries with data.');
@@ -124,5 +127,31 @@ final class DailyVehicleEntryController extends Controller
             'date' => $entry->entry_date,
             'shift' => $entry->shift,
         ])->with('success', 'Entry deleted successfully.');
+    }
+
+    public function export(Request $request): Response|RedirectResponse
+    {
+        $data = $request->validate([
+            'date' => 'required|date_format:Y-m-d',
+            'siding' => 'required|integer|exists:sidings,id',
+            'shift' => 'required|in:all,1,2,3',
+        ]);
+
+        try {
+            $filepath = $this->service->exportEntries(
+                $data['date'],
+                $data['siding'],
+                $data['shift']
+            );
+
+            $filename = basename($filepath);
+
+            return response()->download($filepath, $filename, [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+            ])->deleteFileAfterSend(true);
+        } catch (Throwable $th) {
+            return back()->with('error', 'Failed to export data: '.$th->getMessage());
+        }
     }
 }

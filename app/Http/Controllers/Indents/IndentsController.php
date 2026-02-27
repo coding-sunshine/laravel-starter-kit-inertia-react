@@ -67,29 +67,27 @@ final class IndentsController extends Controller
 
         $validated = $request->validate([
             'siding_id' => ['required', 'integer', 'exists:sidings,id'],
-            'indent_number' => ['required', 'string', 'max:20', 'unique:indents,indent_number'],
-            'target_quantity_mt' => ['required', 'numeric', 'min:0'],
-            'allocated_quantity_mt' => ['nullable', 'numeric', 'min:0'],
+            'indent_number' => ['nullable', 'string', 'max:20', 'unique:indents,indent_number'],
             'state' => ['nullable', 'string', 'in:pending,allocated,partial,completed,cancelled'],
-            'indent_date' => ['required', 'date'],
-            'required_by_date' => ['nullable', 'date'],
             'remarks' => ['nullable', 'string', 'max:1000'],
             'e_demand_reference_id' => ['nullable', 'string', 'max:100'],
             'fnr_number' => ['nullable', 'string', 'max:50'],
+            'expected_loading_date' => ['nullable', 'date'],
+            'demanded_stock' => ['nullable', 'string', 'max:255'],
+            'total_units' => ['nullable', 'string', 'max:255'],
             'pdf' => ['nullable', 'file', 'mimes:pdf', 'max:10240'],
         ]);
 
         $indent = new Indent;
         $indent->siding_id = $validated['siding_id'];
-        $indent->indent_number = $validated['indent_number'];
-        $indent->target_quantity_mt = $validated['target_quantity_mt'];
-        $indent->allocated_quantity_mt = $validated['allocated_quantity_mt'] ?? 0;
+        $indent->indent_number = $validated['indent_number'] ?? null;
         $indent->state = $validated['state'] ?? 'pending';
-        $indent->indent_date = $validated['indent_date'];
-        $indent->required_by_date = $validated['required_by_date'] ?? null;
         $indent->remarks = $validated['remarks'] ?? null;
         $indent->e_demand_reference_id = $validated['e_demand_reference_id'] ?? null;
         $indent->fnr_number = $validated['fnr_number'] ?? null;
+        $indent->expected_loading_date = $validated['expected_loading_date'] ?? null;
+        $indent->demanded_stock = $validated['demanded_stock'] ?? null;
+        $indent->total_units = $validated['total_units'] ?? null;
         $indent->created_by = $request->user()->id;
         $indent->updated_by = $request->user()->id;
         $indent->save();
@@ -149,28 +147,26 @@ final class IndentsController extends Controller
 
         $validated = $request->validate([
             'siding_id' => ['required', 'integer', 'exists:sidings,id'],
-            'indent_number' => ['required', 'string', 'max:20', 'unique:indents,indent_number,'.$indent->id],
-            'target_quantity_mt' => ['required', 'numeric', 'min:0'],
-            'allocated_quantity_mt' => ['nullable', 'numeric', 'min:0'],
+            'indent_number' => ['nullable', 'string', 'max:20', 'unique:indents,indent_number,'.$indent->id],
             'state' => ['nullable', 'string', 'in:pending,allocated,partial,completed,cancelled'],
-            'indent_date' => ['required', 'date'],
-            'required_by_date' => ['nullable', 'date'],
             'remarks' => ['nullable', 'string', 'max:1000'],
             'e_demand_reference_id' => ['nullable', 'string', 'max:100'],
             'fnr_number' => ['nullable', 'string', 'max:50'],
+            'expected_loading_date' => ['nullable', 'date'],
+            'demanded_stock' => ['nullable', 'string', 'max:255'],
+            'total_units' => ['nullable', 'string', 'max:255'],
             'pdf' => ['nullable', 'file', 'mimes:pdf', 'max:10240'],
         ]);
 
         $indent->siding_id = $validated['siding_id'];
-        $indent->indent_number = $validated['indent_number'];
-        $indent->target_quantity_mt = $validated['target_quantity_mt'];
-        $indent->allocated_quantity_mt = $validated['allocated_quantity_mt'] ?? 0;
+        $indent->indent_number = $validated['indent_number'] ?? null;
         $indent->state = $validated['state'] ?? $indent->state;
-        $indent->indent_date = $validated['indent_date'];
-        $indent->required_by_date = $validated['required_by_date'] ?? null;
         $indent->remarks = $validated['remarks'] ?? null;
         $indent->e_demand_reference_id = $validated['e_demand_reference_id'] ?? null;
         $indent->fnr_number = $validated['fnr_number'] ?? null;
+        $indent->expected_loading_date = $validated['expected_loading_date'] ?? null;
+        $indent->demanded_stock = $validated['demanded_stock'] ?? null;
+        $indent->total_units = $validated['total_units'] ?? null;
         $indent->updated_by = $request->user()->id;
         $indent->save();
 
@@ -238,14 +234,20 @@ final class IndentsController extends Controller
         $rake = new Rake;
         $rake->indent_id = $indent->id;
         $rake->siding_id = $indent->siding_id; // Use indent's siding
-        $rake->rake_number = 'RK-'.$indent->indent_number;
-        $rake->rake_type = $validated['rake_type'] ?? 'standard';
+
+        // Generate unique rake number
+        $rakeNumber = $indent->indent_number ? 'RK-'.$indent->indent_number : 'RK-'.uniqid();
+        while (Rake::where('rake_number', $rakeNumber)->exists()) {
+            $rakeNumber = 'RK-'.uniqid();
+        }
+        $rake->rake_number = $rakeNumber;
+        $rake->rake_type = $validated['rake_type'] ?? null;
         $rake->wagon_count = $validated['wagon_count'] ?? 0;
         $rake->loaded_weight_mt = 0;
-        $rake->predicted_weight_mt = $indent->target_quantity_mt;
+        $rake->predicted_weight_mt = null;
         $rake->state = 'pending';
-        $rake->free_time_minutes = $validated['free_time_minutes'] ?? config('rrmcs.default_free_time_minutes', 180);
-        $rake->rr_expected_date = $validated['rr_expected_date'] ?? $indent->required_by_date;
+        $rake->loading_free_minutes = $validated['free_time_minutes'] ?? config('rrmcs.default_free_time_minutes', 180);
+        $rake->rr_expected_date = $validated['rr_expected_date'] ?? null;
         $rake->placement_time = $validated['placement_time'] ? new DateTimeImmutable($validated['placement_time']) : null;
         $rake->created_by = $request->user()->id;
         $rake->updated_by = $request->user()->id;

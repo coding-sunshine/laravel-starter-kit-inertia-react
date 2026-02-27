@@ -63,5 +63,15 @@ All Controllers:
 | [AchievementsController](./achievementscontroller.md) | N/A | ✅ |
 | [SidingSwitchController](./sidingswitchcontroller.md) | N/A | ✅ |
 | RakeWagonController | N/A | ❌ |
+| DailyVehicleEntryController | N/A | ❌ |
+| LoadersController | N/A | ❌ |
+| PenaltyTypesController | N/A | ❌ |
+| PowerPlantController | N/A | ❌ |
+| PowerplantSidingDistancesController | N/A | ❌ |
+| RakeLoadController | N/A | ❌ |
+| SectionTimersController | N/A | ❌ |
+| SidingsController | N/A | ❌ |
+| TxrController | N/A | ❌ |
+| WagonUnfitController | N/A | ❌ |
 
 

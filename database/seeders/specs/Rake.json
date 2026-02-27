@@ -12,6 +12,11 @@
             "nullable": true,
             "default": null
         },
+        "indent_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
         "rake_number": {
             "type": "string",
             "nullable": true,
@@ -27,6 +32,16 @@
             "nullable": true,
             "default": null
         },
+        "placement_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "dispatch_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
         "loaded_weight_mt": {
             "type": "numeric",
             "nullable": true,
@@ -34,16 +49,6 @@
         },
         "predicted_weight_mt": {
             "type": "numeric",
-            "nullable": true,
-            "default": null
-        },
-        "state": {
-            "type": "string",
-            "nullable": true,
-            "default": null
-        },
-        "free_time_minutes": {
-            "type": "integer",
             "nullable": true,
             "default": null
         },
@@ -57,12 +62,57 @@
             "nullable": true,
             "default": null
         },
+        "state": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "loading_start_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "loading_end_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "loading_free_minutes": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "guard_start_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "guard_end_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "weighment_start_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "weighment_end_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
         "created_by": {
             "type": "bigint",
             "nullable": true,
             "default": null
         },
         "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_by": {
             "type": "bigint",
             "nullable": true,
             "default": null
@@ -81,21 +131,6 @@
             "type": "timestamp",
             "nullable": true,
             "default": null
-        },
-        "indent_id": {
-            "type": "bigint",
-            "nullable": true,
-            "default": null
-        },
-        "placement_time": {
-            "type": "timestamp",
-            "nullable": true,
-            "default": null
-        },
-        "dispatch_time": {
-            "type": "timestamp",
-            "nullable": true,
-            "default": null
         }
     },
     "relationships": {
@@ -111,33 +146,29 @@
             "type": "hasMany",
             "model": "Wagon"
         },
-        "weighments": {
+        "rakeWeighments": {
             "type": "hasMany",
-            "model": "Weighment"
+            "model": "RakeWeighment"
         },
         "txr": {
             "type": "hasOne",
             "model": "Txr"
         },
-        "guardInspection": {
-            "type": "hasOne",
+        "wagonLoadings": {
+            "type": "hasMany",
+            "model": "WagonLoading"
+        },
+        "guardInspections": {
+            "type": "hasMany",
             "model": "GuardInspection"
         },
-        "rrDocuments": {
-            "type": "hasMany",
-            "model": "RrDocument"
-        },
-        "rrPrediction": {
+        "rrDocument": {
             "type": "hasOne",
-            "model": "RrPrediction"
+            "model": "RrDocument"
         },
         "penalties": {
             "type": "hasMany",
             "model": "Penalty"
-        },
-        "powerPlantReceipts": {
-            "type": "hasMany",
-            "model": "PowerPlantReceipt"
         },
         "createdBy": {
             "type": "belongsTo",
@@ -146,18 +177,6 @@
         "updatedBy": {
             "type": "belongsTo",
             "model": "UpdatedBy"
-        },
-        "rakeLoad": {
-            "type": "hasOne",
-            "model": "RakeLoad"
-        },
-        "rakeLoads": {
-            "type": "hasMany",
-            "model": "RakeLoad"
-        },
-        "appliedPenalties": {
-            "type": "hasMany",
-            "model": "AppliedPenalty"
         }
     },
     "value_hints": [],

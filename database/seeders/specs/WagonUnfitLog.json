@@ -1,0 +1,63 @@
+{
+    "model": "WagonUnfitLog",
+    "table": "wagon_unfit_logs",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "txr_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "wagon_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "reason": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "marking_method": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "marked_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "txr": {
+            "type": "belongsTo",
+            "model": "Txr"
+        },
+        "wagon": {
+            "type": "belongsTo",
+            "model": "Wagon"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

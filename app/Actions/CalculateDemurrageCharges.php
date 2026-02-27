@@ -46,7 +46,7 @@ final readonly class CalculateDemurrageCharges
         }
 
         // Calculate dwell time
-        $freeHours = $rake->free_time_minutes / 60;
+        $freeHours = $rake->loading_free_minutes / 60;
         $dwellHours = $rake->dispatch_time->diffInHours($rake->rr_expected_date);
         $demurrageHours = max(0, $dwellHours - $freeHours);
 
@@ -177,7 +177,7 @@ final readonly class CalculateDemurrageCharges
             'demurrage_hours' => round($hours, 2),
             'weight_mt' => round($weight, 2),
             'rate_per_mt_hour' => $rate,
-            'free_hours' => $rake->free_time_minutes ? round($rake->free_time_minutes / 60, 2) : null,
+            'free_hours' => $rake->loading_free_minutes ? round($rake->loading_free_minutes / 60, 2) : null,
             'dwell_hours' => null,
         ];
         if ($rake->dispatch_time && $rake->rr_expected_date) {

@@ -15,7 +15,9 @@ import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router, usePage, useForm } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
-import { Clock, FileText, Scale, Train, Edit, Package } from 'lucide-react';
+import { Clock, FileText, Scale, Train, Edit, Trash2 } from 'lucide-react';
+import { RakeWorkflow } from '@/components/rakes/workflow/RakeWorkflow';
+import { WagonOverviewDialog } from '@/components/rakes/WagonOverviewDialog';
 
 interface Siding {
     id: number;
@@ -47,22 +49,11 @@ interface TxrRecord {
     remarks: string | null;
 }
 
-interface RakeLoad {
-    id: number;
-    placement_time: string;
-    free_time_minutes: number;
-    status: string;
-}
-
 interface RakeWagonLoading {
     id: number;
-    rake_load_id: number;
     wagon_id: number;
     loader_id: number | null;
     loaded_quantity_mt: string;
-    attempt_no: number;
-    started_at?: string | null;
-    completed_at?: string | null;
     wagon?: {
         id: number;
         wagon_number: string;
@@ -123,16 +114,14 @@ interface RakeData {
     id: number;
     rake_number: string;
     rake_type: string | null;
-    wagon_count: number;
+    wagon_count: number | null;
     state: string;
     placement_time: string | null;
     dispatch_time: string | null;
-    free_time_minutes: number | null;
+    loading_free_minutes: number | null;
     siding?: Siding | null;
     wagons: Wagon[];
     txr: TxrRecord | null;
-    rakeLoad?: RakeLoad | null;
-    rake_load?: RakeLoad | null;
     wagonLoadings?: RakeWagonLoading[];
     guardInspections?: GuardInspectionRecord[];
     weighments?: WeighmentRecord[];
@@ -693,7 +682,7 @@ export default function RakesShow({
     const unfitWagonInfo = getUnfitWagonInfo(rake.wagons);
 
     useEffect(() => {
-        if (rake.wagons.length === 0 && rake.wagon_count > 0) {
+        if (rake.wagons.length === 0 && (rake.wagon_count ?? 0) > 0) {
             router.visit(`/rakes/${rake.id}/edit`);
         }
     }, [rake.id, rake.wagons.length, rake.wagon_count]);
@@ -734,24 +723,7 @@ export default function RakesShow({
                         }
                     />
                     <div className="flex gap-2">
-                        {rake.txr?.status === 'completed' && (rake.rake_load ?? rake.rakeLoad) && (
-                            <Link href={`/rakes/${rake.id}/load`}>
-                                <Button variant="outline">
-                                    <Package className="mr-2 h-4 w-4" />
-                                    {(rake.rake_load ?? rake.rakeLoad)?.status === 'completed'
-                                        ? 'View Loading'
-                                        : 'Continue Loading'}
-                                </Button>
-                            </Link>
-                        )}
-                        {rake.txr?.status === 'completed' && !(rake.rake_load ?? rake.rakeLoad) && (
-                            <Link href={`/rakes/${rake.id}/load`}>
-                                <Button className="bg-green-600 hover:bg-green-700">
-                                    <Package className="mr-2 h-4 w-4" />
-                                    Start Loading
-                                </Button>
-                            </Link>
-                        )}
+                        <WagonOverviewDialog wagons={rake.wagons} />
                         <Link
                             href="/rakes"
                             className="text-sm font-medium text-muted-foreground underline underline-offset-4"
@@ -774,13 +746,19 @@ export default function RakesShow({
                         <CardHeader className="pb-2">
                             <CardDescription>Wagons</CardDescription>
                             <CardTitle className="text-lg">
-                                {rake.wagon_count}
+                                {rake.wagon_count ?? 0}
                             </CardTitle>
                         </CardHeader>
                     </Card>
-                    {/* Only show timer card in summary if loading is active, but no detailed process */}
-                    {(rake.rake_load ?? rake.rakeLoad) && (
-                        <LoadingTimerCard load={(rake.rake_load ?? rake.rakeLoad)!} />
+                    {/* Loading timer when placement_time and loading_free_minutes exist on Rake */}
+                    {rake.placement_time && rake.loading_free_minutes != null && (
+                        <LoadingTimerCard
+                            load={{
+                                placement_time: rake.placement_time,
+                                free_time_minutes: rake.loading_free_minutes,
+                                status: rake.state === 'ready_for_dispatch' ? 'completed' : 'in_progress',
+                            }}
+                        />
                     )}
                 </div>
 
@@ -913,293 +891,9 @@ export default function RakesShow({
                     </Card>
                 )}
 
+                {/* New Accordion Workflow */}
+                <RakeWorkflow rake={rake} demurrage_rate_per_mt_hour={demurrage_rate_per_mt_hour} />
 
-                {rake.wagons.length > 0 && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Wagons</CardTitle>
-                            <CardDescription>
-                                Click on any wagon to upload details
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-                                {rake.wagons.map((wagon) => (
-                                    <Dialog 
-                                        key={wagon.id}
-                                        open={wagonDialogOpen && selectedWagon?.id === wagon.id}
-                                        onOpenChange={(open) => {
-                                            setWagonDialogOpen(open);
-                                            if (!open) setSelectedWagon(null);
-                                        }}
-                                    >
-                                        <DialogTrigger asChild>
-                                            <div 
-                                                className={`cursor-pointer rounded-lg border-2 p-6 hover:bg-muted/50 transition-colors ${
-                                                    wagon.is_unfit 
-                                                        ? 'border-red-500 bg-red-50/50' 
-                                                        : 'border-green-500 bg-green-50/50'
-                                                }`}
-                                                onClick={() => {
-                                                    setSelectedWagon(wagon);
-                                                    setWagonDialogOpen(true);
-                                                }}
-                                            >
-                                                <div className="text-center space-y-3">
-                                                    <Package className="mx-auto h-12 w-12 text-muted-foreground" />
-                                                    <div>
-                                                        <div className="font-semibold text-lg">
-                                                            {wagon.wagon_number}
-                                                        </div>
-                                                        <div className="text-sm text-muted-foreground">
-                                                            Position {wagon.wagon_sequence}
-                                                        </div>
-                                                    </div>
-                                                    <div className="space-y-1 text-xs">
-                                                        <div className="flex justify-between">
-                                                            <span className="text-muted-foreground">Type:</span>
-                                                            <span className="font-medium">
-                                                                {wagon.wagon_type || 'Not set'}
-                                                            </span>
-                                                        </div>
-                                                        <div className="flex justify-between">
-                                                            <span className="text-muted-foreground">Tare Weight:</span>
-                                                            <span className="font-medium">
-                                                                {wagon.tare_weight_mt ? `${wagon.tare_weight_mt} MT` : 'Not set'}
-                                                            </span>
-                                                        </div>
-                                                        <div className="flex justify-between">
-                                                            <span className="text-muted-foreground">PCC Weight:</span>
-                                                            <span className="font-medium">
-                                                                {wagon.pcc_weight_mt ? `${wagon.pcc_weight_mt} MT` : 'Not set'}
-                                                            </span>
-                                                        </div>
-                                                        <div className="flex justify-between">
-                                                            <span className="text-muted-foreground">Status:</span>
-                                                            <span className={`font-medium ${
-                                                                wagon.is_unfit ? 'text-red-600' : 'text-green-600'
-                                                            }`}>
-                                                                {wagon.is_unfit ? 'Unfit' : 'Fit'}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </DialogTrigger>
-                                        <DialogContent className="max-w-md">
-                                            <DialogHeader>
-                                                <DialogTitle>
-                                                    Edit Wagon {wagon.wagon_number}
-                                                </DialogTitle>
-                                            </DialogHeader>
-                                            <form onSubmit={(e) => {
-                                                e.preventDefault();
-                                                put(`/rakes/${rake.id}/wagons/${wagon.id}`, {
-                                                    preserveScroll: true,
-                                                });
-                                            }}>
-                                                <div className="space-y-4">
-                                                    <div>
-                                                        <Label htmlFor="wagon_type">Wagon Type</Label>
-                                                        <Input
-                                                            id="wagon_type"
-                                                            value={data.wagon_type}
-                                                            onChange={(e) => setData('wagon_type', e.target.value)}
-                                                            placeholder="e.g., BOXN, BOBRN"
-                                                        />
-                                                        <InputError message={errors?.wagon_type} />
-                                                    </div>
-                                                    <div>
-                                                        <Label htmlFor="tare_weight_mt">Tare Weight (MT)</Label>
-                                                        <Input
-                                                            id="tare_weight_mt"
-                                                            value={data.tare_weight_mt}
-                                                            onChange={(e) => setData('tare_weight_mt', e.target.value)}
-                                                            type="number"
-                                                            step="0.01"
-                                                        />
-                                                        <InputError message={errors?.tare_weight_mt} />
-                                                    </div>
-                                                    <div>
-                                                        <Label htmlFor="pcc_weight_mt">PCC Weight (MT)</Label>
-                                                        <Input
-                                                            id="pcc_weight_mt"
-                                                            value={data.pcc_weight_mt}
-                                                            onChange={(e) => setData('pcc_weight_mt', e.target.value)}
-                                                            type="number"
-                                                            step="0.01"
-                                                        />
-                                                        <InputError message={errors?.pcc_weight_mt} />
-                                                    </div>
-                                                    <div className="flex items-center space-x-2">
-                                                        <input
-                                                            type="checkbox"
-                                                            id="is_unfit"
-                                                            checked={data.is_unfit}
-                                                            onChange={(e) => setData('is_unfit', e.target.checked)}
-                                                            className="rounded"
-                                                        />
-                                                        <Label htmlFor="is_unfit">Mark as unfit</Label>
-                                                    </div>
-                                                    <div className="flex justify-end space-x-2 pt-4">
-                                                        <Button
-                                                            type="button"
-                                                            variant="outline"
-                                                            onClick={() => {
-                                                                setWagonDialogOpen(false);
-                                                                setSelectedWagon(null);
-                                                                reset();
-                                                            }}
-                                                        >
-                                                            Cancel
-                                                        </Button>
-                                                        <Button type="submit" disabled={processing}>
-                                                            Save Changes
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            </form>
-                                        </DialogContent>
-                                    </Dialog>
-                                ))}
-                            </div>
-                        </CardContent>
-                    </Card>
-                )}
-
-                {rake.wagons.length === 0 && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>No Wagons</CardTitle>
-                            <CardDescription>
-                                This rake doesn't have any wagons yet. Generate wagons based on the rake's wagon count.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="p-8 text-center">
-                            <Button 
-                                onClick={() => {
-                                    router.post(`/rakes/${rake.id}/generate-wagons`, {}, {
-                                        preserveScroll: true,
-                                        onSuccess: () => {
-                                            router.reload();
-                                        },
-                                        onError: (errors) => {
-                                            console.error('Error generating wagons:', errors);
-                                        },
-                                    });
-                                }}
-                                disabled={processing}
-                            >
-                                <Package className="mr-2 h-4 w-4" />
-                                Generate {rake.wagon_count} Wagons
-                            </Button>
-                        </CardContent>
-                    </Card>
-                )}
-
-                                {rake.guardInspections && rake.guardInspections.length > 0 && rake.guardInspections[0]?.inspection_time && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Guard inspection</CardTitle>
-                            <CardDescription>
-                                Guard approval status
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="text-sm">
-                            <p>
-                                {new Date(
-                                    rake.guardInspections[0]?.inspection_time || '',
-                                ).toLocaleString()}{' '}
-                                —{' '}
-                                {rake.guardInspections[0]?.is_approved
-                                    ? 'Approved'
-                                    : 'Not approved'}
-                            </p>
-                            {rake.guardInspections[0]?.remarks && (
-                                <p className="mt-2 text-muted-foreground">
-                                    {rake.guardInspections[0].remarks}
-                                </p>
-                            )}
-                        </CardContent>
-                    </Card>
-                )}
-
-                {(rake.penalties?.length ?? 0) > 0 && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <Scale className="size-5" />
-                                Penalties
-                            </CardTitle>
-                            <CardDescription>
-                                Demurrage formula: hours over free time × weight
-                                (MT) × ₹{demurrage_rate_per_mt_hour}/MT/h
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <ul className="space-y-3 text-sm">
-                                {rake.penalties?.map((p) => (
-                                    <li
-                                        key={p.id}
-                                        className="rounded border p-3"
-                                    >
-                                        <div className="flex flex-wrap items-center gap-4">
-                                            <span className="font-medium">
-                                                {p.penalty_type}
-                                            </span>
-                                            <span>₹{p.penalty_amount}</span>
-                                            <span className="text-muted-foreground">
-                                                {p.penalty_status} ·{' '}
-                                                {p.penalty_date}
-                                            </span>
-                                        </div>
-                                        {p.description && (
-                                            <p className="mt-2 text-muted-foreground">
-                                                {p.description}
-                                            </p>
-                                        )}
-                                        {p.calculation_breakdown && (
-                                            <p className="mt-1 text-xs text-muted-foreground">
-                                                {
-                                                    p.calculation_breakdown
-                                                        .formula
-                                                }
-                                                {p.calculation_breakdown
-                                                    .demurrage_hours !=
-                                                    null && (
-                                                    <>
-                                                        {' '}
-                                                        ={' '}
-                                                        {
-                                                            p
-                                                                .calculation_breakdown
-                                                                .demurrage_hours
-                                                        }{' '}
-                                                        h ×{' '}
-                                                        {
-                                                            p
-                                                                .calculation_breakdown
-                                                                .weight_mt
-                                                        }{' '}
-                                                        MT × ₹
-                                                        {
-                                                            p
-                                                                .calculation_breakdown
-                                                                .rate_per_mt_hour
-                                                        }
-                                                        /MT/h
-                                                    </>
-                                                )}
-                                            </p>
-                                        )}
-                                    </li>
-                                ))}
-                            </ul>
-                        </CardContent>
-                    </Card>
-                )}
-
-                
                 {!rake.txr && rake.wagons.length === 0 && (
                     <Card>
                         <CardContent className="p-8 text-center text-sm text-muted-foreground">
