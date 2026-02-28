@@ -1,0 +1,107 @@
+{
+    "model": "ApiLog",
+    "table": "api_logs",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "integration_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "request_method": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "request_url": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "request_headers": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "request_body": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "response_status_code": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "response_headers": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "response_body": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "response_time_ms": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "error_message": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "ip_address": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "user_agent": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "user_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        },
+        "apiIntegration": {
+            "type": "belongsTo",
+            "model": "ApiIntegration"
+        },
+        "user": {
+            "type": "belongsTo",
+            "model": "User"
+        }
+    },
+    "value_hints": {
+        "request_url": {
+            "type": "url",
+            "example": "https://example.com"
+        }
+    },
+    "scenarios": []
+}

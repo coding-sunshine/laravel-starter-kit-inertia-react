@@ -15,6 +15,8 @@ interface WorkflowDefinitionRecord {
     name: string;
     description?: string | null;
     trigger_type: string;
+    trigger_config?: unknown;
+    steps?: unknown;
     is_active: boolean;
 }
 interface Props {
@@ -26,12 +28,31 @@ export default function FleetWorkflowDefinitionsEdit({
     workflowDefinition,
     triggerTypes,
 }: Props) {
-    const form = useForm({
-        name: workflowDefinition.name,
-        description: workflowDefinition.description ?? '',
-        trigger_type: workflowDefinition.trigger_type,
-        is_active: workflowDefinition.is_active,
-    });
+    const form = useForm(
+        {
+            name: workflowDefinition.name,
+            description: workflowDefinition.description ?? '',
+            trigger_type: workflowDefinition.trigger_type,
+            trigger_config: workflowDefinition.trigger_config ?? undefined,
+            steps: workflowDefinition.steps ?? undefined,
+            stepsJson: typeof workflowDefinition.steps === 'object'
+                ? JSON.stringify(workflowDefinition.steps, null, 2)
+                : (typeof workflowDefinition.steps === 'string' ? workflowDefinition.steps : '[]'),
+            is_active: workflowDefinition.is_active,
+        },
+        {
+            transform: (data) => {
+                let steps: unknown[] = [];
+                try {
+                    const raw = data.stepsJson ?? '[]';
+                    steps = typeof raw === 'string' ? JSON.parse(raw) : Array.isArray(raw) ? raw : [];
+                } catch {
+                    steps = [];
+                }
+                return { ...data, steps, stepsJson: undefined };
+            },
+        }
+    );
     const { data, setData, processing, errors } = form;
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard().url },
@@ -103,6 +124,19 @@ export default function FleetWorkflowDefinitionsEdit({
                             className="size-4 rounded border-input"
                         />
                         <Label htmlFor="is_active">Active</Label>
+                    </div>
+                    <div>
+                        <Label htmlFor="steps">Steps (JSON array)</Label>
+                        <textarea
+                            id="steps"
+                            value={data.stepsJson ?? '[]'}
+                            onChange={(e) => setData('stepsJson', e.target.value)}
+                            className="mt-1 flex min-h-[120px] w-full rounded-md border border-input bg-transparent px-3 py-2 font-mono text-sm"
+                            placeholder="[]"
+                        />
+                        {errors.steps && (
+                            <p className="mt-1 text-sm text-destructive">{errors.steps}</p>
+                        )}
                     </div>
                     <div className="flex gap-2">
                         <Button type="submit" disabled={processing}>

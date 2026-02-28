@@ -1,0 +1,161 @@
+{
+    "model": "ApiIntegration",
+    "table": "api_integrations",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "integration_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "integration_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "provider_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "api_endpoint": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "api_key_encrypted": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "authentication_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "authentication_config": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "data_sync_frequency": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "last_sync_timestamp": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "sync_status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "error_count": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "last_error_message": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "rate_limit_per_hour": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "monthly_usage_count": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "monthly_limit": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "webhook_url": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "webhook_secret_encrypted": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "is_active": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "apiLogs": {
+            "type": "hasMany",
+            "model": "ApiLog"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": {
+        "integration_name": {
+            "type": "name",
+            "example": "John Doe"
+        },
+        "provider_name": {
+            "type": "name",
+            "example": "John Doe"
+        },
+        "webhook_url": {
+            "type": "url",
+            "example": "https://example.com"
+        }
+    },
+    "scenarios": []
+}

@@ -28,6 +28,7 @@ import {
     Car,
     FileCheck,
     UserCog,
+    Heart,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -82,6 +83,8 @@ interface Counts {
     contractors?: number;
     contractor_compliance?: number;
     contractor_invoices?: number;
+    driver_wellness_records?: number;
+    driver_coaching_plans?: number;
 }
 interface WorkOrderRow { id: number; work_order_number: string; title: string; status: string; vehicle?: { id: number; registration: string }; }
 interface DefectRow { id: number; defect_number: string; title: string; severity: string; vehicle?: { id: number; registration: string }; }
@@ -207,6 +210,14 @@ export default function FleetDashboard({ counts, recentWorkOrders, recentDefects
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <StatCard title="Workflow definitions" count={counts.workflow_definitions ?? 0} href="/fleet/workflow-definitions" icon={GitBranch} />
                         <StatCard title="Workflow executions" count={counts.workflow_executions ?? 0} href="/fleet/workflow-executions" icon={GitBranch} />
+                    </div>
+                </section>
+
+                <section>
+                    <h2 className="mb-3 text-lg font-medium">Wellness & coaching</h2>
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        <StatCard title="Driver wellness records" count={counts.driver_wellness_records ?? 0} href="/fleet/driver-wellness-records" icon={Heart} />
+                        <StatCard title="Driver coaching plans" count={counts.driver_coaching_plans ?? 0} href="/fleet/driver-coaching-plans" icon={GraduationCap} />
                     </div>
                 </section>
 

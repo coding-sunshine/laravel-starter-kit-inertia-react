@@ -43,6 +43,8 @@ use App\Models\Fleet\PoolVehicleBooking;
 use App\Models\Fleet\Contractor;
 use App\Models\Fleet\ContractorCompliance;
 use App\Models\Fleet\ContractorInvoice;
+use App\Models\Fleet\DriverCoachingPlan;
+use App\Models\Fleet\DriverWellnessRecord;
 use App\Models\Fleet\Route as FleetRoute;
 use App\Models\Fleet\ServiceSchedule;
 use App\Models\Fleet\SustainabilityGoal;
@@ -117,6 +119,8 @@ final class FleetDashboardController extends Controller
             'contractors' => Contractor::count(),
             'contractor_compliance' => ContractorCompliance::count(),
             'contractor_invoices' => ContractorInvoice::count(),
+            'driver_wellness_records' => DriverWellnessRecord::count(),
+            'driver_coaching_plans' => DriverCoachingPlan::count(),
         ];
 
         $recentWorkOrders = WorkOrder::query()->with('vehicle')->orderByDesc('created_at')->limit(5)->get();

@@ -266,6 +266,8 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         Route::resource('contractors', App\Http\Controllers\Fleet\ContractorController::class)->names('contractors');
         Route::resource('contractor-compliance', App\Http\Controllers\Fleet\ContractorComplianceController::class)->names('contractor-compliance');
         Route::resource('contractor-invoices', App\Http\Controllers\Fleet\ContractorInvoiceController::class)->names('contractor-invoices');
+        Route::resource('driver-wellness-records', App\Http\Controllers\Fleet\DriverWellnessRecordController::class)->names('driver-wellness-records');
+        Route::resource('driver-coaching-plans', App\Http\Controllers\Fleet\DriverCoachingPlanController::class)->names('driver-coaching-plans');
     });
 
     Route::middleware('tenant')->group(function (): void {

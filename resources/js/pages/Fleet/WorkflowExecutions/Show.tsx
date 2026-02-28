@@ -11,6 +11,11 @@ interface WorkflowExecutionRecord {
     status: string;
     started_at: string;
     completed_at?: string | null;
+    steps_attempted?: number;
+    steps_completed?: number;
+    steps_failed?: number;
+    error_message?: string | null;
+    result_data?: unknown;
     workflow_definition?: { id: number; name: string };
 }
 interface Props {
@@ -77,8 +82,33 @@ export default function FleetWorkflowExecutionsShow({
                                 ? new Date(workflowExecution.completed_at).toLocaleString()
                                 : '—'}
                         </p>
+                        {(workflowExecution.steps_attempted != null || workflowExecution.steps_completed != null) && (
+                            <p>
+                                <span className="font-medium">Steps:</span>{' '}
+                                {workflowExecution.steps_completed ?? 0} / {workflowExecution.steps_attempted ?? 0} completed
+                                {workflowExecution.steps_failed != null && workflowExecution.steps_failed > 0 && `, ${workflowExecution.steps_failed} failed`}
+                            </p>
+                        )}
+                        {workflowExecution.error_message && (
+                            <p>
+                                <span className="font-medium text-destructive">Error:</span>{' '}
+                                <span className="text-destructive">{workflowExecution.error_message}</span>
+                            </p>
+                        )}
                     </CardContent>
                 </Card>
+                {workflowExecution.result_data != null && Object.keys(workflowExecution.result_data as object).length > 0 && (
+                    <Card>
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-base">Result data</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <pre className="max-h-64 overflow-auto rounded bg-muted p-3 text-xs">
+                                {JSON.stringify(workflowExecution.result_data, null, 2)}
+                            </pre>
+                        </CardContent>
+                    </Card>
+                )}
             </div>
         </AppLayout>
     );

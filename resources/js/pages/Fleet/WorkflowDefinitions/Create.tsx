@@ -19,6 +19,8 @@ export default function FleetWorkflowDefinitionsCreate({ triggerTypes }: Props) 
         name: '',
         description: '',
         trigger_type: triggerTypes[0]?.value ?? '',
+        trigger_config: undefined as unknown,
+        steps: [] as unknown[],
         is_active: true,
     });
     const { data, setData, processing, errors } = form;
@@ -91,6 +93,22 @@ export default function FleetWorkflowDefinitionsCreate({ triggerTypes }: Props) 
                             className="size-4 rounded border-input"
                         />
                         <Label htmlFor="is_active">Active</Label>
+                    </div>
+                    <div>
+                        <Label htmlFor="steps">Steps (JSON array)</Label>
+                        <textarea
+                            id="steps"
+                            value={Array.isArray(data.steps) ? JSON.stringify(data.steps, null, 2) : '[]'}
+                            onChange={(e) => {
+                                try {
+                                    setData('steps', e.target.value ? JSON.parse(e.target.value) : []);
+                                } catch {
+                                    setData('steps', []);
+                                }
+                            }}
+                            className="mt-1 flex min-h-[120px] w-full rounded-md border border-input bg-transparent px-3 py-2 font-mono text-sm"
+                            placeholder="[]"
+                        />
                     </div>
                     {errors.is_active && (
                         <p className="text-sm text-destructive">{errors.is_active}</p>

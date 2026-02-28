@@ -1,0 +1,150 @@
+{
+    "model": "Contractor",
+    "table": "contractors",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "code": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "contractor_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "contact_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "contact_phone": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "contact_email": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "address": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "postcode": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "city": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "tax_number": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "insurance_reference": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "insurance_expiry": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "notes": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "is_active": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "contractorCompliance": {
+            "type": "hasMany",
+            "model": "ContractorCompliance"
+        },
+        "contractorInvoices": {
+            "type": "hasMany",
+            "model": "ContractorInvoice"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": {
+        "name": {
+            "type": "name",
+            "example": "John Doe"
+        },
+        "contact_name": {
+            "type": "name",
+            "example": "John Doe"
+        },
+        "contact_email": {
+            "type": "email",
+            "example": "user@example.com"
+        }
+    },
+    "scenarios": []
+}

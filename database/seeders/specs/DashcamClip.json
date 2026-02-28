@@ -1,0 +1,130 @@
+{
+    "model": "DashcamClip",
+    "table": "dashcam_clips",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "vehicle_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "driver_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "incident_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "clip_id": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "event_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "clip_url": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "thumbnail_url": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "recorded_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "duration_seconds": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "file_size_bytes": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "lat": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "lng": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "speed_kmh": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "metadata": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "vehicle": {
+            "type": "belongsTo",
+            "model": "Vehicle"
+        },
+        "driver": {
+            "type": "belongsTo",
+            "model": "Driver"
+        },
+        "incident": {
+            "type": "belongsTo",
+            "model": "Incident"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": {
+        "clip_url": {
+            "type": "url",
+            "example": "https://example.com"
+        },
+        "thumbnail_url": {
+            "type": "url",
+            "example": "https://example.com"
+        }
+    },
+    "scenarios": []
+}

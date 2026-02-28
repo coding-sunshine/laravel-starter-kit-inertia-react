@@ -1,0 +1,131 @@
+{
+    "model": "GreyFleetVehicle",
+    "table": "grey_fleet_vehicles",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "user_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "driver_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "registration": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "make": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "model": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "year": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "colour": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "fuel_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "engine_cc": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "is_approved": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "approval_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "notes": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "is_active": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "user": {
+            "type": "belongsTo",
+            "model": "User"
+        },
+        "driver": {
+            "type": "belongsTo",
+            "model": "Driver"
+        },
+        "mileageClaims": {
+            "type": "hasMany",
+            "model": "MileageClaim"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

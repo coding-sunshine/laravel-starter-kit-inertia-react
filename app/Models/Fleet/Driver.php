@@ -134,6 +134,22 @@ class Driver extends Model
         return $this->hasOne(DriverVehicleAssignment::class)->where('is_current', true);
     }
 
+    /**
+     * @return HasMany<DriverWellnessRecord, $this>
+     */
+    public function wellnessRecords(): HasMany
+    {
+        return $this->hasMany(DriverWellnessRecord::class);
+    }
+
+    /**
+     * @return HasMany<DriverCoachingPlan, $this>
+     */
+    public function coachingPlans(): HasMany
+    {
+        return $this->hasMany(DriverCoachingPlan::class);
+    }
+
     public function getFullNameAttribute(): string
     {
         return trim("{$this->first_name} {$this->last_name}");

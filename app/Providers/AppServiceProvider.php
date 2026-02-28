@@ -203,6 +203,8 @@ final class AppServiceProvider extends ServiceProvider
             'contractor' => \App\Models\Fleet\Contractor::class,
             'contractor_compliance' => \App\Models\Fleet\ContractorCompliance::class,
             'contractor_invoice' => \App\Models\Fleet\ContractorInvoice::class,
+            'driver_wellness_record' => \App\Models\Fleet\DriverWellnessRecord::class,
+            'driver_coaching_plan' => \App\Models\Fleet\DriverCoachingPlan::class,
         ];
         foreach ($bindings as $key => $modelClass) {
             Route::bind($key, function (string $value) use ($modelClass, $scope) {
