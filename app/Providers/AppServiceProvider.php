@@ -178,6 +178,20 @@ final class AppServiceProvider extends ServiceProvider
             'compliance_item' => \App\Models\Fleet\ComplianceItem::class,
             'driver_working_time' => \App\Models\Fleet\DriverWorkingTime::class,
             'tachograph_download' => \App\Models\Fleet\TachographDownload::class,
+            'emissions_record' => \App\Models\Fleet\EmissionsRecord::class,
+            'carbon_target' => \App\Models\Fleet\CarbonTarget::class,
+            'sustainability_goal' => \App\Models\Fleet\SustainabilityGoal::class,
+            'ev_charging_session' => \App\Models\Fleet\EvChargingSession::class,
+            'ev_battery_data' => \App\Models\Fleet\EvBatteryData::class,
+            'training_course' => \App\Models\Fleet\TrainingCourse::class,
+            'training_session' => \App\Models\Fleet\TrainingSession::class,
+            'driver_qualification' => \App\Models\Fleet\DriverQualification::class,
+            'training_enrollment' => \App\Models\Fleet\TrainingEnrollment::class,
+            'cost_allocation' => \App\Models\Fleet\CostAllocation::class,
+            'alert' => \App\Models\Fleet\Alert::class,
+            'alert_preference' => \App\Models\Fleet\AlertPreference::class,
+            'report' => \App\Models\Fleet\Report::class,
+            'report_execution' => \App\Models\Fleet\ReportExecution::class,
         ];
         foreach ($bindings as $key => $modelClass) {
             Route::bind($key, function (string $value) use ($modelClass, $scope) {

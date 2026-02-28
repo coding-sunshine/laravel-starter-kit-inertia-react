@@ -1,0 +1,104 @@
+{
+    "model": "AiTrainingData",
+    "table": "ai_training_data",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "data_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "source_entity_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "source_entity_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "training_label": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "feature_vector": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "ground_truth": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "data_quality_score": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "anonymized": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "consent_obtained": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "retention_period_days": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "used_for_training": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "model_names": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "expires_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": {
+        "model_names": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    },
+    "scenarios": []
+}

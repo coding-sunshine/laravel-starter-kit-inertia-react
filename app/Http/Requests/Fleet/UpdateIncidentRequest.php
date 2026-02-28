@@ -52,7 +52,7 @@ final class UpdateIncidentRequest extends FormRequest
             'recovery_cost' => ['nullable', 'numeric', 'min:0'],
             'status' => ['required', 'string', Rule::in(array_column(IncidentStatus::cases(), 'value'))],
             'photos' => ['nullable', 'array'],
-            'photos.*' => ['image', 'max:5120'],
+            'photos.*' => ['image', 'max:204800'], // 200 MB per file
         ];
     }
 }

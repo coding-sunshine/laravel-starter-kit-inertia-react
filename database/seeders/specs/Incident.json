@@ -1,0 +1,244 @@
+{
+    "model": "Incident",
+    "table": "incidents",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "vehicle_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "driver_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "incident_number": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "incident_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "incident_time": {
+            "type": "time",
+            "nullable": true,
+            "default": null
+        },
+        "incident_timestamp": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "incident_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "severity": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "location_description": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "lat": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "lng": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "weather_conditions": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "road_conditions": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "traffic_conditions": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "fault_determination": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "police_attended": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "police_reference": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "injuries_reported": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "injury_count": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "third_party_involved": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "third_party_details": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "witnesses": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "description": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "initial_assessment": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "estimated_damage_cost": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "actual_repair_cost": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "vehicle_driveable": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "recovery_required": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "recovery_cost": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "reported_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "investigating_officer": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "photos_count": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "documents_count": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "vehicle": {
+            "type": "belongsTo",
+            "model": "Vehicle"
+        },
+        "driver": {
+            "type": "belongsTo",
+            "model": "Driver"
+        },
+        "reportedByUser": {
+            "type": "belongsTo",
+            "model": "ReportedByUser"
+        },
+        "investigatingOfficerUser": {
+            "type": "belongsTo",
+            "model": "InvestigatingOfficerUser"
+        },
+        "insuranceClaims": {
+            "type": "hasMany",
+            "model": "InsuranceClaim"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

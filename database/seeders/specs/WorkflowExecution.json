@@ -1,0 +1,99 @@
+{
+    "model": "WorkflowExecution",
+    "table": "workflow_executions",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "workflow_definition_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "started_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "completed_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "trigger_event": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "trigger_entity_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "trigger_entity_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "trigger_data": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "steps_attempted": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "steps_completed": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "steps_failed": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "error_message": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "error_details": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "result_data": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "workflowDefinition": {
+            "type": "belongsTo",
+            "model": "WorkflowDefinition"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

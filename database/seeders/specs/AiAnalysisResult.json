@@ -1,0 +1,168 @@
+{
+    "model": "AiAnalysisResult",
+    "table": "ai_analysis_results",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "analysis_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "entity_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "entity_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "model_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "model_version": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "confidence_score": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "risk_score": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "priority": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "primary_finding": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "detailed_analysis": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "recommendations": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "action_items": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "business_impact": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "reviewed_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "reviewed_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "review_notes": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "expires_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "superseded_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "training_feedback": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "feedback_rating": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "reviewedBy": {
+            "type": "belongsTo",
+            "model": "ReviewedBy"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": {
+        "model_name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    },
+    "scenarios": []
+}

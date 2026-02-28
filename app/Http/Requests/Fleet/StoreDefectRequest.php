@@ -36,7 +36,7 @@ final class StoreDefectRequest extends FormRequest
             'affects_roadworthiness' => ['nullable', 'boolean'],
             'affects_safety' => ['nullable', 'boolean'],
             'photos' => ['nullable', 'array'],
-            'photos.*' => ['image', 'max:5120'],
+            'photos.*' => ['image', 'max:204800'], // 200 MB per file
         ];
     }
 }

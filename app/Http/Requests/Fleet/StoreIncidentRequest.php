@@ -49,7 +49,7 @@ final class StoreIncidentRequest extends FormRequest
             'recovery_required' => ['nullable', 'boolean'],
             'recovery_cost' => ['nullable', 'numeric', 'min:0'],
             'photos' => ['nullable', 'array'],
-            'photos.*' => ['image', 'max:5120'],
+            'photos.*' => ['image', 'max:204800'], // 200 MB per file
         ];
     }
 }

@@ -1,0 +1,171 @@
+{
+    "model": "InsuranceClaim",
+    "table": "insurance_claims",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "incident_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "insurance_policy_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "claim_number": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "claim_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "claim_amount": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "excess_amount": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "settlement_amount": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "submitted_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "acknowledged_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "settlement_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "claim_handler_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "claim_handler_contact": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "assessor_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "assessor_report": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "supporting_documents": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "correspondence_log": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "recovery_amount": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "legal_action_required": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "legal_representative": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "incident": {
+            "type": "belongsTo",
+            "model": "Incident"
+        },
+        "insurancePolicy": {
+            "type": "belongsTo",
+            "model": "InsurancePolicy"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": {
+        "claim_handler_name": {
+            "type": "name",
+            "example": "John Doe"
+        },
+        "assessor_name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    },
+    "scenarios": []
+}

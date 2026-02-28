@@ -1,0 +1,157 @@
+{
+    "model": "InsurancePolicy",
+    "table": "insurance_policies",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "policy_number": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "insurer_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "policy_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "coverage_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "start_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "end_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "premium_amount": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "excess_amount": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "no_claims_bonus_years": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "covered_vehicles": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "covered_drivers": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "coverage_limits": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "exclusions": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "broker_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "broker_contact": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "policy_documents": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "auto_renewal": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "insuranceClaims": {
+            "type": "hasMany",
+            "model": "InsuranceClaim"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": {
+        "insurer_name": {
+            "type": "name",
+            "example": "John Doe"
+        },
+        "broker_name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    },
+    "scenarios": []
+}

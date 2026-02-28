@@ -239,6 +239,19 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         Route::resource('insurance-claims', App\Http\Controllers\Fleet\InsuranceClaimController::class)->names('insurance-claims');
         Route::resource('workflow-definitions', App\Http\Controllers\Fleet\WorkflowDefinitionController::class)->names('workflow-definitions');
         Route::resource('workflow-executions', App\Http\Controllers\Fleet\WorkflowExecutionController::class)->only(['index', 'show'])->names('workflow-executions');
+        Route::resource('ev-charging-sessions', App\Http\Controllers\Fleet\EvChargingSessionController::class)->names('ev-charging-sessions');
+        Route::resource('ev-battery-data', App\Http\Controllers\Fleet\EvBatteryDataController::class)->names('ev-battery-data');
+        Route::resource('training-courses', App\Http\Controllers\Fleet\TrainingCourseController::class)->names('training-courses');
+        Route::resource('training-sessions', App\Http\Controllers\Fleet\TrainingSessionController::class)->names('training-sessions');
+        Route::resource('driver-qualifications', App\Http\Controllers\Fleet\DriverQualificationController::class)->names('driver-qualifications');
+        Route::resource('training-enrollments', App\Http\Controllers\Fleet\TrainingEnrollmentController::class)->names('training-enrollments');
+        Route::resource('cost-allocations', App\Http\Controllers\Fleet\CostAllocationController::class)->names('cost-allocations');
+        Route::resource('alerts', App\Http\Controllers\Fleet\AlertController::class)->only(['index', 'show'])->names('alerts');
+        Route::post('alerts/{alert}/acknowledge', [App\Http\Controllers\Fleet\AlertController::class, 'acknowledge'])->name('alerts.acknowledge');
+        Route::resource('alert-preferences', App\Http\Controllers\Fleet\AlertPreferenceController::class)->only(['index', 'edit', 'update'])->names('alert-preferences');
+        Route::resource('reports', App\Http\Controllers\Fleet\ReportController::class)->names('reports');
+        Route::post('reports/{report}/run', [App\Http\Controllers\Fleet\ReportExecutionController::class, 'run'])->name('reports.run');
+        Route::resource('report-executions', App\Http\Controllers\Fleet\ReportExecutionController::class)->only(['index', 'show'])->names('report-executions');
     });
 
     Route::middleware('tenant')->group(function (): void {

@@ -1,0 +1,106 @@
+{
+    "model": "EmissionsRecord",
+    "table": "emissions_records",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "vehicle_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "driver_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "trip_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "scope": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "emissions_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "record_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "co2_kg": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "fuel_consumed_litres": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "distance_km": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "metadata": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "vehicle": {
+            "type": "belongsTo",
+            "model": "Vehicle"
+        },
+        "driver": {
+            "type": "belongsTo",
+            "model": "Driver"
+        },
+        "trip": {
+            "type": "belongsTo",
+            "model": "Trip"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

@@ -4,15 +4,19 @@ import type { BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
 import {
     AlertTriangle,
+    Battery,
+    Bell,
     Calendar,
     ClipboardList,
     Clock,
     CreditCard,
     Cpu,
     FileDown,
+    FileText,
     Flame,
     Fuel,
     GitBranch,
+    GraduationCap,
     MapPin,
     Route,
     ShieldCheck,
@@ -47,6 +51,17 @@ interface Counts {
     insurance_claims?: number;
     workflow_definitions?: number;
     workflow_executions?: number;
+    ev_charging_sessions?: number;
+    ev_battery_data?: number;
+    training_courses?: number;
+    training_sessions?: number;
+    driver_qualifications?: number;
+    training_enrollments?: number;
+    cost_allocations?: number;
+    alerts?: number;
+    reports?: number;
+    report_executions?: number;
+    alert_preferences?: number;
 }
 interface WorkOrderRow { id: number; work_order_number: string; title: string; status: string; vehicle?: { id: number; registration: string }; }
 interface DefectRow { id: number; defect_number: string; title: string; severity: string; vehicle?: { id: number; registration: string }; }
@@ -172,6 +187,29 @@ export default function FleetDashboard({ counts, recentWorkOrders, recentDefects
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <StatCard title="Workflow definitions" count={counts.workflow_definitions ?? 0} href="/fleet/workflow-definitions" icon={GitBranch} />
                         <StatCard title="Workflow executions" count={counts.workflow_executions ?? 0} href="/fleet/workflow-executions" icon={GitBranch} />
+                    </div>
+                </section>
+
+                <section>
+                    <h2 className="mb-3 text-lg font-medium">EV, training & costs</h2>
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        <StatCard title="EV charging sessions" count={counts.ev_charging_sessions ?? 0} href="/fleet/ev-charging-sessions" icon={Battery} />
+                        <StatCard title="EV battery data" count={counts.ev_battery_data ?? 0} href="/fleet/ev-battery-data" icon={Battery} />
+                        <StatCard title="Training courses" count={counts.training_courses ?? 0} href="/fleet/training-courses" icon={GraduationCap} />
+                        <StatCard title="Training sessions" count={counts.training_sessions ?? 0} href="/fleet/training-sessions" icon={Calendar} />
+                        <StatCard title="Driver qualifications" count={counts.driver_qualifications ?? 0} href="/fleet/driver-qualifications" icon={ShieldCheck} />
+                        <StatCard title="Training enrollments" count={counts.training_enrollments ?? 0} href="/fleet/training-enrollments" icon={GraduationCap} />
+                        <StatCard title="Cost allocations" count={counts.cost_allocations ?? 0} href="/fleet/cost-allocations" icon={CreditCard} />
+                    </div>
+                </section>
+
+                <section>
+                    <h2 className="mb-3 text-lg font-medium">Alerts & reports</h2>
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        <StatCard title="Alerts" count={counts.alerts ?? 0} href="/fleet/alerts" icon={Bell} />
+                        <StatCard title="Alert preferences" count={counts.alert_preferences ?? 0} href="/fleet/alert-preferences" icon={Bell} />
+                        <StatCard title="Reports" count={counts.reports ?? 0} href="/fleet/reports" icon={FileText} />
+                        <StatCard title="Report executions" count={counts.report_executions ?? 0} href="/fleet/report-executions" icon={FileText} />
                     </div>
                 </section>
 
