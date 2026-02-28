@@ -1,0 +1,93 @@
+{
+    "model": "WarrantyClaim",
+    "table": "warranty_claims",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "work_order_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "claim_number": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "claim_amount": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "settlement_amount": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "submitted_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "settled_at": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "workOrder": {
+            "type": "belongsTo",
+            "model": "WorkOrder"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

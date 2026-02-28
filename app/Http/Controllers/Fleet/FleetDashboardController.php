@@ -69,6 +69,10 @@ use App\Models\Fleet\VehicleLease;
 use App\Models\Fleet\VehicleRecall;
 use App\Models\Fleet\WarrantyClaim;
 use App\Models\Fleet\WorkOrder;
+use App\Models\Fleet\ParkingAllocation;
+use App\Models\Fleet\ElockEvent;
+use App\Models\Fleet\AxleLoadReading;
+use App\Models\Fleet\DataMigrationRun;
 use App\Models\Fleet\WorkflowDefinition;
 use App\Models\Fleet\WorkflowExecution;
 use Illuminate\Http\Request;
@@ -150,6 +154,10 @@ final class FleetDashboardController extends Controller
             'vehicle_leases' => VehicleLease::count(),
             'vehicle_recalls' => VehicleRecall::count(),
             'warranty_claims' => WarrantyClaim::count(),
+            'parking_allocations' => ParkingAllocation::count(),
+            'e_lock_events' => ElockEvent::count(),
+            'axle_load_readings' => AxleLoadReading::count(),
+            'data_migration_runs' => DataMigrationRun::query()->where('organization_id', \App\Services\TenantContext::id())->count(),
         ];
 
         $recentWorkOrders = WorkOrder::query()->with('vehicle')->orderByDesc('created_at')->limit(5)->get();

@@ -1,0 +1,103 @@
+{
+    "model": "VehicleLease",
+    "table": "vehicle_leases",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "vehicle_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "contract_id": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "lessor_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "start_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "end_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "monthly_payment": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "p11d_list_price": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "vehicle": {
+            "type": "belongsTo",
+            "model": "Vehicle"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": {
+        "lessor_name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    },
+    "scenarios": []
+}

@@ -224,6 +224,18 @@
             "type": "hasMany",
             "model": "Defect"
         },
+        "workOrderLines": {
+            "type": "hasMany",
+            "model": "WorkOrderLine"
+        },
+        "workOrderParts": {
+            "type": "hasMany",
+            "model": "WorkOrderPart"
+        },
+        "warrantyClaims": {
+            "type": "hasMany",
+            "model": "WarrantyClaim"
+        },
         "organization": {
             "type": "belongsTo",
             "model": "Organization"

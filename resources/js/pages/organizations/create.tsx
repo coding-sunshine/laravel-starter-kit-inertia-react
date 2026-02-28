@@ -14,7 +14,11 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Create', href: OrganizationController.create.url() },
 ];
 
-export default function OrganizationsCreate() {
+interface Props {
+    organizations?: { id: number; name: string }[];
+}
+
+export default function OrganizationsCreate({ organizations = [] }: Props) {
     const { flash } = usePage<
         {
             flash?: { status?: string };
@@ -54,6 +58,22 @@ export default function OrganizationsCreate() {
                                 />
                                 <InputError message={errors.name} />
                             </div>
+                            {organizations.length > 0 && (
+                                <div className="grid gap-2">
+                                    <Label htmlFor="parent_id">Parent organization</Label>
+                                    <select
+                                        id="parent_id"
+                                        name="parent_id"
+                                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                                    >
+                                        <option value="">None</option>
+                                        {organizations.map((org) => (
+                                            <option key={org.id} value={org.id}>{org.name}</option>
+                                        ))}
+                                    </select>
+                                    <InputError message={errors.parent_id} />
+                                </div>
+                            )}
                             <div className="flex gap-2">
                                 <Button type="submit" disabled={processing}>
                                     {processing ? 'Creating…' : 'Create'}

@@ -221,6 +221,9 @@ final class AppServiceProvider extends ServiceProvider
             'vehicle_lease' => \App\Models\Fleet\VehicleLease::class,
             'vehicle_recall' => \App\Models\Fleet\VehicleRecall::class,
             'warranty_claim' => \App\Models\Fleet\WarrantyClaim::class,
+            'parking_allocation' => \App\Models\Fleet\ParkingAllocation::class,
+            'e_lock_event' => \App\Models\Fleet\ElockEvent::class,
+            'axle_load_reading' => \App\Models\Fleet\AxleLoadReading::class,
         ];
         foreach ($bindings as $key => $modelClass) {
             Route::bind($key, function (string $value) use ($modelClass, $scope) {
@@ -228,6 +231,7 @@ final class AppServiceProvider extends ServiceProvider
             });
         }
         Route::bind('api_log', fn (string $value) => \App\Models\Fleet\ApiLog::findOrFail($value));
+        Route::bind('data_migration_run', fn (string $value) => \App\Models\Fleet\DataMigrationRun::findOrFail($value));
         Route::bind('dashcam_clip', fn (string $value) => \App\Models\Fleet\DashcamClip::withoutGlobalScope($scope)->findOrFail($value));
         Route::bind('vehicle_tyre', fn (string $value) => \App\Models\Fleet\VehicleTyre::findOrFail($value));
         Route::bind('vehicle_check_item', fn (string $value) => \App\Models\Fleet\VehicleCheckItem::findOrFail($value));

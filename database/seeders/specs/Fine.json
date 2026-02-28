@@ -1,0 +1,127 @@
+{
+    "model": "Fine",
+    "table": "fines",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "vehicle_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "driver_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "fine_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "offence_description": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "offence_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "amount": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "amount_paid": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "due_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "appeal_deadline": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "appeal_notes": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "external_reference": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "issuing_authority": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "vehicle": {
+            "type": "belongsTo",
+            "model": "Vehicle"
+        },
+        "driver": {
+            "type": "belongsTo",
+            "model": "Driver"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

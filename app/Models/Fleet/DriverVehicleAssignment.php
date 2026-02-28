@@ -33,6 +33,7 @@ class DriverVehicleAssignment extends Model
         'unassigned_date',
         'is_current',
         'notes',
+        'assigned_by',
     ];
 
     protected $casts = [

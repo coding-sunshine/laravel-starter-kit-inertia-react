@@ -31,15 +31,22 @@ final readonly class OrganizationController
         ]);
     }
 
-    public function create(): Response
+    public function create(Request $request): Response
     {
-        return Inertia::render('organizations/create');
+        $organizations = $request->user()->organizations()->orderBy('name')->get(['id', 'name']);
+
+        return Inertia::render('organizations/create', [
+            'organizations' => $organizations,
+        ]);
     }
 
     public function store(StoreOrganizationRequest $request, CreateOrganizationAction $action): RedirectResponse
     {
         $user = $request->user();
         $organization = $action->handle($user, $request->string('name')->value());
+        if ($request->filled('parent_id')) {
+            $organization->update(['parent_id' => (int) $request->input('parent_id')]);
+        }
 
         $user->switchOrganization($organization);
 
@@ -53,23 +60,34 @@ final readonly class OrganizationController
 
         $request->user()->switchOrganization($organization);
 
+        $organizations = $request->user()->organizations()
+            ->where('organizations.id', '!=', $organization->id)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
         return Inertia::render('organizations/show', [
-            'organization' => $organization->load('owner'),
+            'organization' => $organization->load('owner', 'parent'),
+            'organizations' => $organizations,
         ]);
     }
 
-    public function edit(Organization $organization): Response
+    public function edit(Request $request, Organization $organization): Response
     {
         $this->authorize('update', $organization);
+        $organizations = $request->user()->organizations()
+            ->where('organizations.id', '!=', $organization->id)
+            ->orderBy('name')
+            ->get(['id', 'name']);
 
         return Inertia::render('organizations/show', [
-            'organization' => $organization->load('owner'),
+            'organization' => $organization->load('owner', 'parent'),
+            'organizations' => $organizations,
         ]);
     }
 
     public function update(UpdateOrganizationRequest $request, Organization $organization): RedirectResponse
     {
-        $organization->update($request->safe()->only('name'));
+        $organization->update($request->safe()->only(['name', 'parent_id']));
 
         return to_route('organizations.show', $organization)
             ->with('status', __('Organization updated.'));

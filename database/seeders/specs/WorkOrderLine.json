@@ -1,0 +1,73 @@
+{
+    "model": "WorkOrderLine",
+    "table": "work_order_lines",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "work_order_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "parts_inventory_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "line_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "description": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "quantity": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "unit_price": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "total": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "sort_order": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "workOrder": {
+            "type": "belongsTo",
+            "model": "WorkOrder"
+        },
+        "partsInventory": {
+            "type": "belongsTo",
+            "model": "PartsInventory"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

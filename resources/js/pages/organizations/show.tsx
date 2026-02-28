@@ -20,15 +20,18 @@ interface Organization {
     id: number;
     name: string;
     slug: string;
+    parent_id?: number | null;
     owner?: { id: number; name: string; email: string } | null;
+    parent?: { id: number; name: string } | null;
 }
 
 interface Props {
     organization: Organization;
+    organizations?: { id: number; name: string }[];
 }
 
 export default function OrganizationsShow() {
-    const { organization, flash, errors } = usePage<
+    const { organization, organizations = [], flash, errors } = usePage<
         Props & {
             flash?: { status?: string };
             errors?: Record<string, string>;
@@ -95,6 +98,23 @@ export default function OrganizationsShow() {
                                         />
                                         <InputError message={errors?.name} />
                                     </div>
+                                    {organizations.length > 0 && (
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="parent_id">Parent organization</Label>
+                                            <select
+                                                id="parent_id"
+                                                name="parent_id"
+                                                defaultValue={organization.parent_id ?? ''}
+                                                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                                            >
+                                                <option value="">None</option>
+                                                {organizations.map((org) => (
+                                                    <option key={org.id} value={org.id}>{org.name}</option>
+                                                ))}
+                                            </select>
+                                            <InputError message={errors?.parent_id} />
+                                        </div>
+                                    )}
                                     <Button type="submit" disabled={processing}>
                                         {processing ? 'Saving…' : 'Save'}
                                     </Button>

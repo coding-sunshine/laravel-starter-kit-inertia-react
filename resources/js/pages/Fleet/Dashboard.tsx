@@ -11,14 +11,17 @@ import {
     Clock,
     CreditCard,
     Cpu,
+    Database,
     FileDown,
     FileText,
     Flame,
     Fuel,
     GitBranch,
     GraduationCap,
+    Lock,
     MapPin,
     Route,
+    Scale,
     ShieldCheck,
     Truck,
     Users,
@@ -103,6 +106,10 @@ interface Counts {
     vehicle_leases?: number;
     vehicle_recalls?: number;
     warranty_claims?: number;
+    parking_allocations?: number;
+    e_lock_events?: number;
+    axle_load_readings?: number;
+    data_migration_runs?: number;
 }
 interface WorkOrderRow { id: number; work_order_number: string; title: string; status: string; vehicle?: { id: number; registration: string }; }
 interface DefectRow { id: number; defect_number: string; title: string; severity: string; vehicle?: { id: number; registration: string }; }
@@ -310,6 +317,16 @@ export default function FleetDashboard({ counts, recentWorkOrders, recentDefects
                         <StatCard title="Contractors" count={counts.contractors ?? 0} href="/fleet/contractors" icon={UserCog} />
                         <StatCard title="Contractor compliance" count={counts.contractor_compliance ?? 0} href="/fleet/contractor-compliance" icon={FileCheck} />
                         <StatCard title="Contractor invoices" count={counts.contractor_invoices ?? 0} href="/fleet/contractor-invoices" icon={FileText} />
+                    </div>
+                </section>
+
+                <section>
+                    <h2 className="mb-3 text-lg font-medium">Vehicle extras & audit</h2>
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        <StatCard title="Parking allocations" count={counts.parking_allocations ?? 0} href="/fleet/parking-allocations" icon={MapPin} />
+                        <StatCard title="E-lock events" count={counts.e_lock_events ?? 0} href="/fleet/e-lock-events" icon={Lock} />
+                        <StatCard title="Axle load readings" count={counts.axle_load_readings ?? 0} href="/fleet/axle-load-readings" icon={Scale} />
+                        <StatCard title="Data migration runs" count={counts.data_migration_runs ?? 0} href="/fleet/data-migration-runs" icon={Database} />
                     </div>
                 </section>
 

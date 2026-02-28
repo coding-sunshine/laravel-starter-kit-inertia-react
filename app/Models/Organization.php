@@ -33,6 +33,7 @@ use function setPermissionsTeamId;
  * @property string $slug
  * @property array<string, mixed>|null $settings
  * @property int|null $owner_id
+ * @property int|null $parent_id
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
  * @property \Carbon\Carbon|null $deleted_at
@@ -40,6 +41,8 @@ use function setPermissionsTeamId;
  * @property int|null $updated_by
  * @property int|null $deleted_by
  * @property-read User|null $owner
+ * @property-read Organization|null $parent
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, Organization> $children
  * @property-read \Illuminate\Database\Eloquent\Collection<int, User> $users
  * @property-read \Illuminate\Database\Eloquent\Collection<int, User> $members
  * @property-read \Illuminate\Database\Eloquent\Collection<int, OrganizationInvitation> $invitations
@@ -73,6 +76,7 @@ final class Organization extends Model
         'slug',
         'settings',
         'owner_id',
+        'parent_id',
         'billing_email',
         'tax_id',
         'billing_address',
@@ -102,6 +106,22 @@ final class Organization extends Model
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'owner_id');
+    }
+
+    /**
+     * @return BelongsTo<Organization, $this>
+     */
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(Organization::class, 'parent_id');
+    }
+
+    /**
+     * @return HasMany<Organization, $this>
+     */
+    public function children(): HasMany
+    {
+        return $this->hasMany(Organization::class, 'parent_id');
     }
 
     /**

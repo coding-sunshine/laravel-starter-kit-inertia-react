@@ -288,6 +288,13 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         Route::resource('ppe-assignments', App\Http\Controllers\Fleet\PpeAssignmentController::class)->names('ppe-assignments');
         Route::resource('safety-observations', App\Http\Controllers\Fleet\SafetyObservationController::class)->names('safety-observations');
         Route::resource('toolbox-talks', App\Http\Controllers\Fleet\ToolboxTalkController::class)->names('toolbox-talks');
+        Route::resource('parking-allocations', App\Http\Controllers\Fleet\ParkingAllocationController::class)->names('parking-allocations');
+        Route::get('e-lock-events', [App\Http\Controllers\Fleet\ElockEventController::class, 'index'])->name('e-lock-events.index');
+        Route::get('e-lock-events/{e_lock_event}', [App\Http\Controllers\Fleet\ElockEventController::class, 'show'])->name('e-lock-events.show');
+        Route::get('axle-load-readings', [App\Http\Controllers\Fleet\AxleLoadReadingController::class, 'index'])->name('axle-load-readings.index');
+        Route::get('axle-load-readings/{axle_load_reading}', [App\Http\Controllers\Fleet\AxleLoadReadingController::class, 'show'])->name('axle-load-readings.show');
+        Route::get('data-migration-runs', [App\Http\Controllers\Fleet\DataMigrationRunController::class, 'index'])->name('data-migration-runs.index');
+        Route::get('data-migration-runs/{data_migration_run}', [App\Http\Controllers\Fleet\DataMigrationRunController::class, 'show'])->name('data-migration-runs.show');
     });
 
     Route::middleware('tenant')->group(function (): void {
