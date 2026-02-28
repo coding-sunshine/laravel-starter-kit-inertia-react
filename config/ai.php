@@ -23,7 +23,7 @@ return [
     'default_for_images' => 'openrouter',
     'default_for_audio' => 'openrouter',
     'default_for_transcription' => 'openrouter',
-    'default_for_embeddings' => 'openrouter',
+    'default_for_embeddings' => 'openrouter_embeddings',
     'default_for_reranking' => 'cohere',
 
     /*
@@ -100,6 +100,18 @@ return [
                 ],
                 'embeddings' => [
                     'default' => 'openai/text-embedding-3-small',
+                ],
+            ],
+        ],
+
+        // Embeddings via OpenRouter only (no OpenAI key). Uses OPENROUTER_API_KEY.
+        'openrouter_embeddings' => [
+            'driver' => 'openrouter_embeddings',
+            'key' => trim((string) env('OPENROUTER_API_KEY', '')),
+            'models' => [
+                'embeddings' => [
+                    'default' => 'openai/text-embedding-3-small',
+                    'dimensions' => 1536,
                 ],
             ],
         ],

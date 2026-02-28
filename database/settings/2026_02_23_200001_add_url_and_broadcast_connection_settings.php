@@ -8,10 +8,16 @@ return new class extends SettingsMigration
 {
     public function up(): void
     {
+        $addIfMissing = function (string $key, mixed $value): void {
+            if (! $this->migrator->exists($key)) {
+                $this->migrator->add($key, $value);
+            }
+        };
+
         // AppSettings — application URL (was APP_URL env var)
-        $this->migrator->add('app.url', config('app.url', 'http://localhost'));
+        $addIfMissing('app.url', config('app.url', 'http://localhost'));
 
         // BroadcastingSettings — default connection (was BROADCAST_CONNECTION env var)
-        $this->migrator->add('broadcasting.default_connection', config('broadcasting.default', 'log'));
+        $addIfMissing('broadcasting.default_connection', config('broadcasting.default', 'log'));
     }
 };

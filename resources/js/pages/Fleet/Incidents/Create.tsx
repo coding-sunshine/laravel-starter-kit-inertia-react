@@ -213,11 +213,11 @@ export default function FleetIncidentsCreate({
                         </select>
                     </div>
                     <div>
-                        <Label htmlFor="photos">Photos</Label>
+                        <Label htmlFor="photos">Photos & documents</Label>
                         <input
                             id="photos"
                             type="file"
-                            accept="image/*"
+                            accept="image/*,.txt,.pdf,.docx,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                             multiple
                             className="mt-1 block w-full text-sm text-muted-foreground file:mr-4 file:rounded-md file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-medium file:text-primary-foreground file:transition-colors"
                             onChange={(e) =>

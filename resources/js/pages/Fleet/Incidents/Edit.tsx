@@ -25,13 +25,15 @@ interface IncidentRecord {
     fault_determination?: string | null;
     status: string;
 }
-interface PhotoUrl {
+interface MediaItem {
     id: number;
     url: string;
+    mime_type: string;
+    file_name: string;
 }
 interface Props {
     incident: IncidentRecord;
-    photoUrls: PhotoUrl[];
+    mediaItems: MediaItem[];
     vehicles: { id: number; registration: string }[];
     drivers: { id: number; first_name: string; last_name: string }[];
     incidentTypes: Option[];
@@ -64,7 +66,7 @@ function getIncidentTime(incident: IncidentRecord): string {
 
 export default function FleetIncidentsEdit({
     incident,
-    photoUrls,
+    mediaItems,
     vehicles,
     drivers,
     incidentTypes,
@@ -255,10 +257,10 @@ export default function FleetIncidentsEdit({
                         </select>
                     </div>
                     <div>
-                        <Label>Add more photos</Label>
+                        <Label>Add more photos or documents</Label>
                         <input
                             type="file"
-                            accept="image/*"
+                            accept="image/*,.txt,.pdf,.docx,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                             multiple
                             className="mt-1 block w-full text-sm text-muted-foreground file:mr-4 file:rounded-md file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-medium file:text-primary-foreground"
                             onChange={(e) =>

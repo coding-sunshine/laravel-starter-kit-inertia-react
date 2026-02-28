@@ -19,16 +19,22 @@ interface IncidentRecord {
     vehicle?: { id: number; registration: string };
     driver?: { id: number; first_name: string; last_name: string };
 }
-interface PhotoUrl {
+interface MediaItem {
     id: number;
     url: string;
+    mime_type: string;
+    file_name: string;
 }
 interface Props {
     incident: IncidentRecord;
-    photoUrls: PhotoUrl[];
+    mediaItems: MediaItem[];
 }
 
-export default function FleetIncidentsShow({ incident, photoUrls }: Props) {
+function isImage(mimeType: string): boolean {
+    return (mimeType || '').startsWith('image/');
+}
+
+export default function FleetIncidentsShow({ incident, mediaItems }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard().url },
         { title: 'Fleet', href: '/fleet/incidents' },
@@ -111,28 +117,40 @@ export default function FleetIncidentsShow({ incident, photoUrls }: Props) {
                         )}
                     </CardContent>
                 </Card>
-                {photoUrls.length > 0 && (
+                {mediaItems.length > 0 && (
                     <Card>
                         <CardHeader className="pb-2">
-                            <CardTitle className="text-base">Photos</CardTitle>
+                            <CardTitle className="text-base">Photos & documents</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div className="flex flex-wrap gap-4">
-                                {photoUrls.map((p) => (
-                                    <a
-                                        key={p.id}
-                                        href={p.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="block"
-                                    >
-                                        <img
-                                            src={p.url}
-                                            alt=""
-                                            className="h-32 w-auto rounded border object-cover"
-                                        />
-                                    </a>
-                                ))}
+                                {mediaItems.map((item) =>
+                                    isImage(item.mime_type) ? (
+                                        <a
+                                            key={item.id}
+                                            href={item.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="block"
+                                        >
+                                            <img
+                                                src={item.url}
+                                                alt=""
+                                                className="h-32 w-auto rounded border object-cover"
+                                            />
+                                        </a>
+                                    ) : (
+                                        <a
+                                            key={item.id}
+                                            href={item.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex h-32 min-w-[10rem] items-center justify-center rounded border bg-muted/50 px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
+                                        >
+                                            📄 {item.file_name}
+                                        </a>
+                                    )
+                                )}
                             </div>
                         </CardContent>
                     </Card>

@@ -74,11 +74,16 @@ final class IncidentController extends Controller
         $this->authorize('view', $incident);
         $incident->load(['vehicle', 'driver', 'reportedByUser', 'investigatingOfficerUser']);
         $incident->loadMedia('photos');
-        $photoUrls = $incident->getMedia('photos')->map(fn ($m) => ['id' => $m->id, 'url' => $m->getUrl()])->values()->all();
+        $mediaItems = $incident->getMedia('photos')->map(fn ($m) => [
+            'id' => $m->id,
+            'url' => $m->getUrl(),
+            'mime_type' => $m->mime_type ?? '',
+            'file_name' => $m->file_name ?? 'file',
+        ])->values()->all();
 
         return Inertia::render('Fleet/Incidents/Show', [
             'incident' => $incident,
-            'photoUrls' => $photoUrls,
+            'mediaItems' => $mediaItems,
             'vehicles' => Vehicle::query()->orderBy('registration')->get(['id', 'registration']),
             'drivers' => Driver::query()->orderBy('last_name')->get(['id', 'first_name', 'last_name']),
             ...$this->enumOptions(),
@@ -89,11 +94,16 @@ final class IncidentController extends Controller
     {
         $this->authorize('update', $incident);
         $incident->loadMedia('photos');
-        $photoUrls = $incident->getMedia('photos')->map(fn ($m) => ['id' => $m->id, 'url' => $m->getUrl()])->values()->all();
+        $mediaItems = $incident->getMedia('photos')->map(fn ($m) => [
+            'id' => $m->id,
+            'url' => $m->getUrl(),
+            'mime_type' => $m->mime_type ?? '',
+            'file_name' => $m->file_name ?? 'file',
+        ])->values()->all();
 
         return Inertia::render('Fleet/Incidents/Edit', [
             'incident' => $incident,
-            'photoUrls' => $photoUrls,
+            'mediaItems' => $mediaItems,
             'vehicles' => Vehicle::query()->orderBy('registration')->get(['id', 'registration']),
             'drivers' => Driver::query()->orderBy('last_name')->get(['id', 'first_name', 'last_name']),
             ...$this->enumOptions(),

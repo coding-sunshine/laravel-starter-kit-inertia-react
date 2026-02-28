@@ -8,10 +8,16 @@ return new class extends SettingsMigration
 {
     public function up(): void
     {
-        $this->migrator->add('theme.preset', config('theme.preset', 'default'));
-        $this->migrator->add('theme.base_color', config('theme.base_color', 'neutral'));
-        $this->migrator->add('theme.radius', config('theme.radius', 'default'));
-        $this->migrator->add('theme.font', config('theme.font', 'instrument-sans'));
-        $this->migrator->add('theme.default_appearance', config('theme.default_appearance', 'system'));
+        $addIfMissing = function (string $key, mixed $value): void {
+            if (! $this->migrator->exists($key)) {
+                $this->migrator->add($key, $value);
+            }
+        };
+
+        $addIfMissing('theme.preset', config('theme.preset', 'default'));
+        $addIfMissing('theme.base_color', config('theme.base_color', 'neutral'));
+        $addIfMissing('theme.radius', config('theme.radius', 'default'));
+        $addIfMissing('theme.font', config('theme.font', 'instrument-sans'));
+        $addIfMissing('theme.default_appearance', config('theme.default_appearance', 'system'));
     }
 };

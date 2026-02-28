@@ -43,16 +43,6 @@ final class FleetFullSeeder extends Seeder
 
     private function ensureOrgAndUser(): void
     {
-        $this->org = Organization::query()->first();
-        if (! $this->org) {
-            $this->org = Organization::create([
-                'name' => 'Fleet Demo',
-                'slug' => 'fleet-demo',
-                'owner_id' => User::query()->first()?->id,
-            ]);
-            $this->command?->info('Created organization Fleet Demo.');
-        }
-
         $this->user = User::query()->first();
         if (! $this->user) {
             $this->user = User::factory()->create([
@@ -63,11 +53,29 @@ final class FleetFullSeeder extends Seeder
             $this->command?->info('Created user fleet@example.com.');
         }
 
+        // Seed into the first user's default organization so the dashboard shows data when they log in
+        $this->org = $this->user->defaultOrganization();
+        if (! $this->org) {
+            $this->org = Organization::query()->first();
+        }
+        if (! $this->org) {
+            $this->org = Organization::create([
+                'name' => 'Fleet Demo',
+                'slug' => 'fleet-demo',
+                'owner_id' => $this->user->id,
+            ]);
+            $this->command?->info('Created organization Fleet Demo.');
+        }
+
         if (! DB::table('organization_user')->where('organization_id', $this->org->id)->where('user_id', $this->user->id)->exists()) {
+            $alreadyHasDefault = DB::table('organization_user')
+                ->where('user_id', $this->user->id)
+                ->where('is_default', true)
+                ->exists();
             DB::table('organization_user')->insert([
                 'organization_id' => $this->org->id,
                 'user_id' => $this->user->id,
-                'is_default' => true,
+                'is_default' => ! $alreadyHasDefault,
                 'joined_at' => now(),
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -148,11 +156,14 @@ final class FleetFullSeeder extends Seeder
             ['name' => 'West EV', 'operator' => 'Osprey', 'address' => '5 West Lane Liverpool', 'access_type' => 'public', 'status' => 'active', 'total_connectors' => 4, 'available_connectors' => 1],
         ]);
 
+        $operatingCentre = [
+            ['name' => 'HQ Depot', 'address' => '1 Fleet Way, London', 'max_vehicles' => 25, 'max_trailers' => 10],
+        ];
         $this->seedRecords(\App\Models\Fleet\OperatorLicence::class, 4, [
-            ['license_number' => 'OL001', 'license_type' => 'standard_national', 'traffic_commissioner_area' => 'eastern', 'issue_date' => now()->subYears(2), 'effective_date' => now()->subYears(2), 'expiry_date' => now()->addYears(3), 'authorized_vehicles' => 25],
-            ['license_number' => 'OL002', 'license_type' => 'standard_international', 'traffic_commissioner_area' => 'western', 'issue_date' => now()->subYear(), 'effective_date' => now()->subYear(), 'expiry_date' => now()->addYears(4), 'authorized_vehicles' => 50],
-            ['license_number' => 'OL003', 'license_type' => 'standard_national', 'traffic_commissioner_area' => 'north_eastern', 'issue_date' => now()->subMonths(18), 'effective_date' => now()->subMonths(18), 'expiry_date' => now()->addYears(2), 'authorized_vehicles' => 15],
-            ['license_number' => 'OL004', 'license_type' => 'restricted', 'traffic_commissioner_area' => 'southern', 'issue_date' => now()->subMonths(6), 'effective_date' => now()->subMonths(6), 'expiry_date' => now()->addYears(5), 'authorized_vehicles' => 10],
+            ['license_number' => 'OL001', 'license_type' => 'standard_national', 'traffic_commissioner_area' => 'eastern', 'issue_date' => now()->subYears(2), 'effective_date' => now()->subYears(2), 'expiry_date' => now()->addYears(3), 'authorized_vehicles' => 25, 'operating_centres' => $operatingCentre, 'status' => 'active'],
+            ['license_number' => 'OL002', 'license_type' => 'standard_international', 'traffic_commissioner_area' => 'western', 'issue_date' => now()->subYear(), 'effective_date' => now()->subYear(), 'expiry_date' => now()->addYears(4), 'authorized_vehicles' => 50, 'operating_centres' => $operatingCentre, 'status' => 'active'],
+            ['license_number' => 'OL003', 'license_type' => 'standard_national', 'traffic_commissioner_area' => 'north_eastern', 'issue_date' => now()->subMonths(18), 'effective_date' => now()->subMonths(18), 'expiry_date' => now()->addYears(2), 'authorized_vehicles' => 15, 'operating_centres' => $operatingCentre, 'status' => 'active'],
+            ['license_number' => 'OL004', 'license_type' => 'restricted', 'traffic_commissioner_area' => 'southern', 'issue_date' => now()->subMonths(6), 'effective_date' => now()->subMonths(6), 'expiry_date' => now()->addYears(5), 'authorized_vehicles' => 10, 'operating_centres' => $operatingCentre, 'status' => 'active'],
         ]);
 
         $opLicenceIds = \App\Models\Fleet\OperatorLicence::query()->where('organization_id', $this->org->id)->pluck('id')->all();
@@ -203,12 +214,13 @@ final class FleetFullSeeder extends Seeder
             );
         }
 
+        $cardPrefix = 'FC****' . $this->org->id . '-';
         $fuelCardIds = $this->seedRecords(\App\Models\Fleet\FuelCard::class, self::COUNT, [
-            ['card_number' => 'FC****0001', 'provider' => 'Allstar', 'card_type' => 'fleet', 'status' => 'active'],
-            ['card_number' => 'FC****0002', 'provider' => 'Allstar', 'card_type' => 'fleet', 'status' => 'active'],
-            ['card_number' => 'FC****0003', 'provider' => 'KeyFuels', 'card_type' => 'fleet', 'status' => 'active'],
-            ['card_number' => 'FC****0004', 'provider' => 'Allstar', 'card_type' => 'fleet', 'status' => 'active'],
-            ['card_number' => 'FC****0005', 'provider' => 'KeyFuels', 'card_type' => 'fleet', 'status' => 'active'],
+            ['card_number' => $cardPrefix . '0001', 'provider' => 'Allstar', 'card_type' => 'fleet', 'status' => 'active'],
+            ['card_number' => $cardPrefix . '0002', 'provider' => 'Allstar', 'card_type' => 'fleet', 'status' => 'active'],
+            ['card_number' => $cardPrefix . '0003', 'provider' => 'KeyFuels', 'card_type' => 'fleet', 'status' => 'active'],
+            ['card_number' => $cardPrefix . '0004', 'provider' => 'Allstar', 'card_type' => 'fleet', 'status' => 'active'],
+            ['card_number' => $cardPrefix . '0005', 'provider' => 'KeyFuels', 'card_type' => 'fleet', 'status' => 'active'],
         ]);
 
         for ($i = 0; $i < self::COUNT; $i++) {
@@ -314,7 +326,7 @@ final class FleetFullSeeder extends Seeder
             \App\Models\Fleet\TelematicsDevice::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
                 [
                     'organization_id' => $this->org->id,
-                    'device_id' => 'TEL-' . (1000 + $i),
+                    'device_id' => 'TEL-' . $this->org->id . '-' . (1000 + $i),
                 ],
                 [
                     'vehicle_id' => $vehicleIds[$i % count($vehicleIds)],
@@ -354,7 +366,7 @@ final class FleetFullSeeder extends Seeder
             \App\Models\Fleet\InsurancePolicy::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
                 [
                     'organization_id' => $this->org->id,
-                    'policy_number' => 'INS-' . (5000 + $i),
+                    'policy_number' => 'INS-' . $this->org->id . '-' . (5000 + $i),
                 ],
                 [
                     'insurer_name' => 'Fleet Insurer ' . ($i + 1),

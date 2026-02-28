@@ -207,6 +207,8 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         Route::post('assistant/stream', [App\Http\Controllers\Fleet\FleetAssistantController::class, 'stream'])->name('assistant.stream');
         Route::resource('locations', App\Http\Controllers\Fleet\LocationController::class)->names('locations');
         Route::resource('cost-centers', App\Http\Controllers\Fleet\CostCenterController::class)->names('cost-centers');
+        Route::post('drivers/{driver}/assign-vehicle', [App\Http\Controllers\Fleet\DriverController::class, 'assignVehicle'])->name('drivers.assign-vehicle');
+        Route::post('drivers/{driver}/unassign-vehicle', [App\Http\Controllers\Fleet\DriverController::class, 'unassignVehicle'])->name('drivers.unassign-vehicle');
         Route::resource('drivers', App\Http\Controllers\Fleet\DriverController::class)->names('drivers');
         Route::resource('trailers', App\Http\Controllers\Fleet\TrailerController::class)->names('trailers');
         Route::post('vehicles/{vehicle}/assign-driver', [App\Http\Controllers\Fleet\VehicleController::class, 'assignDriver'])->name('vehicles.assign-driver');

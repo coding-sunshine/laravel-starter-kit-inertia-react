@@ -16,7 +16,7 @@ final class AiSettings extends Settings
 
     public string $default_for_transcription = 'openrouter';
 
-    public string $default_for_embeddings = 'openrouter';
+    public string $default_for_embeddings = 'openrouter_embeddings';
 
     public string $default_for_reranking = 'cohere';
 

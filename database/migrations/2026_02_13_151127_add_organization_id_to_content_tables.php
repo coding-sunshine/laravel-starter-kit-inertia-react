@@ -10,30 +10,19 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('posts', function (Blueprint $table): void {
-            $table->foreignId('organization_id')->nullable()->after('id')->constrained()->nullOnDelete();
-            $table->index('organization_id');
-        });
-
-        Schema::table('help_articles', function (Blueprint $table): void {
-            $table->foreignId('organization_id')->nullable()->after('id')->constrained()->nullOnDelete();
-            $table->index('organization_id');
-        });
-
-        Schema::table('changelog_entries', function (Blueprint $table): void {
-            $table->foreignId('organization_id')->nullable()->after('id')->constrained()->nullOnDelete();
-            $table->index('organization_id');
-        });
-
-        Schema::table('contact_submissions', function (Blueprint $table): void {
-            $table->foreignId('organization_id')->nullable()->after('id')->constrained()->nullOnDelete();
-            $table->index('organization_id');
-        });
-
-        Schema::table('categories', function (Blueprint $table): void {
-            $table->foreignId('organization_id')->nullable()->after('id')->constrained()->nullOnDelete();
-            $table->index('organization_id');
-        });
+        $tables = ['posts', 'help_articles', 'changelog_entries', 'contact_submissions', 'categories'];
+        foreach ($tables as $tableName) {
+            if (! Schema::hasTable($tableName)) {
+                continue;
+            }
+            if (Schema::hasColumn($tableName, 'organization_id')) {
+                continue;
+            }
+            Schema::table($tableName, function (Blueprint $table): void {
+                $table->foreignId('organization_id')->nullable()->after('id')->constrained()->nullOnDelete();
+                $table->index('organization_id');
+            });
+        }
     }
 
     public function down(): void

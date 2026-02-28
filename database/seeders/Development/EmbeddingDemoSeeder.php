@@ -7,6 +7,7 @@ namespace Database\Seeders\Development;
 use App\Models\EmbeddingDemo;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Pgvector\Laravel\Vector;
 
 final class EmbeddingDemoSeeder extends Seeder
@@ -17,6 +18,10 @@ final class EmbeddingDemoSeeder extends Seeder
     public function run(): void
     {
         if (DB::getDriverName() !== 'pgsql') {
+            return;
+        }
+
+        if (! Schema::hasTable('embedding_demos')) {
             return;
         }
 

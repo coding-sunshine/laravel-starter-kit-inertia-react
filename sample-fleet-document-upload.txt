@@ -1,0 +1,16 @@
+FLEET DOCUMENT – SAMPLE FOR RAG TEST
+
+Vehicle: AB12 CDE
+Document type: MOT certificate
+Certificate number: MOT-2026-88472
+
+Test date: 15 February 2026
+Expiry date: 15 February 2027
+
+Result: PASS
+Odometer: 45,230 miles
+
+Notes: Vehicle passed with no advisories. Next MOT due before 15 February 2027.
+
+---
+Use this file to test Document Intelligence (AI Phase 2). Upload it to an Incident (Fleet > Incidents > Edit or Create, add under Photos/documents). After the job runs, ask the Fleet Assistant: "What is the MOT expiry for vehicle AB12 CDE?" or "Search documents for MOT certificate."

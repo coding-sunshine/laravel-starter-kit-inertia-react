@@ -7,6 +7,7 @@ namespace App\Providers;
 use App\Events\OrganizationMemberAdded;
 use App\Events\OrganizationMemberRemoved;
 use App\Events\User\UserCreated;
+use App\Listeners\Ai\ChunkAndEmbedMediaOnUpload;
 use App\Listeners\Billing\AddCreditsFromLemonSqueezyOrder;
 use App\Listeners\Billing\SyncSubscriptionSeatsOnMemberChange;
 use App\Listeners\CreatePersonalOrganizationOnUserCreated;
@@ -31,6 +32,7 @@ use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
@@ -73,6 +75,18 @@ final class AppServiceProvider extends ServiceProvider
             return new \App\Ai\Storage\NormalizingConversationStore($store);
         });
 
+        // Fix Laravel AI manager to properly resolve custom embedding providers
+        $this->app->extend(\Laravel\Ai\AiManager::class, function (\Laravel\Ai\AiManager $manager, $app) {
+            // Register the custom embedding driver
+            $manager->extend('openrouter_embeddings', function ($app, array $config) {
+                return new \App\Ai\Providers\OpenRouterEmbeddingProvider(
+                    $config,
+                    $app->make(Dispatcher::class)
+                );
+            });
+            return $manager;
+        });
+
         $this->configurePan();
         $this->registerFleetMorphMap();
         $this->registerFleetModelBindings();
@@ -108,6 +122,7 @@ final class AppServiceProvider extends ServiceProvider
         Event::listen(OrganizationMemberAdded::class, SyncSubscriptionSeatsOnMemberChange::class);
         Event::listen(OrganizationMemberRemoved::class, SyncSubscriptionSeatsOnMemberChange::class);
         Event::listen(OrderCreated::class, AddCreditsFromLemonSqueezyOrder::class);
+        Event::listen(\Spatie\MediaLibrary\MediaCollections\Events\MediaHasBeenAddedEvent::class, ChunkAndEmbedMediaOnUpload::class);
         User::observe(UserObserver::class);
 
         DataTableExportController::register('users', \App\DataTables\UserDataTable::class);
@@ -181,6 +196,9 @@ final class AppServiceProvider extends ServiceProvider
             'fuel_transaction' => \App\Models\Fleet\FuelTransaction::class,
             'service_schedule' => \App\Models\Fleet\ServiceSchedule::class,
             'work_order' => \App\Models\Fleet\WorkOrder::class,
+            'incident' => \App\Models\Fleet\Incident::class,
+            'insurance_policy' => \App\Models\Fleet\InsurancePolicy::class,
+            'insurance_claim' => \App\Models\Fleet\InsuranceClaim::class,
             'defect' => \App\Models\Fleet\Defect::class,
             'compliance_item' => \App\Models\Fleet\ComplianceItem::class,
             'driver_working_time' => \App\Models\Fleet\DriverWorkingTime::class,

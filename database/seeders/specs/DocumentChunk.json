@@ -42,8 +42,28 @@
             "nullable": true,
             "default": null
         },
+        "source_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "chunk_index": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "token_count": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
         "organization_id": {
             "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "embedding_vector": {
+            "type": "json",
             "nullable": true,
             "default": null
         }

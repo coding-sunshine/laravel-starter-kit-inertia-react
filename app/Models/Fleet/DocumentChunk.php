@@ -15,6 +15,9 @@ use Pgvector\Laravel\Vector;
  * @property int|null $organization_id
  * @property string $chunkable_type
  * @property int $chunkable_id
+ * @property string|null $source_type
+ * @property int|null $chunk_index
+ * @property int|null $token_count
  * @property string $content
  * @property array|null $metadata
  * @property array|null $embedding
@@ -28,6 +31,9 @@ class DocumentChunk extends Model
     protected $fillable = [
         'chunkable_type',
         'chunkable_id',
+        'source_type',
+        'chunk_index',
+        'token_count',
         'content',
         'metadata',
         'embedding',
