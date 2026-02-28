@@ -126,6 +126,11 @@
             "type": "timestamp",
             "nullable": true,
             "default": null
+        },
+        "laravel_job_id": {
+            "type": "string",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {

@@ -14,8 +14,9 @@ import { index as changelogIndex } from '@/routes/changelog';
 import { create as contactCreate } from '@/routes/contact';
 import { index as helpIndex } from '@/routes/help';
 import organizations from '@/routes/organizations';
-import { edit as editUserProfile } from '@/routes/user-profile';
 import { type NavItem, type SharedData } from '@/types';
+
+const userProfileEditUrl = '/settings/profile';
 import { router, usePage } from '@inertiajs/react';
 import { getHotkeyManager } from '@tanstack/hotkeys';
 import {
@@ -154,7 +155,7 @@ export function CommandPalette(): React.ReactElement {
                 <CommandGroup heading="Account">
                     <CommandItem
                         value="Settings"
-                        onSelect={() => run(editUserProfile())}
+                        onSelect={() => run(userProfileEditUrl)}
                     >
                         <Settings className="size-4" />
                         Settings

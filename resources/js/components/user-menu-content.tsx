@@ -7,8 +7,9 @@ import {
 import { UserInfo } from '@/components/user-info';
 import { useMobileNavigation } from '@/hooks/use-mobile-navigation';
 import { logout } from '@/routes';
-import { edit } from '@/routes/user-profile';
 import { type User } from '@/types';
+
+const userProfileEditUrl = '/settings/profile';
 import { Link, router } from '@inertiajs/react';
 import { LogOut, Settings } from 'lucide-react';
 
@@ -36,7 +37,7 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
                 <DropdownMenuItem asChild>
                     <Link
                         className="block w-full"
-                        href={edit()}
+                        href={userProfileEditUrl}
                         as="button"
                         prefetch="click"
                         onClick={cleanup}

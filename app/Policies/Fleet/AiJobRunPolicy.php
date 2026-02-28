@@ -15,6 +15,11 @@ final class AiJobRunPolicy
         return TenantContext::check();
     }
 
+    public function create(User $user): bool
+    {
+        return TenantContext::check();
+    }
+
     public function view(User $user, AiJobRun $job): bool
     {
         return $job->organization_id === TenantContext::id();

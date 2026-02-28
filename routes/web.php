@@ -246,6 +246,8 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         Route::resource('sustainability-goals', App\Http\Controllers\Fleet\SustainabilityGoalController::class)->names('sustainability-goals');
         Route::resource('ai-analysis-results', App\Http\Controllers\Fleet\AiAnalysisResultController::class)->only(['index', 'show'])->names('ai-analysis-results');
         Route::resource('ai-job-runs', App\Http\Controllers\Fleet\AiJobRunController::class)->only(['index', 'show'])->names('ai-job-runs');
+        Route::post('ai-job-runs/run-predictive-maintenance', [App\Http\Controllers\Fleet\AiJobRunController::class, 'runPredictiveMaintenance'])->name('ai-job-runs.run-predictive-maintenance');
+        Route::post('ai-job-runs/run-fraud-detection', [App\Http\Controllers\Fleet\AiJobRunController::class, 'runFraudDetection'])->name('ai-job-runs.run-fraud-detection');
         Route::resource('insurance-policies', App\Http\Controllers\Fleet\InsurancePolicyController::class)->names('insurance-policies');
         Route::resource('incidents', App\Http\Controllers\Fleet\IncidentController::class)->names('incidents');
         Route::post('incidents/{incident}/run-damage-assessment', [App\Http\Controllers\Fleet\IncidentController::class, 'runDamageAssessment'])->name('incidents.run-damage-assessment');

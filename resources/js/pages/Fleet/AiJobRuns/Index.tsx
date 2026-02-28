@@ -1,8 +1,9 @@
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
-import { Head, Link } from '@inertiajs/react';
-import { Play, Eye } from 'lucide-react';
+import { Head, Link, router } from '@inertiajs/react';
+import { Play, Eye, Wrench, ShieldAlert } from 'lucide-react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 
@@ -17,9 +18,32 @@ interface Option { value: string; name: string; }
 interface Props {
     aiJobRuns: { data: AiJobRunRecord[]; links: { url: string | null; label: string; active: boolean }[] };
     statuses: Option[];
+    runPredictiveMaintenanceUrl: string;
+    runFraudDetectionUrl: string;
 }
 
-export default function FleetAiJobRunsIndex({ aiJobRuns, statuses }: Props) {
+export default function FleetAiJobRunsIndex({ aiJobRuns, statuses, runPredictiveMaintenanceUrl, runFraudDetectionUrl }: Props) {
+    const [predictiveLoading, setPredictiveLoading] = useState(false);
+    const [fraudLoading, setFraudLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const runJob = async (url: string, setLoading: (v: boolean) => void) => {
+        setError(null);
+        setLoading(true);
+        try {
+            const res = await fetch(url, { method: 'POST', headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '', 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'include' });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                setError(data?.message ?? 'Request failed');
+                return;
+            }
+            if (data?.url) router.visit(data.url);
+            else router.reload();
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard().url },
         { title: 'Fleet', href: '/fleet' },
@@ -29,9 +53,20 @@ export default function FleetAiJobRunsIndex({ aiJobRuns, statuses }: Props) {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Fleet – AI job runs" />
             <div className="flex h-full flex-1 flex-col gap-6 rounded-xl p-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-4">
                     <h1 className="text-2xl font-semibold">AI job runs</h1>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Button type="button" variant="default" size="sm" disabled={predictiveLoading} onClick={() => runJob(runPredictiveMaintenanceUrl, setPredictiveLoading)}>
+                            <Wrench className="mr-1.5 size-4" />
+                            {predictiveLoading ? 'Queuing…' : 'Run predictive maintenance'}
+                        </Button>
+                        <Button type="button" variant="secondary" size="sm" disabled={fraudLoading} onClick={() => runJob(runFraudDetectionUrl, setFraudLoading)}>
+                            <ShieldAlert className="mr-1.5 size-4" />
+                            {fraudLoading ? 'Queuing…' : 'Run fraud detection'}
+                        </Button>
+                    </div>
                 </div>
+                {error && <p className="text-sm text-destructive">{error}</p>}
                 <form method="get" className="flex flex-wrap items-end gap-4 rounded-lg border p-4">
                     <div className="space-y-1">
                         <Label>Status</Label>
