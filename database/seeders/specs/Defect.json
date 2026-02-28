@@ -1,0 +1,204 @@
+{
+    "model": "Defect",
+    "table": "defects",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "vehicle_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "defect_number": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "title": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "description": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "category": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "severity": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "priority": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "reported_by_driver_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "reported_by_user_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "reported_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "location_on_vehicle": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "images_count": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "assigned_to": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "work_order_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "estimated_cost": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "actual_cost": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "affects_roadworthiness": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "affects_safety": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "vehicle_off_road_required": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "temporary_fix_applied": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "temporary_fix_description": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "resolution_date": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "resolution_description": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "root_cause_analysis": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "preventive_measures": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "vehicle": {
+            "type": "belongsTo",
+            "model": "Vehicle"
+        },
+        "reportedByDriver": {
+            "type": "belongsTo",
+            "model": "ReportedByDriver"
+        },
+        "reportedByUser": {
+            "type": "belongsTo",
+            "model": "ReportedByUser"
+        },
+        "assignedToUser": {
+            "type": "belongsTo",
+            "model": "AssignedToUser"
+        },
+        "workOrder": {
+            "type": "belongsTo",
+            "model": "WorkOrder"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

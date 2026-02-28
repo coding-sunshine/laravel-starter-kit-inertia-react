@@ -1,0 +1,199 @@
+{
+    "model": "FuelTransaction",
+    "table": "fuel_transactions",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "vehicle_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "driver_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "fuel_card_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "external_transaction_id": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "transaction_timestamp": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "fuel_station_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "fuel_station_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "fuel_station_address": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "lat": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "lng": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "fuel_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "litres": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "price_per_litre": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "total_cost": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "vat_amount": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "odometer_reading": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "pump_number": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "receipt_number": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "authorization_code": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "transaction_method": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "fuel_efficiency_kmpl": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "distance_since_last_fill": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "tank_capacity_percent": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "fraud_risk_score": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "anomaly_flags": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "validation_status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "validated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "validation_notes": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "vehicle": {
+            "type": "belongsTo",
+            "model": "Vehicle"
+        },
+        "driver": {
+            "type": "belongsTo",
+            "model": "Driver"
+        },
+        "fuelCard": {
+            "type": "belongsTo",
+            "model": "FuelCard"
+        },
+        "fuelStation": {
+            "type": "belongsTo",
+            "model": "FuelStation"
+        },
+        "validatedByUser": {
+            "type": "belongsTo",
+            "model": "ValidatedByUser"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": {
+        "fuel_station_name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    },
+    "scenarios": []
+}

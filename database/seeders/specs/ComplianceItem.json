@@ -1,0 +1,164 @@
+{
+    "model": "ComplianceItem",
+    "table": "compliance_items",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "entity_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "entity_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "compliance_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "title": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "description": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "regulatory_body": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "legal_requirement": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "issue_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "expiry_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "renewal_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "days_warning": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "cost": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "renewal_cost": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "renewal_required": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "auto_renewal_enabled": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "reminder_frequency_days": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "last_reminder_sent": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "document_reference": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "issuing_authority": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "certificate_number": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "notes": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

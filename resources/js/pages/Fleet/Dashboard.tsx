@@ -8,8 +8,11 @@ import {
     ClipboardList,
     Clock,
     CreditCard,
+    Cpu,
     FileDown,
+    Flame,
     Fuel,
+    GitBranch,
     MapPin,
     Route,
     ShieldCheck,
@@ -34,6 +37,16 @@ interface Counts {
     tachograph_downloads: number;
     behavior_events: number;
     geofence_events: number;
+    emissions_records?: number;
+    carbon_targets?: number;
+    sustainability_goals?: number;
+    ai_analysis_results?: number;
+    ai_job_runs?: number;
+    insurance_policies?: number;
+    incidents?: number;
+    insurance_claims?: number;
+    workflow_definitions?: number;
+    workflow_executions?: number;
 }
 interface WorkOrderRow { id: number; work_order_number: string; title: string; status: string; vehicle?: { id: number; registration: string }; }
 interface DefectRow { id: number; defect_number: string; title: string; severity: string; vehicle?: { id: number; registration: string }; }
@@ -131,6 +144,34 @@ export default function FleetDashboard({ counts, recentWorkOrders, recentDefects
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <StatCard title="Behavior events" count={counts.behavior_events} href="/fleet/behavior-events" icon={AlertTriangle} />
                         <StatCard title="Geofence events" count={counts.geofence_events} href="/fleet/geofence-events" icon={MapPin} />
+                    </div>
+                </section>
+
+                <section>
+                    <h2 className="mb-3 text-lg font-medium">Carbon, sustainability & AI</h2>
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        <StatCard title="Emissions records" count={counts.emissions_records ?? 0} href="/fleet/emissions-records" icon={Flame} />
+                        <StatCard title="Carbon targets" count={counts.carbon_targets ?? 0} href="/fleet/carbon-targets" icon={Route} />
+                        <StatCard title="Sustainability goals" count={counts.sustainability_goals ?? 0} href="/fleet/sustainability-goals" icon={Calendar} />
+                        <StatCard title="AI analysis results" count={counts.ai_analysis_results ?? 0} href="/fleet/ai-analysis-results" icon={Cpu} />
+                        <StatCard title="AI job runs" count={counts.ai_job_runs ?? 0} href="/fleet/ai-job-runs" icon={Cpu} />
+                    </div>
+                </section>
+
+                <section>
+                    <h2 className="mb-3 text-lg font-medium">Insurance & incidents</h2>
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        <StatCard title="Insurance policies" count={counts.insurance_policies ?? 0} href="/fleet/insurance-policies" icon={ShieldCheck} />
+                        <StatCard title="Incidents" count={counts.incidents ?? 0} href="/fleet/incidents" icon={AlertTriangle} />
+                        <StatCard title="Insurance claims" count={counts.insurance_claims ?? 0} href="/fleet/insurance-claims" icon={CreditCard} />
+                    </div>
+                </section>
+
+                <section>
+                    <h2 className="mb-3 text-lg font-medium">Workflows</h2>
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        <StatCard title="Workflow definitions" count={counts.workflow_definitions ?? 0} href="/fleet/workflow-definitions" icon={GitBranch} />
+                        <StatCard title="Workflow executions" count={counts.workflow_executions ?? 0} href="/fleet/workflow-executions" icon={GitBranch} />
                     </div>
                 </section>
 

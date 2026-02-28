@@ -1,0 +1,146 @@
+{
+    "model": "FuelCard",
+    "table": "fuel_cards",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "card_number": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "provider": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "card_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "issue_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "expiry_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "pin_required": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "daily_limit": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "weekly_limit": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "monthly_limit": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "transaction_limit": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "fuel_type_restrictions": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "location_restrictions": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "time_restrictions": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "assigned_vehicle_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "assigned_driver_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "assignedVehicle": {
+            "type": "belongsTo",
+            "model": "AssignedVehicle"
+        },
+        "assignedDriver": {
+            "type": "belongsTo",
+            "model": "AssignedDriver"
+        },
+        "fuelTransactions": {
+            "type": "hasMany",
+            "model": "FuelTransaction"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

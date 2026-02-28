@@ -1,0 +1,157 @@
+{
+    "model": "DriverWorkingTime",
+    "table": "driver_working_time",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "driver_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "shift_start_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "shift_end_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "break_time_minutes": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "driving_time_minutes": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "other_work_time_minutes": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "available_time_minutes": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "rest_time_minutes": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "total_duty_time_minutes": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "weekly_driving_time_minutes": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "fortnightly_driving_time_minutes": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "wtd_compliant": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "rtd_compliant": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "violations": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "tachograph_data": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "manual_entry": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "verified_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "notes": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "driver": {
+            "type": "belongsTo",
+            "model": "Driver"
+        },
+        "verifiedByUser": {
+            "type": "belongsTo",
+            "model": "VerifiedByUser"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

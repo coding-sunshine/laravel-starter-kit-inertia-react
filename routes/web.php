@@ -229,6 +229,16 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         Route::resource('compliance-items', App\Http\Controllers\Fleet\ComplianceItemController::class)->names('compliance-items');
         Route::resource('driver-working-time', App\Http\Controllers\Fleet\DriverWorkingTimeController::class)->names('driver-working-time');
         Route::resource('tachograph-downloads', App\Http\Controllers\Fleet\TachographDownloadController::class)->names('tachograph-downloads');
+        Route::resource('emissions-records', App\Http\Controllers\Fleet\EmissionsRecordController::class)->names('emissions-records');
+        Route::resource('carbon-targets', App\Http\Controllers\Fleet\CarbonTargetController::class)->names('carbon-targets');
+        Route::resource('sustainability-goals', App\Http\Controllers\Fleet\SustainabilityGoalController::class)->names('sustainability-goals');
+        Route::resource('ai-analysis-results', App\Http\Controllers\Fleet\AiAnalysisResultController::class)->only(['index', 'show'])->names('ai-analysis-results');
+        Route::resource('ai-job-runs', App\Http\Controllers\Fleet\AiJobRunController::class)->only(['index', 'show'])->names('ai-job-runs');
+        Route::resource('insurance-policies', App\Http\Controllers\Fleet\InsurancePolicyController::class)->names('insurance-policies');
+        Route::resource('incidents', App\Http\Controllers\Fleet\IncidentController::class)->names('incidents');
+        Route::resource('insurance-claims', App\Http\Controllers\Fleet\InsuranceClaimController::class)->names('insurance-claims');
+        Route::resource('workflow-definitions', App\Http\Controllers\Fleet\WorkflowDefinitionController::class)->names('workflow-definitions');
+        Route::resource('workflow-executions', App\Http\Controllers\Fleet\WorkflowExecutionController::class)->only(['index', 'show'])->names('workflow-executions');
     });
 
     Route::middleware('tenant')->group(function (): void {
