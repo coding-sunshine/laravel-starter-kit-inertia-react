@@ -29,6 +29,7 @@ export default function FleetInsuranceClaimsCreate({
         claim_number: '',
         claim_type: claimTypes[0]?.value ?? '',
         status: statuses[0]?.value ?? '',
+        photos: [] as File[],
     });
     const { data, setData, processing, errors } = form;
     const breadcrumbs: BreadcrumbItem[] = [
@@ -46,7 +47,7 @@ export default function FleetInsuranceClaimsCreate({
             insurance_policy_id:
                 d.insurance_policy_id === '' ? undefined : d.insurance_policy_id,
         }));
-        form.post('/fleet/insurance-claims');
+        form.post('/fleet/insurance-claims', { forceFormData: true });
     };
 
     return (
@@ -154,6 +155,20 @@ export default function FleetInsuranceClaimsCreate({
                                 ))}
                             </select>
                         </div>
+                    </div>
+                    <div>
+                        <Label htmlFor="photos">Photos (optional, for AI damage analysis)</Label>
+                        <input
+                            id="photos"
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            className="mt-1 block w-full text-sm text-muted-foreground file:mr-4 file:rounded-md file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-medium file:text-primary-foreground file:transition-colors"
+                            onChange={(e) => setData('photos', e.target.files ? Array.from(e.target.files) : [])}
+                        />
+                        {data.photos.length > 0 && (
+                            <p className="mt-1 text-sm text-muted-foreground">{data.photos.length} file(s) selected</p>
+                        )}
                     </div>
                     <div className="flex gap-2">
                         <Button type="submit" disabled={processing}>

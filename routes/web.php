@@ -237,6 +237,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         Route::resource('vehicle-recalls', App\Http\Controllers\Fleet\VehicleRecallController::class)->names('vehicle-recalls');
         Route::resource('warranty-claims', App\Http\Controllers\Fleet\WarrantyClaimController::class)->names('warranty-claims');
         Route::resource('defects', App\Http\Controllers\Fleet\DefectController::class)->names('defects');
+        Route::post('defects/{defect}/run-damage-assessment', [App\Http\Controllers\Fleet\DefectController::class, 'runDamageAssessment'])->name('defects.run-damage-assessment');
         Route::resource('compliance-items', App\Http\Controllers\Fleet\ComplianceItemController::class)->names('compliance-items');
         Route::resource('driver-working-time', App\Http\Controllers\Fleet\DriverWorkingTimeController::class)->names('driver-working-time');
         Route::resource('tachograph-downloads', App\Http\Controllers\Fleet\TachographDownloadController::class)->names('tachograph-downloads');
@@ -247,7 +248,9 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         Route::resource('ai-job-runs', App\Http\Controllers\Fleet\AiJobRunController::class)->only(['index', 'show'])->names('ai-job-runs');
         Route::resource('insurance-policies', App\Http\Controllers\Fleet\InsurancePolicyController::class)->names('insurance-policies');
         Route::resource('incidents', App\Http\Controllers\Fleet\IncidentController::class)->names('incidents');
+        Route::post('incidents/{incident}/run-damage-assessment', [App\Http\Controllers\Fleet\IncidentController::class, 'runDamageAssessment'])->name('incidents.run-damage-assessment');
         Route::resource('insurance-claims', App\Http\Controllers\Fleet\InsuranceClaimController::class)->names('insurance-claims');
+        Route::post('insurance-claims/{insurance_claim}/run-damage-assessment', [App\Http\Controllers\Fleet\InsuranceClaimController::class, 'runDamageAssessment'])->name('insurance-claims.run-damage-assessment');
         Route::resource('workflow-definitions', App\Http\Controllers\Fleet\WorkflowDefinitionController::class)->names('workflow-definitions');
         Route::resource('workflow-executions', App\Http\Controllers\Fleet\WorkflowExecutionController::class)->only(['index', 'show'])->names('workflow-executions');
         Route::resource('ev-charging-sessions', App\Http\Controllers\Fleet\EvChargingSessionController::class)->names('ev-charging-sessions');

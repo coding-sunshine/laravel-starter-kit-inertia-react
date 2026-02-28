@@ -10,7 +10,8 @@ final class MediaSettings extends Settings
 {
     public string $disk_name = 'public';
 
-    public int $max_file_size = 10240;
+    /** Max file size in bytes (default 200 MB for defect/incident/claim photos). */
+    public int $max_file_size = 209715200;
 
     public static function group(): string
     {

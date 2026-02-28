@@ -7,7 +7,10 @@ namespace App\Http\Controllers\Fleet;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Fleet\StoreDefectRequest;
 use App\Http\Requests\Fleet\UpdateDefectRequest;
+use App\Jobs\Ai\RunDamageAssessmentJob;
+use App\Models\Fleet\AiAnalysisResult;
 use App\Models\Fleet\Defect;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -58,6 +61,7 @@ final class DefectController extends Controller
             foreach ($request->file('photos') as $file) {
                 $defect->addMedia($file)->toMediaCollection('photos');
             }
+            RunDamageAssessmentJob::dispatch('defect', $defect->id, $request->user()?->id);
         }
         return to_route('fleet.defects.index')->with('flash', ['status' => 'success', 'message' => 'Defect created.']);
     }
@@ -68,10 +72,18 @@ final class DefectController extends Controller
         $defect->load(['vehicle', 'reportedByDriver', 'reportedByUser', 'workOrder']);
         $defect->loadMedia('photos');
         $photoUrls = $defect->getMedia('photos')->map(fn ($m) => ['id' => $m->id, 'url' => $m->getUrl()])->values()->all();
+        $damageAnalysis = AiAnalysisResult::query()
+            ->where('entity_type', 'defect')
+            ->where('entity_id', $defect->id)
+            ->where('analysis_type', 'damage_detection')
+            ->orderByDesc('created_at')
+            ->first();
 
         return Inertia::render('Fleet/Defects/Show', [
             'defect' => $defect,
             'photoUrls' => $photoUrls,
+            'damageAnalysis' => $damageAnalysis?->only(['id', 'primary_finding', 'detailed_analysis', 'recommendations', 'priority', 'confidence_score', 'created_at']),
+            'runDamageAssessmentUrl' => route('fleet.defects.run-damage-assessment', $defect),
         ]);
     }
 
@@ -101,6 +113,7 @@ final class DefectController extends Controller
             foreach ($request->file('photos') as $file) {
                 $defect->addMedia($file)->toMediaCollection('photos');
             }
+            RunDamageAssessmentJob::dispatch('defect', $defect->id, $request->user()?->id);
         }
         return to_route('fleet.defects.show', $defect)->with('flash', ['status' => 'success', 'message' => 'Defect updated.']);
     }
@@ -110,5 +123,22 @@ final class DefectController extends Controller
         $this->authorize('delete', $defect);
         $defect->delete();
         return to_route('fleet.defects.index')->with('flash', ['status' => 'success', 'message' => 'Defect deleted.']);
+    }
+
+    /**
+     * Run AI damage assessment on the defect's first photo. Queued; returns immediately.
+     */
+    public function runDamageAssessment(Request $request, Defect $defect): JsonResponse
+    {
+        $this->authorize('update', $defect);
+        $defect->loadMedia('photos');
+        if ($defect->getFirstMedia('photos') === null) {
+            return response()->json(['message' => 'No photo to analyze.', 'result_id' => null], 422);
+        }
+        RunDamageAssessmentJob::dispatch('defect', $defect->id, $request->user()?->id);
+        return response()->json([
+            'message' => 'Damage analysis queued. Results will appear in AI Analysis and on this defect once complete.',
+            'result_id' => null,
+        ]);
     }
 }

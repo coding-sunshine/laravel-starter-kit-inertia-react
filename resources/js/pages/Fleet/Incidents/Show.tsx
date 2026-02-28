@@ -1,9 +1,21 @@
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+
+interface DamageAnalysisRecord {
+    id: number;
+    primary_finding: string | null;
+    detailed_analysis: Record<string, unknown> | null;
+    recommendations: Record<string, unknown> | null;
+    priority: string | null;
+    confidence_score: number | string | null;
+    created_at: string;
+}
 
 interface IncidentRecord {
     id: number;
@@ -28,19 +40,56 @@ interface MediaItem {
 interface Props {
     incident: IncidentRecord;
     mediaItems: MediaItem[];
+    damageAnalysis?: DamageAnalysisRecord | null;
+    runDamageAssessmentUrl: string;
 }
 
 function isImage(mimeType: string): boolean {
     return (mimeType || '').startsWith('image/');
 }
 
-export default function FleetIncidentsShow({ incident, mediaItems }: Props) {
+export default function FleetIncidentsShow({ incident, mediaItems, damageAnalysis, runDamageAssessmentUrl }: Props) {
+    const [analyzing, setAnalyzing] = useState(false);
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard().url },
         { title: 'Fleet', href: '/fleet/incidents' },
         { title: 'Incidents', href: '/fleet/incidents' },
         { title: incident.incident_number, href: `/fleet/incidents/${incident.id}` },
     ];
+    const hasImage = mediaItems.some((m) => isImage(m.mime_type));
+
+    function handleRunDamageAnalysis() {
+        setAnalyzing(true);
+        const csrf = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content ?? '';
+        fetch(runDamageAssessmentUrl, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrf,
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        })
+            .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
+            .then(({ ok, data }) => {
+                if (ok) {
+                    router.reload();
+                } else {
+                    setAnalyzing(false);
+                    alert(data?.message ?? 'Analysis could not be started.');
+                }
+            })
+            .catch(() => {
+                setAnalyzing(false);
+                alert('Request failed. Please try again.');
+            });
+    }
+
+    const detail = damageAnalysis?.detailed_analysis as { severity?: string; description?: string; cost_range?: string; parts_affected?: string } | undefined;
+    const costRange = damageAnalysis?.recommendations && typeof damageAnalysis.recommendations === 'object' && 'cost_range' in damageAnalysis.recommendations
+        ? (damageAnalysis.recommendations as { cost_range?: string }).cost_range
+        : detail?.cost_range;
+
     const dateDisplay = incident.incident_timestamp
         ? new Date(incident.incident_timestamp).toLocaleString()
         : incident.incident_date
@@ -119,8 +168,18 @@ export default function FleetIncidentsShow({ incident, mediaItems }: Props) {
                 </Card>
                 {mediaItems.length > 0 && (
                     <Card>
-                        <CardHeader className="pb-2">
+                        <CardHeader className="flex flex-row items-center justify-between pb-2">
                             <CardTitle className="text-base">Photos & documents</CardTitle>
+                            {hasImage && (
+                                <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={handleRunDamageAnalysis}
+                                    disabled={analyzing}
+                                >
+                                    {analyzing ? 'Analyzing…' : 'Analyze with AI'}
+                                </Button>
+                            )}
                         </CardHeader>
                         <CardContent>
                             <div className="flex flex-wrap gap-4">
@@ -152,6 +211,39 @@ export default function FleetIncidentsShow({ incident, mediaItems }: Props) {
                                     )
                                 )}
                             </div>
+                        </CardContent>
+                    </Card>
+                )}
+                {damageAnalysis && (
+                    <Card>
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-base">AI damage analysis</CardTitle>
+                            <p className="text-muted-foreground text-xs">
+                                {new Date(damageAnalysis.created_at).toLocaleString()}
+                                {damageAnalysis.priority && (
+                                    <> · <Badge variant="secondary">{damageAnalysis.priority}</Badge></>
+                                )}
+                                {damageAnalysis.confidence_score != null && (
+                                    <> · {Number(damageAnalysis.confidence_score) * 100}% confidence</>
+                                )}
+                            </p>
+                        </CardHeader>
+                        <CardContent className="space-y-2 text-sm">
+                            {damageAnalysis.primary_finding && (
+                                <p><span className="font-medium">Summary:</span> {damageAnalysis.primary_finding}</p>
+                            )}
+                            {detail?.severity && (
+                                <p><span className="font-medium">Severity:</span> {detail.severity}</p>
+                            )}
+                            {detail?.parts_affected && (
+                                <p><span className="font-medium">Parts affected:</span> {detail.parts_affected}</p>
+                            )}
+                            {costRange && (
+                                <p><span className="font-medium">Cost range:</span> {costRange}</p>
+                            )}
+                            {detail?.description && (
+                                <p><span className="font-medium">Description:</span> {detail.description}</p>
+                            )}
                         </CardContent>
                     </Card>
                 )}

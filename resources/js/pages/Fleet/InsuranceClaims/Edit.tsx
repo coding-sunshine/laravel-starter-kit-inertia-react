@@ -39,6 +39,7 @@ export default function FleetInsuranceClaimsEdit({
         claim_number: insuranceClaim.claim_number,
         claim_type: insuranceClaim.claim_type,
         status: insuranceClaim.status,
+        photos: [] as File[],
     });
     const { data, setData, processing, errors } = form;
     const breadcrumbs: BreadcrumbItem[] = [
@@ -54,7 +55,8 @@ export default function FleetInsuranceClaimsEdit({
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        form.put(`/fleet/insurance-claims/${insuranceClaim.id}`);
+        form.transform((d) => ({ ...d, _method: 'PUT' }));
+        form.post(`/fleet/insurance-claims/${insuranceClaim.id}`, { forceFormData: true });
     };
 
     return (
@@ -146,6 +148,20 @@ export default function FleetInsuranceClaimsEdit({
                                 ))}
                             </select>
                         </div>
+                    </div>
+                    <div>
+                        <Label htmlFor="photos">Photos (optional, for AI damage analysis)</Label>
+                        <input
+                            id="photos"
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            className="mt-1 block w-full text-sm text-muted-foreground file:mr-4 file:rounded-md file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-medium file:text-primary-foreground file:transition-colors"
+                            onChange={(e) => setData('photos', e.target.files ? Array.from(e.target.files) : [])}
+                        />
+                        {data.photos.length > 0 && (
+                            <p className="mt-1 text-sm text-muted-foreground">{data.photos.length} file(s) selected</p>
+                        )}
                     </div>
                     <div className="flex gap-2">
                         <Button type="submit" disabled={processing}>

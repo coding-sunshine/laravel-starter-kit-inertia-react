@@ -7,11 +7,15 @@ namespace App\Http\Controllers\Fleet;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Fleet\StoreIncidentRequest;
 use App\Http\Requests\Fleet\UpdateIncidentRequest;
+use App\Jobs\Ai\RunDamageAssessmentJob;
+use App\Models\Fleet\AiAnalysisResult;
 use App\Models\Fleet\Driver;
 use App\Models\Fleet\Incident;
 use App\Models\Fleet\Vehicle;
 use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -65,6 +69,7 @@ final class IncidentController extends Controller
             foreach ($request->file('photos') as $file) {
                 $incident->addMedia($file)->toMediaCollection('photos');
             }
+            RunDamageAssessmentJob::dispatch('incident', $incident->id, $request->user()?->id);
         }
         return to_route('fleet.incidents.index')->with('flash', ['status' => 'success', 'message' => 'Incident created.']);
     }
@@ -81,9 +86,18 @@ final class IncidentController extends Controller
             'file_name' => $m->file_name ?? 'file',
         ])->values()->all();
 
+        $damageAnalysis = AiAnalysisResult::query()
+            ->where('entity_type', 'incident')
+            ->where('entity_id', $incident->id)
+            ->where('analysis_type', 'damage_detection')
+            ->orderByDesc('created_at')
+            ->first();
+
         return Inertia::render('Fleet/Incidents/Show', [
             'incident' => $incident,
             'mediaItems' => $mediaItems,
+            'damageAnalysis' => $damageAnalysis?->only(['id', 'primary_finding', 'detailed_analysis', 'recommendations', 'priority', 'confidence_score', 'created_at']),
+            'runDamageAssessmentUrl' => route('fleet.incidents.run-damage-assessment', $incident),
             'vehicles' => Vehicle::query()->orderBy('registration')->get(['id', 'registration']),
             'drivers' => Driver::query()->orderBy('last_name')->get(['id', 'first_name', 'last_name']),
             ...$this->enumOptions(),
@@ -121,6 +135,7 @@ final class IncidentController extends Controller
             foreach ($request->file('photos') as $file) {
                 $incident->addMedia($file)->toMediaCollection('photos');
             }
+            RunDamageAssessmentJob::dispatch('incident', $incident->id, $request->user()?->id);
         }
         return to_route('fleet.incidents.show', $incident)->with('flash', ['status' => 'success', 'message' => 'Incident updated.']);
     }
@@ -130,5 +145,22 @@ final class IncidentController extends Controller
         $this->authorize('delete', $incident);
         $incident->delete();
         return to_route('fleet.incidents.index')->with('flash', ['status' => 'success', 'message' => 'Incident deleted.']);
+    }
+
+    /**
+     * Run AI damage assessment on the incident's first photo. Queued; returns immediately.
+     */
+    public function runDamageAssessment(Request $request, Incident $incident): JsonResponse
+    {
+        $this->authorize('update', $incident);
+        $incident->loadMedia('photos');
+        if ($incident->getFirstMedia('photos') === null) {
+            return response()->json(['message' => 'No photo to analyze.', 'result_id' => null], 422);
+        }
+        RunDamageAssessmentJob::dispatch('incident', $incident->id, $request->user()?->id);
+        return response()->json([
+            'message' => 'Damage analysis queued. Results will appear in AI Analysis and on this incident once complete.',
+            'result_id' => null,
+        ]);
     }
 }

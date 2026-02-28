@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Mattiverse\Userstamps\Traits\Userstamps;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 
 /**
  * @property int $id
@@ -19,9 +21,10 @@ use Mattiverse\Userstamps\Traits\Userstamps;
  * @property string $claim_type
  * @property string $status
  */
-class InsuranceClaim extends Model
+class InsuranceClaim extends Model implements HasMedia
 {
     use BelongsToOrganization;
+    use InteractsWithMedia;
     use SoftDeletes;
     use Userstamps;
 
@@ -56,5 +59,10 @@ class InsuranceClaim extends Model
     public function insurancePolicy(): BelongsTo
     {
         return $this->belongsTo(InsurancePolicy::class);
+    }
+
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('photos');
     }
 }

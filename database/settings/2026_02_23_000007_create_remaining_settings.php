@@ -54,6 +54,6 @@ return new class extends SettingsMigration
 
         // Media
         $addIfMissing('media.disk_name', config('media-library.disk_name', 'public'));
-        $addIfMissing('media.max_file_size', (int) config('media-library.max_file_size', 10240));
+        $addIfMissing('media.max_file_size', (int) config('media-library.max_file_size', 1024 * 1024 * 200));
     }
 };
