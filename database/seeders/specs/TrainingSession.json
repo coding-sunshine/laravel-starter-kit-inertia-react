@@ -1,0 +1,156 @@
+{
+    "model": "TrainingSession",
+    "table": "training_sessions",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "training_course_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "session_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "instructor_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "instructor_contact": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "scheduled_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "start_time": {
+            "type": "time",
+            "nullable": true,
+            "default": null
+        },
+        "end_time": {
+            "type": "time",
+            "nullable": true,
+            "default": null
+        },
+        "location": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "max_participants": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "registered_count": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "attended_count": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "completion_rate": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "average_score": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "feedback_score": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "notes": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "materials_provided": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "trainingCourse": {
+            "type": "belongsTo",
+            "model": "TrainingCourse"
+        },
+        "enrollments": {
+            "type": "hasMany",
+            "model": "Enrollment"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": {
+        "session_name": {
+            "type": "name",
+            "example": "John Doe"
+        },
+        "instructor_name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    },
+    "scenarios": []
+}

@@ -1,0 +1,89 @@
+{
+    "model": "EvBatteryData",
+    "table": "ev_battery_data",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "vehicle_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "recorded_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "soc_percent": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "soh_percent": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "voltage": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "current_amps": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "temperature_celsius": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "range_remaining_km": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "energy_consumed_kwh": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "regenerative_energy_kwh": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "charging_status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "battery_warnings": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "vehicle": {
+            "type": "belongsTo",
+            "model": "Vehicle"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

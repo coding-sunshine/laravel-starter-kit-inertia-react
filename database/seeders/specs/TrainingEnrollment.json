@@ -1,0 +1,121 @@
+{
+    "model": "TrainingEnrollment",
+    "table": "training_enrollments",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "training_session_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "driver_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "enrollment_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "enrollment_status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "attendance_marked": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "start_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "end_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "completion_percentage": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "assessment_score": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "pass_fail": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "certificate_issued": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "certificate_number": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "feedback_rating": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "feedback_comments": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "enrolled_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "trainingSession": {
+            "type": "belongsTo",
+            "model": "TrainingSession"
+        },
+        "driver": {
+            "type": "belongsTo",
+            "model": "Driver"
+        },
+        "enrolledBy": {
+            "type": "belongsTo",
+            "model": "EnrolledBy"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

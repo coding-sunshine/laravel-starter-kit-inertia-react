@@ -1,0 +1,136 @@
+{
+    "model": "EvChargingSession",
+    "table": "ev_charging_sessions",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "vehicle_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "driver_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "charging_station_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "connector_id": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "session_id": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "start_timestamp": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "end_timestamp": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "duration_minutes": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "energy_delivered_kwh": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "charging_rate_kw": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "initial_soc_percent": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "final_soc_percent": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "cost": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "cost_per_kwh": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "payment_method": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "session_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "interrupted": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "interruption_reason": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "vehicle": {
+            "type": "belongsTo",
+            "model": "Vehicle"
+        },
+        "driver": {
+            "type": "belongsTo",
+            "model": "Driver"
+        },
+        "chargingStation": {
+            "type": "belongsTo",
+            "model": "ChargingStation"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

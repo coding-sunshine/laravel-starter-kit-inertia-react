@@ -1,0 +1,126 @@
+{
+    "model": "CostAllocation",
+    "table": "cost_allocations",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "cost_center_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "allocation_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "cost_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "source_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "source_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "amount": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "vat_amount": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "description": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "reference_number": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "invoice_number": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "supplier_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "allocated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "approval_status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "approved_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "approved_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "costCenter": {
+            "type": "belongsTo",
+            "model": "CostCenter"
+        },
+        "allocatedBy": {
+            "type": "belongsTo",
+            "model": "AllocatedBy"
+        },
+        "approvedBy": {
+            "type": "belongsTo",
+            "model": "ApprovedBy"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": {
+        "supplier_name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    },
+    "scenarios": []
+}

@@ -1,0 +1,107 @@
+{
+    "model": "ReportExecution",
+    "table": "report_executions",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "report_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "execution_start": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "execution_end": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "triggered_by": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "triggered_by_user_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "parameters_used": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "filters_used": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "record_count": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "file_size_bytes": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "file_path": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "error_message": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "execution_time_seconds": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "report": {
+            "type": "belongsTo",
+            "model": "Report"
+        },
+        "triggeredByUser": {
+            "type": "belongsTo",
+            "model": "TriggeredByUser"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

@@ -1,0 +1,128 @@
+{
+    "model": "Report",
+    "table": "reports",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "description": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "report_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "parameters": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "filters": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "schedule_enabled": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "schedule_frequency": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "schedule_day_of_week": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "schedule_day_of_month": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "next_run_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "recipients": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "format": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "is_active": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "reportExecutions": {
+            "type": "hasMany",
+            "model": "ReportExecution"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": {
+        "name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    },
+    "scenarios": []
+}

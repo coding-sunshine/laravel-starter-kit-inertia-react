@@ -252,6 +252,20 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         Route::resource('reports', App\Http\Controllers\Fleet\ReportController::class)->names('reports');
         Route::post('reports/{report}/run', [App\Http\Controllers\Fleet\ReportExecutionController::class, 'run'])->name('reports.run');
         Route::resource('report-executions', App\Http\Controllers\Fleet\ReportExecutionController::class)->only(['index', 'show'])->names('report-executions');
+        Route::resource('api-integrations', App\Http\Controllers\Fleet\ApiIntegrationController::class)->names('api-integrations');
+        Route::resource('api-logs', App\Http\Controllers\Fleet\ApiLogController::class)->only(['index', 'show'])->names('api-logs');
+        Route::resource('dashcam-clips', App\Http\Controllers\Fleet\DashcamClipController::class)->names('dashcam-clips');
+        Route::resource('workshop-bays', App\Http\Controllers\Fleet\WorkshopBayController::class)->names('workshop-bays');
+        Route::resource('parts-inventory', App\Http\Controllers\Fleet\PartsInventoryController::class)->names('parts-inventory');
+        Route::resource('parts-suppliers', App\Http\Controllers\Fleet\PartsSupplierController::class)->names('parts-suppliers');
+        Route::resource('tyre-inventory', App\Http\Controllers\Fleet\TyreInventoryController::class)->names('tyre-inventory');
+        Route::resource('vehicle-tyres', App\Http\Controllers\Fleet\VehicleTyreController::class)->names('vehicle-tyres');
+        Route::resource('grey-fleet-vehicles', App\Http\Controllers\Fleet\GreyFleetVehicleController::class)->names('grey-fleet-vehicles');
+        Route::resource('mileage-claims', App\Http\Controllers\Fleet\MileageClaimController::class)->names('mileage-claims');
+        Route::resource('pool-vehicle-bookings', App\Http\Controllers\Fleet\PoolVehicleBookingController::class)->names('pool-vehicle-bookings');
+        Route::resource('contractors', App\Http\Controllers\Fleet\ContractorController::class)->names('contractors');
+        Route::resource('contractor-compliance', App\Http\Controllers\Fleet\ContractorComplianceController::class)->names('contractor-compliance');
+        Route::resource('contractor-invoices', App\Http\Controllers\Fleet\ContractorInvoiceController::class)->names('contractor-invoices');
     });
 
     Route::middleware('tenant')->group(function (): void {

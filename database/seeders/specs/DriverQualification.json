@@ -1,0 +1,138 @@
+{
+    "model": "DriverQualification",
+    "table": "driver_qualifications",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "driver_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "qualification_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "qualification_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "issuing_authority": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "qualification_number": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "issue_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "expiry_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "grade_achieved": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "score_achieved": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "certificate_file_path": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "verification_required": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "verified_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "verification_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "notes": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "driver": {
+            "type": "belongsTo",
+            "model": "Driver"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": {
+        "qualification_name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    },
+    "scenarios": []
+}

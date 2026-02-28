@@ -192,12 +192,26 @@ final class AppServiceProvider extends ServiceProvider
             'alert_preference' => \App\Models\Fleet\AlertPreference::class,
             'report' => \App\Models\Fleet\Report::class,
             'report_execution' => \App\Models\Fleet\ReportExecution::class,
+            'api_integration' => \App\Models\Fleet\ApiIntegration::class,
+            'workshop_bay' => \App\Models\Fleet\WorkshopBay::class,
+            'parts_inventory' => \App\Models\Fleet\PartsInventory::class,
+            'parts_supplier' => \App\Models\Fleet\PartsSupplier::class,
+            'tyre_inventory' => \App\Models\Fleet\TyreInventory::class,
+            'grey_fleet_vehicle' => \App\Models\Fleet\GreyFleetVehicle::class,
+            'mileage_claim' => \App\Models\Fleet\MileageClaim::class,
+            'pool_vehicle_booking' => \App\Models\Fleet\PoolVehicleBooking::class,
+            'contractor' => \App\Models\Fleet\Contractor::class,
+            'contractor_compliance' => \App\Models\Fleet\ContractorCompliance::class,
+            'contractor_invoice' => \App\Models\Fleet\ContractorInvoice::class,
         ];
         foreach ($bindings as $key => $modelClass) {
             Route::bind($key, function (string $value) use ($modelClass, $scope) {
                 return $modelClass::withoutGlobalScope($scope)->findOrFail($value);
             });
         }
+        Route::bind('api_log', fn (string $value) => \App\Models\Fleet\ApiLog::findOrFail($value));
+        Route::bind('dashcam_clip', fn (string $value) => \App\Models\Fleet\DashcamClip::withoutGlobalScope($scope)->findOrFail($value));
+        Route::bind('vehicle_tyre', fn (string $value) => \App\Models\Fleet\VehicleTyre::findOrFail($value));
     }
 
     private function configurePan(): void

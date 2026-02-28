@@ -22,6 +22,12 @@ import {
     ShieldCheck,
     Truck,
     Users,
+    Wrench,
+    Package,
+    CircleDot,
+    Car,
+    FileCheck,
+    UserCog,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -62,6 +68,20 @@ interface Counts {
     reports?: number;
     report_executions?: number;
     alert_preferences?: number;
+    api_integrations?: number;
+    api_logs?: number;
+    dashcam_clips?: number;
+    workshop_bays?: number;
+    parts_inventory?: number;
+    parts_suppliers?: number;
+    tyre_inventory?: number;
+    vehicle_tyres?: number;
+    grey_fleet_vehicles?: number;
+    mileage_claims?: number;
+    pool_vehicle_bookings?: number;
+    contractors?: number;
+    contractor_compliance?: number;
+    contractor_invoices?: number;
 }
 interface WorkOrderRow { id: number; work_order_number: string; title: string; status: string; vehicle?: { id: number; registration: string }; }
 interface DefectRow { id: number; defect_number: string; title: string; severity: string; vehicle?: { id: number; registration: string }; }
@@ -200,6 +220,26 @@ export default function FleetDashboard({ counts, recentWorkOrders, recentDefects
                         <StatCard title="Driver qualifications" count={counts.driver_qualifications ?? 0} href="/fleet/driver-qualifications" icon={ShieldCheck} />
                         <StatCard title="Training enrollments" count={counts.training_enrollments ?? 0} href="/fleet/training-enrollments" icon={GraduationCap} />
                         <StatCard title="Cost allocations" count={counts.cost_allocations ?? 0} href="/fleet/cost-allocations" icon={CreditCard} />
+                    </div>
+                </section>
+
+                <section>
+                    <h2 className="mb-3 text-lg font-medium">Workshop, tyres & grey fleet</h2>
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        <StatCard title="API integrations" count={counts.api_integrations ?? 0} href="/fleet/api-integrations" icon={Cpu} />
+                        <StatCard title="API logs" count={counts.api_logs ?? 0} href="/fleet/api-logs" icon={FileText} />
+                        <StatCard title="Dashcam clips" count={counts.dashcam_clips ?? 0} href="/fleet/dashcam-clips" icon={AlertTriangle} />
+                        <StatCard title="Workshop bays" count={counts.workshop_bays ?? 0} href="/fleet/workshop-bays" icon={Wrench} />
+                        <StatCard title="Parts inventory" count={counts.parts_inventory ?? 0} href="/fleet/parts-inventory" icon={Package} />
+                        <StatCard title="Parts suppliers" count={counts.parts_suppliers ?? 0} href="/fleet/parts-suppliers" icon={Package} />
+                        <StatCard title="Tyre inventory" count={counts.tyre_inventory ?? 0} href="/fleet/tyre-inventory" icon={CircleDot} />
+                        <StatCard title="Vehicle tyres" count={counts.vehicle_tyres ?? 0} href="/fleet/vehicle-tyres" icon={CircleDot} />
+                        <StatCard title="Grey fleet vehicles" count={counts.grey_fleet_vehicles ?? 0} href="/fleet/grey-fleet-vehicles" icon={Car} />
+                        <StatCard title="Mileage claims" count={counts.mileage_claims ?? 0} href="/fleet/mileage-claims" icon={CreditCard} />
+                        <StatCard title="Pool vehicle bookings" count={counts.pool_vehicle_bookings ?? 0} href="/fleet/pool-vehicle-bookings" icon={Car} />
+                        <StatCard title="Contractors" count={counts.contractors ?? 0} href="/fleet/contractors" icon={UserCog} />
+                        <StatCard title="Contractor compliance" count={counts.contractor_compliance ?? 0} href="/fleet/contractor-compliance" icon={FileCheck} />
+                        <StatCard title="Contractor invoices" count={counts.contractor_invoices ?? 0} href="/fleet/contractor-invoices" icon={FileText} />
                     </div>
                 </section>
 

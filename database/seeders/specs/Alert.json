@@ -1,0 +1,132 @@
+{
+    "model": "Alert",
+    "table": "alerts",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "alert_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "severity": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "title": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "description": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "entity_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "entity_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "triggered_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "acknowledged_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "acknowledged_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "resolved_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "resolved_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "resolution_notes": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "notification_sent": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "escalation_level": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "escalated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "auto_resolve_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "metadata": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "acknowledgedByUser": {
+            "type": "belongsTo",
+            "model": "AcknowledgedByUser"
+        },
+        "resolvedByUser": {
+            "type": "belongsTo",
+            "model": "ResolvedByUser"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

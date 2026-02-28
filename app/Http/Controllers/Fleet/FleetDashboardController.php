@@ -29,6 +29,20 @@ use App\Models\Fleet\InsurancePolicy;
 use App\Models\Fleet\Report;
 use App\Models\Fleet\ReportExecution;
 use App\Models\Fleet\AlertPreference;
+use App\Models\Fleet\ApiIntegration;
+use App\Models\Fleet\ApiLog;
+use App\Models\Fleet\DashcamClip;
+use App\Models\Fleet\WorkshopBay;
+use App\Models\Fleet\PartsInventory;
+use App\Models\Fleet\PartsSupplier;
+use App\Models\Fleet\TyreInventory;
+use App\Models\Fleet\VehicleTyre;
+use App\Models\Fleet\GreyFleetVehicle;
+use App\Models\Fleet\MileageClaim;
+use App\Models\Fleet\PoolVehicleBooking;
+use App\Models\Fleet\Contractor;
+use App\Models\Fleet\ContractorCompliance;
+use App\Models\Fleet\ContractorInvoice;
 use App\Models\Fleet\Route as FleetRoute;
 use App\Models\Fleet\ServiceSchedule;
 use App\Models\Fleet\SustainabilityGoal;
@@ -89,6 +103,20 @@ final class FleetDashboardController extends Controller
                 ->where('user_id', $request->user()->id)
                 ->where('organization_id', \App\Services\TenantContext::id())
                 ->count(),
+            'api_integrations' => ApiIntegration::count(),
+            'api_logs' => ApiLog::count(),
+            'dashcam_clips' => DashcamClip::count(),
+            'workshop_bays' => WorkshopBay::count(),
+            'parts_inventory' => PartsInventory::count(),
+            'parts_suppliers' => PartsSupplier::count(),
+            'tyre_inventory' => TyreInventory::count(),
+            'vehicle_tyres' => VehicleTyre::query()->whereIn('vehicle_id', Vehicle::pluck('id'))->count(),
+            'grey_fleet_vehicles' => GreyFleetVehicle::count(),
+            'mileage_claims' => MileageClaim::count(),
+            'pool_vehicle_bookings' => PoolVehicleBooking::count(),
+            'contractors' => Contractor::count(),
+            'contractor_compliance' => ContractorCompliance::count(),
+            'contractor_invoices' => ContractorInvoice::count(),
         ];
 
         $recentWorkOrders = WorkOrder::query()->with('vehicle')->orderByDesc('created_at')->limit(5)->get();
