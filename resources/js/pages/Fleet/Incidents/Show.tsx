@@ -37,19 +37,29 @@ interface MediaItem {
     mime_type: string;
     file_name: string;
 }
+interface IncidentAnalysisRecord {
+    id: number;
+    primary_finding: string | null;
+    detailed_analysis: Record<string, unknown> | null;
+    priority: string | null;
+    created_at: string;
+}
 interface Props {
     incident: IncidentRecord;
     mediaItems: MediaItem[];
     damageAnalysis?: DamageAnalysisRecord | null;
+    incidentAnalysis?: IncidentAnalysisRecord | null;
     runDamageAssessmentUrl: string;
+    runIncidentAnalysisUrl: string;
 }
 
 function isImage(mimeType: string): boolean {
     return (mimeType || '').startsWith('image/');
 }
 
-export default function FleetIncidentsShow({ incident, mediaItems, damageAnalysis, runDamageAssessmentUrl }: Props) {
+export default function FleetIncidentsShow({ incident, mediaItems, damageAnalysis, incidentAnalysis, runDamageAssessmentUrl, runIncidentAnalysisUrl }: Props) {
     const [analyzing, setAnalyzing] = useState(false);
+    const [analyzingNarrative, setAnalyzingNarrative] = useState(false);
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard().url },
         { title: 'Fleet', href: '/fleet/incidents' },
@@ -81,6 +91,33 @@ export default function FleetIncidentsShow({ incident, mediaItems, damageAnalysi
             })
             .catch(() => {
                 setAnalyzing(false);
+                alert('Request failed. Please try again.');
+            });
+    }
+
+    function handleRunIncidentAnalysis() {
+        setAnalyzingNarrative(true);
+        const csrf = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content ?? '';
+        fetch(runIncidentAnalysisUrl, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrf,
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        })
+            .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
+            .then(({ ok, data }) => {
+                if (ok) {
+                    router.reload();
+                } else {
+                    setAnalyzingNarrative(false);
+                    alert(data?.message ?? 'Analysis could not be started.');
+                }
+            })
+            .catch(() => {
+                setAnalyzingNarrative(false);
                 alert('Request failed. Please try again.');
             });
     }
@@ -243,6 +280,49 @@ export default function FleetIncidentsShow({ incident, mediaItems, damageAnalysi
                             )}
                             {detail?.description && (
                                 <p><span className="font-medium">Description:</span> {detail.description}</p>
+                            )}
+                        </CardContent>
+                    </Card>
+                )}
+                {(incidentAnalysis || incident.description) && (
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between pb-2">
+                            <CardTitle className="text-base">AI narrative summary</CardTitle>
+                            {incident.description && (
+                                <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={handleRunIncidentAnalysis}
+                                    disabled={analyzingNarrative}
+                                >
+                                    {analyzingNarrative ? 'Analyzing…' : 'Re-analyze'}
+                                </Button>
+                            )}
+                        </CardHeader>
+                        <CardContent className="space-y-2 text-sm">
+                            {incidentAnalysis?.primary_finding ? (
+                                <p>{incidentAnalysis.primary_finding}</p>
+                            ) : (
+                                <p className="text-muted-foreground">No AI summary yet. Click Re-analyze to run incident analysis.</p>
+                            )}
+                            {incidentAnalysis?.detailed_analysis && typeof incidentAnalysis.detailed_analysis === 'object' && (
+                                <>
+                                    {(incidentAnalysis.detailed_analysis as Record<string, unknown>).category && (
+                                        <p><span className="font-medium">AI category:</span> {(incidentAnalysis.detailed_analysis as Record<string, unknown>).category as string}</p>
+                                    )}
+                                    {(incidentAnalysis.detailed_analysis as Record<string, unknown>).severity && (
+                                        <p><span className="font-medium">AI severity:</span> {(incidentAnalysis.detailed_analysis as Record<string, unknown>).severity as string}</p>
+                                    )}
+                                    {(incidentAnalysis.detailed_analysis as Record<string, unknown>).location && (
+                                        <p><span className="font-medium">Location (extracted):</span> {(incidentAnalysis.detailed_analysis as Record<string, unknown>).location as string}</p>
+                                    )}
+                                </>
+                            )}
+                            {incidentAnalysis?.created_at && (
+                                <p className="text-muted-foreground text-xs">
+                                    {new Date(incidentAnalysis.created_at).toLocaleString()}
+                                    {incidentAnalysis.priority && <> · <Badge variant="secondary">{incidentAnalysis.priority}</Badge></>}
+                                </p>
                             )}
                         </CardContent>
                     </Card>

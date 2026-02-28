@@ -2,6 +2,7 @@ import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,9 +18,11 @@ interface InsuranceClaimRecord {
     claim_number: string;
     claim_type: string;
     status: string;
+    claim_narrative?: string | null;
 }
 interface Props {
     insuranceClaim: InsuranceClaimRecord;
+    generateFnolUrl: string;
     incidents: { id: number; incident_number: string }[];
     insurancePolicies: { id: number; policy_number: string }[];
     claimTypes: Option[];
@@ -28,6 +31,7 @@ interface Props {
 
 export default function FleetInsuranceClaimsEdit({
     insuranceClaim,
+    generateFnolUrl,
     incidents,
     insurancePolicies,
     claimTypes,
@@ -39,9 +43,38 @@ export default function FleetInsuranceClaimsEdit({
         claim_number: insuranceClaim.claim_number,
         claim_type: insuranceClaim.claim_type,
         status: insuranceClaim.status,
+        claim_narrative: insuranceClaim.claim_narrative ?? '',
         photos: [] as File[],
     });
     const { data, setData, processing, errors } = form;
+    const [generatingFnol, setGeneratingFnol] = useState(false);
+
+    const handleGenerateFnol = () => {
+        setGeneratingFnol(true);
+        const csrf = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content ?? '';
+        fetch(generateFnolUrl, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrf,
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        })
+            .then((res) => res.json().then((body) => ({ ok: res.ok, body })))
+            .then(({ ok, body }) => {
+                setGeneratingFnol(false);
+                if (ok && body.fnol_text) {
+                    setData('claim_narrative', body.fnol_text);
+                } else if (!ok) {
+                    alert(body?.message ?? 'Could not generate FNOL.');
+                }
+            })
+            .catch(() => {
+                setGeneratingFnol(false);
+                alert('Request failed. Please try again.');
+            });
+    };
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard().url },
         { title: 'Fleet', href: '/fleet/insurance-claims' },
@@ -149,6 +182,32 @@ export default function FleetInsuranceClaimsEdit({
                             </select>
                         </div>
                     </div>
+                    {insuranceClaim.incident_id && (
+                        <div>
+                            <div className="flex items-center justify-between">
+                                <Label htmlFor="claim_narrative">Claim narrative (FNOL)</Label>
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={handleGenerateFnol}
+                                    disabled={generatingFnol}
+                                >
+                                    {generatingFnol ? 'Generating…' : 'Generate FNOL'}
+                                </Button>
+                            </div>
+                            <textarea
+                                id="claim_narrative"
+                                value={data.claim_narrative}
+                                onChange={(e) => setData('claim_narrative', e.target.value)}
+                                rows={6}
+                                className="mt-1 flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
+                            />
+                            {errors.claim_narrative && (
+                                <p className="mt-1 text-sm text-destructive">{errors.claim_narrative}</p>
+                            )}
+                        </div>
+                    )}
                     <div>
                         <Label htmlFor="photos">Photos (optional, for AI damage analysis)</Label>
                         <input

@@ -25,6 +25,7 @@ interface InsuranceClaimRecord {
     claim_number: string;
     claim_type: string;
     status: string;
+    claim_narrative?: string | null;
     incident?: { id: number; incident_number: string };
     insurance_policy?: { id: number; policy_number: string };
 }
@@ -33,10 +34,12 @@ interface Props {
     photoUrls: PhotoUrl[];
     damageAnalysis?: DamageAnalysisRecord | null;
     runDamageAssessmentUrl: string;
+    generateFnolUrl: string;
 }
 
-export default function FleetInsuranceClaimsShow({ insuranceClaim, photoUrls, damageAnalysis, runDamageAssessmentUrl }: Props) {
+export default function FleetInsuranceClaimsShow({ insuranceClaim, photoUrls, damageAnalysis, runDamageAssessmentUrl, generateFnolUrl }: Props) {
     const [analyzing, setAnalyzing] = useState(false);
+    const [generatingFnol, setGeneratingFnol] = useState(false);
 
     function handleRunDamageAnalysis() {
         setAnalyzing(true);
@@ -61,6 +64,33 @@ export default function FleetInsuranceClaimsShow({ insuranceClaim, photoUrls, da
             })
             .catch(() => {
                 setAnalyzing(false);
+                alert('Request failed. Please try again.');
+            });
+    }
+
+    function handleGenerateFnol() {
+        setGeneratingFnol(true);
+        const csrf = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content ?? '';
+        fetch(generateFnolUrl, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrf,
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        })
+            .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
+            .then(({ ok, data }) => {
+                if (ok) {
+                    router.reload();
+                } else {
+                    setGeneratingFnol(false);
+                    alert(data?.message ?? 'Could not generate FNOL.');
+                }
+            })
+            .catch(() => {
+                setGeneratingFnol(false);
                 alert('Request failed. Please try again.');
             });
     }
@@ -181,6 +211,28 @@ export default function FleetInsuranceClaimsShow({ insuranceClaim, photoUrls, da
                             )}
                             {detail?.description && (
                                 <p><span className="font-medium">Description:</span> {detail.description}</p>
+                            )}
+                        </CardContent>
+                    </Card>
+                )}
+                {insuranceClaim.incident && (
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between pb-2">
+                            <CardTitle className="text-base">Claim narrative (FNOL)</CardTitle>
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={handleGenerateFnol}
+                                disabled={generatingFnol}
+                            >
+                                {generatingFnol ? 'Generating…' : 'Generate FNOL'}
+                            </Button>
+                        </CardHeader>
+                        <CardContent className="space-y-2 text-sm">
+                            {insuranceClaim.claim_narrative ? (
+                                <p className="whitespace-pre-wrap">{insuranceClaim.claim_narrative}</p>
+                            ) : (
+                                <p className="text-muted-foreground">No narrative yet. Click Generate FNOL to create a draft from the incident.</p>
                             )}
                         </CardContent>
                     </Card>

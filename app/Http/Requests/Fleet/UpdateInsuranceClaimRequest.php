@@ -38,6 +38,7 @@ final class UpdateInsuranceClaimRequest extends FormRequest
             'claim_handler_name' => ['nullable', 'string', 'max:200'],
             'claim_handler_contact' => ['nullable', 'string', 'max:200'],
             'legal_action_required' => ['nullable', 'boolean'],
+            'claim_narrative' => ['nullable', 'string'],
             'photos' => ['nullable', 'array'],
             'photos.*' => ['image', 'max:204800'],
         ];

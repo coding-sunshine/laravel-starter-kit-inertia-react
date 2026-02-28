@@ -9,6 +9,7 @@ use App\Http\Requests\Fleet\StoreInsuranceClaimRequest;
 use App\Http\Requests\Fleet\UpdateInsuranceClaimRequest;
 use App\Jobs\Ai\RunDamageAssessmentJob;
 use App\Models\Fleet\AiAnalysisResult;
+use App\Services\Ai\FnolDraftService;
 use App\Models\Fleet\Incident;
 use App\Models\Fleet\InsuranceClaim;
 use App\Models\Fleet\InsurancePolicy;
@@ -83,6 +84,7 @@ final class InsuranceClaimController extends Controller
             'photoUrls' => $photoUrls,
             'damageAnalysis' => $damageAnalysis?->only(['id', 'primary_finding', 'detailed_analysis', 'recommendations', 'priority', 'confidence_score', 'created_at']),
             'runDamageAssessmentUrl' => route('fleet.insurance-claims.run-damage-assessment', $insurance_claim),
+            'generateFnolUrl' => route('fleet.insurance-claims.generate-fnol', $insurance_claim),
             'incidents' => Incident::query()->orderByDesc('incident_timestamp')->get(['id', 'incident_number']),
             'insurancePolicies' => InsurancePolicy::query()->orderBy('policy_number')->get(['id', 'policy_number']),
             'claimTypes' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\InsuranceClaimType::cases()),
@@ -95,6 +97,7 @@ final class InsuranceClaimController extends Controller
         $this->authorize('update', $insurance_claim);
         return Inertia::render('Fleet/InsuranceClaims/Edit', [
             'insuranceClaim' => $insurance_claim,
+            'generateFnolUrl' => route('fleet.insurance-claims.generate-fnol', $insurance_claim),
             'incidents' => Incident::query()->orderByDesc('incident_timestamp')->get(['id', 'incident_number']),
             'insurancePolicies' => InsurancePolicy::query()->orderBy('policy_number')->get(['id', 'policy_number']),
             'claimTypes' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\InsuranceClaimType::cases()),
@@ -138,6 +141,23 @@ final class InsuranceClaimController extends Controller
         return response()->json([
             'message' => 'Claims analysis queued. Results will appear in AI Analysis and on this claim once complete.',
             'result_id' => null,
+        ]);
+    }
+
+    /**
+     * Generate FNOL draft from the claim's incident and save to claim_narrative.
+     */
+    public function generateFnol(Request $request, InsuranceClaim $insurance_claim): JsonResponse
+    {
+        $this->authorize('update', $insurance_claim);
+        $fnolText = app(FnolDraftService::class)->generate($insurance_claim);
+        if ($fnolText === null) {
+            return response()->json(['message' => 'Could not generate FNOL (no incident or analysis failed).'], 422);
+        }
+        $insurance_claim->update(['claim_narrative' => $fnolText]);
+        return response()->json([
+            'message' => 'FNOL draft generated.',
+            'fnol_text' => $fnolText,
         ]);
     }
 }

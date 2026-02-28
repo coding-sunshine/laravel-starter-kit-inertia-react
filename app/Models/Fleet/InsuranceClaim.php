@@ -34,7 +34,7 @@ class InsuranceClaim extends Model implements HasMedia
         'submitted_date', 'acknowledged_date', 'settlement_date',
         'claim_handler_name', 'claim_handler_contact', 'assessor_name', 'assessor_report',
         'supporting_documents', 'correspondence_log', 'recovery_amount',
-        'legal_action_required', 'legal_representative',
+        'legal_action_required', 'legal_representative', 'claim_narrative',
     ];
 
     protected $casts = [

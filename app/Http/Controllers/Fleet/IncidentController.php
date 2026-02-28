@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Fleet\StoreIncidentRequest;
 use App\Http\Requests\Fleet\UpdateIncidentRequest;
 use App\Jobs\Ai\RunDamageAssessmentJob;
+use App\Jobs\Ai\RunIncidentAnalysisJob;
 use App\Models\Fleet\AiAnalysisResult;
 use App\Models\Fleet\Driver;
 use App\Models\Fleet\Incident;
@@ -71,6 +72,9 @@ final class IncidentController extends Controller
             }
             RunDamageAssessmentJob::dispatch('incident', $incident->id, $request->user()?->id);
         }
+        if (! empty(trim((string) ($validated['description'] ?? '')))) {
+            RunIncidentAnalysisJob::dispatch($incident->id, $request->user()?->id);
+        }
         return to_route('fleet.incidents.index')->with('flash', ['status' => 'success', 'message' => 'Incident created.']);
     }
 
@@ -93,11 +97,20 @@ final class IncidentController extends Controller
             ->orderByDesc('created_at')
             ->first();
 
+        $incidentAnalysis = AiAnalysisResult::query()
+            ->where('entity_type', 'incident')
+            ->where('entity_id', $incident->id)
+            ->where('analysis_type', 'incident_analysis')
+            ->orderByDesc('created_at')
+            ->first();
+
         return Inertia::render('Fleet/Incidents/Show', [
             'incident' => $incident,
             'mediaItems' => $mediaItems,
             'damageAnalysis' => $damageAnalysis?->only(['id', 'primary_finding', 'detailed_analysis', 'recommendations', 'priority', 'confidence_score', 'created_at']),
+            'incidentAnalysis' => $incidentAnalysis?->only(['id', 'primary_finding', 'detailed_analysis', 'priority', 'created_at']),
             'runDamageAssessmentUrl' => route('fleet.incidents.run-damage-assessment', $incident),
+            'runIncidentAnalysisUrl' => route('fleet.incidents.run-incident-analysis', $incident),
             'vehicles' => Vehicle::query()->orderBy('registration')->get(['id', 'registration']),
             'drivers' => Driver::query()->orderBy('last_name')->get(['id', 'first_name', 'last_name']),
             ...$this->enumOptions(),
@@ -137,6 +150,9 @@ final class IncidentController extends Controller
             }
             RunDamageAssessmentJob::dispatch('incident', $incident->id, $request->user()?->id);
         }
+        if (! empty(trim((string) ($validated['description'] ?? '')))) {
+            RunIncidentAnalysisJob::dispatch($incident->id, $request->user()?->id);
+        }
         return to_route('fleet.incidents.show', $incident)->with('flash', ['status' => 'success', 'message' => 'Incident updated.']);
     }
 
@@ -161,6 +177,22 @@ final class IncidentController extends Controller
         return response()->json([
             'message' => 'Damage analysis queued. Results will appear in AI Analysis and on this incident once complete.',
             'result_id' => null,
+        ]);
+    }
+
+    /**
+     * Run AI incident NLP analysis on the incident description and witness text. Queued.
+     */
+    public function runIncidentAnalysis(Request $request, Incident $incident): JsonResponse
+    {
+        $this->authorize('update', $incident);
+        $desc = $incident->description ?? '';
+        if (trim($desc) === '') {
+            return response()->json(['message' => 'No description to analyze.'], 422);
+        }
+        RunIncidentAnalysisJob::dispatch($incident->id, $request->user()?->id);
+        return response()->json([
+            'message' => 'Incident analysis queued. Results will appear shortly.',
         ]);
     }
 }

@@ -141,6 +141,11 @@
             "type": "bigint",
             "nullable": true,
             "default": null
+        },
+        "claim_narrative": {
+            "type": "text",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {
