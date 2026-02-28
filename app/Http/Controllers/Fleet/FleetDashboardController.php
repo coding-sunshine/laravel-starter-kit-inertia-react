@@ -45,7 +45,17 @@ use App\Models\Fleet\ContractorCompliance;
 use App\Models\Fleet\ContractorInvoice;
 use App\Models\Fleet\DriverCoachingPlan;
 use App\Models\Fleet\DriverWellnessRecord;
+use App\Models\Fleet\PermitToWork;
+use App\Models\Fleet\PpeAssignment;
+use App\Models\Fleet\RiskAssessment;
 use App\Models\Fleet\Route as FleetRoute;
+use App\Models\Fleet\SafetyObservation;
+use App\Models\Fleet\SafetyPolicyAcknowledgment;
+use App\Models\Fleet\TachographCalibration;
+use App\Models\Fleet\ToolboxTalk;
+use App\Models\Fleet\VehicleCheck;
+use App\Models\Fleet\VehicleCheckTemplate;
+use App\Models\Fleet\VehicleDisc;
 use App\Models\Fleet\ServiceSchedule;
 use App\Models\Fleet\SustainabilityGoal;
 use App\Models\Fleet\TachographDownload;
@@ -121,6 +131,17 @@ final class FleetDashboardController extends Controller
             'contractor_invoices' => ContractorInvoice::count(),
             'driver_wellness_records' => DriverWellnessRecord::count(),
             'driver_coaching_plans' => DriverCoachingPlan::count(),
+            'vehicle_check_templates' => VehicleCheckTemplate::count(),
+            'vehicle_checks' => VehicleCheck::count(),
+            'risk_assessments' => RiskAssessment::count(),
+            'vehicle_discs' => VehicleDisc::count(),
+            'tachograph_calibrations' => TachographCalibration::count(),
+            'safety_policy_acknowledgments' => SafetyPolicyAcknowledgment::count(),
+            'permit_to_work' => PermitToWork::count(),
+            'ppe_assignments' => PpeAssignment::count(),
+            'safety_observations' => SafetyObservation::count(),
+            'toolbox_talks' => ToolboxTalk::count(),
+            'todays_vehicle_checks' => VehicleCheck::query()->whereDate('check_date', now()->toDateString())->count(),
         ];
 
         $recentWorkOrders = WorkOrder::query()->with('vehicle')->orderByDesc('created_at')->limit(5)->get();

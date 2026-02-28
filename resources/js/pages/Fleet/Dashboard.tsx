@@ -29,6 +29,9 @@ import {
     FileCheck,
     UserCog,
     Heart,
+    ClipboardCheck,
+    HardHat,
+    FileSignature,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -85,6 +88,17 @@ interface Counts {
     contractor_invoices?: number;
     driver_wellness_records?: number;
     driver_coaching_plans?: number;
+    vehicle_check_templates?: number;
+    vehicle_checks?: number;
+    risk_assessments?: number;
+    vehicle_discs?: number;
+    tachograph_calibrations?: number;
+    safety_policy_acknowledgments?: number;
+    permit_to_work?: number;
+    ppe_assignments?: number;
+    safety_observations?: number;
+    toolbox_talks?: number;
+    todays_vehicle_checks?: number;
 }
 interface WorkOrderRow { id: number; work_order_number: string; title: string; status: string; vehicle?: { id: number; registration: string }; }
 interface DefectRow { id: number; defect_number: string; title: string; severity: string; vehicle?: { id: number; registration: string }; }
@@ -174,6 +188,37 @@ export default function FleetDashboard({ counts, recentWorkOrders, recentDefects
                         <StatCard title="Compliance items" count={counts.compliance_items} href="/fleet/compliance-items" icon={ShieldCheck} />
                         <StatCard title="Driver working time" count={counts.driver_working_time} href="/fleet/driver-working-time" icon={Clock} />
                         <StatCard title="Tachograph downloads" count={counts.tachograph_downloads} href="/fleet/tachograph-downloads" icon={FileDown} />
+                    </div>
+                </section>
+
+                <section>
+                    <h2 className="mb-3 text-lg font-medium">Compliance & H&S</h2>
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        <StatCard title="Vehicle check templates" count={counts.vehicle_check_templates ?? 0} href="/fleet/vehicle-check-templates" icon={ClipboardCheck} />
+                        <StatCard title="Vehicle checks" count={counts.vehicle_checks ?? 0} href="/fleet/vehicle-checks" icon={ClipboardCheck} />
+                        {typeof counts.todays_vehicle_checks === 'number' && (
+                            <Link href={`/fleet/vehicle-checks?check_date=${new Date().toISOString().slice(0, 10)}`} className="block">
+                                <Card className="transition-colors hover:bg-muted/50">
+                                    <CardContent className="flex items-center gap-4 p-4">
+                                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                                            <ClipboardCheck className="size-6 text-primary" />
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <p className="truncate font-medium">Today&apos;s vehicle checks</p>
+                                            <p className="text-2xl font-semibold tabular-nums">{counts.todays_vehicle_checks}</p>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </Link>
+                        )}
+                        <StatCard title="Risk assessments" count={counts.risk_assessments ?? 0} href="/fleet/risk-assessments" icon={ShieldCheck} />
+                        <StatCard title="Vehicle discs" count={counts.vehicle_discs ?? 0} href="/fleet/vehicle-discs" icon={ShieldCheck} />
+                        <StatCard title="Tachograph calibrations" count={counts.tachograph_calibrations ?? 0} href="/fleet/tachograph-calibrations" icon={FileDown} />
+                        <StatCard title="Safety policy acknowledgments" count={counts.safety_policy_acknowledgments ?? 0} href="/fleet/safety-policy-acknowledgments" icon={FileSignature} />
+                        <StatCard title="Permit to work" count={counts.permit_to_work ?? 0} href="/fleet/permit-to-work" icon={HardHat} />
+                        <StatCard title="PPE assignments" count={counts.ppe_assignments ?? 0} href="/fleet/ppe-assignments" icon={HardHat} />
+                        <StatCard title="Safety observations" count={counts.safety_observations ?? 0} href="/fleet/safety-observations" icon={AlertTriangle} />
+                        <StatCard title="Toolbox talks" count={counts.toolbox_talks ?? 0} href="/fleet/toolbox-talks" icon={Users} />
                     </div>
                 </section>
 

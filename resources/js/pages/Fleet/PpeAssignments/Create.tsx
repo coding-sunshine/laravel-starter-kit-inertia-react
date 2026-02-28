@@ -1,0 +1,88 @@
+import AppLayout from '@/layouts/app-layout';
+import { dashboard } from '@/routes';
+import type { BreadcrumbItem } from '@/types';
+import { Head, Link, useForm } from '@inertiajs/react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+
+interface Props {
+    users: { id: number; name: string }[];
+    drivers: { id: number; name: string }[];
+    statuses: { value: string; name: string }[];
+}
+
+export default function PpeAssignmentsCreate({ users, drivers, statuses }: Props) {
+    const form = useForm({
+        user_id: '' as number | '',
+        driver_id: '' as number | '',
+        ppe_type: '',
+        item_reference: '',
+        issued_date: new Date().toISOString().slice(0, 10),
+        expiry_or_return_date: '',
+        status: 'active',
+    });
+    const breadcrumbs: BreadcrumbItem[] = [
+        { title: 'Dashboard', href: dashboard().url },
+        { title: 'Fleet', href: '/fleet' },
+        { title: 'PPE assignments', href: '/fleet/ppe-assignments' },
+        { title: 'New', href: '/fleet/ppe-assignments/create' },
+    ];
+    return (
+        <AppLayout breadcrumbs={breadcrumbs}>
+            <Head title="Fleet – New PPE assignment" />
+            <div className="flex h-full flex-1 flex-col gap-6 rounded-xl p-4">
+                <div className="flex items-center gap-4">
+                    <Button variant="ghost" size="sm" asChild><Link href="/fleet/ppe-assignments">Back</Link></Button>
+                    <h1 className="text-2xl font-semibold">New PPE assignment</h1>
+                </div>
+                <form onSubmit={(e) => { e.preventDefault(); form.post('/fleet/ppe-assignments'); }} className="max-w-xl space-y-4 rounded-lg border p-6">
+                    <div className="space-y-2">
+                        <Label>PPE type *</Label>
+                        <Input value={form.data.ppe_type} onChange={e => form.setData('ppe_type', e.target.value)} required />
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                            <Label>User</Label>
+                            <select value={form.data.user_id || ''} onChange={e => form.setData('user_id', e.target.value ? Number(e.target.value) : '')} className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm">
+                                <option value="">—</option>
+                                {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+                            </select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Driver</Label>
+                            <select value={form.data.driver_id || ''} onChange={e => form.setData('driver_id', e.target.value ? Number(e.target.value) : '')} className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm">
+                                <option value="">—</option>
+                                {drivers.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                            </select>
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Item reference</Label>
+                        <Input value={form.data.item_reference} onChange={e => form.setData('item_reference', e.target.value)} />
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                            <Label>Issued date *</Label>
+                            <Input type="date" value={form.data.issued_date} onChange={e => form.setData('issued_date', e.target.value)} required />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Expiry / return date</Label>
+                            <Input type="date" value={form.data.expiry_or_return_date} onChange={e => form.setData('expiry_or_return_date', e.target.value)} />
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Status</Label>
+                        <select value={form.data.status} onChange={e => form.setData('status', e.target.value)} className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm">
+                            {statuses.map((s) => <option key={s.value} value={s.value}>{s.name}</option>)}
+                        </select>
+                    </div>
+                    <div className="flex gap-2">
+                        <Button type="submit" disabled={form.processing}>Save</Button>
+                        <Button type="button" variant="outline" asChild><Link href="/fleet/ppe-assignments">Cancel</Link></Button>
+                    </div>
+                </form>
+            </div>
+        </AppLayout>
+    );
+}

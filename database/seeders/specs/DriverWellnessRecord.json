@@ -1,0 +1,93 @@
+{
+    "model": "DriverWellnessRecord",
+    "table": "driver_wellness_records",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "driver_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "record_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "fatigue_level": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "rest_hours": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "sleep_quality": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "mood": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "notes": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "driver": {
+            "type": "belongsTo",
+            "model": "Driver"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

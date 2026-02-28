@@ -268,6 +268,20 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         Route::resource('contractor-invoices', App\Http\Controllers\Fleet\ContractorInvoiceController::class)->names('contractor-invoices');
         Route::resource('driver-wellness-records', App\Http\Controllers\Fleet\DriverWellnessRecordController::class)->names('driver-wellness-records');
         Route::resource('driver-coaching-plans', App\Http\Controllers\Fleet\DriverCoachingPlanController::class)->names('driver-coaching-plans');
+        Route::resource('vehicle-check-templates', App\Http\Controllers\Fleet\VehicleCheckTemplateController::class)->names('vehicle-check-templates');
+        Route::resource('vehicle-checks', App\Http\Controllers\Fleet\VehicleCheckController::class)->names('vehicle-checks');
+        Route::resource('vehicle-checks.vehicle-check-items', App\Http\Controllers\Fleet\VehicleCheckItemController::class)->only(['index', 'create', 'store', 'show', 'edit', 'update', 'destroy'])->names('vehicle-checks.vehicle-check-items')->scoped();
+        Route::resource('vehicle-check-items', App\Http\Controllers\Fleet\VehicleCheckItemController::class)->only(['show', 'edit', 'update', 'destroy'])->names('vehicle-check-items');
+        Route::resource('risk-assessments', App\Http\Controllers\Fleet\RiskAssessmentController::class)->names('risk-assessments');
+        Route::resource('vehicle-discs', App\Http\Controllers\Fleet\VehicleDiscController::class)->names('vehicle-discs');
+        Route::resource('tachograph-calibrations', App\Http\Controllers\Fleet\TachographCalibrationController::class)->names('tachograph-calibrations');
+        Route::get('safety-policy-acknowledgments', [App\Http\Controllers\Fleet\SafetyPolicyAcknowledgmentController::class, 'index'])->name('safety-policy-acknowledgments.index');
+        Route::get('safety-policy-acknowledgments/create', [App\Http\Controllers\Fleet\SafetyPolicyAcknowledgmentController::class, 'create'])->name('safety-policy-acknowledgments.create');
+        Route::post('safety-policy-acknowledgments', [App\Http\Controllers\Fleet\SafetyPolicyAcknowledgmentController::class, 'store'])->name('safety-policy-acknowledgments.store');
+        Route::resource('permit-to-work', App\Http\Controllers\Fleet\PermitToWorkController::class)->names('permit-to-work');
+        Route::resource('ppe-assignments', App\Http\Controllers\Fleet\PpeAssignmentController::class)->names('ppe-assignments');
+        Route::resource('safety-observations', App\Http\Controllers\Fleet\SafetyObservationController::class)->names('safety-observations');
+        Route::resource('toolbox-talks', App\Http\Controllers\Fleet\ToolboxTalkController::class)->names('toolbox-talks');
     });
 
     Route::middleware('tenant')->group(function (): void {

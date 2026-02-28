@@ -201,6 +201,14 @@
             "type": "hasMany",
             "model": "VehicleAssignment"
         },
+        "wellnessRecords": {
+            "type": "hasMany",
+            "model": "WellnessRecord"
+        },
+        "coachingPlans": {
+            "type": "hasMany",
+            "model": "CoachingPlan"
+        },
         "organization": {
             "type": "belongsTo",
             "model": "Organization"

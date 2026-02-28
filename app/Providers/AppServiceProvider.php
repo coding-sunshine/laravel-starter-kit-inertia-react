@@ -145,6 +145,7 @@ final class AppServiceProvider extends ServiceProvider
             'driver' => \App\Models\Fleet\Driver::class,
             'organization' => \App\Models\Organization::class,
             'trailer' => \App\Models\Fleet\Trailer::class,
+            'location' => \App\Models\Fleet\Location::class,
         ]));
     }
 
@@ -205,6 +206,17 @@ final class AppServiceProvider extends ServiceProvider
             'contractor_invoice' => \App\Models\Fleet\ContractorInvoice::class,
             'driver_wellness_record' => \App\Models\Fleet\DriverWellnessRecord::class,
             'driver_coaching_plan' => \App\Models\Fleet\DriverCoachingPlan::class,
+            'vehicle_check_template' => \App\Models\Fleet\VehicleCheckTemplate::class,
+            'vehicle_check' => \App\Models\Fleet\VehicleCheck::class,
+            'vehicle_check_item' => \App\Models\Fleet\VehicleCheckItem::class,
+            'risk_assessment' => \App\Models\Fleet\RiskAssessment::class,
+            'vehicle_disc' => \App\Models\Fleet\VehicleDisc::class,
+            'tachograph_calibration' => \App\Models\Fleet\TachographCalibration::class,
+            'safety_policy_acknowledgment' => \App\Models\Fleet\SafetyPolicyAcknowledgment::class,
+            'permit_to_work' => \App\Models\Fleet\PermitToWork::class,
+            'ppe_assignment' => \App\Models\Fleet\PpeAssignment::class,
+            'safety_observation' => \App\Models\Fleet\SafetyObservation::class,
+            'toolbox_talk' => \App\Models\Fleet\ToolboxTalk::class,
         ];
         foreach ($bindings as $key => $modelClass) {
             Route::bind($key, function (string $value) use ($modelClass, $scope) {
@@ -214,6 +226,7 @@ final class AppServiceProvider extends ServiceProvider
         Route::bind('api_log', fn (string $value) => \App\Models\Fleet\ApiLog::findOrFail($value));
         Route::bind('dashcam_clip', fn (string $value) => \App\Models\Fleet\DashcamClip::withoutGlobalScope($scope)->findOrFail($value));
         Route::bind('vehicle_tyre', fn (string $value) => \App\Models\Fleet\VehicleTyre::findOrFail($value));
+        Route::bind('vehicle_check_item', fn (string $value) => \App\Models\Fleet\VehicleCheckItem::findOrFail($value));
     }
 
     private function configurePan(): void
