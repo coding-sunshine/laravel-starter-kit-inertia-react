@@ -202,6 +202,9 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 
     Route::middleware('tenant')->prefix('fleet')->name('fleet.')->group(function (): void {
         Route::get('/', [App\Http\Controllers\Fleet\FleetDashboardController::class, 'index'])->name('dashboard');
+        Route::get('assistant', [App\Http\Controllers\Fleet\FleetAssistantController::class, 'index'])->name('assistant.index');
+        Route::post('assistant/prompt', [App\Http\Controllers\Fleet\FleetAssistantController::class, 'prompt'])->name('assistant.prompt');
+        Route::post('assistant/stream', [App\Http\Controllers\Fleet\FleetAssistantController::class, 'stream'])->name('assistant.stream');
         Route::resource('locations', App\Http\Controllers\Fleet\LocationController::class)->names('locations');
         Route::resource('cost-centers', App\Http\Controllers\Fleet\CostCenterController::class)->names('cost-centers');
         Route::resource('drivers', App\Http\Controllers\Fleet\DriverController::class)->names('drivers');

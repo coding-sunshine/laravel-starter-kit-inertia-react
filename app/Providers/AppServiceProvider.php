@@ -35,6 +35,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Ai\Contracts\ConversationStore;
 use LemonSqueezy\Laravel\Events\OrderCreated;
 use Machour\DataTable\Http\Controllers\DataTableExportController;
 use Pan\PanConfiguration;
@@ -67,6 +68,11 @@ final class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // Wrap the default store so conversation history never sends null content to OpenRouter.
+        $this->app->extend(ConversationStore::class, function (ConversationStore $store) {
+            return new \App\Ai\Storage\NormalizingConversationStore($store);
+        });
+
         $this->configurePan();
         $this->registerFleetMorphMap();
         $this->registerFleetModelBindings();

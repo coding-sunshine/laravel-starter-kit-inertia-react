@@ -6,6 +6,7 @@ import {
     AlertTriangle,
     Battery,
     Bell,
+    Bot,
     Calendar,
     ClipboardList,
     Clock,
@@ -126,7 +127,7 @@ function StatCard({
     count,
     href,
     icon: Icon,
-}: { title: string; count: number; href: string; icon: React.ComponentType<{ className?: string }> }) {
+}: { title: string; count: number | undefined; href: string; icon: React.ComponentType<{ className?: string }> }) {
     return (
         <Link href={href} className="block">
             <Card className="transition-colors hover:bg-muted/50">
@@ -136,7 +137,7 @@ function StatCard({
                     </div>
                     <div className="min-w-0 flex-1">
                         <p className="truncate font-medium">{title}</p>
-                        <p className="text-2xl font-semibold tabular-nums">{count}</p>
+                        <p className="text-2xl font-semibold tabular-nums">{count !== undefined ? count : '—'}</p>
                     </div>
                 </CardContent>
             </Card>
@@ -333,6 +334,7 @@ export default function FleetDashboard({ counts, recentWorkOrders, recentDefects
                 <section>
                     <h2 className="mb-3 text-lg font-medium">Alerts & reports</h2>
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        <StatCard title="Fleet Assistant" count={undefined} href="/fleet/assistant" icon={Bot} />
                         <StatCard title="Alerts" count={counts.alerts ?? 0} href="/fleet/alerts" icon={Bell} />
                         <StatCard title="Alert preferences" count={counts.alert_preferences ?? 0} href="/fleet/alert-preferences" icon={Bell} />
                         <StatCard title="Reports" count={counts.reports ?? 0} href="/fleet/reports" icon={FileText} />

@@ -2,104 +2,195 @@
 
 declare(strict_types=1);
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Fleet;
 
-use App\Ai\Agents\AssistantAgent;
-use App\Services\PrismService;
-use Closure;
+use App\Ai\Agents\FleetAssistant;
+use App\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Inertia\Inertia;
+use Inertia\Response;
 use Laravel\Ai\Streaming\Events\ReasoningDelta;
 use Laravel\Ai\Streaming\Events\ReasoningStart;
 use Laravel\Ai\Streaming\Events\StreamEnd;
 use Laravel\Ai\Streaming\Events\StreamStart;
 use Laravel\Ai\Streaming\Events\TextDelta;
-use Symfony\Component\HttpFoundation\Response;
+use Laravel\Ai\Streaming\Events\TextEnd;
+use Laravel\Ai\Streaming\Events\TextStart;
+use Laravel\Ai\Exceptions\AiException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
 
-use function array_reverse;
-use function is_array;
-
-final class ChatController
+final class FleetAssistantController extends Controller
 {
+    private const CONVERSATION_TITLE = 'Fleet Assistant';
+
+    public function index(Request $request): Response
+    {
+        $user = $request->user();
+        $conversations = [];
+        $initialMessages = [];
+        $conversationId = null;
+
+        if ($user !== null) {
+            $conversations = DB::table('agent_conversations')
+                ->where('user_id', $user->id)
+                ->where('title', self::CONVERSATION_TITLE)
+                ->orderByDesc('updated_at')
+                ->limit(20)
+                ->get(['id', 'title', 'updated_at'])
+                ->map(fn ($row): array => [
+                    'id' => $row->id,
+                    'title' => $row->title,
+                    'updated_at' => $row->updated_at,
+                ])
+                ->all();
+
+            $requestedId = $request->query('conversation_id');
+            if (is_string($requestedId) && $requestedId !== '') {
+                $conv = DB::table('agent_conversations')
+                    ->where('id', $requestedId)
+                    ->where('user_id', $user->id)
+                    ->where('title', self::CONVERSATION_TITLE)
+                    ->first();
+                if ($conv !== null) {
+                    $conversationId = $conv->id;
+                    $initialMessages = DB::table('agent_conversation_messages')
+                        ->where('conversation_id', $conversationId)
+                        ->orderBy('created_at')
+                        ->get(['id', 'role', 'content'])
+                        ->map(fn ($m): array => [
+                            'id' => $m->id,
+                            'role' => $m->role,
+                            'content' => (string) ($m->content ?? ''),
+                        ])
+                        ->values()
+                        ->all();
+                }
+            }
+        }
+
+        return Inertia::render('Fleet/Assistant/Index', [
+            'conversations' => $conversations,
+            'initial_messages' => $initialMessages,
+            'conversation_id' => $conversationId,
+        ]);
+    }
+
     /**
-     * Stream chat completion as NDJSON (TanStack AG-UI protocol) for use with fetchHttpStream.
-     * Accepts optional conversation_id to continue a conversation; creates one when absent.
-     * Messages may have either top-level "content" (string) or "parts" (TanStack UIMessage format).
+     * Send a message to the Fleet Assistant and return the reply.
      */
-    public function __invoke(Request $request): Response|StreamedResponse
+    public function prompt(Request $request): JsonResponse
     {
         $request->validate([
-            'messages' => ['required', 'array'],
-            'messages.*.role' => ['required', 'string', 'in:user,assistant,system'],
-            'conversation_id' => ['nullable', 'string', 'uuid', function (string $attr, string $value, Closure $fail) use ($request): void {
-                $user = $request->user();
-                if ($user === null) {
-                    $fail('Unauthenticated.');
-
-                    return;
-                }
-                $exists = DB::table('agent_conversations')
-                    ->where('id', $value)
-                    ->where('user_id', $user->id)
-                    ->exists();
-                if (! $exists) {
-                    $fail('The selected conversation is invalid.');
-                }
-            }],
+            'message' => ['required', 'string', 'max:16000'],
+            'conversation_id' => ['nullable', 'string', 'uuid'],
         ]);
 
         $user = $request->user();
-        abort_if($user === null, 401);
-
-        /** @var array<int, array{role?: string, content?: mixed, parts?: array<int, array{type?: string, content?: string}>}> $messages */
-        $messages = $request->input('messages', []);
-        $lastUser = $this->getMessageContent(array_reverse($messages), 'user');
-        $prompt = $lastUser ?? '';
-
-        if ($prompt === '') {
-            return response()->json([
-                'message' => 'The messages.0.content field is required.',
-                'errors' => ['messages' => ['The last user message must have content or text parts.']],
-            ], 422);
+        if ($user === null) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
         }
 
-        $defaultProvider = config('ai.default', 'openrouter');
-        $providerKey = config("ai.providers.{$defaultProvider}.key");
-        if (empty($providerKey)) {
-            $envKey = mb_strtoupper(str_replace('-', '_', (string) $defaultProvider)).'_API_KEY';
-
-            return response()->json([
-                'message' => 'AI provider is not configured. Set '.$envKey.' in your .env.',
-            ], 503);
+        $organizationId = \App\Services\TenantContext::id();
+        if ($organizationId === null) {
+            return response()->json(['message' => 'No organization selected. Switch to an organization first.'], 403);
         }
 
-        $conversationIdInput = $request->input('conversation_id');
+        $conversationId = $request->input('conversation_id');
         $newConversationId = null;
-        $conversationId = is_string($conversationIdInput) && $conversationIdInput !== '' ? $conversationIdInput : null;
 
-        if ($conversationId === null) {
+        if ($conversationId === null || $conversationId === '') {
             $newConversationId = (string) Str::uuid();
             DB::table('agent_conversations')->insert([
                 'id' => $newConversationId,
                 'user_id' => $user->id,
-                'title' => 'New chat',
+                'title' => 'Fleet Assistant',
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
             $conversationId = $newConversationId;
+        } else {
+            $exists = DB::table('agent_conversations')
+                ->where('id', $conversationId)
+                ->where('user_id', $user->id)
+                ->exists();
+            if (! $exists) {
+                return response()->json(['message' => 'Invalid conversation.'], 422);
+            }
         }
 
-        $agent = AssistantAgent::make(['user_id' => $user->id])
-            ->continue($conversationId, $user);
+        $agent = FleetAssistant::make($organizationId, $user->id)->continue($conversationId, $user);
 
         try {
-            $stream = $agent->stream($prompt);
+            $response = $agent->prompt($request->input('message'));
         } catch (Throwable $e) {
             return response()->json([
-                'message' => 'AI request failed: '.$e->getMessage(),
+                'message' => 'AI request failed.',
+                'error' => $e->getMessage(),
+            ], 502);
+        }
+
+        return response()->json([
+            'reply' => $response->text,
+            'conversation_id' => $conversationId,
+            'new_conversation_id' => $newConversationId,
+        ]);
+    }
+
+    /**
+     * Stream a reply from the Fleet Assistant (NDJSON, same protocol as /api/chat).
+     */
+    public function stream(Request $request): JsonResponse|StreamedResponse
+    {
+        $request->validate([
+            'message' => ['required', 'string', 'max:16000'],
+            'conversation_id' => ['nullable', 'string', 'uuid'],
+        ]);
+
+        $user = $request->user();
+        if ($user === null) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
+        }
+
+        $organizationId = \App\Services\TenantContext::id();
+        if ($organizationId === null) {
+            return response()->json(['message' => 'No organization selected. Switch to an organization first.'], 403);
+        }
+
+        $conversationId = $request->input('conversation_id');
+        $newConversationId = null;
+
+        if ($conversationId === null || $conversationId === '') {
+            $newConversationId = (string) Str::uuid();
+            DB::table('agent_conversations')->insert([
+                'id' => $newConversationId,
+                'user_id' => $user->id,
+                'title' => self::CONVERSATION_TITLE,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+            $conversationId = $newConversationId;
+        } else {
+            $exists = DB::table('agent_conversations')
+                ->where('id', $conversationId)
+                ->where('user_id', $user->id)
+                ->exists();
+            if (! $exists) {
+                return response()->json(['message' => 'Invalid conversation.'], 422);
+            }
+        }
+
+        $agent = FleetAssistant::make($organizationId, $user->id)->continue($conversationId, $user);
+
+        try {
+            $stream = $agent->stream($request->input('message'));
+        } catch (Throwable $e) {
+            return response()->json([
+                'message' => 'AI request failed.',
+                'error' => $e->getMessage(),
             ], 502);
         }
 
@@ -108,7 +199,7 @@ final class ChatController
         $contentAccumulator = '';
 
         return response()->stream(
-            function () use ($stream, $newConversationId, $prompt, &$runId, &$messageId, &$contentAccumulator): void {
+            function () use ($stream, $newConversationId, &$runId, &$messageId, &$contentAccumulator): void {
                 if (ob_get_level() !== 0) {
                     ob_end_clean();
                 }
@@ -138,7 +229,23 @@ final class ChatController
                                 ob_flush();
                             }
                             flush();
+                            continue;
+                        }
 
+                        if ($event instanceof TextStart) {
+                            if ($messageId === null) {
+                                $messageId = $runId ?? $event->messageId;
+                                echo json_encode([
+                                    'type' => 'TEXT_MESSAGE_START',
+                                    'timestamp' => $ts,
+                                    'messageId' => $messageId,
+                                    'role' => 'assistant',
+                                ])."\n";
+                                if (ob_get_level() > 0) {
+                                    ob_flush();
+                                }
+                                flush();
+                            }
                             continue;
                         }
 
@@ -156,7 +263,6 @@ final class ChatController
                                 }
                                 flush();
                             }
-
                             continue;
                         }
 
@@ -186,7 +292,6 @@ final class ChatController
                                 ob_flush();
                             }
                             flush();
-
                             continue;
                         }
 
@@ -216,7 +321,19 @@ final class ChatController
                                 ob_flush();
                             }
                             flush();
+                            continue;
+                        }
 
+                        if ($event instanceof TextEnd) {
+                            echo json_encode([
+                                'type' => 'TEXT_MESSAGE_END',
+                                'timestamp' => $ts,
+                                'messageId' => $messageId ?? $event->messageId,
+                            ])."\n";
+                            if (ob_get_level() > 0) {
+                                ob_flush();
+                            }
+                            flush();
                             continue;
                         }
 
@@ -249,92 +366,31 @@ final class ChatController
                             flush();
                         }
                     }
-
-                    // Generate AI title for new conversations after stream completes
-                    if ($newConversationId !== null && $contentAccumulator !== '') {
-                        try {
-                            $titlePrompt = 'Generate a concise 3-5 word title for this conversation. '
-                                ."Reply with ONLY the title, no quotes or punctuation at the end.\n\n"
-                                ."User: {$prompt}\n"
-                                .'Assistant: '.Str::limit($contentAccumulator, 500);
-
-                            $generatedTitle = Str::limit(
-                                mb_trim(resolve(PrismService::class)->generate($titlePrompt)->text),
-                                100,
-                            );
-
-                            if ($generatedTitle !== '') {
-                                DB::table('agent_conversations')
-                                    ->where('id', $newConversationId)
-                                    ->update(['title' => $generatedTitle, 'updated_at' => now()]);
-
-                                $ts = (int) (microtime(true) * 1000);
-                                echo json_encode([
-                                    'type' => 'CONVERSATION_TITLE_UPDATED',
-                                    'timestamp' => $ts,
-                                    'conversationId' => $newConversationId,
-                                    'title' => $generatedTitle,
-                                ])."\n";
-                                if (ob_get_level() > 0) {
-                                    ob_flush();
-                                }
-                                flush();
-                            }
-                        } catch (Throwable) {
-                            // Silent fail — "New chat" title remains
-                        }
-                    }
                 } catch (Throwable $e) {
-                    $ts = (int) (microtime(true) * 1000);
+                    $message = $e->getMessage();
+                    if ($e instanceof AiException && str_contains($message, '401')) {
+                        $message = 'OpenRouter API key invalid or missing. Set OPENROUTER_API_KEY in .env and run php artisan config:clear.';
+                    }
                     echo json_encode([
-                        'type' => 'RUN_ERROR',
-                        'timestamp' => $ts,
-                        'runId' => $runId,
-                        'error' => ['message' => $e->getMessage(), 'code' => (string) $e->getCode()],
+                        'type' => 'ERROR',
+                        'message' => $message,
                     ])."\n";
                     if (ob_get_level() > 0) {
                         ob_flush();
                     }
                     flush();
+                } finally {
+                    if (ob_get_level() > 0) {
+                        ob_end_flush();
+                    }
                 }
             },
             200,
             [
                 'Content-Type' => 'application/x-ndjson',
-                'Cache-Control' => 'no-cache, no-transform',
+                'Cache-Control' => 'no-cache',
                 'X-Accel-Buffering' => 'no',
             ],
         );
-    }
-
-    /**
-     * Extract text content from a message that may have "content" (string) or "parts" (TanStack UIMessage).
-     *
-     * @param  array<int, array{role?: string, content?: mixed, parts?: array<int, array{type?: string, content?: string}>}>  $messages
-     */
-    private function getMessageContent(array $messages, string $role): ?string
-    {
-        foreach ($messages as $m) {
-            if (($m['role'] ?? '') !== $role) {
-                continue;
-            }
-            if (isset($m['content']) && \is_string($m['content'])) {
-                return $m['content'];
-            }
-            $parts = $m['parts'] ?? [];
-            if (is_array($parts)) {
-                $text = [];
-                foreach ($parts as $part) {
-                    if (($part['type'] ?? '') === 'text' && isset($part['content']) && \is_string($part['content'])) {
-                        $text[] = $part['content'];
-                    }
-                }
-                if ($text !== []) {
-                    return implode('', $text);
-                }
-            }
-        }
-
-        return null;
     }
 }

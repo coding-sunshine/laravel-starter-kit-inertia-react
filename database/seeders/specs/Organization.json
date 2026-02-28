@@ -93,6 +93,14 @@
             "type": "belongsTo",
             "model": "Owner"
         },
+        "parent": {
+            "type": "belongsTo",
+            "model": "Parent"
+        },
+        "children": {
+            "type": "hasMany",
+            "model": "Child"
+        },
         "users": {
             "type": "belongsToMany",
             "model": "User"

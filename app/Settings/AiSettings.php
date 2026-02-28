@@ -8,15 +8,15 @@ use Spatie\LaravelSettings\Settings;
 
 final class AiSettings extends Settings
 {
-    public string $default_provider = 'openai';
+    public string $default_provider = 'openrouter';
 
-    public string $default_for_images = 'gemini';
+    public string $default_for_images = 'openrouter';
 
-    public string $default_for_audio = 'openai';
+    public string $default_for_audio = 'openrouter';
 
-    public string $default_for_transcription = 'openai';
+    public string $default_for_transcription = 'openrouter';
 
-    public string $default_for_embeddings = 'openai';
+    public string $default_for_embeddings = 'openrouter';
 
     public string $default_for_reranking = 'cohere';
 

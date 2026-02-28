@@ -18,11 +18,12 @@ return [
     |
     */
 
-    'default' => 'openai',
-    'default_for_images' => 'gemini',
-    'default_for_audio' => 'openai',
-    'default_for_transcription' => 'openai',
-    'default_for_embeddings' => 'openai',
+    // All AI traffic via OpenRouter (OpenAI and other models). See AI-PROVIDERS.md.
+    'default' => 'openrouter',
+    'default_for_images' => 'openrouter',
+    'default_for_audio' => 'openrouter',
+    'default_for_transcription' => 'openrouter',
+    'default_for_embeddings' => 'openrouter',
     'default_for_reranking' => 'cohere',
 
     /*
@@ -87,15 +88,18 @@ return [
 
         'openai' => [
             'driver' => 'openai',
-            'key' => null,
+            'key' => env('OPENAI_API_KEY'),
         ],
 
         'openrouter' => [
             'driver' => 'openrouter',
-            'key' => null,
+            'key' => trim((string) env('OPENROUTER_API_KEY', '')),
             'models' => [
                 'text' => [
-                    'default' => 'anthropic/claude-sonnet-4.5',
+                    'default' => 'openai/gpt-4o-mini',
+                ],
+                'embeddings' => [
+                    'default' => 'openai/text-embedding-3-small',
                 ],
             ],
         ],

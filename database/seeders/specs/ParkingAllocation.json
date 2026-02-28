@@ -1,0 +1,92 @@
+{
+    "model": "ParkingAllocation",
+    "table": "parking_allocations",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "vehicle_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "location_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "allocated_from": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "allocated_to": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "spot_identifier": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "cost": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "vehicle": {
+            "type": "belongsTo",
+            "model": "Vehicle"
+        },
+        "location": {
+            "type": "belongsTo",
+            "model": "Location"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

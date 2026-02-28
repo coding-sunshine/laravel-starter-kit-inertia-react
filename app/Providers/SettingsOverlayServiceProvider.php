@@ -377,12 +377,16 @@ final class SettingsOverlayServiceProvider extends ServiceProvider
             }
         }
 
-        // Cross-map PrismSettings API keys to Laravel AI SDK config
+        // Cross-map PrismSettings API keys to Laravel AI SDK config.
+        // Only overlay when the setting has a non-empty value so .env/config is used when unset in UI.
         try {
             $prism = resolve(PrismSettings::class);
 
             foreach (self::AI_KEY_CROSS_MAP as $property => $configKey) {
-                config()->set($configKey, $prism->{$property});
+                $value = $prism->{$property};
+                if ($value !== null && trim((string) $value) !== '') {
+                    config()->set($configKey, trim((string) $value));
+                }
             }
         } catch (Throwable) {
             // PrismSettings not available yet — skip silently.

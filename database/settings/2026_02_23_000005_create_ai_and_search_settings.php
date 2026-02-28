@@ -25,11 +25,11 @@ return new class extends SettingsMigration
         $this->migrator->addEncrypted('prism.voyageai_api_key', config('prism.providers.voyageai.api_key'));
 
         // AI
-        $this->migrator->add('ai.default_provider', config('ai.default', 'openai'));
-        $this->migrator->add('ai.default_for_images', config('ai.default_for_images', 'gemini'));
-        $this->migrator->add('ai.default_for_audio', config('ai.default_for_audio', 'openai'));
-        $this->migrator->add('ai.default_for_transcription', config('ai.default_for_transcription', 'openai'));
-        $this->migrator->add('ai.default_for_embeddings', config('ai.default_for_embeddings', 'openai'));
+        $this->migrator->add('ai.default_provider', config('ai.default', 'openrouter'));
+        $this->migrator->add('ai.default_for_images', config('ai.default_for_images', 'openrouter'));
+        $this->migrator->add('ai.default_for_audio', config('ai.default_for_audio', 'openrouter'));
+        $this->migrator->add('ai.default_for_transcription', config('ai.default_for_transcription', 'openrouter'));
+        $this->migrator->add('ai.default_for_embeddings', config('ai.default_for_embeddings', 'openrouter'));
         $this->migrator->add('ai.default_for_reranking', config('ai.default_for_reranking', 'cohere'));
         $this->migrator->add('ai.chat_model', config('ai.providers.openrouter.models.text.default'));
 

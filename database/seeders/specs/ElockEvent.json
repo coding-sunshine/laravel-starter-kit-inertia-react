@@ -1,24 +1,44 @@
 {
-    "model": "DocumentChunk",
-    "table": "document_chunks",
+    "model": "ElockEvent",
+    "table": "e_lock_events",
     "fields": {
         "id": {
             "type": "bigint",
             "nullable": true,
             "default": null
         },
-        "chunkable_type": {
-            "type": "string",
-            "nullable": true,
-            "default": null
-        },
-        "chunkable_id": {
+        "organization_id": {
             "type": "bigint",
             "nullable": true,
             "default": null
         },
-        "content": {
-            "type": "text",
+        "vehicle_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "event_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "event_timestamp": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "lat": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "lng": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "device_id": {
+            "type": "string",
             "nullable": true,
             "default": null
         },
@@ -27,8 +47,8 @@
             "nullable": true,
             "default": null
         },
-        "embedding": {
-            "type": "json",
+        "alert_sent": {
+            "type": "boolean",
             "nullable": true,
             "default": null
         },
@@ -41,14 +61,13 @@
             "type": "timestamp",
             "nullable": true,
             "default": null
-        },
-        "organization_id": {
-            "type": "bigint",
-            "nullable": true,
-            "default": null
         }
     },
     "relationships": {
+        "vehicle": {
+            "type": "belongsTo",
+            "model": "Vehicle"
+        },
         "organization": {
             "type": "belongsTo",
             "model": "Organization"

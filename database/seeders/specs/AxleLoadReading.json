@@ -1,33 +1,53 @@
 {
-    "model": "DocumentChunk",
-    "table": "document_chunks",
+    "model": "AxleLoadReading",
+    "table": "axle_load_readings",
     "fields": {
         "id": {
             "type": "bigint",
             "nullable": true,
             "default": null
         },
-        "chunkable_type": {
-            "type": "string",
-            "nullable": true,
-            "default": null
-        },
-        "chunkable_id": {
+        "organization_id": {
             "type": "bigint",
             "nullable": true,
             "default": null
         },
-        "content": {
-            "type": "text",
+        "vehicle_id": {
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
-        "metadata": {
+        "trip_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "recorded_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "axle_weights_kg": {
             "type": "json",
             "nullable": true,
             "default": null
         },
-        "embedding": {
+        "total_weight_kg": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "overload_flag": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "legal_limit_kg": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "metadata": {
             "type": "json",
             "nullable": true,
             "default": null
@@ -41,14 +61,17 @@
             "type": "timestamp",
             "nullable": true,
             "default": null
-        },
-        "organization_id": {
-            "type": "bigint",
-            "nullable": true,
-            "default": null
         }
     },
     "relationships": {
+        "vehicle": {
+            "type": "belongsTo",
+            "model": "Vehicle"
+        },
+        "trip": {
+            "type": "belongsTo",
+            "model": "Trip"
+        },
         "organization": {
             "type": "belongsTo",
             "model": "Organization"

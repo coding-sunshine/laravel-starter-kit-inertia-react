@@ -1,0 +1,93 @@
+{
+    "model": "DataMigrationRun",
+    "table": "data_migration_runs",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "triggered_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "batch_id": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "migration_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "total_records": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "processed_records": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "failed_records": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "started_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "completed_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "error_summary": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "error_log": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        },
+        "triggeredBy": {
+            "type": "belongsTo",
+            "model": "TriggeredBy"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}
