@@ -225,6 +225,12 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         Route::resource('fuel-transactions', App\Http\Controllers\Fleet\FuelTransactionController::class)->names('fuel-transactions');
         Route::resource('service-schedules', App\Http\Controllers\Fleet\ServiceScheduleController::class)->names('service-schedules');
         Route::resource('work-orders', App\Http\Controllers\Fleet\WorkOrderController::class)->names('work-orders');
+        Route::resource('work-orders.work-order-lines', App\Http\Controllers\Fleet\WorkOrderLineController::class)->only(['index', 'create', 'store', 'edit', 'update', 'destroy'])->names('work-orders.work-order-lines')->scoped();
+        Route::resource('work-orders.work-order-parts', App\Http\Controllers\Fleet\WorkOrderPartController::class)->only(['index', 'create', 'store', 'edit', 'update', 'destroy'])->names('work-orders.work-order-parts')->scoped();
+        Route::resource('fines', App\Http\Controllers\Fleet\FineController::class)->names('fines');
+        Route::resource('vehicle-leases', App\Http\Controllers\Fleet\VehicleLeaseController::class)->names('vehicle-leases');
+        Route::resource('vehicle-recalls', App\Http\Controllers\Fleet\VehicleRecallController::class)->names('vehicle-recalls');
+        Route::resource('warranty-claims', App\Http\Controllers\Fleet\WarrantyClaimController::class)->names('warranty-claims');
         Route::resource('defects', App\Http\Controllers\Fleet\DefectController::class)->names('defects');
         Route::resource('compliance-items', App\Http\Controllers\Fleet\ComplianceItemController::class)->names('compliance-items');
         Route::resource('driver-working-time', App\Http\Controllers\Fleet\DriverWorkingTimeController::class)->names('driver-working-time');

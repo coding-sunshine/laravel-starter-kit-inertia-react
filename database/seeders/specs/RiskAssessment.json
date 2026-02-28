@@ -1,0 +1,127 @@
+{
+    "model": "RiskAssessment",
+    "table": "risk_assessments",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "subject_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "subject_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "title": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "reference_number": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "description": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "hazards": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "control_measures": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "risk_matrix": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "review_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "approved_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "approved_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "createdByUser": {
+            "type": "belongsTo",
+            "model": "CreatedByUser"
+        },
+        "approvedBy": {
+            "type": "belongsTo",
+            "model": "ApprovedBy"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

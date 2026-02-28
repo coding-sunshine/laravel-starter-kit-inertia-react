@@ -1,0 +1,69 @@
+{
+    "model": "VehicleCheckItem",
+    "table": "vehicle_check_items",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "vehicle_check_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "item_index": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "label": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "result_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "result": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "value_text": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "photo_media_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "notes": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "vehicleCheck": {
+            "type": "belongsTo",
+            "model": "VehicleCheck"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

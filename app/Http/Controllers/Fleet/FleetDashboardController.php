@@ -64,6 +64,10 @@ use App\Models\Fleet\TrainingEnrollment;
 use App\Models\Fleet\TrainingSession;
 use App\Models\Fleet\Trip;
 use App\Models\Fleet\Vehicle;
+use App\Models\Fleet\Fine;
+use App\Models\Fleet\VehicleLease;
+use App\Models\Fleet\VehicleRecall;
+use App\Models\Fleet\WarrantyClaim;
 use App\Models\Fleet\WorkOrder;
 use App\Models\Fleet\WorkflowDefinition;
 use App\Models\Fleet\WorkflowExecution;
@@ -142,6 +146,10 @@ final class FleetDashboardController extends Controller
             'safety_observations' => SafetyObservation::count(),
             'toolbox_talks' => ToolboxTalk::count(),
             'todays_vehicle_checks' => VehicleCheck::query()->whereDate('check_date', now()->toDateString())->count(),
+            'fines' => Fine::count(),
+            'vehicle_leases' => VehicleLease::count(),
+            'vehicle_recalls' => VehicleRecall::count(),
+            'warranty_claims' => WarrantyClaim::count(),
         ];
 
         $recentWorkOrders = WorkOrder::query()->with('vehicle')->orderByDesc('created_at')->limit(5)->get();

@@ -134,4 +134,28 @@ class WorkOrder extends Model
     {
         return $this->hasMany(Defect::class, 'work_order_id');
     }
+
+    /**
+     * @return HasMany<WorkOrderLine, $this>
+     */
+    public function workOrderLines(): HasMany
+    {
+        return $this->hasMany(WorkOrderLine::class, 'work_order_id')->orderBy('sort_order');
+    }
+
+    /**
+     * @return HasMany<WorkOrderPart, $this>
+     */
+    public function workOrderParts(): HasMany
+    {
+        return $this->hasMany(WorkOrderPart::class, 'work_order_id');
+    }
+
+    /**
+     * @return HasMany<WarrantyClaim, $this>
+     */
+    public function warrantyClaims(): HasMany
+    {
+        return $this->hasMany(WarrantyClaim::class, 'work_order_id');
+    }
 }

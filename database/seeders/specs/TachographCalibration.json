@@ -1,0 +1,92 @@
+{
+    "model": "TachographCalibration",
+    "table": "tachograph_calibrations",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "vehicle_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "telematics_device_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "calibration_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "due_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "certificate_reference": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "vehicle": {
+            "type": "belongsTo",
+            "model": "Vehicle"
+        },
+        "telematicsDevice": {
+            "type": "belongsTo",
+            "model": "TelematicsDevice"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

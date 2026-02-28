@@ -1,0 +1,125 @@
+{
+    "model": "PermitToWork",
+    "table": "permit_to_work",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "issued_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "issued_to": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "location_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "vehicle_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "permit_number": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "title": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "description": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "valid_from": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "valid_to": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "conditions": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "issuedBy": {
+            "type": "belongsTo",
+            "model": "IssuedBy"
+        },
+        "issuedTo": {
+            "type": "belongsTo",
+            "model": "IssuedTo"
+        },
+        "location": {
+            "type": "belongsTo",
+            "model": "Location"
+        },
+        "vehicle": {
+            "type": "belongsTo",
+            "model": "Vehicle"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

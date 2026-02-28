@@ -1,0 +1,92 @@
+{
+    "model": "VehicleDisc",
+    "table": "vehicle_discs",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "vehicle_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "operator_licence_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "disc_number": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "valid_from": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "valid_to": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "vehicle": {
+            "type": "belongsTo",
+            "model": "Vehicle"
+        },
+        "operatorLicence": {
+            "type": "belongsTo",
+            "model": "OperatorLicence"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

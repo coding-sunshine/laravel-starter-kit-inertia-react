@@ -99,6 +99,10 @@ interface Counts {
     safety_observations?: number;
     toolbox_talks?: number;
     todays_vehicle_checks?: number;
+    fines?: number;
+    vehicle_leases?: number;
+    vehicle_recalls?: number;
+    warranty_claims?: number;
 }
 interface WorkOrderRow { id: number; work_order_number: string; title: string; status: string; vehicle?: { id: number; registration: string }; }
 interface DefectRow { id: number; defect_number: string; title: string; severity: string; vehicle?: { id: number; registration: string }; }
@@ -179,6 +183,16 @@ export default function FleetDashboard({ counts, recentWorkOrders, recentDefects
                         <StatCard title="Service schedules" count={counts.service_schedules} href="/fleet/service-schedules" icon={Calendar} />
                         <StatCard title="Work orders" count={counts.work_orders} href="/fleet/work-orders" icon={ClipboardList} />
                         <StatCard title="Defects" count={counts.defects} href="/fleet/defects" icon={AlertTriangle} />
+                    </div>
+                </section>
+
+                <section>
+                    <h2 className="mb-3 text-lg font-medium">Fines, lease & warranty</h2>
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        <StatCard title="Fines" count={counts.fines ?? 0} href="/fleet/fines" icon={AlertTriangle} />
+                        <StatCard title="Vehicle leases" count={counts.vehicle_leases ?? 0} href="/fleet/vehicle-leases" icon={FileText} />
+                        <StatCard title="Vehicle recalls" count={counts.vehicle_recalls ?? 0} href="/fleet/vehicle-recalls" icon={AlertTriangle} />
+                        <StatCard title="Warranty claims" count={counts.warranty_claims ?? 0} href="/fleet/warranty-claims" icon={FileCheck} />
                     </div>
                 </section>
 

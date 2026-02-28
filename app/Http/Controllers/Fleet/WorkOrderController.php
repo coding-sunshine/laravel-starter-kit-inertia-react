@@ -59,7 +59,7 @@ final class WorkOrderController extends Controller
     public function show(WorkOrder $work_order): Response
     {
         $this->authorize('view', $work_order);
-        $work_order->load(['vehicle', 'assignedGarage', 'defects']);
+        $work_order->load(['vehicle', 'assignedGarage', 'defects', 'workOrderLines.partsInventory', 'workOrderParts.partsInventory', 'warrantyClaims']);
 
         return Inertia::render('Fleet/WorkOrders/Show', ['workOrder' => $work_order]);
     }

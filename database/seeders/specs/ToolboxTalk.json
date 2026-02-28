@@ -1,0 +1,108 @@
+{
+    "model": "ToolboxTalk",
+    "table": "toolbox_talks",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "presenter_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "topic": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "content": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "scheduled_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "scheduled_time": {
+            "type": "time",
+            "nullable": true,
+            "default": null
+        },
+        "location": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "attendee_driver_ids": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "attendee_user_ids": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "attendance_count": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "presenter": {
+            "type": "belongsTo",
+            "model": "Presenter"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

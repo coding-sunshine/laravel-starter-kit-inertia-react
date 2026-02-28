@@ -1,0 +1,77 @@
+{
+    "model": "SafetyPolicyAcknowledgment",
+    "table": "safety_policy_acknowledgments",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "user_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "driver_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "policy_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "policy_reference": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "policy_version": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "acknowledged_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "ip_address": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "user": {
+            "type": "belongsTo",
+            "model": "User"
+        },
+        "driver": {
+            "type": "belongsTo",
+            "model": "Driver"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

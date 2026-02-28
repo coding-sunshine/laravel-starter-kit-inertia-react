@@ -1,0 +1,113 @@
+{
+    "model": "VehicleCheck",
+    "table": "vehicle_checks",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "vehicle_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "vehicle_check_template_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "performed_by_driver_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "performed_by_user_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "defect_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "check_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "vehicle": {
+            "type": "belongsTo",
+            "model": "Vehicle"
+        },
+        "vehicleCheckTemplate": {
+            "type": "belongsTo",
+            "model": "VehicleCheckTemplate"
+        },
+        "performedByDriver": {
+            "type": "belongsTo",
+            "model": "PerformedByDriver"
+        },
+        "performedByUser": {
+            "type": "belongsTo",
+            "model": "PerformedByUser"
+        },
+        "defect": {
+            "type": "belongsTo",
+            "model": "Defect"
+        },
+        "vehicleCheckItems": {
+            "type": "hasMany",
+            "model": "VehicleCheckItem"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

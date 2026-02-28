@@ -217,6 +217,10 @@ final class AppServiceProvider extends ServiceProvider
             'ppe_assignment' => \App\Models\Fleet\PpeAssignment::class,
             'safety_observation' => \App\Models\Fleet\SafetyObservation::class,
             'toolbox_talk' => \App\Models\Fleet\ToolboxTalk::class,
+            'fine' => \App\Models\Fleet\Fine::class,
+            'vehicle_lease' => \App\Models\Fleet\VehicleLease::class,
+            'vehicle_recall' => \App\Models\Fleet\VehicleRecall::class,
+            'warranty_claim' => \App\Models\Fleet\WarrantyClaim::class,
         ];
         foreach ($bindings as $key => $modelClass) {
             Route::bind($key, function (string $value) use ($modelClass, $scope) {
