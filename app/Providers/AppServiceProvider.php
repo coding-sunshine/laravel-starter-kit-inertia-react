@@ -27,6 +27,7 @@ use App\Settings\SeoSettings;
 use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Database\Events\MigrationsEnded;
 use Illuminate\Queue\Events\JobFailed;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
@@ -67,6 +68,7 @@ final class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configurePan();
+        $this->registerFleetMorphMap();
         $this->registerFleetModelBindings();
 
         $this->registerSeoViewComposer();
@@ -135,6 +137,17 @@ final class AppServiceProvider extends ServiceProvider
         return $model instanceof User;
     }
 
+    private function registerFleetMorphMap(): void
+    {
+        $existing = Relation::morphMap() ?: [];
+        Relation::morphMap(array_merge($existing, [
+            'vehicle' => \App\Models\Fleet\Vehicle::class,
+            'driver' => \App\Models\Fleet\Driver::class,
+            'organization' => \App\Models\Organization::class,
+            'trailer' => \App\Models\Fleet\Trailer::class,
+        ]));
+    }
+
     /**
      * Resolve fleet models by id without organization scope so policy returns 403 (not 404) when org mismatches.
      */
@@ -152,6 +165,19 @@ final class AppServiceProvider extends ServiceProvider
             'fuel_station' => \App\Models\Fleet\FuelStation::class,
             'ev_charging_station' => \App\Models\Fleet\EvChargingStation::class,
             'operator_licence' => \App\Models\Fleet\OperatorLicence::class,
+            'route' => \App\Models\Fleet\Route::class,
+            'trip' => \App\Models\Fleet\Trip::class,
+            'behavior_event' => \App\Models\Fleet\BehaviorEvent::class,
+            'telematics_device' => \App\Models\Fleet\TelematicsDevice::class,
+            'geofence_event' => \App\Models\Fleet\GeofenceEvent::class,
+            'fuel_card' => \App\Models\Fleet\FuelCard::class,
+            'fuel_transaction' => \App\Models\Fleet\FuelTransaction::class,
+            'service_schedule' => \App\Models\Fleet\ServiceSchedule::class,
+            'work_order' => \App\Models\Fleet\WorkOrder::class,
+            'defect' => \App\Models\Fleet\Defect::class,
+            'compliance_item' => \App\Models\Fleet\ComplianceItem::class,
+            'driver_working_time' => \App\Models\Fleet\DriverWorkingTime::class,
+            'tachograph_download' => \App\Models\Fleet\TachographDownload::class,
         ];
         foreach ($bindings as $key => $modelClass) {
             Route::bind($key, function (string $value) use ($modelClass, $scope) {

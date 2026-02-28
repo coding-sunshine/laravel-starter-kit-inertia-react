@@ -63,7 +63,16 @@
             "default": null
         }
     },
-    "relationships": [],
+    "relationships": {
+        "vehicle": {
+            "type": "belongsTo",
+            "model": "Vehicle"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
     "value_hints": [],
     "scenarios": []
 }

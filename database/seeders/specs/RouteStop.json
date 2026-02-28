@@ -63,7 +63,16 @@
             "default": null
         }
     },
-    "relationships": [],
+    "relationships": {
+        "route": {
+            "type": "belongsTo",
+            "model": "Route"
+        },
+        "location": {
+            "type": "belongsTo",
+            "model": "Location"
+        }
+    },
     "value_hints": {
         "name": {
             "type": "name",

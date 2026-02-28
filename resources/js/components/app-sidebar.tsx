@@ -21,16 +21,26 @@ import organizations from '@/routes/organizations';
 import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import {
+    AlertTriangle,
     BookOpen,
     Building2,
+    ClipboardList,
+    Clock,
     CreditCard,
+    Cpu,
+    FileDown,
     FileText,
     Folder,
+    Fuel,
     LayoutGrid,
     LifeBuoy,
     Mail,
+    MapPin,
     Megaphone,
     MessageCircle,
+    Route,
+    ShieldCheck,
+    Truck,
     Users,
 } from 'lucide-react';
 import { useMemo } from 'react';
@@ -62,6 +72,13 @@ const mainNavItems: NavItem[] = [
         icon: Building2,
         tenancyRequired: true,
         dataPan: 'nav-organizations',
+    },
+    {
+        title: 'Fleet',
+        href: '/fleet',
+        icon: Truck,
+        tenancyRequired: true,
+        dataPan: 'nav-fleet',
     },
     {
         title: 'Pages',

@@ -201,6 +201,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     });
 
     Route::middleware('tenant')->prefix('fleet')->name('fleet.')->group(function (): void {
+        Route::get('/', [App\Http\Controllers\Fleet\FleetDashboardController::class, 'index'])->name('dashboard');
         Route::resource('locations', App\Http\Controllers\Fleet\LocationController::class)->names('locations');
         Route::resource('cost-centers', App\Http\Controllers\Fleet\CostCenterController::class)->names('cost-centers');
         Route::resource('drivers', App\Http\Controllers\Fleet\DriverController::class)->names('drivers');
@@ -214,6 +215,20 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         Route::resource('ev-charging-stations', App\Http\Controllers\Fleet\EvChargingStationController::class)->names('ev-charging-stations');
         Route::resource('operator-licences', App\Http\Controllers\Fleet\OperatorLicenceController::class)->names('operator-licences');
         Route::resource('driver-vehicle-assignments', App\Http\Controllers\Fleet\DriverVehicleAssignmentController::class)->only(['index', 'store', 'update', 'destroy'])->names('driver-vehicle-assignments');
+        Route::resource('routes', App\Http\Controllers\Fleet\RouteController::class)->names('routes');
+        Route::resource('routes.route-stops', App\Http\Controllers\Fleet\RouteStopController::class)->only(['store', 'update', 'destroy'])->names('routes.stops')->scoped();
+        Route::resource('trips', App\Http\Controllers\Fleet\TripController::class)->only(['index', 'show'])->names('trips');
+        Route::resource('behavior-events', App\Http\Controllers\Fleet\BehaviorEventController::class)->only(['index', 'show'])->names('behavior-events');
+        Route::resource('telematics-devices', App\Http\Controllers\Fleet\TelematicsDeviceController::class)->names('telematics-devices');
+        Route::resource('geofence-events', App\Http\Controllers\Fleet\GeofenceEventController::class)->only(['index'])->names('geofence-events');
+        Route::resource('fuel-cards', App\Http\Controllers\Fleet\FuelCardController::class)->names('fuel-cards');
+        Route::resource('fuel-transactions', App\Http\Controllers\Fleet\FuelTransactionController::class)->names('fuel-transactions');
+        Route::resource('service-schedules', App\Http\Controllers\Fleet\ServiceScheduleController::class)->names('service-schedules');
+        Route::resource('work-orders', App\Http\Controllers\Fleet\WorkOrderController::class)->names('work-orders');
+        Route::resource('defects', App\Http\Controllers\Fleet\DefectController::class)->names('defects');
+        Route::resource('compliance-items', App\Http\Controllers\Fleet\ComplianceItemController::class)->names('compliance-items');
+        Route::resource('driver-working-time', App\Http\Controllers\Fleet\DriverWorkingTimeController::class)->names('driver-working-time');
+        Route::resource('tachograph-downloads', App\Http\Controllers\Fleet\TachographDownloadController::class)->names('tachograph-downloads');
     });
 
     Route::middleware('tenant')->group(function (): void {

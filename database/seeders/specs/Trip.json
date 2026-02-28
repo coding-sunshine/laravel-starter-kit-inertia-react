@@ -88,7 +88,40 @@
             "default": null
         }
     },
-    "relationships": [],
+    "relationships": {
+        "vehicle": {
+            "type": "belongsTo",
+            "model": "Vehicle"
+        },
+        "driver": {
+            "type": "belongsTo",
+            "model": "Driver"
+        },
+        "route": {
+            "type": "belongsTo",
+            "model": "Route"
+        },
+        "startLocation": {
+            "type": "belongsTo",
+            "model": "StartLocation"
+        },
+        "endLocation": {
+            "type": "belongsTo",
+            "model": "EndLocation"
+        },
+        "waypoints": {
+            "type": "hasMany",
+            "model": "Waypoint"
+        },
+        "behaviorEvents": {
+            "type": "hasMany",
+            "model": "BehaviorEvent"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
     "value_hints": [],
     "scenarios": []
 }

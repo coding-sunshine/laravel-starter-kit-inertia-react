@@ -68,7 +68,12 @@
             "default": null
         }
     },
-    "relationships": [],
+    "relationships": {
+        "trip": {
+            "type": "belongsTo",
+            "model": "Trip"
+        }
+    },
     "value_hints": [],
     "scenarios": []
 }

@@ -1,28 +1,30 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Requests\Fleet;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class StoreRouteStopRequest extends FormRequest
+final class StoreRouteStopRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
-        return false;
+        return $this->user()?->can('create', \App\Models\Fleet\RouteStop::class) ?? false;
     }
 
     /**
-     * Get the validation rules that apply to the request.
-     *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         return [
-            //
+            'location_id' => ['nullable', 'integer', 'exists:locations,id'],
+            'name' => ['nullable', 'string', 'max:200'],
+            'sort_order' => ['nullable', 'integer', 'min:0'],
+            'planned_arrival_time' => ['nullable', 'date'],
+            'planned_departure_time' => ['nullable', 'date'],
+            'notes' => ['nullable', 'string'],
         ];
     }
 }

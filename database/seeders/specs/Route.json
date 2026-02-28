@@ -63,7 +63,28 @@
             "default": null
         }
     },
-    "relationships": [],
+    "relationships": {
+        "startLocation": {
+            "type": "belongsTo",
+            "model": "StartLocation"
+        },
+        "endLocation": {
+            "type": "belongsTo",
+            "model": "EndLocation"
+        },
+        "stops": {
+            "type": "hasMany",
+            "model": "Stop"
+        },
+        "trips": {
+            "type": "hasMany",
+            "model": "Trip"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
     "value_hints": {
         "name": {
             "type": "name",

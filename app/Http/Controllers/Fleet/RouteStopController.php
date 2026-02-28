@@ -1,65 +1,39 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Fleet;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use App\Http\Requests\Fleet\StoreRouteStopRequest;
+use App\Http\Requests\Fleet\UpdateRouteStopRequest;
+use App\Models\Fleet\Route;
+use App\Models\Fleet\RouteStop;
+use Illuminate\Http\RedirectResponse;
 
-class RouteStopController extends Controller
+final class RouteStopController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    public function store(StoreRouteStopRequest $request, Route $route): RedirectResponse
     {
-        //
+        $this->authorize('create', RouteStop::class);
+        $maxOrder = $route->stops()->max('sort_order') ?? 0;
+        $route->stops()->create(array_merge($request->validated(), [
+            'sort_order' => $request->input('sort_order', $maxOrder + 1),
+        ]));
+        return redirect()->route('fleet.routes.show', $route)->with('flash', ['status' => 'success', 'message' => 'Stop added.']);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
+    public function update(UpdateRouteStopRequest $request, Route $route, RouteStop $routeStop): RedirectResponse
     {
-        //
+        $this->authorize('update', $routeStop);
+        $routeStop->update($request->validated());
+        return redirect()->route('fleet.routes.show', $route)->with('flash', ['status' => 'success', 'message' => 'Stop updated.']);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
+    public function destroy(Route $route, RouteStop $routeStop): RedirectResponse
     {
-        //
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
+        $this->authorize('delete', $routeStop);
+        $routeStop->delete();
+        return redirect()->route('fleet.routes.show', $route)->with('flash', ['status' => 'success', 'message' => 'Stop removed.']);
     }
 }

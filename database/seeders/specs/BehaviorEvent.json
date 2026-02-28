@@ -73,7 +73,24 @@
             "default": null
         }
     },
-    "relationships": [],
+    "relationships": {
+        "vehicle": {
+            "type": "belongsTo",
+            "model": "Vehicle"
+        },
+        "driver": {
+            "type": "belongsTo",
+            "model": "Driver"
+        },
+        "trip": {
+            "type": "belongsTo",
+            "model": "Trip"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
     "value_hints": [],
     "scenarios": []
 }

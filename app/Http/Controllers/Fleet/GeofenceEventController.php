@@ -1,65 +1,35 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Fleet;
 
 use App\Http\Controllers\Controller;
+use App\Models\Fleet\GeofenceEvent;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Inertia\Response;
 
-class GeofenceEventController extends Controller
+final class GeofenceEventController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    public function index(Request $request): Response
     {
-        //
-    }
+        $this->authorize('viewAny', GeofenceEvent::class);
+        $events = GeofenceEvent::query()
+            ->with(['geofence', 'vehicle', 'driver'])
+            ->when($request->input('geofence_id'), fn ($q, $id) => $q->where('geofence_id', $id))
+            ->when($request->input('event_type'), fn ($q, $type) => $q->where('event_type', $type))
+            ->when($request->input('from_date'), fn ($q, $date) => $q->whereDate('occurred_at', '>=', $date))
+            ->when($request->input('to_date'), fn ($q, $date) => $q->whereDate('occurred_at', '<=', $date))
+            ->orderByDesc('occurred_at')
+            ->paginate(15)
+            ->withQueryString();
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
+        return Inertia::render('Fleet/GeofenceEvents/Index', [
+            'geofenceEvents' => $events,
+            'filters' => $request->only(['geofence_id', 'event_type', 'from_date', 'to_date']),
+            'geofences' => \App\Models\Fleet\Geofence::query()->orderBy('name')->get(['id', 'name']),
+            'eventTypes' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\GeofenceEventType::cases()),
+        ]);
     }
 }
