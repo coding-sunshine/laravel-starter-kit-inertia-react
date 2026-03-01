@@ -221,6 +221,8 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         Route::resource('operator-licences', App\Http\Controllers\Fleet\OperatorLicenceController::class)->names('operator-licences');
         Route::resource('driver-vehicle-assignments', App\Http\Controllers\Fleet\DriverVehicleAssignmentController::class)->only(['index', 'store', 'update', 'destroy'])->names('driver-vehicle-assignments');
         Route::resource('routes', App\Http\Controllers\Fleet\RouteController::class)->names('routes');
+        Route::post('routes/{route}/optimize', [App\Http\Controllers\Fleet\RouteController::class, 'optimize'])->name('routes.optimize');
+        Route::post('routes/{route}/apply-optimized-order', [App\Http\Controllers\Fleet\RouteController::class, 'applyOptimizedOrder'])->name('routes.apply-optimized-order');
         Route::resource('routes.route-stops', App\Http\Controllers\Fleet\RouteStopController::class)->only(['store', 'update', 'destroy'])->names('routes.stops')->scoped();
         Route::resource('trips', App\Http\Controllers\Fleet\TripController::class)->only(['index', 'show'])->names('trips');
         Route::resource('behavior-events', App\Http\Controllers\Fleet\BehaviorEventController::class)->only(['index', 'show'])->names('behavior-events');
@@ -248,6 +250,11 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         Route::resource('ai-job-runs', App\Http\Controllers\Fleet\AiJobRunController::class)->only(['index', 'show'])->names('ai-job-runs');
         Route::post('ai-job-runs/run-predictive-maintenance', [App\Http\Controllers\Fleet\AiJobRunController::class, 'runPredictiveMaintenance'])->name('ai-job-runs.run-predictive-maintenance');
         Route::post('ai-job-runs/run-fraud-detection', [App\Http\Controllers\Fleet\AiJobRunController::class, 'runFraudDetection'])->name('ai-job-runs.run-fraud-detection');
+        Route::post('ai-job-runs/run-compliance-prediction', [App\Http\Controllers\Fleet\AiJobRunController::class, 'runCompliancePrediction'])->name('ai-job-runs.run-compliance-prediction');
+        Route::get('electrification-plan', [App\Http\Controllers\Fleet\FleetElectrificationController::class, 'index'])->name('electrification-plan.index');
+        Route::post('electrification-plan/generate', [App\Http\Controllers\Fleet\FleetElectrificationController::class, 'generate'])->name('electrification-plan.generate');
+        Route::get('fleet-optimization', [App\Http\Controllers\Fleet\FleetOptimizationController::class, 'index'])->name('fleet-optimization.index');
+        Route::post('fleet-optimization/analyze', [App\Http\Controllers\Fleet\FleetOptimizationController::class, 'analyze'])->name('fleet-optimization.analyze');
         Route::resource('insurance-policies', App\Http\Controllers\Fleet\InsurancePolicyController::class)->names('insurance-policies');
         Route::resource('incidents', App\Http\Controllers\Fleet\IncidentController::class)->names('incidents');
         Route::post('incidents/{incident}/run-damage-assessment', [App\Http\Controllers\Fleet\IncidentController::class, 'runDamageAssessment'])->name('incidents.run-damage-assessment');

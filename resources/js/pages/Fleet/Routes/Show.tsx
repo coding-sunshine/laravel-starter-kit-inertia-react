@@ -1,13 +1,14 @@
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, router } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Form } from '@inertiajs/react';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Sparkles } from 'lucide-react';
+import { useState } from 'react';
 
 interface LocationOption { id: number; name: string; }
 interface StopRecord {
@@ -28,12 +29,25 @@ interface RouteRecord {
     end_location?: { id: number; name: string };
     stops?: StopRecord[];
 }
+interface OptimizationResult {
+    suggested_stop_order: number[];
+    estimated_total_distance_km: number;
+    estimated_total_duration_minutes: number;
+    estimated_cost: number;
+    estimated_carbon_kg: number;
+    summary: string;
+}
 interface Props {
     route: RouteRecord;
     locations: LocationOption[];
+    optimizeUrl: string;
+    applyOptimizedOrderUrl: string;
 }
 
-export default function FleetRoutesShow({ route, locations }: Props) {
+export default function FleetRoutesShow({ route, locations, optimizeUrl, applyOptimizedOrderUrl }: Props) {
+    const [optimizing, setOptimizing] = useState(false);
+    const [optimizationResult, setOptimizationResult] = useState<OptimizationResult | null>(null);
+    const [applying, setApplying] = useState(false);
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard().url },
         { title: 'Fleet', href: '/fleet/routes' },
@@ -71,9 +85,83 @@ export default function FleetRoutesShow({ route, locations }: Props) {
 
                 <Card>
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-base">Route stops</CardTitle>
+                        <CardTitle className="flex flex-wrap items-center justify-between gap-2 text-base">
+                            Route stops
+                            {stops.length >= 2 && (
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    size="sm"
+                                    disabled={optimizing}
+                                    onClick={async () => {
+                                        setOptimizing(true);
+                                        setOptimizationResult(null);
+                                        try {
+                                            const res = await fetch(optimizeUrl, {
+                                                method: 'POST',
+                                                headers: {
+                                                    'Accept': 'application/json',
+                                                    'Content-Type': 'application/json',
+                                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '',
+                                                    'X-Requested-With': 'XMLHttpRequest',
+                                                },
+                                                credentials: 'include',
+                                            });
+                                            const data = await res.json().catch(() => ({}));
+                                            if (res.ok && data.suggested_stop_order) {
+                                                setOptimizationResult(data);
+                                            }
+                                        } finally {
+                                            setOptimizing(false);
+                                        }
+                                    }}
+                                >
+                                    <Sparkles className="mr-1.5 size-4" />
+                                    {optimizing ? 'Optimizing…' : 'Optimize with AI'}
+                                </Button>
+                            )}
+                        </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
+                        {optimizationResult && (
+                            <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm">
+                                <p className="font-medium">{optimizationResult.summary}</p>
+                                <p className="mt-1 text-muted-foreground">
+                                    Distance: {optimizationResult.estimated_total_distance_km.toFixed(1)} km · Duration: {optimizationResult.estimated_total_duration_minutes.toFixed(0)} min
+                                    {optimizationResult.estimated_carbon_kg > 0 && ` · CO₂: ${optimizationResult.estimated_carbon_kg.toFixed(1)} kg`}
+                                </p>
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    className="mt-2"
+                                    disabled={applying}
+                                    onClick={async () => {
+                                        setApplying(true);
+                                        try {
+                                            const res = await fetch(applyOptimizedOrderUrl, {
+                                                method: 'POST',
+                                                headers: {
+                                                    'Accept': 'application/json',
+                                                    'Content-Type': 'application/json',
+                                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '',
+                                                    'X-Requested-With': 'XMLHttpRequest',
+                                                },
+                                                credentials: 'include',
+                                                body: JSON.stringify({ stop_order: optimizationResult.suggested_stop_order }),
+                                            });
+                                            if (res.ok) {
+                                                setOptimizationResult(null);
+                                                router.reload();
+                                            }
+                                        } finally {
+                                            setApplying(false);
+                                        }
+                                    }}
+                                >
+                                    {applying ? 'Applying…' : 'Apply suggested order'}
+                                </Button>
+                            </div>
+                        )}
                         <form
                             onSubmit={(e) => {
                                 e.preventDefault();

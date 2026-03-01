@@ -4,6 +4,7 @@ import type { BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
 import {
     AlertTriangle,
+    BarChart3,
     Battery,
     Bell,
     Bot,
@@ -115,11 +116,21 @@ interface Counts {
 interface WorkOrderRow { id: number; work_order_number: string; title: string; status: string; vehicle?: { id: number; registration: string }; }
 interface DefectRow { id: number; defect_number: string; title: string; severity: string; vehicle?: { id: number; registration: string }; }
 interface ComplianceRow { id: number; title: string; expiry_date: string; status: string; entity_type: string; entity_id: number; }
+interface ComplianceAtRiskRow {
+    id: number;
+    primary_finding: string;
+    priority: string;
+    risk_score: number | null;
+    created_at: string;
+    detailed_analysis?: { at_risk_vehicles?: unknown[]; at_risk_drivers?: unknown[] };
+}
 interface Props {
     counts: Counts;
     recentWorkOrders: WorkOrderRow[];
     recentDefects: DefectRow[];
     expiringCompliance: ComplianceRow[];
+    complianceAtRisk?: ComplianceAtRiskRow | null;
+    aiJobRunsUrl?: string;
 }
 
 function StatCard({
@@ -145,7 +156,7 @@ function StatCard({
     );
 }
 
-export default function FleetDashboard({ counts, recentWorkOrders, recentDefects, expiringCompliance }: Props) {
+export default function FleetDashboard({ counts, recentWorkOrders, recentDefects, expiringCompliance, complianceAtRisk, aiJobRunsUrl }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard().url },
         { title: 'Fleet', href: '/fleet' },
@@ -260,6 +271,8 @@ export default function FleetDashboard({ counts, recentWorkOrders, recentDefects
                         <StatCard title="Sustainability goals" count={counts.sustainability_goals ?? 0} href="/fleet/sustainability-goals" icon={Calendar} />
                         <StatCard title="AI analysis results" count={counts.ai_analysis_results ?? 0} href="/fleet/ai-analysis-results" icon={Cpu} />
                         <StatCard title="AI job runs" count={counts.ai_job_runs ?? 0} href="/fleet/ai-job-runs" icon={Cpu} />
+                        <StatCard title="Electrification plan" count={undefined} href="/fleet/electrification-plan" icon={Battery} />
+                        <StatCard title="Fleet optimization" count={undefined} href="/fleet/fleet-optimization" icon={BarChart3} />
                     </div>
                 </section>
 
@@ -406,6 +419,32 @@ export default function FleetDashboard({ counts, recentWorkOrders, recentDefects
                                         </li>
                                     ))}
                                 </ul>
+                            )}
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="pb-2">
+                            <CardTitle className="flex items-center justify-between text-base">
+                                Compliance at risk (AI)
+                                {aiJobRunsUrl && (
+                                    <Link href={aiJobRunsUrl} className="text-sm font-normal text-primary hover:underline">Run prediction</Link>
+                                )}
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            {!complianceAtRisk ? (
+                                <p className="text-sm text-muted-foreground">No compliance prediction run yet. Run a job from AI job runs.</p>
+                            ) : (
+                                <div className="space-y-2 text-sm">
+                                    <p className="font-medium">{complianceAtRisk.primary_finding}</p>
+                                    <p className="text-muted-foreground">
+                                        Priority: <span className="capitalize">{complianceAtRisk.priority}</span>
+                                        {complianceAtRisk.detailed_analysis && (
+                                            <> · {((complianceAtRisk.detailed_analysis.at_risk_vehicles?.length ?? 0) + (complianceAtRisk.detailed_analysis.at_risk_drivers?.length ?? 0))} at risk</>
+                                        )}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">Updated {new Date(complianceAtRisk.created_at).toLocaleString()}</p>
+                                </div>
                             )}
                         </CardContent>
                     </Card>

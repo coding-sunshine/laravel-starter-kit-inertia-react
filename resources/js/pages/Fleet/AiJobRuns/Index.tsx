@@ -2,7 +2,7 @@ import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
-import { Play, Eye, Wrench, ShieldAlert } from 'lucide-react';
+import { Play, Eye, Wrench, ShieldAlert, ClipboardCheck } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -20,11 +20,13 @@ interface Props {
     statuses: Option[];
     runPredictiveMaintenanceUrl: string;
     runFraudDetectionUrl: string;
+    runCompliancePredictionUrl: string;
 }
 
-export default function FleetAiJobRunsIndex({ aiJobRuns, statuses, runPredictiveMaintenanceUrl, runFraudDetectionUrl }: Props) {
+export default function FleetAiJobRunsIndex({ aiJobRuns, statuses, runPredictiveMaintenanceUrl, runFraudDetectionUrl, runCompliancePredictionUrl }: Props) {
     const [predictiveLoading, setPredictiveLoading] = useState(false);
     const [fraudLoading, setFraudLoading] = useState(false);
+    const [complianceLoading, setComplianceLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const runJob = async (url: string, setLoading: (v: boolean) => void) => {
@@ -63,6 +65,10 @@ export default function FleetAiJobRunsIndex({ aiJobRuns, statuses, runPredictive
                         <Button type="button" variant="secondary" size="sm" disabled={fraudLoading} onClick={() => runJob(runFraudDetectionUrl, setFraudLoading)}>
                             <ShieldAlert className="mr-1.5 size-4" />
                             {fraudLoading ? 'Queuing…' : 'Run fraud detection'}
+                        </Button>
+                        <Button type="button" variant="secondary" size="sm" disabled={complianceLoading} onClick={() => runJob(runCompliancePredictionUrl, setComplianceLoading)}>
+                            <ClipboardCheck className="mr-1.5 size-4" />
+                            {complianceLoading ? 'Queuing…' : 'Run compliance prediction'}
                         </Button>
                     </div>
                 </div>

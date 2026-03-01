@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Fleet;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\Ai\RunCompliancePredictionJob;
 use App\Jobs\Ai\RunFraudDetectionJob;
 use App\Jobs\Ai\RunPredictiveMaintenanceJob;
 use App\Models\Fleet\AiJobRun;
@@ -30,6 +31,7 @@ final class AiJobRunController extends Controller
             'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\AiJobRunStatus::cases()),
             'runPredictiveMaintenanceUrl' => route('fleet.ai-job-runs.run-predictive-maintenance'),
             'runFraudDetectionUrl' => route('fleet.ai-job-runs.run-fraud-detection'),
+            'runCompliancePredictionUrl' => route('fleet.ai-job-runs.run-compliance-prediction'),
         ]);
     }
 
@@ -116,6 +118,38 @@ final class AiJobRunController extends Controller
 
         return response()->json([
             'message' => 'Fraud detection job queued.',
+            'ai_job_run_id' => $run->id,
+            'url' => route('fleet.ai-job-runs.show', $run),
+        ]);
+    }
+
+    public function runCompliancePrediction(Request $request): JsonResponse
+    {
+        $this->authorize('create', AiJobRun::class);
+        $organizationId = TenantContext::id();
+        if ($organizationId === null) {
+            return response()->json(['message' => 'No organization context.'], 422);
+        }
+
+        $run = AiJobRun::create([
+            'organization_id' => $organizationId,
+            'job_type' => 'compliance_prediction',
+            'entity_type' => 'organization',
+            'entity_ids' => null,
+            'parameters' => null,
+            'status' => 'queued',
+            'created_by' => $request->user()?->id,
+            'updated_by' => $request->user()?->id,
+        ]);
+
+        RunCompliancePredictionJob::dispatch(
+            $organizationId,
+            $run->id,
+            $request->user()?->id
+        );
+
+        return response()->json([
+            'message' => 'Compliance prediction job queued.',
             'ai_job_run_id' => $run->id,
             'url' => route('fleet.ai-job-runs.show', $run),
         ]);

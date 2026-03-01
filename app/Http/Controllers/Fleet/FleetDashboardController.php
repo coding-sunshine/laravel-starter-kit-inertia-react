@@ -163,12 +163,19 @@ final class FleetDashboardController extends Controller
         $recentWorkOrders = WorkOrder::query()->with('vehicle')->orderByDesc('created_at')->limit(5)->get();
         $recentDefects = Defect::query()->with('vehicle')->orderByDesc('reported_at')->limit(5)->get();
         $expiringCompliance = ComplianceItem::query()->whereIn('status', ['valid', 'expiring_soon'])->orderBy('expiry_date')->limit(5)->get();
+        $complianceAtRisk = AiAnalysisResult::query()
+            ->where('analysis_type', 'compliance_prediction')
+            ->where('entity_type', 'organization')
+            ->orderByDesc('created_at')
+            ->first();
 
         return Inertia::render('Fleet/Dashboard', [
             'counts' => $counts,
             'recentWorkOrders' => $recentWorkOrders,
             'recentDefects' => $recentDefects,
             'expiringCompliance' => $expiringCompliance,
+            'complianceAtRisk' => $complianceAtRisk,
+            'aiJobRunsUrl' => route('fleet.ai-job-runs.index'),
         ]);
     }
 }

@@ -8,6 +8,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Fleet\StoreRouteRequest;
 use App\Http\Requests\Fleet\UpdateRouteRequest;
 use App\Models\Fleet\Route;
+use App\Services\Ai\RouteOptimizationService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -55,6 +57,8 @@ final class RouteController extends Controller
         return Inertia::render('Fleet/Routes/Show', [
             'route' => $route,
             'locations' => \App\Models\Fleet\Location::query()->orderBy('name')->get(['id', 'name']),
+            'optimizeUrl' => route('fleet.routes.optimize', $route),
+            'applyOptimizedOrderUrl' => route('fleet.routes.apply-optimized-order', $route),
         ]);
     }
 
@@ -80,5 +84,33 @@ final class RouteController extends Controller
         $this->authorize('delete', $route);
         $route->delete();
         return to_route('fleet.routes.index')->with('flash', ['status' => 'success', 'message' => 'Route deleted.']);
+    }
+
+    public function optimize(Route $route, RouteOptimizationService $service): JsonResponse
+    {
+        $this->authorize('update', $route);
+        $result = $service->optimize($route);
+        if ($result === null) {
+            return response()->json(['message' => 'No stops to optimize or optimization failed.'], 422);
+        }
+        return response()->json($result);
+    }
+
+    public function applyOptimizedOrder(Request $request, Route $route): JsonResponse
+    {
+        $this->authorize('update', $route);
+        $order = $request->input('stop_order');
+        if (! is_array($order)) {
+            return response()->json(['message' => 'stop_order must be an array of stop IDs.'], 422);
+        }
+        $stopIds = $route->stops()->pluck('id')->all();
+        $order = array_values(array_map('intval', array_intersect($order, $stopIds)));
+        if (count($order) !== count($stopIds)) {
+            return response()->json(['message' => 'stop_order must contain exactly the route stop IDs.'], 422);
+        }
+        foreach ($order as $sortOrder => $stopId) {
+            $route->stops()->where('id', $stopId)->update(['sort_order' => $sortOrder + 1]);
+        }
+        return response()->json(['message' => 'Order applied.', 'stop_order' => $order]);
     }
 }
