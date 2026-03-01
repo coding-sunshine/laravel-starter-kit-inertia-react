@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Jobs\Ai;
 
+use App\Events\Fleet\AiJobCompleted;
 use App\Models\Fleet\AiAnalysisResult;
 use App\Models\Fleet\AiJobRun;
 use App\Models\Scopes\OrganizationScope;
@@ -90,6 +91,14 @@ final class RunCompliancePredictionJob implements ShouldQueue
                 'completed_at' => now(),
                 'result_data' => ['at_risk_count' => $total, 'at_risk_vehicles' => count($vehicles), 'at_risk_drivers' => count($drivers), 'result' => $result],
             ]);
+
+            event(new AiJobCompleted(
+                $this->organizationId,
+                'compliance_prediction',
+                'organization',
+                $this->organizationId,
+                ['at_risk_count' => $total, 'at_risk_vehicles' => count($vehicles), 'at_risk_drivers' => count($drivers)],
+            ));
         } catch (\Throwable $e) {
             Log::error('RunCompliancePredictionJob: failed', [
                 'ai_job_run_id' => $this->aiJobRunId,

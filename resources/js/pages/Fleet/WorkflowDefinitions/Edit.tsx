@@ -115,6 +115,22 @@ export default function FleetWorkflowDefinitionsEdit({
                             <p className="mt-1 text-sm text-destructive">{errors.trigger_type}</p>
                         )}
                     </div>
+                    <div>
+                        <Label htmlFor="trigger_config">Trigger config (JSON, optional)</Label>
+                        <textarea
+                            id="trigger_config"
+                            value={typeof data.trigger_config === 'object' && data.trigger_config !== null ? JSON.stringify(data.trigger_config, null, 2) : (data.trigger_config && typeof data.trigger_config === 'string' ? data.trigger_config : '{}')}
+                            onChange={(e) => {
+                                try {
+                                    setData('trigger_config', e.target.value ? JSON.parse(e.target.value) : {});
+                                } catch {
+                                    setData('trigger_config', {});
+                                }
+                            }}
+                            className="mt-1 flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 font-mono text-sm"
+                            placeholder='{"event": "ai.compliance_prediction.completed"} or {"frequency": "daily"}'
+                        />
+                    </div>
                     <div className="flex items-center gap-2">
                         <input
                             id="is_active"

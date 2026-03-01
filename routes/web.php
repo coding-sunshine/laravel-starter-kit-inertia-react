@@ -262,6 +262,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         Route::resource('insurance-claims', App\Http\Controllers\Fleet\InsuranceClaimController::class)->names('insurance-claims');
         Route::post('insurance-claims/{insurance_claim}/run-damage-assessment', [App\Http\Controllers\Fleet\InsuranceClaimController::class, 'runDamageAssessment'])->name('insurance-claims.run-damage-assessment');
         Route::post('insurance-claims/{insurance_claim}/generate-fnol', [App\Http\Controllers\Fleet\InsuranceClaimController::class, 'generateFnol'])->name('insurance-claims.generate-fnol');
+        Route::post('workflow-definitions/{workflow_definition}/execute', [App\Http\Controllers\Fleet\WorkflowDefinitionController::class, 'execute'])->name('workflow-definitions.execute');
         Route::resource('workflow-definitions', App\Http\Controllers\Fleet\WorkflowDefinitionController::class)->names('workflow-definitions');
         Route::resource('workflow-executions', App\Http\Controllers\Fleet\WorkflowExecutionController::class)->only(['index', 'show'])->names('workflow-executions');
         Route::resource('ev-charging-sessions', App\Http\Controllers\Fleet\EvChargingSessionController::class)->names('ev-charging-sessions');

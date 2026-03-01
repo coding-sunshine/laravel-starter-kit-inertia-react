@@ -14,12 +14,28 @@ import { QueryProvider } from './providers/query-provider';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
+// Explicit entries for Fleet workflow pages so they resolve when glob misses them (e.g. project path with space).
+const workflowPages: Record<string, () => Promise<{ default: unknown }>> = {
+    './pages/Fleet/WorkflowDefinitions/Index.tsx': () =>
+        import('./pages/Fleet/WorkflowDefinitions/Index.tsx'),
+    './pages/Fleet/WorkflowDefinitions/Create.tsx': () =>
+        import('./pages/Fleet/WorkflowDefinitions/Create.tsx'),
+    './pages/Fleet/WorkflowDefinitions/Show.tsx': () =>
+        import('./pages/Fleet/WorkflowDefinitions/Show.tsx'),
+    './pages/Fleet/WorkflowDefinitions/Edit.tsx': () =>
+        import('./pages/Fleet/WorkflowDefinitions/Edit.tsx'),
+};
+const allPages = {
+    ...import.meta.glob('./pages/**/*.tsx'),
+    ...workflowPages,
+};
+
 createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
     resolve: (name) =>
         resolvePageComponent(
             `./pages/${name}.tsx`,
-            import.meta.glob('./pages/**/*.tsx'),
+            allPages,
         ).then((module) => {
             const Page = module.default;
             return function PageWithCookieBanner(

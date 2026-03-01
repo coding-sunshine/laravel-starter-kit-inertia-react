@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Events\Fleet\AiJobCompleted;
 use App\Events\OrganizationMemberAdded;
 use App\Events\OrganizationMemberRemoved;
 use App\Events\User\UserCreated;
 use App\Listeners\Ai\ChunkAndEmbedMediaOnUpload;
 use App\Listeners\Billing\AddCreditsFromLemonSqueezyOrder;
+use App\Listeners\Fleet\StartWorkflowsForAiJobCompleted;
 use App\Listeners\Billing\SyncSubscriptionSeatsOnMemberChange;
 use App\Listeners\CreatePersonalOrganizationOnUserCreated;
 use App\Listeners\Gamification\GrantGamificationOnUserCreated;
@@ -122,6 +124,7 @@ final class AppServiceProvider extends ServiceProvider
         Event::listen(OrganizationMemberAdded::class, SyncSubscriptionSeatsOnMemberChange::class);
         Event::listen(OrganizationMemberRemoved::class, SyncSubscriptionSeatsOnMemberChange::class);
         Event::listen(OrderCreated::class, AddCreditsFromLemonSqueezyOrder::class);
+        Event::listen(AiJobCompleted::class, StartWorkflowsForAiJobCompleted::class);
         Event::listen(\Spatie\MediaLibrary\MediaCollections\Events\MediaHasBeenAddedEvent::class, ChunkAndEmbedMediaOnUpload::class);
         User::observe(UserObserver::class);
 
