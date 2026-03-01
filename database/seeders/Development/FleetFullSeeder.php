@@ -87,12 +87,13 @@ final class FleetFullSeeder extends Seeder
     private function seedPhase1Core(): void
     {
         $locIds = $this->seedRecords(\App\Models\Fleet\Location::class, self::COUNT, [
-            ['name' => 'HQ Depot', 'type' => 'depot', 'address' => '1 Fleet Way', 'city' => 'London', 'country' => 'UK', 'is_active' => true],
-            ['name' => 'North Yard', 'type' => 'yard', 'address' => '2 North Rd', 'city' => 'Manchester', 'country' => 'UK', 'is_active' => true],
-            ['name' => 'South Hub', 'type' => 'depot', 'address' => '3 South St', 'city' => 'Birmingham', 'country' => 'UK', 'is_active' => true],
-            ['name' => 'East Office', 'type' => 'office', 'address' => '4 East Ave', 'city' => 'Leeds', 'country' => 'UK', 'is_active' => true],
-            ['name' => 'West Depot', 'type' => 'depot', 'address' => '5 West Lane', 'city' => 'Liverpool', 'country' => 'UK', 'is_active' => true],
+            ['name' => 'HQ Depot', 'type' => 'depot', 'address' => '1 Fleet Way', 'city' => 'London', 'country' => 'UK', 'lat' => 51.5074, 'lng' => -0.1278, 'is_active' => true],
+            ['name' => 'North Yard', 'type' => 'yard', 'address' => '2 North Rd', 'city' => 'Manchester', 'country' => 'UK', 'lat' => 53.4808, 'lng' => -2.2426, 'is_active' => true],
+            ['name' => 'South Hub', 'type' => 'depot', 'address' => '3 South St', 'city' => 'Birmingham', 'country' => 'UK', 'lat' => 52.4862, 'lng' => -1.8904, 'is_active' => true],
+            ['name' => 'East Office', 'type' => 'office', 'address' => '4 East Ave', 'city' => 'Leeds', 'country' => 'UK', 'lat' => 53.8008, 'lng' => -1.5491, 'is_active' => true],
+            ['name' => 'West Depot', 'type' => 'depot', 'address' => '5 West Lane', 'city' => 'Liverpool', 'country' => 'UK', 'lat' => 53.4084, 'lng' => -2.9916, 'is_active' => true],
         ]);
+        $this->backfillLocationCoordinates();
 
         $this->seedRecords(\App\Models\Fleet\CostCenter::class, self::COUNT, [
             ['code' => 'CC001', 'name' => 'Operations', 'cost_center_type' => 'department', 'is_active' => true],
@@ -174,7 +175,7 @@ final class FleetFullSeeder extends Seeder
             );
         }
 
-        $this->seedPhase2TripsFuel($vehicleIds, $driverIds, $garageIds);
+        $this->seedPhase2TripsFuel($vehicleIds, $driverIds, $garageIds, $locIds);
         $this->seedPhase3MaintenanceCompliance($vehicleIds, $driverIds, $garageIds);
         $this->seedPhase4Telematics($vehicleIds);
         $this->seedPhase5CarbonInsurance($vehicleIds);
@@ -186,14 +187,16 @@ final class FleetFullSeeder extends Seeder
         $this->seedPhase11ExtrasAudit($vehicleIds, $locIds);
     }
 
-    private function seedPhase2TripsFuel(array $vehicleIds, array $driverIds, array $garageIds): void
+    private function seedPhase2TripsFuel(array $vehicleIds, array $driverIds, array $garageIds, array $locIds): void
     {
         $routeIds = $this->seedRecords(\App\Models\Fleet\Route::class, 4, [
-            ['name' => 'London-Manchester', 'route_type' => 'delivery', 'description' => 'A1 route', 'is_active' => true],
-            ['name' => 'Birmingham-Leeds', 'route_type' => 'delivery', 'description' => 'M1 route', 'is_active' => true],
+            ['name' => 'London-Manchester', 'route_type' => 'delivery', 'description' => 'A1 route', 'is_active' => true, 'start_location_id' => $locIds[0] ?? null, 'end_location_id' => $locIds[1] ?? null],
+            ['name' => 'Birmingham-Leeds', 'route_type' => 'delivery', 'description' => 'M1 route', 'is_active' => true, 'start_location_id' => $locIds[2] ?? null, 'end_location_id' => $locIds[3] ?? null],
             ['name' => 'HQ Local', 'route_type' => 'local', 'description' => 'Local deliveries', 'is_active' => true],
             ['name' => 'North Loop', 'route_type' => 'regional', 'description' => 'North region loop', 'is_active' => true],
         ]);
+
+        $this->seedRouteStopsForMap($routeIds[0] ?? null, $locIds);
 
         for ($i = 0; $i < 4; $i++) {
             $started = now()->subDays(rand(0, 14))->setTime(8, 0);
@@ -213,6 +216,7 @@ final class FleetFullSeeder extends Seeder
                 ]
             );
         }
+        $this->seedTripWaypointsForMap($locIds);
 
         $cardPrefix = 'FC****' . $this->org->id . '-';
         $fuelCardIds = $this->seedRecords(\App\Models\Fleet\FuelCard::class, self::COUNT, [
@@ -997,5 +1001,90 @@ final class FleetFullSeeder extends Seeder
             $key['title'] = $attrs['title'];
         }
         return $key;
+    }
+
+    /** Backfill lat/lng for existing locations (by name) so Route/Trip maps have coordinates. */
+    private function backfillLocationCoordinates(): void
+    {
+        $updates = [
+            'HQ Depot' => ['lat' => 51.5074, 'lng' => -0.1278],
+            'North Yard' => ['lat' => 53.4808, 'lng' => -2.2426],
+            'South Hub' => ['lat' => 52.4862, 'lng' => -1.8904],
+            'East Office' => ['lat' => 53.8008, 'lng' => -1.5491],
+            'West Depot' => ['lat' => 53.4084, 'lng' => -2.9916],
+        ];
+        foreach ($updates as $name => $coords) {
+            \App\Models\Fleet\Location::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)
+                ->where('organization_id', $this->org->id)
+                ->where('name', $name)
+                ->update($coords);
+        }
+    }
+
+    /** Seed route_stops for the London-Manchester route so the Route show page map has markers. */
+    private function seedRouteStopsForMap(?int $routeId, array $locIds): void
+    {
+        if ($routeId === null || count($locIds) < 2) {
+            return;
+        }
+        $stops = [
+            ['location_id' => $locIds[0], 'name' => 'HQ Depot (Start)', 'sort_order' => 1],
+            ['location_id' => $locIds[2], 'name' => 'South Hub', 'sort_order' => 2],
+            ['location_id' => $locIds[1], 'name' => 'North Yard (End)', 'sort_order' => 3],
+        ];
+        foreach ($stops as $stop) {
+            \App\Models\Fleet\RouteStop::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
+                [
+                    'route_id' => $routeId,
+                    'sort_order' => $stop['sort_order'],
+                ],
+                [
+                    'location_id' => $stop['location_id'],
+                    'name' => $stop['name'],
+                ]
+            );
+        }
+    }
+
+    /** Seed trip_waypoints so the Trip show page map has a path. Prefer Trip #1 so /fleet/trips/1 always shows the path. */
+    private function seedTripWaypointsForMap(array $locIds): void
+    {
+        $path = [
+            [51.5074, -0.1278],
+            [51.75, -0.45],
+            [52.0, -0.9],
+            [52.25, -1.35],
+            [52.4862, -1.8904],
+            [52.8, -2.0],
+            [53.1, -2.12],
+            [53.4808, -2.2426],
+        ];
+
+        // Prefer trip id=1 so /fleet/trips/1 always shows the path; otherwise first trip of this org
+        $trip = \App\Models\Fleet\Trip::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)
+            ->where('id', 1)
+            ->first();
+        if ($trip === null) {
+            $trip = \App\Models\Fleet\Trip::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)
+                ->where('organization_id', $this->org->id)
+                ->orderBy('id')
+                ->first();
+        }
+        if ($trip === null) {
+            return;
+        }
+        if (\App\Models\Fleet\TripWaypoint::where('trip_id', $trip->id)->exists()) {
+            return;
+        }
+        $recorded = $trip->started_at ?? now()->subHours(2);
+        foreach ($path as $seq => $point) {
+            \App\Models\Fleet\TripWaypoint::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->create([
+                'trip_id' => $trip->id,
+                'lat' => $point[0],
+                'lng' => $point[1],
+                'sequence' => $seq + 1,
+                'recorded_at' => $recorded->copy()->addMinutes($seq * 18),
+            ]);
+        }
     }
 }

@@ -16,6 +16,9 @@ interface LoginProps {
     canResetPassword: boolean;
 }
 
+const isErrorStatus = (s: string) =>
+    /invalid|incorrect|error|failed|expired/i.test(s);
+
 export default function Login({ status, canResetPassword }: LoginProps) {
     return (
         <AuthLayout
@@ -24,6 +27,19 @@ export default function Login({ status, canResetPassword }: LoginProps) {
         >
             <Head title="Log in" />
 
+            {status && (
+                <div
+                    role="alert"
+                    className={
+                        isErrorStatus(status)
+                            ? 'mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-center text-sm font-medium text-destructive'
+                            : 'mb-4 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-center text-sm font-medium text-green-800 dark:border-green-800 dark:bg-green-950/30 dark:text-green-200'
+                    }
+                >
+                    {status}
+                </div>
+            )}
+
             <Form
                 {...SessionController.store.form()}
                 resetOnSuccess={['password']}
@@ -31,9 +47,11 @@ export default function Login({ status, canResetPassword }: LoginProps) {
             >
                 {({ processing, errors }) => (
                     <>
-                        <div className="grid gap-6">
+                        <div className="grid gap-5">
                             <div className="grid gap-2">
-                                <Label htmlFor="email">Email address</Label>
+                                <Label htmlFor="email" className="text-foreground">
+                                    Email address
+                                </Label>
                                 <Input
                                     id="email"
                                     type="email"
@@ -43,18 +61,26 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                     tabIndex={1}
                                     autoComplete="email"
                                     placeholder="email@example.com"
+                                    aria-describedby={errors.email ? 'email-error' : undefined}
+                                    aria-invalid={!!errors.email}
                                 />
-                                <InputError message={errors.email} />
+                                <InputError
+                                    id="email-error"
+                                    message={errors.email}
+                                />
                             </div>
 
                             <div className="grid gap-2">
-                                <div className="flex items-center">
-                                    <Label htmlFor="password">Password</Label>
+                                <div className="flex items-center justify-between gap-2">
+                                    <Label htmlFor="password" className="text-foreground">
+                                        Password
+                                    </Label>
                                     {canResetPassword && (
                                         <TextLink
                                             href={request()}
-                                            className="ml-auto text-sm"
-                                            tabIndex={5}
+                                            className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+                                            tabIndex={4}
+                                            data-pan="auth-forgot-password-link"
                                         >
                                             Forgot password?
                                         </TextLink>
@@ -68,31 +94,47 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                     tabIndex={2}
                                     autoComplete="current-password"
                                     placeholder="Password"
+                                    aria-describedby={errors.password ? 'password-error' : undefined}
+                                    aria-invalid={!!errors.password}
                                 />
-                                <InputError message={errors.password} />
+                                <InputError
+                                    id="password-error"
+                                    message={errors.password}
+                                />
                             </div>
 
-                            <div className="flex items-center space-x-3">
+                            <div className="flex items-center gap-3">
                                 <Checkbox
                                     id="remember"
                                     name="remember"
                                     tabIndex={3}
+                                    aria-describedby="remember-label"
                                 />
-                                <Label htmlFor="remember">Remember me</Label>
+                                <Label
+                                    id="remember-label"
+                                    htmlFor="remember"
+                                    className="text-foreground cursor-pointer font-normal"
+                                >
+                                    Remember me
+                                </Label>
                             </div>
 
                             <Button
                                 type="submit"
-                                className="mt-4 w-full"
-                                tabIndex={4}
+                                size="lg"
+                                className="mt-2 w-full gap-2"
+                                tabIndex={5}
                                 disabled={processing}
                                 data-test="login-button"
                                 data-pan="auth-login-button"
                             >
                                 {processing && (
-                                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                                    <LoaderCircle
+                                        className="size-4 shrink-0 animate-spin"
+                                        aria-hidden
+                                    />
                                 )}
-                                Log in
+                                {processing ? 'Signing in…' : 'Log in'}
                             </Button>
                         </div>
 
@@ -100,7 +142,8 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                             Don't have an account?{' '}
                             <TextLink
                                 href={register()}
-                                tabIndex={5}
+                                className="font-medium text-primary underline-offset-4 hover:underline"
+                                tabIndex={6}
                                 data-pan="auth-sign-up-link"
                             >
                                 Sign up
@@ -109,12 +152,6 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                     </>
                 )}
             </Form>
-
-            {status && (
-                <div className="mb-4 text-center text-sm font-medium text-green-600">
-                    {status}
-                </div>
-            )}
         </AuthLayout>
     );
 }

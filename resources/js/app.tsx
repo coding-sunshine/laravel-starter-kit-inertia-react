@@ -10,6 +10,7 @@ import { CookieConsentBanner } from './components/cookie-consent-banner';
 import { FlashListener } from './components/flash-listener';
 import { ThemeFromProps } from './components/theme-from-props';
 import { initializeTheme } from './hooks/use-appearance';
+import { GoogleMapsProvider } from './providers/google-maps-provider';
 import { QueryProvider } from './providers/query-provider';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
@@ -57,7 +58,9 @@ createInertiaApp({
 
         root.render(
             <QueryProvider>
-                <App {...props} />
+                <GoogleMapsProvider>
+                    <App {...props} />
+                </GoogleMapsProvider>
             </QueryProvider>,
         );
     },

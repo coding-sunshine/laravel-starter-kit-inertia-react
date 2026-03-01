@@ -1,4 +1,6 @@
 import AppLayout from '@/layouts/app-layout';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
@@ -38,8 +40,6 @@ import {
     HardHat,
     FileSignature,
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-
 interface Counts {
     vehicles: number;
     drivers: number;
@@ -139,16 +139,19 @@ function StatCard({
     href,
     icon: Icon,
 }: { title: string; count: number | undefined; href: string; icon: React.ComponentType<{ className?: string }> }) {
+    const hasCount = count !== undefined && count !== null;
     return (
-        <Link href={href} className="block">
-            <Card className="transition-colors hover:bg-muted/50">
-                <CardContent className="flex items-center gap-4 p-4">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                        <Icon className="size-6 text-primary" />
+        <Link href={href} className="block outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg">
+            <Card className="h-full border border-border bg-card transition-all duration-200 hover:shadow-md hover:border-primary/30">
+                <CardContent className="flex min-h-[88px] items-center gap-4 p-4 sm:p-5">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <Icon className="size-6" />
                     </div>
                     <div className="min-w-0 flex-1">
-                        <p className="truncate font-medium">{title}</p>
-                        <p className="text-2xl font-semibold tabular-nums">{count !== undefined ? count : '—'}</p>
+                        <p className="truncate font-medium text-foreground">{title}</p>
+                        <p className="text-2xl font-semibold tabular-nums text-foreground">
+                            {hasCount ? count : '—'}
+                        </p>
                     </div>
                 </CardContent>
             </Card>
@@ -165,15 +168,27 @@ export default function FleetDashboard({ counts, recentWorkOrders, recentDefects
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Fleet – Dashboard" />
-            <div className="flex h-full flex-1 flex-col gap-8 rounded-xl p-4">
-                <div>
-                    <h1 className="text-2xl font-semibold">Fleet dashboard</h1>
-                    <p className="text-muted-foreground">Overview and quick access to all fleet areas.</p>
+            <div className="flex h-full flex-1 flex-col gap-8 rounded-xl p-4 md:p-6">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+                            Fleet dashboard
+                        </h1>
+                        <p className="mt-0.5 text-sm text-muted-foreground">
+                            Overview and quick access to all fleet areas.
+                        </p>
+                    </div>
+                    <Button asChild size="sm" className="shrink-0 gap-2">
+                        <Link href="/fleet/assistant" prefetch="click">
+                            <Bot className="size-4" />
+                            Open Assistant
+                        </Link>
+                    </Button>
                 </div>
 
                 <section>
-                    <h2 className="mb-3 text-lg font-medium">Core</h2>
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <h2 className="mb-4 text-lg font-semibold text-foreground">Core</h2>
+                    <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         <StatCard title="Vehicles" count={counts.vehicles} href="/fleet/vehicles" icon={Truck} />
                         <StatCard title="Drivers" count={counts.drivers} href="/fleet/drivers" icon={Users} />
                         <StatCard title="Driver–vehicle assignments" count={counts.driver_vehicle_assignments} href="/fleet/driver-vehicle-assignments" icon={Users} />
@@ -181,24 +196,24 @@ export default function FleetDashboard({ counts, recentWorkOrders, recentDefects
                 </section>
 
                 <section>
-                    <h2 className="mb-3 text-lg font-medium">Trips & routes</h2>
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <h2 className="mb-4 text-lg font-semibold text-foreground">Trips & routes</h2>
+                    <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         <StatCard title="Routes" count={counts.routes} href="/fleet/routes" icon={Route} />
                         <StatCard title="Trips" count={counts.trips} href="/fleet/trips" icon={MapPin} />
                     </div>
                 </section>
 
                 <section>
-                    <h2 className="mb-3 text-lg font-medium">Fuel</h2>
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <h2 className="mb-4 text-lg font-semibold text-foreground">Fuel</h2>
+                    <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         <StatCard title="Fuel cards" count={counts.fuel_cards} href="/fleet/fuel-cards" icon={CreditCard} />
                         <StatCard title="Fuel transactions" count={counts.fuel_transactions} href="/fleet/fuel-transactions" icon={Fuel} />
                     </div>
                 </section>
 
                 <section>
-                    <h2 className="mb-3 text-lg font-medium">Maintenance</h2>
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <h2 className="mb-4 text-lg font-semibold text-foreground">Maintenance</h2>
+                    <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         <StatCard title="Service schedules" count={counts.service_schedules} href="/fleet/service-schedules" icon={Calendar} />
                         <StatCard title="Work orders" count={counts.work_orders} href="/fleet/work-orders" icon={ClipboardList} />
                         <StatCard title="Defects" count={counts.defects} href="/fleet/defects" icon={AlertTriangle} />
@@ -206,8 +221,8 @@ export default function FleetDashboard({ counts, recentWorkOrders, recentDefects
                 </section>
 
                 <section>
-                    <h2 className="mb-3 text-lg font-medium">Fines, lease & warranty</h2>
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <h2 className="mb-4 text-lg font-semibold text-foreground">Fines, lease & warranty</h2>
+                    <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         <StatCard title="Fines" count={counts.fines ?? 0} href="/fleet/fines" icon={AlertTriangle} />
                         <StatCard title="Vehicle leases" count={counts.vehicle_leases ?? 0} href="/fleet/vehicle-leases" icon={FileText} />
                         <StatCard title="Vehicle recalls" count={counts.vehicle_recalls ?? 0} href="/fleet/vehicle-recalls" icon={AlertTriangle} />
@@ -216,8 +231,8 @@ export default function FleetDashboard({ counts, recentWorkOrders, recentDefects
                 </section>
 
                 <section>
-                    <h2 className="mb-3 text-lg font-medium">Compliance & working time</h2>
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <h2 className="mb-4 text-lg font-semibold text-foreground">Compliance & working time</h2>
+                    <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         <StatCard title="Compliance items" count={counts.compliance_items} href="/fleet/compliance-items" icon={ShieldCheck} />
                         <StatCard title="Driver working time" count={counts.driver_working_time} href="/fleet/driver-working-time" icon={Clock} />
                         <StatCard title="Tachograph downloads" count={counts.tachograph_downloads} href="/fleet/tachograph-downloads" icon={FileDown} />
@@ -225,8 +240,8 @@ export default function FleetDashboard({ counts, recentWorkOrders, recentDefects
                 </section>
 
                 <section>
-                    <h2 className="mb-3 text-lg font-medium">Compliance & H&S</h2>
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <h2 className="mb-4 text-lg font-semibold text-foreground">Compliance & H&S</h2>
+                    <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         <StatCard title="Vehicle check templates" count={counts.vehicle_check_templates ?? 0} href="/fleet/vehicle-check-templates" icon={ClipboardCheck} />
                         <StatCard title="Vehicle checks" count={counts.vehicle_checks ?? 0} href="/fleet/vehicle-checks" icon={ClipboardCheck} />
                         {typeof counts.todays_vehicle_checks === 'number' && (
@@ -256,16 +271,16 @@ export default function FleetDashboard({ counts, recentWorkOrders, recentDefects
                 </section>
 
                 <section>
-                    <h2 className="mb-3 text-lg font-medium">Telematics & events</h2>
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <h2 className="mb-4 text-lg font-semibold text-foreground">Telematics & events</h2>
+                    <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         <StatCard title="Behavior events" count={counts.behavior_events} href="/fleet/behavior-events" icon={AlertTriangle} />
                         <StatCard title="Geofence events" count={counts.geofence_events} href="/fleet/geofence-events" icon={MapPin} />
                     </div>
                 </section>
 
                 <section>
-                    <h2 className="mb-3 text-lg font-medium">Carbon, sustainability & AI</h2>
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <h2 className="mb-4 text-lg font-semibold text-foreground">Carbon, sustainability & AI</h2>
+                    <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         <StatCard title="Emissions records" count={counts.emissions_records ?? 0} href="/fleet/emissions-records" icon={Flame} />
                         <StatCard title="Carbon targets" count={counts.carbon_targets ?? 0} href="/fleet/carbon-targets" icon={Route} />
                         <StatCard title="Sustainability goals" count={counts.sustainability_goals ?? 0} href="/fleet/sustainability-goals" icon={Calendar} />
@@ -277,8 +292,8 @@ export default function FleetDashboard({ counts, recentWorkOrders, recentDefects
                 </section>
 
                 <section>
-                    <h2 className="mb-3 text-lg font-medium">Insurance & incidents</h2>
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <h2 className="mb-4 text-lg font-semibold text-foreground">Insurance & incidents</h2>
+                    <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         <StatCard title="Insurance policies" count={counts.insurance_policies ?? 0} href="/fleet/insurance-policies" icon={ShieldCheck} />
                         <StatCard title="Incidents" count={counts.incidents ?? 0} href="/fleet/incidents" icon={AlertTriangle} />
                         <StatCard title="Insurance claims" count={counts.insurance_claims ?? 0} href="/fleet/insurance-claims" icon={CreditCard} />
@@ -286,24 +301,24 @@ export default function FleetDashboard({ counts, recentWorkOrders, recentDefects
                 </section>
 
                 <section>
-                    <h2 className="mb-3 text-lg font-medium">Workflows</h2>
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <h2 className="mb-4 text-lg font-semibold text-foreground">Workflows</h2>
+                    <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         <StatCard title="Workflow definitions" count={counts.workflow_definitions ?? 0} href="/fleet/workflow-definitions" icon={GitBranch} />
                         <StatCard title="Workflow executions" count={counts.workflow_executions ?? 0} href="/fleet/workflow-executions" icon={GitBranch} />
                     </div>
                 </section>
 
                 <section>
-                    <h2 className="mb-3 text-lg font-medium">Wellness & coaching</h2>
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <h2 className="mb-4 text-lg font-semibold text-foreground">Wellness & coaching</h2>
+                    <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         <StatCard title="Driver wellness records" count={counts.driver_wellness_records ?? 0} href="/fleet/driver-wellness-records" icon={Heart} />
                         <StatCard title="Driver coaching plans" count={counts.driver_coaching_plans ?? 0} href="/fleet/driver-coaching-plans" icon={GraduationCap} />
                     </div>
                 </section>
 
                 <section>
-                    <h2 className="mb-3 text-lg font-medium">EV, training & costs</h2>
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <h2 className="mb-4 text-lg font-semibold text-foreground">EV, training & costs</h2>
+                    <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         <StatCard title="EV charging sessions" count={counts.ev_charging_sessions ?? 0} href="/fleet/ev-charging-sessions" icon={Battery} />
                         <StatCard title="EV battery data" count={counts.ev_battery_data ?? 0} href="/fleet/ev-battery-data" icon={Battery} />
                         <StatCard title="Training courses" count={counts.training_courses ?? 0} href="/fleet/training-courses" icon={GraduationCap} />
@@ -315,8 +330,8 @@ export default function FleetDashboard({ counts, recentWorkOrders, recentDefects
                 </section>
 
                 <section>
-                    <h2 className="mb-3 text-lg font-medium">Workshop, tyres & grey fleet</h2>
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <h2 className="mb-4 text-lg font-semibold text-foreground">Workshop, tyres & grey fleet</h2>
+                    <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         <StatCard title="API integrations" count={counts.api_integrations ?? 0} href="/fleet/api-integrations" icon={Cpu} />
                         <StatCard title="API logs" count={counts.api_logs ?? 0} href="/fleet/api-logs" icon={FileText} />
                         <StatCard title="Dashcam clips" count={counts.dashcam_clips ?? 0} href="/fleet/dashcam-clips" icon={AlertTriangle} />
@@ -335,8 +350,8 @@ export default function FleetDashboard({ counts, recentWorkOrders, recentDefects
                 </section>
 
                 <section>
-                    <h2 className="mb-3 text-lg font-medium">Vehicle extras & audit</h2>
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <h2 className="mb-4 text-lg font-semibold text-foreground">Vehicle extras & audit</h2>
+                    <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         <StatCard title="Parking allocations" count={counts.parking_allocations ?? 0} href="/fleet/parking-allocations" icon={MapPin} />
                         <StatCard title="E-lock events" count={counts.e_lock_events ?? 0} href="/fleet/e-lock-events" icon={Lock} />
                         <StatCard title="Axle load readings" count={counts.axle_load_readings ?? 0} href="/fleet/axle-load-readings" icon={Scale} />
@@ -345,8 +360,8 @@ export default function FleetDashboard({ counts, recentWorkOrders, recentDefects
                 </section>
 
                 <section>
-                    <h2 className="mb-3 text-lg font-medium">Alerts & reports</h2>
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <h2 className="mb-4 text-lg font-semibold text-foreground">Alerts & reports</h2>
+                    <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         <StatCard title="Fleet Assistant" count={undefined} href="/fleet/assistant" icon={Bot} />
                         <StatCard title="Alerts" count={counts.alerts ?? 0} href="/fleet/alerts" icon={Bell} />
                         <StatCard title="Alert preferences" count={counts.alert_preferences ?? 0} href="/fleet/alert-preferences" icon={Bell} />
@@ -356,9 +371,9 @@ export default function FleetDashboard({ counts, recentWorkOrders, recentDefects
                 </section>
 
                 <div className="grid gap-6 lg:grid-cols-3">
-                    <Card>
+                    <Card className="border border-border">
                         <CardHeader className="pb-2">
-                            <CardTitle className="flex items-center justify-between text-base">
+                            <CardTitle className="flex items-center justify-between text-base font-semibold text-foreground">
                                 Recent work orders
                                 <Link href="/fleet/work-orders" className="text-sm font-normal text-primary hover:underline">View all</Link>
                             </CardTitle>
@@ -378,9 +393,9 @@ export default function FleetDashboard({ counts, recentWorkOrders, recentDefects
                             )}
                         </CardContent>
                     </Card>
-                    <Card>
+                    <Card className="border border-border">
                         <CardHeader className="pb-2">
-                            <CardTitle className="flex items-center justify-between text-base">
+                            <CardTitle className="flex items-center justify-between text-base font-semibold text-foreground">
                                 Recent defects
                                 <Link href="/fleet/defects" className="text-sm font-normal text-primary hover:underline">View all</Link>
                             </CardTitle>
@@ -400,9 +415,9 @@ export default function FleetDashboard({ counts, recentWorkOrders, recentDefects
                             )}
                         </CardContent>
                     </Card>
-                    <Card>
+                    <Card className="border border-border">
                         <CardHeader className="pb-2">
-                            <CardTitle className="flex items-center justify-between text-base">
+                            <CardTitle className="flex items-center justify-between text-base font-semibold text-foreground">
                                 Expiring compliance
                                 <Link href="/fleet/compliance-items" className="text-sm font-normal text-primary hover:underline">View all</Link>
                             </CardTitle>
@@ -422,9 +437,9 @@ export default function FleetDashboard({ counts, recentWorkOrders, recentDefects
                             )}
                         </CardContent>
                     </Card>
-                    <Card>
+                    <Card className="border border-border">
                         <CardHeader className="pb-2">
-                            <CardTitle className="flex items-center justify-between text-base">
+                            <CardTitle className="flex items-center justify-between text-base font-semibold text-foreground">
                                 Compliance at risk (AI)
                                 {aiJobRunsUrl && (
                                     <Link href={aiJobRunsUrl} className="text-sm font-normal text-primary hover:underline">Run prediction</Link>
@@ -451,17 +466,17 @@ export default function FleetDashboard({ counts, recentWorkOrders, recentDefects
                 </div>
 
                 <section>
-                    <h2 className="mb-3 text-lg font-medium">Setup & configuration</h2>
+                    <h2 className="mb-4 text-lg font-semibold text-foreground">Setup & configuration</h2>
                     <div className="flex flex-wrap gap-2">
-                        <Link href="/fleet/locations" className="rounded-lg border bg-card px-4 py-2 text-sm font-medium hover:bg-muted">Locations</Link>
-                        <Link href="/fleet/cost-centers" className="rounded-lg border bg-card px-4 py-2 text-sm font-medium hover:bg-muted">Cost centers</Link>
-                        <Link href="/fleet/garages" className="rounded-lg border bg-card px-4 py-2 text-sm font-medium hover:bg-muted">Garages</Link>
-                        <Link href="/fleet/fuel-stations" className="rounded-lg border bg-card px-4 py-2 text-sm font-medium hover:bg-muted">Fuel stations</Link>
-                        <Link href="/fleet/ev-charging-stations" className="rounded-lg border bg-card px-4 py-2 text-sm font-medium hover:bg-muted">EV charging stations</Link>
-                        <Link href="/fleet/geofences" className="rounded-lg border bg-card px-4 py-2 text-sm font-medium hover:bg-muted">Geofences</Link>
-                        <Link href="/fleet/trailers" className="rounded-lg border bg-card px-4 py-2 text-sm font-medium hover:bg-muted">Trailers</Link>
-                        <Link href="/fleet/operator-licences" className="rounded-lg border bg-card px-4 py-2 text-sm font-medium hover:bg-muted">Operator licences</Link>
-                        <Link href="/fleet/telematics-devices" className="rounded-lg border bg-card px-4 py-2 text-sm font-medium hover:bg-muted">Telematics devices</Link>
+                        <Link href="/fleet/locations" className="inline-flex items-center rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted hover:text-primary">Locations</Link>
+                        <Link href="/fleet/cost-centers" className="inline-flex items-center rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted hover:text-primary">Cost centers</Link>
+                        <Link href="/fleet/garages" className="inline-flex items-center rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted hover:text-primary">Garages</Link>
+                        <Link href="/fleet/fuel-stations" className="inline-flex items-center rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted hover:text-primary">Fuel stations</Link>
+                        <Link href="/fleet/ev-charging-stations" className="inline-flex items-center rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted hover:text-primary">EV charging stations</Link>
+                        <Link href="/fleet/geofences" className="inline-flex items-center rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted hover:text-primary">Geofences</Link>
+                        <Link href="/fleet/trailers" className="inline-flex items-center rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted hover:text-primary">Trailers</Link>
+                        <Link href="/fleet/operator-licences" className="inline-flex items-center rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted hover:text-primary">Operator licences</Link>
+                        <Link href="/fleet/telematics-devices" className="inline-flex items-center rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted hover:text-primary">Telematics devices</Link>
                     </div>
                 </section>
             </div>

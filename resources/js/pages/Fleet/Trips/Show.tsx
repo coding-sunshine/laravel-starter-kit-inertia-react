@@ -1,9 +1,15 @@
 import AppLayout from '@/layouts/app-layout';
+import {
+    FleetMap,
+    FleetMapMarker,
+    FleetMapPolyline,
+} from '@/components/fleet/FleetMap';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useMemo } from 'react';
 
 interface TripRecord {
     id: number;
@@ -35,6 +41,17 @@ export default function FleetTripsShow({ trip }: Props) {
     ];
     const waypoints = trip.waypoints ?? [];
     const events = trip.behaviorEvents ?? trip.behavior_events ?? [];
+    const path = useMemo(() => {
+        return waypoints.map((w) => ({
+            lat: Number(w.lat),
+            lng: Number(w.lng),
+        }));
+    }, [waypoints]);
+    const mapCenter = useMemo(() => {
+        if (path.length === 0) return { lat: 51.5, lng: -0.1 };
+        const sum = path.reduce((a, p) => ({ lat: a.lat + p.lat, lng: a.lng + p.lng }), { lat: 0, lng: 0 });
+        return { lat: sum.lat / path.length, lng: sum.lng / path.length };
+    }, [path]);
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={`Fleet – Trip #${trip.id}`} />
@@ -74,6 +91,42 @@ export default function FleetTripsShow({ trip }: Props) {
                     </Card>
                 </div>
                 {trip.notes && <p className="text-sm text-muted-foreground">{trip.notes}</p>}
+                <Card className="overflow-hidden border border-border">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-base font-semibold text-foreground">Trip path</CardTitle>
+                    </CardHeader>
+                    <CardContent className="relative p-0">
+                        <FleetMap
+                            center={mapCenter}
+                            zoom={path.length >= 2 ? 10 : 12}
+                            mapContainerStyle={{ width: '100%', height: '320px' }}
+                            className="rounded-b-lg"
+                        >
+                            {path.length >= 2 && <FleetMapPolyline path={path} />}
+                            {path.length > 0 && (
+                                <>
+                                    <FleetMapMarker
+                                        position={path[0]}
+                                        title="Start"
+                                        label={path.length === 1 ? 'S' : undefined}
+                                    />
+                                    {path.length > 1 && (
+                                        <FleetMapMarker
+                                            position={path[path.length - 1]}
+                                            title="End"
+                                            label="E"
+                                        />
+                                    )}
+                                </>
+                            )}
+                        </FleetMap>
+                        {path.length === 0 && (
+                            <p className="absolute bottom-4 left-1/2 z-10 -translate-x-1/2 rounded bg-card/95 px-3 py-1.5 text-center text-sm text-muted-foreground shadow-sm">
+                                No path recorded for this trip.
+                            </p>
+                        )}
+                    </CardContent>
+                </Card>
                 {waypoints.length > 0 && (
                     <Card>
                         <CardHeader className="pb-2"><CardTitle className="text-base">Waypoints</CardTitle></CardHeader>

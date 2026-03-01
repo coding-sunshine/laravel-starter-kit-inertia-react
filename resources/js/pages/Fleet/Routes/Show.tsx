@@ -1,14 +1,17 @@
 import AppLayout from '@/layouts/app-layout';
-import { dashboard } from '@/routes';
-import type { BreadcrumbItem } from '@/types';
-import { Head, Link, useForm, router } from '@inertiajs/react';
+import {
+    FleetMap,
+    FleetMapMarker,
+} from '@/components/fleet/FleetMap';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Form } from '@inertiajs/react';
-import { Trash2, Sparkles } from 'lucide-react';
-import { useState } from 'react';
+import { dashboard } from '@/routes';
+import type { BreadcrumbItem } from '@/types';
+import { Form, Head, Link, router, useForm } from '@inertiajs/react';
+import { Sparkles, Trash2 } from 'lucide-react';
+import { useMemo, useState } from 'react';
 
 interface LocationOption { id: number; name: string; }
 interface StopRecord {
@@ -17,7 +20,7 @@ interface StopRecord {
     sort_order: number;
     planned_arrival_time: string | null;
     planned_departure_time: string | null;
-    location?: { id: number; name: string };
+    location?: { id: number; name: string; lat?: number | null; lng?: number | null };
 }
 interface RouteRecord {
     id: number;
@@ -63,6 +66,29 @@ export default function FleetRoutesShow({ route, locations, optimizeUrl, applyOp
         notes: '',
     });
     const stops = route.stops ?? [];
+    const stopsWithCoords = useMemo(
+        () =>
+            stops.filter(
+                (s): s is StopRecord & { location: { lat: number | string; lng: number | string } } =>
+                    s.location != null &&
+                    s.location.lat != null &&
+                    s.location.lng != null &&
+                    !Number.isNaN(Number(s.location.lat)) &&
+                    !Number.isNaN(Number(s.location.lng)),
+            ),
+        [stops],
+    );
+    const mapCenter = useMemo(() => {
+        if (stopsWithCoords.length === 0) return { lat: 51.5, lng: -0.1 };
+        const sum = stopsWithCoords.reduce(
+            (a, s) => ({
+                lat: a.lat + Number(s.location.lat),
+                lng: a.lng + Number(s.location.lng),
+            }),
+            { lat: 0, lng: 0 },
+        );
+        return { lat: sum.lat / stopsWithCoords.length, lng: sum.lng / stopsWithCoords.length };
+    }, [stopsWithCoords]);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -82,6 +108,31 @@ export default function FleetRoutesShow({ route, locations, optimizeUrl, applyOp
                     </Button>
                 </div>
                 {route.description && <p className="text-sm text-muted-foreground">{route.description}</p>}
+
+                {stopsWithCoords.length > 0 && (
+                    <Card className="overflow-hidden border border-border">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-base font-semibold text-foreground">Route map</CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                            <FleetMap
+                                center={mapCenter}
+                                zoom={stopsWithCoords.length >= 2 ? 10 : 12}
+                                mapContainerStyle={{ width: '100%', height: '320px' }}
+                                className="rounded-b-lg"
+                            >
+                                {stopsWithCoords.map((s, i) => (
+                                    <FleetMapMarker
+                                        key={s.id}
+                                        position={{ lat: Number(s.location.lat), lng: Number(s.location.lng) }}
+                                        title={s.name ?? s.location.name ?? `Stop ${s.sort_order + 1}`}
+                                        label={String(i + 1)}
+                                    />
+                                ))}
+                            </FleetMap>
+                        </CardContent>
+                    </Card>
+                )}
 
                 <Card>
                     <CardHeader className="pb-2">

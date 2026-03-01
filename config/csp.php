@@ -54,16 +54,17 @@ return [
 
         [Directive::CONNECT, array_filter(array_merge([
             Keyword::SELF,
+            'https://maps.googleapis.com',
         ], $viteHttp, $viteWs))],
 
         in_array(env('APP_ENV'), ['local', 'testing'], true)
-            ? [Directive::SCRIPT, array_merge([Keyword::SELF, Keyword::UNSAFE_EVAL, Keyword::UNSAFE_INLINE, 'https://unpkg.com'], $viteHttp)]
-            : [Directive::SCRIPT, [Keyword::SELF, Keyword::UNSAFE_INLINE, 'https://unpkg.com']],
+            ? [Directive::SCRIPT, array_merge([Keyword::SELF, Keyword::UNSAFE_EVAL, Keyword::UNSAFE_INLINE, 'https://unpkg.com', 'https://maps.googleapis.com'], $viteHttp)]
+            : [Directive::SCRIPT, [Keyword::SELF, Keyword::UNSAFE_INLINE, 'https://unpkg.com', 'https://maps.googleapis.com']],
 
         // Chrome uses script-src-elem for <script> tags; set explicitly so Vite dev server is allowed.
         in_array(env('APP_ENV'), ['local', 'testing'], true)
-            ? [Directive::SCRIPT_ELEM, array_merge([Keyword::SELF, Keyword::UNSAFE_EVAL, Keyword::UNSAFE_INLINE, 'https://unpkg.com'], $viteHttp)]
-            : null,
+            ? [Directive::SCRIPT_ELEM, array_merge([Keyword::SELF, Keyword::UNSAFE_EVAL, Keyword::UNSAFE_INLINE, 'https://unpkg.com', 'https://maps.googleapis.com'], $viteHttp)]
+            : [Directive::SCRIPT_ELEM, [Keyword::SELF, Keyword::UNSAFE_INLINE, 'https://unpkg.com', 'https://maps.googleapis.com']],
     ]),
 
     'report_only_presets' => [],

@@ -8,7 +8,7 @@ return [
     | Theme presets (single source for ThemeSettings, Filament, org branding)
     |--------------------------------------------------------------------------
     */
-    'preset' => env('THEME_PRESET', 'default'),
+    'preset' => env('THEME_PRESET', 'fleet'),
 
     'base_color' => env('THEME_BASE_COLOR', 'neutral'),
 
@@ -27,6 +27,9 @@ return [
         'default' => [
             'label' => 'Default',
         ],
+        'fleet' => [
+            'label' => 'Fleet',
+        ],
         'vega' => [
             'label' => 'Vega',
         ],
@@ -40,7 +43,7 @@ return [
     | Subset of presets orgs can choose (org branding)
     |--------------------------------------------------------------------------
     */
-    'org_allowed_presets' => ['default', 'vega', 'nova'],
+    'org_allowed_presets' => ['default', 'fleet', 'vega', 'nova'],
 
     'base_colors' => [
         'neutral' => 'Neutral',

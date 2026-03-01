@@ -1,4 +1,5 @@
 import PageController from '@/actions/App/Http/Controllers/PageController';
+import { fleetNavItems } from '@/config/fleet-nav';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -217,7 +218,10 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={visibleMainNavItems} />
+                <NavMain
+                    items={visibleMainNavItems}
+                    fleetSubItems={fleetNavItems}
+                />
             </SidebarContent>
 
             <SidebarFooter>
