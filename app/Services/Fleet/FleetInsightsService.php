@@ -24,14 +24,31 @@ final class FleetInsightsService
     {
         $insights = [];
 
-        // Compliance expiring (e.g. MOT) in next N days
-        $expiringCount = ComplianceItem::withoutGlobalScope(OrganizationScope::class)
-            ->where('organization_id', $organizationId)
-            ->where('expiry_date', '>=', now())
-            ->where('expiry_date', '<=', now()->addDays(self::MOT_DAYS_AHEAD))
+        $expiringQuery = function () use ($organizationId): \Illuminate\Database\Eloquent\Builder {
+            return ComplianceItem::withoutGlobalScope(OrganizationScope::class)
+                ->where('organization_id', $organizationId)
+                ->where('expiry_date', '>=', now())
+                ->where('expiry_date', '<=', now()->addDays(self::MOT_DAYS_AHEAD));
+        };
+
+        // MOT due in next N days (proactive compliance insight)
+        $motCount = $expiringQuery()->where('compliance_type', 'mot')->count();
+        if ($motCount > 0) {
+            $insights[] = sprintf('%d vehicle(s) with MOT due in the next %d days.', $motCount, self::MOT_DAYS_AHEAD);
+        }
+
+        // Insurance expiring in next N days
+        $insuranceCount = $expiringQuery()->where('compliance_type', 'insurance')->count();
+        if ($insuranceCount > 0) {
+            $insights[] = sprintf('%d insurance (or policy) item(s) expiring in the next %d days.', $insuranceCount, self::MOT_DAYS_AHEAD);
+        }
+
+        // Other compliance (tax, licence, etc.) expiring in next N days
+        $otherCount = $expiringQuery()
+            ->whereNotIn('compliance_type', ['mot', 'insurance'])
             ->count();
-        if ($expiringCount > 0) {
-            $insights[] = sprintf('%d compliance item(s) (e.g. MOT, insurance) expiring in the next %d days.', $expiringCount, self::MOT_DAYS_AHEAD);
+        if ($otherCount > 0) {
+            $insights[] = sprintf('%d other compliance item(s) (tax, licence, etc.) expiring in the next %d days.', $otherCount, self::MOT_DAYS_AHEAD);
         }
 
         // Service schedules due soon
@@ -82,9 +99,10 @@ final class FleetInsightsService
             $suggested[] = 'What needs attention in my fleet right now?';
             $suggested[] = 'Which vehicles have MOT or insurance expiring soon?';
         }
+        $suggested[] = 'Where is vehicle AB12 CDE?';
         $suggested[] = 'Show me open work orders.';
         $suggested[] = 'List vehicles and their compliance status.';
 
-        return array_slice(array_unique($suggested), 0, 5);
+        return array_slice(array_unique($suggested), 0, 6);
     }
 }

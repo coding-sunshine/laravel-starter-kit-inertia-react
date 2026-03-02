@@ -46,6 +46,10 @@ return [
         'url' => env('EXAMPLE_API_URL', 'https://jsonplaceholder.typicode.com'),
     ],
 
+    'google' => [
+        'maps_api_key' => env('GOOGLE_MAPS_API_KEY', env('VITE_GOOGLE_MAPS_API_KEY')),
+    ],
+
     // Managed via Filament: Settings > Lemon Squeezy
     'lemon_squeezy' => [
         'api_key' => null,

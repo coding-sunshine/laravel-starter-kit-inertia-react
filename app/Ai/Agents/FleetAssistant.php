@@ -42,6 +42,7 @@ final class FleetAssistant implements Agent, Conversational, HasTools
             .'You can: search fleet documents (MOT, V5C, insurance, service history) with the document search tool—when you use it, always cite the source (document name or reference). '
             .'List tools: vehicles, drivers, trips, work orders, compliance items, alerts, service schedules, defects, routes. '
             .'Get-by-ID tools: get_work_order, get_vehicle, get_driver, get_route, get_trip for details on a single item. '
+            .'For "Where is [vehicle]?" or "Where is [registration]?": use list_vehicles to find the vehicle (match by registration or name), then get_vehicle with that vehicle\'s ID to get current position (lat/lng) and location_updated_at. Report the coordinates and when the position was last updated; if no position is reported, say so. '
             .'Use list_work_orders for maintenance and repair orders; list_compliance_items for expiring MOT, insurance, licences (expiring_within_days); list_service_schedules for next service due; list_defects for DVIR-style defects; list_routes for route plans. '
             .'Always scope answers to the current organization. Be concise and cite document sources when using document search. '
             .'If the user asks about something you cannot find in tools, say so.';
