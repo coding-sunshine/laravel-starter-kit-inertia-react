@@ -30,6 +30,8 @@ import {
     Users,
     Wrench,
 } from 'lucide-react';
+import { FleetMap, FleetMapMarker } from '@/components/fleet/FleetMap';
+import { useMemo } from 'react';
 interface Counts {
     vehicles: number;
     drivers: number;
@@ -120,6 +122,14 @@ interface ChartTripsOverTimeRow { date: string; label: string; trips: number; }
 interface ChartWorkOrdersByStatusRow { name: string; value: number; }
 interface ChartWorkOrdersOverTimeRow { date: string; label: string; work_orders: number; }
 
+interface MapVehicleRow {
+    id: number;
+    registration: string;
+    lat: number;
+    lng: number;
+    source: 'current' | 'home';
+}
+
 interface Props {
     counts: Counts;
     chartTripsOverTime: ChartTripsOverTimeRow[];
@@ -131,6 +141,7 @@ interface Props {
     complianceAtRisk?: ComplianceAtRiskRow | null;
     aiJobRunsUrl?: string;
     insights?: string[];
+    mapVehicles?: MapVehicleRow[];
 }
 
 const CHART_COLORS = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)'];
@@ -144,6 +155,8 @@ const tooltipContentStyle = {
     boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
 };
 
+const DEFAULT_MAP_CENTER = { lat: 51.5, lng: -0.1 };
+
 export default function FleetDashboard({
     counts,
     chartTripsOverTime = [],
@@ -155,6 +168,7 @@ export default function FleetDashboard({
     complianceAtRisk,
     aiJobRunsUrl,
     insights = [],
+    mapVehicles = [],
 }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard().url },
@@ -169,6 +183,12 @@ export default function FleetDashboard({
         { name: 'Work orders', value: counts.work_orders },
     ];
     const hasWorkOrdersByStatus = chartWorkOrdersByStatus.some((r) => r.value > 0);
+
+    const mapCenter = useMemo(() => {
+        if (mapVehicles.length === 0) return DEFAULT_MAP_CENTER;
+        const sum = mapVehicles.reduce((a, v) => ({ lat: a.lat + v.lat, lng: a.lng + v.lng }), { lat: 0, lng: 0 });
+        return { lat: sum.lat / mapVehicles.length, lng: sum.lng / mapVehicles.length };
+    }, [mapVehicles]);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -284,6 +304,54 @@ export default function FleetDashboard({
                         </div>
                     </Link>
                 </div>
+
+                {/* Fleet map — show vehicles with a known position (current or home location) */}
+                <Card className="overflow-hidden border border-border">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="flex items-center gap-2 text-base font-semibold text-foreground">
+                            <MapPin className="size-4 text-primary" />
+                            Fleet map
+                        </CardTitle>
+                        <p className="text-xs text-muted-foreground">
+                            {mapVehicles.length > 0
+                                ? `${mapVehicles.length} vehicle(s) with location — current position or home base`
+                                : 'Add vehicle locations or set home location to see the fleet on the map.'}
+                        </p>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        <div className="relative">
+                            <FleetMap
+                                center={mapCenter}
+                                zoom={mapVehicles.length >= 2 ? 8 : 10}
+                                mapContainerStyle={{ width: '100%', height: '340px' }}
+                                className="rounded-b-lg"
+                            >
+                                {mapVehicles.map((v) => (
+                                    <FleetMapMarker
+                                        key={v.id}
+                                        position={{ lat: v.lat, lng: v.lng }}
+                                        title={`${v.registration}${v.source === 'home' ? ' (home)' : ''}`}
+                                        label={v.registration.slice(0, 2).toUpperCase()}
+                                    />
+                                ))}
+                            </FleetMap>
+                            {mapVehicles.length === 0 && (
+                                <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-b-lg bg-muted/40">
+                                    <p className="rounded-lg border border-border bg-card/95 px-4 py-3 text-center text-sm text-muted-foreground shadow-sm">
+                                        No vehicle locations yet. Set current position or home location on vehicles to see them here.
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                        <div className="flex justify-end border-t bg-muted/30 px-4 py-2">
+                            <Button variant="outline" size="sm" asChild>
+                                <Link href="/fleet/vehicles" prefetch="click">
+                                    Manage vehicles
+                                </Link>
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
 
                 {/* Charts grid */}
                 <section>

@@ -212,6 +212,38 @@ final class FleetDashboardController extends Controller
         $orgId = \App\Services\TenantContext::id();
         $insights = $orgId !== null ? $insightsService->forOrganization($orgId) : [];
 
+        // Vehicles with a mappable position: current_lat/lng or home location with lat/lng
+        $mapVehicles = Vehicle::query()
+            ->with('homeLocation:id,lat,lng')
+            ->get(['id', 'registration', 'current_lat', 'current_lng', 'home_location_id'])
+            ->map(function (Vehicle $v): ?array {
+                $lat = $v->current_lat !== null && $v->current_lng !== null
+                    ? (float) $v->current_lat
+                    : null;
+                $lng = $v->current_lat !== null && $v->current_lng !== null
+                    ? (float) $v->current_lng
+                    : null;
+                $source = 'current';
+                if ($lat === null && $v->homeLocation?->lat !== null && $v->homeLocation?->lng !== null) {
+                    $lat = (float) $v->homeLocation->lat;
+                    $lng = (float) $v->homeLocation->lng;
+                    $source = 'home';
+                }
+                if ($lat === null || $lng === null) {
+                    return null;
+                }
+                return [
+                    'id' => $v->id,
+                    'registration' => $v->registration,
+                    'lat' => $lat,
+                    'lng' => $lng,
+                    'source' => $source,
+                ];
+            })
+            ->filter()
+            ->values()
+            ->all();
+
         return Inertia::render('Fleet/Dashboard', [
             'counts' => $counts,
             'chartTripsOverTime' => $tripsOverTime,
@@ -223,6 +255,7 @@ final class FleetDashboardController extends Controller
             'complianceAtRisk' => $complianceAtRisk,
             'aiJobRunsUrl' => route('fleet.ai-job-runs.index'),
             'insights' => $insights,
+            'mapVehicles' => $mapVehicles,
         ]);
     }
 }

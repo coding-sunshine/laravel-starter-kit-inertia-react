@@ -1,10 +1,12 @@
 import AppLayout from '@/layouts/app-layout';
+import { FleetMap, FleetMapMarker } from '@/components/fleet/FleetMap';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
 import { MapPin, Pencil } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface LocationRecord {
     id: number;
@@ -19,6 +21,8 @@ interface LocationRecord {
     contact_email: string | null;
     notes: string | null;
     is_active: boolean;
+    lat?: number | null;
+    lng?: number | null;
 }
 
 interface Props {
@@ -34,6 +38,8 @@ export default function FleetLocationsShow({ location }: Props) {
     ];
 
     const addressParts = [location.address, location.city, location.postcode, location.country].filter(Boolean);
+    const hasCoords = location.lat != null && location.lng != null && !Number.isNaN(Number(location.lat)) && !Number.isNaN(Number(location.lng));
+    const mapCenter = hasCoords ? { lat: Number(location.lat), lng: Number(location.lng) } : null;
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -48,6 +54,26 @@ export default function FleetLocationsShow({ location }: Props) {
                         </Link>
                     </Button>
                 </div>
+                {mapCenter && (
+                    <Card className="overflow-hidden border border-border">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="flex items-center gap-2 text-base font-semibold text-foreground">
+                                <MapPin className="size-4 text-primary" />
+                                Map
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                            <FleetMap
+                                center={mapCenter}
+                                zoom={14}
+                                mapContainerStyle={{ width: '100%', height: '280px' }}
+                                className="rounded-b-lg"
+                            >
+                                <FleetMapMarker position={mapCenter} title={location.name} />
+                            </FleetMap>
+                        </CardContent>
+                    </Card>
+                )}
                 <div className="flex items-start gap-4 rounded-lg border p-4">
                     <MapPin className="mt-0.5 size-5 text-muted-foreground" />
                     <div className="space-y-1">

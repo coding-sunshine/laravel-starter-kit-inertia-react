@@ -1,10 +1,12 @@
 import AppLayout from '@/layouts/app-layout';
+import { FleetMap, FleetMapMarker } from '@/components/fleet/FleetMap';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Head, Link, router, useForm } from '@inertiajs/react';
+import { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Bot } from 'lucide-react';
+import { Bot, MapPin } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -40,6 +42,9 @@ interface VehicleData {
     current_driver_id: number | null;
     current_driver?: { id: number; first_name: string; last_name: string } | null;
     driver_assignments?: AssignmentRecord[];
+    current_lat?: number | null;
+    current_lng?: number | null;
+    home_location?: { id: number; name?: string; lat: number; lng: number } | null;
 }
 
 interface Props {
@@ -66,6 +71,16 @@ export default function FleetVehiclesShow({ vehicle, drivers, assignmentTypes }:
     const assignAction = `/fleet/vehicles/${vehicle.id}/assign-driver`;
     const unassignAction = `/fleet/vehicles/${vehicle.id}/unassign-driver`;
     const assignments = vehicle.driver_assignments ?? [];
+
+    const vehicleMapPosition = useMemo(() => {
+        const hasCurrent = vehicle.current_lat != null && vehicle.current_lng != null && !Number.isNaN(Number(vehicle.current_lat)) && !Number.isNaN(Number(vehicle.current_lng));
+        if (hasCurrent) return { lat: Number(vehicle.current_lat), lng: Number(vehicle.current_lng), source: 'current' as const };
+        const home = vehicle.home_location;
+        if (home?.lat != null && home?.lng != null && !Number.isNaN(Number(home.lat)) && !Number.isNaN(Number(home.lng))) {
+            return { lat: Number(home.lat), lng: Number(home.lng), source: 'home' as const };
+        }
+        return null;
+    }, [vehicle.current_lat, vehicle.current_lng, vehicle.home_location]);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -117,6 +132,35 @@ export default function FleetVehiclesShow({ vehicle, drivers, assignmentTypes }:
                             >
                                 Unassign driver
                             </Button>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* Location map — current position or home location */}
+                {vehicleMapPosition && (
+                    <Card className="overflow-hidden border border-border">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="flex items-center gap-2 text-base font-semibold text-foreground">
+                                <MapPin className="size-4 text-primary" />
+                                Location
+                            </CardTitle>
+                            <p className="text-xs text-muted-foreground">
+                                {vehicleMapPosition.source === 'current' ? 'Last known position' : 'Home location'}
+                            </p>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                            <FleetMap
+                                center={vehicleMapPosition}
+                                zoom={12}
+                                mapContainerStyle={{ width: '100%', height: '280px' }}
+                                className="rounded-b-lg"
+                            >
+                                <FleetMapMarker
+                                    position={vehicleMapPosition}
+                                    title={vehicle.registration}
+                                    label={vehicle.registration.slice(0, 2).toUpperCase()}
+                                />
+                            </FleetMap>
                         </CardContent>
                     </Card>
                 )}

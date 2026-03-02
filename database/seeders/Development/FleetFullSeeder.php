@@ -126,6 +126,8 @@ final class FleetFullSeeder extends Seeder
             ['registration' => 'UV90 WXY', 'make' => 'Tesla', 'model' => 'Model 3', 'year' => 2024, 'fuel_type' => 'electric', 'vehicle_type' => 'car', 'status' => 'active', 'odometer_reading' => 3000, 'compliance_status' => 'compliant', 'home_location_id' => $locIds[0] ?? null],
         ]);
 
+        $this->seedVehicleLiveTrackingPositions($vehicleIds);
+
         $this->seedRecords(\App\Models\Fleet\Geofence::class, 4, [
             ['name' => 'HQ Zone', 'geofence_type' => 'circle', 'radius_meters' => 500, 'is_active' => true],
             ['name' => 'North Yard Zone', 'geofence_type' => 'circle', 'radius_meters' => 300, 'is_active' => true],
@@ -1001,6 +1003,50 @@ final class FleetFullSeeder extends Seeder
             $key['title'] = $attrs['title'];
         }
         return $key;
+    }
+
+    /**
+     * Simulate live tracking from devices: set current_lat, current_lng, location_updated_at
+     * for seeded vehicles and for any other vehicles in the DB that have no position yet,
+     * so the Fleet dashboard map shows vehicle positions in every organization.
+     */
+    private function seedVehicleLiveTrackingPositions(array $vehicleIds): void
+    {
+        $positions = [
+            ['lat' => 51.5074, 'lng' => -0.1278],
+            ['lat' => 51.5150, 'lng' => -0.1420],
+            ['lat' => 53.4808, 'lng' => -2.2426],
+            ['lat' => 52.4862, 'lng' => -1.8904],
+            ['lat' => 53.8008, 'lng' => -1.5491],
+        ];
+        foreach ($vehicleIds as $i => $vid) {
+            $pos = $positions[$i % count($positions)];
+            \App\Models\Fleet\Vehicle::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)
+                ->where('id', $vid)
+                ->update([
+                    'current_lat' => $pos['lat'],
+                    'current_lng' => $pos['lng'],
+                    'location_updated_at' => now()->subMinutes(rand(1, 60)),
+                ]);
+        }
+        // Backfill all other vehicles (e.g. in other orgs like "Test Organization") that have no position
+        $withoutPosition = \App\Models\Fleet\Vehicle::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)
+            ->whereNull('current_lat')
+            ->whereNull('current_lng')
+            ->get(['id']);
+        $updated = 0;
+        foreach ($withoutPosition as $idx => $v) {
+            $pos = $positions[$idx % count($positions)];
+            \App\Models\Fleet\Vehicle::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)
+                ->where('id', $v->id)
+                ->update([
+                    'current_lat' => $pos['lat'],
+                    'current_lng' => $pos['lng'],
+                    'location_updated_at' => now()->subMinutes(rand(1, 60)),
+                ]);
+            $updated++;
+        }
+        $this->command?->info('Seeded simulated live tracking positions for ' . count($vehicleIds) . ' vehicles' . ($updated > 0 ? " and backfilled {$updated} more without position." : '.'));
     }
 
     /** Backfill lat/lng for existing locations (by name) so Route/Trip maps have coordinates. */
