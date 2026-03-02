@@ -28,7 +28,7 @@ import {
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Form, Head, Link } from '@inertiajs/react';
-import { MoreHorizontal, Pencil, Plus, Trash2, Users } from 'lucide-react';
+import { Eye, MoreHorizontal, Pencil, Plus, Trash2, Users } from 'lucide-react';
 import { useState } from 'react';
 
 interface DriverRecord {
@@ -146,10 +146,10 @@ export default function FleetDriversIndex({ drivers }: Props) {
                                                             asChild
                                                         >
                                                             <Link
-                                                                href={`/fleet/drivers/${row.id}/edit`}
-                                                                title="Edit"
+                                                                href={`/fleet/drivers/${row.id}`}
+                                                                title="View details"
                                                             >
-                                                                <Pencil className="size-4" />
+                                                                <Eye className="size-4" />
                                                             </Link>
                                                         </Button>
                                                         <DropdownMenu>

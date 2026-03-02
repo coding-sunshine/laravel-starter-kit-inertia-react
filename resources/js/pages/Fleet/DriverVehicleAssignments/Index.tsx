@@ -1,7 +1,7 @@
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
-import { Form, Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { Link2Off, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -123,23 +123,19 @@ export default function FleetDriverVehicleAssignmentsIndex({ assignments, filter
                                                 )}
                                             </td>
                                             <td className="p-3 text-right">
-                                                <Form
-                                                    action={`/fleet/driver-vehicle-assignments/${row.id}`}
-                                                    method="delete"
-                                                    className="inline"
-                                                    onSubmit={(e) => {
-                                                        if (!confirm('Remove this assignment?')) e.preventDefault();
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    title="Remove assignment"
+                                                    onClick={() => {
+                                                        if (confirm('Remove this assignment?')) {
+                                                            router.delete(`/fleet/driver-vehicle-assignments/${row.id}`);
+                                                        }
                                                     }}
                                                 >
-                                                    <Button
-                                                        type="submit"
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        title="Remove assignment"
-                                                    >
-                                                        <Link2Off className="size-3.5 text-destructive" />
-                                                    </Button>
-                                                </Form>
+                                                    <Link2Off className="size-3.5 text-destructive" />
+                                                </Button>
                                             </td>
                                         </tr>
                                     ))}

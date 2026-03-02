@@ -22,7 +22,7 @@ import {
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Form, Head, Link } from '@inertiajs/react';
-import { Car, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Car, Eye, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import {
     DropdownMenu,
@@ -154,10 +154,10 @@ export default function FleetVehiclesIndex({ vehicles }: Props) {
                                                             asChild
                                                         >
                                                             <Link
-                                                                href={`/fleet/vehicles/${row.id}/edit`}
-                                                                title="Edit"
+                                                                href={`/fleet/vehicles/${row.id}`}
+                                                                title="View details"
                                                             >
-                                                                <Pencil className="size-4" />
+                                                                <Eye className="size-4" />
                                                             </Link>
                                                         </Button>
                                                         <DropdownMenu>

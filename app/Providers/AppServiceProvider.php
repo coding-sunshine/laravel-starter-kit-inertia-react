@@ -190,6 +190,7 @@ final class AppServiceProvider extends ServiceProvider
             'fuel_station' => \App\Models\Fleet\FuelStation::class,
             'ev_charging_station' => \App\Models\Fleet\EvChargingStation::class,
             'operator_licence' => \App\Models\Fleet\OperatorLicence::class,
+            'driver_vehicle_assignment' => \App\Models\Fleet\DriverVehicleAssignment::class,
             'route' => \App\Models\Fleet\Route::class,
             'trip' => \App\Models\Fleet\Trip::class,
             'behavior_event' => \App\Models\Fleet\BehaviorEvent::class,

@@ -87,7 +87,6 @@ export function NavMain({
                     const hasSingleItem = section.items.length === 1;
                     return (
                         <SidebarGroup key={section.label} className="px-2 py-0">
-                            <SidebarGroupLabel>{section.label}</SidebarGroupLabel>
                             <SidebarMenu>
                                 {hasSingleItem ? (() => {
                                     const item = section.items[0]!;

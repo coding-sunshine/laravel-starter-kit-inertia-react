@@ -1,8 +1,14 @@
 import AppLayout from '@/layouts/app-layout';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
-import { Form, Head, Link } from '@inertiajs/react';
-import { MapPin, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Head, Link, router } from '@inertiajs/react';
+import { Eye, MapPin, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface RouteRecord {
@@ -55,8 +61,39 @@ export default function FleetRoutesIndex({ routes }: Props) {
                                         <td className="p-3">{row.route_type}</td>
                                         <td className="p-3">{row.is_active ? 'Active' : 'Inactive'}</td>
                                         <td className="p-3 text-right">
-                                            <Button variant="outline" size="sm" asChild><Link href={`/fleet/routes/${row.id}/edit`}><Pencil className="mr-1 size-3.5" />Edit</Link></Button>
-                                            <Form action={`/fleet/routes/${row.id}`} method="delete" className="ml-2 inline" onSubmit={(e) => { if (!confirm('Delete?')) e.preventDefault(); }}><Button type="submit" variant="ghost" size="sm"><Trash2 className="size-3.5 text-destructive" /></Button></Form>
+                                            <div className="flex items-center justify-end gap-1">
+                                                <Button variant="ghost" size="icon" className="size-8" asChild>
+                                                    <Link href={`/fleet/routes/${row.id}`} title="View details">
+                                                        <Eye className="size-4" />
+                                                    </Link>
+                                                </Button>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="size-8" title="More actions">
+                                                            <MoreHorizontal className="size-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem asChild>
+                                                            <Link href={`/fleet/routes/${row.id}/edit`}>
+                                                                <Pencil className="mr-2 size-4" />
+                                                                Edit
+                                                            </Link>
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            className="text-destructive focus:text-destructive"
+                                                            onClick={() => {
+                                                                if (confirm('Delete this route?')) {
+                                                                    router.delete(`/fleet/routes/${row.id}`);
+                                                                }
+                                                            }}
+                                                        >
+                                                            <Trash2 className="mr-2 size-4" />
+                                                            Delete
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
