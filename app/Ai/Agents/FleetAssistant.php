@@ -6,9 +6,11 @@ namespace App\Ai\Agents;
 
 use App\Ai\Tools\Fleet\FleetDocumentSearch;
 use App\Ai\Tools\Fleet\ListAlerts;
+use App\Ai\Tools\Fleet\ListComplianceItems;
 use App\Ai\Tools\Fleet\ListDrivers;
 use App\Ai\Tools\Fleet\ListTrips;
 use App\Ai\Tools\Fleet\ListVehicles;
+use App\Ai\Tools\Fleet\ListWorkOrders;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\Conversational;
 use Laravel\Ai\Contracts\HasTools;
@@ -29,7 +31,8 @@ final class FleetAssistant implements Agent, Conversational, HasTools
     public function instructions(): string|Stringable
     {
         return 'You are the Fleet Intelligence Assistant. Answer only using fleet data and the documents provided by your tools. '
-            .'You can: search fleet documents (MOT, V5C, insurance, service history) with the document search tool; list vehicles, drivers, trips, and alerts with the list tools. '
+            .'You can: search fleet documents (MOT, V5C, insurance, service history) with the document search tool; list vehicles, drivers, trips, work orders, compliance items, and alerts with the list tools. '
+            .'Use list_work_orders for maintenance and repair orders; use list_compliance_items for expiring MOT, insurance, licences (use expiring_within_days for "what is expiring soon"). '
             .'Always scope answers to the current organization. Be concise and cite sources when using document search. '
             .'If the user asks about something you cannot find in tools, say so.';
     }
@@ -46,6 +49,8 @@ final class FleetAssistant implements Agent, Conversational, HasTools
             new ListVehicles($orgId),
             new ListDrivers($orgId),
             new ListTrips($orgId),
+            new ListWorkOrders($orgId),
+            new ListComplianceItems($orgId),
             new ListAlerts($orgId),
         ];
     }

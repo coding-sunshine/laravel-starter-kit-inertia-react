@@ -1,5 +1,14 @@
 import AppLayout from '@/layouts/app-layout';
 import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
@@ -9,6 +18,7 @@ import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
 import { Eye, MapPin, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 
 interface RouteRecord {
@@ -22,6 +32,8 @@ interface Props {
 }
 
 export default function FleetRoutesIndex({ routes }: Props) {
+    const [deleteTarget, setDeleteTarget] = useState<RouteRecord | null>(null);
+
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard().url },
         { title: 'Fleet', href: '/fleet/routes' },
@@ -82,11 +94,7 @@ export default function FleetRoutesIndex({ routes }: Props) {
                                                         </DropdownMenuItem>
                                                         <DropdownMenuItem
                                                             className="text-destructive focus:text-destructive"
-                                                            onClick={() => {
-                                                                if (confirm('Delete this route?')) {
-                                                                    router.delete(`/fleet/routes/${row.id}`);
-                                                                }
-                                                            }}
+                                                            onClick={() => setDeleteTarget(row)}
                                                         >
                                                             <Trash2 className="mr-2 size-4" />
                                                             Delete
@@ -101,6 +109,33 @@ export default function FleetRoutesIndex({ routes }: Props) {
                         </table>
                     </div>
                 )}
+
+                <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Delete route</DialogTitle>
+                            <DialogDescription>
+                                Are you sure you want to delete <strong>{deleteTarget?.name}</strong>? This action cannot be undone.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                            <DialogClose asChild>
+                                <Button variant="outline">Cancel</Button>
+                            </DialogClose>
+                            <Button
+                                variant="destructive"
+                                onClick={() => {
+                                    if (deleteTarget) {
+                                        router.delete(`/fleet/routes/${deleteTarget.id}`);
+                                        setDeleteTarget(null);
+                                    }
+                                }}
+                            >
+                                Delete
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </div>
         </AppLayout>
     );

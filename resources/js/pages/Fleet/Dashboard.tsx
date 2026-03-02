@@ -411,7 +411,7 @@ export default function FleetDashboard({
                             )}
                         </CardContent>
                     </Card>
-                    <Card className="border border-border">
+                                    <Card className="border border-border">
                         <CardHeader className="pb-2">
                             <CardTitle className="flex items-center justify-between text-base font-semibold text-foreground">
                                 Expiring compliance
@@ -422,6 +422,7 @@ export default function FleetDashboard({
                             {expiringCompliance.length === 0 ? (
                                 <p className="text-sm text-muted-foreground">Nothing expiring soon.</p>
                             ) : (
+                                <>
                                 <ul className="space-y-2 text-sm">
                                     {expiringCompliance.map((c) => (
                                         <li key={c.id} className="flex items-center justify-between border-b border-dashed pb-2 last:border-0">
@@ -430,6 +431,11 @@ export default function FleetDashboard({
                                         </li>
                                     ))}
                                 </ul>
+                                <Link href="/fleet/assistant?prompt=What%27s%20expiring%20soon%3F" className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline">
+                                    <Bot className="size-3.5" />
+                                    Ask assistant
+                                </Link>
+                                </>
                             )}
                         </CardContent>
                     </Card>

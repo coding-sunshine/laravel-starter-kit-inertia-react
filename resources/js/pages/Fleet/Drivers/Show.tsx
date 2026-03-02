@@ -4,6 +4,7 @@ import type { BreadcrumbItem } from '@/types';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Bot } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -76,9 +77,20 @@ export default function FleetDriversShow({ driver, vehicles, assignmentTypes }: 
                             License: {driver.license_number} · Status: {driver.status}
                         </p>
                     </div>
-                    <Button variant="outline" asChild>
-                        <Link href="/fleet/drivers">Back to drivers</Link>
-                    </Button>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Button variant="outline" size="sm" asChild>
+                            <Link href={`/fleet/assistant?prompt=${encodeURIComponent(`Tell me about driver ${driver.first_name} ${driver.last_name} (ID ${driver.id}). Assignments and compliance?`)}`}>
+                                <Bot className="mr-2 size-4" />
+                                Ask assistant
+                            </Link>
+                        </Button>
+                        <Button variant="outline" size="sm" asChild>
+                            <Link href={`/fleet/drivers/${driver.id}/edit`}>Edit</Link>
+                        </Button>
+                        <Button variant="outline" asChild>
+                            <Link href="/fleet/drivers">Back to drivers</Link>
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Current vehicle assignment */}

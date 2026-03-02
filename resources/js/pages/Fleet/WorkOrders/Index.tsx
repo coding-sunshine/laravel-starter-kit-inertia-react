@@ -29,7 +29,7 @@ import {
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Form, Head, Link } from '@inertiajs/react';
-import { ClipboardList, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ClipboardList, Eye, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
 const selectClass =
@@ -198,14 +198,9 @@ export default function FleetWorkOrdersIndex({ workOrders, filters, vehicles, st
                                                     </TableCell>
                                                     <TableCell className="px-4 py-3 text-right">
                                                         <div className="flex items-center justify-end gap-1">
-                                                            <Button variant="ghost" size="sm" asChild>
-                                                                <Link href={`/fleet/work-orders/${row.id}`}>
-                                                                    View
-                                                                </Link>
-                                                            </Button>
                                                             <Button variant="ghost" size="icon" className="size-8" asChild>
-                                                                <Link href={`/fleet/work-orders/${row.id}/edit`} title="Edit">
-                                                                    <Pencil className="size-4" />
+                                                                <Link href={`/fleet/work-orders/${row.id}`} title="View details">
+                                                                    <Eye className="size-4" />
                                                                 </Link>
                                                             </Button>
                                                             <DropdownMenu>
@@ -215,11 +210,6 @@ export default function FleetWorkOrdersIndex({ workOrders, filters, vehicles, st
                                                                     </Button>
                                                                 </DropdownMenuTrigger>
                                                                 <DropdownMenuContent align="end">
-                                                                    <DropdownMenuItem asChild>
-                                                                        <Link href={`/fleet/work-orders/${row.id}`}>
-                                                                            View
-                                                                        </Link>
-                                                                    </DropdownMenuItem>
                                                                     <DropdownMenuItem asChild>
                                                                         <Link href={`/fleet/work-orders/${row.id}/edit`}>
                                                                             <Pencil className="mr-2 size-4" />

@@ -13,7 +13,7 @@ import {
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
-import { MapPin } from 'lucide-react';
+import { Eye, MapPin } from 'lucide-react';
 
 interface TripRecord {
     id: number;
@@ -104,8 +104,10 @@ export default function FleetTripsIndex({ trips }: Props) {
                                                     </span>
                                                 </TableCell>
                                                 <TableCell className="px-4 py-3 text-right">
-                                                    <Button variant="outline" size="sm" asChild>
-                                                        <Link href={`/fleet/trips/${row.id}`}>View</Link>
+                                                    <Button variant="ghost" size="icon" className="size-8" asChild>
+                                                        <Link href={`/fleet/trips/${row.id}`} title="View details">
+                                                            <Eye className="size-4" />
+                                                        </Link>
                                                     </Button>
                                                 </TableCell>
                                             </TableRow>
