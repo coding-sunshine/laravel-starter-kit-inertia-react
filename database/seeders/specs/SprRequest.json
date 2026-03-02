@@ -1,0 +1,93 @@
+{
+    "model": "SprRequest",
+    "table": "spr_requests",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "user_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "project_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "spr_count": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "spr_price": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "is_payment_completed": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "is_request_completed": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "transaction_access_code": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "transaction_id": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "extra_attributes": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "user": {
+            "type": "belongsTo",
+            "model": "User"
+        },
+        "project": {
+            "type": "belongsTo",
+            "model": "Project"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

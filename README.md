@@ -84,6 +84,10 @@ composer test
 
 You should see all tests passing. For the full suite (coverage, type coverage, lint, static analysis), run `composer test:full`.
 
+### Fusion CRM migration (optional)
+
+If this project is used for the Fusion CRM rebuild, see **[docs/FUSION-CRM-MIGRATION.md](docs/FUSION-CRM-MIGRATION.md)** for how to run migrations and import contacts from the legacy MySQL dump (PostgreSQL as app DB). Includes prerequisites, env config, import commands (resume, batch, details-only), verification, and troubleshooting.
+
 ## Available Tooling
 
 ### Development

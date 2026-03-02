@@ -62,6 +62,22 @@ return [
             ]) : [],
         ],
 
+        'mysql_legacy' => [
+            'driver' => 'mysql',
+            'host' => env('MYSQL_LEGACY_HOST', env('DB_HOST', '127.0.0.1')),
+            'port' => env('MYSQL_LEGACY_PORT', '3306'),
+            'database' => env('MYSQL_LEGACY_DATABASE', 'fusioncrm'),
+            'username' => env('MYSQL_LEGACY_USERNAME', 'root'),
+            'password' => env('MYSQL_LEGACY_PASSWORD', ''),
+            'unix_socket' => env('MYSQL_LEGACY_SOCKET', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => true,
+            'engine' => null,
+        ],
+
         'mariadb' => [
             'driver' => 'mariadb',
             'url' => env('DB_URL'),

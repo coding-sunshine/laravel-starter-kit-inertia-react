@@ -83,6 +83,7 @@ final class HandleInertiaRequests extends Middleware
             'honeypot' => $honeypot->enabled() ? $honeypot->toArray() : null,
             'cookieConsent' => config('cookie-consent.enabled', true) ? [
                 'accepted' => $request->hasCookie(config('cookie-consent.cookie_name', 'laravel_cookie_consent')),
+                'acceptUrl' => route('cookie-consent.accept'),
                 'cookieName' => config('cookie-consent.cookie_name', 'laravel_cookie_consent'),
                 'lifetimeDays' => (int) config('cookie-consent.cookie_lifetime', 365 * 20),
             ] : null,

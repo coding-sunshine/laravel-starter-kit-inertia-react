@@ -1,0 +1,102 @@
+{
+    "model": "Developer",
+    "table": "developers",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "legacy_developer_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "user_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "is_onboard": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "relationship_status": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "login_info": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "information_delivery": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "commission_note": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "build_time": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "is_active": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "extra_attributes": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "user": {
+            "type": "belongsTo",
+            "model": "User"
+        },
+        "projects": {
+            "type": "hasMany",
+            "model": "Project"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

@@ -188,7 +188,7 @@
             "bun run test:lint"
         ],
         "test:unit": "XDEBUG_MODE=\"coverage\" pest --parallel --coverage --exactly=100.0",
-        "test:quick": "pest --parallel --compact",
+        "test:quick": "pest --parallel --compact --exclude-testsuite=Browser",
         "test:types": [
             "phpstan",
             "bun run test:types"

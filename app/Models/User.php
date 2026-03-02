@@ -18,6 +18,7 @@ use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -48,6 +49,7 @@ use Spatie\Tags\HasTags;
  * @property-read int $id
  * @property-read string $name
  * @property-read string $email
+ * @property-read int|null $contact_id
  * @property-read string|null $avatar
  * @property-read string|null $avatar_profile
  * @property-read CarbonInterface|null $email_verified_at
@@ -68,6 +70,16 @@ final class User extends Authenticatable implements ExportsPersonalData, Filamen
      * @use HasFactory<UserFactory>
      */
     use CanRedeemVouchers, Categorizable, GiveExperience, HasAchievements, HasAffiliate, HasApiTokens, HasFactory, HasOrganizationPermissions, HasRoles, HasTags, InteractsWithMedia, LogsActivity, Notifiable, Referrable, Searchable, SoftDeletes, TwoFactorAuthenticatable;
+
+    /**
+     * @var list<string>
+     */
+    protected $fillable = [
+        'name',
+        'email',
+        'password',
+        'contact_id',
+    ];
 
     /**
      * @var list<string>
@@ -217,6 +229,14 @@ final class User extends Authenticatable implements ExportsPersonalData, Filamen
     public function ownedOrganizations(): HasMany
     {
         return $this->hasMany(Organization::class, 'owner_id');
+    }
+
+    /**
+     * @return BelongsTo<Contact, $this>
+     */
+    public function contact(): BelongsTo
+    {
+        return $this->belongsTo(Contact::class);
     }
 
     /**

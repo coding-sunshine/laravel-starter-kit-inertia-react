@@ -1,10 +1,10 @@
 import { Button } from '@/components/ui/button';
-import { accept } from '@/routes/cookie-consent';
 import { type SharedData } from '@/types';
 import { router, usePage } from '@inertiajs/react';
 
 interface CookieConsentProps {
     accepted: boolean;
+    acceptUrl: string;
     cookieName: string;
     lifetimeDays: number;
 }
@@ -20,7 +20,7 @@ export function CookieConsentBanner() {
     }
 
     const handleAccept = () => {
-        router.visit(accept().url, { method: 'get' });
+        router.visit(cookieConsent.acceptUrl, { method: 'get' });
     };
 
     return (

@@ -15,6 +15,9 @@ export default defineConfig({
         tailwindcss(),
         wayfinder({
             formVariants: true,
+            // No-op so build doesn't fail when plugin's subprocess fails (PATH/cwd).
+            // Wayfinder is run in prebuild so types already exist.
+            command: 'true',
         }),
     ],
     esbuild: {

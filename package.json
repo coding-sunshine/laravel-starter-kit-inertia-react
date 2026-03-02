@@ -2,7 +2,7 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "build": "vite build",
+        "build": "php artisan wayfinder:generate --with-form --skip-routes && php artisan wayfinder:generate --with-form --skip-actions && vite build",
         "build:ssr": "vite build && vite build --ssr",
         "dev": "vite",
         "lint": "eslint . --fix && prettier --write resources/",

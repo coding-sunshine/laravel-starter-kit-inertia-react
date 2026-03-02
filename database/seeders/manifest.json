@@ -8,6 +8,29 @@
             "data_files": []
         },
         {
+            "name": "CrmRolesSeeder",
+            "category": "essential",
+            "description": "Seeds CRM-specific roles (sales-agent, bdm, referral-partner) and permissions (view/create/edit/delete contacts and projects)",
+            "dependencies": [
+                "RolesAndPermissionsSeeder"
+            ],
+            "data_files": []
+        },
+        {
+            "name": "GamificationSeeder",
+            "category": "essential",
+            "description": "Seeds gamification achievements and badges",
+            "dependencies": [],
+            "data_files": []
+        },
+        {
+            "name": "MailTemplatesSeeder",
+            "category": "essential",
+            "description": "Seeds database mail templates",
+            "dependencies": [],
+            "data_files": []
+        },
+        {
             "name": "UsersSeeder",
             "category": "development",
             "description": "Seeds development users including admins and regular users",
@@ -16,6 +39,37 @@
             ],
             "data_files": [
                 "users.json"
+            ]
+        },
+        {
+            "name": "OrganizationSeeder",
+            "category": "development",
+            "description": "Seeds Organization data",
+            "dependencies": [],
+            "data_files": [
+                "organizations.json"
+            ]
+        },
+        {
+            "name": "OrganizationDomainSeeder",
+            "category": "development",
+            "description": "Seeds OrganizationDomain data",
+            "dependencies": [
+                "OrganizationSeeder"
+            ],
+            "data_files": [
+                "organization_domains.json"
+            ]
+        },
+        {
+            "name": "OrganizationInvitationSeeder",
+            "category": "development",
+            "description": "Seeds OrganizationInvitation data",
+            "dependencies": [
+                "OrganizationSeeder"
+            ],
+            "data_files": [
+                "organization_invitations.json"
             ]
         },
         {
@@ -44,357 +98,6 @@
             ]
         },
         {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
             "name": "BillingMetricSeeder",
             "category": "development",
             "description": "Seeds BillingMetric data",
@@ -402,6 +105,13 @@
             "data_files": [
                 "billing_metrics.json"
             ]
+        },
+        {
+            "name": "BillingSeeder",
+            "category": "development",
+            "description": "Seeds billing-related data (plans, subscriptions, etc.)",
+            "dependencies": [],
+            "data_files": []
         },
         {
             "name": "CreditSeeder",
@@ -485,69 +195,6 @@
             ]
         },
         {
-            "name": "OrganizationSeeder",
-            "category": "development",
-            "description": "Seeds Organization data",
-            "dependencies": [],
-            "data_files": [
-                "organizations.json"
-            ]
-        },
-        {
-            "name": "OrganizationDomainSeeder",
-            "category": "development",
-            "description": "Seeds OrganizationDomain data",
-            "dependencies": [],
-            "data_files": [
-                "organization_domains.json"
-            ]
-        },
-        {
-            "name": "OrganizationInvitationSeeder",
-            "category": "development",
-            "description": "Seeds OrganizationInvitation data",
-            "dependencies": [],
-            "data_files": [
-                "organization_invitations.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
             "name": "EnterpriseInquirySeeder",
             "category": "development",
             "description": "Seeds EnterpriseInquiry data",
@@ -557,454 +204,117 @@
             ]
         },
         {
-            "name": "ActivityLogInjectedModelSeeder",
+            "name": "CategorySeeder",
             "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
+            "description": "Seeds Category data",
             "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
+            "data_files": []
         },
         {
-            "name": "ActivityLogInjectedModelSeeder",
+            "name": "CategorizableSeeder",
             "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
+            "description": "Seeds Categorizable pivot data",
+            "dependencies": [
+                "CategorySeeder"
+            ],
+            "data_files": []
         },
         {
-            "name": "ActivityLogInjectedModelSeeder",
+            "name": "PostSeeder",
             "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
+            "description": "Seeds Post data",
             "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
+            "data_files": []
         },
         {
-            "name": "ActivityLogInjectedModelSeeder",
+            "name": "HelpArticleSeeder",
             "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
+            "description": "Seeds HelpArticle data",
             "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
+            "data_files": []
         },
         {
-            "name": "ActivityLogInjectedModelSeeder",
+            "name": "ChangelogEntrySeeder",
             "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
+            "description": "Seeds ChangelogEntry data",
             "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
+            "data_files": []
         },
         {
-            "name": "ActivityLogInjectedModelSeeder",
+            "name": "ContactSubmissionSeeder",
             "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
+            "description": "Seeds ContactSubmission data",
             "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
+            "data_files": []
         },
         {
-            "name": "ActivityLogInjectedModelSeeder",
+            "name": "AffiliateSeeder",
             "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
+            "description": "Seeds Affiliate data",
             "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
+            "data_files": []
         },
         {
-            "name": "ActivityLogInjectedModelSeeder",
+            "name": "AffiliateCommissionSeeder",
             "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
+            "description": "Seeds AffiliateCommission data",
+            "dependencies": [
+                "AffiliateSeeder"
+            ],
+            "data_files": []
         },
         {
-            "name": "ActivityLogInjectedModelSeeder",
+            "name": "AffiliatePayoutSeeder",
             "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
+            "description": "Seeds AffiliatePayout data",
+            "dependencies": [
+                "AffiliateSeeder"
+            ],
+            "data_files": []
         },
         {
-            "name": "ActivityLogInjectedModelSeeder",
+            "name": "FailedPaymentAttemptSeeder",
             "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
+            "description": "Seeds FailedPaymentAttempt data",
             "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
+            "data_files": []
         },
         {
-            "name": "ActivityLogInjectedModelSeeder",
+            "name": "PageSeeder",
             "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
+            "description": "Seeds Page data",
             "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
+            "data_files": []
         },
         {
-            "name": "ActivityLogInjectedModelSeeder",
+            "name": "PageRevisionSeeder",
             "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
+            "description": "Seeds PageRevision data",
+            "dependencies": [
+                "PageSeeder"
+            ],
+            "data_files": []
         },
         {
-            "name": "ActivityLogInjectedModelSeeder",
+            "name": "ShareableSeeder",
             "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
+            "description": "Seeds Shareable data",
             "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
+            "data_files": []
         },
         {
-            "name": "ActivityLogInjectedModelSeeder",
+            "name": "VisibilityDemoSeeder",
             "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
+            "description": "Seeds VisibilityDemo data",
             "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
+            "data_files": []
         },
         {
-            "name": "ActivityLogInjectedModelSeeder",
+            "name": "VoucherScopeSeeder",
             "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
+            "description": "Seeds VoucherScope data",
             "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
-        },
-        {
-            "name": "ActivityLogInjectedModelSeeder",
-            "category": "development",
-            "description": "Seeds ActivityLogInjectedModel data",
-            "dependencies": [],
-            "data_files": [
-                "activity_log_injected_models.json"
-            ]
+            "data_files": []
         },
         {
             "name": "ActivityLogInjectedModelSeeder",

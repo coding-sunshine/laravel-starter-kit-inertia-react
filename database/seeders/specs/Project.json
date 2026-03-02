@@ -1,0 +1,357 @@
+{
+    "model": "Project",
+    "table": "projects",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "legacy_project_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "title": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "stage": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "estate": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "total_lots": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "storeys": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "min_landsize": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "max_landsize": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "min_living_area": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "max_living_area": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "bedrooms": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "bathrooms": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "min_bedrooms": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "max_bedrooms": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "min_bathrooms": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "max_bathrooms": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "garage": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "min_rent": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "max_rent": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "avg_rent": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "min_rent_yield": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "max_rent_yield": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "avg_rent_yield": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "rent_to_sell_yield": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "is_hot_property": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "description": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "min_price": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "max_price": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "avg_price": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "body_corporate_fees": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "min_body_corporate_fees": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "max_body_corporate_fees": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "rates_fees": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "min_rates_fees": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "max_rates_fees": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "sub_agent_comms": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "is_archived": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "is_hidden": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "start_at": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "end_at": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "is_smsf": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "is_firb": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "is_ndis": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "is_cashflow_positive": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "build_time": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "historical_growth": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "land_info": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "developer_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "projecttype_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "is_featured": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "trust_details": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "property_conditions": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "is_co_living": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "is_rooming": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "is_rent_to_sell": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "is_flexi": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "is_exclusive": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "developer": {
+            "type": "belongsTo",
+            "model": "Developer"
+        },
+        "projecttype": {
+            "type": "belongsTo",
+            "model": "Projecttype"
+        },
+        "lots": {
+            "type": "hasMany",
+            "model": "Lot"
+        },
+        "projectUpdates": {
+            "type": "hasMany",
+            "model": "ProjectUpdate"
+        },
+        "flyers": {
+            "type": "hasMany",
+            "model": "Flyer"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "model": "CreatedBy"
+        },
+        "updatedBy": {
+            "type": "belongsTo",
+            "model": "UpdatedBy"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

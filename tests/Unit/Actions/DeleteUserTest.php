@@ -12,5 +12,7 @@ it('may delete a user', function (): void {
 
     $action->handle($user);
 
-    expect($user->exists)->toBeFalse();
+    // User model uses SoftDeletes, so delete() soft-deletes; record still exists but is trashed
+    $user->refresh();
+    expect($user->trashed())->toBeTrue();
 });

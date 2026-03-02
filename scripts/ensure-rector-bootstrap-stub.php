@@ -10,8 +10,11 @@ declare(strict_types=1);
 $stubDir = __DIR__.'/../vendor/rector/rector/bootstrap';
 $stubFile = $stubDir.'/app.php';
 
-if (! is_dir($stubDir)) {
+if (! is_dir(dirname($stubDir))) {
     return;
+}
+if (! is_dir($stubDir)) {
+    mkdir($stubDir, 0755, true);
 }
 
 $stub = <<<'PHP'
@@ -45,7 +48,4 @@ if (file_exists($stubFile) && file_get_contents($stubFile) === $stub) {
     return;
 }
 
-if (! is_dir($stubDir)) {
-    mkdir($stubDir, 0755, true);
-}
 file_put_contents($stubFile, $stub);

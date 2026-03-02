@@ -1,0 +1,257 @@
+{
+    "model": "Lot",
+    "table": "lots",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "legacy_lot_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "project_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "title": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "land_price": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "build_price": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "stage": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "level": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "building": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "floorplan": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "car": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "storage": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "view": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "garage": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "aspect": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "internal": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "external": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "total": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "storyes": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "land_size": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "title_status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "living_area": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "price": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "bedrooms": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "bathrooms": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "study": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "mpr": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "powder_room": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "balcony": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "rent_yield": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "weekly_rent": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "rent_to_sell_yield": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "rates": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "five_percent_share_price": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "sub_agent_comms": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "body_corporation": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "is_archived": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "is_nras": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "is_smsf": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "is_cashflow_positive": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "completion": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "uuid": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "project": {
+            "type": "belongsTo",
+            "model": "Project"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "model": "CreatedBy"
+        },
+        "updatedBy": {
+            "type": "belongsTo",
+            "model": "UpdatedBy"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}
