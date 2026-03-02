@@ -177,30 +177,24 @@ function canShowNavItem(
 export function AppSidebar() {
     const { auth, features, fleet_only_app } = usePage<SharedData>().props;
     const fleetOnly = Boolean(fleet_only_app);
+    const permissions = auth.permissions ?? [];
+    const canBypass = auth.can_bypass ?? false;
+    const resolvedFeatures = features ?? {};
+    const tenancyEnabled = auth.tenancy_enabled ?? true;
 
     const visibleMainNavItems = useMemo(() => {
-        if (fleetOnly) {
-            return [];
-        }
+        if (fleetOnly) return [];
         return mainNavItems.filter((item) =>
-            canShowNavItem(
-                item,
-                auth.permissions ?? [],
-                auth.can_bypass ?? false,
-                features ?? {},
-                auth.tenancy_enabled ?? true,
-            ),
+            canShowNavItem(item, permissions, canBypass, resolvedFeatures, tenancyEnabled),
         );
-    }, [auth.permissions, auth.can_bypass, auth.tenancy_enabled, features, fleetOnly]);
+    }, [permissions, canBypass, resolvedFeatures, tenancyEnabled, fleetOnly]);
 
     const visibleFooterNavItems = useMemo(() => {
         if (fleetOnly) return [];
-        const f = features ?? {};
-        return footerNavItems.filter(
-            (item) =>
-                !item.feature || Boolean(f[item.feature as keyof typeof f]),
+        return footerNavItems.filter((item) =>
+            canShowNavItem(item, permissions, canBypass, resolvedFeatures, tenancyEnabled),
         );
-    }, [features, fleetOnly]);
+    }, [permissions, canBypass, resolvedFeatures, tenancyEnabled, fleetOnly]);
 
     return (
         <Sidebar collapsible="offcanvas" variant="inset">
@@ -213,7 +207,7 @@ export function AppSidebar() {
                             </Link>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
-                    {(auth.tenancy_enabled ?? true) && (
+                    {tenancyEnabled && (
                         <SidebarMenuItem>
                             <OrganizationSwitcher />
                         </SidebarMenuItem>

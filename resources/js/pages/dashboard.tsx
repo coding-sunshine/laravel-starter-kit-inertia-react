@@ -7,8 +7,11 @@ import { edit as editProfile } from '@/routes/user-profile';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/react';
 import {
+    Activity,
     BarChart3,
+    Bug,
     FileText,
+    GitBranch,
     LifeBuoy,
     Mail,
     Settings,
@@ -45,7 +48,7 @@ export default function Dashboard() {
     const quickActions = [
         {
             label: 'Edit profile',
-            href: editProfile(),
+            href: editProfile().url,
             icon: UserPen,
             show: true,
             dataPan: 'dashboard-quick-edit-profile',
@@ -87,6 +90,30 @@ export default function Dashboard() {
             show: canAccessAdmin,
             external: true,
             dataPan: 'dashboard-quick-product-analytics',
+        },
+        {
+            label: 'Horizon (queues)',
+            href: '/horizon',
+            icon: Activity,
+            show: canAccessAdmin,
+            external: true,
+            dataPan: 'dashboard-quick-horizon',
+        },
+        {
+            label: 'Waterline (workflows)',
+            href: '/waterline',
+            icon: GitBranch,
+            show: canAccessAdmin,
+            external: true,
+            dataPan: 'dashboard-quick-waterline',
+        },
+        {
+            label: 'Telescope (debug)',
+            href: '/telescope',
+            icon: Bug,
+            show: canAccessAdmin,
+            external: true,
+            dataPan: 'dashboard-quick-telescope',
         },
     ].filter((a) => a.show);
 
@@ -133,13 +160,7 @@ export default function Dashboard() {
                             data-pan={action.dataPan}
                         >
                             {action.external ? (
-                                <a
-                                    href={
-                                        typeof action.href === 'string'
-                                            ? action.href
-                                            : action.href.url
-                                    }
-                                >
+                                <a href={action.href}>
                                     <action.icon className="size-5 text-muted-foreground" />
                                     <span className="text-sm">
                                         {action.label}

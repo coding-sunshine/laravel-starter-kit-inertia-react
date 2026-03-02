@@ -27,13 +27,11 @@ final class ModelRegistry
 
         foreach (File::allFiles($modelsPath) as $file) {
             $className = $this->getClassNameFromFile($file->getPathname());
-
             if ($className === null || ! class_exists($className)) {
                 continue;
             }
 
             $reflection = new ReflectionClass($className);
-
             if ($reflection->isAbstract() || $reflection->isInterface() || ! $reflection->isSubclassOf(Model::class)) {
                 continue;
             }

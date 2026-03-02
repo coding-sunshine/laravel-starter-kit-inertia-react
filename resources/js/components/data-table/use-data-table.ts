@@ -207,6 +207,10 @@ export function useDataTable<TData>({
     const table = useReactTable<TData>({
         data: tableData.data,
         columns: columnDefs,
+        getRowId: (row, index) => {
+            const id = (row as { id?: unknown }).id;
+            return id != null ? String(id) : `row-${index}`;
+        },
         manualPagination: true,
         manualSorting: true,
         manualFiltering: true,

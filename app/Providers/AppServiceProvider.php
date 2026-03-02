@@ -4,15 +4,16 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\DataTables\UserDataTable;
 use App\Events\Fleet\AiJobCompleted;
 use App\Events\OrganizationMemberAdded;
 use App\Events\OrganizationMemberRemoved;
 use App\Events\User\UserCreated;
 use App\Listeners\Ai\ChunkAndEmbedMediaOnUpload;
 use App\Listeners\Billing\AddCreditsFromLemonSqueezyOrder;
-use App\Listeners\Fleet\StartWorkflowsForAiJobCompleted;
 use App\Listeners\Billing\SyncSubscriptionSeatsOnMemberChange;
 use App\Listeners\CreatePersonalOrganizationOnUserCreated;
+use App\Listeners\Fleet\StartWorkflowsForAiJobCompleted;
 use App\Listeners\Gamification\GrantGamificationOnUserCreated;
 use App\Listeners\LogImpersonationEvents;
 use App\Listeners\MigrationListener;
@@ -28,20 +29,25 @@ use App\Services\PaymentGateway\PaymentGatewayManager;
 use App\Services\PrismService;
 use App\Settings\SeoSettings;
 use Illuminate\Contracts\Debug\ExceptionHandler;
+use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Database\Events\MigrationsEnded;
 use Illuminate\Queue\Events\JobFailed;
-use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Ai\Contracts\ConversationStore;
 use LemonSqueezy\Laravel\Events\OrderCreated;
+use Machour\DataTable\Http\Controllers\DataTableDetailRowController;
 use Machour\DataTable\Http\Controllers\DataTableExportController;
+use Machour\DataTable\Http\Controllers\DataTableImportController;
+use Machour\DataTable\Http\Controllers\DataTableInlineEditController;
+use Machour\DataTable\Http\Controllers\DataTableSelectAllController;
+use Machour\DataTable\Http\Controllers\DataTableToggleController;
 use Pan\PanConfiguration;
 use Spatie\Activitylog\ActivitylogServiceProvider;
 use Spatie\Permission\Models\Permission;
@@ -86,6 +92,7 @@ final class AppServiceProvider extends ServiceProvider
                     $app->make(Dispatcher::class)
                 );
             });
+
             return $manager;
         });
 
@@ -128,7 +135,16 @@ final class AppServiceProvider extends ServiceProvider
         Event::listen(\Spatie\MediaLibrary\MediaCollections\Events\MediaHasBeenAddedEvent::class, ChunkAndEmbedMediaOnUpload::class);
         User::observe(UserObserver::class);
 
-        DataTableExportController::register('users', \App\DataTables\UserDataTable::class);
+        foreach ([
+            DataTableExportController::class,
+            DataTableInlineEditController::class,
+            DataTableToggleController::class,
+            DataTableSelectAllController::class,
+            DataTableDetailRowController::class,
+            DataTableImportController::class,
+        ] as $controller) {
+            $controller::register('users', UserDataTable::class);
+        }
     }
 
     private function userHasBypassPermissions(object $user): bool
@@ -306,8 +322,12 @@ final class AppServiceProvider extends ServiceProvider
             'dashboard-quick-contact',
             'dashboard-quick-email-templates',
             'dashboard-quick-product-analytics',
+            'dashboard-quick-horizon',
+            'dashboard-quick-waterline',
+            'dashboard-quick-telescope',
             'dashboard-card-view-analytics',
             'command-palette',
+            'global-search',
             'nav-chat',
             'nav-users',
             'chat-conversation-list',

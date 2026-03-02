@@ -16,11 +16,7 @@ final class OrganizationInvitationPolicy
     public function viewAny(User $user, ?Organization $organization = null): bool
     {
         if (! $organization instanceof Organization) {
-            if ($user->isSuperAdmin()) {
-                return true;
-            }
-
-            return $user->organizations()->exists();
+            return $user->isSuperAdmin() || $user->organizations()->exists();
         }
 
         return $user->belongsToOrganization($organization->id);
@@ -33,9 +29,7 @@ final class OrganizationInvitationPolicy
 
     public function create(User $user, Organization $organization): bool
     {
-        return $organization->isOwner($user)
-            || $user->isSuperAdmin()
-            || $this->userHasOrgRole($user, $organization, 'admin');
+        return $this->isOwnerSuperAdminOrRole($user, $organization, 'admin');
     }
 
     public function update(User $user, OrganizationInvitation $organizationInvitation): bool
@@ -44,15 +38,19 @@ final class OrganizationInvitationPolicy
             return true;
         }
 
-        $organization = $organizationInvitation->organization;
-
-        return $organization->isOwner($user)
-            || $this->userHasOrgRole($user, $organization, 'admin');
+        return $this->isOwnerSuperAdminOrRole($user, $organizationInvitation->organization, 'admin');
     }
 
     public function delete(User $user, OrganizationInvitation $organizationInvitation): bool
     {
         return $this->update($user, $organizationInvitation);
+    }
+
+    private function isOwnerSuperAdminOrRole(User $user, Organization $organization, string $role): bool
+    {
+        return $organization->isOwner($user)
+            || $user->isSuperAdmin()
+            || $this->userHasOrgRole($user, $organization, $role);
     }
 
     private function userHasOrgRole(User $user, Organization $organization, string $role): bool

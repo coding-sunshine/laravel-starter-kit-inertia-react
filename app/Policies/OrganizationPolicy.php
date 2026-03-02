@@ -30,9 +30,7 @@ final class OrganizationPolicy
 
     public function update(User $user, Organization $organization): bool
     {
-        return $organization->isOwner($user)
-            || $user->isSuperAdmin()
-            || $this->userHasOrgRole($user, $organization, 'admin');
+        return $this->isOwnerSuperAdminOrRole($user, $organization, 'admin');
     }
 
     public function delete(User $user, Organization $organization): bool
@@ -52,9 +50,14 @@ final class OrganizationPolicy
 
     public function addMember(User $user, Organization $organization): bool
     {
+        return $this->isOwnerSuperAdminOrRole($user, $organization, 'admin');
+    }
+
+    private function isOwnerSuperAdminOrRole(User $user, Organization $organization, string $role): bool
+    {
         return $organization->isOwner($user)
             || $user->isSuperAdmin()
-            || $this->userHasOrgRole($user, $organization, 'admin');
+            || $this->userHasOrgRole($user, $organization, $role);
     }
 
     private function userHasOrgRole(User $user, Organization $organization, string $role): bool

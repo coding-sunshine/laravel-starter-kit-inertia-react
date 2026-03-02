@@ -31,9 +31,11 @@
         "developing-with-prism",
         "database-mail",
         "documentation-automation",
+        "durable-workflow",
         "laravel-data-table",
         "laravel-excel",
         "pan-product-analytics",
+        "taylor-otwell-style",
         "telescope",
         "visibility-sharing"
     ]
