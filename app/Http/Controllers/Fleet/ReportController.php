@@ -22,6 +22,7 @@ final class ReportController extends Controller
     {
         $this->authorize('viewAny', Report::class);
         $reports = Report::query()
+            ->with(['reportExecutions' => fn ($q) => $q->orderByDesc('execution_start')->limit(1)])
             ->when($request->input('report_type'), fn ($q, $v) => $q->where('report_type', $v))
             ->when($request->input('schedule_frequency'), fn ($q, $v) => $q->where('schedule_frequency', $v))
             ->when($request->boolean('is_active'), fn ($q) => $q->where('is_active', true))

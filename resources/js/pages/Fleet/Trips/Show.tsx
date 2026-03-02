@@ -10,7 +10,14 @@ import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
 import { useMemo } from 'react';
+import { MapPin } from 'lucide-react';
 
+interface StopRecord {
+    id: number;
+    name: string | null;
+    sort_order: number;
+    location?: { id: number; name: string };
+}
 interface TripRecord {
     id: number;
     status: string;
@@ -23,7 +30,7 @@ interface TripRecord {
     notes: string | null;
     vehicle?: { id: number; registration: string };
     driver?: { id: number; first_name: string; last_name: string };
-    route?: { id: number; name: string };
+    route?: { id: number; name: string; stops?: StopRecord[] };
     start_location?: { id: number; name: string };
     end_location?: { id: number; name: string };
     waypoints?: { id: number; sequence: number; lat: number; lng: number; recorded_at: string | null }[];
@@ -77,7 +84,14 @@ export default function FleetTripsShow({ trip }: Props) {
                             <p>End: {trip.planned_end_time ? new Date(trip.planned_end_time).toLocaleString() : '—'}</p>
                             {trip.start_location && <p>From: {trip.start_location.name}</p>}
                             {trip.end_location && <p>To: {trip.end_location.name}</p>}
-                            {trip.route && <p>Route: <Link href={`/fleet/routes/${trip.route.id}`} className="underline">{trip.route.name}</Link></p>}
+                            {trip.route && (
+                                <p>
+                                    Route: <Link href={`/fleet/routes/${trip.route.id}`} className="underline">{trip.route.name}</Link>
+                                    {trip.route.stops && trip.route.stops.length > 0 && (
+                                        <> · <Link href={`/fleet/routes/${trip.route.id}`} className="text-primary hover:underline">See stops</Link></>
+                                    )}
+                                </p>
+                            )}
                         </CardContent>
                     </Card>
                     <Card>
@@ -91,6 +105,29 @@ export default function FleetTripsShow({ trip }: Props) {
                     </Card>
                 </div>
                 {trip.notes && <p className="text-sm text-muted-foreground">{trip.notes}</p>}
+                {trip.route?.stops && trip.route.stops.length > 0 && (
+                    <Card className="border border-border">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="flex items-center justify-between text-base font-semibold text-foreground">
+                                Route stops
+                                <Link href={`/fleet/routes/${trip.route.id}`} className="text-sm font-normal text-primary hover:underline flex items-center gap-1">
+                                    <MapPin className="size-3.5" />
+                                    See full route
+                                </Link>
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground">
+                                {trip.route.stops
+                                    .slice()
+                                    .sort((a, b) => a.sort_order - b.sort_order)
+                                    .map((s) => (
+                                        <li key={s.id}>{s.name || s.location?.name || `Stop ${s.sort_order + 1}`}</li>
+                                    ))}
+                            </ol>
+                        </CardContent>
+                    </Card>
+                )}
                 <Card className="overflow-hidden border border-border">
                     <CardHeader className="pb-2">
                         <CardTitle className="text-base font-semibold text-foreground">Trip path</CardTitle>

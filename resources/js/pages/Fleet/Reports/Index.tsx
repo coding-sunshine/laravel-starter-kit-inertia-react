@@ -1,12 +1,19 @@
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
-import { Form, Head, Link } from '@inertiajs/react';
+import { Form, Head, Link, router } from '@inertiajs/react';
 import { FileText, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 
-interface Row { id: number; name: string; report_type: string; format: string; is_active: boolean; }
+interface Row {
+    id: number;
+    name: string;
+    report_type: string;
+    format: string;
+    is_active: boolean;
+    report_executions?: { id: number; execution_start: string; status: string }[];
+}
 interface Props {
     reports: { data: Row[]; links: { url: string | null; label: string; active: boolean }[] };
     filters: Record<string, string>;
@@ -26,7 +33,10 @@ export default function FleetReportsIndex({ reports, filters, reportTypes, sched
             <Head title="Fleet – Reports" />
             <div className="flex h-full flex-1 flex-col gap-6 rounded-xl p-4">
                 <div className="flex items-center justify-between">
-                    <h1 className="text-2xl font-semibold">Reports</h1>
+                    <div>
+                        <h1 className="text-2xl font-semibold">Reports</h1>
+                        <p className="text-sm text-muted-foreground">Saved reports, last run, and run/view/download executions.</p>
+                    </div>
                     <Button asChild>
                         <Link href="/fleet/reports/create"><Plus className="mr-2 size-4" />New</Link>
                     </Button>
@@ -56,26 +66,43 @@ export default function FleetReportsIndex({ reports, filters, reportTypes, sched
                                         <th className="p-3 text-left font-medium">Name</th>
                                         <th className="p-3 text-left font-medium">Type</th>
                                         <th className="p-3 text-left font-medium">Format</th>
+                                        <th className="p-3 text-left font-medium">Last run</th>
                                         <th className="p-3 text-left font-medium">Active</th>
                                         <th className="p-3 text-right font-medium">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {reports.data.map((row) => (
-                                        <tr key={row.id} className="border-b last:border-0">
-                                            <td className="p-3">{row.name}</td>
-                                            <td className="p-3">{row.report_type}</td>
-                                            <td className="p-3">{row.format}</td>
-                                            <td className="p-3">{row.is_active ? 'Yes' : 'No'}</td>
-                                            <td className="p-3 text-right">
-                                                <Button variant="outline" size="sm" asChild><Link href={`/fleet/reports/${row.id}`}>View</Link></Button>
-                                                <Button variant="outline" size="sm" asChild><Link href={`/fleet/reports/${row.id}/edit`}><Pencil className="ml-1 size-3.5" /></Link></Button>
-                                                <Form action={`/fleet/reports/${row.id}`} method="delete" className="ml-2 inline" onSubmit={(e) => { if (!confirm('Delete?')) e.preventDefault(); }}>
-                                                    <Button type="submit" variant="ghost" size="sm"><Trash2 className="size-3.5 text-destructive" /></Button>
-                                                </Form>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                    {reports.data.map((row) => {
+                                        const lastRun = row.report_executions?.[0];
+                                        return (
+                                            <tr key={row.id} className="border-b last:border-0">
+                                                <td className="p-3">{row.name}</td>
+                                                <td className="p-3">{row.report_type}</td>
+                                                <td className="p-3">{row.format}</td>
+                                                <td className="p-3 text-muted-foreground">
+                                                    {lastRun
+                                                        ? `${new Date(lastRun.execution_start).toLocaleString()} (${lastRun.status})`
+                                                        : '—'}
+                                                </td>
+                                                <td className="p-3">{row.is_active ? 'Yes' : 'No'}</td>
+                                                <td className="p-3 text-right">
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => router.post(`/fleet/reports/${row.id}/run`)}
+                                                    >
+                                                        Run
+                                                    </Button>
+                                                    <Button variant="outline" size="sm" asChild><Link href={`/fleet/reports/${row.id}`} className="ml-1">View</Link></Button>
+                                                    <Button variant="outline" size="sm" asChild><Link href={`/fleet/reports/${row.id}/edit`} className="ml-1"><Pencil className="size-3.5" /></Link></Button>
+                                                    <Form action={`/fleet/reports/${row.id}`} method="delete" className="ml-1 inline" onSubmit={(e) => { if (!confirm('Delete?')) e.preventDefault(); }}>
+                                                        <Button type="submit" variant="ghost" size="sm"><Trash2 className="size-3.5 text-destructive" /></Button>
+                                                    </Form>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>

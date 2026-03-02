@@ -64,6 +64,8 @@ interface Counts {
     training_enrollments?: number;
     cost_allocations?: number;
     alerts?: number;
+    alerts_open?: number;
+    compliance_due_soon?: number;
     reports?: number;
     report_executions?: number;
     alert_preferences?: number;
@@ -213,8 +215,8 @@ export default function FleetDashboard({
                     </Card>
                 )}
 
-                {/* KPI strip */}
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:gap-4">
+                {/* KPI strip — 4–6 cards with links (optional filters) */}
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 lg:gap-4">
                     <Link href="/fleet/vehicles" className="rounded-xl border border-border bg-card p-4 shadow-sm transition-all hover:border-primary/30 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                         <div className="flex items-center gap-3">
                             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -259,6 +261,28 @@ export default function FleetDashboard({
                             </div>
                         </div>
                     </Link>
+                    <Link href="/fleet/alerts?status=active" className="rounded-xl border border-border bg-card p-4 shadow-sm transition-all hover:border-primary/30 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-destructive/10 text-destructive">
+                                <Bell className="size-5" />
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Alerts open</p>
+                                <p className="text-2xl font-bold tabular-nums text-foreground">{counts.alerts_open ?? counts.alerts ?? 0}</p>
+                            </div>
+                        </div>
+                    </Link>
+                    <Link href="/fleet/compliance-items?status=expiring_soon" className="rounded-xl border border-border bg-card p-4 shadow-sm transition-all hover:border-primary/30 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                                <AlertTriangle className="size-5" />
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Compliance due soon</p>
+                                <p className="text-2xl font-bold tabular-nums text-foreground">{counts.compliance_due_soon ?? 0}</p>
+                            </div>
+                        </div>
+                    </Link>
                 </div>
 
                 {/* Charts grid */}
@@ -268,7 +292,10 @@ export default function FleetDashboard({
                         {/* Trips over time */}
                         <Card className="border border-border">
                             <CardHeader className="pb-2">
-                                <CardTitle className="text-base font-semibold text-foreground">Trips (last 14 days)</CardTitle>
+                                <CardTitle className="flex items-center justify-between text-base font-semibold text-foreground">
+                                    Trips (last 14 days)
+                                    <Link href="/fleet/trips" className="text-sm font-normal text-primary hover:underline">View all</Link>
+                                </CardTitle>
                                 <p className="text-xs text-muted-foreground">Daily trip count</p>
                             </CardHeader>
                             <CardContent>
@@ -289,7 +316,7 @@ export default function FleetDashboard({
                                                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                                                 <XAxis dataKey="label" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} />
                                                 <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} allowDecimals={false} />
-                                                <Tooltip contentStyle={tooltipContentStyle} formatter={(value: number) => [value, 'Trips']} labelFormatter={(l) => `Date: ${l}`} />
+                                                <Tooltip contentStyle={tooltipContentStyle} formatter={(value: number | undefined) => [value ?? 0, 'Trips']} labelFormatter={(l) => `Date: ${l}`} />
                                                 <Area type="monotone" dataKey="trips" name="Trips" stroke="hsl(var(--primary))" fill="url(#tripsGradient)" strokeWidth={2} />
                                             </AreaChart>
                                         </ResponsiveContainer>
@@ -301,7 +328,10 @@ export default function FleetDashboard({
                         {/* Work orders over time */}
                         <Card className="border border-border">
                             <CardHeader className="pb-2">
-                                <CardTitle className="text-base font-semibold text-foreground">Work orders created (last 14 days)</CardTitle>
+                                <CardTitle className="flex items-center justify-between text-base font-semibold text-foreground">
+                                    Work orders created (last 14 days)
+                                    <Link href="/fleet/work-orders" className="text-sm font-normal text-primary hover:underline">View all</Link>
+                                </CardTitle>
                                 <p className="text-xs text-muted-foreground">New work orders per day</p>
                             </CardHeader>
                             <CardContent>
@@ -316,7 +346,7 @@ export default function FleetDashboard({
                                                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                                                 <XAxis dataKey="label" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} />
                                                 <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} allowDecimals={false} />
-                                                <Tooltip contentStyle={tooltipContentStyle} formatter={(value: number) => [value, 'Work orders']} labelFormatter={(l) => `Date: ${l}`} />
+                                                <Tooltip contentStyle={tooltipContentStyle} formatter={(value: number | undefined) => [value ?? 0, 'Work orders']} labelFormatter={(l) => `Date: ${l}`} />
                                                 <Bar dataKey="work_orders" name="Work orders" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                                             </BarChart>
                                         </ResponsiveContainer>
@@ -325,11 +355,11 @@ export default function FleetDashboard({
                             </CardContent>
                         </Card>
 
-                        {/* Overview by category */}
+                        {/* Overview by category — click bar to filter list */}
                         <Card className="border border-border">
                             <CardHeader className="pb-2">
                                 <CardTitle className="text-base font-semibold text-foreground">Fleet overview by category</CardTitle>
-                                <p className="text-xs text-muted-foreground">Counts across main entities</p>
+                                <p className="text-xs text-muted-foreground">Counts across main entities · click bar to open list</p>
                             </CardHeader>
                             <CardContent>
                                 <div className="h-[240px] w-full">
@@ -338,19 +368,39 @@ export default function FleetDashboard({
                                             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
                                             <XAxis type="number" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} allowDecimals={false} />
                                             <YAxis type="category" dataKey="name" width={80} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} />
-                                            <Tooltip contentStyle={tooltipContentStyle} formatter={(value: number) => [value, 'Count']} />
-                                            <Bar dataKey="value" name="Count" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+                                            <Tooltip contentStyle={tooltipContentStyle} formatter={(value: number | undefined) => [value ?? 0, 'Count']} />
+                                            <Bar
+                                                dataKey="value"
+                                                name="Count"
+                                                fill="hsl(var(--primary))"
+                                                radius={[0, 4, 4, 0]}
+                                                cursor="pointer"
+                                                onClick={(data: { name?: string }) => {
+                                                    const name = data?.name;
+                                                    const url =
+                                                        name === 'Vehicles' ? '/fleet/vehicles'
+                                                        : name === 'Drivers' ? '/fleet/drivers'
+                                                        : name === 'Routes' ? '/fleet/routes'
+                                                        : name === 'Trips' ? '/fleet/trips'
+                                                        : name === 'Work orders' ? '/fleet/work-orders'
+                                                        : null;
+                                                    if (url) window.location.href = url;
+                                                }}
+                                            />
                                         </BarChart>
                                     </ResponsiveContainer>
                                 </div>
                             </CardContent>
                         </Card>
 
-                        {/* Work orders by status */}
+                        {/* Work orders by status — click segment to list with filter */}
                         <Card className="border border-border">
                             <CardHeader className="pb-2">
-                                <CardTitle className="text-base font-semibold text-foreground">Work orders by status</CardTitle>
-                                <p className="text-xs text-muted-foreground">Breakdown by status</p>
+                                <CardTitle className="flex items-center justify-between text-base font-semibold text-foreground">
+                                    Work orders by status
+                                    <Link href="/fleet/work-orders" className="text-sm font-normal text-primary hover:underline">View all</Link>
+                                </CardTitle>
+                                <p className="text-xs text-muted-foreground">Breakdown by status · click segment to filter list</p>
                             </CardHeader>
                             <CardContent>
                                 <div className="h-[240px] w-full">
@@ -370,14 +420,21 @@ export default function FleetDashboard({
                                                     innerRadius={56}
                                                     outerRadius={88}
                                                     paddingAngle={2}
-                                                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                                    label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
                                                     labelLine={{ stroke: 'hsl(var(--muted-foreground))' }}
+                                                    cursor="pointer"
+                                                    onClick={(data: { name?: string }) => {
+                                                        const name = data?.name ?? '';
+                                                        const status = name.toLowerCase().replace(/\s+/g, '_');
+                                                        if (status && status !== 'no_orders') window.location.href = `/fleet/work-orders?status=${status}`;
+                                                        else window.location.href = '/fleet/work-orders';
+                                                    }}
                                                 >
                                                     {chartWorkOrdersByStatus.map((_, index) => (
                                                         <Cell key={index} fill={CHART_COLORS[index % CHART_COLORS.length] || CHART_COLORS_FALLBACK[index % CHART_COLORS_FALLBACK.length]} />
                                                     ))}
                                                 </Pie>
-                                                <Tooltip contentStyle={tooltipContentStyle} formatter={(value: number, name: string) => [value, name]} />
+                                                <Tooltip contentStyle={tooltipContentStyle} formatter={(value: number | undefined, name: string | undefined) => [value ?? 0, name ?? '']} />
                                                 <Legend layout="horizontal" align="center" verticalAlign="bottom" wrapperStyle={{ fontSize: 11 }} />
                                             </PieChart>
                                         </ResponsiveContainer>

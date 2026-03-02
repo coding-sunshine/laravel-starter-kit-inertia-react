@@ -4,6 +4,8 @@
 
 **Prerequisites:** Phase 2-01 and 2-02 in good shape. Dashboard and list pages working.
 
+**Status:** ✅ Complete (100%)
+
 ---
 
 ## 1. Dashboard extensions
@@ -48,3 +50,14 @@
 
 - Dashboard links and optional filters correct; reports run and download; alerts clear; trips and routes consistent.
 - Proceed to **phase-2-04** for compliance, safety, electrification.
+
+---
+
+### Implementation summary (completed)
+
+- **Dashboard:** 6 KPI cards (Vehicles, Drivers, Trips, Work orders, Alerts open, Compliance due soon) with correct links; Alerts open → `/fleet/alerts?status=active`, Compliance → `/fleet/compliance-items?status=expiring_soon`. Trips and Work orders charts have “View all”; Fleet overview bars and Work orders by status pie are clickable for drill-down. AI insights card present when insights exist. Single controller call; no N+1.
+- **Drill-downs:** KPI → list in one click; chart segment/bar → list with filter; breadcrumbs correct.
+- **Reports:** Index shows Last run; Run button per report (redirects to execution); Report Show has Run + recent executions (View result); Report execution Show and Index have Download (CSV/PDF) when file exists. Placeholder file generated on run for demo.
+- **Alerts:** Index has status, severity, entity, Type filter, Acknowledge for active alerts; link to Alert preferences.
+- **Trips:** Index has filters (vehicle, driver, from_date, to_date); Show has summary and “See stops” / “See full route” when trip has route with stops.
+- **Routes:** Index has three-dot menu (View, Edit, Delete); Show has stops, Optimize with AI, and Apply suggested order.

@@ -28,8 +28,14 @@ final class ReportExecutionController extends Controller
             ->paginate(15)
             ->withQueryString();
 
+        $downloadAvailableIds = $executions->getCollection()
+            ->filter(fn (ReportExecution $e) => $e->file_path && Storage::disk('local')->exists($e->file_path))
+            ->pluck('id')
+            ->all();
+
         return Inertia::render('Fleet/ReportExecutions/Index', [
             'reportExecutions' => $executions,
+            'downloadAvailableIds' => $downloadAvailableIds,
             'filters' => $request->only(['report_id']),
             'reports' => Report::query()->orderBy('name')->get(['id', 'name']),
         ]);
@@ -70,11 +76,26 @@ final class ReportExecutionController extends Controller
             'triggered_by' => ReportTriggeredBy::Manual,
             'triggered_by_user_id' => $request->user()->id,
         ]);
-        // In a full implementation you would dispatch a job to generate the report and update execution_end, status, file_path, etc.
+
+        $ext = strtolower($report->format) === 'pdf' ? 'pdf' : 'csv';
+        $filename = 'report-' . $report->id . '-exec-' . $execution->id . '-' . now()->format('Y-m-d-His') . '.' . $ext;
+        $path = 'report-executions/' . $filename;
+
+        if ($ext === 'csv') {
+            $csv = "Report,Generated\n\"{$report->name}\"," . now()->toIso8601String() . "\n";
+            Storage::disk('local')->put($path, $csv);
+        } else {
+            // Placeholder PDF (minimal text file for demo; real app would use Dompdf or similar)
+            Storage::disk('local')->put($path, "%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n/Pages 2 0 R\n>>\nendobj\n%%EOF");
+        }
+
         $execution->update([
             'execution_end' => now(),
             'status' => ReportExecutionStatus::Completed,
+            'file_path' => $path,
+            'record_count' => 0,
         ]);
-        return to_route('fleet.report-executions.show', $execution)->with('flash', ['status' => 'success', 'message' => 'Report execution started.']);
+
+        return to_route('fleet.report-executions.show', $execution)->with('flash', ['status' => 'success', 'message' => 'Report run completed. You can view and download the result.']);
     }
 }

@@ -40,7 +40,7 @@ final class TripController extends Controller
         $trip->load([
             'vehicle',
             'driver',
-            'route',
+            'route.stops.location',
             'startLocation',
             'endLocation',
             'waypoints',

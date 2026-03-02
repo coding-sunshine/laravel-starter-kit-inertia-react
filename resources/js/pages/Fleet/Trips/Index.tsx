@@ -30,7 +30,7 @@ interface Props {
     drivers: { id: number; first_name: string; last_name: string }[];
 }
 
-export default function FleetTripsIndex({ trips }: Props) {
+export default function FleetTripsIndex({ trips, filters, vehicles, drivers }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard().url },
         { title: 'Fleet', href: '/fleet' },
@@ -43,8 +43,38 @@ export default function FleetTripsIndex({ trips }: Props) {
             <div className="flex h-full flex-1 flex-col gap-6 rounded-xl p-4 md:p-6">
                 <FleetPageHeader
                     title="Trips"
-                    description="View and manage planned and completed trips."
+                    description="View and manage planned and completed trips. Filter by vehicle, driver, or date."
                 />
+
+                <form method="get" className="flex flex-wrap items-end gap-4 rounded-lg border border-border bg-card p-4">
+                    <div className="space-y-1">
+                        <label className="text-sm font-medium">Vehicle</label>
+                        <select name="vehicle_id" defaultValue={filters.vehicle_id ?? ''} className="h-9 w-40 rounded-md border border-input bg-transparent px-3 py-1 text-sm">
+                            <option value="">All</option>
+                            {vehicles.map((v) => (
+                                <option key={v.id} value={v.id}>{v.registration}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-sm font-medium">Driver</label>
+                        <select name="driver_id" defaultValue={filters.driver_id ?? ''} className="h-9 w-48 rounded-md border border-input bg-transparent px-3 py-1 text-sm">
+                            <option value="">All</option>
+                            {drivers.map((d) => (
+                                <option key={d.id} value={d.id}>{d.first_name} {d.last_name}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-sm font-medium">From date</label>
+                        <input type="date" name="from_date" defaultValue={filters.from_date ?? ''} className="h-9 w-40 rounded-md border border-input bg-transparent px-3 py-1 text-sm" />
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-sm font-medium">To date</label>
+                        <input type="date" name="to_date" defaultValue={filters.to_date ?? ''} className="h-9 w-40 rounded-md border border-input bg-transparent px-3 py-1 text-sm" />
+                    </div>
+                    <Button type="submit" variant="secondary" size="sm">Filter</Button>
+                </form>
 
                 <Card className="border border-border shadow-sm">
                     <CardHeader className="pb-3">

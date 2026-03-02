@@ -6,14 +6,21 @@ import { FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 
-interface Row { id: number; execution_start: string; status: string; triggered_by: string; report?: { id: number; name: string }; }
+interface Row {
+    id: number;
+    execution_start: string;
+    status: string;
+    triggered_by: string;
+    report?: { id: number; name: string };
+}
 interface Props {
     reportExecutions: { data: Row[]; links: { url: string | null; label: string; active: boolean }[] };
+    downloadAvailableIds?: number[];
     filters: Record<string, string>;
     reports: { id: number; name: string }[];
 }
 
-export default function FleetReportExecutionsIndex({ reportExecutions, filters, reports }: Props) {
+export default function FleetReportExecutionsIndex({ reportExecutions, downloadAvailableIds = [], filters, reports }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard().url },
         { title: 'Fleet', href: '/fleet' },
@@ -61,7 +68,12 @@ export default function FleetReportExecutionsIndex({ reportExecutions, filters, 
                                             <td className="p-3">{row.status}</td>
                                             <td className="p-3">{row.triggered_by}</td>
                                             <td className="p-3 text-right">
-                                                <Button variant="outline" size="sm" asChild><Link href={`/fleet/report-executions/${row.id}`}>View</Link></Button>
+                                                {(downloadAvailableIds as number[]).includes(row.id) && (
+                                                    <Button variant="outline" size="sm" asChild>
+                                                        <a href={`/fleet/report-executions/${row.id}/download`} download>Download</a>
+                                                    </Button>
+                                                )}
+                                                <Button variant="outline" size="sm" asChild className="ml-1"><Link href={`/fleet/report-executions/${row.id}`}>View</Link></Button>
                                             </td>
                                         </tr>
                                     ))}

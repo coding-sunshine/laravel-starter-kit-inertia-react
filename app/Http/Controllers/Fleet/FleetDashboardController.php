@@ -118,6 +118,8 @@ final class FleetDashboardController extends Controller
             'training_enrollments' => TrainingEnrollment::count(),
             'cost_allocations' => CostAllocation::count(),
             'alerts' => Alert::count(),
+            'alerts_open' => Alert::where('status', 'active')->count(),
+            'compliance_due_soon' => ComplianceItem::query()->where('status', 'expiring_soon')->count(),
             'reports' => Report::count(),
             'report_executions' => ReportExecution::count(),
             'alert_preferences' => AlertPreference::query()
