@@ -5,24 +5,51 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Services\DailyVehicleEntryService;
+use App\Services\ShiftValidationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 use Throwable;
 
 final class DailyVehicleEntryController extends Controller
 {
-    public function __construct(private DailyVehicleEntryService $service) {}
+    public function __construct(
+        private DailyVehicleEntryService $service,
+        private ShiftValidationService $shiftValidation
+    ) {}
 
     public function index(Request $request): InertiaResponse
     {
         $date = $request->get('date', now()->format('Y-m-d'));
         $activeShift = (int) $request->get('shift', 1);
 
+        // Validate shift access for today
+        if ($date === now()->format('Y-m-d')) {
+            if (! $this->shiftValidation->canAccessShift($activeShift, $date)) {
+                $availableShifts = $this->shiftValidation->getAvailableShifts();
+                $defaultShift = $availableShifts->first() ?? 1;
+
+                // Redirect to the first available shift if requested shift is not accessible
+                if ($activeShift !== $defaultShift) {
+                    return redirect()->route('road-dispatch.daily-vehicle-entries.index', [
+                        'date' => $date,
+                        'shift' => $defaultShift,
+                    ]);
+                }
+            }
+        }
+
         $entries = $this->service->getEntriesByDateAndShift($date, $activeShift);
         $shiftSummary = $this->service->getShiftSummary($date);
+        $shiftStatus = $this->shiftValidation->getShiftCompletionStatus($date);
+        $shiftTimes = [
+            1 => $this->shiftValidation->getShiftTimeRange(1),
+            2 => $this->shiftValidation->getShiftTimeRange(2),
+            3 => $this->shiftValidation->getShiftTimeRange(3),
+        ];
 
         // Get available sidings for export dropdown
         $sidings = \App\Models\Siding::orderBy('name')->get(['id', 'name']);
@@ -32,6 +59,8 @@ final class DailyVehicleEntryController extends Controller
             'date' => $date,
             'activeShift' => $activeShift,
             'shiftSummary' => $shiftSummary,
+            'shiftStatus' => $shiftStatus,
+            'shiftTimes' => $shiftTimes,
             'sidings' => $sidings,
         ]);
     }
@@ -50,6 +79,15 @@ final class DailyVehicleEntryController extends Controller
             'd_challan_no' => 'nullable|string|max:255',
             'challan_mode' => 'nullable|in:offline,online',
         ]);
+
+        // Validate shift access for today
+        if ($data['entry_date'] === now()->format('Y-m-d')) {
+            if (! $this->shiftValidation->canAccessShift($data['shift'], $data['entry_date'])) {
+                throw ValidationException::withMessages([
+                    'shift' => 'This shift is not available at the current time. Please wait for the shift to become active.',
+                ]);
+            }
+        }
 
         $entry = $this->service->createEntry($data);
 

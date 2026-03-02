@@ -179,9 +179,9 @@ export default function IndentsIndex({ indents }: Props) {
                                 </table>
                                 {indents.last_page > 1 && (
                                     <div className="mt-4 flex flex-wrap gap-2">
-                                        {indents.links.map((link) => (
+                                        {indents.links.map((link, index) => (
                                             <Link
-                                                key={link.url ?? link.label}
+                                                key={`${link.url ?? 'null'}-${link.label}-${index}`}
                                                 href={link.url ?? '#'}
                                                 className={
                                                     link.active

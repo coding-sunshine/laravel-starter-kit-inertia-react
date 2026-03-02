@@ -36,15 +36,28 @@ interface Siding {
   name: string;
 }
 
+interface ShiftStatus {
+  is_active: boolean;
+  is_available: boolean;
+  is_completed: boolean;
+}
+
+interface ShiftTime {
+  start: string;
+  end: string;
+}
+
 interface Props {
   entries: DailyVehicleEntry[];
   date: string;
   activeShift: number;
   shiftSummary: Record<number, number>;
+  shiftStatus?: Record<number, ShiftStatus>;
+  shiftTimes: Record<number, ShiftTime>;
   sidings: Siding[];
 }
 
-export default function DailyVehicleEntriesIndex({ entries, date, activeShift, shiftSummary, sidings }: Props) {
+export default function DailyVehicleEntriesIndex({ entries, date, activeShift, shiftSummary, shiftStatus, shiftTimes, sidings }: Props) {
   const [selectedDate, setSelectedDate] = useState(date);
   const [activeShiftState, setActiveShiftState] = useState(activeShift);
   const [exportShift, setExportShift] = useState<string>('all');
@@ -67,6 +80,19 @@ export default function DailyVehicleEntriesIndex({ entries, date, activeShift, s
   };
 
   const handleShiftChange = (shift: number) => {
+    // Check if shift is available for today
+    if (shiftStatus && selectedDate === new Date().toISOString().split('T')[0]) {
+      if (!shiftStatus[shift]?.is_available) {
+        // Show alert or message instead of changing shift
+        const messages = {
+          2: '2nd shift will be available after 1st shift completion (after 11:00)',
+          3: '3rd shift will be available after 2nd shift completion (after 22:00)',
+        };
+        alert(messages[shift as keyof typeof messages] || 'This shift is not available at the current time.');
+        return;
+      }
+    }
+
     setActiveShiftState(shift);
     router.get(
       '/road-dispatch/daily-vehicle-entries',
@@ -76,6 +102,19 @@ export default function DailyVehicleEntriesIndex({ entries, date, activeShift, s
   };
 
   const handleAddRow = () => {
+    // Check if current shift is available for today
+    if (shiftStatus && selectedDate === new Date().toISOString().split('T')[0]) {
+      if (!shiftStatus[activeShiftState]?.is_available) {
+        const messages = {
+          1: '1st shift is only available between 06:00 - 11:00',
+          2: '2nd shift will be available after 1st shift completion (after 11:00)',
+          3: '3rd shift will be available after 2nd shift completion (after 22:00)',
+        };
+        alert(messages[activeShiftState as keyof typeof messages] || 'This shift is not available at the current time.');
+        return;
+      }
+    }
+
     // Store current scroll position
     const scrollY = window.scrollY;
     
@@ -242,11 +281,19 @@ export default function DailyVehicleEntriesIndex({ entries, date, activeShift, s
           </CardContent>
         </Card>
 
+        {/* Shift Times */}
+        <p className="text-sm text-gray-500">
+          Shift 1: {shiftTimes[1]?.start ?? '06:00'}–{shiftTimes[1]?.end ?? '11:00'} &nbsp;|&nbsp;{' '}
+          Shift 2: {shiftTimes[2]?.start ?? '11:00'}–{shiftTimes[2]?.end ?? '22:00'} &nbsp;|&nbsp;{' '}
+          Shift 3: {shiftTimes[3]?.start ?? '22:00'}–{shiftTimes[3]?.end ?? '06:00'}
+        </p>
+
         {/* Shift Tabs */}
         <ShiftTabs
           activeShift={activeShiftState}
           onShiftChange={handleShiftChange}
           shiftSummary={shiftSummary}
+          shiftStatus={shiftStatus}
         />
 
         {/* Vehicle Entry Table */}

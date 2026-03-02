@@ -121,6 +121,12 @@ const mainNavItems: NavItem[] = [
         dataPan: 'nav-road-dispatch',
     },
     {
+        title: 'Vehicle Dispatch Register',
+        href: '/vehicle-dispatch',
+        icon: Truck,
+        dataPan: 'nav-vehicle-dispatch',
+    },
+    {
         title: 'Railway Receipts',
         href: '/railway-receipts',
         icon: FileText,

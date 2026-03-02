@@ -30,7 +30,9 @@ export function GlossaryTerm({ term, children }: GlossaryTermProps) {
                     {children}
                 </span>
             </TooltipTrigger>
-            <TooltipContent>{definition}</TooltipContent>
+            <TooltipContent>
+                <p>{definition}</p>
+            </TooltipContent>
         </Tooltip>
     );
 }
