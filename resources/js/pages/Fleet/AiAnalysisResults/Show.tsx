@@ -37,7 +37,7 @@ export default function FleetAiAnalysisResultsShow({ aiAnalysisResult }: Props) 
         { title: `Analysis #${aiAnalysisResult.id}`, href: `/fleet/ai-analysis-results/${aiAnalysisResult.id}` },
     ];
     const reviewerName = aiAnalysisResult.reviewed_by
-        ? (aiAnalysisResult.reviewed_by.name ?? [aiAnalysisResult.reviewed_by.first_name, aiAnalysisResult.reviewed_by.last_name].filter(Boolean).join(' ') || '—')
+        ? ((aiAnalysisResult.reviewed_by.name ?? [aiAnalysisResult.reviewed_by.first_name, aiAnalysisResult.reviewed_by.last_name].filter(Boolean).join(' ')) || '—')
         : null;
     return (
         <AppLayout breadcrumbs={breadcrumbs}>

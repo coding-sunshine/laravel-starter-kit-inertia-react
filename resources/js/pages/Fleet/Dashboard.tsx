@@ -1,6 +1,15 @@
 import AppLayout from '@/layouts/app-layout';
+import {
+    FleetBlockSectionHeader,
+    FleetDataCard,
+    fleetDataCardListClass,
+    fleetDataCardRowClass,
+    fleetDataCardRowPrimaryClass,
+    fleetDataCardRowSecondaryClass,
+    FleetGlassCard,
+    FleetPageShell,
+} from '@/components/fleet';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
@@ -193,34 +202,27 @@ export default function FleetDashboard({
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Fleet – Dashboard" />
-            <div className="flex h-full flex-1 flex-col gap-8 rounded-xl p-4 md:p-6">
-                {/* Header */}
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
-                            Fleet dashboard
-                        </h1>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                            Overview and quick access to all fleet areas.
-                        </p>
-                    </div>
+            <FleetPageShell
+                title="Fleet dashboard"
+                subtitle="Overview and quick access to all fleet areas."
+                rightActions={
                     <Button asChild size="sm" className="shrink-0 gap-2">
                         <Link href="/fleet/assistant" prefetch="click">
                             <Bot className="size-4" />
                             Open Assistant
                         </Link>
                     </Button>
-                </div>
-
+                }
+                className="flex flex-1 flex-col gap-8 p-4 md:p-6"
+                contentWrapperClassName="flex flex-1 flex-col gap-8"
+            >
                 {insights.length > 0 && (
-                    <Card className="border-primary/20 bg-primary/5">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="flex items-center gap-2 text-base">
+                    <FleetGlassCard className="border-l-4 border-l-primary/70">
+                        <div className="space-y-1 text-sm text-muted-foreground">
+                            <h3 className="flex items-center gap-2 text-base font-semibold text-foreground">
                                 <Bot className="size-4 text-primary" />
                                 AI insights
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-1 text-sm text-muted-foreground">
+                            </h3>
                             <ul className="list-inside list-disc space-y-0.5">
                                 {insights.map((line, i) => (
                                     <li key={i}>{line}</li>
@@ -231,94 +233,106 @@ export default function FleetDashboard({
                                     Ask assistant
                                 </Link>
                             </Button>
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </FleetGlassCard>
                 )}
 
-                {/* KPI strip — 4–6 cards with links (optional filters) */}
+                <FleetBlockSectionHeader>Critical metrics</FleetBlockSectionHeader>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 lg:gap-4">
-                    <Link href="/fleet/vehicles" className="rounded-xl border border-border bg-card p-4 shadow-sm transition-all hover:border-primary/30 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                        <div className="flex items-center gap-3">
-                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                                <Truck className="size-5" />
+                    <Link href="/fleet/vehicles" className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                        <FleetGlassCard className="border-l-4 border-l-primary/70 p-4 transition-all hover:shadow-md">
+                            <div className="flex items-center gap-3">
+                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                    <Truck className="size-5" />
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Vehicles</p>
+                                    <p className="text-2xl font-bold tabular-nums text-foreground">{counts.vehicles}</p>
+                                </div>
                             </div>
-                            <div className="min-w-0">
-                                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Vehicles</p>
-                                <p className="text-2xl font-bold tabular-nums text-foreground">{counts.vehicles}</p>
-                            </div>
-                        </div>
+                        </FleetGlassCard>
                     </Link>
-                    <Link href="/fleet/drivers" className="rounded-xl border border-border bg-card p-4 shadow-sm transition-all hover:border-primary/30 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                        <div className="flex items-center gap-3">
-                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                                <Users className="size-5" />
+                    <Link href="/fleet/drivers" className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                        <FleetGlassCard className="border-l-4 border-l-violet-400/70 p-4 transition-all hover:shadow-md">
+                            <div className="flex items-center gap-3">
+                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-violet-500/10 text-violet-600">
+                                    <Users className="size-5" />
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Drivers</p>
+                                    <p className="text-2xl font-bold tabular-nums text-foreground">{counts.drivers}</p>
+                                </div>
                             </div>
-                            <div className="min-w-0">
-                                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Drivers</p>
-                                <p className="text-2xl font-bold tabular-nums text-foreground">{counts.drivers}</p>
-                            </div>
-                        </div>
+                        </FleetGlassCard>
                     </Link>
-                    <Link href="/fleet/trips" className="rounded-xl border border-border bg-card p-4 shadow-sm transition-all hover:border-primary/30 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                        <div className="flex items-center gap-3">
-                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                                <MapPin className="size-5" />
+                    <Link href="/fleet/trips" className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                        <FleetGlassCard className="border-l-4 border-l-emerald-400/70 p-4 transition-all hover:shadow-md">
+                            <div className="flex items-center gap-3">
+                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600">
+                                    <MapPin className="size-5" />
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Trips</p>
+                                    <p className="text-2xl font-bold tabular-nums text-foreground">{counts.trips}</p>
+                                </div>
                             </div>
-                            <div className="min-w-0">
-                                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Trips</p>
-                                <p className="text-2xl font-bold tabular-nums text-foreground">{counts.trips}</p>
-                            </div>
-                        </div>
+                        </FleetGlassCard>
                     </Link>
-                    <Link href="/fleet/work-orders" className="rounded-xl border border-border bg-card p-4 shadow-sm transition-all hover:border-primary/30 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                        <div className="flex items-center gap-3">
-                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                                <ClipboardList className="size-5" />
+                    <Link href="/fleet/work-orders" className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                        <FleetGlassCard className="border-l-4 border-l-sky-400/70 p-4 transition-all hover:shadow-md">
+                            <div className="flex items-center gap-3">
+                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-sky-500/10 text-sky-600">
+                                    <ClipboardList className="size-5" />
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Work orders</p>
+                                    <p className="text-2xl font-bold tabular-nums text-foreground">{counts.work_orders}</p>
+                                </div>
                             </div>
-                            <div className="min-w-0">
-                                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Work orders</p>
-                                <p className="text-2xl font-bold tabular-nums text-foreground">{counts.work_orders}</p>
-                            </div>
-                        </div>
+                        </FleetGlassCard>
                     </Link>
-                    <Link href="/fleet/alerts?status=active" className="rounded-xl border border-border bg-card p-4 shadow-sm transition-all hover:border-primary/30 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                        <div className="flex items-center gap-3">
-                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-destructive/10 text-destructive">
-                                <Bell className="size-5" />
+                    <Link href="/fleet/alerts?status=active" className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                        <FleetGlassCard className="border-l-4 border-l-rose-400/70 p-4 transition-all hover:shadow-md">
+                            <div className="flex items-center gap-3">
+                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-rose-500/10 text-rose-600">
+                                    <Bell className="size-5" />
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Alerts open</p>
+                                    <p className="text-2xl font-bold tabular-nums text-foreground">{counts.alerts_open ?? counts.alerts ?? 0}</p>
+                                </div>
                             </div>
-                            <div className="min-w-0">
-                                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Alerts open</p>
-                                <p className="text-2xl font-bold tabular-nums text-foreground">{counts.alerts_open ?? counts.alerts ?? 0}</p>
-                            </div>
-                        </div>
+                        </FleetGlassCard>
                     </Link>
-                    <Link href="/fleet/compliance-items?status=expiring_soon" className="rounded-xl border border-border bg-card p-4 shadow-sm transition-all hover:border-primary/30 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                        <div className="flex items-center gap-3">
-                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                                <AlertTriangle className="size-5" />
+                    <Link href="/fleet/compliance-items?status=expiring_soon" className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                        <FleetGlassCard className="border-l-4 border-l-amber-400/70 p-4 transition-all hover:shadow-md">
+                            <div className="flex items-center gap-3">
+                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600">
+                                    <AlertTriangle className="size-5" />
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Compliance due soon</p>
+                                    <p className="text-2xl font-bold tabular-nums text-foreground">{counts.compliance_due_soon ?? 0}</p>
+                                </div>
                             </div>
-                            <div className="min-w-0">
-                                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Compliance due soon</p>
-                                <p className="text-2xl font-bold tabular-nums text-foreground">{counts.compliance_due_soon ?? 0}</p>
-                            </div>
-                        </div>
+                        </FleetGlassCard>
                     </Link>
                 </div>
 
-                {/* Fleet map — show vehicles with a known position (current or home location) */}
-                <Card className="overflow-hidden border border-border">
-                    <CardHeader className="pb-2">
-                        <CardTitle className="flex items-center gap-2 text-base font-semibold text-foreground">
+                {/* Fleet map — glass card (reference UI) */}
+                <FleetGlassCard className="overflow-hidden p-0">
+                    <div className="border-b border-white/30 px-4 pb-2 pt-4">
+                        <h3 className="flex items-center gap-2 text-base font-semibold text-foreground">
                             <MapPin className="size-4 text-primary" />
                             Fleet map
-                        </CardTitle>
+                        </h3>
                         <p className="text-xs text-muted-foreground">
                             {mapVehicles.length > 0
                                 ? `${mapVehicles.length} vehicle(s) with location — current position or home base`
                                 : 'Add vehicle locations or set home location to see the fleet on the map.'}
                         </p>
-                    </CardHeader>
-                    <CardContent className="p-0">
+                    </div>
+                    <div className="p-0">
                         <div className="relative">
                             <FleetMap
                                 center={mapCenter}
@@ -343,262 +357,233 @@ export default function FleetDashboard({
                                 </div>
                             )}
                         </div>
-                        <div className="flex justify-end border-t bg-muted/30 px-4 py-2">
+                        <div className="flex justify-end border-t border-white/30 bg-white/20 px-4 py-2">
                             <Button variant="outline" size="sm" asChild>
                                 <Link href="/fleet/vehicles" prefetch="click">
                                     Manage vehicles
                                 </Link>
                             </Button>
                         </div>
-                    </CardContent>
-                </Card>
+                    </div>
+                </FleetGlassCard>
 
-                {/* Charts grid */}
                 <section>
-                    <h2 className="mb-4 text-lg font-semibold text-foreground">Trends & analytics</h2>
+                    <FleetBlockSectionHeader>Trends &amp; analytics</FleetBlockSectionHeader>
                     <div className="grid gap-6 lg:grid-cols-2">
-                        {/* Trips over time */}
-                        <Card className="border border-border">
-                            <CardHeader className="pb-2">
-                                <CardTitle className="flex items-center justify-between text-base font-semibold text-foreground">
+                        <FleetGlassCard>
+                            <div className="pb-2">
+                                <div className="flex items-center justify-between text-base font-semibold text-foreground">
                                     Trips (last 14 days)
                                     <Link href="/fleet/trips" className="text-sm font-normal text-primary hover:underline">View all</Link>
-                                </CardTitle>
-                                <p className="text-xs text-muted-foreground">Daily trip count</p>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="h-[240px] w-full">
-                                    {chartTripsOverTime.length === 0 ? (
-                                        <div className="flex h-full items-center justify-center rounded-lg bg-muted/30 text-sm text-muted-foreground">
-                                            No trip data for this period.
-                                        </div>
-                                    ) : (
-                                        <ResponsiveContainer width="100%" height={240}>
-                                            <AreaChart data={chartTripsOverTime} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                                                <defs>
-                                                    <linearGradient id="tripsGradient" x1="0" y1="0" x2="0" y2="1">
-                                                        <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.4} />
-                                                        <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                                                    </linearGradient>
-                                                </defs>
-                                                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                                                <XAxis dataKey="label" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} />
-                                                <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} allowDecimals={false} />
-                                                <Tooltip contentStyle={tooltipContentStyle} formatter={(value: number | undefined) => [value ?? 0, 'Trips']} labelFormatter={(l) => `Date: ${l}`} />
-                                                <Area type="monotone" dataKey="trips" name="Trips" stroke="hsl(var(--primary))" fill="url(#tripsGradient)" strokeWidth={2} />
-                                            </AreaChart>
-                                        </ResponsiveContainer>
-                                    )}
                                 </div>
-                            </CardContent>
-                        </Card>
+                                <p className="text-xs text-muted-foreground">Daily trip count</p>
+                            </div>
+                            <div className="h-[240px] w-full">
+                                {chartTripsOverTime.length === 0 ? (
+                                    <div className="flex h-full items-center justify-center rounded-lg bg-muted/30 text-sm text-muted-foreground">
+                                        No trip data for this period.
+                                    </div>
+                                ) : (
+                                    <ResponsiveContainer width="100%" height={240}>
+                                        <AreaChart data={chartTripsOverTime} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                                            <defs>
+                                                <linearGradient id="tripsGradient" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.4} />
+                                                    <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                                                </linearGradient>
+                                            </defs>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                                            <XAxis dataKey="label" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} />
+                                            <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} allowDecimals={false} />
+                                            <Tooltip contentStyle={tooltipContentStyle} formatter={(value: number | undefined) => [value ?? 0, 'Trips']} labelFormatter={(l) => `Date: ${l}`} />
+                                            <Area type="monotone" dataKey="trips" name="Trips" stroke="hsl(var(--primary))" fill="url(#tripsGradient)" strokeWidth={2} />
+                                        </AreaChart>
+                                    </ResponsiveContainer>
+                                )}
+                            </div>
+                        </FleetGlassCard>
 
-                        {/* Work orders over time */}
-                        <Card className="border border-border">
-                            <CardHeader className="pb-2">
-                                <CardTitle className="flex items-center justify-between text-base font-semibold text-foreground">
+                        <FleetGlassCard>
+                            <div className="pb-2">
+                                <div className="flex items-center justify-between text-base font-semibold text-foreground">
                                     Work orders created (last 14 days)
                                     <Link href="/fleet/work-orders" className="text-sm font-normal text-primary hover:underline">View all</Link>
-                                </CardTitle>
-                                <p className="text-xs text-muted-foreground">New work orders per day</p>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="h-[240px] w-full">
-                                    {chartWorkOrdersOverTime.length === 0 ? (
-                                        <div className="flex h-full items-center justify-center rounded-lg bg-muted/30 text-sm text-muted-foreground">
-                                            No data for this period.
-                                        </div>
-                                    ) : (
-                                        <ResponsiveContainer width="100%" height={240}>
-                                            <BarChart data={chartWorkOrdersOverTime} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                                                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                                                <XAxis dataKey="label" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} />
-                                                <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} allowDecimals={false} />
-                                                <Tooltip contentStyle={tooltipContentStyle} formatter={(value: number | undefined) => [value ?? 0, 'Work orders']} labelFormatter={(l) => `Date: ${l}`} />
-                                                <Bar dataKey="work_orders" name="Work orders" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                                            </BarChart>
-                                        </ResponsiveContainer>
-                                    )}
                                 </div>
-                            </CardContent>
-                        </Card>
-
-                        {/* Overview by category — click bar to filter list */}
-                        <Card className="border border-border">
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-base font-semibold text-foreground">Fleet overview by category</CardTitle>
-                                <p className="text-xs text-muted-foreground">Counts across main entities · click bar to open list</p>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="h-[240px] w-full">
+                                <p className="text-xs text-muted-foreground">New work orders per day</p>
+                            </div>
+                            <div className="h-[240px] w-full">
+                                {chartWorkOrdersOverTime.length === 0 ? (
+                                    <div className="flex h-full items-center justify-center rounded-lg bg-muted/30 text-sm text-muted-foreground">
+                                        No data for this period.
+                                    </div>
+                                ) : (
                                     <ResponsiveContainer width="100%" height={240}>
-                                        <BarChart data={overviewBarData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} layout="vertical" className="[&_.recharts-cartesian-grid-horizontal]:opacity-0">
-                                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
-                                            <XAxis type="number" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} allowDecimals={false} />
-                                            <YAxis type="category" dataKey="name" width={80} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} />
-                                            <Tooltip contentStyle={tooltipContentStyle} formatter={(value: number | undefined) => [value ?? 0, 'Count']} />
-                                            <Bar
-                                                dataKey="value"
-                                                name="Count"
-                                                fill="hsl(var(--primary))"
-                                                radius={[0, 4, 4, 0]}
-                                                cursor="pointer"
-                                                onClick={(data: { name?: string }) => {
-                                                    const name = data?.name;
-                                                    const url =
-                                                        name === 'Vehicles' ? '/fleet/vehicles'
-                                                        : name === 'Drivers' ? '/fleet/drivers'
-                                                        : name === 'Routes' ? '/fleet/routes'
-                                                        : name === 'Trips' ? '/fleet/trips'
-                                                        : name === 'Work orders' ? '/fleet/work-orders'
-                                                        : null;
-                                                    if (url) window.location.href = url;
-                                                }}
-                                            />
+                                        <BarChart data={chartWorkOrdersOverTime} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                                            <XAxis dataKey="label" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} />
+                                            <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} allowDecimals={false} />
+                                            <Tooltip contentStyle={tooltipContentStyle} formatter={(value: number | undefined) => [value ?? 0, 'Work orders']} labelFormatter={(l) => `Date: ${l}`} />
+                                            <Bar dataKey="work_orders" name="Work orders" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                                         </BarChart>
                                     </ResponsiveContainer>
-                                </div>
-                            </CardContent>
-                        </Card>
+                                )}
+                            </div>
+                        </FleetGlassCard>
 
-                        {/* Work orders by status — click segment to list with filter */}
-                        <Card className="border border-border">
-                            <CardHeader className="pb-2">
-                                <CardTitle className="flex items-center justify-between text-base font-semibold text-foreground">
+                        <FleetGlassCard>
+                            <div className="pb-2">
+                                <h3 className="text-base font-semibold text-foreground">Fleet overview by category</h3>
+                                <p className="text-xs text-muted-foreground">Counts across main entities · click bar to open list</p>
+                            </div>
+                            <div className="h-[240px] w-full">
+                                <ResponsiveContainer width="100%" height={240}>
+                                    <BarChart data={overviewBarData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} layout="vertical" className="[&_.recharts-cartesian-grid-horizontal]:opacity-0">
+                                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
+                                        <XAxis type="number" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} allowDecimals={false} />
+                                        <YAxis type="category" dataKey="name" width={80} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} />
+                                        <Tooltip contentStyle={tooltipContentStyle} formatter={(value: number | undefined) => [value ?? 0, 'Count']} />
+                                        <Bar
+                                            dataKey="value"
+                                            name="Count"
+                                            fill="hsl(var(--primary))"
+                                            radius={[0, 4, 4, 0]}
+                                            cursor="pointer"
+                                            onClick={(data: { name?: string }) => {
+                                                const name = data?.name;
+                                                const url =
+                                                    name === 'Vehicles' ? '/fleet/vehicles'
+                                                    : name === 'Drivers' ? '/fleet/drivers'
+                                                    : name === 'Routes' ? '/fleet/routes'
+                                                    : name === 'Trips' ? '/fleet/trips'
+                                                    : name === 'Work orders' ? '/fleet/work-orders'
+                                                    : null;
+                                                if (url) window.location.href = url;
+                                            }}
+                                        />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </FleetGlassCard>
+
+                        <FleetGlassCard>
+                            <div className="pb-2">
+                                <div className="flex items-center justify-between text-base font-semibold text-foreground">
                                     Work orders by status
                                     <Link href="/fleet/work-orders" className="text-sm font-normal text-primary hover:underline">View all</Link>
-                                </CardTitle>
-                                <p className="text-xs text-muted-foreground">Breakdown by status · click segment to filter list</p>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="h-[240px] w-full">
-                                    {!hasWorkOrdersByStatus ? (
-                                        <div className="flex h-full items-center justify-center rounded-lg bg-muted/30 text-sm text-muted-foreground">
-                                            No work orders yet.
-                                        </div>
-                                    ) : (
-                                        <ResponsiveContainer width="100%" height={240}>
-                                            <PieChart>
-                                                <Pie
-                                                    data={chartWorkOrdersByStatus}
-                                                    dataKey="value"
-                                                    nameKey="name"
-                                                    cx="50%"
-                                                    cy="50%"
-                                                    innerRadius={56}
-                                                    outerRadius={88}
-                                                    paddingAngle={2}
-                                                    label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
-                                                    labelLine={{ stroke: 'hsl(var(--muted-foreground))' }}
-                                                    cursor="pointer"
-                                                    onClick={(data: { name?: string }) => {
-                                                        const name = data?.name ?? '';
-                                                        const status = name.toLowerCase().replace(/\s+/g, '_');
-                                                        if (status && status !== 'no_orders') window.location.href = `/fleet/work-orders?status=${status}`;
-                                                        else window.location.href = '/fleet/work-orders';
-                                                    }}
-                                                >
-                                                    {chartWorkOrdersByStatus.map((_, index) => (
-                                                        <Cell key={index} fill={CHART_COLORS[index % CHART_COLORS.length] || CHART_COLORS_FALLBACK[index % CHART_COLORS_FALLBACK.length]} />
-                                                    ))}
-                                                </Pie>
-                                                <Tooltip contentStyle={tooltipContentStyle} formatter={(value: number | undefined, name: string | undefined) => [value ?? 0, name ?? '']} />
-                                                <Legend layout="horizontal" align="center" verticalAlign="bottom" wrapperStyle={{ fontSize: 11 }} />
-                                            </PieChart>
-                                        </ResponsiveContainer>
-                                    )}
                                 </div>
-                            </CardContent>
-                        </Card>
+                                <p className="text-xs text-muted-foreground">Breakdown by status · click segment to filter list</p>
+                            </div>
+                            <div className="h-[240px] w-full">
+                                {!hasWorkOrdersByStatus ? (
+                                    <div className="flex h-full items-center justify-center rounded-lg bg-muted/30 text-sm text-muted-foreground">
+                                        No work orders yet.
+                                    </div>
+                                ) : (
+                                    <ResponsiveContainer width="100%" height={240}>
+                                        <PieChart>
+                                            <Pie
+                                                data={chartWorkOrdersByStatus}
+                                                dataKey="value"
+                                                nameKey="name"
+                                                cx="50%"
+                                                cy="50%"
+                                                innerRadius={56}
+                                                outerRadius={88}
+                                                paddingAngle={2}
+                                                label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
+                                                labelLine={{ stroke: 'hsl(var(--muted-foreground))' }}
+                                                cursor="pointer"
+                                                onClick={(data: { name?: string }) => {
+                                                    const name = data?.name ?? '';
+                                                    const status = name.toLowerCase().replace(/\s+/g, '_');
+                                                    if (status && status !== 'no_orders') window.location.href = `/fleet/work-orders?status=${status}`;
+                                                    else window.location.href = '/fleet/work-orders';
+                                                }}
+                                            >
+                                                {chartWorkOrdersByStatus.map((_, index) => (
+                                                    <Cell key={index} fill={CHART_COLORS[index % CHART_COLORS.length] || CHART_COLORS_FALLBACK[index % CHART_COLORS_FALLBACK.length]} />
+                                                ))}
+                                            </Pie>
+                                            <Tooltip contentStyle={tooltipContentStyle} formatter={(value: number | undefined, name: string | undefined) => [value ?? 0, name ?? '']} />
+                                            <Legend layout="horizontal" align="center" verticalAlign="bottom" wrapperStyle={{ fontSize: 11 }} />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                )}
+                            </div>
+                        </FleetGlassCard>
                     </div>
                 </section>
 
-                {/* Activity: recent items and compliance */}
                 <section>
-                    <h2 className="mb-4 text-lg font-semibold text-foreground">Activity</h2>
-                <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-4">
-                    <Card className="border border-border">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="flex items-center justify-between text-base font-semibold text-foreground">
-                                Recent work orders
-                                <Link href="/fleet/work-orders" className="text-sm font-normal text-primary hover:underline">View all</Link>
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
+                    <FleetBlockSectionHeader>Activity</FleetBlockSectionHeader>
+                    <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-4">
+                        <FleetDataCard
+                            title="Recent work orders"
+                            right={<Link href="/fleet/work-orders" className="text-sm font-normal text-primary hover:underline">View all</Link>}
+                        >
                             {recentWorkOrders.length === 0 ? (
                                 <p className="text-sm text-muted-foreground">No work orders yet.</p>
                             ) : (
-                                <ul className="space-y-2 text-sm">
+                                <ul className={fleetDataCardListClass}>
                                     {recentWorkOrders.map((wo) => (
-                                        <li key={wo.id} className="flex items-center justify-between border-b border-dashed pb-2 last:border-0">
-                                            <Link href={`/fleet/work-orders/${wo.id}`} className="font-medium hover:underline">{wo.work_order_number}</Link>
-                                            <span className="text-muted-foreground">{wo.vehicle?.registration ?? wo.status}</span>
+                                        <li key={wo.id} className={fleetDataCardRowClass}>
+                                            <Link href={`/fleet/work-orders/${wo.id}`} className={fleetDataCardRowPrimaryClass}>
+                                                {wo.work_order_number}
+                                            </Link>
+                                            <span className={fleetDataCardRowSecondaryClass}>{wo.vehicle?.registration ?? wo.status}</span>
                                         </li>
                                     ))}
                                 </ul>
                             )}
-                        </CardContent>
-                    </Card>
-                    <Card className="border border-border">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="flex items-center justify-between text-base font-semibold text-foreground">
-                                Recent defects
-                                <Link href="/fleet/defects" className="text-sm font-normal text-primary hover:underline">View all</Link>
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
+                        </FleetDataCard>
+                        <FleetDataCard
+                            title="Recent defects"
+                            right={<Link href="/fleet/defects" className="text-sm font-normal text-primary hover:underline">View all</Link>}
+                        >
                             {recentDefects.length === 0 ? (
                                 <p className="text-sm text-muted-foreground">No defects reported.</p>
                             ) : (
-                                <ul className="space-y-2 text-sm">
+                                <ul className={fleetDataCardListClass}>
                                     {recentDefects.map((d) => (
-                                        <li key={d.id} className="flex items-center justify-between border-b border-dashed pb-2 last:border-0">
-                                            <Link href={`/fleet/defects/${d.id}`} className="font-medium hover:underline">{d.defect_number}</Link>
-                                            <span className="text-muted-foreground">{d.severity}</span>
+                                        <li key={d.id} className={fleetDataCardRowClass}>
+                                            <Link href={`/fleet/defects/${d.id}`} className={fleetDataCardRowPrimaryClass}>
+                                                {d.defect_number}
+                                            </Link>
+                                            <span className={fleetDataCardRowSecondaryClass}>{d.severity}</span>
                                         </li>
                                     ))}
                                 </ul>
                             )}
-                        </CardContent>
-                    </Card>
-                                    <Card className="border border-border">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="flex items-center justify-between text-base font-semibold text-foreground">
-                                Expiring compliance
-                                <Link href="/fleet/compliance-items" className="text-sm font-normal text-primary hover:underline">View all</Link>
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
+                        </FleetDataCard>
+                        <FleetDataCard
+                            title="Expiring compliance"
+                            right={<Link href="/fleet/compliance-items" className="text-sm font-normal text-primary hover:underline">View all</Link>}
+                        >
                             {expiringCompliance.length === 0 ? (
                                 <p className="text-sm text-muted-foreground">Nothing expiring soon.</p>
                             ) : (
                                 <>
-                                <ul className="space-y-2 text-sm">
-                                    {expiringCompliance.map((c) => (
-                                        <li key={c.id} className="flex items-center justify-between border-b border-dashed pb-2 last:border-0">
-                                            <Link href={`/fleet/compliance-items/${c.id}`} className="font-medium hover:underline">{c.title}</Link>
-                                            <span className="text-muted-foreground">{new Date(c.expiry_date).toLocaleDateString()}</span>
-                                        </li>
-                                    ))}
-                                </ul>
-                                <Link href="/fleet/assistant?prompt=What%27s%20expiring%20soon%3F" className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline">
-                                    <Bot className="size-3.5" />
-                                    Ask assistant
-                                </Link>
+                                    <ul className={fleetDataCardListClass}>
+                                        {expiringCompliance.map((c) => (
+                                            <li key={c.id} className={fleetDataCardRowClass}>
+                                                <Link href={`/fleet/compliance-items/${c.id}`} className={fleetDataCardRowPrimaryClass}>
+                                                    {c.title}
+                                                </Link>
+                                                <span className={fleetDataCardRowSecondaryClass}>{new Date(c.expiry_date).toLocaleDateString()}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                    <Link href="/fleet/assistant?prompt=What%27s%20expiring%20soon%3F" className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline">
+                                        <Bot className="size-3.5" />
+                                        Ask assistant
+                                    </Link>
                                 </>
                             )}
-                        </CardContent>
-                    </Card>
-                    <Card className="border border-border">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="flex items-center justify-between text-base font-semibold text-foreground">
-                                Compliance at risk (AI)
-                                {aiJobRunsUrl && (
-                                    <Link href={aiJobRunsUrl} className="text-sm font-normal text-primary hover:underline">Run prediction</Link>
-                                )}
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
+                        </FleetDataCard>
+                        <FleetDataCard
+                            title="Compliance at risk (AI)"
+                            right={aiJobRunsUrl ? <Link href={aiJobRunsUrl} className="text-sm font-normal text-primary hover:underline">Run prediction</Link> : undefined}
+                        >
                             {!complianceAtRisk ? (
                                 <p className="text-sm text-muted-foreground">No compliance prediction run yet. Run a job from AI job runs.</p>
                             ) : (
@@ -613,15 +598,14 @@ export default function FleetDashboard({
                                     <p className="text-xs text-muted-foreground">Updated {new Date(complianceAtRisk.created_at).toLocaleString()}</p>
                                 </div>
                             )}
-                        </CardContent>
-                    </Card>
-                </div>
+                        </FleetDataCard>
+                    </div>
                 </section>
 
-                {/* Quick links: main fleet areas */}
                 <section>
-                    <h2 className="mb-4 text-lg font-semibold text-foreground">Quick links</h2>
-                    <div className="flex flex-wrap gap-2">
+                    <FleetBlockSectionHeader>Quick links</FleetBlockSectionHeader>
+                    <FleetGlassCard>
+                        <div className="flex flex-wrap gap-2">
                         <Link href="/fleet/vehicles" className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/30 hover:bg-muted hover:text-primary">
                             <Truck className="size-4" /> Vehicles
                         </Link>
@@ -652,9 +636,10 @@ export default function FleetDashboard({
                         <Link href="/fleet/garages" className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/30 hover:bg-muted hover:text-primary">
                             <Wrench className="size-4" /> Garages
                         </Link>
-                    </div>
+                        </div>
+                    </FleetGlassCard>
                 </section>
-            </div>
+            </FleetPageShell>
         </AppLayout>
     );
 }

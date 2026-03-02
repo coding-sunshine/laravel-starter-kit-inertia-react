@@ -1,5 +1,15 @@
 import AppLayout from '@/layouts/app-layout';
 import {
+    FleetActionIconButton,
+    FleetActionIconLink,
+    FleetEmptyState,
+    FleetGlassCard,
+    FleetGlassPill,
+    FleetPageHeader,
+    FleetPageToolbarRight,
+    FleetPagination,
+} from '@/components/fleet';
+import {
     Dialog,
     DialogClose,
     DialogContent,
@@ -9,15 +19,17 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
-import { Eye, MapPin, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Eye, MapPin, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 
@@ -42,73 +54,99 @@ export default function FleetRoutesIndex({ routes }: Props) {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Fleet – Routes" />
-            <div className="flex h-full flex-1 flex-col gap-6 rounded-xl p-4">
-                <div className="flex items-center justify-between">
-                    <h1 className="text-2xl font-semibold">Routes</h1>
-                    <Button asChild>
-                        <Link href="/fleet/routes/create"><Plus className="mr-2 size-4" />New</Link>
-                    </Button>
-                </div>
-                {routes.data.length === 0 ? (
-                    <div className="rounded-lg border border-dashed py-16 text-center">
-                        <MapPin className="mx-auto size-10 text-muted-foreground" />
-                        <p className="mt-2 text-sm text-muted-foreground">No routes yet.</p>
-                        <Button asChild className="mt-4"><Link href="/fleet/routes/create">Create route</Link></Button>
+            <div className="flex h-full flex-1 flex-col gap-6 rounded-xl p-4 md:p-6">
+                <FleetPageHeader
+                    title="Routes"
+                    description="Manage routes and route types."
+                    action={
+                        <Button asChild>
+                            <Link href="/fleet/routes/create">
+                                <Plus className="mr-2 size-4" />
+                                New route
+                            </Link>
+                        </Button>
+                    }
+                />
+
+                <FleetGlassCard className="min-w-0 overflow-hidden" noPadding>
+                    <div className="mb-2 flex h-9 items-center justify-between border-b border-white/30 px-4 pt-4 pb-2">
+                        <h3 className="text-base font-medium text-[#5b638d]">
+                            All routes — {routes.data.length === 0 ? 'No routes yet' : `${routes.data.length} route${routes.data.length === 1 ? '' : 's'}`}
+                        </h3>
+                        <FleetPageToolbarRight>
+                            <Button asChild size="sm">
+                                <Link href="/fleet/routes/create">
+                                    <Plus className="mr-2 size-4" />
+                                    New
+                                </Link>
+                            </Button>
+                        </FleetPageToolbarRight>
                     </div>
-                ) : (
-                    <div className="rounded-md border">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="border-b bg-muted/50">
-                                    <th className="p-3 text-left font-medium">Name</th>
-                                    <th className="p-3 text-left font-medium">Type</th>
-                                    <th className="p-3 text-left font-medium">Status</th>
-                                    <th className="p-3 text-right font-medium">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {routes.data.map((row) => (
-                                    <tr key={row.id} className="border-b last:border-0">
-                                        <td className="p-3"><Link href={`/fleet/routes/${row.id}`} className="font-medium hover:underline">{row.name}</Link></td>
-                                        <td className="p-3">{row.route_type}</td>
-                                        <td className="p-3">{row.is_active ? 'Active' : 'Inactive'}</td>
-                                        <td className="p-3 text-right">
-                                            <div className="flex items-center justify-end gap-1">
-                                                <Button variant="ghost" size="icon" className="size-8" asChild>
-                                                    <Link href={`/fleet/routes/${row.id}`} title="View details">
-                                                        <Eye className="size-4" />
+                    {routes.data.length === 0 ? (
+                        <div className="px-6 pb-8">
+                            <FleetEmptyState
+                                icon={MapPin}
+                                title="No routes yet"
+                                description="Create a route to organize trips and schedules."
+                                action={
+                                    <Button asChild>
+                                        <Link href="/fleet/routes/create">Create route</Link>
+                                    </Button>
+                                }
+                            />
+                        </div>
+                    ) : (
+                        <>
+                            <div className="fleet-glass-table w-full overflow-x-auto">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow className="border-0 bg-transparent hover:bg-transparent">
+                                            <TableHead className="h-11 px-4 font-semibold">Name</TableHead>
+                                            <TableHead className="h-11 px-4 font-semibold">Type</TableHead>
+                                            <TableHead className="h-11 px-4 font-semibold">Status</TableHead>
+                                            <TableHead className="h-11 w-[120px] px-4 text-right font-semibold">Actions</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {routes.data.map((row) => (
+                                            <TableRow key={row.id} className="group transition-colors">
+                                                <TableCell className="px-4 py-3">
+                                                    <Link href={`/fleet/routes/${row.id}`} className="font-medium text-foreground hover:underline">
+                                                        {row.name}
                                                     </Link>
-                                                </Button>
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="size-8" title="More actions">
-                                                            <MoreHorizontal className="size-4" />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuItem asChild>
-                                                            <Link href={`/fleet/routes/${row.id}/edit`}>
-                                                                <Pencil className="mr-2 size-4" />
-                                                                Edit
-                                                            </Link>
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem
-                                                            className="text-destructive focus:text-destructive"
+                                                </TableCell>
+                                                <TableCell className="px-4 py-3 text-muted-foreground">{row.route_type}</TableCell>
+                                                <TableCell className="px-4 py-3">
+                                                    <FleetGlassPill variant={row.is_active ? 'success' : 'default'}>
+                                                        {row.is_active ? 'Active' : 'Inactive'}
+                                                    </FleetGlassPill>
+                                                </TableCell>
+                                                <TableCell className="px-4 py-3 text-right">
+                                                    <div className="flex items-center justify-end gap-1">
+                                                        <FleetActionIconLink href={`/fleet/routes/${row.id}`} label="View" variant="view">
+                                                            <Eye className="size-4" />
+                                                        </FleetActionIconLink>
+                                                        <FleetActionIconLink href={`/fleet/routes/${row.id}/edit`} label="Edit" variant="edit">
+                                                            <Pencil className="size-4" />
+                                                        </FleetActionIconLink>
+                                                        <FleetActionIconButton
+                                                            label="Delete"
+                                                            variant="delete"
                                                             onClick={() => setDeleteTarget(row)}
                                                         >
-                                                            <Trash2 className="mr-2 size-4" />
-                                                            Delete
-                                                        </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
+                                                            <Trash2 className="size-4" />
+                                                        </FleetActionIconButton>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                            <FleetPagination links={routes.links ?? []} />
+                        </>
+                    )}
+                </FleetGlassCard>
 
                 <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
                     <DialogContent>

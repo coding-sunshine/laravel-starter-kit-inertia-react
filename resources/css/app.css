@@ -108,6 +108,12 @@
     --sidebar-accent-foreground: oklch(0.254 0 0);
     --sidebar-border: oklch(0.91 0 0);
     --sidebar-ring: oklch(0.45 0.18 264);
+
+    /* Fleet glass theme (reference UI) */
+    --glass-bg: rgba(255, 255, 255, 0.55);
+    --glass-border: rgba(255, 255, 255, 0.35);
+    --glass-blur: 20px;
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .dark {
@@ -143,6 +149,12 @@
     --sidebar-accent-foreground: oklch(0.985 0 0);
     --sidebar-border: oklch(0.269 0 0);
     --sidebar-ring: oklch(0.439 0 0);
+
+    /* Fleet glass (dark) */
+    --glass-bg: rgba(255, 255, 255, 0.1);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-blur: 20px;
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
 /* Fleet-only: no decorative background/illustration (beach/hero image) in main or sidebar wrapper */
@@ -260,6 +272,38 @@
 .fleet-no-decor-wrapper .fleet-no-decor a:not(.text-primary-foreground) {
     color: #1d4ed8;
 }
+
+/* Fleet reference-style glass table: sticky header, tinted header text, alternating rows */
+.fleet-no-decor-wrapper .fleet-glass-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+.fleet-no-decor-wrapper .fleet-glass-table thead th {
+    color: #5b638d !important;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+}
+.fleet-no-decor-wrapper .fleet-glass-table tbody tr {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+    transition: background-color 0.15s;
+}
+.fleet-no-decor-wrapper .fleet-glass-table tbody tr:nth-child(even) {
+    background: rgba(255, 255, 255, 0.2);
+}
+.fleet-no-decor-wrapper .fleet-glass-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+.fleet-no-decor-wrapper .fleet-glass-table tbody td {
+    color: #334155;
+}
+
 /* Hide org logo graphic (e.g. beach/palm SVG) in sidebar and main when fleet-only */
 .fleet-no-decor-wrapper [data-sidebar="header"] [data-sidebar="menu-button"]:first-of-type img,
 .fleet-no-decor-wrapper [data-sidebar="header"] [data-sidebar="menu-button"]:first-of-type > div:first-of-type {

@@ -1,7 +1,17 @@
 import AppLayout from '@/layouts/app-layout';
-import { FleetEmptyState, FleetPageHeader } from '@/components/fleet';
+import {
+    FleetActionIconButton,
+    FleetActionIconLink,
+    FleetEmptyState,
+    FleetGlassCard,
+    FleetGlassPill,
+    FleetPageHeader,
+    FleetPageToolbar,
+    FleetPageToolbarLeft,
+    FleetPageToolbarRight,
+    FleetPagination,
+} from '@/components/fleet';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     Dialog,
     DialogClose,
@@ -11,12 +21,6 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
 import {
     Table,
@@ -29,7 +33,7 @@ import {
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Form, Head, Link } from '@inertiajs/react';
-import { ClipboardList, Eye, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ClipboardList, Eye, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
 const selectClass =
@@ -77,182 +81,133 @@ export default function FleetWorkOrdersIndex({ workOrders, filters, vehicles, st
                     }
                 />
 
-                <Card className="border border-border shadow-sm">
-                    <CardHeader className="pb-3">
-                        <CardTitle className="text-base font-semibold">Filters</CardTitle>
-                        <CardDescription>Narrow by vehicle or status.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <Form method="get" className="flex flex-wrap items-end gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="wo-vehicle">Vehicle</Label>
-                                <select
-                                    id="wo-vehicle"
-                                    name="vehicle_id"
-                                    defaultValue={filters.vehicle_id ?? ''}
-                                    className={selectClass}
-                                >
-                                    <option value="">All</option>
-                                    {vehicles.map((v) => (
-                                        <option key={v.id} value={v.id}>
-                                            {v.registration}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="wo-status">Status</Label>
-                                <select
-                                    id="wo-status"
-                                    name="status"
-                                    defaultValue={filters.status ?? ''}
-                                    className={selectClass}
-                                >
-                                    <option value="">All</option>
-                                    {statuses.map((s) => (
-                                        <option key={s.value} value={s.value}>
-                                            {s.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                            <Button type="submit" variant="secondary" size="sm">
-                                Apply
-                            </Button>
-                        </Form>
-                    </CardContent>
-                </Card>
-
-                <Card className="border border-border shadow-sm">
-                    <CardHeader className="pb-3">
-                        <CardTitle className="text-base font-semibold">All work orders</CardTitle>
-                        <CardDescription>
-                            {workOrders.data.length === 0
-                                ? 'No work orders match the filters.'
-                                : `${workOrders.data.length} work order${workOrders.data.length === 1 ? '' : 's'}`}
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-0">
-                        {workOrders.data.length === 0 ? (
-                            <div className="px-6 pb-8">
-                                <FleetEmptyState
-                                    icon={ClipboardList}
-                                    title="No work orders yet"
-                                    description="Create a work order to schedule maintenance or repairs."
-                                    action={
-                                        <Button asChild>
-                                            <Link href="/fleet/work-orders/create">
-                                                <Plus className="mr-2 size-4" />
-                                                Create work order
-                                            </Link>
-                                        </Button>
-                                    }
-                                />
-                            </div>
-                        ) : (
-                            <>
-                                <div className="overflow-hidden rounded-b-xl border-t border-border">
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow className="bg-muted/40 hover:bg-muted/40">
-                                                <TableHead className="h-11 px-4 font-semibold">Number</TableHead>
-                                                <TableHead className="h-11 px-4 font-semibold">Title</TableHead>
-                                                <TableHead className="h-11 px-4 font-semibold">Vehicle</TableHead>
-                                                <TableHead className="h-11 px-4 font-semibold">Status</TableHead>
-                                                <TableHead className="h-11 px-4 font-semibold">Priority</TableHead>
-                                                <TableHead className="h-11 px-4 font-semibold">Scheduled</TableHead>
-                                                <TableHead className="h-11 w-[80px] px-4 text-right font-semibold">
-                                                    Actions
-                                                </TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {workOrders.data.map((row) => (
-                                                <TableRow key={row.id} className="group transition-colors">
-                                                    <TableCell className="px-4 py-3">
-                                                        <Link
-                                                            href={`/fleet/work-orders/${row.id}`}
-                                                            className="font-medium text-foreground hover:underline"
-                                                        >
-                                                            {row.work_order_number}
-                                                        </Link>
-                                                    </TableCell>
-                                                    <TableCell className="px-4 py-3 text-muted-foreground">
-                                                        {row.title}
-                                                    </TableCell>
-                                                    <TableCell className="px-4 py-3 text-muted-foreground">
-                                                        {row.vehicle?.registration ?? '—'}
-                                                    </TableCell>
-                                                    <TableCell className="px-4 py-3">
-                                                        <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-                                                            {row.status}
-                                                        </span>
-                                                    </TableCell>
-                                                    <TableCell className="px-4 py-3 text-muted-foreground">
-                                                        {row.priority}
-                                                    </TableCell>
-                                                    <TableCell className="px-4 py-3 text-muted-foreground">
-                                                        {row.scheduled_date
-                                                            ? new Date(row.scheduled_date).toLocaleDateString()
-                                                            : '—'}
-                                                    </TableCell>
-                                                    <TableCell className="px-4 py-3 text-right">
-                                                        <div className="flex items-center justify-end gap-1">
-                                                            <Button variant="ghost" size="icon" className="size-8" asChild>
-                                                                <Link href={`/fleet/work-orders/${row.id}`} title="View details">
-                                                                    <Eye className="size-4" />
-                                                                </Link>
-                                                            </Button>
-                                                            <DropdownMenu>
-                                                                <DropdownMenuTrigger asChild>
-                                                                    <Button variant="ghost" size="icon" className="size-8" title="More actions">
-                                                                        <MoreHorizontal className="size-4" />
-                                                                    </Button>
-                                                                </DropdownMenuTrigger>
-                                                                <DropdownMenuContent align="end">
-                                                                    <DropdownMenuItem asChild>
-                                                                        <Link href={`/fleet/work-orders/${row.id}/edit`}>
-                                                                            <Pencil className="mr-2 size-4" />
-                                                                            Edit
-                                                                        </Link>
-                                                                    </DropdownMenuItem>
-                                                                    <DropdownMenuItem
-                                                                        className="text-destructive focus:text-destructive"
-                                                                        onClick={() => setDeleteTarget(row)}
-                                                                    >
-                                                                        <Trash2 className="mr-2 size-4" />
-                                                                        Delete
-                                                                    </DropdownMenuItem>
-                                                                </DropdownMenuContent>
-                                                            </DropdownMenu>
-                                                        </div>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                </div>
-                                {workOrders.links && workOrders.links.length > 1 && (
-                                    <div className="flex flex-wrap gap-2 border-t border-border px-4 py-3">
-                                        {workOrders.links.map((link, i) => (
-                                            <Link
-                                                key={i}
-                                                href={link.url ?? '#'}
-                                                className={`rounded-md border px-3 py-1.5 text-sm font-medium transition-colors ${
-                                                    link.active
-                                                        ? 'border-primary bg-primary text-primary-foreground'
-                                                        : 'border-border hover:bg-muted'
-                                                }`}
-                                            >
-                                                {link.label}
-                                            </Link>
+                <FleetGlassCard className="p-3">
+                    <Form method="get">
+                        <FleetPageToolbar>
+                            <FleetPageToolbarLeft className="flex flex-wrap items-end gap-3">
+                                <div className="space-y-2">
+                                    <Label htmlFor="wo-vehicle">Vehicle</Label>
+                                    <select id="wo-vehicle" name="vehicle_id" defaultValue={filters.vehicle_id ?? ''} className={selectClass + ' w-[180px]'}>
+                                        <option value="">All</option>
+                                        {vehicles.map((v) => (
+                                            <option key={v.id} value={v.id}>{v.registration}</option>
                                         ))}
-                                    </div>
-                                )}
-                            </>
-                        )}
-                    </CardContent>
-                </Card>
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="wo-status">Status</Label>
+                                    <select id="wo-status" name="status" defaultValue={filters.status ?? ''} className={selectClass + ' w-[160px]'}>
+                                        <option value="">All</option>
+                                        {statuses.map((s) => (
+                                            <option key={s.value} value={s.value}>{s.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <Button type="submit" variant="secondary" size="sm">Apply</Button>
+                            </FleetPageToolbarLeft>
+                            <FleetPageToolbarRight>
+                                <Button asChild size="sm">
+                                    <Link href="/fleet/work-orders/create">
+                                        <Plus className="mr-2 size-4" />
+                                        New work order
+                                    </Link>
+                                </Button>
+                            </FleetPageToolbarRight>
+                        </FleetPageToolbar>
+                    </Form>
+                </FleetGlassCard>
+
+                <FleetGlassCard className="min-w-0 overflow-hidden" noPadding>
+                    <div className="mb-2 flex h-9 items-center justify-between border-b border-white/30 px-4 pt-4 pb-2">
+                        <h3 className="text-base font-medium text-[#5b638d]">
+                            All work orders — {workOrders.data.length === 0 ? 'None' : `${workOrders.data.length} work order${workOrders.data.length === 1 ? '' : 's'}`}
+                        </h3>
+                        <FleetPageToolbarRight>
+                            <Button asChild size="sm">
+                                <Link href="/fleet/work-orders/create">
+                                    <Plus className="mr-2 size-4" />
+                                    New
+                                </Link>
+                            </Button>
+                        </FleetPageToolbarRight>
+                    </div>
+                    {workOrders.data.length === 0 ? (
+                        <div className="px-6 pb-8">
+                            <FleetEmptyState
+                                icon={ClipboardList}
+                                title="No work orders yet"
+                                description="Create a work order to schedule maintenance or repairs."
+                                action={
+                                    <Button asChild>
+                                        <Link href="/fleet/work-orders/create">
+                                            <Plus className="mr-2 size-4" />
+                                            Create work order
+                                        </Link>
+                                    </Button>
+                                }
+                            />
+                        </div>
+                    ) : (
+                        <>
+                            <div className="fleet-glass-table w-full overflow-x-auto">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow className="border-0 bg-transparent hover:bg-transparent">
+                                            <TableHead className="h-11 px-4 font-semibold">Number</TableHead>
+                                            <TableHead className="h-11 px-4 font-semibold">Title</TableHead>
+                                            <TableHead className="h-11 px-4 font-semibold">Vehicle</TableHead>
+                                            <TableHead className="h-11 px-4 font-semibold">Status</TableHead>
+                                            <TableHead className="h-11 px-4 font-semibold">Priority</TableHead>
+                                            <TableHead className="h-11 px-4 font-semibold">Scheduled</TableHead>
+                                            <TableHead className="h-11 w-[120px] px-4 text-right font-semibold">Actions</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {workOrders.data.map((row) => (
+                                            <TableRow key={row.id} className="group transition-colors">
+                                                <TableCell className="px-4 py-3">
+                                                    <Link href={`/fleet/work-orders/${row.id}`} className="font-medium text-foreground hover:underline">
+                                                        {row.work_order_number}
+                                                    </Link>
+                                                </TableCell>
+                                                <TableCell className="px-4 py-3 text-muted-foreground">{row.title}</TableCell>
+                                                <TableCell className="px-4 py-3 text-muted-foreground">{row.vehicle?.registration ?? '—'}</TableCell>
+                                                <TableCell className="px-4 py-3">
+                                                    <FleetGlassPill variant="default">{row.status}</FleetGlassPill>
+                                                </TableCell>
+                                                <TableCell className="px-4 py-3 text-muted-foreground">{row.priority}</TableCell>
+                                                <TableCell className="px-4 py-3 text-muted-foreground">
+                                                    {row.scheduled_date ? new Date(row.scheduled_date).toLocaleDateString() : '—'}
+                                                </TableCell>
+                                                <TableCell className="px-4 py-3 text-right">
+                                                    <div className="flex items-center justify-end gap-1">
+                                                        <FleetActionIconLink href={`/fleet/work-orders/${row.id}`} label="View" variant="view">
+                                                            <Eye className="size-4" />
+                                                        </FleetActionIconLink>
+                                                        <FleetActionIconLink href={`/fleet/work-orders/${row.id}/edit`} label="Edit" variant="edit">
+                                                            <Pencil className="size-4" />
+                                                        </FleetActionIconLink>
+                                                        <FleetActionIconButton label="Delete" variant="delete" onClick={() => setDeleteTarget(row)}>
+                                                            <Trash2 className="size-4" />
+                                                        </FleetActionIconButton>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                            <FleetPagination
+                                links={workOrders.links ?? []}
+                                showingLabel={
+                                    workOrders.data.length > 0
+                                        ? `Showing ${workOrders.data.length} work order${workOrders.data.length === 1 ? '' : 's'}`
+                                        : undefined
+                                }
+                            />
+                        </>
+                    )}
+                </FleetGlassCard>
 
                 <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
                     <DialogContent>

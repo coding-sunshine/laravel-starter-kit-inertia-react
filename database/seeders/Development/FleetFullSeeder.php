@@ -187,6 +187,228 @@ final class FleetFullSeeder extends Seeder
         $this->seedPhase9ComplianceHs($vehicleIds, $driverIds, $locIds, $garageIds, $opLicenceIds);
         $this->seedPhase10FinesLeaseWarranty($vehicleIds, $driverIds);
         $this->seedPhase11ExtrasAudit($vehicleIds, $locIds);
+
+        $this->seedFromLegacyDump($this->org);
+
+        // Seed legacy data into every other org that already has fleet data,
+        // so the dashboard shows updated counts in any org (e.g. Test Organization).
+        $orgIdsWithVehicles = \App\Models\Fleet\Vehicle::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)
+            ->distinct()
+            ->pluck('organization_id');
+        foreach ($orgIdsWithVehicles as $oid) {
+            if ($oid === $this->org->id) {
+                continue;
+            }
+            $otherOrg = Organization::query()->find($oid);
+            if ($otherOrg instanceof Organization) {
+                $this->seedFromLegacyDump($otherOrg);
+            }
+        }
+    }
+
+    /**
+     * Seed additional data from the legacy (old) database dump so the app feels
+     * like the old fleet app: more vehicles, locations (companies), defects,
+     * and maintenance-style records. All data is created in the given org.
+     */
+    private function seedFromLegacyDump(Organization $org): void
+    {
+        $scope = \App\Models\Scopes\OrganizationScope::class;
+
+        // Legacy companies → Locations (depots/offices)
+        $legacyCompanyNames = [
+            'Caldicot', 'Commercial Motors - Man', 'Coryton', 'Cruselys', 'Ebor Trucks',
+            'GCA', 'ICL - Hebburn', 'ICL - West thurrock', 'ICL - Widnes', 'Industrial Chemicals',
+            'Lynch Transport', 'MAN - Gateshead', 'Pelican', 'Pullman - Ellesmere Port', 'Purfleet Commercials',
+            'Rema Tip Top', 'Renault - West Thurrock', 'S&B Commercials', 'Suttons', 'Thinktank',
+            'Thompsons Commercials - Renault', 'Woodwards - Wigan (Renault)', 'Yorkshire Rubber Linings',
+        ];
+        $legacyLocIds = [];
+        foreach (array_slice($legacyCompanyNames, 0, 18) as $name) {
+            $loc = \App\Models\Fleet\Location::withoutGlobalScope($scope)->firstOrCreate(
+                ['organization_id' => $org->id, 'name' => $name],
+                [
+                    'type' => 'depot',
+                    'address' => $name . ', UK',
+                    'city' => 'UK',
+                    'country' => 'GB',
+                    'is_active' => true,
+                ]
+            );
+            $legacyLocIds[] = $loc->id;
+        }
+
+        // Legacy vehicle types: id => [make, model, vehicle_type (our enum), fuel_type]
+        $legacyVehicleTypes = [
+            1 => ['make' => 'MAN', 'model' => 'TGX', 'vehicle_type' => 'truck', 'fuel_type' => 'diesel'],
+            2 => ['make' => 'MAN', 'model' => 'Rigid TGM', 'vehicle_type' => 'truck', 'fuel_type' => 'diesel'],
+            3 => ['make' => 'MAN', 'model' => 'T480', 'vehicle_type' => 'truck', 'fuel_type' => 'diesel'],
+            4 => ['make' => 'Mercedes', 'model' => 'Sprinter', 'vehicle_type' => 'van', 'fuel_type' => 'diesel'],
+            5 => ['make' => 'DAF', 'model' => 'Rigid', 'vehicle_type' => 'truck', 'fuel_type' => 'diesel'],
+        ];
+
+        // Legacy vehicles from dump: id => [registration, type_id, status, odometer, mot_expiry]
+        $legacyVehicles = [
+            1 => ['EU15ZPR', 1, 'Roadworthy', 391091, '2024-01-31'],
+            2 => ['EU15ZPT', 1, 'Roadworthy', 0, '2024-03-31'],
+            3 => ['EX68BXG', 1, 'Roadworthy', 0, null],
+            4 => ['EX68BXH', 1, 'Roadworthy', 0, null],
+            5 => ['EX68BXJ', 1, 'Roadworthy', 0, null],
+            6 => ['EX68BXK', 1, 'Roadworthy', 0, null],
+            7 => ['EX68BXL', 1, 'Roadworthy', 0, null],
+            8 => ['EX68BXM', 1, 'Roadworthy', 0, null],
+            9 => ['EX68BXN', 1, 'Roadworthy', 0, null],
+            10 => ['EX68BXO', 1, 'Roadworthy', 0, null],
+            11 => ['EX68BXP', 1, 'Roadworthy', 0, null],
+            12 => ['EX68BXR', 1, 'Roadworthy', 0, null],
+            13 => ['EY16FHV', 2, 'Roadworthy', 0, null],
+            14 => ['EY21TDX', 1, 'Roadworthy', 0, null],
+            15 => ['EY21TDZ', 1, 'Roadworthy', 0, null],
+            16 => ['EY21TFA', 1, 'Roadworthy', 0, null],
+            17 => ['EY21TFE', 1, 'Roadworthy', 0, null],
+            18 => ['EY21TFF', 1, 'Roadworthy', 0, null],
+            19 => ['EY21TFJ', 1, 'Roadworthy', 0, null],
+            20 => ['EY21TFK', 1, 'Roadworthy', 0, null],
+            21 => ['EY21TFN', 1, 'Roadworthy', 0, null],
+            22 => ['EY66MZP', 2, 'Roadworthy', 0, null],
+            23 => ['EY66MZT', 2, 'Roadworthy', 0, null],
+            24 => ['EY66MZU', 2, 'Roadworthy', 0, null],
+            25 => ['EY70LNK', 1, 'Roadworthy', 0, null],
+            26 => ['EY70LNN', 1, 'Roadworthy', 0, null],
+            27 => ['LV68XDG', 3, 'Roadworthy', 0, null],
+            28 => ['LV68XDH', 3, 'Archived', 0, null],
+            29 => ['LV68XDJ', 3, 'Archived', 0, null],
+            30 => ['LV68XDK', 3, 'Roadworthy', 0, null],
+            31 => ['LV68XDL', 3, 'Archived', 0, null],
+            32 => ['LV68XDM', 3, 'Archived', 0, null],
+            33 => ['LV68XDN', 3, 'Archived', 0, null],
+            34 => ['LX70MLJ', 3, 'Roadworthy', 0, null],
+            35 => ['LX70MLL', 3, 'Roadworthy', 0, null],
+            36 => ['LX70MLN', 3, 'Roadworthy', 0, null],
+            37 => ['LX70MLO', 3, 'Roadworthy', 0, null],
+            38 => ['LX70MLU', 3, 'Roadworthy', 0, null],
+            39 => ['LX70MLV', 3, 'Roadworthy', 0, null],
+            40 => ['LX70MLY', 3, 'Roadworthy', 0, null],
+        ];
+
+        $oldToNewVehicleId = [];
+        $homeLocId = $legacyLocIds[0] ?? null;
+        foreach ($legacyVehicles as $oldId => $row) {
+            [$reg, $typeId, $status, $odometer, $motExpiry] = $row;
+            $type = $legacyVehicleTypes[$typeId] ?? $legacyVehicleTypes[1];
+            $ourStatus = $status === 'Archived' ? 'disposed' : 'active';
+            $v = \App\Models\Fleet\Vehicle::withoutGlobalScope($scope)->firstOrCreate(
+                ['organization_id' => $org->id, 'registration' => $reg],
+                [
+                    'make' => $type['make'],
+                    'model' => $type['model'],
+                    'year' => $this->yearFromRegistration($reg),
+                    'fuel_type' => $type['fuel_type'],
+                    'vehicle_type' => $type['vehicle_type'],
+                    'status' => $ourStatus,
+                    'odometer_reading' => $odometer ?: rand(50000, 250000),
+                    'mot_expiry_date' => $motExpiry ? \Carbon\Carbon::parse($motExpiry) : null,
+                    'compliance_status' => 'compliant',
+                    'home_location_id' => $homeLocId,
+                ]
+            );
+            $oldToNewVehicleId[$oldId] = $v->id;
+        }
+
+        $this->seedVehicleLiveTrackingPositions(array_values($oldToNewVehicleId));
+
+        // Legacy defects (from dump): only for vehicles we just created (old_id 1, 22, etc.)
+        $legacyDefects = [
+            ['old_vehicle_id' => 1, 'defect_number' => '1669797052883', 'status' => 'resolved', 'reported_at' => '2022-12-06 11:03:38', 'resolved_at' => '2022-12-16 12:45:35'],
+            ['old_vehicle_id' => 1, 'defect_number' => '1669878342798', 'status' => 'resolved', 'reported_at' => '2022-12-06 11:03:38', 'resolved_at' => '2022-12-16 12:36:17'],
+            ['old_vehicle_id' => 1, 'defect_number' => '1669878357296', 'status' => 'resolved', 'reported_at' => '2022-12-06 11:03:38', 'resolved_at' => '2022-12-16 12:37:47'],
+            ['old_vehicle_id' => 22, 'defect_number' => '1670318056566', 'status' => 'resolved', 'reported_at' => '2022-12-08 07:33:40', 'resolved_at' => '2022-12-16 12:39:47'],
+            ['old_vehicle_id' => 22, 'defect_number' => '1670318164276', 'status' => 'resolved', 'reported_at' => '2022-12-08 07:33:41', 'resolved_at' => '2022-12-16 12:40:39'],
+            ['old_vehicle_id' => 22, 'defect_number' => '1670318190151', 'status' => 'resolved', 'reported_at' => '2022-12-08 07:33:41', 'resolved_at' => '2022-12-16 12:40:59'],
+            ['old_vehicle_id' => 22, 'defect_number' => '1670484646901', 'status' => 'resolved', 'reported_at' => '2022-12-08 07:33:41', 'resolved_at' => '2022-12-16 12:41:29'],
+            ['old_vehicle_id' => 22, 'defect_number' => '1670484656287', 'status' => 'resolved', 'reported_at' => '2022-12-19 07:07:50', 'resolved_at' => '2022-12-27 08:51:14'],
+            ['old_vehicle_id' => 22, 'defect_number' => '1670484666375', 'status' => 'resolved', 'reported_at' => '2022-12-19 07:07:51', 'resolved_at' => '2022-12-27 08:49:43'],
+        ];
+        foreach ($legacyDefects as $d) {
+            $newVehicleId = $oldToNewVehicleId[$d['old_vehicle_id']] ?? null;
+            if ($newVehicleId === null) {
+                continue;
+            }
+            \App\Models\Fleet\Defect::withoutGlobalScope($scope)->firstOrCreate(
+                [
+                    'organization_id' => $org->id,
+                    'vehicle_id' => $newVehicleId,
+                    'defect_number' => $d['defect_number'],
+                ],
+                [
+                    'title' => 'Defect from pre-trip check',
+                    'description' => 'Defect reported from walk-around / pre-trip check.',
+                    'category' => 'safety',
+                    'severity' => 'minor',
+                    'status' => $d['status'],
+                    'reported_at' => $d['reported_at'],
+                    'resolution_date' => $d['resolved_at'] ?? null,
+                ]
+            );
+        }
+
+        // Extra defects across legacy vehicles so lists look full
+        $titles = ['Dashboard warning light', 'Brake wear indicator', 'Tyre pressure low', 'Windscreen chip', 'Mirror adjustment'];
+        foreach (array_slice($legacyVehicles, 0, 15, true) as $oldId => $row) {
+            $newVehicleId = $oldToNewVehicleId[$oldId] ?? null;
+            if ($newVehicleId === null) {
+                continue;
+            }
+            $title = $titles[array_rand($titles)];
+            \App\Models\Fleet\Defect::withoutGlobalScope($scope)->firstOrCreate(
+                [
+                    'organization_id' => $org->id,
+                    'vehicle_id' => $newVehicleId,
+                    'defect_number' => 'LEG-' . $oldId . '-' . rand(100, 999),
+                ],
+                [
+                    'title' => $title,
+                    'description' => 'Reported from legacy system.',
+                    'category' => 'safety',
+                    'severity' => 'minor',
+                    'status' => rand(0, 2) === 0 ? 'resolved' : 'reported',
+                    'reported_at' => now()->subDays(rand(1, 60)),
+                ]
+            );
+        }
+
+        // Service schedules for legacy vehicles (maintenance_events from dump: MOT, Annual service, etc.)
+        $serviceTypes = ['mot', 'annual_service_inspection', 'next_service_inspection', 'preventative_maintenance_inspection'];
+        foreach (array_slice($oldToNewVehicleId, 0, 25, true) as $oldId => $newVehicleId) {
+            $type = $serviceTypes[$oldId % count($serviceTypes)];
+            \App\Models\Fleet\ServiceSchedule::withoutGlobalScope($scope)->firstOrCreate(
+                [
+                    'organization_id' => $org->id,
+                    'vehicle_id' => $newVehicleId,
+                    'service_type' => $type,
+                ],
+                [
+                    'interval_type' => 'time',
+                    'interval_value' => 12,
+                    'interval_unit' => 'months',
+                    'last_service_date' => now()->subMonths(rand(3, 8)),
+                    'alert_days_before' => 14,
+                    'is_active' => true,
+                ]
+            );
+        }
+
+        $this->command?->info('Legacy dump seed: ' . count($legacyVehicles) . ' vehicles, ' . count($legacyLocIds) . ' locations (from legacy companies), defects and service schedules.');
+    }
+
+    /** Derive approximate year from UK-style registration (e.g. EU15 → 2015, EY21 → 2021, LX70 → 2020). */
+    private function yearFromRegistration(string $reg): int
+    {
+        if (preg_match('/\d{2}/', $reg, $m)) {
+            $yy = (int) $m[0];
+            return $yy <= (int) date('y') + 1 ? 2000 + $yy : 1900 + $yy;
+        }
+        return (int) date('Y') - rand(2, 6);
     }
 
     private function seedPhase2TripsFuel(array $vehicleIds, array $driverIds, array $garageIds, array $locIds): void

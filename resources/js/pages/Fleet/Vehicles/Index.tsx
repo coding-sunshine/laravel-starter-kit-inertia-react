@@ -1,7 +1,6 @@
 import AppLayout from '@/layouts/app-layout';
-import { FleetEmptyState, FleetPageHeader } from '@/components/fleet';
+import { FleetActionIconButton, FleetActionIconLink, FleetEmptyState, FleetGlassCard, FleetGlassPill, FleetPageHeader, FleetPageToolbarRight, FleetPagination } from '@/components/fleet';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     Dialog,
     DialogClose,
@@ -22,14 +21,8 @@ import {
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Form, Head, Link } from '@inertiajs/react';
-import { Car, Eye, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Car, Eye, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 
 interface VehicleRecord {
     id: number;
@@ -72,37 +65,42 @@ export default function FleetVehiclesIndex({ vehicles }: Props) {
                     }
                 />
 
-                <Card className="border border-border shadow-sm">
-                    <CardHeader className="pb-3">
-                        <CardTitle className="text-base font-semibold">All vehicles</CardTitle>
-                        <CardDescription>
-                            {vehicles.data.length === 0
-                                ? 'No vehicles in the fleet yet.'
-                                : `${vehicles.data.length} vehicle${vehicles.data.length === 1 ? '' : 's'}`}
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-0">
-                        {vehicles.data.length === 0 ? (
-                            <div className="px-6 pb-8">
-                                <FleetEmptyState
-                                    icon={Car}
-                                    title="No vehicles yet"
-                                    description="Add your first vehicle to start managing your fleet."
-                                    action={
-                                        <Button asChild>
-                                            <Link href="/fleet/vehicles/create">
-                                                <Plus className="mr-2 size-4" />
-                                                Add vehicle
-                                            </Link>
-                                        </Button>
-                                    }
-                                />
-                            </div>
-                        ) : (
-                            <div className="overflow-hidden rounded-b-xl border-t border-border">
+                <FleetGlassCard className="min-w-0 overflow-hidden" noPadding>
+                    <div className="mb-2 flex h-9 items-center justify-between border-b border-white/30 px-4 pt-4 pb-2">
+                        <h3 className="text-base font-medium text-[#5b638d]">
+                            All vehicles — {vehicles.data.length === 0 ? 'No vehicles yet' : `${vehicles.data.length} vehicle${vehicles.data.length === 1 ? '' : 's'}`}
+                        </h3>
+                        <FleetPageToolbarRight>
+                            <Button asChild size="sm">
+                                <Link href="/fleet/vehicles/create">
+                                    <Plus className="mr-2 size-4" />
+                                    New vehicle
+                                </Link>
+                            </Button>
+                        </FleetPageToolbarRight>
+                    </div>
+                    {vehicles.data.length === 0 ? (
+                        <div className="px-6 pb-8">
+                            <FleetEmptyState
+                                icon={Car}
+                                title="No vehicles yet"
+                                description="Add your first vehicle to start managing your fleet."
+                                action={
+                                    <Button asChild>
+                                        <Link href="/fleet/vehicles/create">
+                                            <Plus className="mr-2 size-4" />
+                                            Add vehicle
+                                        </Link>
+                                    </Button>
+                                }
+                            />
+                        </div>
+                    ) : (
+                        <>
+                            <div className="fleet-glass-table w-full overflow-x-auto">
                                 <Table>
-                                    <TableHeader>
-                                        <TableRow className="bg-muted/40 hover:bg-muted/40">
+                                <TableHeader>
+                                    <TableRow className="border-0 bg-transparent hover:bg-transparent">
                                             <TableHead className="h-11 px-4 font-semibold">
                                                 Registration
                                             </TableHead>
@@ -135,62 +133,33 @@ export default function FleetVehiclesIndex({ vehicles }: Props) {
                                                     {row.make} {row.model}
                                                 </TableCell>
                                                 <TableCell className="px-4 py-3">
-                                                    <span
-                                                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                                                            row.status === 'active'
-                                                                ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
-                                                                : 'bg-muted text-muted-foreground'
-                                                        }`}
-                                                    >
+                                                    <FleetGlassPill variant={row.status === 'active' ? 'success' : 'default'}>
                                                         {row.status}
-                                                    </span>
+                                                    </FleetGlassPill>
                                                 </TableCell>
                                                 <TableCell className="px-4 py-3 text-right">
                                                     <div className="flex items-center justify-end gap-1">
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="size-8"
-                                                            asChild
+                                                        <FleetActionIconLink
+                                                            href={`/fleet/vehicles/${row.id}`}
+                                                            label="View details"
+                                                            variant="view"
                                                         >
-                                                            <Link
-                                                                href={`/fleet/vehicles/${row.id}`}
-                                                                title="View details"
-                                                            >
-                                                                <Eye className="size-4" />
-                                                            </Link>
-                                                        </Button>
-                                                        <DropdownMenu>
-                                                            <DropdownMenuTrigger asChild>
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="icon"
-                                                                    className="size-8"
-                                                                    title="More actions"
-                                                                >
-                                                                    <MoreHorizontal className="size-4" />
-                                                                </Button>
-                                                            </DropdownMenuTrigger>
-                                                            <DropdownMenuContent align="end">
-                                                                <DropdownMenuItem asChild>
-                                                                    <Link
-                                                                        href={`/fleet/vehicles/${row.id}/edit`}
-                                                                    >
-                                                                        <Pencil className="mr-2 size-4" />
-                                                                        Edit
-                                                                    </Link>
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuItem
-                                                                    className="text-destructive focus:text-destructive"
-                                                                    onClick={() =>
-                                                                        setDeleteTarget(row)
-                                                                    }
-                                                                >
-                                                                    <Trash2 className="mr-2 size-4" />
-                                                                    Delete
-                                                                </DropdownMenuItem>
-                                                            </DropdownMenuContent>
-                                                        </DropdownMenu>
+                                                            <Eye className="size-4" />
+                                                        </FleetActionIconLink>
+                                                        <FleetActionIconLink
+                                                            href={`/fleet/vehicles/${row.id}/edit`}
+                                                            label="Edit"
+                                                            variant="edit"
+                                                        >
+                                                            <Pencil className="size-4" />
+                                                        </FleetActionIconLink>
+                                                        <FleetActionIconButton
+                                                            label="Delete"
+                                                            variant="delete"
+                                                            onClick={() => setDeleteTarget(row)}
+                                                        >
+                                                            <Trash2 className="size-4" />
+                                                        </FleetActionIconButton>
                                                     </div>
                                                 </TableCell>
                                             </TableRow>
@@ -198,9 +167,10 @@ export default function FleetVehiclesIndex({ vehicles }: Props) {
                                     </TableBody>
                                 </Table>
                             </div>
+                            <FleetPagination links={vehicles.links ?? []} />
+                        </>
                         )}
-                    </CardContent>
-                </Card>
+                </FleetGlassCard>
 
                 <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
                     <DialogContent>

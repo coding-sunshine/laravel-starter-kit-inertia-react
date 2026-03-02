@@ -17,8 +17,28 @@ import { QueryProvider } from './providers/query-provider';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
-// Explicit entries for Fleet workflow pages so they resolve when glob misses them (e.g. project path with space).
-const workflowPages: Record<string, () => Promise<{ default: unknown }>> = {
+// Explicit entries for Fleet pages so they resolve when glob misses them (e.g. project path with space).
+const fleetExplicitPages: Record<string, () => Promise<{ default: unknown }>> = {
+    './pages/Fleet/Vehicles/Index.tsx': () => import('./pages/Fleet/Vehicles/Index.tsx'),
+    './pages/Fleet/Vehicles/Show.tsx': () => import('./pages/Fleet/Vehicles/Show.tsx'),
+    './pages/Fleet/Vehicles/Create.tsx': () => import('./pages/Fleet/Vehicles/Create.tsx'),
+    './pages/Fleet/Vehicles/Edit.tsx': () => import('./pages/Fleet/Vehicles/Edit.tsx'),
+    './pages/Fleet/Drivers/Index.tsx': () => import('./pages/Fleet/Drivers/Index.tsx'),
+    './pages/Fleet/Drivers/Show.tsx': () => import('./pages/Fleet/Drivers/Show.tsx'),
+    './pages/Fleet/Drivers/Create.tsx': () => import('./pages/Fleet/Drivers/Create.tsx'),
+    './pages/Fleet/Drivers/Edit.tsx': () => import('./pages/Fleet/Drivers/Edit.tsx'),
+    './pages/Fleet/WorkOrders/Index.tsx': () => import('./pages/Fleet/WorkOrders/Index.tsx'),
+    './pages/Fleet/WorkOrders/Show.tsx': () => import('./pages/Fleet/WorkOrders/Show.tsx'),
+    './pages/Fleet/WorkOrders/Create.tsx': () => import('./pages/Fleet/WorkOrders/Create.tsx'),
+    './pages/Fleet/WorkOrders/Edit.tsx': () => import('./pages/Fleet/WorkOrders/Edit.tsx'),
+    './pages/Fleet/Assistant/Index.tsx': () => import('./pages/Fleet/Assistant/Index.tsx'),
+    './pages/Fleet/DriverVehicleAssignments/Index.tsx': () =>
+        import('./pages/Fleet/DriverVehicleAssignments/Index.tsx'),
+    './pages/Fleet/Defects/Index.tsx': () => import('./pages/Fleet/Defects/Index.tsx'),
+    './pages/Fleet/Defects/Show.tsx': () => import('./pages/Fleet/Defects/Show.tsx'),
+    './pages/Fleet/Routes/Index.tsx': () => import('./pages/Fleet/Routes/Index.tsx'),
+    './pages/Fleet/Trips/Index.tsx': () => import('./pages/Fleet/Trips/Index.tsx'),
+    './pages/Fleet/Dashboard.tsx': () => import('./pages/Fleet/Dashboard.tsx'),
     './pages/Fleet/WorkflowDefinitions/Index.tsx': () =>
         import('./pages/Fleet/WorkflowDefinitions/Index.tsx'),
     './pages/Fleet/WorkflowDefinitions/Create.tsx': () =>
@@ -30,7 +50,7 @@ const workflowPages: Record<string, () => Promise<{ default: unknown }>> = {
 };
 const allPages = {
     ...import.meta.glob('./pages/**/*.tsx'),
-    ...workflowPages,
+    ...fleetExplicitPages,
 };
 
 createInertiaApp({
