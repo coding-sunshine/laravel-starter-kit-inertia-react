@@ -128,6 +128,7 @@ interface Props {
     expiringCompliance: ComplianceRow[];
     complianceAtRisk?: ComplianceAtRiskRow | null;
     aiJobRunsUrl?: string;
+    insights?: string[];
 }
 
 const CHART_COLORS = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)'];
@@ -151,6 +152,7 @@ export default function FleetDashboard({
     expiringCompliance,
     complianceAtRisk,
     aiJobRunsUrl,
+    insights = [],
 }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard().url },
@@ -187,6 +189,29 @@ export default function FleetDashboard({
                         </Link>
                     </Button>
                 </div>
+
+                {insights.length > 0 && (
+                    <Card className="border-primary/20 bg-primary/5">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="flex items-center gap-2 text-base">
+                                <Bot className="size-4 text-primary" />
+                                AI insights
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-1 text-sm text-muted-foreground">
+                            <ul className="list-inside list-disc space-y-0.5">
+                                {insights.map((line, i) => (
+                                    <li key={i}>{line}</li>
+                                ))}
+                            </ul>
+                            <Button asChild size="sm" variant="outline" className="mt-2">
+                                <Link href="/fleet/assistant" prefetch="click">
+                                    Ask assistant
+                                </Link>
+                            </Button>
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* KPI strip */}
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:gap-4">

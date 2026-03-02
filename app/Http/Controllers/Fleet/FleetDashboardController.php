@@ -75,6 +75,7 @@ use App\Models\Fleet\AxleLoadReading;
 use App\Models\Fleet\DataMigrationRun;
 use App\Models\Fleet\WorkflowDefinition;
 use App\Models\Fleet\WorkflowExecution;
+use App\Services\Fleet\FleetInsightsService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -205,6 +206,10 @@ final class FleetDashboardController extends Controller
             ];
         }
 
+        $insightsService = app(FleetInsightsService::class);
+        $orgId = \App\Services\TenantContext::id();
+        $insights = $orgId !== null ? $insightsService->forOrganization($orgId) : [];
+
         return Inertia::render('Fleet/Dashboard', [
             'counts' => $counts,
             'chartTripsOverTime' => $tripsOverTime,
@@ -215,6 +220,7 @@ final class FleetDashboardController extends Controller
             'expiringCompliance' => $expiringCompliance,
             'complianceAtRisk' => $complianceAtRisk,
             'aiJobRunsUrl' => route('fleet.ai-job-runs.index'),
+            'insights' => $insights,
         ]);
     }
 }

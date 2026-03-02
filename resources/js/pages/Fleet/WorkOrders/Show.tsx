@@ -2,7 +2,7 @@ import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Form, Head, Link } from '@inertiajs/react';
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { Bot, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -59,7 +59,15 @@ export default function FleetWorkOrdersShow({ workOrder }: Props) {
             <div className="flex h-full flex-1 flex-col gap-6 rounded-xl p-4">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                     <h1 className="text-2xl font-semibold">{workOrder.work_order_number}</h1>
-                    <Button variant="outline" asChild><Link href="/fleet/work-orders">Back</Link></Button>
+                    <div className="flex gap-2">
+                        <Button variant="outline" size="sm" asChild>
+                            <Link href={`/fleet/assistant?context=work_order:${workOrder.id}`} prefetch="click">
+                                <Bot className="mr-1.5 size-4" />
+                                Ask assistant
+                            </Link>
+                        </Button>
+                        <Button variant="outline" asChild><Link href="/fleet/work-orders">Back</Link></Button>
+                    </div>
                 </div>
                 <Card>
                     <CardHeader className="pb-2"><CardTitle className="text-base">Work order</CardTitle></CardHeader>

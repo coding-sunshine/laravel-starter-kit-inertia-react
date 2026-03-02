@@ -5,9 +5,17 @@ declare(strict_types=1);
 namespace App\Ai\Agents;
 
 use App\Ai\Tools\Fleet\FleetDocumentSearch;
+use App\Ai\Tools\Fleet\GetDriver;
+use App\Ai\Tools\Fleet\GetRoute;
+use App\Ai\Tools\Fleet\GetTrip;
+use App\Ai\Tools\Fleet\GetVehicle;
+use App\Ai\Tools\Fleet\GetWorkOrder;
 use App\Ai\Tools\Fleet\ListAlerts;
 use App\Ai\Tools\Fleet\ListComplianceItems;
+use App\Ai\Tools\Fleet\ListDefects;
 use App\Ai\Tools\Fleet\ListDrivers;
+use App\Ai\Tools\Fleet\ListRoutes;
+use App\Ai\Tools\Fleet\ListServiceSchedules;
 use App\Ai\Tools\Fleet\ListTrips;
 use App\Ai\Tools\Fleet\ListVehicles;
 use App\Ai\Tools\Fleet\ListWorkOrders;
@@ -31,9 +39,11 @@ final class FleetAssistant implements Agent, Conversational, HasTools
     public function instructions(): string|Stringable
     {
         return 'You are the Fleet Intelligence Assistant. Answer only using fleet data and the documents provided by your tools. '
-            .'You can: search fleet documents (MOT, V5C, insurance, service history) with the document search tool; list vehicles, drivers, trips, work orders, compliance items, and alerts with the list tools. '
-            .'Use list_work_orders for maintenance and repair orders; use list_compliance_items for expiring MOT, insurance, licences (use expiring_within_days for "what is expiring soon"). '
-            .'Always scope answers to the current organization. Be concise and cite sources when using document search. '
+            .'You can: search fleet documents (MOT, V5C, insurance, service history) with the document search tool—when you use it, always cite the source (document name or reference). '
+            .'List tools: vehicles, drivers, trips, work orders, compliance items, alerts, service schedules, defects, routes. '
+            .'Get-by-ID tools: get_work_order, get_vehicle, get_driver, get_route, get_trip for details on a single item. '
+            .'Use list_work_orders for maintenance and repair orders; list_compliance_items for expiring MOT, insurance, licences (expiring_within_days); list_service_schedules for next service due; list_defects for DVIR-style defects; list_routes for route plans. '
+            .'Always scope answers to the current organization. Be concise and cite document sources when using document search. '
             .'If the user asks about something you cannot find in tools, say so.';
     }
 
@@ -52,6 +62,14 @@ final class FleetAssistant implements Agent, Conversational, HasTools
             new ListWorkOrders($orgId),
             new ListComplianceItems($orgId),
             new ListAlerts($orgId),
+            new ListServiceSchedules($orgId),
+            new ListDefects($orgId),
+            new ListRoutes($orgId),
+            new GetWorkOrder($orgId),
+            new GetVehicle($orgId),
+            new GetDriver($orgId),
+            new GetRoute($orgId),
+            new GetTrip($orgId),
         ];
     }
 }

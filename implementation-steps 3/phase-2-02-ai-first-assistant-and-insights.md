@@ -54,3 +54,13 @@ Implementation: e.g. `FleetInsightsService::forOrganization($orgId)`; call from 
 - Streaming and conversation UX solid; errors handled with retry.
 
 Proceed to **phase-2-03** for extended operations and analytics.
+
+---
+
+## Implementation status (complete)
+
+- **Tools:** ListWorkOrders, ListComplianceItems, ListServiceSchedules, ListDefects, ListRoutes, ListAlerts, ListVehicles, ListDrivers, ListTrips; GetWorkOrder, GetVehicle, GetDriver, GetRoute, GetTrip; FleetDocumentSearch. All registered in FleetAssistant with org scoping.
+- **RAG:** FleetDocumentSearch queries document_chunks by org; agent instructions require citing document sources.
+- **Proactive insights:** `FleetInsightsService::forOrganization($orgId)` returns insights (compliance expiring in 14 days, service due, unacknowledged alerts, overdue work orders). Dashboard shows "AI insights" card when non-empty; assistant index receives insights and suggested questions and displays them when starting a new chat.
+- **Contextual Ask assistant:** Work order show has "Ask assistant" linking to `/fleet/assistant?context=work_order:{id}`. Assistant supports `?context=vehicle:123`, `work_order:123`, `driver:123` and pre-fills context_prompt (e.g. "Tell me about work order ID 123"). Vehicle and driver show already had Ask assistant from P2-01.
+- **Done:** Streaming/errors/retry unchanged; phase ready for phase-2-03.

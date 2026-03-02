@@ -15,9 +15,7 @@ final class ListTrips implements Tool
 {
     private const DEFAULT_LIMIT = 10;
 
-    public function __construct(
-        private readonly int $organizationId,
-    ) {}
+    public function __construct(private readonly int $organizationId) {}
 
     public function description(): string
     {

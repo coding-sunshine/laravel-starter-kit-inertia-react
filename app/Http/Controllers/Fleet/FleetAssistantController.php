@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Fleet;
 
 use App\Ai\Agents\FleetAssistant;
 use App\Http\Controllers\Controller;
+use App\Services\Fleet\FleetInsightsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -88,10 +89,33 @@ final class FleetAssistantController extends Controller
             }
         }
 
+        $organizationId = \App\Services\TenantContext::id();
+        $insightsService = app(FleetInsightsService::class);
+        $insights = $organizationId !== null ? $insightsService->forOrganization($organizationId) : [];
+        $suggestedQuestions = $organizationId !== null ? $insightsService->suggestedQuestions($organizationId) : [];
+
+        $context = null;
+        $contextPrompt = null;
+        $contextParam = $request->query('context');
+        if (is_string($contextParam) && $contextParam !== '') {
+            $context = $contextParam;
+            if (preg_match('/^vehicle:(\d+)$/i', $contextParam, $m)) {
+                $contextPrompt = 'Tell me about vehicle ID ' . $m[1];
+            } elseif (preg_match('/^work_order:(\d+)$/i', $contextParam, $m)) {
+                $contextPrompt = 'Tell me about work order ID ' . $m[1];
+            } elseif (preg_match('/^driver:(\d+)$/i', $contextParam, $m)) {
+                $contextPrompt = 'Tell me about driver ID ' . $m[1];
+            }
+        }
+
         return Inertia::render('Fleet/Assistant/Index', [
             'conversations' => $conversations,
             'initial_messages' => $initialMessages,
             'conversation_id' => $conversationId,
+            'insights' => $insights,
+            'suggested_questions' => $suggestedQuestions,
+            'context' => $context,
+            'context_prompt' => $contextPrompt,
         ]);
     }
 

@@ -49,12 +49,20 @@ interface Props {
     conversations: ConversationItem[];
     initial_messages: Message[];
     conversation_id: string | null;
+    insights?: string[];
+    suggested_questions?: string[];
+    context?: string | null;
+    context_prompt?: string | null;
 }
 
 export default function FleetAssistantIndex({
     conversations = [],
     initial_messages = [],
     conversation_id = null,
+    insights = [],
+    suggested_questions = [],
+    context = null,
+    context_prompt = null,
 }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard().url },
@@ -81,17 +89,19 @@ export default function FleetAssistantIndex({
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const abortRef = useRef<AbortController | null>(null);
 
-    // Pre-fill from chatbot FAB suggestion (?prompt=...)
+    // Pre-fill from ?prompt= or from server-provided context_prompt (e.g. ?context=work_order:123)
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         const prompt = params.get('prompt');
-        if (prompt && typeof prompt === 'string') {
+        if (typeof context_prompt === 'string' && context_prompt !== '') {
+            setInput(context_prompt);
+        } else if (prompt && typeof prompt === 'string') {
             setInput(prompt);
             params.delete('prompt');
             const q = params.toString();
             window.history.replaceState({}, '', window.location.pathname + (q ? `?${q}` : ''));
         }
-    }, []);
+    }, [context_prompt]);
 
     // Sync state when opening a different conversation (e.g. from sidebar or URL)
     useEffect(() => {
@@ -493,12 +503,38 @@ export default function FleetAssistantIndex({
                     <div className="flex min-h-[400px] flex-1 flex-col rounded-lg border bg-muted/20">
                         <div className="flex-1 space-y-4 overflow-y-auto p-4">
                             {messages.length === 0 && !loading && (
-                                <div className="flex flex-col items-center justify-center gap-2 py-12 text-center text-muted-foreground">
-                                    <Bot className="size-12" />
-                                    <p>Send a message to get started.</p>
-                                    <p className="text-sm">
-                                        e.g. &quot;List my vehicles&quot; or &quot;Any active alerts?&quot;
-                                    </p>
+                                <div className="flex flex-col items-center justify-center gap-4 py-8 text-center">
+                                    <Bot className="size-12 text-muted-foreground" />
+                                    <p className="text-muted-foreground">Send a message to get started.</p>
+                                    {insights.length > 0 && (
+                                        <div className="w-full max-w-md rounded-lg border bg-card px-4 py-3 text-left text-sm">
+                                            <p className="mb-2 font-medium text-foreground">Insights</p>
+                                            <ul className="list-inside list-disc space-y-0.5 text-muted-foreground">
+                                                {insights.map((line, i) => (
+                                                    <li key={i}>{line}</li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
+                                    {suggested_questions.length > 0 && (
+                                        <div className="flex flex-wrap justify-center gap-2">
+                                            {suggested_questions.map((q, i) => (
+                                                <button
+                                                    key={i}
+                                                    type="button"
+                                                    onClick={() => setInput(q)}
+                                                    className="rounded-full border bg-muted/50 px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                                                >
+                                                    {q}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {suggested_questions.length === 0 && (
+                                        <p className="text-sm text-muted-foreground">
+                                            e.g. &quot;List my vehicles&quot; or &quot;Any active alerts?&quot;
+                                        </p>
+                                    )}
                                 </div>
                             )}
                             {messages.map((m) => (
