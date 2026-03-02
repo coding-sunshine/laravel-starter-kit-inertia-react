@@ -4,6 +4,7 @@ import { AppSidebar } from '@/components/app-sidebar';
 import { AppSidebarHeader } from '@/components/app-sidebar-header';
 import { CloseSidebarOnNavigate } from '@/components/close-sidebar-on-navigate';
 import { CommandPalette } from '@/components/command-dialog';
+import { FleetAssistantFab } from '@/components/fleet';
 import { type BreadcrumbItem } from '@/types';
 import { type PropsWithChildren } from 'react';
 import { useEffect } from 'react';
@@ -32,6 +33,7 @@ export default function AppSidebarLayout({
                     <AppSidebarHeader breadcrumbs={breadcrumbs} />
                     {children}
                 </AppContent>
+                <FleetAssistantFab />
             </AppShell>
         </div>
     );

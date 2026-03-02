@@ -81,6 +81,18 @@ export default function FleetAssistantIndex({
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const abortRef = useRef<AbortController | null>(null);
 
+    // Pre-fill from chatbot FAB suggestion (?prompt=...)
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const prompt = params.get('prompt');
+        if (prompt && typeof prompt === 'string') {
+            setInput(prompt);
+            params.delete('prompt');
+            const q = params.toString();
+            window.history.replaceState({}, '', window.location.pathname + (q ? `?${q}` : ''));
+        }
+    }, []);
+
     // Sync state when opening a different conversation (e.g. from sidebar or URL)
     useEffect(() => {
         setMessages(

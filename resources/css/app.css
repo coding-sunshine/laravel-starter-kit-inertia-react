@@ -188,4 +188,49 @@ body.fleet-no-decor-active [id*="tsqd-open-btn-container"] * {
     body {
         @apply bg-background text-foreground;
     }
+
+    /* Global hover: smooth transitions on interactive elements */
+    a,
+    button,
+    [role="button"],
+    [role="menuitem"],
+    [data-slot="sidebar-menu-button"],
+    [data-slot="table-row"],
+    [data-slot="table-cell"] a,
+    [data-sidebar="trigger"],
+    .cursor-pointer,
+    [type="submit"],
+    [type="button"],
+    select,
+    input:not([type="checkbox"]):not([type="radio"]),
+    [data-slot="card"] a,
+    [data-slot="dialog-trigger"] {
+        transition:
+            color 0.2s ease,
+            background-color 0.2s ease,
+            border-color 0.2s ease,
+            box-shadow 0.2s ease,
+            transform 0.2s ease,
+            opacity 0.2s ease;
+    }
+
+    /* Visible hover effects so every hover shows feedback */
+    [data-slot="button"]:hover:not(:disabled) {
+        transform: scale(1.02);
+    }
+    [data-slot="button"]:active:not(:disabled) {
+        transform: scale(0.98);
+    }
+    a[href].rounded-xl:hover {
+        transform: scale(1.01);
+        box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+    }
+    [data-slot="sidebar-menu-button"]:hover:not([data-active="true"]) {
+        background-color: hsl(var(--sidebar-accent));
+        color: hsl(var(--sidebar-accent-foreground));
+    }
+    [data-slot="table-row"]:hover {
+        background-color: hsl(var(--muted) / 0.6);
+    }
 }
+
