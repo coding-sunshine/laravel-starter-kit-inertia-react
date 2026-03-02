@@ -1,0 +1,203 @@
+{
+    "model": "PropertyReservation",
+    "table": "property_reservations",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "agent_contact_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "primary_contact_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "secondary_contact_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "logged_in_user_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "project_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "lot_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "purchase_price": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "purchaser_type": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "trustee_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "abn_acn": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "SMSF_trust_setup": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "bare_trust_setup": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "funds_rollover": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "agree_lawlab": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "firm": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "broker": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "finance_preapproval": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "finance_days_req": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "deposit": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "land_deposit": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "build_deposit": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "contract_send": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "agree": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "agree_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "family_trust": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        },
+        "agentContact": {
+            "type": "belongsTo",
+            "model": "AgentContact"
+        },
+        "primaryContact": {
+            "type": "belongsTo",
+            "model": "PrimaryContact"
+        },
+        "secondaryContact": {
+            "type": "belongsTo",
+            "model": "SecondaryContact"
+        },
+        "loggedInUser": {
+            "type": "belongsTo",
+            "model": "LoggedInUser"
+        },
+        "project": {
+            "type": "belongsTo",
+            "model": "Project"
+        },
+        "lot": {
+            "type": "belongsTo",
+            "model": "Lot"
+        }
+    },
+    "value_hints": {
+        "trustee_name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    },
+    "scenarios": []
+}

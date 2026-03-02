@@ -90,6 +90,92 @@ final class Contact extends Model
         return $this->hasMany(ContactPhone::class);
     }
 
+    // ─── Step 4: Reservations, Enquiries, Searches, Sales (inverse) ─────
+
+    /** @return HasMany<PropertyReservation, $this> */
+    public function propertyReservationsAsAgent(): HasMany
+    {
+        return $this->hasMany(PropertyReservation::class, 'agent_contact_id');
+    }
+
+    /** @return HasMany<PropertyReservation, $this> */
+    public function propertyReservationsAsPrimary(): HasMany
+    {
+        return $this->hasMany(PropertyReservation::class, 'primary_contact_id');
+    }
+
+    /** @return HasMany<PropertyReservation, $this> */
+    public function propertyReservationsAsSecondary(): HasMany
+    {
+        return $this->hasMany(PropertyReservation::class, 'secondary_contact_id');
+    }
+
+    /** @return HasMany<PropertyEnquiry, $this> */
+    public function propertyEnquiriesAsClient(): HasMany
+    {
+        return $this->hasMany(PropertyEnquiry::class, 'client_contact_id');
+    }
+
+    /** @return HasMany<PropertyEnquiry, $this> */
+    public function propertyEnquiriesAsAgent(): HasMany
+    {
+        return $this->hasMany(PropertyEnquiry::class, 'agent_contact_id');
+    }
+
+    /** @return HasMany<PropertySearch, $this> */
+    public function propertySearchesAsClient(): HasMany
+    {
+        return $this->hasMany(PropertySearch::class, 'client_contact_id');
+    }
+
+    /** @return HasMany<PropertySearch, $this> */
+    public function propertySearchesAsAgent(): HasMany
+    {
+        return $this->hasMany(PropertySearch::class, 'agent_contact_id');
+    }
+
+    /** @return HasMany<Sale, $this> */
+    public function salesAsClient(): HasMany
+    {
+        return $this->hasMany(Sale::class, 'client_contact_id');
+    }
+
+    /** @return HasMany<Sale, $this> */
+    public function salesAsAffiliateContact(): HasMany
+    {
+        return $this->hasMany(Sale::class, 'affiliate_contact_id');
+    }
+
+    /** @return HasMany<Sale, $this> */
+    public function salesAsSubscriberContact(): HasMany
+    {
+        return $this->hasMany(Sale::class, 'subscriber_contact_id');
+    }
+
+    /** @return HasMany<Sale, $this> */
+    public function salesAsSalesAgentContact(): HasMany
+    {
+        return $this->hasMany(Sale::class, 'sales_agent_contact_id');
+    }
+
+    /** @return HasMany<Sale, $this> */
+    public function salesAsBdmContact(): HasMany
+    {
+        return $this->hasMany(Sale::class, 'bdm_contact_id');
+    }
+
+    /** @return HasMany<Sale, $this> */
+    public function salesAsReferralPartnerContact(): HasMany
+    {
+        return $this->hasMany(Sale::class, 'referral_partner_contact_id');
+    }
+
+    /** @return HasMany<Sale, $this> */
+    public function salesAsAgentContact(): HasMany
+    {
+        return $this->hasMany(Sale::class, 'agent_contact_id');
+    }
+
     /**
      * @return BelongsTo<User, $this>
      */

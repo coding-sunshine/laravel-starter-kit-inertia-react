@@ -1,0 +1,74 @@
+{
+    "model": "Commission",
+    "table": "commissions",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "commissionable_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "commissionable_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "commission_in": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "commission_out": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "commission_profit": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "commission_percent_in": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "commission_percent_out": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "commission_percent_profit": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "extra_attributes": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": [],
+    "value_hints": [],
+    "scenarios": []
+}

@@ -1,0 +1,131 @@
+{
+    "model": "PropertyEnquiry",
+    "table": "property_enquiries",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "client_contact_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "agent_contact_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "logged_in_user_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "purchaser_type": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "max_capacity": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "preferred_location": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "preapproval": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "property": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "requesting_info": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "instructions": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "inspection_person": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "inspection_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "inspection_time": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "cash_purchase": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        },
+        "clientContact": {
+            "type": "belongsTo",
+            "model": "ClientContact"
+        },
+        "agentContact": {
+            "type": "belongsTo",
+            "model": "AgentContact"
+        },
+        "loggedInUser": {
+            "type": "belongsTo",
+            "model": "LoggedInUser"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

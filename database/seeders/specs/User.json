@@ -76,6 +76,11 @@
             "type": "timestamp",
             "nullable": true,
             "default": null
+        },
+        "contact_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {
@@ -86,6 +91,10 @@
         "ownedOrganizations": {
             "type": "hasMany",
             "model": "OwnedOrganization"
+        },
+        "contact": {
+            "type": "belongsTo",
+            "model": "Contact"
         },
         "termsAcceptances": {
             "type": "hasMany",

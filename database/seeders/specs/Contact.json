@@ -120,6 +120,62 @@
             "type": "hasMany",
             "model": "ContactPhone"
         },
+        "propertyReservationsAsAgent": {
+            "type": "hasMany",
+            "model": "PropertyReservationsAsAgent"
+        },
+        "propertyReservationsAsPrimary": {
+            "type": "hasMany",
+            "model": "PropertyReservationsAsPrimary"
+        },
+        "propertyReservationsAsSecondary": {
+            "type": "hasMany",
+            "model": "PropertyReservationsAsSecondary"
+        },
+        "propertyEnquiriesAsClient": {
+            "type": "hasMany",
+            "model": "PropertyEnquiriesAsClient"
+        },
+        "propertyEnquiriesAsAgent": {
+            "type": "hasMany",
+            "model": "PropertyEnquiriesAsAgent"
+        },
+        "propertySearchesAsClient": {
+            "type": "hasMany",
+            "model": "PropertySearchesAsClient"
+        },
+        "propertySearchesAsAgent": {
+            "type": "hasMany",
+            "model": "PropertySearchesAsAgent"
+        },
+        "salesAsClient": {
+            "type": "hasMany",
+            "model": "SalesAsClient"
+        },
+        "salesAsAffiliateContact": {
+            "type": "hasMany",
+            "model": "SalesAsAffiliateContact"
+        },
+        "salesAsSubscriberContact": {
+            "type": "hasMany",
+            "model": "SalesAsSubscriberContact"
+        },
+        "salesAsSalesAgentContact": {
+            "type": "hasMany",
+            "model": "SalesAsSalesAgentContact"
+        },
+        "salesAsBdmContact": {
+            "type": "hasMany",
+            "model": "SalesAsBdmContact"
+        },
+        "salesAsReferralPartnerContact": {
+            "type": "hasMany",
+            "model": "SalesAsReferralPartnerContact"
+        },
+        "salesAsAgentContact": {
+            "type": "hasMany",
+            "model": "SalesAsAgentContact"
+        },
         "createdBy": {
             "type": "belongsTo",
             "model": "CreatedBy"
