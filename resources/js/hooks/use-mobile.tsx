@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
-const MOBILE_BREAKPOINT = 768;
+/** Matches Tailwind lg (1024px). Sidebar is drawer below this, persistent above. */
+const MOBILE_BREAKPOINT = 1024;
 
 export function useIsMobile() {
     const [isMobile, setIsMobile] = useState<boolean>();

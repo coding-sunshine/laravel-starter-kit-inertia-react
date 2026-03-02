@@ -130,7 +130,13 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('terms/accept', [TermsAcceptController::class, 'show'])->name('terms.accept');
     Route::post('terms/accept', [TermsAcceptController::class, 'store'])->name('terms.accept.store');
 
-    Route::get('dashboard', fn () => Inertia::render('dashboard'))->name('dashboard');
+    Route::get('dashboard', function () {
+        if (config('app.fleet_only_app', false)) {
+            return redirect()->route('fleet.dashboard');
+        }
+
+        return Inertia::render('dashboard');
+    })->name('dashboard');
 
     Route::get('chat', fn () => Inertia::render('chat/index'))->name('chat');
 
@@ -205,6 +211,8 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         Route::get('assistant', [App\Http\Controllers\Fleet\FleetAssistantController::class, 'index'])->name('assistant.index');
         Route::post('assistant/prompt', [App\Http\Controllers\Fleet\FleetAssistantController::class, 'prompt'])->name('assistant.prompt');
         Route::post('assistant/stream', [App\Http\Controllers\Fleet\FleetAssistantController::class, 'stream'])->name('assistant.stream');
+        Route::patch('assistant/conversations/{id}', [App\Http\Controllers\Fleet\FleetAssistantController::class, 'updateConversation'])->name('assistant.conversations.update');
+        Route::delete('assistant/conversations/{id}', [App\Http\Controllers\Fleet\FleetAssistantController::class, 'destroyConversation'])->name('assistant.conversations.destroy');
         Route::resource('locations', App\Http\Controllers\Fleet\LocationController::class)->names('locations');
         Route::resource('cost-centers', App\Http\Controllers\Fleet\CostCenterController::class)->names('cost-centers');
         Route::post('drivers/{driver}/assign-vehicle', [App\Http\Controllers\Fleet\DriverController::class, 'assignVehicle'])->name('drivers.assign-vehicle');
@@ -277,6 +285,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         Route::resource('alert-preferences', App\Http\Controllers\Fleet\AlertPreferenceController::class)->only(['index', 'edit', 'update'])->names('alert-preferences');
         Route::resource('reports', App\Http\Controllers\Fleet\ReportController::class)->names('reports');
         Route::post('reports/{report}/run', [App\Http\Controllers\Fleet\ReportExecutionController::class, 'run'])->name('reports.run');
+        Route::get('report-executions/{report_execution}/download', [App\Http\Controllers\Fleet\ReportExecutionController::class, 'download'])->name('report-executions.download');
         Route::resource('report-executions', App\Http\Controllers\Fleet\ReportExecutionController::class)->only(['index', 'show'])->names('report-executions');
         Route::resource('api-integrations', App\Http\Controllers\Fleet\ApiIntegrationController::class)->names('api-integrations');
         Route::resource('api-logs', App\Http\Controllers\Fleet\ApiLogController::class)->only(['index', 'show'])->names('api-logs');

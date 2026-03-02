@@ -125,14 +125,21 @@ If you choose Framer Motion, keep the patterns above consistent app-wide; docume
 
 ## 9. Implementation checklist
 
-- [ ] Install Framer Motion (or choose CSS-only / Auto Animate); configure reduced motion.
-- [ ] Add page transition (Inertia + AnimatePresence or motion wrapper) with 150–250ms fade.
-- [ ] Apply list stagger or card enter animation on Fleet dashboard and key list pages.
-- [ ] Add card hover and button tap feedback using motion.
-- [ ] Define responsive sidebar: drawer/sheet below `lg`, persistent above; menu trigger in header.
-- [ ] Ensure tables scroll or collapse to cards on small screens; verify touch targets ≥44px.
+- [x] Install Framer Motion (or choose CSS-only / Auto Animate); configure reduced motion.
+- [x] Add page transition (Inertia + AnimatePresence or motion wrapper) with 150–250ms fade.
+- [x] Apply list stagger or card enter animation on Fleet dashboard and key list pages.
+- [x] Add card hover and button tap feedback using motion.
+- [x] Define responsive sidebar: drawer/sheet below `lg`, persistent above; menu trigger in header.
+- [x] Ensure tables scroll or collapse to cards on small screens; verify touch targets ≥44px.
 - [ ] Test login, Fleet dashboard, and Workflow definitions on mobile and tablet viewports.
-- [ ] Document animation and breakpoint decisions in DESIGN_SYSTEM.md or this step.
+- [x] Document animation and breakpoint decisions in DESIGN_SYSTEM.md or this step.
+
+### Implementation notes
+
+- **Framer Motion:** Installed with LazyMotion (domAnimation) for smaller bundle. Page transition uses 200ms fade; reduced motion sets duration to 0.
+- **Breakpoints:** Mobile/tablet vs desktop uses `lg` (1024px) for sidebar; `use-mobile` hook and sidebar visibility use `lg`.
+- **Touch targets:** Sidebar trigger and sidebar nav items use `min-h-[44px]` / `min-w-[44px]` (WCAG 2.5.5).
+- **Tables:** Fleet list/detail tables use `overflow-x-auto` and `min-w-[400px]` or `min-w-[600px]` so they scroll horizontally on small screens.
 
 ---
 

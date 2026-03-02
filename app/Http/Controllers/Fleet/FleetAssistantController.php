@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Fleet;
 use App\Ai\Agents\FleetAssistant;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -27,6 +28,17 @@ final class FleetAssistantController extends Controller
 {
     private const CONVERSATION_TITLE = 'Fleet Assistant';
 
+    private const AGENT_FLEET = 'fleet_assistant';
+
+    /** @param \Illuminate\Database\Query\Builder $query */
+    private function scopeFleetConversations($query): void
+    {
+        $query->where(function ($q): void {
+            $q->where('agent', self::AGENT_FLEET)
+                ->orWhere(fn ($q2): mixed => $q2->whereNull('agent')->where('title', self::CONVERSATION_TITLE));
+        });
+    }
+
     public function index(Request $request): Response
     {
         $user = $request->user();
@@ -37,7 +49,9 @@ final class FleetAssistantController extends Controller
         if ($user !== null) {
             $conversations = DB::table('agent_conversations')
                 ->where('user_id', $user->id)
-                ->where('title', self::CONVERSATION_TITLE)
+                ->where(function ($q): void {
+                    $this->scopeFleetConversations($q);
+                })
                 ->orderByDesc('updated_at')
                 ->limit(20)
                 ->get(['id', 'title', 'updated_at'])
@@ -53,7 +67,9 @@ final class FleetAssistantController extends Controller
                 $conv = DB::table('agent_conversations')
                     ->where('id', $requestedId)
                     ->where('user_id', $user->id)
-                    ->where('title', self::CONVERSATION_TITLE)
+                    ->where(function ($q): void {
+                    $this->scopeFleetConversations($q);
+                })
                     ->first();
                 if ($conv !== null) {
                     $conversationId = $conv->id;
@@ -104,10 +120,12 @@ final class FleetAssistantController extends Controller
 
         if ($conversationId === null || $conversationId === '') {
             $newConversationId = (string) Str::uuid();
+            $title = Str::limit($request->input('message'), 60) ?: self::CONVERSATION_TITLE;
             DB::table('agent_conversations')->insert([
                 'id' => $newConversationId,
                 'user_id' => $user->id,
-                'title' => 'Fleet Assistant',
+                'agent' => self::AGENT_FLEET,
+                'title' => $title,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -116,6 +134,9 @@ final class FleetAssistantController extends Controller
             $exists = DB::table('agent_conversations')
                 ->where('id', $conversationId)
                 ->where('user_id', $user->id)
+                ->where(function ($q): void {
+                    $this->scopeFleetConversations($q);
+                })
                 ->exists();
             if (! $exists) {
                 return response()->json(['message' => 'Invalid conversation.'], 422);
@@ -165,10 +186,12 @@ final class FleetAssistantController extends Controller
 
         if ($conversationId === null || $conversationId === '') {
             $newConversationId = (string) Str::uuid();
+            $title = Str::limit($request->input('message'), 60) ?: self::CONVERSATION_TITLE;
             DB::table('agent_conversations')->insert([
                 'id' => $newConversationId,
                 'user_id' => $user->id,
-                'title' => self::CONVERSATION_TITLE,
+                'agent' => self::AGENT_FLEET,
+                'title' => $title,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -177,6 +200,9 @@ final class FleetAssistantController extends Controller
             $exists = DB::table('agent_conversations')
                 ->where('id', $conversationId)
                 ->where('user_id', $user->id)
+                ->where(function ($q): void {
+                    $this->scopeFleetConversations($q);
+                })
                 ->exists();
             if (! $exists) {
                 return response()->json(['message' => 'Invalid conversation.'], 422);
@@ -392,5 +418,66 @@ final class FleetAssistantController extends Controller
                 'X-Accel-Buffering' => 'no',
             ],
         );
+    }
+
+    /**
+     * Rename a Fleet Assistant conversation (web, session auth).
+     */
+    public function updateConversation(Request $request, string $id): RedirectResponse|JsonResponse
+    {
+        $request->validate(['title' => ['required', 'string', 'max:255']]);
+        $user = $request->user();
+        if ($user === null) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
+        }
+
+        $updated = DB::table('agent_conversations')
+            ->where('id', $id)
+            ->where('user_id', $user->id)
+            ->where(function ($q): void {
+                    $this->scopeFleetConversations($q);
+                })
+            ->update(['title' => $request->input('title'), 'updated_at' => now()]);
+
+        if (! $updated) {
+            return response()->json(['message' => 'Conversation not found.'], 404);
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json(['data' => ['id' => $id, 'title' => $request->input('title')]]);
+        }
+
+        return redirect()->back();
+    }
+
+    /**
+     * Delete a Fleet Assistant conversation and its messages (web, session auth).
+     */
+    public function destroyConversation(Request $request, string $id): RedirectResponse|JsonResponse
+    {
+        $user = $request->user();
+        if ($user === null) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
+        }
+
+        $deleted = DB::table('agent_conversations')
+            ->where('id', $id)
+            ->where('user_id', $user->id)
+            ->where(function ($q): void {
+                    $this->scopeFleetConversations($q);
+                })
+            ->delete();
+
+        if (! $deleted) {
+            return response()->json(['message' => 'Conversation not found.'], 404);
+        }
+
+        DB::table('agent_conversation_messages')->where('conversation_id', $id)->delete();
+
+        if ($request->expectsJson()) {
+            return response()->json(null, 204);
+        }
+
+        return redirect()->to($id === $request->query('conversation_id') ? '/fleet/assistant' : $request->header('Referer', '/fleet/assistant'));
     }
 }

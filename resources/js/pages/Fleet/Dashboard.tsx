@@ -5,40 +5,30 @@ import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
 import {
+    Area,
+    Bar,
+    BarChart,
+    CartesianGrid,
+    Cell,
+    Legend,
+    Pie,
+    PieChart,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis,
+    YAxis,
+    AreaChart,
+} from 'recharts';
+import {
     AlertTriangle,
-    BarChart3,
-    Battery,
     Bell,
     Bot,
-    Calendar,
     ClipboardList,
-    Clock,
-    CreditCard,
-    Cpu,
-    Database,
-    FileDown,
-    FileText,
-    Flame,
-    Fuel,
-    GitBranch,
-    GraduationCap,
-    Lock,
     MapPin,
     Route,
-    Scale,
-    ShieldCheck,
     Truck,
     Users,
     Wrench,
-    Package,
-    CircleDot,
-    Car,
-    FileCheck,
-    UserCog,
-    Heart,
-    ClipboardCheck,
-    HardHat,
-    FileSignature,
 } from 'lucide-react';
 interface Counts {
     vehicles: number;
@@ -124,8 +114,15 @@ interface ComplianceAtRiskRow {
     created_at: string;
     detailed_analysis?: { at_risk_vehicles?: unknown[]; at_risk_drivers?: unknown[] };
 }
+interface ChartTripsOverTimeRow { date: string; label: string; trips: number; }
+interface ChartWorkOrdersByStatusRow { name: string; value: number; }
+interface ChartWorkOrdersOverTimeRow { date: string; label: string; work_orders: number; }
+
 interface Props {
     counts: Counts;
+    chartTripsOverTime: ChartTripsOverTimeRow[];
+    chartWorkOrdersByStatus: ChartWorkOrdersByStatusRow[];
+    chartWorkOrdersOverTime: ChartWorkOrdersOverTimeRow[];
     recentWorkOrders: WorkOrderRow[];
     recentDefects: DefectRow[];
     expiringCompliance: ComplianceRow[];
@@ -133,48 +130,53 @@ interface Props {
     aiJobRunsUrl?: string;
 }
 
-function StatCard({
-    title,
-    count,
-    href,
-    icon: Icon,
-}: { title: string; count: number | undefined; href: string; icon: React.ComponentType<{ className?: string }> }) {
-    const hasCount = count !== undefined && count !== null;
-    return (
-        <Link href={href} className="block outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg">
-            <Card className="h-full border border-border bg-card transition-all duration-200 hover:shadow-md hover:border-primary/30">
-                <CardContent className="flex min-h-[88px] items-center gap-4 p-4 sm:p-5">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                        <Icon className="size-6" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                        <p className="truncate font-medium text-foreground">{title}</p>
-                        <p className="text-2xl font-semibold tabular-nums text-foreground">
-                            {hasCount ? count : '—'}
-                        </p>
-                    </div>
-                </CardContent>
-            </Card>
-        </Link>
-    );
-}
+const CHART_COLORS = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)'];
+const CHART_COLORS_FALLBACK = ['#0ea5e9', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444'];
 
-export default function FleetDashboard({ counts, recentWorkOrders, recentDefects, expiringCompliance, complianceAtRisk, aiJobRunsUrl }: Props) {
+const tooltipContentStyle = {
+    backgroundColor: 'hsl(var(--card))',
+    border: '1px solid hsl(var(--border))',
+    borderRadius: '8px',
+    fontSize: '12px',
+    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+};
+
+export default function FleetDashboard({
+    counts,
+    chartTripsOverTime = [],
+    chartWorkOrdersByStatus = [],
+    chartWorkOrdersOverTime = [],
+    recentWorkOrders,
+    recentDefects,
+    expiringCompliance,
+    complianceAtRisk,
+    aiJobRunsUrl,
+}: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard().url },
         { title: 'Fleet', href: '/fleet' },
     ];
 
+    const overviewBarData = [
+        { name: 'Vehicles', value: counts.vehicles },
+        { name: 'Drivers', value: counts.drivers },
+        { name: 'Routes', value: counts.routes },
+        { name: 'Trips', value: counts.trips },
+        { name: 'Work orders', value: counts.work_orders },
+    ];
+    const hasWorkOrdersByStatus = chartWorkOrdersByStatus.some((r) => r.value > 0);
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Fleet – Dashboard" />
             <div className="flex h-full flex-1 flex-col gap-8 rounded-xl p-4 md:p-6">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                {/* Header */}
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+                        <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
                             Fleet dashboard
                         </h1>
-                        <p className="mt-0.5 text-sm text-muted-foreground">
+                        <p className="mt-1 text-sm text-muted-foreground">
                             Overview and quick access to all fleet areas.
                         </p>
                     </div>
@@ -186,191 +188,185 @@ export default function FleetDashboard({ counts, recentWorkOrders, recentDefects
                     </Button>
                 </div>
 
-                <section>
-                    <h2 className="mb-4 text-lg font-semibold text-foreground">Core</h2>
-                    <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                        <StatCard title="Vehicles" count={counts.vehicles} href="/fleet/vehicles" icon={Truck} />
-                        <StatCard title="Drivers" count={counts.drivers} href="/fleet/drivers" icon={Users} />
-                        <StatCard title="Driver–vehicle assignments" count={counts.driver_vehicle_assignments} href="/fleet/driver-vehicle-assignments" icon={Users} />
-                    </div>
-                </section>
+                {/* KPI strip */}
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:gap-4">
+                    <Link href="/fleet/vehicles" className="rounded-xl border border-border bg-card p-4 shadow-sm transition-all hover:border-primary/30 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                <Truck className="size-5" />
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Vehicles</p>
+                                <p className="text-2xl font-bold tabular-nums text-foreground">{counts.vehicles}</p>
+                            </div>
+                        </div>
+                    </Link>
+                    <Link href="/fleet/drivers" className="rounded-xl border border-border bg-card p-4 shadow-sm transition-all hover:border-primary/30 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                <Users className="size-5" />
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Drivers</p>
+                                <p className="text-2xl font-bold tabular-nums text-foreground">{counts.drivers}</p>
+                            </div>
+                        </div>
+                    </Link>
+                    <Link href="/fleet/trips" className="rounded-xl border border-border bg-card p-4 shadow-sm transition-all hover:border-primary/30 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                <MapPin className="size-5" />
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Trips</p>
+                                <p className="text-2xl font-bold tabular-nums text-foreground">{counts.trips}</p>
+                            </div>
+                        </div>
+                    </Link>
+                    <Link href="/fleet/work-orders" className="rounded-xl border border-border bg-card p-4 shadow-sm transition-all hover:border-primary/30 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                <ClipboardList className="size-5" />
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Work orders</p>
+                                <p className="text-2xl font-bold tabular-nums text-foreground">{counts.work_orders}</p>
+                            </div>
+                        </div>
+                    </Link>
+                </div>
 
+                {/* Charts grid */}
                 <section>
-                    <h2 className="mb-4 text-lg font-semibold text-foreground">Trips & routes</h2>
-                    <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                        <StatCard title="Routes" count={counts.routes} href="/fleet/routes" icon={Route} />
-                        <StatCard title="Trips" count={counts.trips} href="/fleet/trips" icon={MapPin} />
-                    </div>
-                </section>
-
-                <section>
-                    <h2 className="mb-4 text-lg font-semibold text-foreground">Fuel</h2>
-                    <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                        <StatCard title="Fuel cards" count={counts.fuel_cards} href="/fleet/fuel-cards" icon={CreditCard} />
-                        <StatCard title="Fuel transactions" count={counts.fuel_transactions} href="/fleet/fuel-transactions" icon={Fuel} />
-                    </div>
-                </section>
-
-                <section>
-                    <h2 className="mb-4 text-lg font-semibold text-foreground">Maintenance</h2>
-                    <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                        <StatCard title="Service schedules" count={counts.service_schedules} href="/fleet/service-schedules" icon={Calendar} />
-                        <StatCard title="Work orders" count={counts.work_orders} href="/fleet/work-orders" icon={ClipboardList} />
-                        <StatCard title="Defects" count={counts.defects} href="/fleet/defects" icon={AlertTriangle} />
-                    </div>
-                </section>
-
-                <section>
-                    <h2 className="mb-4 text-lg font-semibold text-foreground">Fines, lease & warranty</h2>
-                    <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                        <StatCard title="Fines" count={counts.fines ?? 0} href="/fleet/fines" icon={AlertTriangle} />
-                        <StatCard title="Vehicle leases" count={counts.vehicle_leases ?? 0} href="/fleet/vehicle-leases" icon={FileText} />
-                        <StatCard title="Vehicle recalls" count={counts.vehicle_recalls ?? 0} href="/fleet/vehicle-recalls" icon={AlertTriangle} />
-                        <StatCard title="Warranty claims" count={counts.warranty_claims ?? 0} href="/fleet/warranty-claims" icon={FileCheck} />
-                    </div>
-                </section>
-
-                <section>
-                    <h2 className="mb-4 text-lg font-semibold text-foreground">Compliance & working time</h2>
-                    <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                        <StatCard title="Compliance items" count={counts.compliance_items} href="/fleet/compliance-items" icon={ShieldCheck} />
-                        <StatCard title="Driver working time" count={counts.driver_working_time} href="/fleet/driver-working-time" icon={Clock} />
-                        <StatCard title="Tachograph downloads" count={counts.tachograph_downloads} href="/fleet/tachograph-downloads" icon={FileDown} />
-                    </div>
-                </section>
-
-                <section>
-                    <h2 className="mb-4 text-lg font-semibold text-foreground">Compliance & H&S</h2>
-                    <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                        <StatCard title="Vehicle check templates" count={counts.vehicle_check_templates ?? 0} href="/fleet/vehicle-check-templates" icon={ClipboardCheck} />
-                        <StatCard title="Vehicle checks" count={counts.vehicle_checks ?? 0} href="/fleet/vehicle-checks" icon={ClipboardCheck} />
-                        {typeof counts.todays_vehicle_checks === 'number' && (
-                            <Link href={`/fleet/vehicle-checks?check_date=${new Date().toISOString().slice(0, 10)}`} className="block">
-                                <Card className="transition-colors hover:bg-muted/50">
-                                    <CardContent className="flex items-center gap-4 p-4">
-                                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                                            <ClipboardCheck className="size-6 text-primary" />
+                    <h2 className="mb-4 text-lg font-semibold text-foreground">Trends & analytics</h2>
+                    <div className="grid gap-6 lg:grid-cols-2">
+                        {/* Trips over time */}
+                        <Card className="border border-border">
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-base font-semibold text-foreground">Trips (last 14 days)</CardTitle>
+                                <p className="text-xs text-muted-foreground">Daily trip count</p>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="h-[240px] w-full">
+                                    {chartTripsOverTime.length === 0 ? (
+                                        <div className="flex h-full items-center justify-center rounded-lg bg-muted/30 text-sm text-muted-foreground">
+                                            No trip data for this period.
                                         </div>
-                                        <div className="min-w-0 flex-1">
-                                            <p className="truncate font-medium">Today&apos;s vehicle checks</p>
-                                            <p className="text-2xl font-semibold tabular-nums">{counts.todays_vehicle_checks}</p>
+                                    ) : (
+                                        <ResponsiveContainer width="100%" height={240}>
+                                            <AreaChart data={chartTripsOverTime} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                                                <defs>
+                                                    <linearGradient id="tripsGradient" x1="0" y1="0" x2="0" y2="1">
+                                                        <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.4} />
+                                                        <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                                                    </linearGradient>
+                                                </defs>
+                                                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                                                <XAxis dataKey="label" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} />
+                                                <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} allowDecimals={false} />
+                                                <Tooltip contentStyle={tooltipContentStyle} formatter={(value: number) => [value, 'Trips']} labelFormatter={(l) => `Date: ${l}`} />
+                                                <Area type="monotone" dataKey="trips" name="Trips" stroke="hsl(var(--primary))" fill="url(#tripsGradient)" strokeWidth={2} />
+                                            </AreaChart>
+                                        </ResponsiveContainer>
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* Work orders over time */}
+                        <Card className="border border-border">
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-base font-semibold text-foreground">Work orders created (last 14 days)</CardTitle>
+                                <p className="text-xs text-muted-foreground">New work orders per day</p>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="h-[240px] w-full">
+                                    {chartWorkOrdersOverTime.length === 0 ? (
+                                        <div className="flex h-full items-center justify-center rounded-lg bg-muted/30 text-sm text-muted-foreground">
+                                            No data for this period.
                                         </div>
-                                    </CardContent>
-                                </Card>
-                            </Link>
-                        )}
-                        <StatCard title="Risk assessments" count={counts.risk_assessments ?? 0} href="/fleet/risk-assessments" icon={ShieldCheck} />
-                        <StatCard title="Vehicle discs" count={counts.vehicle_discs ?? 0} href="/fleet/vehicle-discs" icon={ShieldCheck} />
-                        <StatCard title="Tachograph calibrations" count={counts.tachograph_calibrations ?? 0} href="/fleet/tachograph-calibrations" icon={FileDown} />
-                        <StatCard title="Safety policy acknowledgments" count={counts.safety_policy_acknowledgments ?? 0} href="/fleet/safety-policy-acknowledgments" icon={FileSignature} />
-                        <StatCard title="Permit to work" count={counts.permit_to_work ?? 0} href="/fleet/permit-to-work" icon={HardHat} />
-                        <StatCard title="PPE assignments" count={counts.ppe_assignments ?? 0} href="/fleet/ppe-assignments" icon={HardHat} />
-                        <StatCard title="Safety observations" count={counts.safety_observations ?? 0} href="/fleet/safety-observations" icon={AlertTriangle} />
-                        <StatCard title="Toolbox talks" count={counts.toolbox_talks ?? 0} href="/fleet/toolbox-talks" icon={Users} />
+                                    ) : (
+                                        <ResponsiveContainer width="100%" height={240}>
+                                            <BarChart data={chartWorkOrdersOverTime} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                                                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                                                <XAxis dataKey="label" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} />
+                                                <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} allowDecimals={false} />
+                                                <Tooltip contentStyle={tooltipContentStyle} formatter={(value: number) => [value, 'Work orders']} labelFormatter={(l) => `Date: ${l}`} />
+                                                <Bar dataKey="work_orders" name="Work orders" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* Overview by category */}
+                        <Card className="border border-border">
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-base font-semibold text-foreground">Fleet overview by category</CardTitle>
+                                <p className="text-xs text-muted-foreground">Counts across main entities</p>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="h-[240px] w-full">
+                                    <ResponsiveContainer width="100%" height={240}>
+                                        <BarChart data={overviewBarData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} layout="vertical" className="[&_.recharts-cartesian-grid-horizontal]:opacity-0">
+                                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
+                                            <XAxis type="number" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} allowDecimals={false} />
+                                            <YAxis type="category" dataKey="name" width={80} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} />
+                                            <Tooltip contentStyle={tooltipContentStyle} formatter={(value: number) => [value, 'Count']} />
+                                            <Bar dataKey="value" name="Count" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* Work orders by status */}
+                        <Card className="border border-border">
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-base font-semibold text-foreground">Work orders by status</CardTitle>
+                                <p className="text-xs text-muted-foreground">Breakdown by status</p>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="h-[240px] w-full">
+                                    {!hasWorkOrdersByStatus ? (
+                                        <div className="flex h-full items-center justify-center rounded-lg bg-muted/30 text-sm text-muted-foreground">
+                                            No work orders yet.
+                                        </div>
+                                    ) : (
+                                        <ResponsiveContainer width="100%" height={240}>
+                                            <PieChart>
+                                                <Pie
+                                                    data={chartWorkOrdersByStatus}
+                                                    dataKey="value"
+                                                    nameKey="name"
+                                                    cx="50%"
+                                                    cy="50%"
+                                                    innerRadius={56}
+                                                    outerRadius={88}
+                                                    paddingAngle={2}
+                                                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                                    labelLine={{ stroke: 'hsl(var(--muted-foreground))' }}
+                                                >
+                                                    {chartWorkOrdersByStatus.map((_, index) => (
+                                                        <Cell key={index} fill={CHART_COLORS[index % CHART_COLORS.length] || CHART_COLORS_FALLBACK[index % CHART_COLORS_FALLBACK.length]} />
+                                                    ))}
+                                                </Pie>
+                                                <Tooltip contentStyle={tooltipContentStyle} formatter={(value: number, name: string) => [value, name]} />
+                                                <Legend layout="horizontal" align="center" verticalAlign="bottom" wrapperStyle={{ fontSize: 11 }} />
+                                            </PieChart>
+                                        </ResponsiveContainer>
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
                     </div>
                 </section>
 
+                {/* Activity: recent items and compliance */}
                 <section>
-                    <h2 className="mb-4 text-lg font-semibold text-foreground">Telematics & events</h2>
-                    <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                        <StatCard title="Behavior events" count={counts.behavior_events} href="/fleet/behavior-events" icon={AlertTriangle} />
-                        <StatCard title="Geofence events" count={counts.geofence_events} href="/fleet/geofence-events" icon={MapPin} />
-                    </div>
-                </section>
-
-                <section>
-                    <h2 className="mb-4 text-lg font-semibold text-foreground">Carbon, sustainability & AI</h2>
-                    <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                        <StatCard title="Emissions records" count={counts.emissions_records ?? 0} href="/fleet/emissions-records" icon={Flame} />
-                        <StatCard title="Carbon targets" count={counts.carbon_targets ?? 0} href="/fleet/carbon-targets" icon={Route} />
-                        <StatCard title="Sustainability goals" count={counts.sustainability_goals ?? 0} href="/fleet/sustainability-goals" icon={Calendar} />
-                        <StatCard title="AI analysis results" count={counts.ai_analysis_results ?? 0} href="/fleet/ai-analysis-results" icon={Cpu} />
-                        <StatCard title="AI job runs" count={counts.ai_job_runs ?? 0} href="/fleet/ai-job-runs" icon={Cpu} />
-                        <StatCard title="Electrification plan" count={undefined} href="/fleet/electrification-plan" icon={Battery} />
-                        <StatCard title="Fleet optimization" count={undefined} href="/fleet/fleet-optimization" icon={BarChart3} />
-                    </div>
-                </section>
-
-                <section>
-                    <h2 className="mb-4 text-lg font-semibold text-foreground">Insurance & incidents</h2>
-                    <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                        <StatCard title="Insurance policies" count={counts.insurance_policies ?? 0} href="/fleet/insurance-policies" icon={ShieldCheck} />
-                        <StatCard title="Incidents" count={counts.incidents ?? 0} href="/fleet/incidents" icon={AlertTriangle} />
-                        <StatCard title="Insurance claims" count={counts.insurance_claims ?? 0} href="/fleet/insurance-claims" icon={CreditCard} />
-                    </div>
-                </section>
-
-                <section>
-                    <h2 className="mb-4 text-lg font-semibold text-foreground">Workflows</h2>
-                    <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                        <StatCard title="Workflow definitions" count={counts.workflow_definitions ?? 0} href="/fleet/workflow-definitions" icon={GitBranch} />
-                        <StatCard title="Workflow executions" count={counts.workflow_executions ?? 0} href="/fleet/workflow-executions" icon={GitBranch} />
-                    </div>
-                </section>
-
-                <section>
-                    <h2 className="mb-4 text-lg font-semibold text-foreground">Wellness & coaching</h2>
-                    <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                        <StatCard title="Driver wellness records" count={counts.driver_wellness_records ?? 0} href="/fleet/driver-wellness-records" icon={Heart} />
-                        <StatCard title="Driver coaching plans" count={counts.driver_coaching_plans ?? 0} href="/fleet/driver-coaching-plans" icon={GraduationCap} />
-                    </div>
-                </section>
-
-                <section>
-                    <h2 className="mb-4 text-lg font-semibold text-foreground">EV, training & costs</h2>
-                    <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                        <StatCard title="EV charging sessions" count={counts.ev_charging_sessions ?? 0} href="/fleet/ev-charging-sessions" icon={Battery} />
-                        <StatCard title="EV battery data" count={counts.ev_battery_data ?? 0} href="/fleet/ev-battery-data" icon={Battery} />
-                        <StatCard title="Training courses" count={counts.training_courses ?? 0} href="/fleet/training-courses" icon={GraduationCap} />
-                        <StatCard title="Training sessions" count={counts.training_sessions ?? 0} href="/fleet/training-sessions" icon={Calendar} />
-                        <StatCard title="Driver qualifications" count={counts.driver_qualifications ?? 0} href="/fleet/driver-qualifications" icon={ShieldCheck} />
-                        <StatCard title="Training enrollments" count={counts.training_enrollments ?? 0} href="/fleet/training-enrollments" icon={GraduationCap} />
-                        <StatCard title="Cost allocations" count={counts.cost_allocations ?? 0} href="/fleet/cost-allocations" icon={CreditCard} />
-                    </div>
-                </section>
-
-                <section>
-                    <h2 className="mb-4 text-lg font-semibold text-foreground">Workshop, tyres & grey fleet</h2>
-                    <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                        <StatCard title="API integrations" count={counts.api_integrations ?? 0} href="/fleet/api-integrations" icon={Cpu} />
-                        <StatCard title="API logs" count={counts.api_logs ?? 0} href="/fleet/api-logs" icon={FileText} />
-                        <StatCard title="Dashcam clips" count={counts.dashcam_clips ?? 0} href="/fleet/dashcam-clips" icon={AlertTriangle} />
-                        <StatCard title="Workshop bays" count={counts.workshop_bays ?? 0} href="/fleet/workshop-bays" icon={Wrench} />
-                        <StatCard title="Parts inventory" count={counts.parts_inventory ?? 0} href="/fleet/parts-inventory" icon={Package} />
-                        <StatCard title="Parts suppliers" count={counts.parts_suppliers ?? 0} href="/fleet/parts-suppliers" icon={Package} />
-                        <StatCard title="Tyre inventory" count={counts.tyre_inventory ?? 0} href="/fleet/tyre-inventory" icon={CircleDot} />
-                        <StatCard title="Vehicle tyres" count={counts.vehicle_tyres ?? 0} href="/fleet/vehicle-tyres" icon={CircleDot} />
-                        <StatCard title="Grey fleet vehicles" count={counts.grey_fleet_vehicles ?? 0} href="/fleet/grey-fleet-vehicles" icon={Car} />
-                        <StatCard title="Mileage claims" count={counts.mileage_claims ?? 0} href="/fleet/mileage-claims" icon={CreditCard} />
-                        <StatCard title="Pool vehicle bookings" count={counts.pool_vehicle_bookings ?? 0} href="/fleet/pool-vehicle-bookings" icon={Car} />
-                        <StatCard title="Contractors" count={counts.contractors ?? 0} href="/fleet/contractors" icon={UserCog} />
-                        <StatCard title="Contractor compliance" count={counts.contractor_compliance ?? 0} href="/fleet/contractor-compliance" icon={FileCheck} />
-                        <StatCard title="Contractor invoices" count={counts.contractor_invoices ?? 0} href="/fleet/contractor-invoices" icon={FileText} />
-                    </div>
-                </section>
-
-                <section>
-                    <h2 className="mb-4 text-lg font-semibold text-foreground">Vehicle extras & audit</h2>
-                    <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                        <StatCard title="Parking allocations" count={counts.parking_allocations ?? 0} href="/fleet/parking-allocations" icon={MapPin} />
-                        <StatCard title="E-lock events" count={counts.e_lock_events ?? 0} href="/fleet/e-lock-events" icon={Lock} />
-                        <StatCard title="Axle load readings" count={counts.axle_load_readings ?? 0} href="/fleet/axle-load-readings" icon={Scale} />
-                        <StatCard title="Data migration runs" count={counts.data_migration_runs ?? 0} href="/fleet/data-migration-runs" icon={Database} />
-                    </div>
-                </section>
-
-                <section>
-                    <h2 className="mb-4 text-lg font-semibold text-foreground">Alerts & reports</h2>
-                    <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                        <StatCard title="Fleet Assistant" count={undefined} href="/fleet/assistant" icon={Bot} />
-                        <StatCard title="Alerts" count={counts.alerts ?? 0} href="/fleet/alerts" icon={Bell} />
-                        <StatCard title="Alert preferences" count={counts.alert_preferences ?? 0} href="/fleet/alert-preferences" icon={Bell} />
-                        <StatCard title="Reports" count={counts.reports ?? 0} href="/fleet/reports" icon={FileText} />
-                        <StatCard title="Report executions" count={counts.report_executions ?? 0} href="/fleet/report-executions" icon={FileText} />
-                    </div>
-                </section>
-
-                <div className="grid gap-6 lg:grid-cols-3">
+                    <h2 className="mb-4 text-lg font-semibold text-foreground">Activity</h2>
+                <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-4">
                     <Card className="border border-border">
                         <CardHeader className="pb-2">
                             <CardTitle className="flex items-center justify-between text-base font-semibold text-foreground">
@@ -464,19 +460,42 @@ export default function FleetDashboard({ counts, recentWorkOrders, recentDefects
                         </CardContent>
                     </Card>
                 </div>
+                </section>
 
+                {/* Quick links: main fleet areas */}
                 <section>
-                    <h2 className="mb-4 text-lg font-semibold text-foreground">Setup & configuration</h2>
+                    <h2 className="mb-4 text-lg font-semibold text-foreground">Quick links</h2>
                     <div className="flex flex-wrap gap-2">
-                        <Link href="/fleet/locations" className="inline-flex items-center rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted hover:text-primary">Locations</Link>
-                        <Link href="/fleet/cost-centers" className="inline-flex items-center rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted hover:text-primary">Cost centers</Link>
-                        <Link href="/fleet/garages" className="inline-flex items-center rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted hover:text-primary">Garages</Link>
-                        <Link href="/fleet/fuel-stations" className="inline-flex items-center rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted hover:text-primary">Fuel stations</Link>
-                        <Link href="/fleet/ev-charging-stations" className="inline-flex items-center rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted hover:text-primary">EV charging stations</Link>
-                        <Link href="/fleet/geofences" className="inline-flex items-center rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted hover:text-primary">Geofences</Link>
-                        <Link href="/fleet/trailers" className="inline-flex items-center rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted hover:text-primary">Trailers</Link>
-                        <Link href="/fleet/operator-licences" className="inline-flex items-center rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted hover:text-primary">Operator licences</Link>
-                        <Link href="/fleet/telematics-devices" className="inline-flex items-center rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted hover:text-primary">Telematics devices</Link>
+                        <Link href="/fleet/vehicles" className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/30 hover:bg-muted hover:text-primary">
+                            <Truck className="size-4" /> Vehicles
+                        </Link>
+                        <Link href="/fleet/drivers" className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/30 hover:bg-muted hover:text-primary">
+                            <Users className="size-4" /> Drivers
+                        </Link>
+                        <Link href="/fleet/trips" className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/30 hover:bg-muted hover:text-primary">
+                            <MapPin className="size-4" /> Trips
+                        </Link>
+                        <Link href="/fleet/routes" className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/30 hover:bg-muted hover:text-primary">
+                            <Route className="size-4" /> Routes
+                        </Link>
+                        <Link href="/fleet/work-orders" className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/30 hover:bg-muted hover:text-primary">
+                            <ClipboardList className="size-4" /> Work orders
+                        </Link>
+                        <Link href="/fleet/defects" className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/30 hover:bg-muted hover:text-primary">
+                            <AlertTriangle className="size-4" /> Defects
+                        </Link>
+                        <Link href="/fleet/assistant" className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/30 hover:bg-muted hover:text-primary">
+                            <Bot className="size-4" /> Assistant
+                        </Link>
+                        <Link href="/fleet/alerts" className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/30 hover:bg-muted hover:text-primary">
+                            <Bell className="size-4" /> Alerts
+                        </Link>
+                        <Link href="/fleet/locations" className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/30 hover:bg-muted hover:text-primary">
+                            <MapPin className="size-4" /> Locations
+                        </Link>
+                        <Link href="/fleet/garages" className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/30 hover:bg-muted hover:text-primary">
+                            <Wrench className="size-4" /> Garages
+                        </Link>
                     </div>
                 </section>
             </div>

@@ -131,8 +131,8 @@ export default function FleetTripsShow({ trip }: Props) {
                     <Card>
                         <CardHeader className="pb-2"><CardTitle className="text-base">Waypoints</CardTitle></CardHeader>
                         <CardContent>
-                            <div className="rounded-md border">
-                                <table className="w-full text-sm">
+                            <div className="overflow-x-auto rounded-md border">
+                                <table className="w-full min-w-[400px] text-sm">
                                     <thead><tr className="border-b bg-muted/50"><th className="p-3 text-left font-medium">#</th><th className="p-3 text-left font-medium">Lat</th><th className="p-3 text-left font-medium">Lng</th><th className="p-3 text-left font-medium">Recorded</th></tr></thead>
                                     <tbody>
                                         {waypoints.map((w) => (
@@ -153,8 +153,8 @@ export default function FleetTripsShow({ trip }: Props) {
                     <Card>
                         <CardHeader className="pb-2"><CardTitle className="text-base">Behavior events</CardTitle></CardHeader>
                         <CardContent>
-                            <div className="rounded-md border">
-                                <table className="w-full text-sm">
+                            <div className="overflow-x-auto rounded-md border">
+                                <table className="w-full min-w-[400px] text-sm">
                                     <thead><tr className="border-b bg-muted/50"><th className="p-3 text-left font-medium">Type</th><th className="p-3 text-left font-medium">Severity</th><th className="p-3 text-left font-medium">Occurred</th></tr></thead>
                                     <tbody>
                                         {events.map((ev) => (

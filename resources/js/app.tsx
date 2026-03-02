@@ -1,8 +1,10 @@
 import '../css/app.css';
 import './echo';
 
+import { PageTransition } from '@/components/motion/page-transition';
 import { createInertiaApp } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
+import { AnimatePresence } from 'framer-motion';
 import type { ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Toaster } from 'sonner';
@@ -32,7 +34,10 @@ const allPages = {
 };
 
 createInertiaApp({
-    title: (title) => (title ? `${title} - ${appName}` : appName),
+    title: (title) => {
+        const name = (typeof window !== 'undefined' && (window as { __INERTIA_APP_TITLE?: string }).__INERTIA_APP_TITLE) || appName;
+        return title ? `${title} - ${name}` : name;
+    },
     resolve: (name) =>
         resolvePageComponent(
             `./pages/${name}.tsx`,
@@ -47,13 +52,21 @@ createInertiaApp({
                         <ThemeFromProps />
                         <CookieConsentBanner />
                         <FlashListener />
-                        <Page {...props} />
+                        <AnimatePresence mode="wait">
+                            <PageTransition>
+                                <Page {...props} />
+                            </PageTransition>
+                        </AnimatePresence>
                         <Toaster richColors position="top-right" />
                     </>
                 );
             };
         }),
     setup({ el, App, props }) {
+        const p = props as { fleet_only_app?: boolean; name?: string };
+        if (p.fleet_only_app) (window as { __INERTIA_APP_TITLE?: string }).__INERTIA_APP_TITLE = 'Fleet Management';
+        else (window as { __INERTIA_APP_TITLE?: string }).__INERTIA_APP_TITLE = p.name || appName;
+
         const root = createRoot(el);
 
         root.render(

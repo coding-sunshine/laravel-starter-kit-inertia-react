@@ -11,8 +11,10 @@ use App\Enums\Fleet\ReportExecutionStatus;
 use App\Enums\Fleet\ReportTriggeredBy;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class ReportExecutionController extends Controller
 {
@@ -37,8 +39,25 @@ final class ReportExecutionController extends Controller
     {
         $this->authorize('view', $report_execution);
         $report_execution->load(['report', 'triggeredByUser']);
+        $downloadUrl = $report_execution->file_path && Storage::disk('local')->exists($report_execution->file_path)
+            ? route('fleet.report-executions.download', $report_execution)
+            : null;
 
-        return Inertia::render('Fleet/ReportExecutions/Show', ['reportExecution' => $report_execution]);
+        return Inertia::render('Fleet/ReportExecutions/Show', [
+            'reportExecution' => $report_execution,
+            'downloadUrl' => $downloadUrl,
+        ]);
+    }
+
+    public function download(ReportExecution $report_execution): StreamedResponse|RedirectResponse
+    {
+        $this->authorize('view', $report_execution);
+        if (! $report_execution->file_path || ! Storage::disk('local')->exists($report_execution->file_path)) {
+            return redirect()->back()->with('flash', ['status' => 'error', 'message' => 'Report file is not available.']);
+        }
+        $filename = basename($report_execution->file_path);
+
+        return Storage::disk('local')->download($report_execution->file_path, $filename);
     }
 
     public function run(Request $request, Report $report): RedirectResponse

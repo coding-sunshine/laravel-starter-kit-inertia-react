@@ -2,8 +2,17 @@ import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/react';
-import { Bot, MessageSquarePlus, Send, User } from 'lucide-react';
+import { Bot, MessageSquarePlus, Pencil, Send, Trash2, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from '@inertiajs/react';
 
@@ -64,6 +73,11 @@ export default function FleetAssistantIndex({
     const [conversationId, setConversationId] = useState<string | null>(conversation_id);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editTitle, setEditTitle] = useState('');
+    const [localConversations, setLocalConversations] = useState<ConversationItem[]>(conversations);
+    const [deleteTarget, setDeleteTarget] = useState<ConversationItem | null>(null);
+    const [deleting, setDeleting] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const abortRef = useRef<AbortController | null>(null);
 
@@ -78,6 +92,10 @@ export default function FleetAssistantIndex({
         );
         setConversationId(conversation_id);
     }, [conversation_id]);
+
+    useEffect(() => {
+        setLocalConversations(conversations);
+    }, [conversations]);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -139,6 +157,15 @@ export default function FleetAssistantIndex({
                                 currentConvId = chunk.conversationId;
                                 setConversationId(chunk.conversationId);
                                 updateUrl(chunk.conversationId);
+                                const autoTitle = text.slice(0, 60) || 'Fleet Assistant';
+                                setLocalConversations((prev) => [
+                                    {
+                                        id: chunk.conversationId!,
+                                        title: autoTitle,
+                                        updated_at: new Date().toISOString(),
+                                    },
+                                    ...prev,
+                                ]);
                             }
                             break;
                         case 'TEXT_MESSAGE_START':
@@ -254,11 +281,80 @@ export default function FleetAssistantIndex({
     };
 
     const openConversation = (id: string | null) => {
+        setEditingId(null);
         if (id) {
             router.get('/fleet/assistant', { conversation_id: id });
         } else {
             router.get('/fleet/assistant');
         }
+    };
+
+    const startEditing = (c: ConversationItem) => {
+        setEditingId(c.id);
+        setEditTitle(c.title);
+    };
+
+    const cancelEditing = () => {
+        setEditingId(null);
+        setEditTitle('');
+    };
+
+    const submitRename = async () => {
+        if (!editingId || !editTitle.trim()) {
+            cancelEditing();
+            return;
+        }
+        const csrf = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content ?? '';
+        const res = await fetch(`/fleet/assistant/conversations/${editingId}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrf,
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify({ title: editTitle.trim() }),
+        });
+        if (res.ok) {
+            setLocalConversations((prev) =>
+                prev.map((x) => (x.id === editingId ? { ...x, title: editTitle.trim() } : x)),
+            );
+            cancelEditing();
+        } else {
+            const data = await res.json().catch(() => ({}));
+            setError(data?.message ?? 'Failed to rename');
+        }
+    };
+
+    const performDelete = async (id: string) => {
+        const csrf = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content ?? '';
+        setDeleting(true);
+        try {
+            const res = await fetch(`/fleet/assistant/conversations/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrf,
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+            if (res.ok) {
+                setLocalConversations((prev) => prev.filter((c) => c.id !== id));
+                setDeleteTarget(null);
+                if (conversationId === id) {
+                    router.visit('/fleet/assistant');
+                }
+            } else {
+                const data = await res.json().catch(() => ({}));
+                setError(data?.message ?? 'Failed to delete');
+            }
+        } finally {
+            setDeleting(false);
+        }
+    };
+
+    const handleDeleteConfirm = () => {
+        if (deleteTarget) void performDelete(deleteTarget.id);
     };
 
     return (
@@ -280,24 +376,94 @@ export default function FleetAssistantIndex({
                         </Link>
                     </Button>
                     <div className="flex-1 overflow-y-auto">
-                        {conversations.length === 0 && (
+                        {localConversations.length === 0 && (
                             <p className="px-2 py-4 text-center text-xs text-muted-foreground">No past chats</p>
                         )}
-                        {conversations.map((c) => (
-                            <button
+                        {localConversations.map((c) => (
+                            <div
                                 key={c.id}
-                                type="button"
-                                onClick={() => openConversation(c.id)}
-                                className={`w-full rounded-md px-2 py-2 text-left text-sm hover:bg-muted ${
-                                    conversation_id === c.id ? 'bg-muted font-medium' : ''
+                                className={`group flex flex-col gap-0.5 rounded-md px-2 py-2 ${
+                                    conversation_id === c.id ? 'bg-muted font-medium' : 'hover:bg-muted/70'
                                 }`}
-                                title={c.title}
                             >
-                                <span className="block truncate">{c.title}</span>
-                                <span className="text-xs text-muted-foreground">
-                                    {new Date(c.updated_at).toLocaleDateString()}
-                                </span>
-                            </button>
+                                {editingId === c.id ? (
+                                    <div className="flex flex-col gap-1" onClick={(e) => e.stopPropagation()}>
+                                        <input
+                                            type="text"
+                                            value={editTitle}
+                                            onChange={(e) => setEditTitle(e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') void submitRename();
+                                                if (e.key === 'Escape') cancelEditing();
+                                            }}
+                                            className="w-full rounded border border-input bg-background px-2 py-1 text-sm"
+                                            autoFocus
+                                        />
+                                        <div className="flex gap-1">
+                                            <Button
+                                                size="sm"
+                                                variant="secondary"
+                                                className="h-7 flex-1 text-xs"
+                                                onClick={() => void submitRename()}
+                                            >
+                                                Save
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                className="h-7 flex-1 text-xs"
+                                                onClick={cancelEditing}
+                                            >
+                                                Cancel
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="flex min-w-0 items-start gap-1">
+                                            <button
+                                                type="button"
+                                                onClick={() => openConversation(c.id)}
+                                                className="min-w-0 flex-1 truncate text-left text-sm"
+                                                title={c.title}
+                                            >
+                                                <span className="block truncate">{c.title}</span>
+                                            </button>
+                                            <span className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="size-6"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        startEditing(c);
+                                                    }}
+                                                    title="Rename"
+                                                >
+                                                    <Pencil className="size-3" />
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="size-6 text-destructive hover:text-destructive"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setDeleteTarget(c);
+                                                    }}
+                                                    title="Delete"
+                                                >
+                                                    <Trash2 className="size-3" />
+                                                </Button>
+                                            </span>
+                                        </div>
+                                        <span className="text-xs text-muted-foreground">
+                                            {new Date(c.updated_at).toLocaleDateString()}
+                                        </span>
+                                    </>
+                                )}
+                            </div>
                         ))}
                     </div>
                 </aside>
@@ -386,6 +552,32 @@ export default function FleetAssistantIndex({
                     </div>
                 </div>
             </div>
+
+            <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Delete conversation</DialogTitle>
+                        <DialogDescription>
+                            This will permanently delete &ldquo;{deleteTarget?.title}&rdquo; and all its
+                            messages. This action cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button variant="outline" disabled={deleting}>
+                                Cancel
+                            </Button>
+                        </DialogClose>
+                        <Button
+                            variant="destructive"
+                            onClick={handleDeleteConfirm}
+                            disabled={deleting}
+                        >
+                            {deleting ? 'Deleting…' : 'Delete'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </AppLayout>
     );
 }

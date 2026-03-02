@@ -169,8 +169,47 @@ final class FleetDashboardController extends Controller
             ->orderByDesc('created_at')
             ->first();
 
+        // Chart: trips per day (last 14 days)
+        $days = 14;
+        $tripsOverTime = [];
+        for ($i = $days - 1; $i >= 0; $i--) {
+            $date = now()->subDays($i)->toDateString();
+            $tripsOverTime[] = [
+                'date' => $date,
+                'label' => now()->subDays($i)->format('M j'),
+                'trips' => Trip::query()->whereDate('started_at', $date)->count(),
+            ];
+        }
+
+        // Chart: work orders by status
+        $workOrdersByStatus = WorkOrder::query()
+            ->selectRaw('status, count(*) as count')
+            ->groupBy('status')
+            ->get();
+        $chartWorkOrdersByStatus = $workOrdersByStatus->map(fn ($row): array => [
+            'name' => ucfirst(str_replace('_', ' ', $row->status)),
+            'value' => (int) $row->count,
+        ])->values()->all();
+        if (empty($chartWorkOrdersByStatus)) {
+            $chartWorkOrdersByStatus = [['name' => 'No orders', 'value' => 0]];
+        }
+
+        // Chart: work orders per day (last 14 days)
+        $workOrdersOverTime = [];
+        for ($i = $days - 1; $i >= 0; $i--) {
+            $date = now()->subDays($i)->toDateString();
+            $workOrdersOverTime[] = [
+                'date' => $date,
+                'label' => now()->subDays($i)->format('M j'),
+                'work_orders' => WorkOrder::query()->whereDate('created_at', $date)->count(),
+            ];
+        }
+
         return Inertia::render('Fleet/Dashboard', [
             'counts' => $counts,
+            'chartTripsOverTime' => $tripsOverTime,
+            'chartWorkOrdersByStatus' => array_values($chartWorkOrdersByStatus),
+            'chartWorkOrdersOverTime' => $workOrdersOverTime,
             'recentWorkOrders' => $recentWorkOrders,
             'recentDefects' => $recentDefects,
             'expiringCompliance' => $expiringCompliance,

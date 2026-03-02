@@ -145,6 +145,41 @@
     --sidebar-ring: oklch(0.439 0 0);
 }
 
+/* Fleet-only: no decorative background/illustration (beach/hero image) in main or sidebar wrapper */
+.fleet-no-decor-wrapper .fleet-no-decor,
+.fleet-no-decor {
+    background-image: none !important;
+    background-color: var(--background);
+}
+.fleet-no-decor-wrapper [data-slot="sidebar-wrapper"] {
+    background-image: none !important;
+}
+/* Hide org logo graphic (e.g. beach/palm SVG) in sidebar and main when fleet-only */
+.fleet-no-decor-wrapper [data-sidebar="header"] [data-sidebar="menu-button"]:first-of-type img,
+.fleet-no-decor-wrapper [data-sidebar="header"] [data-sidebar="menu-button"]:first-of-type > div:first-of-type {
+    display: none !important;
+}
+.fleet-no-decor-wrapper [data-slot="sidebar-inset"] svg[viewBox="0 0 633 633"],
+.fleet-no-decor-wrapper [data-slot="sidebar-inset"] svg[viewBox="0 0 1045 1045"],
+.fleet-no-decor-wrapper [data-slot="sidebar-inset"] div[aria-hidden="true"]:has(svg[viewBox="0 0 633 633"]) {
+    display: none !important;
+}
+/* Hide third-party widget that injects beach/decorative graphic (e.g. feedback/chat button) */
+.fleet-no-decor-wrapper [id*="tsqd-open-btn-container"],
+.fleet-no-decor-wrapper [id*="tsqd-open-btn-container"] *,
+body.fleet-no-decor-active [id*="tsqd-open-btn-container"],
+body.fleet-no-decor-active [id*="tsqd-open-btn-container"] * {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    opacity: 0 !important;
+    position: absolute !important;
+    left: -9999px !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+}
+
 @layer base {
     * {
         @apply border-border;

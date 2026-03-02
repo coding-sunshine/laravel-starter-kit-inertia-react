@@ -3,9 +3,17 @@ import { usePage } from '@inertiajs/react';
 import AppLogoIcon from './app-logo-icon';
 
 export default function AppLogo() {
-    const { name, branding } = usePage<SharedData>().props;
+    const { name, branding, fleet_only_app } = usePage<SharedData>().props;
     const logoUrl = branding?.logoUrl ?? null;
-    const siteName = name ?? 'Laravel Starter Kit';
+    const siteName = fleet_only_app ? 'Fleet Management' : (name ?? 'Laravel Starter Kit');
+
+    if (fleet_only_app) {
+        return (
+            <span className="truncate text-sm font-semibold leading-tight">
+                {siteName}
+            </span>
+        );
+    }
 
     return (
         <>

@@ -101,11 +101,11 @@
 
 ## 5. Implementation checklist
 
-- [ ] Audit key user flows (login → Fleet → entity list → show → edit); ensure breadcrumbs and sidebar match; fix any dead ends or inconsistent labels.
-- [ ] Ensure every list has empty state + CTA; every async action has loading and success/error feedback.
-- [ ] Add or refine charts on main dashboard and Fleet dashboard (Recharts, design tokens); add charts to Fleet optimization / electrification result views if data supports it.
-- [ ] Align report and report-execution pages with design system; clear “Run” and “Download”; optional chart/summary on report or execution show.
-- [ ] Document UX decisions (IA, terminology, patterns) in DESIGN_SYSTEM.md or a short UX_NOTES.md; link references below.
+- [x] Audit key user flows (login → Fleet → entity list → show → edit); ensure breadcrumbs and sidebar match; fix any dead ends or inconsistent labels.
+- [x] Ensure every list has empty state + CTA; every async action has loading and success/error feedback.
+- [x] Add or refine charts on main dashboard and Fleet dashboard (Recharts, design tokens); add charts to Fleet optimization / electrification result views if data supports it.
+- [x] Align report and report-execution pages with design system; clear “Run” and “Download”; optional chart/summary on report or execution show.
+- [x] Document UX decisions (IA, terminology, patterns) in DESIGN_SYSTEM.md or a short UX_NOTES.md; link references below.
 
 ---
 

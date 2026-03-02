@@ -246,8 +246,8 @@ export default function FleetRoutesShow({ route, locations, optimizeUrl, applyOp
                         {stops.length === 0 ? (
                             <p className="text-sm text-muted-foreground">No stops yet.</p>
                         ) : (
-                            <div className="rounded-md border">
-                                <table className="w-full text-sm">
+                            <div className="overflow-x-auto rounded-md border">
+                                <table className="w-full min-w-[600px] text-sm">
                                     <thead>
                                         <tr className="border-b bg-muted/50">
                                             <th className="p-3 text-left font-medium">Order</th>

@@ -1,5 +1,5 @@
 import PageController from '@/actions/App/Http/Controllers/PageController';
-import { fleetNavItems } from '@/config/fleet-nav';
+import { fleetDashboardItem, fleetNavSections } from '@/config/fleet-nav';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -175,36 +175,40 @@ function canShowNavItem(
 }
 
 export function AppSidebar() {
-    const { auth, features } = usePage<SharedData>().props;
-    const visibleMainNavItems = useMemo(
-        () =>
-            mainNavItems.filter((item) =>
-                canShowNavItem(
-                    item,
-                    auth.permissions ?? [],
-                    auth.can_bypass ?? false,
-                    features ?? {},
-                    auth.tenancy_enabled ?? true,
-                ),
+    const { auth, features, fleet_only_app } = usePage<SharedData>().props;
+    const fleetOnly = Boolean(fleet_only_app);
+
+    const visibleMainNavItems = useMemo(() => {
+        if (fleetOnly) {
+            return [];
+        }
+        return mainNavItems.filter((item) =>
+            canShowNavItem(
+                item,
+                auth.permissions ?? [],
+                auth.can_bypass ?? false,
+                features ?? {},
+                auth.tenancy_enabled ?? true,
             ),
-        [auth.permissions, auth.can_bypass, auth.tenancy_enabled, features],
-    );
+        );
+    }, [auth.permissions, auth.can_bypass, auth.tenancy_enabled, features, fleetOnly]);
 
     const visibleFooterNavItems = useMemo(() => {
+        if (fleetOnly) return [];
         const f = features ?? {};
         return footerNavItems.filter(
             (item) =>
                 !item.feature || Boolean(f[item.feature as keyof typeof f]),
         );
-    }, [features]);
+    }, [features, fleetOnly]);
 
     return (
-        <Sidebar collapsible="icon" variant="inset">
+        <Sidebar collapsible="offcanvas" variant="inset">
             <SidebarHeader>
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton size="lg" asChild>
-                            <Link href={dashboard().url} prefetch="click">
+                            <Link href={fleetOnly ? '/fleet' : dashboard().url} prefetch="click">
                                 <AppLogo />
                             </Link>
                         </SidebarMenuButton>
@@ -220,7 +224,11 @@ export function AppSidebar() {
             <SidebarContent>
                 <NavMain
                     items={visibleMainNavItems}
-                    fleetSubItems={fleetNavItems}
+                    fleetSubItems={fleetOnly ? [] : undefined}
+                    groupLabel="Platform"
+                    fleetOnlyLayout={fleetOnly}
+                    fleetDashboardItem={fleetOnly ? fleetDashboardItem : undefined}
+                    fleetNavSections={fleetOnly ? fleetNavSections : undefined}
                 />
             </SidebarContent>
 

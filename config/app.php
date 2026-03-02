@@ -19,6 +19,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Fleet-only application mode
+    |--------------------------------------------------------------------------
+    | When true, the sidebar shows only Fleet navigation (no Platform Dashboard,
+    | Chat, Users, Organizations, API docs, Repository, Documentation) and the
+    | main dashboard route redirects to the Fleet dashboard.
+    |
+    */
+
+    'fleet_only_app' => env('FLEET_ONLY_APP', true),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------
     |

@@ -58,7 +58,9 @@ final class ReportController extends Controller
     public function show(Report $report): Response
     {
         $this->authorize('view', $report);
-        $report->load('reportExecutions');
+        $report->load([
+            'reportExecutions' => fn ($q) => $q->orderByDesc('execution_start')->limit(10),
+        ]);
 
         return Inertia::render('Fleet/Reports/Show', ['report' => $report]);
     }

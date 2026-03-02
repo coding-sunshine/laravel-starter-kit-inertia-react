@@ -45,12 +45,12 @@ export default function FleetReportsIndex({ reports, filters, reportTypes, sched
                     <div className="rounded-lg border border-dashed py-16 text-center">
                         <FileText className="mx-auto size-10 text-muted-foreground" />
                         <p className="mt-2 text-sm text-muted-foreground">No reports yet.</p>
-                        <Button asChild className="mt-4"><Link href="/fleet/reports/create">Add report</Link></Button>
+                        <Button asChild className="mt-4"><Link href="/fleet/reports/create">Create report</Link></Button>
                     </div>
                 ) : (
                     <>
-                        <div className="rounded-md border">
-                            <table className="w-full text-sm">
+                        <div className="overflow-x-auto rounded-md border">
+                            <table className="w-full min-w-[600px] text-sm">
                                 <thead>
                                     <tr className="border-b bg-muted/50">
                                         <th className="p-3 text-left font-medium">Name</th>

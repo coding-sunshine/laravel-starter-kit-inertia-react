@@ -19,6 +19,7 @@ import {
     AreaChart,
     CartesianGrid,
     ResponsiveContainer,
+    Tooltip,
     XAxis,
     YAxis,
 } from 'recharts';
@@ -161,29 +162,47 @@ export default function Dashboard() {
                     data-pan="dashboard-chart"
                 >
                     <h3 className="mb-2 font-medium">Activity (sample)</h3>
-                    <div className="h-[200px] w-full">
-                        <ResponsiveContainer
-                            width="100%"
-                            height={200}
-                            minHeight={200}
-                        >
-                            <AreaChart data={chartData}>
-                                <CartesianGrid
-                                    strokeDasharray="3 3"
-                                    className="stroke-muted"
-                                />
-                                <XAxis dataKey="name" className="text-xs" />
-                                <YAxis className="text-xs" />
-                                <Area
-                                    type="monotone"
-                                    dataKey="value"
-                                    stroke="hsl(var(--primary))"
-                                    fill="hsl(var(--primary))"
-                                    fillOpacity={0.3}
-                                />
-                            </AreaChart>
-                        </ResponsiveContainer>
-                    </div>
+                    {chartData.length === 0 ? (
+                        <p className="flex h-[200px] items-center justify-center text-sm text-muted-foreground">
+                            No data for this period.
+                        </p>
+                    ) : (
+                        <div className="h-[200px] w-full">
+                            <ResponsiveContainer
+                                width="100%"
+                                height={200}
+                                minHeight={200}
+                            >
+                                <AreaChart data={chartData}>
+                                    <CartesianGrid
+                                        strokeDasharray="3 3"
+                                        className="stroke-muted"
+                                    />
+                                    <XAxis dataKey="name" className="text-xs" tick={{ fill: 'hsl(var(--foreground))' }} />
+                                    <YAxis className="text-xs" tick={{ fill: 'hsl(var(--foreground))' }} />
+                                    <Tooltip
+                                        contentStyle={{
+                                            backgroundColor: 'hsl(var(--card))',
+                                            border: '1px solid hsl(var(--border))',
+                                            borderRadius: '6px',
+                                            fontSize: '12px',
+                                        }}
+                                        labelStyle={{ color: 'hsl(var(--foreground))' }}
+                                        formatter={(value: number) => [value, 'Value']}
+                                        labelFormatter={(label) => `Day: ${label}`}
+                                    />
+                                    <Area
+                                        type="monotone"
+                                        dataKey="value"
+                                        name="Value"
+                                        stroke="hsl(var(--primary))"
+                                        fill="hsl(var(--primary))"
+                                        fillOpacity={0.3}
+                                    />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        </div>
+                    )}
                 </div>
 
                 {canAccessAdmin && (
