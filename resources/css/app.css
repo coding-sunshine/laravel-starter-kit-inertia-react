@@ -154,6 +154,112 @@
 .fleet-no-decor-wrapper [data-slot="sidebar-wrapper"] {
     background-image: none !important;
 }
+
+/* Fleet-only: Fleetscyc-style dark sidebar and top bar (#282a2e) */
+.fleet-no-decor-wrapper {
+    --sidebar: oklch(0.165 0.006 264);
+    --sidebar-foreground: oklch(0.985 0 0);
+    --sidebar-primary: oklch(0.55 0.18 264);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.22 0.008 264);
+    --sidebar-accent-foreground: oklch(0.985 0 0);
+    --sidebar-border: oklch(0.24 0.008 264);
+    --sidebar-ring: oklch(0.55 0.18 264);
+}
+/* Sidebar: force dark background and white text so it matches top bar and stays readable */
+.fleet-no-decor-wrapper [data-slot="sidebar-wrapper"],
+.fleet-no-decor-wrapper [data-sidebar="sidebar"],
+.fleet-no-decor-wrapper [data-slot="sidebar"] {
+    background-color: #282a2e !important;
+    color: #fff !important;
+}
+.fleet-no-decor-wrapper [data-sidebar="sidebar"] *,
+.fleet-no-decor-wrapper [data-sidebar="sidebar"] a,
+.fleet-no-decor-wrapper [data-sidebar="sidebar"] button,
+.fleet-no-decor-wrapper [data-sidebar="header"] *,
+.fleet-no-decor-wrapper [data-sidebar="menu"] *,
+.fleet-no-decor-wrapper [data-sidebar="menu-button"],
+.fleet-no-decor-wrapper [data-sidebar="group-label"],
+.fleet-no-decor-wrapper [data-sidebar="footer"] * {
+    color: rgba(255, 255, 255, 0.92) !important;
+}
+.fleet-no-decor-wrapper [data-sidebar="sidebar"] a:hover,
+.fleet-no-decor-wrapper [data-sidebar="menu-button"]:hover,
+.fleet-no-decor-wrapper [data-sidebar="menu-button"][data-active="true"] {
+    color: #fff !important;
+}
+/* Sidebar hover/active: dark highlight so white text stays readable (no light grey) */
+.fleet-no-decor-wrapper [data-sidebar="menu-button"]:hover,
+.fleet-no-decor-wrapper [data-sidebar="menu-button"][data-active="true"],
+.fleet-no-decor-wrapper [data-sidebar="menu-button"][data-state="open"] {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    color: #fff !important;
+}
+.fleet-no-decor-wrapper [data-sidebar="menu-button"]:hover *,
+.fleet-no-decor-wrapper [data-sidebar="menu-button"][data-active="true"] *,
+.fleet-no-decor-wrapper [data-sidebar="menu-button"][data-state="open"] * {
+    color: #fff !important;
+}
+.fleet-no-decor-wrapper [data-sidebar="menu-sub-button"]:hover,
+.fleet-no-decor-wrapper [data-sidebar="menu-sub-button"][data-active="true"] {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    color: #fff !important;
+}
+.fleet-no-decor-wrapper [data-sidebar="menu-sub-button"]:hover *,
+.fleet-no-decor-wrapper [data-sidebar="menu-sub-button"][data-active="true"] * {
+    color: #fff !important;
+}
+.fleet-no-decor-wrapper [data-sidebar="menu-action"]:hover {
+    background-color: transparent !important;
+    color: #fff !important;
+}
+.fleet-no-decor-wrapper .fleet-chrome-header {
+    background-color: #282a2e !important;
+    border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+    color: #fff !important;
+}
+.fleet-no-decor-wrapper .fleet-chrome-header a,
+.fleet-no-decor-wrapper .fleet-chrome-header button,
+.fleet-no-decor-wrapper .fleet-chrome-header [data-sidebar="trigger"],
+.fleet-no-decor-wrapper .fleet-chrome-header .text-muted-foreground {
+    color: rgba(255, 255, 255, 0.9) !important;
+}
+.fleet-no-decor-wrapper .fleet-chrome-header [data-sidebar="trigger"]:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    color: #fff !important;
+}
+/* Main dashboard/content area: white background and readable data (fix invisible labels/headers) */
+.fleet-no-decor-wrapper .fleet-no-decor {
+    background-color: #fff !important;
+    /* Darker text on white so labels, table headers, and muted content are visible */
+    --foreground: oklch(0.22 0 0);
+    --muted-foreground: oklch(0.4 0 0);
+    --card-foreground: oklch(0.22 0 0);
+    color: #1f2937;
+}
+.fleet-no-decor-wrapper .fleet-no-decor [data-slot="table-head"],
+.fleet-no-decor-wrapper .fleet-no-decor th,
+.fleet-no-decor-wrapper .fleet-no-decor thead th {
+    color: #1f2937 !important;
+}
+.fleet-no-decor-wrapper .fleet-no-decor [data-slot="label"],
+.fleet-no-decor-wrapper .fleet-no-decor label {
+    color: #374151 !important;
+}
+.fleet-no-decor-wrapper .fleet-no-decor .text-muted-foreground {
+    color: #4b5563 !important;
+}
+.fleet-no-decor-wrapper .fleet-no-decor td,
+.fleet-no-decor-wrapper .fleet-no-decor [data-slot="table-cell"] {
+    color: #1f2937;
+}
+/* Badges and secondary text (e.g. severity "minor") readable on white */
+.fleet-no-decor-wrapper .fleet-no-decor [class*="bg-muted"] {
+    color: #374151;
+}
+.fleet-no-decor-wrapper .fleet-no-decor a:not(.text-primary-foreground) {
+    color: #1d4ed8;
+}
 /* Hide org logo graphic (e.g. beach/palm SVG) in sidebar and main when fleet-only */
 .fleet-no-decor-wrapper [data-sidebar="header"] [data-sidebar="menu-button"]:first-of-type img,
 .fleet-no-decor-wrapper [data-sidebar="header"] [data-sidebar="menu-button"]:first-of-type > div:first-of-type {
