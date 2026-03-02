@@ -1174,6 +1174,8 @@
                     "fleet.assistant.index",
                     "fleet.assistant.prompt",
                     "fleet.assistant.stream",
+                    "fleet.assistant.conversations.update",
+                    "fleet.assistant.conversations.destroy",
                     "fleet.locations.index",
                     "fleet.locations.create",
                     "fleet.locations.store",
@@ -1259,6 +1261,8 @@
                     "fleet.routes.edit",
                     "fleet.routes.update",
                     "fleet.routes.destroy",
+                    "fleet.routes.optimize",
+                    "fleet.routes.apply-optimized-order",
                     "fleet.routes.stops.store",
                     "fleet.routes.stops.update",
                     "fleet.routes.stops.destroy",
@@ -1349,6 +1353,7 @@
                     "fleet.defects.edit",
                     "fleet.defects.update",
                     "fleet.defects.destroy",
+                    "fleet.defects.run-damage-assessment",
                     "fleet.compliance-items.index",
                     "fleet.compliance-items.create",
                     "fleet.compliance-items.store",
@@ -1395,6 +1400,13 @@
                     "fleet.ai-analysis-results.show",
                     "fleet.ai-job-runs.index",
                     "fleet.ai-job-runs.show",
+                    "fleet.ai-job-runs.run-predictive-maintenance",
+                    "fleet.ai-job-runs.run-fraud-detection",
+                    "fleet.ai-job-runs.run-compliance-prediction",
+                    "fleet.electrification-plan.index",
+                    "fleet.electrification-plan.generate",
+                    "fleet.fleet-optimization.index",
+                    "fleet.fleet-optimization.analyze",
                     "fleet.insurance-policies.index",
                     "fleet.insurance-policies.create",
                     "fleet.insurance-policies.store",
@@ -1409,6 +1421,8 @@
                     "fleet.incidents.edit",
                     "fleet.incidents.update",
                     "fleet.incidents.destroy",
+                    "fleet.incidents.run-damage-assessment",
+                    "fleet.incidents.run-incident-analysis",
                     "fleet.insurance-claims.index",
                     "fleet.insurance-claims.create",
                     "fleet.insurance-claims.store",
@@ -1416,6 +1430,9 @@
                     "fleet.insurance-claims.edit",
                     "fleet.insurance-claims.update",
                     "fleet.insurance-claims.destroy",
+                    "fleet.insurance-claims.run-damage-assessment",
+                    "fleet.insurance-claims.generate-fnol",
+                    "fleet.workflow-definitions.execute",
                     "fleet.workflow-definitions.index",
                     "fleet.workflow-definitions.create",
                     "fleet.workflow-definitions.store",
@@ -1488,6 +1505,7 @@
                     "fleet.reports.update",
                     "fleet.reports.destroy",
                     "fleet.reports.run",
+                    "fleet.report-executions.download",
                     "fleet.report-executions.index",
                     "fleet.report-executions.show",
                     "fleet.api-integrations.index",
@@ -1943,6 +1961,8 @@
                     "fleet.assistant.index",
                     "fleet.assistant.prompt",
                     "fleet.assistant.stream",
+                    "fleet.assistant.conversations.update",
+                    "fleet.assistant.conversations.destroy",
                     "fleet.locations.index",
                     "fleet.locations.create",
                     "fleet.locations.store",
@@ -2028,6 +2048,8 @@
                     "fleet.routes.edit",
                     "fleet.routes.update",
                     "fleet.routes.destroy",
+                    "fleet.routes.optimize",
+                    "fleet.routes.apply-optimized-order",
                     "fleet.routes.stops.store",
                     "fleet.routes.stops.update",
                     "fleet.routes.stops.destroy",
@@ -2118,6 +2140,7 @@
                     "fleet.defects.edit",
                     "fleet.defects.update",
                     "fleet.defects.destroy",
+                    "fleet.defects.run-damage-assessment",
                     "fleet.compliance-items.index",
                     "fleet.compliance-items.create",
                     "fleet.compliance-items.store",
@@ -2164,6 +2187,13 @@
                     "fleet.ai-analysis-results.show",
                     "fleet.ai-job-runs.index",
                     "fleet.ai-job-runs.show",
+                    "fleet.ai-job-runs.run-predictive-maintenance",
+                    "fleet.ai-job-runs.run-fraud-detection",
+                    "fleet.ai-job-runs.run-compliance-prediction",
+                    "fleet.electrification-plan.index",
+                    "fleet.electrification-plan.generate",
+                    "fleet.fleet-optimization.index",
+                    "fleet.fleet-optimization.analyze",
                     "fleet.insurance-policies.index",
                     "fleet.insurance-policies.create",
                     "fleet.insurance-policies.store",
@@ -2178,6 +2208,8 @@
                     "fleet.incidents.edit",
                     "fleet.incidents.update",
                     "fleet.incidents.destroy",
+                    "fleet.incidents.run-damage-assessment",
+                    "fleet.incidents.run-incident-analysis",
                     "fleet.insurance-claims.index",
                     "fleet.insurance-claims.create",
                     "fleet.insurance-claims.store",
@@ -2185,6 +2217,9 @@
                     "fleet.insurance-claims.edit",
                     "fleet.insurance-claims.update",
                     "fleet.insurance-claims.destroy",
+                    "fleet.insurance-claims.run-damage-assessment",
+                    "fleet.insurance-claims.generate-fnol",
+                    "fleet.workflow-definitions.execute",
                     "fleet.workflow-definitions.index",
                     "fleet.workflow-definitions.create",
                     "fleet.workflow-definitions.store",
@@ -2257,6 +2292,7 @@
                     "fleet.reports.update",
                     "fleet.reports.destroy",
                     "fleet.reports.run",
+                    "fleet.report-executions.download",
                     "fleet.report-executions.index",
                     "fleet.report-executions.show",
                     "fleet.api-integrations.index",
@@ -2847,6 +2883,8 @@
                     "fleet.assistant.index",
                     "fleet.assistant.prompt",
                     "fleet.assistant.stream",
+                    "fleet.assistant.conversations.update",
+                    "fleet.assistant.conversations.destroy",
                     "fleet.locations.index",
                     "fleet.locations.create",
                     "fleet.locations.store",
@@ -2932,6 +2970,8 @@
                     "fleet.routes.edit",
                     "fleet.routes.update",
                     "fleet.routes.destroy",
+                    "fleet.routes.optimize",
+                    "fleet.routes.apply-optimized-order",
                     "fleet.routes.stops.store",
                     "fleet.routes.stops.update",
                     "fleet.routes.stops.destroy",
@@ -3022,6 +3062,7 @@
                     "fleet.defects.edit",
                     "fleet.defects.update",
                     "fleet.defects.destroy",
+                    "fleet.defects.run-damage-assessment",
                     "fleet.compliance-items.index",
                     "fleet.compliance-items.create",
                     "fleet.compliance-items.store",
@@ -3068,6 +3109,13 @@
                     "fleet.ai-analysis-results.show",
                     "fleet.ai-job-runs.index",
                     "fleet.ai-job-runs.show",
+                    "fleet.ai-job-runs.run-predictive-maintenance",
+                    "fleet.ai-job-runs.run-fraud-detection",
+                    "fleet.ai-job-runs.run-compliance-prediction",
+                    "fleet.electrification-plan.index",
+                    "fleet.electrification-plan.generate",
+                    "fleet.fleet-optimization.index",
+                    "fleet.fleet-optimization.analyze",
                     "fleet.insurance-policies.index",
                     "fleet.insurance-policies.create",
                     "fleet.insurance-policies.store",
@@ -3082,6 +3130,8 @@
                     "fleet.incidents.edit",
                     "fleet.incidents.update",
                     "fleet.incidents.destroy",
+                    "fleet.incidents.run-damage-assessment",
+                    "fleet.incidents.run-incident-analysis",
                     "fleet.insurance-claims.index",
                     "fleet.insurance-claims.create",
                     "fleet.insurance-claims.store",
@@ -3089,6 +3139,9 @@
                     "fleet.insurance-claims.edit",
                     "fleet.insurance-claims.update",
                     "fleet.insurance-claims.destroy",
+                    "fleet.insurance-claims.run-damage-assessment",
+                    "fleet.insurance-claims.generate-fnol",
+                    "fleet.workflow-definitions.execute",
                     "fleet.workflow-definitions.index",
                     "fleet.workflow-definitions.create",
                     "fleet.workflow-definitions.store",
@@ -3161,6 +3214,7 @@
                     "fleet.reports.update",
                     "fleet.reports.destroy",
                     "fleet.reports.run",
+                    "fleet.report-executions.download",
                     "fleet.report-executions.index",
                     "fleet.report-executions.show",
                     "fleet.api-integrations.index",
@@ -3689,6 +3743,8 @@
                     "fleet.assistant.index",
                     "fleet.assistant.prompt",
                     "fleet.assistant.stream",
+                    "fleet.assistant.conversations.update",
+                    "fleet.assistant.conversations.destroy",
                     "fleet.locations.index",
                     "fleet.locations.create",
                     "fleet.locations.store",
@@ -3774,6 +3830,8 @@
                     "fleet.routes.edit",
                     "fleet.routes.update",
                     "fleet.routes.destroy",
+                    "fleet.routes.optimize",
+                    "fleet.routes.apply-optimized-order",
                     "fleet.routes.stops.store",
                     "fleet.routes.stops.update",
                     "fleet.routes.stops.destroy",
@@ -3864,6 +3922,7 @@
                     "fleet.defects.edit",
                     "fleet.defects.update",
                     "fleet.defects.destroy",
+                    "fleet.defects.run-damage-assessment",
                     "fleet.compliance-items.index",
                     "fleet.compliance-items.create",
                     "fleet.compliance-items.store",
@@ -3910,6 +3969,13 @@
                     "fleet.ai-analysis-results.show",
                     "fleet.ai-job-runs.index",
                     "fleet.ai-job-runs.show",
+                    "fleet.ai-job-runs.run-predictive-maintenance",
+                    "fleet.ai-job-runs.run-fraud-detection",
+                    "fleet.ai-job-runs.run-compliance-prediction",
+                    "fleet.electrification-plan.index",
+                    "fleet.electrification-plan.generate",
+                    "fleet.fleet-optimization.index",
+                    "fleet.fleet-optimization.analyze",
                     "fleet.insurance-policies.index",
                     "fleet.insurance-policies.create",
                     "fleet.insurance-policies.store",
@@ -3924,6 +3990,8 @@
                     "fleet.incidents.edit",
                     "fleet.incidents.update",
                     "fleet.incidents.destroy",
+                    "fleet.incidents.run-damage-assessment",
+                    "fleet.incidents.run-incident-analysis",
                     "fleet.insurance-claims.index",
                     "fleet.insurance-claims.create",
                     "fleet.insurance-claims.store",
@@ -3931,6 +3999,9 @@
                     "fleet.insurance-claims.edit",
                     "fleet.insurance-claims.update",
                     "fleet.insurance-claims.destroy",
+                    "fleet.insurance-claims.run-damage-assessment",
+                    "fleet.insurance-claims.generate-fnol",
+                    "fleet.workflow-definitions.execute",
                     "fleet.workflow-definitions.index",
                     "fleet.workflow-definitions.create",
                     "fleet.workflow-definitions.store",
@@ -4003,6 +4074,7 @@
                     "fleet.reports.update",
                     "fleet.reports.destroy",
                     "fleet.reports.run",
+                    "fleet.report-executions.download",
                     "fleet.report-executions.index",
                     "fleet.report-executions.show",
                     "fleet.api-integrations.index",
@@ -4472,6 +4544,8 @@
                     "fleet.assistant.index",
                     "fleet.assistant.prompt",
                     "fleet.assistant.stream",
+                    "fleet.assistant.conversations.update",
+                    "fleet.assistant.conversations.destroy",
                     "fleet.locations.index",
                     "fleet.locations.create",
                     "fleet.locations.store",
@@ -4557,6 +4631,8 @@
                     "fleet.routes.edit",
                     "fleet.routes.update",
                     "fleet.routes.destroy",
+                    "fleet.routes.optimize",
+                    "fleet.routes.apply-optimized-order",
                     "fleet.routes.stops.store",
                     "fleet.routes.stops.update",
                     "fleet.routes.stops.destroy",
@@ -4647,6 +4723,7 @@
                     "fleet.defects.edit",
                     "fleet.defects.update",
                     "fleet.defects.destroy",
+                    "fleet.defects.run-damage-assessment",
                     "fleet.compliance-items.index",
                     "fleet.compliance-items.create",
                     "fleet.compliance-items.store",
@@ -4693,6 +4770,13 @@
                     "fleet.ai-analysis-results.show",
                     "fleet.ai-job-runs.index",
                     "fleet.ai-job-runs.show",
+                    "fleet.ai-job-runs.run-predictive-maintenance",
+                    "fleet.ai-job-runs.run-fraud-detection",
+                    "fleet.ai-job-runs.run-compliance-prediction",
+                    "fleet.electrification-plan.index",
+                    "fleet.electrification-plan.generate",
+                    "fleet.fleet-optimization.index",
+                    "fleet.fleet-optimization.analyze",
                     "fleet.insurance-policies.index",
                     "fleet.insurance-policies.create",
                     "fleet.insurance-policies.store",
@@ -4707,6 +4791,8 @@
                     "fleet.incidents.edit",
                     "fleet.incidents.update",
                     "fleet.incidents.destroy",
+                    "fleet.incidents.run-damage-assessment",
+                    "fleet.incidents.run-incident-analysis",
                     "fleet.insurance-claims.index",
                     "fleet.insurance-claims.create",
                     "fleet.insurance-claims.store",
@@ -4714,6 +4800,9 @@
                     "fleet.insurance-claims.edit",
                     "fleet.insurance-claims.update",
                     "fleet.insurance-claims.destroy",
+                    "fleet.insurance-claims.run-damage-assessment",
+                    "fleet.insurance-claims.generate-fnol",
+                    "fleet.workflow-definitions.execute",
                     "fleet.workflow-definitions.index",
                     "fleet.workflow-definitions.create",
                     "fleet.workflow-definitions.store",
@@ -4786,6 +4875,7 @@
                     "fleet.reports.update",
                     "fleet.reports.destroy",
                     "fleet.reports.run",
+                    "fleet.report-executions.download",
                     "fleet.report-executions.index",
                     "fleet.report-executions.show",
                     "fleet.api-integrations.index",
@@ -5241,6 +5331,8 @@
                     "fleet.assistant.index",
                     "fleet.assistant.prompt",
                     "fleet.assistant.stream",
+                    "fleet.assistant.conversations.update",
+                    "fleet.assistant.conversations.destroy",
                     "fleet.locations.index",
                     "fleet.locations.create",
                     "fleet.locations.store",
@@ -5326,6 +5418,8 @@
                     "fleet.routes.edit",
                     "fleet.routes.update",
                     "fleet.routes.destroy",
+                    "fleet.routes.optimize",
+                    "fleet.routes.apply-optimized-order",
                     "fleet.routes.stops.store",
                     "fleet.routes.stops.update",
                     "fleet.routes.stops.destroy",
@@ -5416,6 +5510,7 @@
                     "fleet.defects.edit",
                     "fleet.defects.update",
                     "fleet.defects.destroy",
+                    "fleet.defects.run-damage-assessment",
                     "fleet.compliance-items.index",
                     "fleet.compliance-items.create",
                     "fleet.compliance-items.store",
@@ -5462,6 +5557,13 @@
                     "fleet.ai-analysis-results.show",
                     "fleet.ai-job-runs.index",
                     "fleet.ai-job-runs.show",
+                    "fleet.ai-job-runs.run-predictive-maintenance",
+                    "fleet.ai-job-runs.run-fraud-detection",
+                    "fleet.ai-job-runs.run-compliance-prediction",
+                    "fleet.electrification-plan.index",
+                    "fleet.electrification-plan.generate",
+                    "fleet.fleet-optimization.index",
+                    "fleet.fleet-optimization.analyze",
                     "fleet.insurance-policies.index",
                     "fleet.insurance-policies.create",
                     "fleet.insurance-policies.store",
@@ -5476,6 +5578,8 @@
                     "fleet.incidents.edit",
                     "fleet.incidents.update",
                     "fleet.incidents.destroy",
+                    "fleet.incidents.run-damage-assessment",
+                    "fleet.incidents.run-incident-analysis",
                     "fleet.insurance-claims.index",
                     "fleet.insurance-claims.create",
                     "fleet.insurance-claims.store",
@@ -5483,6 +5587,9 @@
                     "fleet.insurance-claims.edit",
                     "fleet.insurance-claims.update",
                     "fleet.insurance-claims.destroy",
+                    "fleet.insurance-claims.run-damage-assessment",
+                    "fleet.insurance-claims.generate-fnol",
+                    "fleet.workflow-definitions.execute",
                     "fleet.workflow-definitions.index",
                     "fleet.workflow-definitions.create",
                     "fleet.workflow-definitions.store",
@@ -5555,6 +5662,7 @@
                     "fleet.reports.update",
                     "fleet.reports.destroy",
                     "fleet.reports.run",
+                    "fleet.report-executions.download",
                     "fleet.report-executions.index",
                     "fleet.report-executions.show",
                     "fleet.api-integrations.index",
@@ -6183,6 +6291,8 @@
                     "fleet.assistant.index",
                     "fleet.assistant.prompt",
                     "fleet.assistant.stream",
+                    "fleet.assistant.conversations.update",
+                    "fleet.assistant.conversations.destroy",
                     "fleet.locations.index",
                     "fleet.locations.create",
                     "fleet.locations.store",
@@ -6268,6 +6378,8 @@
                     "fleet.routes.edit",
                     "fleet.routes.update",
                     "fleet.routes.destroy",
+                    "fleet.routes.optimize",
+                    "fleet.routes.apply-optimized-order",
                     "fleet.routes.stops.store",
                     "fleet.routes.stops.update",
                     "fleet.routes.stops.destroy",
@@ -6358,6 +6470,7 @@
                     "fleet.defects.edit",
                     "fleet.defects.update",
                     "fleet.defects.destroy",
+                    "fleet.defects.run-damage-assessment",
                     "fleet.compliance-items.index",
                     "fleet.compliance-items.create",
                     "fleet.compliance-items.store",
@@ -6404,6 +6517,13 @@
                     "fleet.ai-analysis-results.show",
                     "fleet.ai-job-runs.index",
                     "fleet.ai-job-runs.show",
+                    "fleet.ai-job-runs.run-predictive-maintenance",
+                    "fleet.ai-job-runs.run-fraud-detection",
+                    "fleet.ai-job-runs.run-compliance-prediction",
+                    "fleet.electrification-plan.index",
+                    "fleet.electrification-plan.generate",
+                    "fleet.fleet-optimization.index",
+                    "fleet.fleet-optimization.analyze",
                     "fleet.insurance-policies.index",
                     "fleet.insurance-policies.create",
                     "fleet.insurance-policies.store",
@@ -6418,6 +6538,8 @@
                     "fleet.incidents.edit",
                     "fleet.incidents.update",
                     "fleet.incidents.destroy",
+                    "fleet.incidents.run-damage-assessment",
+                    "fleet.incidents.run-incident-analysis",
                     "fleet.insurance-claims.index",
                     "fleet.insurance-claims.create",
                     "fleet.insurance-claims.store",
@@ -6425,6 +6547,9 @@
                     "fleet.insurance-claims.edit",
                     "fleet.insurance-claims.update",
                     "fleet.insurance-claims.destroy",
+                    "fleet.insurance-claims.run-damage-assessment",
+                    "fleet.insurance-claims.generate-fnol",
+                    "fleet.workflow-definitions.execute",
                     "fleet.workflow-definitions.index",
                     "fleet.workflow-definitions.create",
                     "fleet.workflow-definitions.store",
@@ -6497,6 +6622,7 @@
                     "fleet.reports.update",
                     "fleet.reports.destroy",
                     "fleet.reports.run",
+                    "fleet.report-executions.download",
                     "fleet.report-executions.index",
                     "fleet.report-executions.show",
                     "fleet.api-integrations.index",
@@ -6848,9 +6974,9 @@
             }
         },
         "Fleet/AiAnalysisResults/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/AiAnalysisResults/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -6860,9 +6986,9 @@
             }
         },
         "Fleet/AiAnalysisResults/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/AiAnalysisResults/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -6872,33 +6998,39 @@
             }
         },
         "Fleet/AiJobRuns/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/AiJobRuns/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
                     "fleet.ai-job-runs.index",
-                    "fleet.ai-job-runs.show"
+                    "fleet.ai-job-runs.show",
+                    "fleet.ai-job-runs.run-predictive-maintenance",
+                    "fleet.ai-job-runs.run-fraud-detection",
+                    "fleet.ai-job-runs.run-compliance-prediction"
                 ]
             }
         },
         "Fleet/AiJobRuns/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/AiJobRuns/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
                     "fleet.ai-job-runs.index",
-                    "fleet.ai-job-runs.show"
+                    "fleet.ai-job-runs.show",
+                    "fleet.ai-job-runs.run-predictive-maintenance",
+                    "fleet.ai-job-runs.run-fraud-detection",
+                    "fleet.ai-job-runs.run-compliance-prediction"
                 ]
             }
         },
         "Fleet/AlertPreferences/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/AlertPreferences/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -6909,9 +7041,9 @@
             }
         },
         "Fleet/AlertPreferences/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/AlertPreferences/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -6922,9 +7054,9 @@
             }
         },
         "Fleet/Alerts/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Alerts/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -6935,9 +7067,9 @@
             }
         },
         "Fleet/Alerts/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Alerts/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -6948,9 +7080,9 @@
             }
         },
         "Fleet/ApiIntegrations/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/ApiIntegrations/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -6965,9 +7097,9 @@
             }
         },
         "Fleet/ApiIntegrations/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/ApiIntegrations/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -6982,9 +7114,9 @@
             }
         },
         "Fleet/ApiIntegrations/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/ApiIntegrations/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -6999,9 +7131,9 @@
             }
         },
         "Fleet/ApiIntegrations/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/ApiIntegrations/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7016,9 +7148,9 @@
             }
         },
         "Fleet/ApiLogs/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/ApiLogs/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7028,9 +7160,9 @@
             }
         },
         "Fleet/ApiLogs/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/ApiLogs/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7040,22 +7172,24 @@
             }
         },
         "Fleet/Assistant/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Assistant/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
                     "fleet.assistant.index",
                     "fleet.assistant.prompt",
-                    "fleet.assistant.stream"
+                    "fleet.assistant.stream",
+                    "fleet.assistant.conversations.update",
+                    "fleet.assistant.conversations.destroy"
                 ]
             }
         },
         "Fleet/AxleLoadReadings/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/AxleLoadReadings/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7065,9 +7199,9 @@
             }
         },
         "Fleet/AxleLoadReadings/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/AxleLoadReadings/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7077,9 +7211,9 @@
             }
         },
         "Fleet/BehaviorEvents/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/BehaviorEvents/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7089,9 +7223,9 @@
             }
         },
         "Fleet/BehaviorEvents/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/BehaviorEvents/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7101,9 +7235,9 @@
             }
         },
         "Fleet/CarbonTargets/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/CarbonTargets/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7118,9 +7252,9 @@
             }
         },
         "Fleet/CarbonTargets/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/CarbonTargets/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7135,9 +7269,9 @@
             }
         },
         "Fleet/CarbonTargets/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/CarbonTargets/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7152,9 +7286,9 @@
             }
         },
         "Fleet/CarbonTargets/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/CarbonTargets/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7169,9 +7303,9 @@
             }
         },
         "Fleet/ComplianceItems/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/ComplianceItems/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7186,9 +7320,9 @@
             }
         },
         "Fleet/ComplianceItems/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/ComplianceItems/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7203,9 +7337,9 @@
             }
         },
         "Fleet/ComplianceItems/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/ComplianceItems/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7220,9 +7354,9 @@
             }
         },
         "Fleet/ComplianceItems/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/ComplianceItems/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7237,9 +7371,9 @@
             }
         },
         "Fleet/ContractorCompliance/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/ContractorCompliance/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7254,9 +7388,9 @@
             }
         },
         "Fleet/ContractorCompliance/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/ContractorCompliance/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7271,9 +7405,9 @@
             }
         },
         "Fleet/ContractorCompliance/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/ContractorCompliance/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7288,9 +7422,9 @@
             }
         },
         "Fleet/ContractorCompliance/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/ContractorCompliance/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7305,9 +7439,9 @@
             }
         },
         "Fleet/ContractorInvoices/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/ContractorInvoices/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7322,9 +7456,9 @@
             }
         },
         "Fleet/ContractorInvoices/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/ContractorInvoices/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7339,9 +7473,9 @@
             }
         },
         "Fleet/ContractorInvoices/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/ContractorInvoices/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7356,9 +7490,9 @@
             }
         },
         "Fleet/ContractorInvoices/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/ContractorInvoices/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7373,9 +7507,9 @@
             }
         },
         "Fleet/Contractors/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Contractors/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7390,9 +7524,9 @@
             }
         },
         "Fleet/Contractors/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Contractors/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7407,9 +7541,9 @@
             }
         },
         "Fleet/Contractors/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Contractors/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7424,9 +7558,9 @@
             }
         },
         "Fleet/Contractors/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Contractors/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7441,9 +7575,9 @@
             }
         },
         "Fleet/CostAllocations/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/CostAllocations/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7458,9 +7592,9 @@
             }
         },
         "Fleet/CostAllocations/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/CostAllocations/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7475,9 +7609,9 @@
             }
         },
         "Fleet/CostAllocations/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/CostAllocations/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7492,9 +7626,9 @@
             }
         },
         "Fleet/CostAllocations/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/CostAllocations/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7509,9 +7643,9 @@
             }
         },
         "Fleet/CostCenters/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/CostCenters/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7526,9 +7660,9 @@
             }
         },
         "Fleet/CostCenters/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/CostCenters/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7543,9 +7677,9 @@
             }
         },
         "Fleet/CostCenters/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/CostCenters/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7560,9 +7694,9 @@
             }
         },
         "Fleet/CostCenters/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/CostCenters/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7577,9 +7711,9 @@
             }
         },
         "Fleet/Dashboard": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Dashboard.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7588,9 +7722,9 @@
             }
         },
         "Fleet/DashcamClips/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/DashcamClips/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7605,9 +7739,9 @@
             }
         },
         "Fleet/DashcamClips/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/DashcamClips/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7622,9 +7756,9 @@
             }
         },
         "Fleet/DashcamClips/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/DashcamClips/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7639,9 +7773,9 @@
             }
         },
         "Fleet/DashcamClips/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/DashcamClips/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7656,9 +7790,9 @@
             }
         },
         "Fleet/DataMigrationRuns/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/DataMigrationRuns/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7668,9 +7802,9 @@
             }
         },
         "Fleet/DataMigrationRuns/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/DataMigrationRuns/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7680,9 +7814,9 @@
             }
         },
         "Fleet/Defects/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Defects/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7692,14 +7826,15 @@
                     "fleet.defects.show",
                     "fleet.defects.edit",
                     "fleet.defects.update",
-                    "fleet.defects.destroy"
+                    "fleet.defects.destroy",
+                    "fleet.defects.run-damage-assessment"
                 ]
             }
         },
         "Fleet/Defects/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Defects/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7709,14 +7844,15 @@
                     "fleet.defects.show",
                     "fleet.defects.edit",
                     "fleet.defects.update",
-                    "fleet.defects.destroy"
+                    "fleet.defects.destroy",
+                    "fleet.defects.run-damage-assessment"
                 ]
             }
         },
         "Fleet/Defects/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Defects/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7726,14 +7862,15 @@
                     "fleet.defects.show",
                     "fleet.defects.edit",
                     "fleet.defects.update",
-                    "fleet.defects.destroy"
+                    "fleet.defects.destroy",
+                    "fleet.defects.run-damage-assessment"
                 ]
             }
         },
         "Fleet/Defects/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Defects/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7743,14 +7880,15 @@
                     "fleet.defects.show",
                     "fleet.defects.edit",
                     "fleet.defects.update",
-                    "fleet.defects.destroy"
+                    "fleet.defects.destroy",
+                    "fleet.defects.run-damage-assessment"
                 ]
             }
         },
         "Fleet/DriverCoachingPlans/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/DriverCoachingPlans/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7765,9 +7903,9 @@
             }
         },
         "Fleet/DriverCoachingPlans/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/DriverCoachingPlans/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7782,9 +7920,9 @@
             }
         },
         "Fleet/DriverCoachingPlans/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/DriverCoachingPlans/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7799,9 +7937,9 @@
             }
         },
         "Fleet/DriverCoachingPlans/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/DriverCoachingPlans/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7816,9 +7954,9 @@
             }
         },
         "Fleet/DriverQualifications/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/DriverQualifications/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7833,9 +7971,9 @@
             }
         },
         "Fleet/DriverQualifications/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/DriverQualifications/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7850,9 +7988,9 @@
             }
         },
         "Fleet/DriverQualifications/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/DriverQualifications/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7867,9 +8005,9 @@
             }
         },
         "Fleet/DriverQualifications/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/DriverQualifications/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7884,9 +8022,9 @@
             }
         },
         "Fleet/DriverVehicleAssignments/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/DriverVehicleAssignments/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7898,9 +8036,9 @@
             }
         },
         "Fleet/DriverWellnessRecords/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/DriverWellnessRecords/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7915,9 +8053,9 @@
             }
         },
         "Fleet/DriverWellnessRecords/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/DriverWellnessRecords/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7932,9 +8070,9 @@
             }
         },
         "Fleet/DriverWellnessRecords/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/DriverWellnessRecords/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7949,9 +8087,9 @@
             }
         },
         "Fleet/DriverWellnessRecords/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/DriverWellnessRecords/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7966,9 +8104,9 @@
             }
         },
         "Fleet/DriverWorkingTime/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/DriverWorkingTime/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -7983,9 +8121,9 @@
             }
         },
         "Fleet/DriverWorkingTime/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/DriverWorkingTime/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8000,9 +8138,9 @@
             }
         },
         "Fleet/DriverWorkingTime/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/DriverWorkingTime/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8017,9 +8155,9 @@
             }
         },
         "Fleet/DriverWorkingTime/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/DriverWorkingTime/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8034,9 +8172,9 @@
             }
         },
         "Fleet/Drivers/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Drivers/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8053,9 +8191,9 @@
             }
         },
         "Fleet/Drivers/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Drivers/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8072,9 +8210,9 @@
             }
         },
         "Fleet/Drivers/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Drivers/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8091,9 +8229,9 @@
             }
         },
         "Fleet/Drivers/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Drivers/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8110,9 +8248,9 @@
             }
         },
         "Fleet/ElockEvents/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/ElockEvents/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8122,9 +8260,9 @@
             }
         },
         "Fleet/ElockEvents/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/ElockEvents/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8134,9 +8272,9 @@
             }
         },
         "Fleet/EmissionsRecords/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/EmissionsRecords/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8151,9 +8289,9 @@
             }
         },
         "Fleet/EmissionsRecords/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/EmissionsRecords/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8168,9 +8306,9 @@
             }
         },
         "Fleet/EmissionsRecords/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/EmissionsRecords/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8185,9 +8323,9 @@
             }
         },
         "Fleet/EmissionsRecords/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/EmissionsRecords/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8202,9 +8340,9 @@
             }
         },
         "Fleet/EvBatteryData/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/EvBatteryData/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8219,9 +8357,9 @@
             }
         },
         "Fleet/EvBatteryData/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/EvBatteryData/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8236,9 +8374,9 @@
             }
         },
         "Fleet/EvBatteryData/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/EvBatteryData/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8253,9 +8391,9 @@
             }
         },
         "Fleet/EvBatteryData/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/EvBatteryData/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8270,9 +8408,9 @@
             }
         },
         "Fleet/EvChargingSessions/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/EvChargingSessions/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8287,9 +8425,9 @@
             }
         },
         "Fleet/EvChargingSessions/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/EvChargingSessions/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8304,9 +8442,9 @@
             }
         },
         "Fleet/EvChargingSessions/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/EvChargingSessions/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8321,9 +8459,9 @@
             }
         },
         "Fleet/EvChargingSessions/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/EvChargingSessions/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8338,9 +8476,9 @@
             }
         },
         "Fleet/EvChargingStations/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/EvChargingStations/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8355,9 +8493,9 @@
             }
         },
         "Fleet/EvChargingStations/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/EvChargingStations/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8372,9 +8510,9 @@
             }
         },
         "Fleet/EvChargingStations/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/EvChargingStations/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8389,9 +8527,9 @@
             }
         },
         "Fleet/EvChargingStations/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/EvChargingStations/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8406,9 +8544,9 @@
             }
         },
         "Fleet/Fines/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Fines/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8423,9 +8561,9 @@
             }
         },
         "Fleet/Fines/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Fines/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8440,9 +8578,9 @@
             }
         },
         "Fleet/Fines/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Fines/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8457,9 +8595,9 @@
             }
         },
         "Fleet/Fines/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Fines/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8474,9 +8612,9 @@
             }
         },
         "Fleet/FuelCards/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/FuelCards/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8491,9 +8629,9 @@
             }
         },
         "Fleet/FuelCards/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/FuelCards/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8508,9 +8646,9 @@
             }
         },
         "Fleet/FuelCards/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/FuelCards/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8525,9 +8663,9 @@
             }
         },
         "Fleet/FuelCards/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/FuelCards/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8542,9 +8680,9 @@
             }
         },
         "Fleet/FuelStations/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/FuelStations/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8559,9 +8697,9 @@
             }
         },
         "Fleet/FuelStations/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/FuelStations/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8576,9 +8714,9 @@
             }
         },
         "Fleet/FuelStations/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/FuelStations/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8593,9 +8731,9 @@
             }
         },
         "Fleet/FuelStations/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/FuelStations/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8610,9 +8748,9 @@
             }
         },
         "Fleet/FuelTransactions/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/FuelTransactions/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8627,9 +8765,9 @@
             }
         },
         "Fleet/FuelTransactions/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/FuelTransactions/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8644,9 +8782,9 @@
             }
         },
         "Fleet/FuelTransactions/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/FuelTransactions/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8661,9 +8799,9 @@
             }
         },
         "Fleet/FuelTransactions/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/FuelTransactions/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8678,9 +8816,9 @@
             }
         },
         "Fleet/Garages/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Garages/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8695,9 +8833,9 @@
             }
         },
         "Fleet/Garages/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Garages/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8712,9 +8850,9 @@
             }
         },
         "Fleet/Garages/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Garages/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8729,9 +8867,9 @@
             }
         },
         "Fleet/Garages/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Garages/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8746,9 +8884,9 @@
             }
         },
         "Fleet/GeofenceEvents/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/GeofenceEvents/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8757,9 +8895,9 @@
             }
         },
         "Fleet/Geofences/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Geofences/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8774,9 +8912,9 @@
             }
         },
         "Fleet/Geofences/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Geofences/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8791,9 +8929,9 @@
             }
         },
         "Fleet/Geofences/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Geofences/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8808,9 +8946,9 @@
             }
         },
         "Fleet/Geofences/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Geofences/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8825,9 +8963,9 @@
             }
         },
         "Fleet/GreyFleetVehicles/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/GreyFleetVehicles/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8842,9 +8980,9 @@
             }
         },
         "Fleet/GreyFleetVehicles/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/GreyFleetVehicles/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8859,9 +8997,9 @@
             }
         },
         "Fleet/GreyFleetVehicles/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/GreyFleetVehicles/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8876,9 +9014,9 @@
             }
         },
         "Fleet/GreyFleetVehicles/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/GreyFleetVehicles/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8893,9 +9031,9 @@
             }
         },
         "Fleet/Incidents/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Incidents/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8905,14 +9043,16 @@
                     "fleet.incidents.show",
                     "fleet.incidents.edit",
                     "fleet.incidents.update",
-                    "fleet.incidents.destroy"
+                    "fleet.incidents.destroy",
+                    "fleet.incidents.run-damage-assessment",
+                    "fleet.incidents.run-incident-analysis"
                 ]
             }
         },
         "Fleet/Incidents/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Incidents/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8922,14 +9062,16 @@
                     "fleet.incidents.show",
                     "fleet.incidents.edit",
                     "fleet.incidents.update",
-                    "fleet.incidents.destroy"
+                    "fleet.incidents.destroy",
+                    "fleet.incidents.run-damage-assessment",
+                    "fleet.incidents.run-incident-analysis"
                 ]
             }
         },
         "Fleet/Incidents/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Incidents/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8939,14 +9081,16 @@
                     "fleet.incidents.show",
                     "fleet.incidents.edit",
                     "fleet.incidents.update",
-                    "fleet.incidents.destroy"
+                    "fleet.incidents.destroy",
+                    "fleet.incidents.run-damage-assessment",
+                    "fleet.incidents.run-incident-analysis"
                 ]
             }
         },
         "Fleet/Incidents/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Incidents/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8956,14 +9100,16 @@
                     "fleet.incidents.show",
                     "fleet.incidents.edit",
                     "fleet.incidents.update",
-                    "fleet.incidents.destroy"
+                    "fleet.incidents.destroy",
+                    "fleet.incidents.run-damage-assessment",
+                    "fleet.incidents.run-incident-analysis"
                 ]
             }
         },
         "Fleet/InsuranceClaims/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/InsuranceClaims/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8973,14 +9119,16 @@
                     "fleet.insurance-claims.show",
                     "fleet.insurance-claims.edit",
                     "fleet.insurance-claims.update",
-                    "fleet.insurance-claims.destroy"
+                    "fleet.insurance-claims.destroy",
+                    "fleet.insurance-claims.run-damage-assessment",
+                    "fleet.insurance-claims.generate-fnol"
                 ]
             }
         },
         "Fleet/InsuranceClaims/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/InsuranceClaims/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -8990,14 +9138,16 @@
                     "fleet.insurance-claims.show",
                     "fleet.insurance-claims.edit",
                     "fleet.insurance-claims.update",
-                    "fleet.insurance-claims.destroy"
+                    "fleet.insurance-claims.destroy",
+                    "fleet.insurance-claims.run-damage-assessment",
+                    "fleet.insurance-claims.generate-fnol"
                 ]
             }
         },
         "Fleet/InsuranceClaims/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/InsuranceClaims/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9007,14 +9157,16 @@
                     "fleet.insurance-claims.show",
                     "fleet.insurance-claims.edit",
                     "fleet.insurance-claims.update",
-                    "fleet.insurance-claims.destroy"
+                    "fleet.insurance-claims.destroy",
+                    "fleet.insurance-claims.run-damage-assessment",
+                    "fleet.insurance-claims.generate-fnol"
                 ]
             }
         },
         "Fleet/InsuranceClaims/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/InsuranceClaims/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9024,14 +9176,16 @@
                     "fleet.insurance-claims.show",
                     "fleet.insurance-claims.edit",
                     "fleet.insurance-claims.update",
-                    "fleet.insurance-claims.destroy"
+                    "fleet.insurance-claims.destroy",
+                    "fleet.insurance-claims.run-damage-assessment",
+                    "fleet.insurance-claims.generate-fnol"
                 ]
             }
         },
         "Fleet/InsurancePolicies/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/InsurancePolicies/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9046,9 +9200,9 @@
             }
         },
         "Fleet/InsurancePolicies/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/InsurancePolicies/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9063,9 +9217,9 @@
             }
         },
         "Fleet/InsurancePolicies/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/InsurancePolicies/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9080,9 +9234,9 @@
             }
         },
         "Fleet/InsurancePolicies/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/InsurancePolicies/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9097,9 +9251,9 @@
             }
         },
         "Fleet/Locations/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Locations/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9114,9 +9268,9 @@
             }
         },
         "Fleet/Locations/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Locations/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9131,9 +9285,9 @@
             }
         },
         "Fleet/Locations/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Locations/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9148,9 +9302,9 @@
             }
         },
         "Fleet/Locations/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Locations/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9165,9 +9319,9 @@
             }
         },
         "Fleet/MileageClaims/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/MileageClaims/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9182,9 +9336,9 @@
             }
         },
         "Fleet/MileageClaims/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/MileageClaims/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9199,9 +9353,9 @@
             }
         },
         "Fleet/MileageClaims/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/MileageClaims/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9216,9 +9370,9 @@
             }
         },
         "Fleet/MileageClaims/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/MileageClaims/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9233,9 +9387,9 @@
             }
         },
         "Fleet/OperatorLicences/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/OperatorLicences/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9250,9 +9404,9 @@
             }
         },
         "Fleet/OperatorLicences/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/OperatorLicences/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9267,9 +9421,9 @@
             }
         },
         "Fleet/OperatorLicences/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/OperatorLicences/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9284,9 +9438,9 @@
             }
         },
         "Fleet/OperatorLicences/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/OperatorLicences/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9301,9 +9455,9 @@
             }
         },
         "Fleet/ParkingAllocations/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/ParkingAllocations/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9318,9 +9472,9 @@
             }
         },
         "Fleet/ParkingAllocations/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/ParkingAllocations/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9335,9 +9489,9 @@
             }
         },
         "Fleet/ParkingAllocations/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/ParkingAllocations/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9352,9 +9506,9 @@
             }
         },
         "Fleet/ParkingAllocations/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/ParkingAllocations/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9369,9 +9523,9 @@
             }
         },
         "Fleet/PartsInventory/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/PartsInventory/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9386,9 +9540,9 @@
             }
         },
         "Fleet/PartsInventory/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/PartsInventory/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9403,9 +9557,9 @@
             }
         },
         "Fleet/PartsInventory/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/PartsInventory/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9420,9 +9574,9 @@
             }
         },
         "Fleet/PartsInventory/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/PartsInventory/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9437,9 +9591,9 @@
             }
         },
         "Fleet/PartsSuppliers/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/PartsSuppliers/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9454,9 +9608,9 @@
             }
         },
         "Fleet/PartsSuppliers/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/PartsSuppliers/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9471,9 +9625,9 @@
             }
         },
         "Fleet/PartsSuppliers/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/PartsSuppliers/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9488,9 +9642,9 @@
             }
         },
         "Fleet/PartsSuppliers/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/PartsSuppliers/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9505,9 +9659,9 @@
             }
         },
         "Fleet/PermitToWork/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/PermitToWork/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9522,9 +9676,9 @@
             }
         },
         "Fleet/PermitToWork/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/PermitToWork/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9539,9 +9693,9 @@
             }
         },
         "Fleet/PermitToWork/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/PermitToWork/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9556,9 +9710,9 @@
             }
         },
         "Fleet/PermitToWork/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/PermitToWork/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9573,9 +9727,9 @@
             }
         },
         "Fleet/PoolVehicleBookings/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/PoolVehicleBookings/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9590,9 +9744,9 @@
             }
         },
         "Fleet/PoolVehicleBookings/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/PoolVehicleBookings/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9607,9 +9761,9 @@
             }
         },
         "Fleet/PoolVehicleBookings/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/PoolVehicleBookings/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9624,9 +9778,9 @@
             }
         },
         "Fleet/PoolVehicleBookings/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/PoolVehicleBookings/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9641,9 +9795,9 @@
             }
         },
         "Fleet/PpeAssignments/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/PpeAssignments/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9658,9 +9812,9 @@
             }
         },
         "Fleet/PpeAssignments/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/PpeAssignments/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9675,9 +9829,9 @@
             }
         },
         "Fleet/PpeAssignments/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/PpeAssignments/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9692,9 +9846,9 @@
             }
         },
         "Fleet/PpeAssignments/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/PpeAssignments/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9709,35 +9863,37 @@
             }
         },
         "Fleet/ReportExecutions/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/ReportExecutions/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
                     "fleet.reports.run",
+                    "fleet.report-executions.download",
                     "fleet.report-executions.index",
                     "fleet.report-executions.show"
                 ]
             }
         },
         "Fleet/ReportExecutions/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/ReportExecutions/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
                     "fleet.reports.run",
+                    "fleet.report-executions.download",
                     "fleet.report-executions.index",
                     "fleet.report-executions.show"
                 ]
             }
         },
         "Fleet/Reports/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Reports/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9752,9 +9908,9 @@
             }
         },
         "Fleet/Reports/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Reports/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9769,9 +9925,9 @@
             }
         },
         "Fleet/Reports/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Reports/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9786,9 +9942,9 @@
             }
         },
         "Fleet/Reports/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Reports/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9803,9 +9959,9 @@
             }
         },
         "Fleet/RiskAssessments/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/RiskAssessments/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9820,9 +9976,9 @@
             }
         },
         "Fleet/RiskAssessments/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/RiskAssessments/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9837,9 +9993,9 @@
             }
         },
         "Fleet/RiskAssessments/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/RiskAssessments/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9854,9 +10010,9 @@
             }
         },
         "Fleet/RiskAssessments/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/RiskAssessments/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9871,9 +10027,9 @@
             }
         },
         "Fleet/Routes/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Routes/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9883,14 +10039,16 @@
                     "fleet.routes.show",
                     "fleet.routes.edit",
                     "fleet.routes.update",
-                    "fleet.routes.destroy"
+                    "fleet.routes.destroy",
+                    "fleet.routes.optimize",
+                    "fleet.routes.apply-optimized-order"
                 ]
             }
         },
         "Fleet/Routes/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Routes/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9900,14 +10058,16 @@
                     "fleet.routes.show",
                     "fleet.routes.edit",
                     "fleet.routes.update",
-                    "fleet.routes.destroy"
+                    "fleet.routes.destroy",
+                    "fleet.routes.optimize",
+                    "fleet.routes.apply-optimized-order"
                 ]
             }
         },
         "Fleet/Routes/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Routes/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9917,14 +10077,16 @@
                     "fleet.routes.show",
                     "fleet.routes.edit",
                     "fleet.routes.update",
-                    "fleet.routes.destroy"
+                    "fleet.routes.destroy",
+                    "fleet.routes.optimize",
+                    "fleet.routes.apply-optimized-order"
                 ]
             }
         },
         "Fleet/Routes/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Routes/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9934,14 +10096,16 @@
                     "fleet.routes.show",
                     "fleet.routes.edit",
                     "fleet.routes.update",
-                    "fleet.routes.destroy"
+                    "fleet.routes.destroy",
+                    "fleet.routes.optimize",
+                    "fleet.routes.apply-optimized-order"
                 ]
             }
         },
         "Fleet/SafetyObservations/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/SafetyObservations/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9956,9 +10120,9 @@
             }
         },
         "Fleet/SafetyObservations/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/SafetyObservations/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9973,9 +10137,9 @@
             }
         },
         "Fleet/SafetyObservations/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/SafetyObservations/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -9990,9 +10154,9 @@
             }
         },
         "Fleet/SafetyObservations/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/SafetyObservations/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10007,9 +10171,9 @@
             }
         },
         "Fleet/SafetyPolicyAcknowledgments/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/SafetyPolicyAcknowledgments/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10020,9 +10184,9 @@
             }
         },
         "Fleet/SafetyPolicyAcknowledgments/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/SafetyPolicyAcknowledgments/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10033,9 +10197,9 @@
             }
         },
         "Fleet/ServiceSchedules/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/ServiceSchedules/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10050,9 +10214,9 @@
             }
         },
         "Fleet/ServiceSchedules/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/ServiceSchedules/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10067,9 +10231,9 @@
             }
         },
         "Fleet/ServiceSchedules/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/ServiceSchedules/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10084,9 +10248,9 @@
             }
         },
         "Fleet/ServiceSchedules/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/ServiceSchedules/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10101,9 +10265,9 @@
             }
         },
         "Fleet/SustainabilityGoals/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/SustainabilityGoals/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10118,9 +10282,9 @@
             }
         },
         "Fleet/SustainabilityGoals/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/SustainabilityGoals/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10135,9 +10299,9 @@
             }
         },
         "Fleet/SustainabilityGoals/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/SustainabilityGoals/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10152,9 +10316,9 @@
             }
         },
         "Fleet/SustainabilityGoals/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/SustainabilityGoals/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10169,9 +10333,9 @@
             }
         },
         "Fleet/TachographCalibrations/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/TachographCalibrations/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10186,9 +10350,9 @@
             }
         },
         "Fleet/TachographCalibrations/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/TachographCalibrations/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10203,9 +10367,9 @@
             }
         },
         "Fleet/TachographCalibrations/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/TachographCalibrations/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10220,9 +10384,9 @@
             }
         },
         "Fleet/TachographCalibrations/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/TachographCalibrations/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10237,9 +10401,9 @@
             }
         },
         "Fleet/TachographDownloads/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/TachographDownloads/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10254,9 +10418,9 @@
             }
         },
         "Fleet/TachographDownloads/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/TachographDownloads/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10271,9 +10435,9 @@
             }
         },
         "Fleet/TachographDownloads/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/TachographDownloads/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10288,9 +10452,9 @@
             }
         },
         "Fleet/TachographDownloads/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/TachographDownloads/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10305,9 +10469,9 @@
             }
         },
         "Fleet/TelematicsDevices/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/TelematicsDevices/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10322,9 +10486,9 @@
             }
         },
         "Fleet/TelematicsDevices/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/TelematicsDevices/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10339,9 +10503,9 @@
             }
         },
         "Fleet/TelematicsDevices/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/TelematicsDevices/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10356,9 +10520,9 @@
             }
         },
         "Fleet/TelematicsDevices/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/TelematicsDevices/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10373,9 +10537,9 @@
             }
         },
         "Fleet/ToolboxTalks/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/ToolboxTalks/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10390,9 +10554,9 @@
             }
         },
         "Fleet/ToolboxTalks/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/ToolboxTalks/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10407,9 +10571,9 @@
             }
         },
         "Fleet/ToolboxTalks/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/ToolboxTalks/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10424,9 +10588,9 @@
             }
         },
         "Fleet/ToolboxTalks/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/ToolboxTalks/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10441,9 +10605,9 @@
             }
         },
         "Fleet/Trailers/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Trailers/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10458,9 +10622,9 @@
             }
         },
         "Fleet/Trailers/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Trailers/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10475,9 +10639,9 @@
             }
         },
         "Fleet/Trailers/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Trailers/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10492,9 +10656,9 @@
             }
         },
         "Fleet/Trailers/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Trailers/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10509,9 +10673,9 @@
             }
         },
         "Fleet/TrainingCourses/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/TrainingCourses/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10526,9 +10690,9 @@
             }
         },
         "Fleet/TrainingCourses/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/TrainingCourses/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10543,9 +10707,9 @@
             }
         },
         "Fleet/TrainingCourses/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/TrainingCourses/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10560,9 +10724,9 @@
             }
         },
         "Fleet/TrainingCourses/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/TrainingCourses/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10577,9 +10741,9 @@
             }
         },
         "Fleet/TrainingEnrollments/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/TrainingEnrollments/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10594,9 +10758,9 @@
             }
         },
         "Fleet/TrainingEnrollments/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/TrainingEnrollments/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10611,9 +10775,9 @@
             }
         },
         "Fleet/TrainingEnrollments/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/TrainingEnrollments/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10628,9 +10792,9 @@
             }
         },
         "Fleet/TrainingEnrollments/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/TrainingEnrollments/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10645,9 +10809,9 @@
             }
         },
         "Fleet/TrainingSessions/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/TrainingSessions/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10662,9 +10826,9 @@
             }
         },
         "Fleet/TrainingSessions/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/TrainingSessions/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10679,9 +10843,9 @@
             }
         },
         "Fleet/TrainingSessions/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/TrainingSessions/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10696,9 +10860,9 @@
             }
         },
         "Fleet/TrainingSessions/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/TrainingSessions/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10713,9 +10877,9 @@
             }
         },
         "Fleet/Trips/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Trips/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10725,9 +10889,9 @@
             }
         },
         "Fleet/Trips/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Trips/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10737,9 +10901,9 @@
             }
         },
         "Fleet/TyreInventory/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/TyreInventory/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10754,9 +10918,9 @@
             }
         },
         "Fleet/TyreInventory/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/TyreInventory/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10771,9 +10935,9 @@
             }
         },
         "Fleet/TyreInventory/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/TyreInventory/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10788,9 +10952,9 @@
             }
         },
         "Fleet/TyreInventory/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/TyreInventory/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10805,9 +10969,9 @@
             }
         },
         "Fleet/VehicleCheckTemplates/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/VehicleCheckTemplates/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10822,9 +10986,9 @@
             }
         },
         "Fleet/VehicleCheckTemplates/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/VehicleCheckTemplates/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10839,9 +11003,9 @@
             }
         },
         "Fleet/VehicleCheckTemplates/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/VehicleCheckTemplates/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10856,9 +11020,9 @@
             }
         },
         "Fleet/VehicleCheckTemplates/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/VehicleCheckTemplates/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10873,9 +11037,9 @@
             }
         },
         "Fleet/VehicleChecks/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/VehicleChecks/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10890,9 +11054,9 @@
             }
         },
         "Fleet/VehicleChecks/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/VehicleChecks/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10907,9 +11071,9 @@
             }
         },
         "Fleet/VehicleChecks/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/VehicleChecks/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10924,9 +11088,9 @@
             }
         },
         "Fleet/VehicleChecks/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/VehicleChecks/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10941,9 +11105,9 @@
             }
         },
         "Fleet/VehicleDiscs/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/VehicleDiscs/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10958,9 +11122,9 @@
             }
         },
         "Fleet/VehicleDiscs/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/VehicleDiscs/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10975,9 +11139,9 @@
             }
         },
         "Fleet/VehicleDiscs/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/VehicleDiscs/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -10992,9 +11156,9 @@
             }
         },
         "Fleet/VehicleDiscs/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/VehicleDiscs/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -11009,9 +11173,9 @@
             }
         },
         "Fleet/VehicleLeases/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/VehicleLeases/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -11026,9 +11190,9 @@
             }
         },
         "Fleet/VehicleLeases/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/VehicleLeases/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -11043,9 +11207,9 @@
             }
         },
         "Fleet/VehicleLeases/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/VehicleLeases/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -11060,9 +11224,9 @@
             }
         },
         "Fleet/VehicleLeases/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/VehicleLeases/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -11077,9 +11241,9 @@
             }
         },
         "Fleet/VehicleRecalls/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/VehicleRecalls/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -11094,9 +11258,9 @@
             }
         },
         "Fleet/VehicleRecalls/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/VehicleRecalls/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -11111,9 +11275,9 @@
             }
         },
         "Fleet/VehicleRecalls/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/VehicleRecalls/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -11128,9 +11292,9 @@
             }
         },
         "Fleet/VehicleRecalls/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/VehicleRecalls/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -11145,9 +11309,9 @@
             }
         },
         "Fleet/VehicleTyres/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/VehicleTyres/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -11162,9 +11326,9 @@
             }
         },
         "Fleet/VehicleTyres/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/VehicleTyres/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -11179,9 +11343,9 @@
             }
         },
         "Fleet/VehicleTyres/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/VehicleTyres/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -11196,9 +11360,9 @@
             }
         },
         "Fleet/VehicleTyres/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/VehicleTyres/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -11213,9 +11377,9 @@
             }
         },
         "Fleet/Vehicles/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Vehicles/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -11232,9 +11396,9 @@
             }
         },
         "Fleet/Vehicles/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Vehicles/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -11251,9 +11415,9 @@
             }
         },
         "Fleet/Vehicles/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Vehicles/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -11270,9 +11434,9 @@
             }
         },
         "Fleet/Vehicles/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/Vehicles/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -11289,9 +11453,9 @@
             }
         },
         "Fleet/WarrantyClaims/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/WarrantyClaims/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -11306,9 +11470,9 @@
             }
         },
         "Fleet/WarrantyClaims/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/WarrantyClaims/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -11323,9 +11487,9 @@
             }
         },
         "Fleet/WarrantyClaims/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/WarrantyClaims/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -11340,9 +11504,9 @@
             }
         },
         "Fleet/WarrantyClaims/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/WarrantyClaims/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -11357,9 +11521,9 @@
             }
         },
         "Fleet/WorkOrderLines/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/WorkOrderLines/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -11373,9 +11537,9 @@
             }
         },
         "Fleet/WorkOrderLines/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/WorkOrderLines/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -11389,9 +11553,9 @@
             }
         },
         "Fleet/WorkOrderLines/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/WorkOrderLines/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -11405,9 +11569,9 @@
             }
         },
         "Fleet/WorkOrderParts/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/WorkOrderParts/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -11421,9 +11585,9 @@
             }
         },
         "Fleet/WorkOrderParts/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/WorkOrderParts/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -11437,9 +11601,9 @@
             }
         },
         "Fleet/WorkOrderParts/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/WorkOrderParts/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -11453,9 +11617,9 @@
             }
         },
         "Fleet/WorkOrders/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/WorkOrders/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -11470,9 +11634,9 @@
             }
         },
         "Fleet/WorkOrders/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/WorkOrders/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -11487,9 +11651,9 @@
             }
         },
         "Fleet/WorkOrders/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/WorkOrders/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -11504,9 +11668,9 @@
             }
         },
         "Fleet/WorkOrders/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/WorkOrders/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -11521,12 +11685,13 @@
             }
         },
         "Fleet/WorkflowDefinitions/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/WorkflowDefinitions/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
+                    "fleet.workflow-definitions.execute",
                     "fleet.workflow-definitions.index",
                     "fleet.workflow-definitions.create",
                     "fleet.workflow-definitions.store",
@@ -11538,12 +11703,13 @@
             }
         },
         "Fleet/WorkflowDefinitions/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/WorkflowDefinitions/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
+                    "fleet.workflow-definitions.execute",
                     "fleet.workflow-definitions.index",
                     "fleet.workflow-definitions.create",
                     "fleet.workflow-definitions.store",
@@ -11555,12 +11721,13 @@
             }
         },
         "Fleet/WorkflowDefinitions/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/WorkflowDefinitions/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
+                    "fleet.workflow-definitions.execute",
                     "fleet.workflow-definitions.index",
                     "fleet.workflow-definitions.create",
                     "fleet.workflow-definitions.store",
@@ -11572,12 +11739,13 @@
             }
         },
         "Fleet/WorkflowDefinitions/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/WorkflowDefinitions/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
+                    "fleet.workflow-definitions.execute",
                     "fleet.workflow-definitions.index",
                     "fleet.workflow-definitions.create",
                     "fleet.workflow-definitions.store",
@@ -11589,9 +11757,9 @@
             }
         },
         "Fleet/WorkflowExecutions/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/WorkflowExecutions/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -11601,9 +11769,9 @@
             }
         },
         "Fleet/WorkflowExecutions/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/WorkflowExecutions/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -11613,9 +11781,9 @@
             }
         },
         "Fleet/WorkshopBays/Create": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/WorkshopBays/Create.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -11630,9 +11798,9 @@
             }
         },
         "Fleet/WorkshopBays/Edit": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/WorkshopBays/Edit.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -11647,9 +11815,9 @@
             }
         },
         "Fleet/WorkshopBays/Index": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/WorkshopBays/Index.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -11664,9 +11832,9 @@
             }
         },
         "Fleet/WorkshopBays/Show": {
-            "documented": false,
+            "documented": true,
             "userGuide": null,
-            "developerGuide": null,
+            "developerGuide": "./Fleet/WorkshopBays/Show.md",
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": [
@@ -11677,6 +11845,30 @@
                     "fleet.workshop-bays.edit",
                     "fleet.workshop-bays.update",
                     "fleet.workshop-bays.destroy"
+                ]
+            }
+        },
+        "Fleet/ElectrificationPlan/Index": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./Fleet/ElectrificationPlan/Index.md",
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": [
+                    "fleet.electrification-plan.index",
+                    "fleet.electrification-plan.generate"
+                ]
+            }
+        },
+        "Fleet/FleetOptimization/Index": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "./Fleet/FleetOptimization/Index.md",
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": [
+                    "fleet.fleet-optimization.index",
+                    "fleet.fleet-optimization.analyze"
                 ]
             }
         }
