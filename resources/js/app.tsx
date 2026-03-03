@@ -12,7 +12,7 @@ import { ThemeFromProps } from './components/theme-from-props';
 import { initializeTheme } from './hooks/use-appearance';
 import { QueryProvider } from './providers/query-provider';
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+const appName = import.meta.env.VITE_APP_NAME || 'Fusion';
 
 createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),

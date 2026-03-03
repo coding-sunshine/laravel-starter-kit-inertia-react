@@ -17,10 +17,12 @@ export default function SaleTablePage({ tableData }: Props) {
                         {tableData.meta.total} results
                     </p>
                 </div>
-                <DataTable<App.DataTables.SaleDataTable>
-                    tableData={tableData}
-                    tableName="sale"
-                />
+                <div className="fusion-table-card overflow-x-auto rounded-lg">
+                    <DataTable<App.DataTables.SaleDataTable>
+                        tableData={tableData}
+                        tableName="sale"
+                    />
+                </div>
             </div>
         </>
     );

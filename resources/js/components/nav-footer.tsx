@@ -2,6 +2,7 @@ import { Icon } from '@/components/icon';
 import {
     SidebarGroup,
     SidebarGroupContent,
+    SidebarGroupLabel,
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
@@ -26,6 +27,7 @@ export function NavFooter({
             {...props}
             className={`group-data-[collapsible=icon]:p-0 ${className || ''}`}
         >
+            <SidebarGroupLabel>Resources</SidebarGroupLabel>
             <SidebarGroupContent>
                 <SidebarMenu>
                     {items.map((item) => {
@@ -38,7 +40,7 @@ export function NavFooter({
                             <SidebarMenuItem key={`${item.title}-${url}`}>
                                 <SidebarMenuButton
                                     asChild
-                                    className="text-neutral-600 hover:text-neutral-800 dark:text-neutral-300 dark:hover:text-neutral-100"
+                                    className="text-sidebar-foreground/80 hover:text-sidebar-foreground"
                                 >
                                     {external ? (
                                         <a

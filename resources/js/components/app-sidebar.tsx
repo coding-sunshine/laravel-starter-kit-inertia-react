@@ -11,6 +11,7 @@ import {
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
+    SidebarSeparator,
 } from '@/components/ui/sidebar';
 import { chat, dashboard } from '@/routes';
 import { index as blogIndex } from '@/routes/blog';
@@ -197,6 +198,7 @@ export function AppSidebar() {
 
             <SidebarFooter>
                 <NavFooter items={visibleFooterNavItems} className="mt-auto" />
+                <SidebarSeparator className="my-2" />
                 <NavUser />
             </SidebarFooter>
         </Sidebar>

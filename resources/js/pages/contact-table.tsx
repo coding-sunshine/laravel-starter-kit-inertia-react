@@ -17,10 +17,12 @@ export default function ContactTablePage({ tableData }: Props) {
                         {tableData.meta.total} results
                     </p>
                 </div>
+                <div className="fusion-table-card overflow-x-auto rounded-lg">
                 <DataTable<App.DataTables.ContactDataTable>
                     tableData={tableData}
                     tableName="contact"
                 />
+                </div>
             </div>
         </>
     );

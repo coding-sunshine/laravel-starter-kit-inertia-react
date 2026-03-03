@@ -20,10 +20,12 @@ export default function LotTablePage({ tableData }: Props) {
                         {tableData.meta.total} results
                     </p>
                 </div>
-                <DataTable<App.DataTables.LotDataTable>
-                    tableData={tableData}
-                    tableName="lot"
-                />
+                <div className="fusion-table-card overflow-x-auto rounded-lg">
+                    <DataTable<App.DataTables.LotDataTable>
+                        tableData={tableData}
+                        tableName="lot"
+                    />
+                </div>
             </div>
         </>
     );

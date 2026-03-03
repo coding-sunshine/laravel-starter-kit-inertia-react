@@ -20,10 +20,12 @@ export default function ProjectTablePage({ tableData }: Props) {
                         {tableData.meta.total} results
                     </p>
                 </div>
-                <DataTable<App.DataTables.ProjectDataTable>
-                    tableData={tableData}
-                    tableName="project"
-                />
+                <div className="fusion-table-card overflow-x-auto rounded-lg">
+                    <DataTable<App.DataTables.ProjectDataTable>
+                        tableData={tableData}
+                        tableName="project"
+                    />
+                </div>
             </div>
         </>
     );

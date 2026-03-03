@@ -5,7 +5,7 @@ import AppLogoIcon from './app-logo-icon';
 export default function AppLogo() {
     const { name, branding } = usePage<SharedData>().props;
     const logoUrl = branding?.logoUrl ?? null;
-    const siteName = name ?? 'Laravel Starter Kit';
+    const siteName = name ?? 'Fusion';
 
     return (
         <>

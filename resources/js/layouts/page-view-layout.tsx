@@ -9,7 +9,7 @@ interface PageViewLayoutProps {
 export default function PageViewLayout({ children }: PageViewLayoutProps) {
     const { name, branding } = usePage<SharedData>().props;
     const logoUrl = branding?.logoUrl ?? null;
-    const siteName = name ?? 'Laravel Starter Kit';
+    const siteName = name ?? 'Fusion';
 
     return (
         <div className="flex min-h-screen flex-col bg-background text-foreground">

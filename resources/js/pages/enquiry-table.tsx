@@ -17,10 +17,12 @@ export default function EnquiryTablePage({ tableData }: Props) {
                         {tableData.meta.total} results
                     </p>
                 </div>
-                <DataTable<App.DataTables.PropertyEnquiryDataTable>
-                    tableData={tableData}
-                    tableName="enquiry"
-                />
+                <div className="fusion-table-card overflow-x-auto rounded-lg">
+                    <DataTable<App.DataTables.PropertyEnquiryDataTable>
+                        tableData={tableData}
+                        tableName="enquiry"
+                    />
+                </div>
             </div>
         </>
     );

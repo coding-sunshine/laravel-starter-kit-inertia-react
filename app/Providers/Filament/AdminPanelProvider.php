@@ -7,6 +7,7 @@ namespace App\Providers\Filament;
 use A909M\FilamentStateFusion\FilamentStateFusionPlugin;
 use AlizHarb\ActivityLog\ActivityLogPlugin;
 use App\Http\Middleware\EnsureSetupComplete;
+use Filament\Enums\ThemeMode;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -38,14 +39,15 @@ final class AdminPanelProvider extends PanelProvider
             ->authGuard('web')
             ->login()
             ->brandName(config('app.name'))
-            ->brandLogo(asset('logo.svg'))
+            ->brandLogo(null)
             ->favicon(asset('favicon.svg'))
             ->font('Inter Variable', null, null, [])
             ->colors([
-                'primary' => Color::Amber,
+                'primary' => Color::Slate,
             ])
             ->globalSearch()
-            ->darkMode()
+            ->defaultThemeMode(ThemeMode::Light)
+            ->darkMode(false)
             ->sidebarCollapsibleOnDesktop()
             ->spa()
             ->maxContentWidth(Width::SevenExtraLarge)

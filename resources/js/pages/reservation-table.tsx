@@ -17,10 +17,12 @@ export default function ReservationTablePage({ tableData }: Props) {
                         {tableData.meta.total} results
                     </p>
                 </div>
-                <DataTable<App.DataTables.PropertyReservationDataTable>
-                    tableData={tableData}
-                    tableName="reservation"
-                />
+                <div className="fusion-table-card overflow-x-auto rounded-lg">
+                    <DataTable<App.DataTables.PropertyReservationDataTable>
+                        tableData={tableData}
+                        tableName="reservation"
+                    />
+                </div>
             </div>
         </>
     );

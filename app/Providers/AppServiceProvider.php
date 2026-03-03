@@ -74,6 +74,11 @@ final class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         FilamentView::registerRenderHook(
+            PanelsRenderHook::STYLES_AFTER,
+            fn (): string => view('filament.admin-revamp-styles')->render(),
+        );
+
+        FilamentView::registerRenderHook(
             PanelsRenderHook::BODY_END,
             fn (): string => view('filament.chat-widget')->render(),
         );

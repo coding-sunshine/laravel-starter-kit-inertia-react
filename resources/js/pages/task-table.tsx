@@ -17,10 +17,12 @@ export default function TaskTablePage({ tableData }: Props) {
                         {tableData.meta.total} results
                     </p>
                 </div>
-                <DataTable<App.DataTables.TaskDataTable>
-                    tableData={tableData}
-                    tableName="task"
-                />
+                <div className="fusion-table-card overflow-x-auto rounded-lg">
+                    <DataTable<App.DataTables.TaskDataTable>
+                        tableData={tableData}
+                        tableName="task"
+                    />
+                </div>
             </div>
         </>
     );
