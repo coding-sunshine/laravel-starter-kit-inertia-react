@@ -39,7 +39,7 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | [help/index](./help-index.md) | help.index, help.show | ✅ |
 | [help/show](./help-show.md) | help.index, help.show | ✅ |
 | [settings/personal-data-export](./settings-personal-data-export.md) | filament.exports.download, filament.imports.failed-rows.download | ✅ |
-| [onboarding/show](./onboarding-show.md) | onboarding, onboarding.store | ✅ |
+| [onboarding/show](./onboarding-show.md) | onboarding, onboarding.update | ✅ |
 | [legal/privacy](./legal-privacy.md) | filament.exports.download, filament.imports.failed-rows.download | ✅ |
 | [legal/terms](./legal-terms.md) | filament.exports.download, filament.imports.failed-rows.download | ✅ |
 | [settings/achievements](docs/developer/frontend/pages/settings/achievements.md) | achievements.show | ✅ |
@@ -68,8 +68,8 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | [Fleet/AiJobRuns/Show](./Fleet/AiJobRuns/Show.md) | fleet.ai-job-runs.index, fleet.ai-job-runs.show | ✅ |
 | [Fleet/AlertPreferences/Edit](./Fleet/AlertPreferences/Edit.md) | fleet.alert-preferences.index, fleet.alert-preferences.edit | ✅ |
 | [Fleet/AlertPreferences/Index](./Fleet/AlertPreferences/Index.md) | fleet.alert-preferences.index, fleet.alert-preferences.edit | ✅ |
-| [Fleet/Alerts/Index](./Fleet/Alerts/Index.md) | fleet.alerts.index, fleet.alerts.show | ✅ |
-| [Fleet/Alerts/Show](./Fleet/Alerts/Show.md) | fleet.alerts.index, fleet.alerts.show | ✅ |
+| [Fleet/Alerts/Index](./Fleet/Alerts/Index.md) | fleet.alerts.bulk-acknowledge, fleet.alerts.index | ✅ |
+| [Fleet/Alerts/Show](./Fleet/Alerts/Show.md) | fleet.alerts.bulk-acknowledge, fleet.alerts.index | ✅ |
 | [Fleet/ApiIntegrations/Create](./Fleet/ApiIntegrations/Create.md) | fleet.api-integrations.index, fleet.api-integrations.create | ✅ |
 | [Fleet/ApiIntegrations/Edit](./Fleet/ApiIntegrations/Edit.md) | fleet.api-integrations.index, fleet.api-integrations.create | ✅ |
 | [Fleet/ApiIntegrations/Index](./Fleet/ApiIntegrations/Index.md) | fleet.api-integrations.index, fleet.api-integrations.create | ✅ |
@@ -109,7 +109,7 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | [Fleet/CostCenters/Edit](./Fleet/CostCenters/Edit.md) | fleet.cost-centers.index, fleet.cost-centers.create | ✅ |
 | [Fleet/CostCenters/Index](./Fleet/CostCenters/Index.md) | fleet.cost-centers.index, fleet.cost-centers.create | ✅ |
 | [Fleet/CostCenters/Show](./Fleet/CostCenters/Show.md) | fleet.cost-centers.index, fleet.cost-centers.create | ✅ |
-| [Fleet/Dashboard](./Fleet/Dashboard.md) | fleet.dashboard | ✅ |
+| [Fleet/Dashboard](./Fleet/Dashboard.md) | fleet.dashboard, fleet.dashboard.positions | ✅ |
 | [Fleet/DashcamClips/Create](./Fleet/DashcamClips/Create.md) | fleet.dashcam-clips.index, fleet.dashcam-clips.create | ✅ |
 | [Fleet/DashcamClips/Edit](./Fleet/DashcamClips/Edit.md) | fleet.dashcam-clips.index, fleet.dashcam-clips.create | ✅ |
 | [Fleet/DashcamClips/Index](./Fleet/DashcamClips/Index.md) | fleet.dashcam-clips.index, fleet.dashcam-clips.create | ✅ |
@@ -137,10 +137,10 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | [Fleet/DriverWorkingTime/Edit](./Fleet/DriverWorkingTime/Edit.md) | fleet.driver-working-time.index, fleet.driver-working-time.create | ✅ |
 | [Fleet/DriverWorkingTime/Index](./Fleet/DriverWorkingTime/Index.md) | fleet.driver-working-time.index, fleet.driver-working-time.create | ✅ |
 | [Fleet/DriverWorkingTime/Show](./Fleet/DriverWorkingTime/Show.md) | fleet.driver-working-time.index, fleet.driver-working-time.create | ✅ |
-| [Fleet/Drivers/Create](./Fleet/Drivers/Create.md) | fleet.drivers.assign-vehicle, fleet.drivers.unassign-vehicle | ✅ |
-| [Fleet/Drivers/Edit](./Fleet/Drivers/Edit.md) | fleet.drivers.assign-vehicle, fleet.drivers.unassign-vehicle | ✅ |
-| [Fleet/Drivers/Index](./Fleet/Drivers/Index.md) | fleet.drivers.assign-vehicle, fleet.drivers.unassign-vehicle | ✅ |
-| [Fleet/Drivers/Show](./Fleet/Drivers/Show.md) | fleet.drivers.assign-vehicle, fleet.drivers.unassign-vehicle | ✅ |
+| [Fleet/Drivers/Create](./Fleet/Drivers/Create.md) | fleet.drivers.bulk-destroy, fleet.drivers.export | ✅ |
+| [Fleet/Drivers/Edit](./Fleet/Drivers/Edit.md) | fleet.drivers.bulk-destroy, fleet.drivers.export | ✅ |
+| [Fleet/Drivers/Index](./Fleet/Drivers/Index.md) | fleet.drivers.bulk-destroy, fleet.drivers.export | ✅ |
+| [Fleet/Drivers/Show](./Fleet/Drivers/Show.md) | fleet.drivers.bulk-destroy, fleet.drivers.export | ✅ |
 | [Fleet/ElockEvents/Index](./Fleet/ElockEvents/Index.md) | fleet.e-lock-events.index, fleet.e-lock-events.show | ✅ |
 | [Fleet/ElockEvents/Show](./Fleet/ElockEvents/Show.md) | fleet.e-lock-events.index, fleet.e-lock-events.show | ✅ |
 | [Fleet/EmissionsRecords/Create](./Fleet/EmissionsRecords/Create.md) | fleet.emissions-records.index, fleet.emissions-records.create | ✅ |
@@ -326,10 +326,10 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | [Fleet/VehicleTyres/Edit](./Fleet/VehicleTyres/Edit.md) | fleet.vehicle-tyres.index, fleet.vehicle-tyres.create | ✅ |
 | [Fleet/VehicleTyres/Index](./Fleet/VehicleTyres/Index.md) | fleet.vehicle-tyres.index, fleet.vehicle-tyres.create | ✅ |
 | [Fleet/VehicleTyres/Show](./Fleet/VehicleTyres/Show.md) | fleet.vehicle-tyres.index, fleet.vehicle-tyres.create | ✅ |
-| [Fleet/Vehicles/Create](./Fleet/Vehicles/Create.md) | fleet.vehicles.assign-driver, fleet.vehicles.unassign-driver | ✅ |
-| [Fleet/Vehicles/Edit](./Fleet/Vehicles/Edit.md) | fleet.vehicles.assign-driver, fleet.vehicles.unassign-driver | ✅ |
-| [Fleet/Vehicles/Index](./Fleet/Vehicles/Index.md) | fleet.vehicles.assign-driver, fleet.vehicles.unassign-driver | ✅ |
-| [Fleet/Vehicles/Show](./Fleet/Vehicles/Show.md) | fleet.vehicles.assign-driver, fleet.vehicles.unassign-driver | ✅ |
+| [Fleet/Vehicles/Create](./Fleet/Vehicles/Create.md) | fleet.vehicles.bulk-destroy, fleet.vehicles.export | ✅ |
+| [Fleet/Vehicles/Edit](./Fleet/Vehicles/Edit.md) | fleet.vehicles.bulk-destroy, fleet.vehicles.export | ✅ |
+| [Fleet/Vehicles/Index](./Fleet/Vehicles/Index.md) | fleet.vehicles.bulk-destroy, fleet.vehicles.export | ✅ |
+| [Fleet/Vehicles/Show](./Fleet/Vehicles/Show.md) | fleet.vehicles.bulk-destroy, fleet.vehicles.export | ✅ |
 | [Fleet/WarrantyClaims/Create](./Fleet/WarrantyClaims/Create.md) | fleet.warranty-claims.index, fleet.warranty-claims.create | ✅ |
 | [Fleet/WarrantyClaims/Edit](./Fleet/WarrantyClaims/Edit.md) | fleet.warranty-claims.index, fleet.warranty-claims.create | ✅ |
 | [Fleet/WarrantyClaims/Index](./Fleet/WarrantyClaims/Index.md) | fleet.warranty-claims.index, fleet.warranty-claims.create | ✅ |
@@ -340,10 +340,10 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | [Fleet/WorkOrderParts/Create](./Fleet/WorkOrderParts/Create.md) | fleet.work-orders.work-order-parts.index, fleet.work-orders.work-order-parts.create | ✅ |
 | [Fleet/WorkOrderParts/Edit](./Fleet/WorkOrderParts/Edit.md) | fleet.work-orders.work-order-parts.index, fleet.work-orders.work-order-parts.create | ✅ |
 | [Fleet/WorkOrderParts/Index](./Fleet/WorkOrderParts/Index.md) | fleet.work-orders.work-order-parts.index, fleet.work-orders.work-order-parts.create | ✅ |
-| [Fleet/WorkOrders/Create](./Fleet/WorkOrders/Create.md) | fleet.work-orders.index, fleet.work-orders.create | ✅ |
-| [Fleet/WorkOrders/Edit](./Fleet/WorkOrders/Edit.md) | fleet.work-orders.index, fleet.work-orders.create | ✅ |
-| [Fleet/WorkOrders/Index](./Fleet/WorkOrders/Index.md) | fleet.work-orders.index, fleet.work-orders.create | ✅ |
-| [Fleet/WorkOrders/Show](./Fleet/WorkOrders/Show.md) | fleet.work-orders.index, fleet.work-orders.create | ✅ |
+| [Fleet/WorkOrders/Create](./Fleet/WorkOrders/Create.md) | fleet.work-orders.bulk-destroy, fleet.work-orders.export | ✅ |
+| [Fleet/WorkOrders/Edit](./Fleet/WorkOrders/Edit.md) | fleet.work-orders.bulk-destroy, fleet.work-orders.export | ✅ |
+| [Fleet/WorkOrders/Index](./Fleet/WorkOrders/Index.md) | fleet.work-orders.bulk-destroy, fleet.work-orders.export | ✅ |
+| [Fleet/WorkOrders/Show](./Fleet/WorkOrders/Show.md) | fleet.work-orders.bulk-destroy, fleet.work-orders.export | ✅ |
 | [Fleet/WorkflowDefinitions/Create](./Fleet/WorkflowDefinitions/Create.md) | fleet.workflow-definitions.execute, fleet.workflow-definitions.index | ✅ |
 | [Fleet/WorkflowDefinitions/Edit](./Fleet/WorkflowDefinitions/Edit.md) | fleet.workflow-definitions.execute, fleet.workflow-definitions.index | ✅ |
 | [Fleet/WorkflowDefinitions/Index](./Fleet/WorkflowDefinitions/Index.md) | fleet.workflow-definitions.execute, fleet.workflow-definitions.index | ✅ |
@@ -356,5 +356,8 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | [Fleet/WorkshopBays/Show](./Fleet/WorkshopBays/Show.md) | fleet.workshop-bays.index, fleet.workshop-bays.create | ✅ |
 | [Fleet/ElectrificationPlan/Index](./Fleet/ElectrificationPlan/Index.md) | fleet.electrification-plan.index, fleet.electrification-plan.generate | ✅ |
 | [Fleet/FleetOptimization/Index](./Fleet/FleetOptimization/Index.md) | fleet.fleet-optimization.index, fleet.fleet-optimization.analyze | ✅ |
+| [Fleet/DvirWizard/Index](./Fleet/DvirWizard/Index.md) | fleet.dvir.index, fleet.dvir.store | ✅ |
+| [Fleet/Reports/EldReport](./Fleet/Reports/EldReport.md) | fleet.reports.eld | ✅ |
+| [Fleet/Reports/IftaReport](./Fleet/Reports/IftaReport.md) | fleet.reports.ifta | ✅ |
 
 

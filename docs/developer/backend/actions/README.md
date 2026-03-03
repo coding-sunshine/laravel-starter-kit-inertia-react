@@ -40,5 +40,7 @@ All Actions:
 | [StoreEnterpriseInquiryAction](./StoreEnterpriseInquiryAction.md) | N/A | ✅ |
 | [BulkSoftDeleteUsers](./BulkSoftDeleteUsers.md) | N/A | ✅ |
 | [DuplicateUser](./DuplicateUser.md) | N/A | ✅ |
+| [GetHelpArticleFaqsAction](./gethelparticlefaqsaction.md) | N/A | ✅ |
+| [SummarizeHelpArticleAction](./summarizehelparticleaction.md) | N/A | ✅ |
 
 
