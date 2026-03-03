@@ -74,7 +74,10 @@ interface VehicleDispatch {
 interface Filters {
     date_from?: string;
     date_to?: string;
+    date?: string;
     shift?: string;
+    permit_no?: string;
+    truck_regd_no?: string;
 }
 
 interface Props {
@@ -105,6 +108,7 @@ interface Props {
     }>;
     preview_data?: any[];
     import_siding_id?: number;
+    import_target_date?: string;
     flash?: { success?: string };
 }
 
@@ -117,6 +121,7 @@ export default function VehicleDispatchIndex({
     sidings,
     preview_data,
     import_siding_id,
+    import_target_date,
     flash,
 }: Props) {
     const pageProps = usePage<Props>().props;
@@ -134,6 +139,9 @@ export default function VehicleDispatchIndex({
     const [showImportDialog, setShowImportDialog] = useState(false);
     const [selectedSidingId, setSelectedSidingId] = useState<number>(
         import_siding_id ?? currentSiding?.id ?? sidings[0]?.id ?? 0,
+    );
+    const [targetDate, setTargetDate] = useState<string>(
+        import_target_date ?? new Date().toISOString().split('T')[0]
     );
     const [previewData, setPreviewData] = useState<any[]>([]);
     const [editingDispatch, setEditingDispatch] = useState<VehicleDispatch | null>(null);
@@ -159,8 +167,11 @@ export default function VehicleDispatchIndex({
             if (import_siding_id) {
                 setSelectedSidingId(import_siding_id);
             }
+            if (import_target_date) {
+                setTargetDate(import_target_date);
+            }
         }
-    }, [preview_data, import_siding_id]);
+    }, [preview_data, import_siding_id, import_target_date]);
 
     // Only update searchFilters when props change, but don't trigger useEffect on initial mount
     useEffect(() => {
@@ -229,7 +240,7 @@ export default function VehicleDispatchIndex({
 
         router.post(
             '/vehicle-dispatch/import',
-            { data: importData, siding_id: selectedSidingId },
+            { data: importData, siding_id: selectedSidingId, target_date: targetDate },
             {
                 onSuccess: (page) => {
                     const preview = page.props.preview_data;
@@ -263,7 +274,7 @@ export default function VehicleDispatchIndex({
 
         router.post(
             '/vehicle-dispatch/save',
-            { data: previewData, siding_id: selectedSidingId },
+            { data: previewData, siding_id: selectedSidingId, target_date: targetDate },
             {
                 onSuccess: (page) => {
                     setImportSuccess(
@@ -289,9 +300,60 @@ export default function VehicleDispatchIndex({
     const formatDate = (dateString: string | null) => {
         if (!dateString) return 'N/A';
         try {
-            return format(new Date(dateString), 'dd MMM yyyy HH:mm');
+            let date: Date;
+            
+            // Check if it's a Unix timestamp (number)
+            if (/^\d+$/.test(dateString)) {
+                date = new Date(parseInt(dateString) * 1000); // Convert Unix timestamp to milliseconds
+            } else {
+                // Handle Laravel timestamp format and timezone issues
+                date = new Date(dateString);
+                // Check if date is invalid (1970 indicates parsing issue)
+                if (date.getFullYear() === 1970 && dateString.includes('2026')) {
+                    // Try to parse the string manually for Laravel timestamps
+                    const match = dateString.match(/(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})/);
+                    if (match) {
+                        const [, year, month, day, hour, minute, second] = match;
+                        date = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}`);
+                    }
+                }
+            }
+            
+            return format(date, 'dd MMM yyyy HH:mm');
         } catch {
             return dateString;
+        }
+    };
+
+    /** Derive shift from issued_on: 1st (00:00-08:00), 2nd (08:01-16:00), 3rd (16:01-23:59) */
+    const getShiftFromIssuedOn = (issuedOn: string | null): string | null => {
+        if (!issuedOn) return null;
+        try {
+            let d: Date;
+            
+            // Check if it's a Unix timestamp (number)
+            if (/^\d+$/.test(issuedOn)) {
+                d = new Date(parseInt(issuedOn) * 1000); // Convert Unix timestamp to milliseconds
+            } else {
+                d = new Date(issuedOn);
+                
+                // Check if date parsing failed (1970 indicates issue)
+                if (d.getFullYear() === 1970 && issuedOn.includes('2026')) {
+                    // Try to parse the string manually for Laravel timestamps
+                    const match = issuedOn.match(/(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})/);
+                    if (match) {
+                        const [, year, month, day, hour, minute, second] = match;
+                        d = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}`);
+                    }
+                }
+            }
+            
+            const minutes = d.getHours() * 60 + d.getMinutes();
+            if (minutes <= 480) return '1st';
+            if (minutes <= 960) return '2nd';
+            return '3rd';
+        } catch {
+            return null;
         }
     };
 
@@ -377,7 +439,24 @@ export default function VehicleDispatchIndex({
 
             <div className="space-y-6">
                 <Heading
-                    title="Vehicle Dispatch Register"
+                    title={
+                        <>
+                            Vehicle Dispatch Register
+                            <span className="text-sm font-normal text-gray-500 ml-2">
+                                {(() => {
+                                    if (searchFilters.date_from && searchFilters.date_to) {
+                                        const from = format(new Date(searchFilters.date_from), 'dd MMM yyyy');
+                                        const to = format(new Date(searchFilters.date_to), 'dd MMM yyyy');
+                                        return ` (${from} - ${to})`;
+                                    } else if (searchFilters.date) {
+                                        return ` (${format(new Date(searchFilters.date), 'dd MMM yyyy')})`;
+                                    } else {
+                                        return '';
+                                    }
+                                })()}
+                            </span>
+                        </>
+                    }
                     description="Manage vehicle dispatch entries for sidings"
                 />
 
@@ -449,9 +528,9 @@ export default function VehicleDispatchIndex({
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="all">All Shifts</SelectItem>
-                                        <SelectItem value="1st">1st Shift (06:00-14:00)</SelectItem>
-                                        <SelectItem value="2nd">2nd Shift (14:00-22:00)</SelectItem>
-                                        <SelectItem value="3rd">3rd Shift (22:00-06:00)</SelectItem>
+                                        <SelectItem value="1st">1st Shift (00:00-08:00)</SelectItem>
+                                        <SelectItem value="2nd">2nd Shift (08:01-16:00)</SelectItem>
+                                        <SelectItem value="3rd">3rd Shift (16:01-23:59)</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -496,6 +575,7 @@ export default function VehicleDispatchIndex({
                                             <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Permit No</th>
                                             <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pass No</th>
                                             <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stack DO No</th>
+                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Issued On</th>
                                             <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Truck Regd No</th>
                                             <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mineral</th>
                                             <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mineral Type</th>
@@ -515,6 +595,7 @@ export default function VehicleDispatchIndex({
                                                 <td className="px-4 py-2 text-sm text-gray-900">{row.permit_no || '-'}</td>
                                                 <td className="px-4 py-2 text-sm text-gray-900">{row.pass_no || '-'}</td>
                                                 <td className="px-4 py-2 text-sm text-gray-900">{row.stack_do_no || '-'}</td>
+                                                <td className="px-4 py-2 text-sm text-gray-900">{formatDate(row.issued_on)}</td>
                                                 <td className="px-4 py-2 text-sm text-gray-900">{row.truck_regd_no || '-'}</td>
                                                 <td className="px-4 py-2 text-sm text-gray-900">{row.mineral || '-'}</td>
                                                 <td className="px-4 py-2 text-sm text-gray-900">{row.mineral_type || '-'}</td>
@@ -570,7 +651,22 @@ export default function VehicleDispatchIndex({
                 {/* Data Table */}
                 <Card>
                     <CardHeader>
-                        <CardTitle>Vehicle Dispatch Records</CardTitle>
+                        <CardTitle>
+                            Vehicle Dispatch Records
+                            <span className="text-sm font-normal text-gray-500 ml-2">
+                                {(() => {
+                                    if (searchFilters.date_from && searchFilters.date_to) {
+                                        const from = format(new Date(searchFilters.date_from), 'dd MMM yyyy');
+                                        const to = format(new Date(searchFilters.date_to), 'dd MMM yyyy');
+                                        return `(${from} - ${to})`;
+                                    } else if (searchFilters.date) {
+                                        return `(${format(new Date(searchFilters.date), 'dd MMM yyyy')})`;
+                                    } else {
+                                        return '';
+                                    }
+                                })()}
+                            </span>
+                        </CardTitle>
                         <CardDescription>
                             Showing {vehicleDispatches.data.length} of {vehicleDispatches.total} records
                         </CardDescription>
@@ -639,8 +735,10 @@ export default function VehicleDispatchIndex({
                                             </TableCell>
                                             <TableCell>{dispatch.distance_km ?? '-'}</TableCell>
                                             <TableCell>
-                                                {dispatch.shift && (
-                                                    <Badge variant="outline">{dispatch.shift}</Badge>
+                                                {(getShiftFromIssuedOn(dispatch.issued_on) || dispatch.shift) && (
+                                                    <Badge variant="outline">
+                                                        {getShiftFromIssuedOn(dispatch.issued_on) || dispatch.shift}
+                                                    </Badge>
                                                 )}
                                             </TableCell>
                                             <TableCell>
@@ -656,26 +754,34 @@ export default function VehicleDispatchIndex({
                         {vehicleDispatches.last_page > 1 && (
                             <div className="mt-4 flex justify-center">
                                 <div className="flex gap-2">
-                                    {vehicleDispatches.links.map((link, index) => (
-                                        <button
-                                            key={index}
-                                            onClick={() => {
-                                                if (link.url) {
-                                                    router.get(link.url, {}, { preserveScroll: true });
-                                                }
-                                            }}
-                                            disabled={!link.url}
-                                            className={`px-3 py-2 rounded ${
-                                                link.active
-                                                    ? 'bg-blue-500 text-white'
-                                                    : link.url
-                                                    ? 'bg-gray-200 hover:bg-gray-300'
-                                                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                            }`}
-                                        >
-                                            {link.label.replace('&laquo;', '«').replace('&raquo;', '»')}
-                                        </button>
-                                    ))}
+                                    {vehicleDispatches.links.map((link, index) => {
+                                        // Extract page number from URL
+                                        const pageMatch = link.url?.match(/page=(\d+)/);
+                                        const pageNumber = pageMatch ? parseInt(pageMatch[1]) : null;
+                                        
+                                        return (
+                                            <button
+                                                key={index}
+                                                onClick={() => {
+                                                    if (link.url && pageNumber) {
+                                                        // Preserve all current filters when changing page
+                                                        const filtersWithPage = { ...searchFilters, page: pageNumber };
+                                                        router.get('/vehicle-dispatch', filtersWithPage, { preserveScroll: true });
+                                                    }
+                                                }}
+                                                disabled={!link.url}
+                                                className={`px-3 py-2 rounded ${
+                                                    link.active
+                                                        ? 'bg-blue-500 text-white'
+                                                        : link.url
+                                                        ? 'bg-gray-200 hover:bg-gray-300'
+                                                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                                }`}
+                                            >
+                                                {link.label.replace('&laquo;', '«').replace('&raquo;', '»')}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         )}
@@ -853,6 +959,7 @@ export default function VehicleDispatchIndex({
                                 <p className="text-sm text-gray-600 mt-1">
                                     <strong>Paste raw Excel/HTML table data</strong> - tab, comma, or pipe separated.<br/>
                                     <strong>Multiple column layouts auto-detected.</strong> Common formats:<br/>
+                                    <strong>Format D (14 cols):</strong> Sl.No|Permit|Pass|StackDO|IssuedOn|Truck|Mineral|MinType|Weight|Source|Dest|Consignee|Gate|Dist<br/>
                                     <strong>Format A (16 cols):</strong> Serial|Ref|Permit|Pass|StackDO|IssuedOn|Truck|Mineral|MinType|Weight|Source|Dest|Consignee|Gate|Dist|Shift<br/>
                                     <strong>Format B (Truck last):</strong> Serial|Ref|Permit|Pass|StackDO|IssuedOn|Mineral|MinType|Weight|Source|...|Truck<br/>
                                     <strong>Format C (9 cols):</strong> Serial|Ref|Permit|Pass|StackDO|IssuedOn|Truck|Mineral|Weight<br/><br/>
@@ -886,6 +993,19 @@ export default function VehicleDispatchIndex({
                                         ))}
                                     </SelectContent>
                                 </Select>
+                            </div>
+                            <div>
+                                <Label htmlFor="target-date">Target Date for Import</Label>
+                                <Input
+                                    id="target-date"
+                                    type="date"
+                                    value={targetDate}
+                                    onChange={(e) => setTargetDate(e.target.value)}
+                                    className="w-full"
+                                />
+                                <p className="text-sm text-gray-600 mt-1">
+                                    Select the date for which this data will be stored. If no date is provided in the data, this date will be used.
+                                </p>
                             </div>
                             <div>
                                 <Label htmlFor="import-data">Paste Data</Label>

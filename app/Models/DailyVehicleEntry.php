@@ -29,6 +29,8 @@ final class DailyVehicleEntry extends Model
         'status',
         'created_by',
         'updated_by',
+        'trip_id_no',
+        'transport_name',
     ];
 
     /**

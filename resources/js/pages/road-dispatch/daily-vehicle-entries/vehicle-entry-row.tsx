@@ -14,6 +14,8 @@ interface DailyVehicleEntry {
   shift: number;
   e_challan_no: string | null;
   vehicle_no: string | null;
+  trip_id_no: string | null;
+  transport_name: string | null;
   gross_wt: number | null;
   tare_wt: number | null;
   reached_at: string;
@@ -43,6 +45,8 @@ export default function VehicleEntryRow({ entry, serialNumber, date, shift }: Ve
   const [formData, setFormData] = useState({
     e_challan_no: entry.e_challan_no || '',
     vehicle_no: entry.vehicle_no || '',
+    trip_id_no: entry.trip_id_no || '',
+    transport_name: entry.transport_name || '',
     gross_wt: entry.gross_wt?.toString() || '',
     tare_wt: entry.tare_wt?.toString() || '',
     wb_no: entry.wb_no || '',
@@ -97,6 +101,8 @@ export default function VehicleEntryRow({ entry, serialNumber, date, shift }: Ve
     return !!(
       entry.e_challan_no?.trim() ||
       entry.vehicle_no?.trim() ||
+      entry.trip_id_no?.trim() ||
+      entry.transport_name?.trim() ||
       entry.gross_wt ||
       entry.tare_wt ||
       entry.wb_no?.trim() ||
@@ -110,6 +116,8 @@ export default function VehicleEntryRow({ entry, serialNumber, date, shift }: Ve
     return (
       !entry.e_challan_no?.trim() &&
       !entry.vehicle_no?.trim() &&
+      !entry.trip_id_no?.trim() &&
+      !entry.transport_name?.trim() &&
       !entry.gross_wt &&
       !entry.tare_wt &&
       entry.status === 'draft'
@@ -211,6 +219,30 @@ export default function VehicleEntryRow({ entry, serialNumber, date, shift }: Ve
           }}
           placeholder="Vehicle No"
           className="w-32"
+        />
+      </TableCell>
+
+      <TableCell>
+        <Input
+          value={formData.trip_id_no}
+          onChange={(e) => {
+            updateField('trip_id_no', e.target.value);
+            debouncedSave();
+          }}
+          placeholder="Trip ID No"
+          className="w-32"
+        />
+      </TableCell>
+
+      <TableCell>
+        <Input
+          value={formData.transport_name}
+          onChange={(e) => {
+            updateField('transport_name', e.target.value);
+            debouncedSave();
+          }}
+          placeholder="Transport Name"
+          className="w-40"
         />
       </TableCell>
 

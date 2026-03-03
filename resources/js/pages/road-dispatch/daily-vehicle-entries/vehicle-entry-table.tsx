@@ -13,6 +13,8 @@ interface DailyVehicleEntry {
   shift: number;
   e_challan_no: string | null;
   vehicle_no: string | null;
+  trip_id_no: string | null;
+  transport_name: string | null;
   gross_wt: number | null;
   tare_wt: number | null;
   reached_at: string | null;
@@ -129,6 +131,8 @@ export default function VehicleEntryTable({ entries, date, shift }: VehicleEntry
             <TableHead className="w-16">SL NO</TableHead>
             <TableHead>E Challan No</TableHead>
             <TableHead>Vehicle No</TableHead>
+            <TableHead>Trip ID No</TableHead>
+            <TableHead>Transport Name</TableHead>
             <TableHead>Gross WT (G2)</TableHead>
             <TableHead>Tare WT (T1)</TableHead>
             <TableHead>Net Weight</TableHead>
@@ -142,7 +146,7 @@ export default function VehicleEntryTable({ entries, date, shift }: VehicleEntry
         <TableBody>
           {entries.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={11} className="text-center py-8 text-gray-500">
+              <TableCell colSpan={13} className="text-center py-8 text-gray-500">
                 No entries found for this shift. Click "Add Row" to create a new entry.
               </TableCell>
             </TableRow>

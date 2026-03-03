@@ -8,6 +8,7 @@ use App\Http\Requests\UpdateVehicleDispatchRequest;
 use App\Models\Siding;
 use App\Models\VehicleDispatch;
 use DateTimeImmutable;
+use DOMDocument;
 use Exception;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -26,18 +27,23 @@ final class VehicleDispatchController extends Controller
         $user = Auth::user();
         $currentSiding = session('current_siding');
 
+        // Default to current date if no date filter is provided
+        $date = $request->get('date') ?: now()->format('Y-m-d');
+
         $query = VehicleDispatch::with(['siding', 'creator'])
             ->when($currentSiding, fn ($q) => $q->forSiding($currentSiding->id))
-            ->when($request->date, fn ($q) => $q->forDate($request->date))
+            ->when($request->date_from, fn ($q) => $q->whereDate('issued_on', '>=', $request->date_from))
+            ->when($request->date_to, fn ($q) => $q->whereDate('issued_on', '<=', $request->date_to))
+            ->when($date && ! $request->date_from && ! $request->date_to, fn ($q) => $q->forDate($date))
             ->when($request->shift, fn ($q) => $q->forShift($request->shift))
             ->when($request->permit_no, fn ($q) => $q->byPermitNo($request->permit_no))
             ->when($request->truck_regd_no, fn ($q) => $q->byTruckRegdNo($request->truck_regd_no))
             ->orderBy('issued_on', 'desc')
             ->orderBy('created_at', 'desc');
-            
+
         $vehicleDispatches = $query->paginate(25);
 
-        $shifts = ['Morning', 'Evening', 'Night'];
+        $shifts = ['1st', '2nd', '3rd'];
         $availableDates = VehicleDispatch::selectRaw('DATE(issued_on) as date')
             ->whereNotNull('issued_on')
             ->distinct()
@@ -57,13 +63,14 @@ final class VehicleDispatchController extends Controller
 
         return Inertia::render('VehicleDispatch/Index', [
             'vehicleDispatches' => $vehicleDispatches,
-            'filters' => $request->only(['date', 'shift', 'permit_no', 'truck_regd_no']),
+            'filters' => array_merge(['date' => $date], $request->only(['date_from', 'date_to', 'shift', 'permit_no', 'truck_regd_no'])),
             'shifts' => $shifts,
             'availableDates' => $availableDates,
             'currentSiding' => $currentSiding,
             'sidings' => $sidings,
             'preview_data' => $request->session()->get('preview_data', []),
             'import_siding_id' => $request->session()->get('import_siding_id'),
+            'import_target_date' => $request->session()->get('import_target_date'),
             'flash' => [
                 'success' => $request->session()->get('success'),
             ],
@@ -72,7 +79,21 @@ final class VehicleDispatchController extends Controller
 
     public function update(UpdateVehicleDispatchRequest $request, VehicleDispatch $vehicleDispatch): RedirectResponse
     {
-        $vehicleDispatch->update($request->validated());
+        $data = $request->validated();
+        if (! empty($data['issued_on'])) {
+            try {
+                $dt = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $data['issued_on'])
+                    ?: DateTimeImmutable::createFromFormat('Y-m-d\TH:i:s', $data['issued_on'])
+                    ?: DateTimeImmutable::createFromFormat('Y-m-d\TH:i', $data['issued_on'])
+                    ?: new DateTimeImmutable($data['issued_on']);
+                if ($dt) {
+                    $data['shift'] = VehicleDispatch::shiftFromIssuedOn($dt);
+                }
+            } catch (\Throwable) {
+                // Leave shift unchanged if date parse fails
+            }
+        }
+        $vehicleDispatch->update($data);
 
         $filters = $request->input('_filters', []);
         $query = is_array($filters) ? array_filter($filters) : [];
@@ -87,6 +108,7 @@ final class VehicleDispatchController extends Controller
         $validator = Validator::make($request->all(), [
             'data' => 'required|string',
             'siding_id' => 'required|exists:sidings,id',
+            'target_date' => 'nullable|date',
         ]);
 
         if ($validator->fails()) {
@@ -95,6 +117,7 @@ final class VehicleDispatchController extends Controller
 
         $data = $request->input('data');
         $sidingId = $request->input('siding_id');
+        $targetDate = $request->input('target_date', now()->format('Y-m-d'));
 
         // Parse Excel-style paste data
         $rows = $this->parsePasteData($data);
@@ -124,9 +147,10 @@ final class VehicleDispatchController extends Controller
 
         // Redirect back to index with preview data in session (keeps URL as /vehicle-dispatch)
         return redirect()
-            ->route('vehicle-dispatch.index', $request->only(['date', 'shift', 'permit_no', 'truck_regd_no']))
+            ->route('vehicle-dispatch.index', array_merge(['date' => $targetDate], $request->only(['shift', 'permit_no', 'truck_regd_no'])))
             ->with('preview_data', $parsedRows)
-            ->with('import_siding_id', $sidingId);
+            ->with('import_siding_id', $sidingId)
+            ->with('import_target_date', $targetDate);
     }
 
     public function saveImport(Request $request): RedirectResponse
@@ -134,6 +158,7 @@ final class VehicleDispatchController extends Controller
         $validator = Validator::make($request->all(), [
             'data' => 'required|array',
             'siding_id' => 'required|exists:sidings,id',
+            'target_date' => 'nullable|date',
         ]);
 
         if ($validator->fails()) {
@@ -142,15 +167,21 @@ final class VehicleDispatchController extends Controller
 
         $data = $request->input('data');
         $sidingId = $request->input('siding_id');
+        $targetDate = $request->input('target_date', now()->format('Y-m-d'));
 
         $imported = 0;
         $errors = [];
 
-        DB::transaction(function () use ($data, $sidingId, &$imported, &$errors) {
+        DB::transaction(function () use ($data, $sidingId, $targetDate, &$imported, &$errors) {
             foreach ($data as $index => $row) {
                 try {
                     // Validate required fields before saving
                     $this->validateVehicleDispatchData($row, $sidingId);
+
+                    // Apply target date to each record if no issued_on is present
+                    if (empty($row['issued_on'])) {
+                        $row['issued_on'] = $targetDate . ' ' . now()->format('H:i:s');
+                    }
 
                     VehicleDispatch::create($row);
                     $imported++;
@@ -166,7 +197,7 @@ final class VehicleDispatchController extends Controller
             ]);
         }
 
-        return redirect()->route('vehicle-dispatch.index')
+        return redirect()->route('vehicle-dispatch.index', ['date' => $targetDate])
             ->with('success', "Successfully imported {$imported} vehicle dispatch records.");
     }
 
@@ -232,10 +263,76 @@ final class VehicleDispatchController extends Controller
         }
     }
 
+    /**
+     * Extract table rows from HTML table markup (e.g. when pasting from web pages).
+     * Returns array of row arrays (each row = array of cell values), or empty if not HTML table.
+     */
+    private function parseHtmlTableToRows(string $data): array
+    {
+        $data = mb_trim($data);
+        if ($data === '' || (mb_strpos($data, '<table') === false && mb_strpos($data, '<tr') === false && mb_strpos($data, '<td') === false)) {
+            return [];
+        }
+
+        libxml_use_internal_errors(true);
+        $dom = new DOMDocument;
+        $wrapped = mb_convert_encoding('<html><body>'.$data.'</body></html>', 'HTML-ENTITIES', 'UTF-8');
+        if (! @$dom->loadHTML($wrapped)) {
+            libxml_clear_errors();
+
+            return [];
+        }
+
+        $body = $dom->getElementsByTagName('body')->item(0);
+        $rows = [];
+        if (! $body) {
+            libxml_clear_errors();
+
+            return [];
+        }
+
+        foreach ($body->getElementsByTagName('tr') as $tr) {
+            $cells = [];
+            foreach ($tr->getElementsByTagName('td') as $td) {
+                $cells[] = mb_trim($td->textContent ?? '');
+            }
+            foreach ($tr->getElementsByTagName('th') as $th) {
+                $cells[] = mb_trim($th->textContent ?? '');
+            }
+            if (count($cells) >= 4) {
+                $rows[] = $cells;
+            }
+        }
+        libxml_clear_errors();
+
+        return $rows;
+    }
+
     private function parsePasteData(string $data): array
     {
+        // If pasted content looks like HTML table, extract rows from it first
+        $htmlRows = $this->parseHtmlTableToRows($data);
+        if (! empty($htmlRows)) {
+            $filtered = [];
+            $headerSkipped = false;
+            foreach ($htmlRows as $columns) {
+                if (! $headerSkipped && $this->isHeaderRow($columns)) {
+                    $headerSkipped = true;
+
+                    continue;
+                }
+                if (count($columns) >= 4) {
+                    $filtered[] = $columns;
+                }
+            }
+
+            return $filtered;
+        }
+
         // Decode HTML entities (e.g. &nbsp; when copying from web tables)
         $data = html_entity_decode($data, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        // Strip any remaining HTML tags (handles partial HTML paste)
+        $data = strip_tags($data);
         // Normalize line endings
         $data = str_replace(["\r\n", "\r"], "\n", mb_trim($data));
         $lines = explode("\n", $data);
@@ -299,7 +396,7 @@ final class VehicleDispatchController extends Controller
     {
         // Check if first row contains common header keywords
         $headerKeywords = [
-            'serial', 'permit', 'pass', 'truck', 'mineral', 'weight', 'source',
+            'serial', 'sl.', 'permit', 'pass', 'truck', 'mineral', 'weight', 'source',
             'destination', 'consignee', 'gate', 'distance', 'shift', 'issued', 'stack',
             'ref', 'do', 'regd', 'type', 'check', 'km',
         ];
@@ -327,23 +424,55 @@ final class VehicleDispatchController extends Controller
 
     private function parseVehicleDispatchRow(array $row, int $sidingId): array
     {
-        // Format A matches: S.NO|REF|Permit|Pass|Stack|IssuedOn|Truck|Mineral|MinType|Weight|Source|Dest|Consignee|CheckGate|Distance|Shift
-        $formatA = $this->mapFormatA($row, $sidingId);
-        if ($this->hasValidRequiredFields($formatA)) {
-            return $formatA;
+        $data = null;
+
+        // Format D: 14 cols, no Ref - Sl.No|Permit|Pass|StackDO|IssuedOn|Truck|Mineral|MinType|Weight|Source|Dest|Consignee|CheckGate|Distance
+        if (count($row) >= 14) {
+            $formatD = $this->mapFormatD($row, $sidingId);
+            if ($this->hasValidRequiredFields($formatD)) {
+                $data = $formatD;
+            }
         }
 
-        $formatB = $this->mapFormatB($row, $sidingId);
-        if ($this->hasValidRequiredFields($formatB)) {
-            return $formatB;
+        if (! $data) {
+            $formatA = $this->mapFormatA($row, $sidingId);
+            if ($this->hasValidRequiredFields($formatA)) {
+                $data = $formatA;
+            }
         }
 
-        $formatC = $this->mapFormatC($row, $sidingId);
-        if ($this->hasValidRequiredFields($formatC)) {
-            return $formatC;
+        if (! $data) {
+            $formatB = $this->mapFormatB($row, $sidingId);
+            if ($this->hasValidRequiredFields($formatB)) {
+                $data = $formatB;
+            }
         }
 
-        return $this->mapWithWeightScan($row, $sidingId);
+        if (! $data) {
+            $formatC = $this->mapFormatC($row, $sidingId);
+            if ($this->hasValidRequiredFields($formatC)) {
+                $data = $formatC;
+            }
+        }
+
+        if (! $data) {
+            $data = $this->mapWithWeightScan($row, $sidingId);
+        }
+
+        return $this->applyShiftFromIssuedOn($data);
+    }
+
+    private function applyShiftFromIssuedOn(array $data): array
+    {
+        $issuedOn = $data['issued_on'] ?? null;
+        if ($issuedOn) {
+            $dt = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $issuedOn);
+            if ($dt) {
+                $data['shift'] = VehicleDispatch::shiftFromIssuedOn($dt);
+            }
+        }
+
+        return $data;
     }
 
     private function hasValidRequiredFields(array $data): bool
@@ -432,6 +561,31 @@ final class VehicleDispatchController extends Controller
         ];
     }
 
+    /** Format D: 14 columns, no Ref - Sl.No|Permit|Pass|StackDO|IssuedOn|Truck|Mineral|MinType|Weight|Source|Dest|Consignee|CheckGate|Distance */
+    private function mapFormatD(array $row, int $sidingId): array
+    {
+        return [
+            'siding_id' => $sidingId,
+            'serial_no' => $this->parseNullableInt($row[0] ?? null),
+            'ref_no' => null,
+            'permit_no' => $this->parseNullableString($row[1] ?? null),
+            'pass_no' => $this->parseNullableString($row[2] ?? null),
+            'stack_do_no' => $this->parseNullableString($row[3] ?? null),
+            'issued_on' => $this->parseTimestamp($row[4] ?? null),
+            'truck_regd_no' => $this->parseNullableString($row[5] ?? null),
+            'mineral' => $this->parseNullableString($row[6] ?? null),
+            'mineral_type' => $this->parseNullableString($row[7] ?? null),
+            'mineral_weight' => $this->parseFlexibleDecimal($row[8] ?? null),
+            'source' => $this->parseNullableString($row[9] ?? null),
+            'destination' => $this->parseNullableString($row[10] ?? null),
+            'consignee' => $this->parseNullableString($row[11] ?? null),
+            'check_gate' => $this->parseNullableString($row[12] ?? null),
+            'distance_km' => $this->parseNullableInt($row[13] ?? null),
+            'shift' => null,
+            'created_by' => auth()->id(),
+        ];
+    }
+
     /** Fallback: scan cols 6-11 for first valid weight, infer other fields */
     private function mapWithWeightScan(array $row, int $sidingId): array
     {
@@ -444,7 +598,10 @@ final class VehicleDispatchController extends Controller
             }
         }
 
-        // If we found weight at col 8
+        // If we found weight at col 8 with 14 columns → Format D
+        if ($weightCol === 8 && count($row) >= 14) {
+            return $this->mapFormatD($row, $sidingId);
+        }
         if ($weightCol === 8) {
             return count($row) <= 9
                 ? $this->mapFormatC($row, $sidingId)
@@ -521,21 +678,29 @@ final class VehicleDispatchController extends Controller
             return null;
         }
 
-        // Try to parse various date formats
+        // Clean the value first
+        $cleanValue = mb_trim($value);
+        
+        // Try to parse various date formats (02-Mar-2026 23:59 = 11:59 PM = 3rd shift)
+        // Note: H:i A misparses "23:59 PM" as 11:59 AM; use H:i * to treat 23:59 as 24h and absorb trailing AM/PM
         $formats = [
+            'd-M-Y h:i A',  // 02-Mar-2026 11:59 PM (12-hour)
+            'd-M-Y H:i',    // 02-Mar-2026 23:59 (24h, no AM/PM)
+            'd-M-Y H:i:s',  // 02-Mar-2026 23:59:00 (24h with seconds)
+            'd-M-Y g:i A',  // 02-Mar-2026 11:59 PM (12-hour with lowercase)
             'Y-m-d H:i:s', 'Y-m-d', 'd-m-Y H:i:s', 'd-m-Y', 'd/m/Y', 'm/d/Y',
             'd/m/y', 'm/d/y', 'd/m/Y H:i:s', 'm/d/Y H:i:s', 'd/m/y H:i:s', 'm/d/y H:i:s',
         ];
 
         foreach ($formats as $format) {
-            $date = DateTimeImmutable::createFromFormat($format, mb_trim($value));
+            $date = DateTimeImmutable::createFromFormat($format, $cleanValue);
             if ($date) {
                 return $date->format('Y-m-d H:i:s');
             }
         }
 
         // Special handling for DD/MM/YY format (like 01/03/20)
-        if (preg_match('/^(\d{2})\/(\d{2})\/(\d{2})$/', mb_trim($value), $matches)) {
+        if (preg_match('/^(\d{2})\/(\d{2})\/(\d{2})$/', $cleanValue, $matches)) {
             $day = $matches[1];
             $month = $matches[2];
             $year = $matches[3];
@@ -549,8 +714,37 @@ final class VehicleDispatchController extends Controller
             }
         }
 
+        // Special handling for format like "02-Mar-2026 23:59 PM"
+        if (preg_match('/^(\d{1,2})-([A-Za-z]{3})-(\d{4})\s+(\d{1,2}):(\d{2})(\s+(AM|PM))?$/i', $cleanValue, $matches)) {
+            $day = $matches[1];
+            $month = $matches[2];
+            $year = $matches[3];
+            $hour = (int)$matches[4];
+            $minute = $matches[5];
+            $ampm = isset($matches[7]) ? strtoupper($matches[7]) : null;
+            
+            // Convert month name to number
+            $monthNum = date('m', strtotime("$day-$month-$year"));
+            if ($monthNum === false) {
+                return null;
+            }
+            
+            // Convert to 24-hour format only if AM/PM is present
+            if ($ampm === 'PM' && $hour < 12) {
+                $hour += 12;
+            } elseif ($ampm === 'AM' && $hour == 12) {
+                $hour = 0;
+            }
+            // If no AM/PM, assume 24-hour format (don't convert)
+            
+            $date = DateTimeImmutable::createFromFormat('Y-m-d H:i', "$year-$monthNum-$day $hour:$minute");
+            if ($date) {
+                return $date->format('Y-m-d H:i:s');
+            }
+        }
+
         // Try strtotime as fallback
-        $timestamp = strtotime($value);
+        $timestamp = strtotime($cleanValue);
         if ($timestamp !== false) {
             return date('Y-m-d H:i:s', $timestamp);
         }

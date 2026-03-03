@@ -18,6 +18,8 @@ interface DailyVehicleEntry {
   shift: number;
   e_challan_no: string | null;
   vehicle_no: string | null;
+  trip_id_no: string | null;
+  transport_name: string | null;
   gross_wt: number | null;
   tare_wt: number | null;
   reached_at: string;

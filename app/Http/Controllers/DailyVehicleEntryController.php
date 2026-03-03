@@ -73,6 +73,8 @@ final class DailyVehicleEntryController extends Controller
             'shift' => 'required|integer|between:1,3',
             'e_challan_no' => 'nullable|string|max:255',
             'vehicle_no' => 'nullable|string|max:255',
+            'trip_id_no' => 'nullable|string|max:255',
+            'transport_name' => 'nullable|string|max:255',
             'gross_wt' => 'nullable|numeric|min:0',
             'tare_wt' => 'nullable|numeric|min:0',
             'wb_no' => 'nullable|string|max:255',
@@ -103,6 +105,8 @@ final class DailyVehicleEntryController extends Controller
         $data = $request->validate([
             'e_challan_no' => 'nullable|string|max:255',
             'vehicle_no' => 'nullable|string|max:255',
+            'trip_id_no' => 'nullable|string|max:255',
+            'transport_name' => 'nullable|string|max:255',
             'gross_wt' => 'nullable|numeric|min:0',
             'tare_wt' => 'nullable|numeric|min:0',
             'wb_no' => 'nullable|string|max:255',
@@ -148,6 +152,8 @@ final class DailyVehicleEntryController extends Controller
 
         $hasData = ! empty($entry->e_challan_no) ||
                    ! empty($entry->vehicle_no) ||
+                   ! empty($entry->trip_id_no) ||
+                   ! empty($entry->transport_name) ||
                    ! is_null($entry->gross_wt) ||
                    ! is_null($entry->tare_wt) ||
                    ! empty($entry->wb_no) ||

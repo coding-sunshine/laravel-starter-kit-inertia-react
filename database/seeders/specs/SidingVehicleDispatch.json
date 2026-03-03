@@ -1,6 +1,6 @@
 {
-    "model": "DailyVehicleEntry",
-    "table": "daily_vehicle_entries",
+    "model": "SidingVehicleDispatch",
+    "table": "siding_vehicle_dispatches",
     "fields": {
         "id": {
             "type": "bigint",
@@ -12,67 +12,87 @@
             "nullable": true,
             "default": null
         },
-        "entry_date": {
-            "type": "date",
-            "nullable": true,
-            "default": null
-        },
-        "shift": {
+        "serial_no": {
             "type": "integer",
             "nullable": true,
             "default": null
         },
-        "e_challan_no": {
+        "ref_no": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "permit_no": {
             "type": "string",
             "nullable": true,
             "default": null
         },
-        "vehicle_no": {
+        "pass_no": {
             "type": "string",
             "nullable": true,
             "default": null
         },
-        "gross_wt": {
-            "type": "numeric",
+        "stack_do_no": {
+            "type": "string",
             "nullable": true,
             "default": null
         },
-        "tare_wt": {
-            "type": "numeric",
-            "nullable": true,
-            "default": null
-        },
-        "reached_at": {
+        "issued_on": {
             "type": "timestamp",
             "nullable": true,
             "default": null
         },
-        "wb_no": {
+        "truck_regd_no": {
             "type": "string",
             "nullable": true,
             "default": null
         },
-        "d_challan_no": {
+        "mineral": {
             "type": "string",
             "nullable": true,
             "default": null
         },
-        "challan_mode": {
+        "mineral_type": {
             "type": "string",
             "nullable": true,
             "default": null
         },
-        "status": {
+        "mineral_weight": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "source": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "destination": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "consignee": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "check_gate": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "distance_km": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "shift": {
             "type": "string",
             "nullable": true,
             "default": null
         },
         "created_by": {
-            "type": "bigint",
-            "nullable": true,
-            "default": null
-        },
-        "updated_by": {
             "type": "bigint",
             "nullable": true,
             "default": null
@@ -86,37 +106,9 @@
             "type": "timestamp",
             "nullable": true,
             "default": null
-        },
-        "trip_id_no": {
-            "type": "string",
-            "nullable": true,
-            "default": null
-        },
-        "transport_name": {
-            "type": "string",
-            "nullable": true,
-            "default": null
         }
     },
-    "relationships": {
-        "siding": {
-            "type": "belongsTo",
-            "model": "Siding"
-        },
-        "creator": {
-            "type": "belongsTo",
-            "model": "Creator"
-        },
-        "updater": {
-            "type": "belongsTo",
-            "model": "Updater"
-        }
-    },
-    "value_hints": {
-        "transport_name": {
-            "type": "name",
-            "example": "John Doe"
-        }
-    },
+    "relationships": [],
+    "value_hints": [],
     "scenarios": []
 }
