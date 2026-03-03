@@ -42,5 +42,14 @@ All Controllers:
 | [PageController](./pagecontroller.md) | N/A | ✅ |
 | [PageViewController](./pageviewcontroller.md) | N/A | ✅ |
 | [UsersTableController](./UsersTableController.md) | N/A | ✅ |
+| ContactsTableController | N/A | ❌ |
+| DashboardController | N/A | ❌ |
+| EnquiriesTableController | N/A | ❌ |
+| LotsTableController | N/A | ❌ |
+| ProjectsTableController | N/A | ❌ |
+| ReservationsTableController | N/A | ❌ |
+| SalesTableController | N/A | ❌ |
+| SearchesTableController | N/A | ❌ |
+| TasksTableController | N/A | ❌ |
 
 

@@ -8,7 +8,7 @@ use Spatie\LaravelSettings\Settings;
 
 final class AiSettings extends Settings
 {
-    public string $default_provider = 'openai';
+    public string $default_provider = 'openrouter';
 
     public string $default_for_images = 'gemini';
 

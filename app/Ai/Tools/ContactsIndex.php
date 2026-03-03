@@ -27,7 +27,7 @@ final class ContactsIndex implements Tool
         $limit = min(max((int) $request->integer('limit', 10), 1), 50);
 
         $builder = Contact::query()
-            ->with(['contactEmails:contact_id,email', 'company:id,name'])
+            ->with(['contactEmails:contact_id,value', 'company:id,name'])
             ->orderByDesc('updated_at')
             ->limit($limit);
 
@@ -37,20 +37,20 @@ final class ContactsIndex implements Tool
                 $q->where('first_name', 'like', $like)
                     ->orWhere('last_name', 'like', $like)
                     ->orWhere('company_name', 'like', $like)
-                    ->orWhereHas('contactEmails', fn ($e) => $e->where('email', 'like', $like));
+                    ->orWhereHas('contactEmails', fn ($e) => $e->where('value', 'like', $like));
             });
         }
 
-        $contacts = $builder->get(['id', 'organization_id', 'first_name', 'last_name', 'company_name', 'type', 'stage', 'updated_at']);
+        $contacts = $builder->get(['id', 'organization_id', 'first_name', 'last_name', 'company_id', 'company_name', 'type', 'stage', 'updated_at']);
 
         if ($contacts->isEmpty()) {
             return 'No contacts found.';
         }
 
         $lines = $contacts->map(function (Contact $c): string {
-            $name = trim($c->first_name.' '.$c->last_name) ?: '—';
+            $name = mb_trim($c->first_name.' '.$c->last_name) ?: '—';
             $emails = $c->relationLoaded('contactEmails')
-                ? $c->contactEmails->pluck('email')->take(2)->implode(', ')
+                ? $c->contactEmails->pluck('value')->take(2)->implode(', ')
                 : '';
             $company = $c->company_name ?? ($c->company?->name ?? '');
 

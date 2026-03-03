@@ -6,8 +6,6 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Throwable;
-
 return new class extends Migration
 {
     public function up(): void
@@ -18,8 +16,8 @@ return new class extends Migration
 
         try {
             DB::statement('CREATE EXTENSION IF NOT EXISTS vector');
-        } catch (Throwable $e) {
-            if (str_contains($e->getMessage(), 'permission denied') || str_contains($e->getMessage(), '42501')) {
+        } catch (\Throwable $e) {
+            if (str_contains($e->getMessage(), 'permission denied') || str_contains($e->getMessage(), '42501') || str_contains($e->getMessage(), 'not available')) {
                 return;
             }
             throw $e;

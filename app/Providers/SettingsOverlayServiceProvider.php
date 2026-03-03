@@ -368,7 +368,16 @@ final class SettingsOverlayServiceProvider extends ServiceProvider
                 $settings = resolve($settingsClass);
 
                 foreach ($config['map'] as $property => $configKey) {
-                    config()->set($configKey, $settings->{$property});
+                    $value = $settings->{$property};
+
+                    // Never overwrite env-backed config defaults with null/empty DB values.
+                    // This lets .env remain the source of truth until a value is explicitly
+                    // saved in Filament Settings.
+                    if ($value === null || $value === '') {
+                        continue;
+                    }
+
+                    config()->set($configKey, $value);
                 }
             } catch (Throwable) {
                 // Settings table may not exist yet (fresh install, migrations pending).
@@ -382,7 +391,10 @@ final class SettingsOverlayServiceProvider extends ServiceProvider
             $prism = resolve(PrismSettings::class);
 
             foreach (self::AI_KEY_CROSS_MAP as $property => $configKey) {
-                config()->set($configKey, $prism->{$property});
+                $value = $prism->{$property};
+                if ($value !== null && $value !== '') {
+                    config()->set($configKey, $value);
+                }
             }
         } catch (Throwable) {
             // PrismSettings not available yet — skip silently.

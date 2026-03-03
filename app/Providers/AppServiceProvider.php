@@ -25,6 +25,8 @@ use App\Policies\ShareablePolicy;
 use App\Services\PaymentGateway\PaymentGatewayManager;
 use App\Services\PrismService;
 use App\Settings\SeoSettings;
+use Filament\Support\Facades\FilamentView;
+use Filament\View\PanelsRenderHook;
 use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Database\Events\MigrationsEnded;
 use Illuminate\Queue\Events\JobFailed;
@@ -71,6 +73,11 @@ final class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        FilamentView::registerRenderHook(
+            PanelsRenderHook::BODY_END,
+            fn (): string => view('filament.chat-widget')->render(),
+        );
+
         $this->configurePan();
 
         $this->registerSeoViewComposer();

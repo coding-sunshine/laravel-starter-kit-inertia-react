@@ -1,0 +1,49 @@
+{
+    "model": "WebsiteElement",
+    "table": "website_elements",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "website_page_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "config": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "order": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamptz",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamptz",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "websitePage": {
+            "type": "belongsTo",
+            "model": "WebsitePage"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

@@ -21,10 +21,15 @@ final class ConversationController extends Controller
         $user = $request->user();
         $perPage = max(1, min(50, (int) $request->get('per_page', 20)));
 
-        $conversations = DB::table('agent_conversations')
-            ->where('user_id', $user->id)
-            ->latest('updated_at')
-            ->paginate($perPage);
+        $query = DB::table('agent_conversations')
+            ->where('user_id', $user->id);
+
+        $organizationId = $request->get('organization_id');
+        if ($organizationId !== null) {
+            $query->where('organization_id', $organizationId);
+        }
+
+        $conversations = $query->latest('updated_at')->paginate($perPage);
 
         return response()->json([
             'data' => $conversations->getCollection()->map(fn ($row): array => [

@@ -1,0 +1,13 @@
+{
+    "model": "EmbeddingDocument",
+    "table": "embedding_documents",
+    "fields": [],
+    "relationships": {
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

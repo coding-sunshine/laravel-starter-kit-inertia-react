@@ -1,0 +1,58 @@
+{
+    "model": "WebsitePage",
+    "table": "website_pages",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "website_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "title": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "slug": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "content": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "order": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamptz",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamptz",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "website": {
+            "type": "belongsTo",
+            "model": "Website"
+        },
+        "elements": {
+            "type": "hasMany",
+            "model": "Element"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

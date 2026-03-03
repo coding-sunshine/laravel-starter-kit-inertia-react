@@ -20,7 +20,7 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | Page | Route | Documented |
 |------|-------|------------|
 | [appearance/update](./appearance-update.md) | filament.exports.download, filament.imports.failed-rows.download | ✅ |
-| [dashboard](./dashboard.md) | filament.exports.download, filament.imports.failed-rows.download | ✅ |
+| [dashboard](./dashboard.md) | dashboard | ✅ |
 | [session/create](./session-create.md) | login, login.store | ✅ |
 | [user-email-reset-notification/create](./user-email-reset-notification-create.md) | password.request, password.email | ✅ |
 | [user-email-verification-notification/create](./user-email-verification-notification-create.md) | verification.notice, verification.send | ✅ |
@@ -62,5 +62,17 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | [pages/index](./pages/index.md) | pages.index, pages.create | ✅ |
 | [pages/show](./pages/show.md) | pages.index, pages.create | ✅ |
 | [settings/branding](./settings/branding.md) | settings.branding.edit, settings.branding.update | ✅ |
+| contact-table | contacts.table | ❌ |
+| enquiry-table | enquiries.table | ❌ |
+| lot-table | lots.table | ❌ |
+| project-table | projects.table | ❌ |
+| reports/contacts | reports.contacts | ❌ |
+| reports/reservations | reports.reservations | ❌ |
+| reports/sales | reports.sales | ❌ |
+| reports/tasks | reports.tasks | ❌ |
+| reservation-table | reservations.table | ❌ |
+| sale-table | sales.table | ❌ |
+| search-table | searches.table | ❌ |
+| task-table | tasks.table | ❌ |
 
 

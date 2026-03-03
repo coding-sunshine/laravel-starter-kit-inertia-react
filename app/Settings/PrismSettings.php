@@ -14,7 +14,7 @@ final class PrismSettings extends Settings
 
     public string $default_provider = 'openrouter';
 
-    public string $default_model = 'deepseek/deepseek-r1-0528:free';
+    public string $default_model = 'openai/gpt-4o-mini';
 
     public ?string $openai_api_key = null;
 
