@@ -14,9 +14,9 @@ return [
 
     'radius' => env('THEME_RADIUS', 'default'),
 
-    'font' => env('THEME_FONT', 'instrument-sans'),
+    'font' => env('THEME_FONT', 'inter'),
 
-    'default_appearance' => env('THEME_DEFAULT_APPEARANCE', 'system'), // light | dark | system
+    'default_appearance' => env('THEME_DEFAULT_APPEARANCE', 'light'), // light | dark | system
 
     /*
     |--------------------------------------------------------------------------
@@ -36,6 +36,9 @@ return [
         'nova' => [
             'label' => 'Nova',
         ],
+        'metronic' => [
+            'label' => 'Metronic',
+        ],
     ],
 
     /*
@@ -43,7 +46,7 @@ return [
     | Subset of presets orgs can choose (org branding)
     |--------------------------------------------------------------------------
     */
-    'org_allowed_presets' => ['default', 'fleet', 'vega', 'nova'],
+    'org_allowed_presets' => ['default', 'fleet', 'vega', 'nova', 'metronic'],
 
     'base_colors' => [
         'neutral' => 'Neutral',
@@ -63,6 +66,7 @@ return [
     ],
 
     'fonts' => [
+        'inter' => 'Inter',
         'instrument-sans' => 'Instrument Sans',
         'geist-sans' => 'Geist Sans',
     ],
