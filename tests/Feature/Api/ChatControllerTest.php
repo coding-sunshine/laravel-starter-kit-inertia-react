@@ -45,7 +45,7 @@ test('api chat accepts TanStack UIMessage format with parts instead of content',
         },
     ]);
 
-    $response = actingAs($user, 'sanctum')->postJson('/api/chat', [
+    $response = actingAs($user)->postJson('/api/chat', [
         'messages' => [
             [
                 'id' => 'msg-1',
@@ -62,7 +62,7 @@ test('api chat accepts TanStack UIMessage format with parts instead of content',
 test('api chat returns 422 when messages are missing', function (): void {
     $user = User::factory()->withoutTwoFactor()->create();
 
-    $response = actingAs($user, 'sanctum')->postJson('/api/chat', []);
+    $response = actingAs($user)->postJson('/api/chat', []);
 
     $response->assertUnprocessable();
     $response->assertJsonFragment(['detail' => 'The messages field is required.']);
@@ -73,7 +73,7 @@ test('api chat returns 503 when AI provider has no API key', function (): void {
     Config::set('ai.default', 'openai');
     Config::set('ai.providers.openai.key');
 
-    $response = actingAs($user, 'sanctum')->postJson('/api/chat', [
+    $response = actingAs($user)->postJson('/api/chat', [
         'messages' => [['role' => 'user', 'content' => 'Hi']],
     ]);
 
@@ -85,7 +85,7 @@ test('api chat returns 422 when conversation_id is invalid', function (): void {
     $user = User::factory()->withoutTwoFactor()->create();
     $fakeUuid = '00000000-0000-0000-0000-000000000001';
 
-    $response = actingAs($user, 'sanctum')->postJson('/api/chat', [
+    $response = actingAs($user)->postJson('/api/chat', [
         'messages' => [['role' => 'user', 'content' => 'Hi']],
         'conversation_id' => $fakeUuid,
     ]);
@@ -105,7 +105,7 @@ test('api chat returns 422 when conversation_id belongs to another user', functi
         'updated_at' => now(),
     ]);
 
-    $response = actingAs($user, 'sanctum')->postJson('/api/chat', [
+    $response = actingAs($user)->postJson('/api/chat', [
         'messages' => [['role' => 'user', 'content' => 'Hi']],
         'conversation_id' => $convId,
     ]);
@@ -143,7 +143,7 @@ test('api chat without conversation_id creates a conversation for the user', fun
         },
     ]);
 
-    $response = actingAs($user, 'sanctum')->postJson('/api/chat', [
+    $response = actingAs($user)->postJson('/api/chat', [
         'messages' => [['role' => 'user', 'content' => 'Hello']],
     ]);
 

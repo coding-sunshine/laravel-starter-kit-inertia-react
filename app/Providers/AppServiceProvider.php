@@ -66,7 +66,7 @@ final class AppServiceProvider extends ServiceProvider
 
         $this->app->singleton(PaymentGatewayManager::class);
 
-        config(['filament-impersonate.redirect_to' => '/dashboard']);
+        config(['filament-impersonate.redirect_to' => '/chat']);
     }
 
     public function boot(): void

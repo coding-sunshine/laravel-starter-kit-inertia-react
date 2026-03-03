@@ -8,6 +8,9 @@ declare(strict_types=1);
  * after adding or changing routes.
  */
 
+use App\Http\Controllers\Api\ChatController;
+use App\Http\Controllers\Api\ChatMemoryController;
+use App\Http\Controllers\Api\ConversationController;
 use App\Http\Controllers\Billing\BillingDashboardController;
 use App\Http\Controllers\Billing\CreditController;
 use App\Http\Controllers\Billing\InvoiceController;
@@ -16,12 +19,15 @@ use App\Http\Controllers\Billing\PricingController;
 use App\Http\Controllers\Billing\StripeWebhookController;
 use App\Http\Controllers\Blog\BlogController;
 use App\Http\Controllers\Changelog\ChangelogController;
+use App\Http\Controllers\ContactsTableController;
 use App\Http\Controllers\ContactSubmissionController;
 use App\Http\Controllers\CookieConsentController;
+use App\Http\Controllers\EnquiriesTableController;
 use App\Http\Controllers\EnterpriseInquiryController;
 use App\Http\Controllers\HelpCenter\HelpCenterController;
 use App\Http\Controllers\HelpCenter\RateHelpArticleController;
 use App\Http\Controllers\InvitationAcceptController;
+use App\Http\Controllers\LotsTableController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\OrganizationInvitationController;
@@ -30,9 +36,18 @@ use App\Http\Controllers\OrganizationSwitchController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\PageViewController;
 use App\Http\Controllers\PersonalDataExportController;
+use App\Http\Controllers\ProjectsTableController;
+use App\Http\Controllers\Reports\ContactReportController;
+use App\Http\Controllers\Reports\ReservationReportController;
+use App\Http\Controllers\Reports\SalesReportController;
+use App\Http\Controllers\Reports\TaskReportController;
+use App\Http\Controllers\ReservationsTableController;
+use App\Http\Controllers\SalesTableController;
+use App\Http\Controllers\SearchesTableController;
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\Settings\AchievementsController;
 use App\Http\Controllers\Settings\BrandingController;
+use App\Http\Controllers\TasksTableController;
 use App\Http\Controllers\TermsAcceptController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserEmailResetNotificationController;
@@ -133,6 +148,30 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('dashboard', App\Http\Controllers\DashboardController::class)->name('dashboard');
 
     Route::get('chat', fn () => Inertia::render('chat/index'))->name('chat');
+
+    // Chat API (web session auth so same cookie as /chat page; avoids Sanctum stateful domain/Referer issues)
+    Route::prefix('api')->group(function (): void {
+        Route::post('chat', ChatController::class)->name('api.chat');
+        Route::get('chat/memories', ChatMemoryController::class)->name('chat.memories');
+        Route::get('conversations', [ConversationController::class, 'index'])->name('conversations.index');
+        Route::get('conversations/{id}', [ConversationController::class, 'show'])->name('conversations.show');
+        Route::patch('conversations/{id}', [ConversationController::class, 'update'])->name('conversations.update');
+        Route::delete('conversations/{id}', [ConversationController::class, 'destroy'])->name('conversations.destroy');
+    });
+
+    Route::get('projects', [ProjectsTableController::class, 'index'])->name('projects.table');
+    Route::get('lots', [LotsTableController::class, 'index'])->name('lots.table');
+    Route::get('contacts-list', [ContactsTableController::class, 'index'])->name('contacts.table');
+    Route::get('tasks', [TasksTableController::class, 'index'])->name('tasks.table');
+    Route::get('sales', [SalesTableController::class, 'index'])->name('sales.table');
+    Route::get('reservations', [ReservationsTableController::class, 'index'])->name('reservations.table');
+    Route::get('enquiries', [EnquiriesTableController::class, 'index'])->name('enquiries.table');
+    Route::get('searches', [SearchesTableController::class, 'index'])->name('searches.table');
+
+    Route::get('reports/contacts', ContactReportController::class)->name('reports.contacts');
+    Route::get('reports/tasks', TaskReportController::class)->name('reports.tasks');
+    Route::get('reports/sales', SalesReportController::class)->name('reports.sales');
+    Route::get('reports/reservations', ReservationReportController::class)->name('reports.reservations');
 
     Route::get('users', [UsersTableController::class, 'index'])->name('users.table');
     Route::post('users/bulk-soft-delete', [UsersTableController::class, 'bulkSoftDelete'])->name('users.bulk-soft-delete');

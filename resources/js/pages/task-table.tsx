@@ -1,0 +1,27 @@
+import { DataTable } from "laravel-data-table";
+import type { DataTableResponse } from "laravel-data-table";
+import { Head } from "@inertiajs/react";
+
+interface Props {
+    tableData: DataTableResponse<App.DataTables.TaskDataTable>;
+}
+
+export default function TaskTablePage({ tableData }: Props) {
+    return (
+        <>
+            <Head title="Tasks" />
+            <div className="flex h-full flex-1 flex-col gap-4 p-4">
+                <div>
+                    <h1 className="text-2xl font-bold tracking-tight">Tasks</h1>
+                    <p className="text-muted-foreground">
+                        {tableData.meta.total} results
+                    </p>
+                </div>
+                <DataTable<App.DataTables.TaskDataTable>
+                    tableData={tableData}
+                    tableName="task"
+                />
+            </div>
+        </>
+    );
+}

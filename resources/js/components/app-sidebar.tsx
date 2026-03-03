@@ -38,16 +38,16 @@ import AppLogo from './app-logo';
 
 const mainNavItems: NavItem[] = [
     {
-        title: 'Dashboard',
-        href: dashboard().url,
-        icon: LayoutGrid,
-        dataPan: 'nav-dashboard',
-    },
-    {
         title: 'Chat',
         href: chat().url,
         icon: MessageCircle,
         dataPan: 'nav-chat',
+    },
+    {
+        title: 'Dashboard',
+        href: dashboard().url,
+        icon: LayoutGrid,
+        dataPan: 'nav-dashboard',
     },
     {
         title: 'Users',

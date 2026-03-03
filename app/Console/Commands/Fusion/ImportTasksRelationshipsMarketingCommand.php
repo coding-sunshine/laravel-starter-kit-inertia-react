@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Console\Commands\Fusion;
 
-use App\Models\AdManagement;
 use App\Models\Address;
+use App\Models\AdManagement;
 use App\Models\BrochureMailJob;
 use App\Models\CampaignWebsite;
 use App\Models\CampaignWebsiteTemplate;
@@ -27,8 +27,13 @@ use App\Models\Scopes\OrganizationScope;
 use App\Models\Status;
 use App\Models\SurveyQuestion;
 use App\Models\Task;
+use App\Models\Website;
 use App\Models\WebsiteContact;
+use App\Models\WebsiteElement;
+use App\Models\WebsitePage;
 use App\Models\WidgetSetting;
+use App\Models\WordpressTemplate;
+use App\Models\WordpressWebsite;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Throwable;
@@ -104,6 +109,11 @@ final class ImportTasksRelationshipsMarketingCommand extends Command
         $this->importCampaignWebsites($connection, $chunk);
         $this->importResources($connection, $chunk);
         $this->importAdAndLayout($connection, $chunk);
+        $this->importWebsites($connection, $chunk);
+        $this->importWebsitePages($connection, $chunk);
+        $this->importWebsiteElements($connection, $chunk);
+        $this->importWordpressWebsites($connection, $chunk);
+        $this->importWordpressTemplates($connection, $chunk);
 
         $this->info('Import complete.');
 
@@ -115,6 +125,11 @@ final class ImportTasksRelationshipsMarketingCommand extends Command
         $this->info('Truncating Step 5 tables...');
 
         foreach ([
+            'wordpress_templates',
+            'wordpress_websites',
+            'website_elements',
+            'website_pages',
+            'websites',
             'survey_questions',
             'widget_settings',
             'column_management',
@@ -465,8 +480,8 @@ final class ImportTasksRelationshipsMarketingCommand extends Command
                     }
 
                     // Map legacy address structure to new structure
-                    $line1 = trim(($row->house_number ?? '') . ' ' . ($row->street ?? ''));
-                    $line2 = trim(($row->unit ?? '') . ' ' . ($row->suburb ?? ''));
+                    $line1 = mb_trim(($row->house_number ?? '').' '.($row->street ?? ''));
+                    $line2 = mb_trim(($row->unit ?? '').' '.($row->suburb ?? ''));
 
                     // Skip addresses with no meaningful address information
                     if (empty($line1) && empty($line2) && empty($row->city) && empty($row->postcode)) {
@@ -529,7 +544,7 @@ final class ImportTasksRelationshipsMarketingCommand extends Command
                 }
             });
 
-        $this->info('Status ID mapping created: ' . count($statusIdMap) . ' mappings');
+        $this->info('Status ID mapping created: '.count($statusIdMap).' mappings');
 
         DB::connection($connection)
             ->table('statusables')
@@ -549,7 +564,7 @@ final class ImportTasksRelationshipsMarketingCommand extends Command
                     }
 
                     // Map legacy status ID to new status ID
-                    if (!isset($statusIdMap[$row->status_id])) {
+                    if (! isset($statusIdMap[$row->status_id])) {
                         continue; // Skip if no mapping found
                     }
 
@@ -617,7 +632,7 @@ final class ImportTasksRelationshipsMarketingCommand extends Command
                 }
             });
 
-        $this->info('Campaign website ID mapping created: ' . count($campaignWebsiteIdMap) . ' mappings');
+        $this->info('Campaign website ID mapping created: '.count($campaignWebsiteIdMap).' mappings');
 
         DB::connection($connection)
             ->table('campaign_website_templates')
@@ -645,7 +660,7 @@ final class ImportTasksRelationshipsMarketingCommand extends Command
                     }
 
                     // Skip if project doesn't exist
-                    if (!DB::table('projects')->where('id', $row->project_id)->exists()) {
+                    if (! DB::table('projects')->where('id', $row->project_id)->exists()) {
                         continue;
                     }
 
@@ -742,7 +757,7 @@ final class ImportTasksRelationshipsMarketingCommand extends Command
                 foreach ($rows as $row) {
                     // Skip if user doesn't exist
                     $userExists = DB::table('users')->where('id', $row->user_id)->exists();
-                    if (!$userExists) {
+                    if (! $userExists) {
                         continue;
                     }
 
@@ -762,7 +777,7 @@ final class ImportTasksRelationshipsMarketingCommand extends Command
                 foreach ($rows as $row) {
                     // Skip if user doesn't exist
                     $userExists = DB::table('users')->where('id', $row->user_id)->exists();
-                    if (!$userExists) {
+                    if (! $userExists) {
                         continue;
                     }
 
@@ -814,5 +829,109 @@ final class ImportTasksRelationshipsMarketingCommand extends Command
 
         return is_array($decoded) ? $decoded : null;
     }
-}
 
+    private function importWebsites(string $connection, int $chunk): void
+    {
+        $this->info('Importing websites...');
+
+        DB::connection($connection)
+            ->table('websites')
+            ->orderBy('id')
+            ->chunkById($chunk, function ($rows): void {
+                foreach ($rows as $row) {
+                    Website::create([
+                        'organization_id' => $this->organizationId,
+                        'name' => (string) ($row->name ?? $row->title ?? 'Website'),
+                        'domain' => $row->domain ?? $row->url ?? null,
+                        'settings' => $this->decodeJson($row->settings ?? null),
+                    ]);
+                }
+            });
+    }
+
+    private function importWebsitePages(string $connection, int $chunk): void
+    {
+        $this->info('Importing website_pages...');
+
+        DB::connection($connection)
+            ->table('website_pages')
+            ->orderBy('id')
+            ->chunkById($chunk, function ($rows): void {
+                foreach ($rows as $row) {
+                    if (! DB::table('websites')->where('id', $row->website_id)->exists()) {
+                        continue;
+                    }
+
+                    WebsitePage::create([
+                        'website_id' => $row->website_id,
+                        'title' => (string) ($row->title ?? 'Page'),
+                        'slug' => (string) ($row->slug ?? ''),
+                        'content' => $row->content ?? null,
+                        'order' => $row->order ?? 0,
+                    ]);
+                }
+            });
+    }
+
+    private function importWebsiteElements(string $connection, int $chunk): void
+    {
+        $this->info('Importing website_elements...');
+
+        DB::connection($connection)
+            ->table('website_elements')
+            ->orderBy('id')
+            ->chunkById($chunk, function ($rows): void {
+                foreach ($rows as $row) {
+                    if (! DB::table('website_pages')->where('id', $row->website_page_id)->exists()) {
+                        continue;
+                    }
+
+                    WebsiteElement::create([
+                        'website_page_id' => $row->website_page_id,
+                        'type' => (string) ($row->type ?? 'unknown'),
+                        'config' => $this->decodeJson($row->config ?? null),
+                        'order' => $row->order ?? 0,
+                    ]);
+                }
+            });
+    }
+
+    private function importWordpressWebsites(string $connection, int $chunk): void
+    {
+        $this->info('Importing wordpress_websites...');
+
+        DB::connection($connection)
+            ->table('wordpress_websites')
+            ->orderBy('id')
+            ->chunkById($chunk, function ($rows): void {
+                foreach ($rows as $row) {
+                    WordpressWebsite::create([
+                        'organization_id' => $this->organizationId,
+                        'name' => (string) ($row->name ?? $row->title ?? 'WordPress Site'),
+                        'url' => $row->url ?? null,
+                        'api_key' => $row->api_key ?? null,
+                    ]);
+                }
+            });
+    }
+
+    private function importWordpressTemplates(string $connection, int $chunk): void
+    {
+        $this->info('Importing wordpress_templates...');
+
+        DB::connection($connection)
+            ->table('wordpress_templates')
+            ->orderBy('id')
+            ->chunkById($chunk, function ($rows): void {
+                foreach ($rows as $row) {
+                    WordpressTemplate::firstOrCreate(
+                        ['slug' => (string) ($row->slug ?? $row->template_id ?? '')],
+                        [
+                            'name' => (string) ($row->name ?? 'Template'),
+                            'schema' => $this->decodeJson($row->schema ?? null),
+                        ]
+                    );
+                }
+            });
+    }
+}

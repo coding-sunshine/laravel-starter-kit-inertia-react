@@ -12,10 +12,10 @@ interface Props {
 export default function LotTablePage({ tableData }: Props) {
     return (
         <>
-            <Head title="Lot" />
+            <Head title="Lots" />
             <div className="flex h-full flex-1 flex-col gap-4 p-4">
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Lot</h1>
+                    <h1 className="text-2xl font-bold tracking-tight">Lots</h1>
                     <p className="text-muted-foreground">
                         {tableData.meta.total} results
                     </p>

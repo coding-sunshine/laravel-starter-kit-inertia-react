@@ -60,9 +60,14 @@ function getCsrfToken(): string {
     }
 }
 
+import type { ChatAgent } from './_components/empty-state';
+
 export default function ChatPage() {
     const { auth } = usePage<SharedData>().props;
     const isMobile = useIsMobile();
+    const [agent, setAgent] = useState<ChatAgent>('contact');
+    const agentRef = useRef(agent);
+    agentRef.current = agent;
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [conversationIdFromUrl, setConversationIdFromUrl] = useState<
         string | null
@@ -112,6 +117,7 @@ export default function ChatPage() {
                     headers,
                     body: {
                         conversation_id: conversationIdRef.current ?? undefined,
+                        agent: agentRef.current,
                     },
                     fetchClient: async (
                         url: RequestInfo | URL,
@@ -156,11 +162,18 @@ export default function ChatPage() {
     const { messages, sendMessage, setMessages, isLoading, error, stop } =
         useChat({
             connection,
+            onError(err: Error) {
+                console.error('[Chat] stream or request error:', err);
+            },
             onChunk(chunk: {
                 type?: string;
                 conversationId?: string;
                 title?: string;
+                error?: { message?: string };
             }) {
+                if (chunk.type === 'RUN_ERROR' && chunk.error?.message) {
+                    console.error('[Chat] RUN_ERROR:', chunk.error.message);
+                }
                 if (
                     chunk.type === 'CONVERSATION_CREATED' &&
                     chunk.conversationId
@@ -323,7 +336,7 @@ export default function ChatPage() {
                     {error && <ErrorBanner error={error} />}
 
                     {messages.length === 0 && !isLoading ? (
-                        <EmptyState onSend={handleSend} />
+                        <EmptyState agent={agent} onSend={handleSend} />
                     ) : (
                         <MessageList
                             messages={messages}
@@ -332,12 +345,33 @@ export default function ChatPage() {
                         />
                     )}
 
-                    <ChatInput
-                        onSend={handleSend}
-                        onStop={stop}
-                        isLoading={isLoading}
-                        disabled={!csrfReady}
-                    />
+                    <div className="flex flex-col border-t">
+                        <div className="flex items-center gap-1 border-b px-3 py-2">
+                            <span className="text-muted-foreground mr-2 text-xs font-medium">Agent:</span>
+                            <div className="flex rounded-md border bg-muted/50 p-0.5">
+                                {(['contact', 'property', 'general'] as const).map((a) => (
+                                    <button
+                                        key={a}
+                                        type="button"
+                                        onClick={() => setAgent(a)}
+                                        className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
+                                            agent === a
+                                                ? 'bg-background text-foreground shadow-sm'
+                                                : 'text-muted-foreground hover:text-foreground'
+                                        }`}
+                                    >
+                                        {a === 'contact' ? 'Contacts' : a === 'property' ? 'Property & Sales' : 'General'}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                        <ChatInput
+                            onSend={handleSend}
+                            onStop={stop}
+                            isLoading={isLoading}
+                            disabled={!csrfReady}
+                        />
+                    </div>
                 </div>
             </div>
         </AppSidebarLayout>

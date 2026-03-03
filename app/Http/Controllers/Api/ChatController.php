@@ -71,11 +71,15 @@ final class ChatController
 
         $defaultProvider = config('ai.default', 'openai');
         $providerKey = config("ai.providers.{$defaultProvider}.key");
+        $envKey = mb_strtoupper(str_replace('-', '_', (string) $defaultProvider)).'_API_KEY';
+        // Use .env when config key is empty (e.g. not yet set in Filament Settings)
+        if (empty($providerKey) && ($envValue = env($envKey)) !== null && $envValue !== '') {
+            $providerKey = $envValue;
+            config(["ai.providers.{$defaultProvider}.key" => $providerKey]);
+        }
         if (empty($providerKey)) {
-            $envKey = mb_strtoupper(str_replace('-', '_', (string) $defaultProvider)).'_API_KEY';
-
             return response()->json([
-                'message' => 'AI provider is not configured. Set '.$envKey.' in your .env.',
+                'message' => 'AI provider is not configured. Set '.$envKey.' in your .env or in Settings > AI / Prism.',
             ], 503);
         }
 
@@ -112,7 +116,7 @@ final class ChatController
             ], 502);
         }
 
-        $runId = null;
+        $runId = (string) Str::ulid();
         $messageId = null;
         $contentAccumulator = '';
 
@@ -121,6 +125,20 @@ final class ChatController
                 if (ob_get_level() !== 0) {
                     ob_end_clean();
                 }
+                $ts = (int) (microtime(true) * 1000);
+                echo json_encode(['type' => 'RUN_STARTED', 'timestamp' => $ts, 'runId' => $runId])."\n";
+                if ($newConversationId !== null) {
+                    echo json_encode([
+                        'type' => 'CONVERSATION_CREATED',
+                        'timestamp' => $ts,
+                        'conversationId' => $newConversationId,
+                    ])."\n";
+                }
+                if (ob_get_level() > 0) {
+                    ob_flush();
+                }
+                flush();
+
                 try {
                     foreach ($stream as $event) {
                         if (connection_aborted() !== 0) {
@@ -131,22 +149,6 @@ final class ChatController
 
                         if ($event instanceof StreamStart) {
                             $runId = $event->id;
-                            echo json_encode([
-                                'type' => 'RUN_STARTED',
-                                'timestamp' => $ts,
-                                'runId' => $runId,
-                            ])."\n";
-                            if ($newConversationId !== null) {
-                                echo json_encode([
-                                    'type' => 'CONVERSATION_CREATED',
-                                    'timestamp' => $ts,
-                                    'conversationId' => $newConversationId,
-                                ])."\n";
-                            }
-                            if (ob_get_level() > 0) {
-                                ob_flush();
-                            }
-                            flush();
 
                             continue;
                         }

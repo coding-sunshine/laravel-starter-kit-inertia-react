@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\DataTables;
 
 use App\Models\Lot;
@@ -10,11 +12,19 @@ use Machour\DataTable\QuickView;
 use Spatie\TypeScriptTransformer\Attributes\TypeScript;
 
 #[TypeScript]
-class LotDataTable extends AbstractDataTable
+final class LotDataTable extends AbstractDataTable
 {
     public function __construct(
         public int $id,
-        // TODO: Add DTO properties matching your model
+        public ?string $title,
+        public ?string $project_title,
+        public ?string $price,
+        public ?string $land_price,
+        public ?string $stage,
+        public ?int $bedrooms,
+        public ?int $bathrooms,
+        public ?string $land_size,
+        public bool $is_archived,
         public ?string $created_at,
     ) {}
 
@@ -22,6 +32,15 @@ class LotDataTable extends AbstractDataTable
     {
         return new self(
             id: $model->id,
+            title: $model->title,
+            project_title: $model->project?->title,
+            price: $model->price !== null ? (string) $model->price : null,
+            land_price: $model->land_price !== null ? (string) $model->land_price : null,
+            stage: $model->stage,
+            bedrooms: $model->bedrooms,
+            bathrooms: $model->bathrooms,
+            land_size: $model->land_size !== null ? (string) $model->land_size : null,
+            is_archived: (bool) $model->is_archived,
             created_at: $model->created_at?->format('Y-m-d H:i'),
         );
     }
@@ -30,7 +49,15 @@ class LotDataTable extends AbstractDataTable
     {
         return [
             new Column(id: 'id', label: 'ID', type: 'number', sortable: true),
-            // TODO: Add columns matching your DTO properties
+            new Column(id: 'title', label: 'Title', type: 'string', sortable: true),
+            new Column(id: 'project_title', label: 'Project', type: 'string', sortable: false),
+            new Column(id: 'price', label: 'Price', type: 'string', sortable: true),
+            new Column(id: 'land_price', label: 'Land price', type: 'string', sortable: true),
+            new Column(id: 'stage', label: 'Stage', type: 'string', sortable: true),
+            new Column(id: 'bedrooms', label: 'Beds', type: 'number', sortable: true),
+            new Column(id: 'bathrooms', label: 'Baths', type: 'number', sortable: true),
+            new Column(id: 'land_size', label: 'Land size', type: 'string', sortable: true),
+            new Column(id: 'is_archived', label: 'Archived', type: 'boolean', sortable: true),
             new Column(id: 'created_at', label: 'Created at', type: 'date', sortable: true),
         ];
     }
@@ -38,18 +65,16 @@ class LotDataTable extends AbstractDataTable
     public static function tableQuickViews(): array
     {
         return [
-            new QuickView(
-                id: 'all',
-                label: 'All',
-                params: [],
-            ),
-            // TODO: Add quick views for common filters
+            new QuickView(id: 'all', label: 'All', params: []),
+            new QuickView(id: 'active', label: 'Active', params: ['filter[is_archived]' => '0']),
+            new QuickView(id: 'archived', label: 'Archived', params: ['filter[is_archived]' => '1']),
         ];
     }
 
     public static function tableBaseQuery(): Builder
     {
-        return Lot::query();
+        return Lot::query()
+            ->with(['project']);
     }
 
     public static function tableDefaultSort(): string
