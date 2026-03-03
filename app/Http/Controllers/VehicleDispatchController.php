@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateVehicleDispatchRequest;
+use App\Models\PowerplantSidingDistance;
 use App\Models\Siding;
 use App\Models\VehicleDispatch;
 use DateTimeImmutable;
@@ -69,7 +70,6 @@ final class VehicleDispatchController extends Controller
             'currentSiding' => $currentSiding,
             'sidings' => $sidings,
             'preview_data' => $request->session()->get('preview_data', []),
-            'import_siding_id' => $request->session()->get('import_siding_id'),
             'import_target_date' => $request->session()->get('import_target_date'),
             'flash' => [
                 'success' => $request->session()->get('success'),
@@ -107,7 +107,6 @@ final class VehicleDispatchController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'data' => 'required|string',
-            'siding_id' => 'required|exists:sidings,id',
             'target_date' => 'nullable|date',
         ]);
 
@@ -116,7 +115,6 @@ final class VehicleDispatchController extends Controller
         }
 
         $data = $request->input('data');
-        $sidingId = $request->input('siding_id');
         $targetDate = $request->input('target_date', now()->format('Y-m-d'));
 
         // Parse Excel-style paste data
@@ -132,7 +130,7 @@ final class VehicleDispatchController extends Controller
 
         foreach ($rows as $index => $row) {
             try {
-                $parsedData = $this->parseVehicleDispatchRow($row, $sidingId);
+                $parsedData = $this->parseVehicleDispatchRow($row);
                 $parsedRows[] = $parsedData;
             } catch (Exception $e) {
                 $errors[] = 'Row '.($index + 2).': '.$e->getMessage();
@@ -149,7 +147,6 @@ final class VehicleDispatchController extends Controller
         return redirect()
             ->route('vehicle-dispatch.index', array_merge(['date' => $targetDate], $request->only(['shift', 'permit_no', 'truck_regd_no'])))
             ->with('preview_data', $parsedRows)
-            ->with('import_siding_id', $sidingId)
             ->with('import_target_date', $targetDate);
     }
 
@@ -157,7 +154,6 @@ final class VehicleDispatchController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'data' => 'required|array',
-            'siding_id' => 'required|exists:sidings,id',
             'target_date' => 'nullable|date',
         ]);
 
@@ -166,17 +162,21 @@ final class VehicleDispatchController extends Controller
         }
 
         $data = $request->input('data');
-        $sidingId = $request->input('siding_id');
         $targetDate = $request->input('target_date', now()->format('Y-m-d'));
 
         $imported = 0;
         $errors = [];
 
-        DB::transaction(function () use ($data, $sidingId, $targetDate, &$imported, &$errors) {
+        DB::transaction(function () use ($data, $targetDate, &$imported, &$errors) {
             foreach ($data as $index => $row) {
                 try {
+                    // Remove siding object data before saving (only keep siding_id)
+                    if (isset($row['siding'])) {
+                        unset($row['siding']);
+                    }
+                    
                     // Validate required fields before saving
-                    $this->validateVehicleDispatchData($row, $sidingId);
+                    $this->validateVehicleDispatchData($row);
 
                     // Apply target date to each record if no issued_on is present
                     if (empty($row['issued_on'])) {
@@ -235,7 +235,7 @@ final class VehicleDispatchController extends Controller
             ->get(['id', 'name', 'code']);
     }
 
-    private function validateVehicleDispatchData(array $row, int $sidingId): void
+    private function validateVehicleDispatchData(array $row): void
     {
         // Validate required fields
         if (empty($row['permit_no'])) {
@@ -261,6 +261,54 @@ final class VehicleDispatchController extends Controller
         if (! is_numeric($row['mineral_weight']) || (float) $row['mineral_weight'] < 0) {
             throw new InvalidArgumentException('Mineral Weight must be a valid positive number');
         }
+
+        // Validate that siding_id is present (should be determined from distance)
+        if (empty($row['siding_id'])) {
+            throw new InvalidArgumentException('Siding could not be determined from distance. Please check the distance value.');
+        }
+    }
+
+    /**
+     * Find siding ID based on distance from powerplant_siding_distances table
+     */
+    private function findSidingByDistance(?float $distance): ?int
+    {
+        if ($distance === null || $distance <= 0) {
+            return null;
+        }
+
+        // Look for exact match first (within 0.01 tolerance for floating point comparison)
+        $exactMatch = PowerplantSidingDistance::whereRaw('ABS(distance_km - ?) < 0.01', [$distance])
+            ->first();
+
+        if ($exactMatch) {
+            return $exactMatch->siding_id;
+        }
+
+        // If no exact match, try to find the closest distance (within 1 km tolerance)
+        $closestMatch = PowerplantSidingDistance::select('siding_id', 'distance_km')
+            ->whereRaw('ABS(distance_km - ?) <= 1', [$distance])
+            ->orderByRaw('ABS(distance_km - ?) ASC', [$distance])
+            ->first();
+
+        return $closestMatch?->siding_id;
+    }
+
+    /**
+     * Get siding information for preview display
+     */
+    private function getSidingInfo(?int $sidingId): ?array
+    {
+        if (!$sidingId) {
+            return null;
+        }
+
+        $siding = Siding::find($sidingId);
+        return $siding ? [
+            'id' => $siding->id,
+            'name' => $siding->name,
+            'code' => $siding->code,
+        ] : null;
     }
 
     /**
@@ -422,41 +470,41 @@ final class VehicleDispatchController extends Controller
         return false;
     }
 
-    private function parseVehicleDispatchRow(array $row, int $sidingId): array
+    private function parseVehicleDispatchRow(array $row): array
     {
         $data = null;
 
         // Format D: 14 cols, no Ref - Sl.No|Permit|Pass|StackDO|IssuedOn|Truck|Mineral|MinType|Weight|Source|Dest|Consignee|CheckGate|Distance
         if (count($row) >= 14) {
-            $formatD = $this->mapFormatD($row, $sidingId);
+            $formatD = $this->mapFormatD($row);
             if ($this->hasValidRequiredFields($formatD)) {
                 $data = $formatD;
             }
         }
 
         if (! $data) {
-            $formatA = $this->mapFormatA($row, $sidingId);
+            $formatA = $this->mapFormatA($row);
             if ($this->hasValidRequiredFields($formatA)) {
                 $data = $formatA;
             }
         }
 
         if (! $data) {
-            $formatB = $this->mapFormatB($row, $sidingId);
+            $formatB = $this->mapFormatB($row);
             if ($this->hasValidRequiredFields($formatB)) {
                 $data = $formatB;
             }
         }
 
         if (! $data) {
-            $formatC = $this->mapFormatC($row, $sidingId);
+            $formatC = $this->mapFormatC($row);
             if ($this->hasValidRequiredFields($formatC)) {
                 $data = $formatC;
             }
         }
 
         if (! $data) {
-            $data = $this->mapWithWeightScan($row, $sidingId);
+            $data = $this->mapWithWeightScan($row);
         }
 
         return $this->applyShiftFromIssuedOn($data);
@@ -487,10 +535,15 @@ final class VehicleDispatchController extends Controller
     }
 
     /** Format A: 6=Truck, 7=Mineral, 8=MinType, 9=MinWeight */
-    private function mapFormatA(array $row, int $sidingId): array
+    private function mapFormatA(array $row): array
     {
+        $distance = $this->parseNullableInt($row[14] ?? null);
+        $sidingId = $this->findSidingByDistance($distance);
+        $sidingInfo = $this->getSidingInfo($sidingId);
+        
         return [
             'siding_id' => $sidingId,
+            'siding' => $sidingInfo,
             'serial_no' => $this->parseNullableInt($row[0] ?? null),
             'ref_no' => $this->parseNullableInt($row[1] ?? null),
             'permit_no' => $this->parseNullableString($row[2] ?? null),
@@ -505,17 +558,22 @@ final class VehicleDispatchController extends Controller
             'destination' => $this->parseNullableString($row[11] ?? null),
             'consignee' => $this->parseNullableString($row[12] ?? null),
             'check_gate' => $this->parseNullableString($row[13] ?? null),
-            'distance_km' => $this->parseNullableInt($row[14] ?? null),
+            'distance_km' => $distance,
             'shift' => $this->parseNullableString($row[15] ?? null),
             'created_by' => auth()->id(),
         ];
     }
 
     /** Format B: 6=Mineral, 7=MinType, 8=MinWeight, 15=Truck */
-    private function mapFormatB(array $row, int $sidingId): array
+    private function mapFormatB(array $row): array
     {
+        $distance = $this->parseNullableInt($row[13] ?? null);
+        $sidingId = $this->findSidingByDistance($distance);
+        $sidingInfo = $this->getSidingInfo($sidingId);
+        
         return [
             'siding_id' => $sidingId,
+            'siding' => $sidingInfo,
             'serial_no' => $this->parseNullableInt($row[0] ?? null),
             'ref_no' => $this->parseNullableInt($row[1] ?? null),
             'permit_no' => $this->parseNullableString($row[2] ?? null),
@@ -529,7 +587,7 @@ final class VehicleDispatchController extends Controller
             'destination' => $this->parseNullableString($row[10] ?? null),
             'consignee' => $this->parseNullableString($row[11] ?? null),
             'check_gate' => $this->parseNullableString($row[12] ?? null),
-            'distance_km' => $this->parseNullableInt($row[13] ?? null),
+            'distance_km' => $distance,
             'shift' => $this->parseNullableString($row[14] ?? null),
             'truck_regd_no' => $this->parseNullableString($row[15] ?? null),
             'created_by' => auth()->id(),
@@ -537,10 +595,14 @@ final class VehicleDispatchController extends Controller
     }
 
     /** Format C: 9 columns - 6=Truck, 7=Mineral, 8=MinWeight (no mineral type) */
-    private function mapFormatC(array $row, int $sidingId): array
+    private function mapFormatC(array $row): array
     {
+        $sidingId = $this->findSidingByDistance(null); // No distance in this format
+        $sidingInfo = $this->getSidingInfo($sidingId);
+        
         return [
             'siding_id' => $sidingId,
+            'siding' => $sidingInfo,
             'serial_no' => $this->parseNullableInt($row[0] ?? null),
             'ref_no' => $this->parseNullableInt($row[1] ?? null),
             'permit_no' => $this->parseNullableString($row[2] ?? null),
@@ -562,10 +624,15 @@ final class VehicleDispatchController extends Controller
     }
 
     /** Format D: 14 columns, no Ref - Sl.No|Permit|Pass|StackDO|IssuedOn|Truck|Mineral|MinType|Weight|Source|Dest|Consignee|CheckGate|Distance */
-    private function mapFormatD(array $row, int $sidingId): array
+    private function mapFormatD(array $row): array
     {
+        $distance = $this->parseNullableInt($row[13] ?? null);
+        $sidingId = $this->findSidingByDistance($distance);
+        $sidingInfo = $this->getSidingInfo($sidingId);
+        
         return [
             'siding_id' => $sidingId,
+            'siding' => $sidingInfo,
             'serial_no' => $this->parseNullableInt($row[0] ?? null),
             'ref_no' => null,
             'permit_no' => $this->parseNullableString($row[1] ?? null),
@@ -580,14 +647,14 @@ final class VehicleDispatchController extends Controller
             'destination' => $this->parseNullableString($row[10] ?? null),
             'consignee' => $this->parseNullableString($row[11] ?? null),
             'check_gate' => $this->parseNullableString($row[12] ?? null),
-            'distance_km' => $this->parseNullableInt($row[13] ?? null),
+            'distance_km' => $distance,
             'shift' => null,
             'created_by' => auth()->id(),
         ];
     }
 
     /** Fallback: scan cols 6-11 for first valid weight, infer other fields */
-    private function mapWithWeightScan(array $row, int $sidingId): array
+    private function mapWithWeightScan(array $row): array
     {
         $weightCol = null;
         for ($i = 6; $i <= 11; $i++) {
@@ -600,20 +667,24 @@ final class VehicleDispatchController extends Controller
 
         // If we found weight at col 8 with 14 columns → Format D
         if ($weightCol === 8 && count($row) >= 14) {
-            return $this->mapFormatD($row, $sidingId);
+            return $this->mapFormatD($row);
         }
         if ($weightCol === 8) {
             return count($row) <= 9
-                ? $this->mapFormatC($row, $sidingId)
-                : $this->mapFormatB($row, $sidingId);
+                ? $this->mapFormatC($row)
+                : $this->mapFormatB($row);
         }
         if ($weightCol === 9) {
-            return $this->mapFormatA($row, $sidingId);
+            return $this->mapFormatA($row);
         }
         if ($weightCol === 7) {
             // Mineral at 6, Weight at 7 (6 used for both truck and mineral when only 8 cols)
+            $sidingId = $this->findSidingByDistance(null); // No distance in this format
+            $sidingInfo = $this->getSidingInfo($sidingId);
+            
             return [
                 'siding_id' => $sidingId,
+                'siding' => $sidingInfo,
                 'serial_no' => $this->parseNullableInt($row[0] ?? null),
                 'ref_no' => $this->parseNullableInt($row[1] ?? null),
                 'permit_no' => $this->parseNullableString($row[2] ?? null),
@@ -635,14 +706,7 @@ final class VehicleDispatchController extends Controller
         }
 
         // Last resort: Format A
-        return $this->mapFormatA($row, $sidingId);
-    }
-
-    private function createVehicleDispatchFromRow(array $row, int $sidingId): VehicleDispatch
-    {
-        $data = $this->parseVehicleDispatchRow($row, $sidingId);
-
-        return VehicleDispatch::create($data);
+        return $this->mapFormatA($row);
     }
 
     private function parseNullableInt($value): ?int

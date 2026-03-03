@@ -1,4 +1,4 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { useState, useEffect, useRef } from 'react';
 import { dashboard } from '@/routes';
 import AppLayout from '@/layouts/app-layout';
@@ -9,76 +9,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from '@/components/ui/dialog';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import {
-    Search,
-    Filter,
-    Download,
-    Upload,
-    Calendar as CalendarIcon,
-    Clock,
-    Truck,
-    FileText,
-    AlertCircle,
-    CheckCircle,
-    Pencil,
-} from 'lucide-react';
+import { Filter, Upload, Calendar as CalendarIcon, AlertCircle, CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { DateRange } from 'react-day-picker';
-
-interface VehicleDispatch {
-    id: number;
-    siding_id: number;
-    serial_no: number | null;
-    ref_no: number | null;
-    permit_no: string;
-    pass_no: string;
-    stack_do_no: string | null;
-    issued_on: string | null;
-    truck_regd_no: string;
-    mineral: string;
-    mineral_type: string | null;
-    mineral_weight: number;
-    source: string | null;
-    destination: string | null;
-    consignee: string | null;
-    check_gate: string | null;
-    distance_km: number | null;
-    shift: string | null;
-    created_at: string;
-    updated_at: string;
-    siding: {
-        id: number;
-        name: string;
-        code: string;
-    };
-    creator: {
-        id: number;
-        name: string;
-        email: string;
-    } | null;
-}
-
-interface Filters {
-    date_from?: string;
-    date_to?: string;
-    date?: string;
-    shift?: string;
-    permit_no?: string;
-    truck_regd_no?: string;
-}
+import type { VehicleDispatch, Filters } from './types';
+import { toDatetimeLocal } from './utils';
+import MainDataTab from './MainDataTab';
+import DPRTab from './DPRTab';
+import VehicleDispatchTabs, { type VehicleDispatchTabValue } from './VehicleDispatchTabs';
 
 interface Props {
     vehicleDispatches: {
@@ -106,8 +47,7 @@ interface Props {
         name: string;
         code: string;
     }>;
-    preview_data?: any[];
-    import_siding_id?: number;
+    preview_data?: Record<string, unknown>[];
     import_target_date?: string;
     flash?: { success?: string };
 }
@@ -120,7 +60,6 @@ export default function VehicleDispatchIndex({
     currentSiding,
     sidings,
     preview_data,
-    import_siding_id,
     import_target_date,
     flash,
 }: Props) {
@@ -137,41 +76,27 @@ export default function VehicleDispatchIndex({
     const successMessage =
         flash?.success ?? pageProps.flash?.success ?? importSuccess;
     const [showImportDialog, setShowImportDialog] = useState(false);
-    const [selectedSidingId, setSelectedSidingId] = useState<number>(
-        import_siding_id ?? currentSiding?.id ?? sidings[0]?.id ?? 0,
-    );
     const [targetDate, setTargetDate] = useState<string>(
         import_target_date ?? new Date().toISOString().split('T')[0]
     );
-    const [previewData, setPreviewData] = useState<any[]>([]);
+    const [previewData, setPreviewData] = useState<Record<string, unknown>[]>([]);
     const [editingDispatch, setEditingDispatch] = useState<VehicleDispatch | null>(null);
     const [editForm, setEditForm] = useState<Record<string, string | number | null>>({});
     const [isUpdating, setIsUpdating] = useState(false);
+    const [activeTab, setActiveTab] = useState<VehicleDispatchTabValue>('main-data');
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
     const isInitialMount = useRef(true);
-
-    // Sync selectedSidingId when sidings load or currentSiding changes (e.g. initial load)
-    useEffect(() => {
-        const effectiveId =
-            import_siding_id ?? currentSiding?.id ?? sidings[0]?.id;
-        if (effectiveId && selectedSidingId === 0) {
-            setSelectedSidingId(effectiveId);
-        }
-    }, [import_siding_id, currentSiding, sidings]);
 
     // Handle preview data from props (after import redirect)
     useEffect(() => {
         if (preview_data && Array.isArray(preview_data) && preview_data.length > 0) {
             setPreviewData(preview_data);
             setShowImportDialog(false);
-            if (import_siding_id) {
-                setSelectedSidingId(import_siding_id);
-            }
             if (import_target_date) {
                 setTargetDate(import_target_date);
             }
         }
-    }, [preview_data, import_siding_id, import_target_date]);
+    }, [preview_data, import_target_date]);
 
     // Only update searchFilters when props change, but don't trigger useEffect on initial mount
     useEffect(() => {
@@ -232,15 +157,9 @@ export default function VehicleDispatchIndex({
         setImportErrors([]);
         setImportSuccess(null);
 
-        if (!selectedSidingId) {
-            setImportErrors(['Please select a siding for the import.']);
-            setIsImporting(false);
-            return;
-        }
-
         router.post(
             '/vehicle-dispatch/import',
-            { data: importData, siding_id: selectedSidingId, target_date: targetDate },
+            { data: importData, target_date: targetDate },
             {
                 onSuccess: (page) => {
                     const preview = page.props.preview_data;
@@ -274,7 +193,7 @@ export default function VehicleDispatchIndex({
 
         router.post(
             '/vehicle-dispatch/save',
-            { data: previewData, siding_id: selectedSidingId, target_date: targetDate },
+            { data: previewData, target_date: targetDate },
             {
                 onSuccess: (page) => {
                     setImportSuccess(
@@ -295,81 +214,6 @@ export default function VehicleDispatchIndex({
                 preserveScroll: true,
             }
         );
-    };
-
-    const formatDate = (dateString: string | null) => {
-        if (!dateString) return 'N/A';
-        try {
-            let date: Date;
-            
-            // Check if it's a Unix timestamp (number)
-            if (/^\d+$/.test(dateString)) {
-                date = new Date(parseInt(dateString) * 1000); // Convert Unix timestamp to milliseconds
-            } else {
-                // Handle Laravel timestamp format and timezone issues
-                date = new Date(dateString);
-                // Check if date is invalid (1970 indicates parsing issue)
-                if (date.getFullYear() === 1970 && dateString.includes('2026')) {
-                    // Try to parse the string manually for Laravel timestamps
-                    const match = dateString.match(/(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})/);
-                    if (match) {
-                        const [, year, month, day, hour, minute, second] = match;
-                        date = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}`);
-                    }
-                }
-            }
-            
-            return format(date, 'dd MMM yyyy HH:mm');
-        } catch {
-            return dateString;
-        }
-    };
-
-    /** Derive shift from issued_on: 1st (00:00-08:00), 2nd (08:01-16:00), 3rd (16:01-23:59) */
-    const getShiftFromIssuedOn = (issuedOn: string | null): string | null => {
-        if (!issuedOn) return null;
-        try {
-            let d: Date;
-            
-            // Check if it's a Unix timestamp (number)
-            if (/^\d+$/.test(issuedOn)) {
-                d = new Date(parseInt(issuedOn) * 1000); // Convert Unix timestamp to milliseconds
-            } else {
-                d = new Date(issuedOn);
-                
-                // Check if date parsing failed (1970 indicates issue)
-                if (d.getFullYear() === 1970 && issuedOn.includes('2026')) {
-                    // Try to parse the string manually for Laravel timestamps
-                    const match = issuedOn.match(/(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})/);
-                    if (match) {
-                        const [, year, month, day, hour, minute, second] = match;
-                        d = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}`);
-                    }
-                }
-            }
-            
-            const minutes = d.getHours() * 60 + d.getMinutes();
-            if (minutes <= 480) return '1st';
-            if (minutes <= 960) return '2nd';
-            return '3rd';
-        } catch {
-            return null;
-        }
-    };
-
-    const formatWeight = (weight: number) => {
-        return `${weight.toLocaleString()} MT`;
-    };
-
-    const toDatetimeLocal = (dateString: string | null): string => {
-        if (!dateString) return '';
-        try {
-            const d = new Date(dateString);
-            const pad = (n: number) => n.toString().padStart(2, '0');
-            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-        } catch {
-            return '';
-        }
     };
 
     const openEditModal = (dispatch: VehicleDispatch) => {
@@ -557,236 +401,25 @@ export default function VehicleDispatchIndex({
                     </Button>
                 </div>
 
-                {/* Preview Data Section */}
-                {previewData.length > 0 && (
-                    <Card className="mt-6">
-                        <CardHeader>
-                            <CardTitle>Import Preview - {previewData.length} Records</CardTitle>
-                            <CardDescription>
-                                Review the parsed data below. Click "Save to Database" to store these records or "Clear Preview" to remove them.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="overflow-x-auto">
-                                <table className="min-w-full border border-gray-200">
-                                    <thead className="bg-gray-50">
-                                        <tr>
-                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Serial</th>
-                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Permit No</th>
-                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pass No</th>
-                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stack DO No</th>
-                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Issued On</th>
-                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Truck Regd No</th>
-                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mineral</th>
-                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mineral Type</th>
-                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Weight</th>
-                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Source</th>
-                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Destination</th>
-                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Consignee</th>
-                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Check Gate</th>
-                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Distance</th>
-                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Shift</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="bg-white divide-y divide-gray-200">
-                                        {previewData.map((row, index) => (
-                                            <tr key={index} className="hover:bg-gray-50">
-                                                <td className="px-4 py-2 text-sm text-gray-900">{row.serial_no || '-'}</td>
-                                                <td className="px-4 py-2 text-sm text-gray-900">{row.permit_no || '-'}</td>
-                                                <td className="px-4 py-2 text-sm text-gray-900">{row.pass_no || '-'}</td>
-                                                <td className="px-4 py-2 text-sm text-gray-900">{row.stack_do_no || '-'}</td>
-                                                <td className="px-4 py-2 text-sm text-gray-900">{formatDate(row.issued_on)}</td>
-                                                <td className="px-4 py-2 text-sm text-gray-900">{row.truck_regd_no || '-'}</td>
-                                                <td className="px-4 py-2 text-sm text-gray-900">{row.mineral || '-'}</td>
-                                                <td className="px-4 py-2 text-sm text-gray-900">{row.mineral_type || '-'}</td>
-                                                <td className="px-4 py-2 text-sm text-gray-900">{row.mineral_weight || '-'}</td>
-                                                <td className="px-4 py-2 text-sm text-gray-900 max-w-xs truncate" title={row.source}>{row.source || '-'}</td>
-                                                <td className="px-4 py-2 text-sm text-gray-900 max-w-xs truncate" title={row.destination}>{row.destination || '-'}</td>
-                                                <td className="px-4 py-2 text-sm text-gray-900 max-w-xs truncate" title={row.consignee}>{row.consignee || '-'}</td>
-                                                <td className="px-4 py-2 text-sm text-gray-900">{row.check_gate || '-'}</td>
-                                                <td className="px-4 py-2 text-sm text-gray-900">{row.distance_km || '-'}</td>
-                                                <td className="px-4 py-2 text-sm text-gray-900">{row.shift || '-'}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            {importErrors.length > 0 && (
-                                <div className="mt-4 bg-red-50 border border-red-200 rounded p-3">
-                                    <div className="flex items-center gap-2 text-red-800">
-                                        <AlertCircle className="h-4 w-4" />
-                                        <span className="font-medium">Save Errors:</span>
-                                    </div>
-                                    <div className="mt-2 space-y-1">
-                                        {importErrors.map((error, index) => (
-                                            <div key={index} className="text-sm text-red-700">{error}</div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="flex justify-end gap-2 mt-4">
-                                <Button
-                                    variant="outline"
-                                    onClick={() => {
-                                        setPreviewData([]);
-                                        setImportErrors([]);
-                                    }}
-                                    disabled={isImporting}
-                                >
-                                    Clear Preview
-                                </Button>
-                                <Button
-                                    onClick={handleSaveImport}
-                                    disabled={isImporting}
-                                >
-                                    {isImporting ? 'Saving...' : 'Save to Database'}
-                                </Button>
-                            </div>
-                        </CardContent>
-                    </Card>
-                )}
-
-                {/* Data Table */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>
-                            Vehicle Dispatch Records
-                            <span className="text-sm font-normal text-gray-500 ml-2">
-                                {(() => {
-                                    if (searchFilters.date_from && searchFilters.date_to) {
-                                        const from = format(new Date(searchFilters.date_from), 'dd MMM yyyy');
-                                        const to = format(new Date(searchFilters.date_to), 'dd MMM yyyy');
-                                        return `(${from} - ${to})`;
-                                    } else if (searchFilters.date) {
-                                        return `(${format(new Date(searchFilters.date), 'dd MMM yyyy')})`;
-                                    } else {
-                                        return '';
-                                    }
-                                })()}
-                            </span>
-                        </CardTitle>
-                        <CardDescription>
-                            Showing {vehicleDispatches.data.length} of {vehicleDispatches.total} records
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="rounded-md border overflow-x-auto">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead className="sticky left-0 bg-muted/95 z-10">Actions</TableHead>
-                                        <TableHead>Serial No</TableHead>
-                                        <TableHead>Ref No</TableHead>
-                                        <TableHead>Permit No</TableHead>
-                                        <TableHead>Pass No</TableHead>
-                                        <TableHead>Stack DO No</TableHead>
-                                        <TableHead>Issued On</TableHead>
-                                        <TableHead>Truck Regd No</TableHead>
-                                        <TableHead>Mineral</TableHead>
-                                        <TableHead>Mineral Type</TableHead>
-                                        <TableHead>Weight (MT)</TableHead>
-                                        <TableHead>Source</TableHead>
-                                        <TableHead>Destination</TableHead>
-                                        <TableHead>Consignee</TableHead>
-                                        <TableHead>Check Gate</TableHead>
-                                        <TableHead>Distance KM</TableHead>
-                                        <TableHead>Shift</TableHead>
-                                        <TableHead>Siding</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {vehicleDispatches.data.map((dispatch) => (
-                                        <TableRow key={dispatch.id}>
-                                            <TableCell className="sticky left-0 bg-background z-10">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    onClick={() => openEditModal(dispatch)}
-                                                    className="h-8 w-8"
-                                                >
-                                                    <Pencil className="h-4 w-4" />
-                                                </Button>
-                                            </TableCell>
-                                            <TableCell>{dispatch.serial_no ?? '-'}</TableCell>
-                                            <TableCell>{dispatch.ref_no ?? '-'}</TableCell>
-                                            <TableCell className="font-medium">{dispatch.permit_no}</TableCell>
-                                            <TableCell>{dispatch.pass_no}</TableCell>
-                                            <TableCell className="max-w-[120px] truncate" title={dispatch.stack_do_no ?? undefined}>
-                                                {dispatch.stack_do_no ?? '-'}
-                                            </TableCell>
-                                            <TableCell>{formatDate(dispatch.issued_on)}</TableCell>
-                                            <TableCell>{dispatch.truck_regd_no}</TableCell>
-                                            <TableCell>{dispatch.mineral}</TableCell>
-                                            <TableCell>{dispatch.mineral_type ?? '-'}</TableCell>
-                                            <TableCell>{formatWeight(dispatch.mineral_weight)}</TableCell>
-                                            <TableCell className="max-w-[180px] truncate" title={dispatch.source ?? undefined}>
-                                                {dispatch.source ?? '-'}
-                                            </TableCell>
-                                            <TableCell className="max-w-[180px] truncate" title={dispatch.destination ?? undefined}>
-                                                {dispatch.destination ?? '-'}
-                                            </TableCell>
-                                            <TableCell className="max-w-[180px] truncate" title={dispatch.consignee ?? undefined}>
-                                                {dispatch.consignee ?? '-'}
-                                            </TableCell>
-                                            <TableCell className="max-w-[120px] truncate" title={dispatch.check_gate ?? undefined}>
-                                                {dispatch.check_gate ?? '-'}
-                                            </TableCell>
-                                            <TableCell>{dispatch.distance_km ?? '-'}</TableCell>
-                                            <TableCell>
-                                                {(getShiftFromIssuedOn(dispatch.issued_on) || dispatch.shift) && (
-                                                    <Badge variant="outline">
-                                                        {getShiftFromIssuedOn(dispatch.issued_on) || dispatch.shift}
-                                                    </Badge>
-                                                )}
-                                            </TableCell>
-                                            <TableCell>
-                                                <Badge variant="secondary">{dispatch.siding.code}</Badge>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </div>
-
-                        {/* Simple Pagination */}
-                        {vehicleDispatches.last_page > 1 && (
-                            <div className="mt-4 flex justify-center">
-                                <div className="flex gap-2">
-                                    {vehicleDispatches.links.map((link, index) => {
-                                        // Extract page number from URL
-                                        const pageMatch = link.url?.match(/page=(\d+)/);
-                                        const pageNumber = pageMatch ? parseInt(pageMatch[1]) : null;
-                                        
-                                        return (
-                                            <button
-                                                key={index}
-                                                onClick={() => {
-                                                    if (link.url && pageNumber) {
-                                                        // Preserve all current filters when changing page
-                                                        const filtersWithPage = { ...searchFilters, page: pageNumber };
-                                                        router.get('/vehicle-dispatch', filtersWithPage, { preserveScroll: true });
-                                                    }
-                                                }}
-                                                disabled={!link.url}
-                                                className={`px-3 py-2 rounded ${
-                                                    link.active
-                                                        ? 'bg-blue-500 text-white'
-                                                        : link.url
-                                                        ? 'bg-gray-200 hover:bg-gray-300'
-                                                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                                }`}
-                                            >
-                                                {link.label.replace('&laquo;', '«').replace('&raquo;', '»')}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
+                {/* Tabbed Content: Main Data | DPR */}
+                <VehicleDispatchTabs activeTab={activeTab} onTabChange={setActiveTab}>
+                    {activeTab === 'main-data' && (
+                        <MainDataTab
+                            vehicleDispatches={vehicleDispatches}
+                            searchFilters={searchFilters}
+                            previewData={previewData}
+                            importErrors={importErrors}
+                            isImporting={isImporting}
+                            onEditDispatch={openEditModal}
+                            onClearPreview={() => {
+                                setPreviewData([]);
+                                setImportErrors([]);
+                            }}
+                            onSaveImport={handleSaveImport}
+                        />
+                    )}
+                    {activeTab === 'dpr' && <DPRTab />}
+                </VehicleDispatchTabs>
             </div>
 
             {/* Edit Record Dialog */}
@@ -977,24 +610,6 @@ export default function VehicleDispatchIndex({
 
                         <div className="space-y-4">
                             <div>
-                                <Label htmlFor="siding-select">Select Siding</Label>
-                                <Select
-                                    value={selectedSidingId ? selectedSidingId.toString() : ''}
-                                    onValueChange={(value) => setSelectedSidingId(parseInt(value, 10))}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select a siding" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {sidings.map((siding) => (
-                                            <SelectItem key={siding.id} value={siding.id.toString()}>
-                                                {siding.name} ({siding.code})
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div>
                                 <Label htmlFor="target-date">Target Date for Import</Label>
                                 <Input
                                     id="target-date"
@@ -1005,6 +620,12 @@ export default function VehicleDispatchIndex({
                                 />
                                 <p className="text-sm text-gray-600 mt-1">
                                     Select the date for which this data will be stored. If no date is provided in the data, this date will be used.
+                                </p>
+                            </div>
+                            <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+                                <p className="text-sm text-blue-800">
+                                    <strong>Note:</strong> Siding will be automatically determined based on the distance value in each record. 
+                                    Make sure your data includes accurate distance values (e.g., 55.000 for Pakur Siding, 71.000 for Dumka Goods Shed).
                                 </p>
                             </div>
                             <div>
@@ -1053,7 +674,7 @@ export default function VehicleDispatchIndex({
                                 </Button>
                                 <Button
                                     onClick={handleImport}
-                                    disabled={!importData.trim() || !selectedSidingId || isImporting}
+                                    disabled={!importData.trim() || isImporting}
                                 >
                                     {isImporting ? 'Importing...' : 'Import'}
                                 </Button>

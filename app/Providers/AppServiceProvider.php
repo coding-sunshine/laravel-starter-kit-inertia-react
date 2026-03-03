@@ -189,6 +189,8 @@ final class AppServiceProvider extends ServiceProvider
             'penalty-root-cause-drill',
             'penalty-dispute-drill',
             'penalty-cost-savings',
+            'vehicle-dispatch-tab-main-data',
+            'vehicle-dispatch-tab-dpr',
         ]);
     }
 
