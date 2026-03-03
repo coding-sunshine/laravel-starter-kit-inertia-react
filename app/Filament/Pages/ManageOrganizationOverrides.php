@@ -5,24 +5,24 @@ declare(strict_types=1);
 namespace App\Filament\Pages;
 
 use App\Models\Organization;
+use App\Models\OrganizationSetting;
 use App\Providers\SettingsOverlayServiceProvider;
 use App\Services\OrganizationSettingsService;
 use BackedEnum;
 use Filament\Actions\Action;
+use Filament\Actions\DeleteAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
-use Filament\Tables\Actions\DeleteAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\DB;
 use UnitEnum;
 
 final class ManageOrganizationOverrides extends Page implements HasTable
@@ -45,17 +45,17 @@ final class ManageOrganizationOverrides extends Page implements HasTable
     {
         return $table
             ->query(
-                fn (): Builder => DB::table('organization_settings')
+                fn (): Builder => OrganizationSetting::query()
                     ->join('organizations', 'organizations.id', '=', 'organization_settings.organization_id')
                     ->select([
                         'organization_settings.id',
-                        'organizations.name as organization_name',
+                        'organization_settings.organization_id',
                         'organization_settings.group',
                         'organization_settings.name',
                         'organization_settings.is_encrypted',
                         'organization_settings.updated_at',
+                        'organizations.name as organization_name',
                     ])
-                    ->toBase()
             )
             ->columns([
                 TextColumn::make('organization_name')
@@ -77,10 +77,8 @@ final class ManageOrganizationOverrides extends Page implements HasTable
             ])
             ->actions([
                 DeleteAction::make()
-                    ->action(function ($record): void {
-                        DB::table('organization_settings')
-                            ->where('id', $record->id)
-                            ->delete();
+                    ->action(function (OrganizationSetting $record): void {
+                        $record->delete();
 
                         Notification::make()
                             ->title('Override removed')

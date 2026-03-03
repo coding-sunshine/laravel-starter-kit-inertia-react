@@ -1,0 +1,68 @@
+{
+    "model": "MailList",
+    "table": "mail_lists",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "owner_contact_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "client_ids": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamptz",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamptz",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "ownerContact": {
+            "type": "belongsTo",
+            "model": "OwnerContact"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": {
+        "name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    },
+    "scenarios": []
+}

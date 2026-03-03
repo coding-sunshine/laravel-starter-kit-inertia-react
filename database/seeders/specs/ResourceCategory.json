@@ -1,0 +1,39 @@
+{
+    "model": "ResourceCategory",
+    "table": "resource_categories",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "slug": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamptz",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamptz",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": [],
+    "value_hints": {
+        "name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    },
+    "scenarios": []
+}

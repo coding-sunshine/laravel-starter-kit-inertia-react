@@ -1,0 +1,63 @@
+{
+    "model": "Note",
+    "table": "notes",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "noteable_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "noteable_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "author_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "content": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamptz",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamptz",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "author": {
+            "type": "belongsTo",
+            "model": "Author"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Ai\Agents\AssistantAgent;
+use App\Ai\Agents\ContactAssistantAgent;
+use App\Ai\Agents\PropertySalesAgent;
 use App\Services\PrismService;
 use Closure;
 use Illuminate\Http\Request;
@@ -34,6 +36,7 @@ final class ChatController
         $request->validate([
             'messages' => ['required', 'array'],
             'messages.*.role' => ['required', 'string', 'in:user,assistant,system'],
+            'agent' => ['nullable', 'string', 'in:general,contact,property'],
             'conversation_id' => ['nullable', 'string', 'uuid', function (string $attr, string $value, Closure $fail) use ($request): void {
                 $user = $request->user();
                 if ($user === null) {
@@ -92,8 +95,14 @@ final class ChatController
             $conversationId = $newConversationId;
         }
 
-        $agent = AssistantAgent::make(['user_id' => $user->id])
-            ->continue($conversationId, $user);
+        $agentType = $request->input('agent', 'general');
+        $context = ['user_id' => $user->id];
+
+        $agent = match ($agentType) {
+            'contact' => ContactAssistantAgent::make($context)->continue($conversationId, $user),
+            'property' => PropertySalesAgent::make()->continue($conversationId, $user),
+            default => AssistantAgent::make($context)->continue($conversationId, $user),
+        };
 
         try {
             $stream = $agent->stream($prompt);

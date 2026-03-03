@@ -1,0 +1,62 @@
+{
+    "model": "AiBotCategory",
+    "table": "ai_bot_categories",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "slug": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "order_column": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamptz",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamptz",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "promptCommands": {
+            "type": "hasMany",
+            "model": "PromptCommand"
+        },
+        "boxes": {
+            "type": "hasMany",
+            "model": "Box"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": {
+        "name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    },
+    "scenarios": []
+}

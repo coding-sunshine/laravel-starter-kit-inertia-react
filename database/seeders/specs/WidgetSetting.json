@@ -1,0 +1,44 @@
+{
+    "model": "WidgetSetting",
+    "table": "widget_settings",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "user_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "widget": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "settings": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamptz",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamptz",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "user": {
+            "type": "belongsTo",
+            "model": "User"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

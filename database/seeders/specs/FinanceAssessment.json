@@ -1,0 +1,67 @@
+{
+    "model": "FinanceAssessment",
+    "table": "finance_assessments",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "agent_contact_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "logged_in_user_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "data": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamptz",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamptz",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "agentContact": {
+            "type": "belongsTo",
+            "model": "AgentContact"
+        },
+        "loggedInUser": {
+            "type": "belongsTo",
+            "model": "LoggedInUser"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

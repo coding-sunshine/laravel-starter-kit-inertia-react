@@ -1,0 +1,49 @@
+{
+    "model": "ColumnManagement",
+    "table": "column_management",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "user_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "table": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "visible_columns": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "hidden_columns": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamptz",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamptz",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "user": {
+            "type": "belongsTo",
+            "model": "User"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

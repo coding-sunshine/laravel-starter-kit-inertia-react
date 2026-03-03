@@ -1,0 +1,49 @@
+{
+    "model": "SurveyQuestion",
+    "table": "survey_questions",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "questionnaire_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "question": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "options": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamptz",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamptz",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "questionnaire": {
+            "type": "belongsTo",
+            "model": "Questionnaire"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

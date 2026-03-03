@@ -1,0 +1,57 @@
+{
+    "model": "Relationship",
+    "table": "relationships",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "account_contact_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "relation_contact_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamptz",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamptz",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "accountContact": {
+            "type": "belongsTo",
+            "model": "AccountContact"
+        },
+        "relationContact": {
+            "type": "belongsTo",
+            "model": "RelationContact"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

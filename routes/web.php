@@ -130,7 +130,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('terms/accept', [TermsAcceptController::class, 'show'])->name('terms.accept');
     Route::post('terms/accept', [TermsAcceptController::class, 'store'])->name('terms.accept.store');
 
-    Route::get('dashboard', fn () => Inertia::render('dashboard'))->name('dashboard');
+    Route::get('dashboard', App\Http\Controllers\DashboardController::class)->name('dashboard');
 
     Route::get('chat', fn () => Inertia::render('chat/index'))->name('chat');
 

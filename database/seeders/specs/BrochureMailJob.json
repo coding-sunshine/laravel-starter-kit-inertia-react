@@ -1,0 +1,91 @@
+{
+    "model": "BrochureMailJob",
+    "table": "brochure_mail_jobs",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "owner_contact_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "mail_list_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "status_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "scheduled_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "client_contact_ids": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamptz",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamptz",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "ownerContact": {
+            "type": "belongsTo",
+            "model": "OwnerContact"
+        },
+        "mailList": {
+            "type": "belongsTo",
+            "model": "MailList"
+        },
+        "status": {
+            "type": "belongsTo",
+            "model": "Status"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": {
+        "name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    },
+    "scenarios": []
+}
