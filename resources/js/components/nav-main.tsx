@@ -15,8 +15,8 @@ import {
 } from '@/components/ui/sidebar';
 import type { FleetNavItem, FleetNavSection } from '@/config/fleet-nav';
 import { type NavItem } from '@/types';
-import { ChevronRight } from 'lucide-react';
 import { Link, usePage } from '@inertiajs/react';
+import { ChevronRight, MoreHorizontal } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 function getHref(item: NavItem): string {
@@ -24,7 +24,10 @@ function getHref(item: NavItem): string {
 }
 
 function isItemActive(pageUrl: string, href: string): boolean {
-    return pageUrl === href || (href !== '/fleet' && pageUrl.startsWith(href + '/'));
+    return (
+        pageUrl === href ||
+        (href !== '/fleet' && pageUrl.startsWith(href + '/'))
+    );
 }
 
 export function NavMain({
@@ -46,20 +49,26 @@ export function NavMain({
     const pageUrl = page.url;
     const isFleetPath = pageUrl.startsWith('/fleet');
     const [fleetOpen, setFleetOpen] = useState(isFleetPath);
-    const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
+    const [openSubmenus, setOpenSubmenus] = useState<Record<string, boolean>>(
+        {},
+    );
 
     useEffect(() => {
         if (isFleetPath) setFleetOpen(true);
     }, [isFleetPath]);
 
+    // Auto-expand submenu sections when a submenu item is active
     useEffect(() => {
         if (!fleetOnlyLayout || !sections.length) return;
         const next: Record<string, boolean> = {};
         sections.forEach((sec) => {
-            const hasActive = sec.items.some((it) => isItemActive(pageUrl, it.href));
-            if (hasActive) next[sec.label] = true;
+            if (!sec.submenu?.length) return;
+            const hasActiveSubmenu = sec.submenu.some((it) =>
+                isItemActive(pageUrl, it.href),
+            );
+            if (hasActiveSubmenu) next[sec.label] = true;
         });
-        setOpenSections((prev) => ({ ...prev, ...next }));
+        setOpenSubmenus((prev) => ({ ...prev, ...next }));
     }, [fleetOnlyLayout, sections, pageUrl]);
 
     if (fleetOnlyLayout && dashboardItem && sections.length > 0) {
@@ -74,8 +83,13 @@ export function NavMain({
                                 isActive={pageUrl === dashboardItem.href}
                                 tooltip={{ children: dashboardItem.title }}
                             >
-                                <Link href={dashboardItem.href} prefetch="click">
-                                    {dashboardItem.icon && <dashboardItem.icon />}
+                                <Link
+                                    href={dashboardItem.href}
+                                    prefetch="click"
+                                >
+                                    {dashboardItem.icon && (
+                                        <dashboardItem.icon />
+                                    )}
                                     <span>{dashboardItem.title}</span>
                                 </Link>
                             </SidebarMenuButton>
@@ -83,45 +97,76 @@ export function NavMain({
                     </SidebarMenu>
                 </SidebarGroup>
                 {sections.map((section) => {
-                    const isOpen = openSections[section.label] ?? false;
-                    const hasSingleItem = section.items.length === 1;
+                    const SectionIcon = section.icon;
+                    const hasSubmenu =
+                        section.submenu && section.submenu.length > 0;
+                    const isSubmenuOpen =
+                        openSubmenus[section.label] ?? false;
+
                     return (
-                        <SidebarGroup key={section.label} className="px-2 py-0">
+                        <SidebarGroup
+                            key={section.label}
+                            className="px-2 py-0"
+                        >
+                            <SidebarGroupLabel>
+                                {SectionIcon && (
+                                    <SectionIcon className="mr-1 size-3.5" />
+                                )}
+                                {section.label}
+                            </SidebarGroupLabel>
                             <SidebarMenu>
-                                {hasSingleItem ? (() => {
-                                    const item = section.items[0]!;
+                                {section.items.map((item) => {
                                     const ItemIcon = item.icon;
                                     return (
-                                        <SidebarMenuItem>
+                                        <SidebarMenuItem key={item.href}>
                                             <SidebarMenuButton
                                                 asChild
-                                                isActive={isItemActive(pageUrl, item.href)}
-                                                tooltip={{ children: item.title }}
+                                                isActive={isItemActive(
+                                                    pageUrl,
+                                                    item.href,
+                                                )}
+                                                tooltip={{
+                                                    children: item.title,
+                                                }}
                                             >
-                                                <Link href={item.href} prefetch="click">
+                                                <Link
+                                                    href={item.href}
+                                                    prefetch="click"
+                                                >
                                                     {ItemIcon && <ItemIcon />}
                                                     <span>{item.title}</span>
                                                 </Link>
                                             </SidebarMenuButton>
                                         </SidebarMenuItem>
                                     );
-                                })() : (
+                                })}
+                                {hasSubmenu && (
                                     <Collapsible
-                                        open={isOpen}
+                                        open={isSubmenuOpen}
                                         onOpenChange={(open) =>
-                                            setOpenSections((p) => ({ ...p, [section.label]: open }))
+                                            setOpenSubmenus((p) => ({
+                                                ...p,
+                                                [section.label]: open,
+                                            }))
                                         }
                                     >
                                         <SidebarMenuItem>
                                             <CollapsibleTrigger asChild>
                                                 <SidebarMenuButton
-                                                    isActive={section.items.some((it) =>
-                                                        isItemActive(pageUrl, it.href),
+                                                    isActive={section.submenu!.some(
+                                                        (it) =>
+                                                            isItemActive(
+                                                                pageUrl,
+                                                                it.href,
+                                                            ),
                                                     )}
-                                                    tooltip={{ children: section.label }}
-                                                    className="group min-h-9"
+                                                    tooltip={{
+                                                        children: `More ${section.label}`,
+                                                    }}
+                                                    className="group text-sidebar-foreground/70"
                                                 >
-                                                    <span>{section.label}</span>
+                                                    <MoreHorizontal />
+                                                    <span>More</span>
                                                     <ChevronRight
                                                         className="ml-auto size-4 shrink-0 transition-transform group-data-[state=open]:rotate-90"
                                                         aria-hidden
@@ -130,19 +175,34 @@ export function NavMain({
                                             </CollapsibleTrigger>
                                             <CollapsibleContent>
                                                 <SidebarMenuSub>
-                                                    {section.items.map((sub) => (
-                                                        <SidebarMenuSubItem key={sub.href}>
-                                                            <SidebarMenuSubButton
-                                                                asChild
-                                                                isActive={isItemActive(pageUrl, sub.href)}
+                                                    {section.submenu!.map(
+                                                        (sub) => (
+                                                            <SidebarMenuSubItem
+                                                                key={sub.href}
                                                             >
-                                                                <Link href={sub.href} prefetch="click">
-                                                                    {sub.icon && <sub.icon />}
-                                                                    <span>{sub.title}</span>
-                                                                </Link>
-                                                            </SidebarMenuSubButton>
-                                                        </SidebarMenuSubItem>
-                                                    ))}
+                                                                <SidebarMenuSubButton
+                                                                    asChild
+                                                                    isActive={isItemActive(
+                                                                        pageUrl,
+                                                                        sub.href,
+                                                                    )}
+                                                                >
+                                                                    <Link
+                                                                        href={
+                                                                            sub.href
+                                                                        }
+                                                                        prefetch="click"
+                                                                    >
+                                                                        <span>
+                                                                            {
+                                                                                sub.title
+                                                                            }
+                                                                        </span>
+                                                                    </Link>
+                                                                </SidebarMenuSubButton>
+                                                            </SidebarMenuSubItem>
+                                                        ),
+                                                    )}
                                                 </SidebarMenuSub>
                                             </CollapsibleContent>
                                         </SidebarMenuItem>
@@ -162,7 +222,8 @@ export function NavMain({
             <SidebarMenu>
                 {items.map((item) => {
                     const href = getHref(item);
-                    const isFleet = href === '/fleet' && fleetSubItems.length > 0;
+                    const isFleet =
+                        href === '/fleet' && fleetSubItems.length > 0;
 
                     if (isFleet) {
                         return (
