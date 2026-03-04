@@ -108,12 +108,27 @@ final class WorkOrderController extends Controller
             ];
         }, 'summary');
 
+        $statusCounts = Inertia::defer(function () {
+            $counts = WorkOrder::query()
+                ->selectRaw('status, COUNT(*) as count')
+                ->groupBy('status')
+                ->pluck('count', 'status');
+
+            return [
+                'open' => ($counts->get('draft', 0) + $counts->get('pending', 0) + $counts->get('approved', 0)),
+                'in_progress' => $counts->get('in_progress', 0),
+                'completed' => $counts->get('completed', 0),
+                'cancelled' => $counts->get('cancelled', 0),
+            ];
+        }, 'statusCounts');
+
         return Inertia::render('Fleet/WorkOrders/Index', [
             'workOrders' => $orders,
             'filters' => $request->only(['vehicle_id', 'status']),
             'vehicles' => \App\Models\Fleet\Vehicle::query()->orderBy('registration')->get(['id', 'registration']),
             'statuses' => array_map(fn (\App\Enums\Fleet\WorkOrderStatus $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\WorkOrderStatus::cases()),
             'summary' => $summary,
+            'statusCounts' => $statusCounts,
         ]);
     }
 

@@ -13,6 +13,14 @@ import {
 } from '@/components/fleet';
 import type { SummaryStat } from '@/components/fleet';
 import { Button } from '@/components/ui/button';
+import {
+    ChartContainer,
+    ChartLegend,
+    ChartLegendContent,
+    ChartTooltip,
+    ChartTooltipContent,
+} from '@/components/ui/chart';
+import type { ChartConfig } from '@/components/ui/chart';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
     Dialog,
@@ -52,9 +60,75 @@ import {
     Trash2,
 } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
+import { Cell, Pie, PieChart } from 'recharts';
 
 const selectClass =
     'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-ring';
+
+const statusDonutConfig = {
+    open: { label: 'Open', color: 'var(--color-blue-500, #3b82f6)' },
+    in_progress: { label: 'In Progress', color: 'var(--color-amber-500, #f59e0b)' },
+    completed: { label: 'Completed', color: 'var(--color-emerald-500, #10b981)' },
+    cancelled: { label: 'Cancelled', color: 'var(--color-gray-400, #9ca3af)' },
+} satisfies ChartConfig;
+
+const STATUS_COLORS: Record<string, string> = {
+    open: 'var(--color-blue-500, #3b82f6)',
+    in_progress: 'var(--color-amber-500, #f59e0b)',
+    completed: 'var(--color-emerald-500, #10b981)',
+    cancelled: 'var(--color-gray-400, #9ca3af)',
+};
+
+function StatusDonut({ counts }: { counts: { open: number; in_progress: number; completed: number; cancelled: number } }) {
+    const data = [
+        { name: 'open', label: 'Open', value: counts.open },
+        { name: 'in_progress', label: 'In Progress', value: counts.in_progress },
+        { name: 'completed', label: 'Completed', value: counts.completed },
+        { name: 'cancelled', label: 'Cancelled', value: counts.cancelled },
+    ].filter((d) => d.value > 0);
+
+    const total = data.reduce((sum, d) => sum + d.value, 0);
+
+    if (total === 0) return null;
+
+    return (
+        <div className="rounded-xl border bg-card p-4 shadow-sm">
+            <h4 className="mb-2 text-sm font-medium text-muted-foreground">Status Distribution</h4>
+            <ChartContainer config={statusDonutConfig} className="mx-auto h-[180px] w-full max-w-[240px]">
+                <PieChart>
+                    <ChartTooltip
+                        content={
+                            <ChartTooltipContent
+                                formatter={(value, name) => {
+                                    const cfg = statusDonutConfig[name as keyof typeof statusDonutConfig];
+                                    return `${cfg?.label ?? name}: ${value}`;
+                                }}
+                            />
+                        }
+                    />
+                    <Pie
+                        data={data}
+                        dataKey="value"
+                        nameKey="name"
+                        innerRadius={45}
+                        outerRadius={70}
+                        paddingAngle={3}
+                        startAngle={90}
+                        endAngle={-270}
+                        isAnimationActive={true}
+                        animationDuration={800}
+                        animationEasing="ease-out"
+                    >
+                        {data.map((entry) => (
+                            <Cell key={entry.name} fill={STATUS_COLORS[entry.name]} />
+                        ))}
+                    </Pie>
+                    <ChartLegend content={<ChartLegendContent />} />
+                </PieChart>
+            </ChartContainer>
+        </div>
+    );
+}
 
 interface WorkOrderRecord {
     id: number;
@@ -79,6 +153,12 @@ interface Props {
         completed_this_week: number;
         avg_resolution_days: number | null;
     };
+    statusCounts?: {
+        open: number;
+        in_progress: number;
+        completed: number;
+        cancelled: number;
+    };
 }
 
 export default function FleetWorkOrdersIndex({
@@ -87,6 +167,7 @@ export default function FleetWorkOrdersIndex({
     vehicles,
     statuses,
     summary,
+    statusCounts,
 }: Props) {
     const [deleteTarget, setDeleteTarget] = useState<WorkOrderRecord | null>(
         null,
@@ -205,17 +286,23 @@ export default function FleetWorkOrdersIndex({
                     }
                 />
 
-                {summary && (
-                    <FleetIndexSummaryBar
-                        stats={
-                            [
-                                { label: 'Open', value: summary.open, icon: ClipboardList },
-                                { label: 'Overdue', value: summary.overdue, icon: AlertTriangle, variant: summary.overdue > 0 ? 'danger' : 'default' },
-                                { label: 'Completed This Week', value: summary.completed_this_week, icon: CheckCircle, variant: 'success' },
-                                { label: 'Avg Resolution', value: summary.avg_resolution_days !== null ? `${summary.avg_resolution_days}d` : '—', icon: Clock },
-                            ] satisfies SummaryStat[]
-                        }
-                    />
+                {(summary || statusCounts) && (
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
+                        {summary && (
+                            <FleetIndexSummaryBar
+                                className="flex-1"
+                                stats={
+                                    [
+                                        { label: 'Open', value: summary.open, icon: ClipboardList },
+                                        { label: 'Overdue', value: summary.overdue, icon: AlertTriangle, variant: summary.overdue > 0 ? 'danger' : 'default' },
+                                        { label: 'Completed This Week', value: summary.completed_this_week, icon: CheckCircle, variant: 'success' },
+                                        { label: 'Avg Resolution', value: summary.avg_resolution_days !== null ? `${summary.avg_resolution_days}d` : '—', icon: Clock },
+                                    ] satisfies SummaryStat[]
+                                }
+                            />
+                        )}
+                        {statusCounts && <StatusDonut counts={statusCounts} />}
+                    </div>
                 )}
 
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
