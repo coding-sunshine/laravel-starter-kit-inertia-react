@@ -14,15 +14,15 @@ final class AiAnalysisResultController extends Controller
     public function index(): Response
     {
         $this->authorize('viewAny', AiAnalysisResult::class);
-        $results = AiAnalysisResult::query()
-            ->orderByDesc('created_at')
+        $results = AiAnalysisResult::query()->latest()
             ->paginate(15)
             ->withQueryString();
 
         return Inertia::render('Fleet/AiAnalysisResults/Index', [
             'aiAnalysisResults' => $results,
-            'analysisTypes' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\AiAnalysisType::cases()),
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\AiAnalysisStatus::cases()),
+            'analysisTypes' => array_map(fn (\App\Enums\Fleet\AiAnalysisType $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\AiAnalysisType::cases()),
+            'statuses' => array_map(fn (\App\Enums\Fleet\AiAnalysisStatus $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\AiAnalysisStatus::cases()),
+            'summary' => Inertia::defer(fn (): array => $this->computeSummary()),
         ]);
     }
 
@@ -33,8 +33,30 @@ final class AiAnalysisResultController extends Controller
 
         return Inertia::render('Fleet/AiAnalysisResults/Show', [
             'aiAnalysisResult' => $ai_analysis_result,
-            'analysisTypes' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\AiAnalysisType::cases()),
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\AiAnalysisStatus::cases()),
+            'analysisTypes' => array_map(fn (\App\Enums\Fleet\AiAnalysisType $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\AiAnalysisType::cases()),
+            'statuses' => array_map(fn (\App\Enums\Fleet\AiAnalysisStatus $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\AiAnalysisStatus::cases()),
         ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function computeSummary(): array
+    {
+        $query = AiAnalysisResult::query();
+
+        $total = $query->count();
+        $highPriority = (clone $query)->whereIn('priority', ['high', 'critical'])->count();
+        $mediumPriority = (clone $query)->where('priority', 'medium')->count();
+        $avgConfidence = $total > 0
+            ? round((float) (clone $query)->avg('confidence_score') * 100)
+            : 0;
+
+        return [
+            'totalResults' => $total,
+            'highPriority' => $highPriority,
+            'mediumPriority' => $mediumPriority,
+            'avgConfidence' => $avgConfidence,
+        ];
     }
 }
