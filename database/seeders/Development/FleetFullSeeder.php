@@ -234,6 +234,7 @@ final class FleetFullSeeder extends Seeder
         $this->seedPhase11ExtrasAudit($vehicleIds, $locIds);
 
         $this->seedHistoricalChartData($vehicleIds, $driverIds);
+        $this->seedAiAnalysisData($vehicleIds, $driverIds);
 
         $this->seedFromLegacyDump($this->org);
 
@@ -1474,6 +1475,484 @@ final class FleetFullSeeder extends Seeder
             $scheduleCount++;
         }
         $this->command?->info("Seeded {$scheduleCount} historical service schedules.");
+    }
+
+    /**
+     * Seed AI analysis results, job runs, workflow definitions, and workflow executions
+     * so the AI panel, AI pages, and dashboard AI section look populated during demos.
+     *
+     * @param  array<int>  $vehicleIds
+     * @param  array<int>  $driverIds
+     */
+    private function seedAiAnalysisData(array $vehicleIds, array $driverIds): void
+    {
+        $scope = \App\Models\Scopes\OrganizationScope::class;
+
+        // --- AI Analysis Results (14 records covering all key types) ---
+        $analysisResults = [
+            [
+                'analysis_type' => 'compliance_prediction',
+                'entity_type' => 'vehicle',
+                'entity_id' => $vehicleIds[0] ?? 1,
+                'primary_finding' => '3 vehicles have MOT expiring within 14 days',
+                'priority' => 'high',
+                'confidence_score' => 0.9200,
+                'risk_score' => 78.50,
+                'status' => 'pending',
+                'detailed_analysis' => ['finding' => 'MOT certificates for vehicles AB12 CDE, FG34 HIJ, and KL56 MNO expire within the next 14 days. Failure to renew will result in non-compliance and potential fines.', 'affected_vehicles' => 3, 'earliest_expiry' => now()->addDays(5)->toDateString()],
+                'recommendations' => ['Schedule MOT tests immediately for all 3 vehicles', 'Contact approved testing centres for availability', 'Consider staggering renewal dates to avoid future clustering'],
+                'action_items' => ['Book MOT for AB12 CDE by '.now()->addDays(3)->toDateString(), 'Book MOT for FG34 HIJ by '.now()->addDays(7)->toDateString(), 'Book MOT for KL56 MNO by '.now()->addDays(10)->toDateString()],
+                'business_impact' => ['risk' => 'Non-compliance fines up to GBP 2,500 per vehicle', 'cost' => 'MOT testing cost approximately GBP 55 per vehicle', 'downtime' => 'Estimated 2-3 hours per vehicle'],
+            ],
+            [
+                'analysis_type' => 'compliance_prediction',
+                'entity_type' => 'driver',
+                'entity_id' => $driverIds[2] ?? 3,
+                'primary_finding' => 'Driver licence renewal needed for 2 drivers',
+                'priority' => 'medium',
+                'confidence_score' => 0.8800,
+                'risk_score' => 62.00,
+                'status' => 'reviewed',
+                'detailed_analysis' => ['finding' => 'Two drivers have licences expiring within 30 days. Both require Category C renewal for continued HGV operation.', 'affected_drivers' => 2, 'licence_categories' => ['C', 'C+E']],
+                'recommendations' => ['Notify drivers of upcoming renewal deadlines', 'Verify medical fitness certificates are current', 'Plan temporary cover for drivers during renewal period'],
+                'action_items' => ['Send renewal reminder to affected drivers', 'Confirm medical certificates valid', 'Arrange temporary driver assignments'],
+                'business_impact' => ['risk' => 'Loss of 2 qualified HGV drivers', 'cost' => 'Licence renewal fees approximately GBP 43 per driver', 'operational' => 'Potential route coverage gaps for 1-2 weeks'],
+            ],
+            [
+                'analysis_type' => 'predictive_maintenance',
+                'entity_type' => 'vehicle',
+                'entity_id' => $vehicleIds[1] ?? 2,
+                'primary_finding' => 'Vehicle AB12 CDE: Brake pad wear, service in ~5 days',
+                'priority' => 'high',
+                'confidence_score' => 0.9100,
+                'risk_score' => 82.30,
+                'status' => 'pending',
+                'detailed_analysis' => ['finding' => 'Brake pad wear indicators show 15% remaining material. Based on current usage patterns, replacement needed within 5 days.', 'wear_percentage' => 85, 'daily_mileage_avg' => 142, 'last_service_date' => now()->subMonths(3)->toDateString()],
+                'recommendations' => ['Schedule brake pad replacement within 48 hours', 'Inspect brake discs for scoring during replacement', 'Review service schedule frequency for high-mileage vehicles'],
+                'action_items' => ['Create work order for brake replacement', 'Order brake pads from preferred supplier', 'Book workshop bay for service'],
+                'business_impact' => ['safety' => 'Critical safety risk if brakes fail', 'cost' => 'Brake pad replacement GBP 180-250', 'downtime' => '3-4 hours vehicle off-road'],
+            ],
+            [
+                'analysis_type' => 'predictive_maintenance',
+                'entity_type' => 'vehicle',
+                'entity_id' => $vehicleIds[4] ?? 5,
+                'primary_finding' => 'Vehicle KL56 MNO: Oil change overdue by 2,000 miles',
+                'priority' => 'medium',
+                'confidence_score' => 0.8500,
+                'risk_score' => 55.00,
+                'status' => 'actioned',
+                'detailed_analysis' => ['finding' => 'Oil change was due at 45,000 miles. Current odometer reads 47,000 miles. Engine oil degradation may affect performance.', 'overdue_miles' => 2000, 'current_odometer' => 47000, 'recommended_interval' => 15000],
+                'recommendations' => ['Schedule oil change immediately', 'Check oil filter condition', 'Consider reducing service interval to 12,000 miles for this vehicle'],
+                'action_items' => ['Book oil change service', 'Order synthetic oil and filter', 'Update service schedule'],
+                'business_impact' => ['risk' => 'Engine wear if deferred further', 'cost' => 'Oil change GBP 85-120', 'prevention' => 'Avoids potential GBP 3,000+ engine repair'],
+            ],
+            [
+                'analysis_type' => 'fraud_detection',
+                'entity_type' => 'vehicle',
+                'entity_id' => $vehicleIds[6] ?? 7,
+                'primary_finding' => 'Fuel transaction #247: 15% above fleet average',
+                'priority' => 'medium',
+                'confidence_score' => 0.7800,
+                'risk_score' => 48.00,
+                'status' => 'pending',
+                'detailed_analysis' => ['finding' => 'Recent fuel transaction shows cost 15% above fleet average for similar vehicle type and route. Pattern inconsistent with normal consumption.', 'transaction_amount' => 142.50, 'fleet_average' => 123.90, 'deviation_percentage' => 15.0, 'previous_month_avg' => 121.30],
+                'recommendations' => ['Review fuel card usage for this vehicle', 'Cross-reference with GPS route data', 'Interview driver if discrepancy confirmed'],
+                'action_items' => ['Pull fuel card transaction history', 'Compare with telematics route data', 'Flag for fleet manager review'],
+                'business_impact' => ['potential_loss' => 'GBP 18.60 per transaction if fraudulent', 'annual_exposure' => 'Up to GBP 960 annually per vehicle', 'detection' => 'Early detection prevents escalation'],
+            ],
+            [
+                'analysis_type' => 'cost_optimization',
+                'entity_type' => 'organization',
+                'entity_id' => $this->org->id,
+                'primary_finding' => 'Route consolidation could save 12% fuel cost',
+                'priority' => 'low',
+                'confidence_score' => 0.8300,
+                'risk_score' => 22.00,
+                'status' => 'reviewed',
+                'detailed_analysis' => ['finding' => 'Analysis of 200+ trips over 30 days reveals 3 route pairs with significant overlap. Consolidation would reduce total distance by 340 miles/week.', 'overlapping_routes' => 3, 'weekly_distance_saving' => 340, 'fuel_saving_percentage' => 12],
+                'recommendations' => ['Merge London-Birmingham and London-Leeds routes via shared Birmingham stop', 'Adjust departure schedules to enable consolidation', 'Monitor fuel spend after implementation'],
+                'action_items' => ['Create consolidated route plan', 'Update driver schedules', 'Set up fuel monitoring dashboard'],
+                'business_impact' => ['annual_saving' => 'Estimated GBP 8,400 fuel savings', 'carbon' => '4.2 tonnes CO2 reduction annually', 'efficiency' => '2 fewer vehicle-days per week'],
+            ],
+            [
+                'analysis_type' => 'cost_optimization',
+                'entity_type' => 'organization',
+                'entity_id' => $this->org->id,
+                'primary_finding' => '3 vehicles underutilised, consider pooling',
+                'priority' => 'medium',
+                'confidence_score' => 0.8000,
+                'risk_score' => 35.00,
+                'status' => 'pending',
+                'detailed_analysis' => ['finding' => '3 vehicles averaging less than 30 miles/day vs fleet average of 120 miles/day. These vehicles are used less than 3 days/week.', 'underutilised_count' => 3, 'avg_daily_miles' => 28, 'fleet_avg_daily_miles' => 120, 'usage_days_per_week' => 2.3],
+                'recommendations' => ['Move underutilised vehicles to pool fleet', 'Implement booking system for shared access', 'Consider disposing of 1-2 vehicles if utilisation remains low'],
+                'action_items' => ['Identify the 3 underutilised vehicles', 'Set up pool booking system', 'Review disposal options'],
+                'business_impact' => ['annual_saving' => 'GBP 12,000-18,000 in insurance, maintenance, depreciation', 'fleet_efficiency' => '12% improvement in overall fleet utilisation', 'capital' => 'GBP 45,000-75,000 if vehicles disposed'],
+            ],
+            [
+                'analysis_type' => 'risk_assessment',
+                'entity_type' => 'driver',
+                'entity_id' => $driverIds[5] ?? 6,
+                'primary_finding' => 'Driver safety score declining 78->72, coaching recommended',
+                'priority' => 'high',
+                'confidence_score' => 0.8700,
+                'risk_score' => 72.00,
+                'status' => 'pending',
+                'detailed_analysis' => ['finding' => 'Driver safety score has declined from 78 to 72 over the past 4 weeks. Harsh braking events increased 40%, speeding incidents up 25%.', 'score_trend' => [78, 76, 74, 72], 'harsh_braking_increase' => 40, 'speeding_increase' => 25, 'period_weeks' => 4],
+                'recommendations' => ['Schedule one-on-one coaching session', 'Review dashcam footage for recent incidents', 'Assign refresher training on defensive driving'],
+                'action_items' => ['Book coaching session within 7 days', 'Pull dashcam clips for last 2 weeks', 'Enroll in defensive driving course'],
+                'business_impact' => ['safety' => 'Increased accident risk if trend continues', 'insurance' => 'Potential premium increase of 5-10%', 'compliance' => 'Risk of falling below minimum safety threshold'],
+            ],
+            [
+                'analysis_type' => 'damage_detection',
+                'entity_type' => 'vehicle',
+                'entity_id' => $vehicleIds[8] ?? 9,
+                'primary_finding' => 'Front bumper damage, estimated GBP 2,800',
+                'priority' => 'medium',
+                'confidence_score' => 0.8200,
+                'risk_score' => 45.00,
+                'status' => 'reviewed',
+                'detailed_analysis' => ['finding' => 'AI image analysis of vehicle check photos detected front bumper damage consistent with low-speed collision. Damage area approximately 45cm x 20cm.', 'damage_area_cm' => '45x20', 'damage_type' => 'collision', 'estimated_repair_cost' => 2800, 'severity' => 'moderate'],
+                'recommendations' => ['Obtain repair quotes from approved bodyshops', 'Check if damage is covered under insurance policy', 'Review dashcam footage for incident details'],
+                'action_items' => ['Request bodyshop quotes', 'File insurance claim if cost-effective', 'Update vehicle condition report'],
+                'business_impact' => ['repair_cost' => 'GBP 2,800 estimated', 'insurance_excess' => 'GBP 500 policy excess', 'downtime' => '2-3 days for repair'],
+            ],
+            [
+                'analysis_type' => 'electrification_planning',
+                'entity_type' => 'organization',
+                'entity_id' => $this->org->id,
+                'primary_finding' => 'EV transition feasible for 8/25 vehicles, 18-month ROI',
+                'priority' => 'low',
+                'confidence_score' => 0.7600,
+                'risk_score' => 18.00,
+                'status' => 'reviewed',
+                'detailed_analysis' => ['finding' => '8 of 25 fleet vehicles have daily ranges under 100 miles with predictable routes, making them strong EV candidates. Analysis includes charging infrastructure requirements.', 'ev_candidates' => 8, 'total_fleet' => 25, 'avg_daily_range' => 62, 'roi_months' => 18, 'charging_stations_needed' => 4],
+                'recommendations' => ['Start with 3-vehicle pilot using Tesla Model 3 or equivalent', 'Install 4 charging points at HQ Depot and North Yard', 'Apply for government OZEV workplace charging grant'],
+                'action_items' => ['Identify 3 pilot vehicles for replacement', 'Get charging infrastructure quotes', 'Submit OZEV grant application'],
+                'business_impact' => ['annual_fuel_saving' => 'GBP 2,400 per vehicle (fuel vs electricity)', 'carbon_reduction' => '12 tonnes CO2 annually for 8 vehicles', 'grant_available' => 'Up to GBP 14,000 OZEV workplace charging grant'],
+            ],
+            [
+                'analysis_type' => 'incident_analysis',
+                'entity_type' => 'driver',
+                'entity_id' => $driverIds[10] ?? $driverIds[array_key_last($driverIds)],
+                'primary_finding' => 'Low-speed parking collision, driver fatigue noted',
+                'priority' => 'medium',
+                'confidence_score' => 0.8400,
+                'risk_score' => 58.00,
+                'status' => 'pending',
+                'detailed_analysis' => ['finding' => 'Incident occurred at 16:45 during reverse parking manoeuvre. Driver had completed 9.5 hours of driving. Telematics shows reduced reaction times in final 2 hours.', 'incident_time' => '16:45', 'driving_hours' => 9.5, 'speed_at_impact' => 3, 'fatigue_indicators' => true],
+                'recommendations' => ['Review driving hours policy compliance', 'Implement fatigue monitoring alerts', 'Schedule rest break reminders after 4.5 hours'],
+                'action_items' => ['Investigate working time compliance', 'Install fatigue detection system trial', 'Update driver handbook on rest requirements'],
+                'business_impact' => ['repair_cost' => 'GBP 1,200 parking bollard and vehicle damage', 'insurance' => 'Claim may affect no-claims discount', 'regulatory' => 'Potential working time directive violation'],
+            ],
+            [
+                'analysis_type' => 'fuel_efficiency',
+                'entity_type' => 'vehicle',
+                'entity_id' => $vehicleIds[3] ?? 4,
+                'primary_finding' => 'Fuel efficiency dropped 18% vs 3-month average',
+                'priority' => 'medium',
+                'confidence_score' => 0.8900,
+                'risk_score' => 42.00,
+                'status' => 'pending',
+                'detailed_analysis' => ['finding' => 'Vehicle fuel consumption has increased from 8.2 to 9.7 mpg over the past 2 weeks. Potential causes include tyre pressure, engine issues, or driving behaviour changes.', 'current_mpg' => 9.7, 'baseline_mpg' => 8.2, 'decline_percentage' => 18, 'period_days' => 14],
+                'recommendations' => ['Check tyre pressures and condition', 'Schedule engine diagnostics', 'Review driver behaviour data for changes'],
+                'action_items' => ['Inspect tyres within 24 hours', 'Book diagnostic scan', 'Compare driver telematics data'],
+                'business_impact' => ['extra_fuel_cost' => 'GBP 45/week additional fuel spend', 'annual_impact' => 'GBP 2,340 if not addressed', 'environmental' => '1.8 tonnes additional CO2 annually'],
+            ],
+            [
+                'analysis_type' => 'safety_scoring',
+                'entity_type' => 'driver',
+                'entity_id' => $driverIds[0] ?? 1,
+                'primary_finding' => 'Top performer: 96 safety score, zero incidents in 6 months',
+                'priority' => 'low',
+                'confidence_score' => 0.9400,
+                'risk_score' => 5.00,
+                'status' => 'reviewed',
+                'detailed_analysis' => ['finding' => 'Driver consistently maintains the highest safety score in the fleet. Zero incidents, zero harsh braking events, and excellent fuel economy over the past 6 months.', 'safety_score' => 96, 'incidents' => 0, 'harsh_events' => 0, 'months_tracked' => 6],
+                'recommendations' => ['Recognise as safety champion in fleet communications', 'Consider as mentor for lower-scoring drivers', 'Nominate for driver of the quarter award'],
+                'action_items' => ['Send recognition communication', 'Pair with coaching programme', 'Submit award nomination'],
+                'business_impact' => ['insurance' => 'Contributes to lower fleet premium', 'culture' => 'Positive safety culture reinforcement', 'retention' => 'Recognition improves driver retention'],
+            ],
+            [
+                'analysis_type' => 'driver_coaching',
+                'entity_type' => 'driver',
+                'entity_id' => $driverIds[7] ?? 8,
+                'primary_finding' => 'Excessive idling: 22% of engine-on time, coaching needed',
+                'priority' => 'medium',
+                'confidence_score' => 0.8600,
+                'risk_score' => 38.00,
+                'status' => 'pending',
+                'detailed_analysis' => ['finding' => 'Driver averages 22% idle time vs fleet average of 8%. This represents approximately 1.5 hours of unnecessary idling per day.', 'idle_percentage' => 22, 'fleet_avg_idle' => 8, 'daily_idle_hours' => 1.5, 'weekly_fuel_waste_litres' => 18],
+                'recommendations' => ['Schedule eco-driving coaching session', 'Set idle-time alerts on telematics device', 'Review delivery scheduling for wait time reduction'],
+                'action_items' => ['Book eco-driving course', 'Configure idle alerts at 3 minutes', 'Review delivery time windows'],
+                'business_impact' => ['fuel_waste' => 'GBP 35/week in wasted fuel', 'annual_cost' => 'GBP 1,820 annually', 'emissions' => '2.4 tonnes CO2 from unnecessary idling'],
+            ],
+        ];
+
+        $now = now();
+        $resultIds = [];
+        foreach ($analysisResults as $i => $result) {
+            $result['organization_id'] = $this->org->id;
+            $result['model_name'] = 'gpt-4o-mini';
+            $result['model_version'] = '2024-07-18';
+            $result['created_at'] = $now->copy()->subDays(random_int(1, 14))->subHours(random_int(0, 12));
+            $result['updated_at'] = $result['created_at'];
+
+            $model = \App\Models\Fleet\AiAnalysisResult::withoutGlobalScope($scope)->firstOrCreate(
+                [
+                    'organization_id' => $this->org->id,
+                    'analysis_type' => $result['analysis_type'],
+                    'primary_finding' => $result['primary_finding'],
+                ],
+                $result
+            );
+            $resultIds[] = $model->id;
+        }
+        $this->command?->info('Seeded '.count($resultIds).' AI analysis results.');
+
+        // --- AI Job Runs (5 completed jobs) ---
+        $jobRuns = [
+            [
+                'job_type' => 'compliance_prediction',
+                'entity_type' => 'vehicle',
+                'entity_ids' => array_slice($vehicleIds, 0, 10),
+                'parameters' => ['scope' => 'mot_and_licence', 'lookahead_days' => 30],
+                'status' => 'completed',
+                'priority' => 80,
+                'started_at' => $now->copy()->subDays(2)->setHour(6),
+                'completed_at' => $now->copy()->subDays(2)->setHour(6)->addMinutes(3),
+                'progress_percentage' => 100,
+                'cpu_time_seconds' => 45,
+                'memory_usage_mb' => 128,
+                'result_data' => ['results_count' => 2, 'high_priority' => 1, 'medium_priority' => 1],
+            ],
+            [
+                'job_type' => 'maintenance_prediction',
+                'entity_type' => 'vehicle',
+                'entity_ids' => array_slice($vehicleIds, 0, 15),
+                'parameters' => ['analysis_depth' => 'full', 'include_cost_estimate' => true],
+                'status' => 'completed',
+                'priority' => 90,
+                'started_at' => $now->copy()->subDays(3)->setHour(2),
+                'completed_at' => $now->copy()->subDays(3)->setHour(2)->addMinutes(8),
+                'progress_percentage' => 100,
+                'cpu_time_seconds' => 120,
+                'memory_usage_mb' => 256,
+                'result_data' => ['vehicles_analysed' => 15, 'maintenance_needed' => 4, 'urgent' => 1],
+            ],
+            [
+                'job_type' => 'fraud_detection',
+                'entity_type' => 'vehicle',
+                'entity_ids' => $vehicleIds,
+                'parameters' => ['period_days' => 30, 'deviation_threshold' => 10],
+                'status' => 'completed',
+                'priority' => 70,
+                'started_at' => $now->copy()->subDays(1)->setHour(3),
+                'completed_at' => $now->copy()->subDays(1)->setHour(3)->addMinutes(5),
+                'progress_percentage' => 100,
+                'cpu_time_seconds' => 78,
+                'memory_usage_mb' => 192,
+                'result_data' => ['transactions_scanned' => 139, 'flagged' => 3, 'confirmed_anomalies' => 1],
+            ],
+            [
+                'job_type' => 'risk_assessment',
+                'entity_type' => 'driver',
+                'entity_ids' => array_slice($driverIds, 0, 20),
+                'parameters' => ['include_behaviour_events' => true, 'scoring_model' => 'v2'],
+                'status' => 'completed',
+                'priority' => 85,
+                'started_at' => $now->copy()->subDays(1)->setHour(22),
+                'completed_at' => $now->copy()->subDays(1)->setHour(22)->addMinutes(6),
+                'progress_percentage' => 100,
+                'cpu_time_seconds' => 95,
+                'memory_usage_mb' => 210,
+                'result_data' => ['drivers_assessed' => 20, 'high_risk' => 2, 'declining_trend' => 3],
+            ],
+            [
+                'job_type' => 'cost_analysis',
+                'entity_type' => 'organization',
+                'entity_ids' => [$this->org->id],
+                'parameters' => ['period_days' => 30, 'include_route_analysis' => true],
+                'status' => 'completed',
+                'priority' => 60,
+                'started_at' => $now->copy()->subDays(4)->setHour(1),
+                'completed_at' => $now->copy()->subDays(4)->setHour(1)->addMinutes(12),
+                'progress_percentage' => 100,
+                'cpu_time_seconds' => 180,
+                'memory_usage_mb' => 320,
+                'result_data' => ['total_cost_analysed' => 45200, 'savings_identified' => 8400, 'recommendations' => 4],
+            ],
+        ];
+
+        foreach ($jobRuns as $run) {
+            $run['organization_id'] = $this->org->id;
+            $run['created_by'] = $this->user->id;
+            $run['updated_by'] = $this->user->id;
+            $run['created_at'] = $run['started_at'];
+            $run['updated_at'] = $run['completed_at'];
+
+            \App\Models\Fleet\AiJobRun::withoutGlobalScope($scope)->firstOrCreate(
+                [
+                    'organization_id' => $this->org->id,
+                    'job_type' => $run['job_type'],
+                    'started_at' => $run['started_at'],
+                ],
+                $run
+            );
+        }
+        $this->command?->info('Seeded '.count($jobRuns).' AI job runs.');
+
+        // --- Workflow Definitions (3 records) ---
+        $workflowDefs = [
+            [
+                'name' => 'Nightly Compliance Check',
+                'description' => 'Runs compliance prediction analysis every night at 2 AM for all vehicles and drivers with upcoming expiry dates.',
+                'trigger_type' => 'schedule',
+                'trigger_config' => ['cron' => '0 2 * * *', 'timezone' => 'Europe/London'],
+                'steps' => [
+                    ['name' => 'Collect expiry data', 'action' => 'gather_compliance_items', 'timeout' => 300],
+                    ['name' => 'Run AI prediction', 'action' => 'run_compliance_prediction', 'timeout' => 600],
+                    ['name' => 'Generate alerts', 'action' => 'create_alerts_for_findings', 'timeout' => 120],
+                    ['name' => 'Send notifications', 'action' => 'notify_fleet_managers', 'timeout' => 60],
+                ],
+                'is_active' => true,
+            ],
+            [
+                'name' => 'Fuel Anomaly Detection',
+                'description' => 'Triggered when a fuel transaction exceeds the fleet average by more than 10%. Analyses transaction patterns and flags suspicious activity.',
+                'trigger_type' => 'event',
+                'trigger_config' => ['event' => 'fuel_transaction.created', 'condition' => 'amount > fleet_avg * 1.1'],
+                'steps' => [
+                    ['name' => 'Fetch transaction details', 'action' => 'get_fuel_transaction', 'timeout' => 30],
+                    ['name' => 'Compare with fleet average', 'action' => 'compute_fleet_fuel_stats', 'timeout' => 120],
+                    ['name' => 'Run fraud detection', 'action' => 'run_fraud_detection_ai', 'timeout' => 300],
+                    ['name' => 'Flag if anomalous', 'action' => 'create_alert_if_flagged', 'timeout' => 60],
+                ],
+                'is_active' => true,
+            ],
+            [
+                'name' => 'Weekly Fleet Health Report',
+                'description' => 'Generates a comprehensive fleet health report every Monday at 7 AM, combining maintenance predictions, driver safety scores, and cost analysis.',
+                'trigger_type' => 'schedule',
+                'trigger_config' => ['cron' => '0 7 * * 1', 'timezone' => 'Europe/London'],
+                'steps' => [
+                    ['name' => 'Compute fleet health score', 'action' => 'calculate_fleet_health', 'timeout' => 180],
+                    ['name' => 'Run maintenance predictions', 'action' => 'run_predictive_maintenance', 'timeout' => 600],
+                    ['name' => 'Aggregate driver scores', 'action' => 'compile_driver_safety_summary', 'timeout' => 120],
+                    ['name' => 'Generate report', 'action' => 'create_fleet_health_report', 'timeout' => 300],
+                    ['name' => 'Distribute report', 'action' => 'email_report_to_managers', 'timeout' => 60],
+                ],
+                'is_active' => true,
+            ],
+        ];
+
+        $defIds = $this->seedRecords(\App\Models\Fleet\WorkflowDefinition::class, count($workflowDefs), $workflowDefs);
+        $this->command?->info('Seeded '.count($defIds).' workflow definitions.');
+
+        // --- Workflow Executions (7 records across the 3 definitions) ---
+        $executions = [
+            // Nightly Compliance Check — ran 3 times
+            [
+                'workflow_definition_id' => $defIds[0],
+                'started_at' => $now->copy()->subDays(1)->setHour(2),
+                'completed_at' => $now->copy()->subDays(1)->setHour(2)->addMinutes(4),
+                'trigger_event' => 'schedule.cron',
+                'status' => 'completed',
+                'steps_attempted' => 4,
+                'steps_completed' => 4,
+                'steps_failed' => 0,
+                'result_data' => ['findings' => 3, 'alerts_created' => 2, 'notifications_sent' => 1],
+            ],
+            [
+                'workflow_definition_id' => $defIds[0],
+                'started_at' => $now->copy()->subDays(2)->setHour(2),
+                'completed_at' => $now->copy()->subDays(2)->setHour(2)->addMinutes(5),
+                'trigger_event' => 'schedule.cron',
+                'status' => 'completed',
+                'steps_attempted' => 4,
+                'steps_completed' => 4,
+                'steps_failed' => 0,
+                'result_data' => ['findings' => 1, 'alerts_created' => 1, 'notifications_sent' => 1],
+            ],
+            [
+                'workflow_definition_id' => $defIds[0],
+                'started_at' => $now->copy()->subDays(3)->setHour(2),
+                'completed_at' => $now->copy()->subDays(3)->setHour(2)->addMinutes(3),
+                'trigger_event' => 'schedule.cron',
+                'status' => 'completed',
+                'steps_attempted' => 4,
+                'steps_completed' => 4,
+                'steps_failed' => 0,
+                'result_data' => ['findings' => 0, 'alerts_created' => 0, 'notifications_sent' => 0],
+            ],
+            // Fuel Anomaly Detection — ran 2 times
+            [
+                'workflow_definition_id' => $defIds[1],
+                'started_at' => $now->copy()->subDays(1)->setHour(14)->setMinute(22),
+                'completed_at' => $now->copy()->subDays(1)->setHour(14)->addMinutes(7),
+                'trigger_event' => 'fuel_transaction.created',
+                'trigger_entity_type' => 'fuel_transaction',
+                'trigger_entity_id' => 247,
+                'trigger_data' => ['amount' => 142.50, 'fleet_avg' => 123.90],
+                'status' => 'completed',
+                'steps_attempted' => 4,
+                'steps_completed' => 4,
+                'steps_failed' => 0,
+                'result_data' => ['anomaly_detected' => true, 'deviation' => 15.0, 'alert_created' => true],
+            ],
+            [
+                'workflow_definition_id' => $defIds[1],
+                'started_at' => $now->copy()->subDays(5)->setHour(9)->setMinute(15),
+                'completed_at' => $now->copy()->subDays(5)->setHour(9)->addMinutes(4),
+                'trigger_event' => 'fuel_transaction.created',
+                'trigger_entity_type' => 'fuel_transaction',
+                'trigger_entity_id' => 198,
+                'trigger_data' => ['amount' => 98.20, 'fleet_avg' => 123.90],
+                'status' => 'completed',
+                'steps_attempted' => 4,
+                'steps_completed' => 3,
+                'steps_failed' => 0,
+                'result_data' => ['anomaly_detected' => false, 'deviation' => -20.7],
+            ],
+            // Weekly Fleet Health Report — ran 2 times
+            [
+                'workflow_definition_id' => $defIds[2],
+                'started_at' => $now->copy()->subWeek()->startOfWeek()->setHour(7),
+                'completed_at' => $now->copy()->subWeek()->startOfWeek()->setHour(7)->addMinutes(18),
+                'trigger_event' => 'schedule.cron',
+                'status' => 'completed',
+                'steps_attempted' => 5,
+                'steps_completed' => 5,
+                'steps_failed' => 0,
+                'result_data' => ['health_score' => 74, 'maintenance_alerts' => 3, 'report_url' => '/reports/fleet-health-2026-w09'],
+            ],
+            [
+                'workflow_definition_id' => $defIds[2],
+                'started_at' => $now->copy()->subWeeks(2)->startOfWeek()->setHour(7),
+                'completed_at' => $now->copy()->subWeeks(2)->startOfWeek()->setHour(7)->addMinutes(15),
+                'trigger_event' => 'schedule.cron',
+                'status' => 'completed',
+                'steps_attempted' => 5,
+                'steps_completed' => 5,
+                'steps_failed' => 0,
+                'result_data' => ['health_score' => 81, 'maintenance_alerts' => 1, 'report_url' => '/reports/fleet-health-2026-w08'],
+            ],
+        ];
+
+        $executionCount = 0;
+        foreach ($executions as $exec) {
+            $exec['created_at'] = $exec['started_at'];
+            $exec['updated_at'] = $exec['completed_at'];
+
+            \App\Models\Fleet\WorkflowExecution::query()->firstOrCreate(
+                [
+                    'workflow_definition_id' => $exec['workflow_definition_id'],
+                    'started_at' => $exec['started_at'],
+                ],
+                $exec
+            );
+            $executionCount++;
+        }
+        $this->command?->info("Seeded {$executionCount} workflow executions.");
     }
 
     /**
