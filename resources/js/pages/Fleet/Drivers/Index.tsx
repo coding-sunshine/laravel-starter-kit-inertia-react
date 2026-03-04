@@ -1,4 +1,5 @@
 import {
+    AiInsightBadge,
     FleetActionIconButton,
     FleetActionIconLink,
     FleetEmptyState,
@@ -83,6 +84,12 @@ interface DriverRecord {
     license_number: string;
     license_expiry_date: string;
 }
+interface AiInsight {
+    id: number;
+    primary_finding: string;
+    priority: 'high' | 'medium' | 'low';
+    analysis_type: string;
+}
 interface Props {
     drivers: {
         data: DriverRecord[];
@@ -96,9 +103,10 @@ interface Props {
         low_safety: number;
         qualifications_expiring: number;
     };
+    aiInsights?: Record<number, AiInsight>;
 }
 
-export default function FleetDriversIndex({ drivers, filters = {}, summary }: Props) {
+export default function FleetDriversIndex({ drivers, filters = {}, summary, aiInsights }: Props) {
     const [deleteTarget, setDeleteTarget] = useState<DriverRecord | null>(null);
     const [nlQuery, setNlQuery] = useState('');
     const [nlLoading, setNlLoading] = useState(false);
@@ -466,6 +474,11 @@ export default function FleetDriversIndex({ drivers, filters = {}, summary }: Pr
                                                 Status
                                             </TableHead>
                                         )}
+                                        {aiInsights && Object.keys(aiInsights).length > 0 && (
+                                            <TableHead className="h-11 px-4 font-semibold">
+                                                AI Insight
+                                            </TableHead>
+                                        )}
                                         <TableHead className="h-11 w-[120px] px-4 text-right font-semibold">
                                             Actions
                                         </TableHead>
@@ -514,6 +527,17 @@ export default function FleetDriversIndex({ drivers, filters = {}, summary }: Pr
                                                     >
                                                         {row.status}
                                                     </FleetGlassPill>
+                                                </TableCell>
+                                            )}
+                                            {aiInsights && Object.keys(aiInsights).length > 0 && (
+                                                <TableCell className="px-4 py-3">
+                                                    {aiInsights[row.id] && (
+                                                        <AiInsightBadge
+                                                            text={aiInsights[row.id].primary_finding}
+                                                            priority={aiInsights[row.id].priority}
+                                                            href={`/fleet/ai-analysis-results/${aiInsights[row.id].id}`}
+                                                        />
+                                                    )}
                                                 </TableCell>
                                             )}
                                             <TableCell className="px-4 py-3 text-right">

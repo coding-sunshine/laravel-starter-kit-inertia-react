@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Fleet;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Fleet\StoreVehicleRequest;
 use App\Http\Requests\Fleet\UpdateVehicleRequest;
+use App\Models\Fleet\AiAnalysisResult;
 use App\Models\Fleet\Defect;
 use App\Models\Fleet\DriverVehicleAssignment;
 use App\Models\Fleet\Trip;
@@ -59,10 +60,31 @@ final class VehicleController extends Controller
             ];
         }, 'summary');
 
+        $vehicleIds = collect($vehicles->items())->pluck('id')->all();
+
+        $aiInsights = Inertia::defer(function () use ($vehicleIds): array {
+            return AiAnalysisResult::query()
+                ->where('entity_type', 'vehicle')
+                ->whereIn('entity_id', $vehicleIds)
+                ->orderByDesc('created_at')
+                ->get()
+                ->unique('entity_id')
+                ->mapWithKeys(fn (AiAnalysisResult $r) => [
+                    $r->entity_id => [
+                        'id' => $r->id,
+                        'primary_finding' => $r->primary_finding,
+                        'priority' => $r->priority,
+                        'analysis_type' => $r->analysis_type,
+                    ],
+                ])
+                ->all();
+        }, 'aiInsights');
+
         return Inertia::render('Fleet/Vehicles/Index', [
             'vehicles' => $vehicles,
             'filters' => $request->only(['status', 'odometer_min', 'odometer_max', 'search']),
             'summary' => $summary,
+            'aiInsights' => $aiInsights,
         ]);
     }
 

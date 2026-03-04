@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Fleet;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Fleet\StoreDriverRequest;
 use App\Http\Requests\Fleet\UpdateDriverRequest;
+use App\Models\Fleet\AiAnalysisResult;
 use App\Models\Fleet\Driver;
 use App\Models\Fleet\DriverVehicleAssignment;
 use App\Services\TenantContext;
@@ -46,10 +47,31 @@ final class DriverController extends Controller
             ];
         }, 'summary');
 
+        $driverIds = collect($drivers->items())->pluck('id')->all();
+
+        $aiInsights = Inertia::defer(function () use ($driverIds): array {
+            return AiAnalysisResult::query()
+                ->where('entity_type', 'driver')
+                ->whereIn('entity_id', $driverIds)
+                ->orderByDesc('created_at')
+                ->get()
+                ->unique('entity_id')
+                ->mapWithKeys(fn (AiAnalysisResult $r) => [
+                    $r->entity_id => [
+                        'id' => $r->id,
+                        'primary_finding' => $r->primary_finding,
+                        'priority' => $r->priority,
+                        'analysis_type' => $r->analysis_type,
+                    ],
+                ])
+                ->all();
+        }, 'aiInsights');
+
         return Inertia::render('Fleet/Drivers/Index', [
             'drivers' => $drivers,
             'filters' => $request->only(['status']),
             'summary' => $summary,
+            'aiInsights' => $aiInsights,
         ]);
     }
 

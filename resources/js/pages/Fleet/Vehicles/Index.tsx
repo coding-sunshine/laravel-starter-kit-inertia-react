@@ -1,4 +1,5 @@
 import {
+    AiInsightBadge,
     FleetActionIconButton,
     FleetActionIconLink,
     FleetEmptyState,
@@ -77,6 +78,12 @@ interface VehicleRecord {
     model: string;
     status: string;
 }
+interface AiInsight {
+    id: number;
+    primary_finding: string;
+    priority: 'high' | 'medium' | 'low';
+    analysis_type: string;
+}
 interface Props {
     vehicles: {
         data: VehicleRecord[];
@@ -95,9 +102,10 @@ interface Props {
         in_maintenance: number;
         due_for_service: number;
     };
+    aiInsights?: Record<number, AiInsight>;
 }
 
-export default function FleetVehiclesIndex({ vehicles, filters = {}, summary }: Props) {
+export default function FleetVehiclesIndex({ vehicles, filters = {}, summary, aiInsights }: Props) {
     const [deleteTarget, setDeleteTarget] = useState<VehicleRecord | null>(
         null,
     );
@@ -536,6 +544,11 @@ export default function FleetVehiclesIndex({ vehicles, filters = {}, summary }: 
                                                     Status
                                                 </TableHead>
                                             )}
+                                            {aiInsights && Object.keys(aiInsights).length > 0 && (
+                                                <TableHead className="h-11 px-4 font-semibold">
+                                                    AI Insight
+                                                </TableHead>
+                                            )}
                                             <TableHead className="h-11 w-[80px] px-4 text-right font-semibold">
                                                 Actions
                                             </TableHead>
@@ -583,6 +596,17 @@ export default function FleetVehiclesIndex({ vehicles, filters = {}, summary }: 
                                                         >
                                                             {row.status}
                                                         </FleetGlassPill>
+                                                    </TableCell>
+                                                )}
+                                                {aiInsights && Object.keys(aiInsights).length > 0 && (
+                                                    <TableCell className="px-4 py-3">
+                                                        {aiInsights[row.id] && (
+                                                            <AiInsightBadge
+                                                                text={aiInsights[row.id].primary_finding}
+                                                                priority={aiInsights[row.id].priority}
+                                                                href={`/fleet/ai-analysis-results/${aiInsights[row.id].id}`}
+                                                            />
+                                                        )}
                                                     </TableCell>
                                                 )}
                                                 <TableCell className="px-4 py-3 text-right">
