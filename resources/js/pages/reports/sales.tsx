@@ -34,13 +34,13 @@ export default function SalesReportPage({
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-4">
-                    <div className="rounded-lg border p-4">
+                    <div className="fusion-card p-4">
                         <p className="text-muted-foreground text-sm">
                             Total Sales
                         </p>
                         <p className="text-3xl font-bold">{totalSales}</p>
                     </div>
-                    <div className="rounded-lg border p-4">
+                    <div className="fusion-card p-4">
                         <p className="text-muted-foreground text-sm">
                             Total Comms In
                         </p>
@@ -48,7 +48,7 @@ export default function SalesReportPage({
                             {formatCurrency(totalCommsIn)}
                         </p>
                     </div>
-                    <div className="rounded-lg border p-4">
+                    <div className="fusion-card p-4">
                         <p className="text-muted-foreground text-sm">
                             Total Comms Out
                         </p>
@@ -56,7 +56,7 @@ export default function SalesReportPage({
                             {formatCurrency(totalCommsOut)}
                         </p>
                     </div>
-                    <div className="rounded-lg border p-4">
+                    <div className="fusion-card p-4">
                         <p className="text-muted-foreground text-sm">
                             Profit Margin
                         </p>
@@ -65,7 +65,7 @@ export default function SalesReportPage({
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">
-                    <div className="rounded-lg border p-4">
+                    <div className="fusion-card p-4">
                         <h2 className="mb-3 text-lg font-semibold">
                             Sales by Month (Last 6 Months)
                         </h2>
@@ -88,7 +88,7 @@ export default function SalesReportPage({
                         </dl>
                     </div>
 
-                    <div className="rounded-lg border p-4">
+                    <div className="fusion-card p-4">
                         <h2 className="mb-3 text-lg font-semibold">
                             Top Agents by Commission
                         </h2>

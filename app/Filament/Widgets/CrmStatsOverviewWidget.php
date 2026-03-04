@@ -26,12 +26,30 @@ final class CrmStatsOverviewWidget extends BaseStatsOverviewWidget
      */
     protected function getStats(): array
     {
-        if (! TenantContext::check()) {
-            return [];
-        }
-
+        $hasTenant = TenantContext::check();
         $startOfMonth = now()->startOfMonth();
         $endOfMonth = now()->endOfMonth();
+
+        if (! $hasTenant) {
+            return [
+                Stat::make('Contacts', '0')
+                    ->description('Select an organization')
+                    ->icon('heroicon-o-users')
+                    ->color('gray'),
+                Stat::make('Open tasks', '0')
+                    ->description('Select an organization')
+                    ->icon('heroicon-o-clipboard-document-check')
+                    ->color('gray'),
+                Stat::make('Reservations (this month)', '0')
+                    ->description('Select an organization')
+                    ->icon('heroicon-o-calendar-days')
+                    ->color('gray'),
+                Stat::make('Sales (this month)', '0')
+                    ->description('Select an organization')
+                    ->icon('heroicon-o-banknotes')
+                    ->color('gray'),
+            ];
+        }
 
         $contacts = Contact::query()->count();
         $tasksOpen = Task::query()->whereNull('completed_at')->count();
@@ -44,18 +62,28 @@ final class CrmStatsOverviewWidget extends BaseStatsOverviewWidget
 
         return [
             Stat::make('Contacts', (string) $contacts)
-                ->description('Total in organization'),
+                ->description('Total in organization')
+                ->icon('heroicon-o-users')
+                ->color('slate'),
             Stat::make('Open tasks', (string) $tasksOpen)
-                ->description('Not completed'),
+                ->description('Not completed')
+                ->icon('heroicon-o-clipboard-document-check')
+                ->color('amber'),
             Stat::make('Reservations (this month)', (string) $reservationsMonth)
-                ->url(PropertyReservationResource::getUrl('index')),
+                ->url(PropertyReservationResource::getUrl('index'))
+                ->description('This month')
+                ->icon('heroicon-o-calendar-days')
+                ->color('blue'),
             Stat::make('Sales (this month)', (string) $salesMonth)
-                ->url(SaleResource::getUrl('index')),
+                ->url(SaleResource::getUrl('index'))
+                ->description('This month')
+                ->icon('heroicon-o-banknotes')
+                ->color('emerald'),
         ];
     }
 
     public static function canView(): bool
     {
-        return TenantContext::check();
+        return true;
     }
 }

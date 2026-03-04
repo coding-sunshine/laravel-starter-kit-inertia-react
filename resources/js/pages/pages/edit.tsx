@@ -223,7 +223,7 @@ export default function PageEdit({ page, puckJson, templates = [] }: Props) {
                     </div>
                 )}
 
-                <div className="min-h-0 flex-1 rounded-lg border">
+                <div className="fusion-card min-h-0 flex-1">
                     <Suspense
                         fallback={
                             <div className="flex h-96 items-center justify-center text-muted-foreground">

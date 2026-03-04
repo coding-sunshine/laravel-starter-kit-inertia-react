@@ -24,19 +24,19 @@ export default function TaskReportPage({
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-3">
-                    <div className="rounded-lg border p-4">
+                    <div className="fusion-card p-4">
                         <p className="text-muted-foreground text-sm">
                             Completion Rate
                         </p>
                         <p className="text-3xl font-bold">{completionRate}%</p>
                     </div>
-                    <div className="rounded-lg border p-4">
+                    <div className="fusion-card p-4">
                         <p className="text-muted-foreground text-sm">
                             Overdue Tasks
                         </p>
                         <p className="text-3xl font-bold">{overdueCount}</p>
                     </div>
-                    <div className="rounded-lg border p-4">
+                    <div className="fusion-card p-4">
                         <p className="text-muted-foreground text-sm">
                             Created This Month
                         </p>
@@ -46,7 +46,7 @@ export default function TaskReportPage({
                     </div>
                 </div>
 
-                <div className="rounded-lg border p-4">
+                <div className="fusion-card p-4">
                     <h2 className="mb-3 text-lg font-semibold">By Status</h2>
                     <dl className="space-y-2">
                         {Object.entries(byStatus).map(([status, count]) => (

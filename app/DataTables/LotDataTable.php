@@ -37,8 +37,8 @@ final class LotDataTable extends AbstractDataTable
             price: $model->price !== null ? (string) $model->price : null,
             land_price: $model->land_price !== null ? (string) $model->land_price : null,
             stage: $model->stage,
-            bedrooms: $model->bedrooms,
-            bathrooms: $model->bathrooms,
+            bedrooms: $model->bedrooms ? (int) $model->bedrooms : null,
+            bathrooms: $model->bathrooms ? (int) $model->bathrooms : null,
             land_size: $model->land_size !== null ? (string) $model->land_size : null,
             is_archived: (bool) $model->is_archived,
             created_at: $model->created_at?->format('Y-m-d H:i'),
@@ -74,11 +74,23 @@ final class LotDataTable extends AbstractDataTable
     public static function tableBaseQuery(): Builder
     {
         return Lot::query()
-            ->with(['project']);
+            ->with(['project'])
+            ->leftJoin('projects', 'lots.project_id', '=', 'projects.id')
+            ->select('lots.*', 'projects.title as project_title', 'projects.estate as project_estate');
     }
 
     public static function tableDefaultSort(): string
     {
         return '-id';
+    }
+
+    public static function tableSearchableColumns(): array
+    {
+        return [
+            'lots.title',
+            'lots.stage',
+            'projects.title',
+            'projects.estate',
+        ];
     }
 }

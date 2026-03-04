@@ -47,7 +47,7 @@ export default function Achievements({
                         description="Your experience points, level, and unlocked achievements"
                     />
 
-                    <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
+                    <div className="fusion-card p-4 text-card-foreground">
                         <div className="flex flex-wrap items-center gap-4">
                             <div>
                                 <p className="text-sm text-muted-foreground">
@@ -100,7 +100,7 @@ export default function Achievements({
                                 {achievements.map((a) => (
                                     <li
                                         key={a.id}
-                                        className="flex items-start gap-3 rounded-lg border p-3"
+                                        className="fusion-card flex items-start gap-3 p-3"
                                     >
                                         {a.image ? (
                                             <img

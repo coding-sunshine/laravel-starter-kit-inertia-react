@@ -30,7 +30,7 @@ export default function ReservationReportPage({
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-3">
-                    <div className="rounded-lg border p-4">
+                    <div className="fusion-card p-4">
                         <p className="text-muted-foreground text-sm">
                             Total Reservations
                         </p>
@@ -38,13 +38,13 @@ export default function ReservationReportPage({
                             {totalReservations}
                         </p>
                     </div>
-                    <div className="rounded-lg border p-4">
+                    <div className="fusion-card p-4">
                         <p className="text-muted-foreground text-sm">
                             This Month
                         </p>
                         <p className="text-3xl font-bold">{thisMonth}</p>
                     </div>
-                    <div className="rounded-lg border p-4">
+                    <div className="fusion-card p-4">
                         <p className="text-muted-foreground text-sm">
                             Avg. Purchase Price
                         </p>
@@ -54,7 +54,7 @@ export default function ReservationReportPage({
                     </div>
                 </div>
 
-                <div className="rounded-lg border p-4">
+                <div className="fusion-card p-4">
                     <h2 className="mb-3 text-lg font-semibold">
                         By Project (Top 10)
                     </h2>

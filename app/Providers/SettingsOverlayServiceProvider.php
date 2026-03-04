@@ -370,6 +370,13 @@ final class SettingsOverlayServiceProvider extends ServiceProvider
                 foreach ($config['map'] as $property => $configKey) {
                     $value = $settings->{$property};
 
+                    // Special handling for tenancy.enabled - always respect MULTI_ORGANIZATION_ENABLED from .env
+                    if ($configKey === 'tenancy.enabled' && env('MULTI_ORGANIZATION_ENABLED') !== null) {
+                        $value = (bool) env('MULTI_ORGANIZATION_ENABLED');
+                        config()->set($configKey, $value);
+                        continue;
+                    }
+
                     // Never overwrite env-backed config defaults with null/empty DB values.
                     // This lets .env remain the source of truth until a value is explicitly
                     // saved in Filament Settings.

@@ -92,7 +92,7 @@ export default function OrganizationsMembers() {
                         })}
                         method="post"
                         disableWhileProcessing
-                        className="flex flex-wrap items-end gap-4 rounded-lg border p-4"
+                        className="fusion-card flex flex-wrap items-end gap-4 p-4"
                     >
                         {({ processing, errors }) => (
                             <>
@@ -137,7 +137,7 @@ export default function OrganizationsMembers() {
                         {members.map((member) => (
                             <li
                                 key={member.id}
-                                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3"
+                                className="fusion-card flex flex-wrap items-center justify-between gap-2 p-3"
                             >
                                 <div>
                                     <span className="font-medium">
@@ -241,7 +241,7 @@ export default function OrganizationsMembers() {
                             {pendingInvitations.map((inv) => (
                                 <li
                                     key={inv.id}
-                                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-dashed p-3"
+                                    className="fusion-card flex flex-wrap items-center justify-between gap-2 border-dashed p-3"
                                 >
                                     <span className="text-sm">
                                         {inv.email} – {inv.role}

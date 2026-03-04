@@ -43,7 +43,7 @@ export default function PagesIndex({ pages }: Props) {
                 </div>
 
                 {pages.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16 text-center">
+                    <div className="fusion-card flex flex-col items-center justify-center border-dashed py-16 text-center">
                         <FileText className="size-10 text-muted-foreground" />
                         <p className="mt-2 text-sm font-medium text-muted-foreground">
                             No pages yet
@@ -67,7 +67,7 @@ export default function PagesIndex({ pages }: Props) {
                         {pages.map((page) => (
                             <li
                                 key={page.id}
-                                className="flex items-center justify-between gap-4 rounded-lg border bg-card p-4"
+                                className="fusion-card flex items-center justify-between gap-4 p-4"
                             >
                                 <div className="min-w-0 flex-1">
                                     <Link

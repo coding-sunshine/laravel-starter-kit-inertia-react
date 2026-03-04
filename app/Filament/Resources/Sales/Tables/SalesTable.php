@@ -51,13 +51,21 @@ final class SalesTable
                     }),
                 SelectFilter::make('client_contact_id')
                     ->label('Client')
-                    ->relationship('clientContact', 'first_name', modifyQueryUsing: fn ($q) => $q->orderBy('first_name'))
+                    ->relationship(
+                        'clientContact',
+                        'first_name',
+                        modifyQueryUsing: fn (Builder $query): Builder => $query->orderBy('first_name'),
+                    )
                     ->getOptionLabelFromRecordUsing(fn ($record) => trim($record->first_name.' '.$record->last_name))
                     ->searchable()
                     ->preload(),
                 SelectFilter::make('sales_agent_contact_id')
                     ->label('Sales agent')
-                    ->relationship('salesAgentContact', 'first_name', modifyQueryUsing: fn ($q) => $q->orderBy('first_name'))
+                    ->relationship(
+                        'salesAgentContact',
+                        'first_name',
+                        modifyQueryUsing: fn (Builder $query): Builder => $query->orderBy('first_name'),
+                    )
                     ->getOptionLabelFromRecordUsing(fn ($record) => trim($record->first_name.' '.$record->last_name))
                     ->searchable()
                     ->preload(),

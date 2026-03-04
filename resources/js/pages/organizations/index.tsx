@@ -84,7 +84,7 @@ export default function OrganizationsIndex() {
                                             href={organizations.show.url({
                                                 organization: org.slug,
                                             })}
-                                            className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50"
+                                            className="fusion-card flex items-center justify-between p-3 transition-colors hover:bg-muted/50"
                                         >
                                             <span className="font-medium">
                                                 {org.name}

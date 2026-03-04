@@ -250,8 +250,8 @@ return [
     |
     */
     'widgets' => [
-        'enabled' => true,
-        'dashboard' => true,
+        'enabled' => false,
+        'dashboard' => false,
         'widgets' => [
             AlizHarb\ActivityLog\Widgets\ActivityChartWidget::class,
             AlizHarb\ActivityLog\Widgets\LatestActivityWidget::class,

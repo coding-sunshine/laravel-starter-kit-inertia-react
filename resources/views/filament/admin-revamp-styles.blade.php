@@ -110,4 +110,72 @@
     .fi-main {
         background: transparent;
     }
+
+    /* Tables: same card style as main app (rounded, border, header) */
+    .fi-ta-ctn {
+        border-radius: 0.5rem;
+        border: 1px solid rgb(229 231 235);
+        background: rgb(255 255 255);
+        box-shadow: none;
+        ring: none;
+    }
+    .fi-ta-table > thead > tr {
+        background: rgb(249 250 251);
+    }
+    .fi-ta-table > thead > tr > .fi-ta-header-cell {
+        color: rgb(55 65 81);
+    }
+    .fi-ta-table {
+        border-color: rgb(229 231 235);
+    }
+    .fi-ta-table > tbody > tr:hover {
+        background: rgb(249 250 251);
+    }
+    .fi-ta-header,
+    .fi-ta-header-toolbar,
+    .fi-ta-filters-above-content-ctn,
+    .fi-ta-filter-indicators,
+    .fi-ta-selection-indicator,
+    .fi-ta-reorder-indicator,
+    .fi-pagination {
+        border-color: rgb(229 231 235);
+    }
+
+    /* Widget/section cards on dashboard and list pages */
+    .fi-section-content-ctn,
+    .fi-wi-stats-overview-stat,
+    .fi-wi-chart {
+        border-radius: 0.5rem;
+        border: 1px solid rgb(229 231 235);
+        background: rgb(255 255 255);
+    }
+    .fi-section-header {
+        border-color: rgb(229 231 235);
+    }
+
+    /* Dashboard: widget cards same as fusion-card, with subtle elevation */
+    .fi-wi-chart,
+    .fi-wi-stats-overview-stat,
+    .fi-wi-stats-overview {
+        border-radius: 0.5rem;
+        border: 1px solid rgb(229 231 235);
+        background: rgb(255 255 255);
+        box-shadow: 0 10px 20px rgba(15, 23, 42, 0.03);
+    }
+    .fi-wi-stats-overview-stat {
+        padding: 1.1rem 1.4rem;
+        gap: 0.5rem;
+    }
+
+    /* Dashboard heading + grid spacing */
+    .fi-main-header-heading {
+        font-size: 1.35rem;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        color: rgb(15 23 42);
+    }
+    .fi-main-ctn .fi-wi-stats-overview,
+    .fi-main-ctn .fi-wi-chart {
+        margin-top: 0.5rem;
+    }
 </style>

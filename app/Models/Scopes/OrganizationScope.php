@@ -18,6 +18,11 @@ final class OrganizationScope implements Scope
             return;
         }
 
+        // If multi-tenant mode is disabled (single-tenant/fleet-only), skip organization scoping
+        if (! config('tenancy.enabled', true)) {
+            return;
+        }
+
         $organizationId = TenantContext::id();
 
         if ($organizationId === null) {

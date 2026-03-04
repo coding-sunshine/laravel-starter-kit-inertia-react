@@ -54,7 +54,7 @@ export default function TermsAccept({
                     </Link>
                 </div>
 
-                <div className="rounded-lg border bg-card p-6 shadow-sm">
+                <div className="fusion-card p-6">
                     <div className="mb-6">
                         <h1 className="text-xl font-semibold">
                             New terms require your acceptance
@@ -84,7 +84,7 @@ export default function TermsAccept({
                         {pendingVersions.map((version) => (
                             <div
                                 key={version.id}
-                                className="rounded-lg border border-border p-4"
+                                className="fusion-card p-4"
                             >
                                 <div className="flex items-start gap-3">
                                     <Checkbox

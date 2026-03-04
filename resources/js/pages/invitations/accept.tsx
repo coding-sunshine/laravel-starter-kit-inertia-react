@@ -37,7 +37,7 @@ export default function InvitationsAccept() {
         >
             <Head title="Accept invitation" />
             <div className="space-y-6">
-                <div className="flex items-center gap-3 rounded-lg border p-4">
+                <div className="fusion-card flex items-center gap-3 p-4">
                     <Building2 className="size-10 text-muted-foreground" />
                     <div>
                         <p className="font-medium">

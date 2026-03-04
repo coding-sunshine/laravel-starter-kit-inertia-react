@@ -66,11 +66,26 @@ final class ContactDataTable extends AbstractDataTable
     public static function tableBaseQuery(): Builder
     {
         return Contact::query()
-            ->with(['source', 'company']);
+            ->with(['source', 'company'])
+            ->leftJoin('sources', 'contacts.source_id', '=', 'sources.id')
+            ->leftJoin('companies', 'contacts.company_id', '=', 'companies.id')
+            ->select('contacts.*', 'companies.name as company_name_search', 'sources.label as source_label_search');
     }
 
     public static function tableDefaultSort(): string
     {
         return '-id';
+    }
+
+    public static function tableSearchableColumns(): array
+    {
+        return [
+            'contacts.first_name',
+            'contacts.last_name',
+            'companies.name',
+            'contacts.company_name',
+            'contacts.type',
+            'contacts.stage',
+        ];
     }
 }

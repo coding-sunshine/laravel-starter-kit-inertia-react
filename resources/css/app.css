@@ -173,7 +173,7 @@
     @apply shadow-sm;
 }
 
-/* Tables: all list/dashboard and data-table pages */
+/* Tables: all list/dashboard and data-table pages (same look everywhere) */
 [data-slot='table-container'],
 .fusion-table-card {
     @apply rounded-lg border border-border bg-card;
@@ -183,4 +183,12 @@
 }
 [data-slot='table-header'] {
     @apply bg-muted/50;
+}
+[data-slot='table-row'] {
+    @apply transition-colors;
+}
+
+/* Content cards: dashboard, reports, and any card-style block */
+.fusion-card {
+    @apply rounded-lg border border-border bg-card;
 }

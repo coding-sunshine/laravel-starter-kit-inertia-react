@@ -146,6 +146,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::post('terms/accept', [TermsAcceptController::class, 'store'])->name('terms.accept.store');
 
     Route::get('dashboard', App\Http\Controllers\DashboardController::class)->name('dashboard');
+    Route::get('dashboard/metrics', [App\Http\Controllers\DashboardController::class, 'metrics'])->name('dashboard.metrics');
 
     Route::get('chat', fn () => Inertia::render('chat/index'))->name('chat');
 

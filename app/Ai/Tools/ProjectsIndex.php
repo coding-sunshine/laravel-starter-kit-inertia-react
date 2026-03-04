@@ -30,7 +30,7 @@ final class ProjectsIndex implements Tool
         if ($query !== '') {
             $like = '%'.Str::replace(['%', '_'], ['\\%', '\\_'], $query).'%';
             $builder->where(function ($q) use ($like): void {
-                $q->where('title', 'like', $like)->orWhere('description', 'like', $like);
+                $q->where('title', 'ILIKE', $like)->orWhere('description', 'ILIKE', $like);
             });
         }
 
@@ -47,8 +47,8 @@ final class ProjectsIndex implements Tool
             $p->stage ?? '—',
             $p->estate ?? '—',
             $p->total_lots ?? '—',
-            $p->min_price ? number_format($p->min_price) : '—',
-            $p->max_price ? number_format($p->max_price) : '—',
+            $p->min_price ? number_format((float) $p->min_price) : '—',
+            $p->max_price ? number_format((float) $p->max_price) : '—',
             $p->updated_at?->toDateString() ?? '—',
         ));
 

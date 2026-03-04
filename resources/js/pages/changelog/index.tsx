@@ -52,7 +52,7 @@ export default function ChangelogIndex({ entries }: Props) {
             <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-4">
                 <h1 className="text-2xl font-semibold">Changelog</h1>
                 {entries.data.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16 text-center">
+                    <div className="fusion-card flex flex-col items-center justify-center border-dashed py-16 text-center">
                         <p className="text-sm font-medium text-muted-foreground">
                             No changelog entries yet
                         </p>
@@ -65,7 +65,7 @@ export default function ChangelogIndex({ entries }: Props) {
                         {entries.data.map((entry) => (
                             <li
                                 key={entry.id}
-                                className="rounded-lg border bg-card p-4"
+                                className="fusion-card p-4"
                             >
                                 <div className="mb-2 flex flex-wrap items-center gap-2">
                                     {entry.version && (

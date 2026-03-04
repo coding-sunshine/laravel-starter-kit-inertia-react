@@ -8,6 +8,7 @@ use Spatie\LaravelSettings\Settings;
 
 final class TenancySettings extends Settings
 {
+    // This gets overridden by SettingsOverlayServiceProvider based on env('MULTI_ORGANIZATION_ENABLED')
     public bool $enabled = true;
 
     public ?string $domain = null;

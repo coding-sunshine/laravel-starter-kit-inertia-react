@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Actions\GetDashboardMetrics;
 use App\Models\Contact;
 use App\Models\PropertyReservation;
 use App\Models\Sale;
 use App\Models\Task;
 use App\Services\PrismService;
 use App\Services\TenantContext;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
@@ -17,6 +19,10 @@ use Inertia\Response;
 
 final class DashboardController extends Controller
 {
+    public function __construct(
+        private readonly GetDashboardMetrics $getDashboardMetrics
+    ) {}
+
     /**
      * Dashboard with role-aware KPIs (contacts, tasks, reservations, sales).
      * When tenant context is set, includes aggregates and optional AI insight.
@@ -32,6 +38,16 @@ final class DashboardController extends Controller
             'insight' => $insight,
             'dashboard_role' => $roleHint,
         ]);
+    }
+
+    /**
+     * Get dashboard metrics via JSON API
+     */
+    public function metrics(): JsonResponse
+    {
+        $metrics = $this->getDashboardMetrics->handle();
+
+        return response()->json($metrics);
     }
 
     /**

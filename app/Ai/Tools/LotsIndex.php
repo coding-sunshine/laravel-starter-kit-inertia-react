@@ -35,7 +35,7 @@ final class LotsIndex implements Tool
         }
         if ($query !== '') {
             $like = '%'.Str::replace(['%', '_'], ['\\%', '\\_'], $query).'%';
-            $builder->where('title', 'like', $like);
+            $builder->where('title', 'ILIKE', $like);
         }
 
         $lots = $builder->get(['id', 'project_id', 'title', 'stage', 'price', 'bedrooms', 'bathrooms', 'updated_at']);
@@ -50,7 +50,7 @@ final class LotsIndex implements Tool
             Str::limit($l->title ?? '—', 40),
             $l->relationLoaded('project') ? Str::limit($l->project?->title ?? '—', 25) : '—',
             $l->stage ?? '—',
-            $l->price ? number_format($l->price) : '—',
+            $l->price ? number_format((float) $l->price) : '—',
             $l->bedrooms ?? '—',
             $l->bathrooms ?? '—',
             $l->updated_at?->toDateString() ?? '—',

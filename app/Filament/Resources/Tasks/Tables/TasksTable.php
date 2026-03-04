@@ -53,7 +53,7 @@ final class TasksTable
                         'completed' => 'Completed',
                         'cancelled' => 'Cancelled',
                     ])
-                    ->nullable(),
+                    ->placeholder('All statuses'),
                 SelectFilter::make('assigned_to_user_id')
                     ->label('Assigned to')
                     ->relationship('assignedUser', 'name')

@@ -47,7 +47,7 @@ export default function BlogIndex({ posts }: Props) {
             <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-4">
                 <h1 className="text-2xl font-semibold">Blog</h1>
                 {posts.data.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16 text-center">
+                    <div className="fusion-card flex flex-col items-center justify-center border-dashed py-16 text-center">
                         <p className="text-sm font-medium text-muted-foreground">
                             No posts yet
                         </p>
@@ -61,7 +61,7 @@ export default function BlogIndex({ posts }: Props) {
                             <li key={post.id}>
                                 <Link
                                     href={blogShow({ post: post.slug }).url}
-                                    className="block rounded-lg border bg-card p-4 transition-colors hover:bg-muted/50"
+                                    className="fusion-card block p-4 transition-colors hover:bg-muted/50"
                                 >
                                     <h2 className="font-medium text-foreground">
                                         {post.title}

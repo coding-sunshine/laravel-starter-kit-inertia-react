@@ -74,11 +74,25 @@ final class ProjectDataTable extends AbstractDataTable
     public static function tableBaseQuery(): Builder
     {
         return Project::query()
-            ->with(['developer', 'projecttype']);
+            ->with(['developer', 'projecttype'])
+            ->leftJoin('developers', 'projects.developer_id', '=', 'developers.id')
+            ->leftJoin('projecttypes', 'projects.projecttype_id', '=', 'projecttypes.id')
+            ->select('projects.*', 'developers.name as developer_name_search', 'projecttypes.name as projecttype_name_search');
     }
 
     public static function tableDefaultSort(): string
     {
         return '-id';
+    }
+
+    public static function tableSearchableColumns(): array
+    {
+        return [
+            'projects.title',
+            'projects.estate',
+            'projects.stage',
+            'developers.name',
+            'projecttypes.name',
+        ];
     }
 }

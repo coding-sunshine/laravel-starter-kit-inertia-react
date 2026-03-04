@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\V1\UserController;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Route;
@@ -29,5 +30,11 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:60,1')->group(functio
         Route::post('users', [UserController::class, 'store'])->name('users.store');
         Route::match(['put', 'patch'], 'users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::delete('users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+
+        // Dashboard routes
+        Route::get('dashboard/metrics', [DashboardController::class, 'metrics'])->name('dashboard.metrics');
+        Route::get('dashboard/pipeline', [DashboardController::class, 'pipeline'])->name('dashboard.pipeline');
+        Route::get('dashboard/revenue', [DashboardController::class, 'revenue'])->name('dashboard.revenue');
+        Route::get('dashboard/distribution', [DashboardController::class, 'distribution'])->name('dashboard.distribution');
     });
 });

@@ -320,7 +320,7 @@ export default function ChatPage() {
                     />
                 )}
 
-                <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border bg-card">
+                <div className="fusion-card flex min-w-0 flex-1 flex-col overflow-hidden">
                     {isMobile && (
                         <div className="flex items-center border-b px-3 py-2">
                             <Button

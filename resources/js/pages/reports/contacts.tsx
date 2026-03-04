@@ -27,7 +27,7 @@ export default function ContactReportPage({
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-3">
-                    <div className="rounded-lg border p-4">
+                    <div className="fusion-card p-4">
                         <h2 className="mb-3 text-lg font-semibold">By Type</h2>
                         <dl className="space-y-2">
                             {Object.entries(byType).map(([type, count]) => (
@@ -44,7 +44,7 @@ export default function ContactReportPage({
                         </dl>
                     </div>
 
-                    <div className="rounded-lg border p-4">
+                    <div className="fusion-card p-4">
                         <h2 className="mb-3 text-lg font-semibold">
                             By Stage
                         </h2>
@@ -63,7 +63,7 @@ export default function ContactReportPage({
                         </dl>
                     </div>
 
-                    <div className="rounded-lg border p-4">
+                    <div className="fusion-card p-4">
                         <h2 className="mb-3 text-lg font-semibold">
                             By Source
                         </h2>

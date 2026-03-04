@@ -30,7 +30,7 @@ export default function HelpIndex({ featured, byCategory }: Props) {
                 <h1 className="text-2xl font-semibold">Help Center</h1>
                 {featured.length === 0 &&
                 Object.keys(byCategory).length === 0 ? (
-                    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16 text-center">
+                    <div className="fusion-card flex flex-col items-center justify-center border-dashed py-16 text-center">
                         <p className="text-sm font-medium text-muted-foreground">
                             No help articles yet
                         </p>
@@ -54,7 +54,7 @@ export default function HelpIndex({ featured, byCategory }: Props) {
                                                 helpArticle: article.slug,
                                             }).url
                                         }
-                                        className="block rounded-lg border bg-card p-4 transition-colors hover:bg-muted/50"
+                                        className="fusion-card block p-4 transition-colors hover:bg-muted/50"
                                     >
                                         <span className="font-medium text-foreground">
                                             {article.title}

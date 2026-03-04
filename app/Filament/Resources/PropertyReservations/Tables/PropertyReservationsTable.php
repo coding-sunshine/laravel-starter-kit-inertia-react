@@ -50,7 +50,11 @@ final class PropertyReservationsTable
                     }),
                 SelectFilter::make('agent_contact_id')
                     ->label('Agent')
-                    ->relationship('agentContact', 'first_name', modifyQueryUsing: fn ($q) => $q->orderBy('first_name'))
+                    ->relationship(
+                        'agentContact',
+                        'first_name',
+                        modifyQueryUsing: fn (Builder $query): Builder => $query->orderBy('first_name'),
+                    )
                     ->getOptionLabelFromRecordUsing(fn ($record) => trim($record->first_name.' '.$record->last_name))
                     ->searchable()
                     ->preload(),

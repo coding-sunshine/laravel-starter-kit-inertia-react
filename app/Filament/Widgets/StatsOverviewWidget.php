@@ -18,6 +18,9 @@ final class StatsOverviewWidget extends BaseStatsOverviewWidget
     {
         return [
             Stat::make('Users', (string) User::query()->count())
+                ->description('Total platform users')
+                ->icon('heroicon-o-user-group')
+                ->color('slate')
                 ->url(UserResource::getUrl('index')),
         ];
     }

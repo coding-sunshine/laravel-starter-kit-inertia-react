@@ -166,7 +166,7 @@ export function ConversationSidebar({
             className={
                 isMobile
                     ? 'flex h-full flex-col overflow-hidden'
-                    : 'flex w-64 shrink-0 flex-col overflow-hidden rounded-xl border bg-card'
+                    : 'fusion-card flex w-64 shrink-0 flex-col overflow-hidden'
             }
             data-pan="chat-conversation-list"
         >
