@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Api\BulkDocumentController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\V1\UserController;
 use Illuminate\Http\JsonResponse;
@@ -36,5 +37,14 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:60,1')->group(functio
         Route::get('dashboard/pipeline', [DashboardController::class, 'pipeline'])->name('dashboard.pipeline');
         Route::get('dashboard/revenue', [DashboardController::class, 'revenue'])->name('dashboard.revenue');
         Route::get('dashboard/distribution', [DashboardController::class, 'distribution'])->name('dashboard.distribution');
+
+        // Bulk Document Processing routes
+        Route::prefix('documents')->name('documents.')->group(function (): void {
+            Route::post('bulk-upload', [BulkDocumentController::class, 'upload'])->name('bulk-upload');
+            Route::get('batch/{batchId}/status', [BulkDocumentController::class, 'batchStatus'])->name('batch-status');
+            Route::get('queue-status', [BulkDocumentController::class, 'queueStatus'])->name('queue-status');
+            Route::post('bulk-approve', [BulkDocumentController::class, 'bulkApprove'])->name('bulk-approve');
+            Route::post('bulk-reject', [BulkDocumentController::class, 'bulkReject'])->name('bulk-reject');
+        });
     });
 });

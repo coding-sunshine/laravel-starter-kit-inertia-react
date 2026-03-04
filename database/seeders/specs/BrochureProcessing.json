@@ -76,6 +76,26 @@
             "type": "timestamp",
             "nullable": true,
             "default": null
+        },
+        "batch_id": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "queue_status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "processing_started_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "processing_completed_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {
@@ -106,6 +126,14 @@
             "example": "2024-01-01 00:00:00"
         },
         "created_at_record": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        },
+        "processing_started_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        },
+        "processing_completed_at": {
             "type": "datetime",
             "example": "2024-01-01 00:00:00"
         }
