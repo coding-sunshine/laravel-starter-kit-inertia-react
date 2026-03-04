@@ -1,0 +1,533 @@
+{
+  "project": "Fleet Dashboard UI/UX Overhaul — Clean, Demo-Ready, AI-Forward",
+  "description": "The fleet management app needs a complete visual and UX overhaul for client demos. The current UI uses heavy glass morphism (frosted cards, gradient backgrounds, backdrop-blur), dumps 60+ flat KPI counts on the dashboard, buries AI features deep in the sidebar, and seeds only 5 records per entity — making every page look empty. The goal is a clean, white, shadcn-style dashboard that tells a story at a glance, makes AI impossible to miss, and has enough seed data to feel alive.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Install shadcn chart component",
+      "description": "As a developer, I need the shadcn chart primitives installed so all chart components use consistent --chart-1 through --chart-5 CSS variables.",
+      "acceptanceCriteria": [
+        "Run npx shadcn@latest add chart successfully",
+        "resources/js/components/ui/chart.tsx exists with ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend exports",
+        "Chart CSS variables (--chart-1 through --chart-5) available in theme",
+        "npm run build passes"
+      ],
+      "priority": 1,
+      "passes": true
+    },
+    {
+      "id": "US-002",
+      "title": "Switch to fleet theme preset with light default",
+      "description": "As a user, I want the app to use a professional indigo-blue theme with a white background by default so it looks clean and modern.",
+      "acceptanceCriteria": [
+        "config/theme.php uses 'preset' =\u003e 'fleet' with professional indigo-blue primary, white background, and proper chart CSS variables",
+        "'default_appearance' =\u003e 'light' is set",
+        "All existing fleet pages render without visual breaks from the preset change",
+        "npm run build passes"
+      ],
+      "priority": 2,
+      "passes": true
+    },
+    {
+      "id": "US-003",
+      "title": "Replace glass morphism with flat cards",
+      "description": "As a user, I want clean flat cards instead of frosted glass effects so the UI looks professional and modern.",
+      "acceptanceCriteria": [
+        "resources/js/components/fleet/glass-card.tsx: glassCardBase replaced with 'bg-card text-card-foreground rounded-xl border shadow-sm transition-shadow hover:shadow-md'",
+        "This single change propagates to all fleet pages using GlassCard",
+        "No blur, no backdrop-filter, no gradient overlays on cards",
+        "Cards look correct in both light and dark mode"
+      ],
+      "priority": 2,
+      "passes": true
+    },
+    {
+      "id": "US-004",
+      "title": "Remove gradient background from page shell",
+      "description": "As a user, I want a clean white/neutral background instead of radial gradient blobs.",
+      "acceptanceCriteria": [
+        "resources/js/components/fleet/fleet-page-shell.tsx: the pageBgClass div with 3 radial gradients is removed",
+        "Background is plain bg-background (white in light mode, dark in dark mode)",
+        "All fleet pages using FleetPageShell render with clean background"
+      ],
+      "priority": 2,
+      "passes": true
+    },
+    {
+      "id": "US-005",
+      "title": "Clean up FleetStatTile",
+      "description": "As a developer, I need the stat tile component cleaned up and extended with trend support for use in the new dashboard.",
+      "acceptanceCriteria": [
+        "resources/js/components/fleet/fleet-stat-tile.tsx: blur glow div removed",
+        "/70 opacity modifiers removed for crisper colors",
+        "New optional props added: trend?: 'up' | 'down' | 'flat', trendValue?: string",
+        "Trend arrow renders green (up), red (down), or gray (flat) next to the value",
+        "Component renders correctly in light and dark mode"
+      ],
+      "priority": 2,
+      "passes": true
+    },
+    {
+      "id": "US-006",
+      "title": "Add dark mode toggle to header",
+      "description": "As a user, I want a dark mode toggle in the header so I can switch appearance without digging into settings.",
+      "acceptanceCriteria": [
+        "resources/js/components/app-sidebar-header.tsx: AppearanceToggleDropdown imported from @/components/appearance-dropdown",
+        "Toggle placed between search button and user dropdown",
+        "Clicking toggles between light/dark/system",
+        "All fleet pages and charts respect the toggle"
+      ],
+      "priority": 2,
+      "passes": true
+    },
+    {
+      "id": "US-007",
+      "title": "Fix data card dividers for dark mode",
+      "description": "As a user, I want data card dividers to look correct in both light and dark mode.",
+      "acceptanceCriteria": [
+        "resources/js/components/fleet/fleet-data-card.tsx: divide-white/30 changed to divide-border",
+        "Dividers visible in light mode and dark mode"
+      ],
+      "priority": 2,
+      "passes": true
+    },
+    {
+      "id": "US-008",
+      "title": "Backend — Dashboard chart data and trends",
+      "description": "As the dashboard frontend, I need new data props from the backend to render KPI trends, sparklines, charts, AI predictions, and upcoming maintenance.",
+      "acceptanceCriteria": [
+        "FleetDashboardController.php returns these new props: kpiTrends (object comparing this-week vs last-week counts for vehicles, trips, work_orders, alerts with percentage change + direction), kpiSparklines (daily counts over last 7 days for vehicles, trips, work_orders, alerts as array of 7 numbers each), chartFleetActivity (daily trip count + work order count over 30 days for area chart), chartCostBreakdown (aggregate fuel + maintenance + insurance costs for donut chart), chartFuelCostTrend (FuelTransaction SUM(total_cost) per day over 30 days for line chart), chartDriverSafetyDistribution (drivers bucketed by safety_score — 90+, 70-89, \u003c70 for donut chart), aiPredictions (latest 5 AiAnalysisResult records with priority, primary_finding, analysis_type, entity_type, entity_id for AI panel), upcomingMaintenance (ServiceSchedule records due within 14 days, limit 5, with vehicle name and due date), fleetHealthScore (computed integer 0-100 based on active alerts severity, overdue work orders, expired compliance, and driver safety scores), fleetHealthSummary (one-sentence AI-style summary string)",
+        "All queries are scoped to the current organization (tenant)",
+        "Queries use eager loading where appropriate to avoid N+1",
+        "php artisan test --compact passes (no regressions)"
+      ],
+      "priority": 3,
+      "passes": true
+    },
+    {
+      "id": "US-009",
+      "title": "Create Fleet Health Banner component",
+      "description": "As a user, I want to see a prominent banner at the top of the dashboard telling me if my fleet is healthy or needs attention, so I get an emotional signal in 1 second.",
+      "acceptanceCriteria": [
+        "New file: resources/js/components/fleet/fleet-health-banner.tsx",
+        "Displays a score circle (0-100) with progress bar",
+        "Color coding: green (80+), amber (60-79), red (\u003c60)",
+        "Shows AI summary sentence next to the score",
+        "Shows a breakdown row: \"X active alerts | Y overdue work orders | Z expiring compliance\"",
+        "CTA button: \"View Details\" links to alerts or relevant page",
+        "Renders correctly in light and dark mode",
+        "npm run build passes"
+      ],
+      "priority": 4,
+      "passes": true
+    },
+    {
+      "id": "US-010",
+      "title": "Create Fleet KPI Card component",
+      "description": "As a user, I want hero KPI cards with large numbers, trend arrows, and sparklines so I can see key metrics at a glance.",
+      "acceptanceCriteria": [
+        "New file: resources/js/components/fleet/fleet-kpi-card.tsx",
+        "Uses shadcn Card component",
+        "Props: title, value (number), trend (up/down/flat), trendValue (string like \"+4%\"), sparklineData (number[]), icon (optional), subtitle (optional, e.g., \"2 overdue\")",
+        "Large number display (text-3xl font-bold)",
+        "Trend arrow: green up, red down, gray flat — with percentage",
+        "7-day sparkline rendered as a tiny area/line chart using recharts",
+        "Renders correctly in light and dark mode",
+        "npm run build passes"
+      ],
+      "priority": 4,
+      "passes": true
+    },
+    {
+      "id": "US-011",
+      "title": "Create Fleet Chart Card wrapper",
+      "description": "As a developer, I need a reusable card wrapper for charts that includes a title, optional description, and optional time-range selector.",
+      "acceptanceCriteria": [
+        "New file: resources/js/components/fleet/fleet-chart-card.tsx",
+        "Uses shadcn Card + ChartContainer from shadcn chart",
+        "Props: title, description?, timeRanges? (array of {label, value}), selectedRange?, onRangeChange?, children (the chart)",
+        "Time range selector renders as segmented button group (e.g., 7d / 14d / 30d)",
+        "Renders correctly in light and dark mode",
+        "npm run build passes"
+      ],
+      "priority": 4,
+      "passes": true
+    },
+    {
+      "id": "US-012",
+      "title": "Create Fleet AI Panel component",
+      "description": "As a user, I want a dedicated AI insights panel on the dashboard showing the latest predictions with priority indicators and action links, so AI is impossible to miss.",
+      "acceptanceCriteria": [
+        "New file: resources/js/components/fleet/fleet-ai-panel.tsx",
+        "Displays a list of up to 5 AI predictions",
+        "Each row shows: priority dot (red=high, amber=medium, blue=low), analysis type label, primary finding text, CTA link to the full analysis result",
+        "Header: \"AI Insights\" with a BrainCircuit (or similar) icon",
+        "Empty state if no predictions: \"No AI insights yet. Run an analysis to get started.\"",
+        "Renders correctly in light and dark mode",
+        "npm run build passes"
+      ],
+      "priority": 4,
+      "passes": true
+    },
+    {
+      "id": "US-013",
+      "title": "Create AI Insight Badge component",
+      "description": "As a developer, I need a small inline pill/badge that shows an AI insight summary on entity tables and show pages.",
+      "acceptanceCriteria": [
+        "New file: resources/js/components/fleet/ai-insight-badge.tsx",
+        "Props: text (short finding), priority (high/medium/low), analysisType?",
+        "Renders as a small pill with BrainCircuit icon + text + priority color border/background",
+        "Colors: red tint (high), amber tint (medium), blue tint (low)",
+        "Clickable — accepts optional href to link to full analysis",
+        "Renders correctly in light and dark mode",
+        "npm run build passes"
+      ],
+      "priority": 4,
+      "passes": true
+    },
+    {
+      "id": "US-014",
+      "title": "Create Animated Number component",
+      "description": "As a user, I want KPI numbers to animate from 0 to their target value when the dashboard loads, adding a polished feel.",
+      "acceptanceCriteria": [
+        "New file: resources/js/components/fleet/animated-number.tsx",
+        "Props: value (number), duration? (ms, default 400), prefix? (e.g., \"GBP\"), suffix? (e.g., \"%\")",
+        "Uses framer-motion to animate from 0 to target",
+        "Integers display as integers, decimals display with appropriate precision",
+        "Animation triggers on mount and when value changes",
+        "npm run build passes"
+      ],
+      "priority": 4,
+      "passes": true
+    },
+    {
+      "id": "US-015",
+      "title": "Rewrite Dashboard layout",
+      "description": "As a user, I want a completely redesigned dashboard that tells a story: fleet health first, then key metrics, then charts, then AI, then operational detail — so I understand my fleet status in seconds.",
+      "acceptanceCriteria": [
+        "resources/js/pages/Fleet/Dashboard.tsx is fully rewritten with this layout: Section 1 — Fleet Health Banner (full width): score circle, AI summary, breakdown, CTA using FleetHealthBanner. Section 2 — Hero KPI Cards (grid-cols-2 md:grid-cols-4): Vehicles (count + trend), Active Drivers (count + trend), Open Work Orders (count + \"X overdue\" subtitle), Active Alerts (count + trend), each using FleetKpiCard with sparklines. Section 3 — Primary Charts (grid-cols-1 lg:grid-cols-7): Left (col-span-4): Fleet Activity area chart (trips + work orders overlaid, 7d/14d/30d selector), Right (col-span-3): Cost Breakdown donut chart (fuel/maintenance/insurance). Section 4 — AI Intelligence Layer (grid-cols-1 lg:grid-cols-7): Left (col-span-4): FleetAiPanel with 5 predictions, Right (col-span-3): Fuel Spend Trend line chart. Section 5 — Operational Detail (grid-cols-1 lg:grid-cols-3): Recent Alerts (with severity badges), Upcoming Maintenance (with dates), Driver Safety Distribution donut. Section 6 — Fleet Map (collapsible, closed by default).",
+        "Only 4 hero KPI cards on dashboard (not 60+)",
+        "AI has its own full-width section — not a sidebar panel",
+        "All charts use recharts + shadcn ChartContainer",
+        "Dashboard renders correctly with seeded data",
+        "Dashboard renders correctly in light and dark mode",
+        "npm run build passes"
+      ],
+      "priority": 5,
+      "passes": true
+    },
+    {
+      "id": "US-016",
+      "title": "Increase base seed data to 25 records",
+      "description": "As a demo presenter, I need enough seed data that pages look alive — 25 vehicles, 25 drivers, 10 locations with realistic UK data.",
+      "acceptanceCriteria": [
+        "database/seeders/Development/FleetFullSeeder.php: COUNT = 5 changed to COUNT = 25",
+        "25 vehicles with realistic UK registrations and a mix of makes: Ford Transit, Mercedes Sprinter, Volvo FH, Tesla Model 3, MAN TGX, DAF XF",
+        "25 drivers with UK names and safety scores ranging 62-98",
+        "10 locations using UK cities (London, Manchester, Birmingham, Leeds, Glasgow, Bristol, Liverpool, Edinburgh, Cardiff, Belfast)",
+        "php artisan db:seed --class=Database\\Seeders\\Development\\FleetFullSeeder completes without errors"
+      ],
+      "priority": 3,
+      "passes": true
+    },
+    {
+      "id": "US-017",
+      "title": "Seed historical chart data (30 days)",
+      "description": "As a demo presenter, I need 30 days of historical data so charts show realistic trends instead of flat lines.",
+      "acceptanceCriteria": [
+        "New method seedHistoricalChartData() in FleetFullSeeder",
+        "Trips: 200+ records, 7-10 per day, higher on weekdays, spread over 30 days",
+        "Work Orders: 60+ records, status mix: 30% completed, 20% in_progress, 15% scheduled, 15% pending, 10% draft, 10% cancelled. Completions clustered toward recent dates.",
+        "Fuel Transactions: 120+ records, GBP 30-150 per transaction, subtle upward cost trend over 30 days",
+        "Alerts: 20+ records, 3-4 critical active, 5-6 warning active, 10+ resolved. 2-3 burst clusters simulating real incidents.",
+        "Compliance Items: 30+ records, 60% valid, 20% expiring_soon, 10% expired, 10% pending",
+        "Service Schedules: 15+ records, 5 due within next 14 days",
+        "Data produces visually impressive charts (weekly trip patterns, upward fuel cost trend, etc.)",
+        "Seeder completes without errors"
+      ],
+      "priority": 3,
+      "passes": true
+    },
+    {
+      "id": "US-018",
+      "title": "Seed AI analysis results and job runs",
+      "description": "As a demo presenter, I need pre-seeded AI analysis results so the AI panel and AI pages aren't empty during demos.",
+      "acceptanceCriteria": [
+        "12-15 AiAnalysisResult records seeded with types and findings: compliance_prediction (\"3 vehicles have MOT expiring within 14 days\" high, \"Driver licence renewal needed for 2 drivers\" medium), predictive_maintenance (\"Vehicle AB12 CDE: Brake pad wear, service in ~5 days\" high, \"Vehicle KL56 MNO: Oil change overdue by 2,000 miles\" medium), fraud_detection (\"Fuel transaction #247: 15% above fleet average\" medium), cost_optimization (\"Route consolidation could save 12% fuel cost\" low, \"3 vehicles underutilized, consider pooling\" medium), risk_assessment (\"Driver safety score declining 78-\u003e72, coaching recommended\" high), damage_assessment (\"Front bumper damage, estimated GBP 2,800\" medium), electrification_planning (\"EV transition feasible for 8/25 vehicles, 18-month ROI\" low), incident_analysis (\"Low-speed parking collision, driver fatigue noted\" medium)",
+        "Each result has detailed_analysis JSON, recommendations array, and confidence_score between 0.76-0.94",
+        "3-5 AiJobRun records seeded (completed status)",
+        "2-3 WorkflowDefinition records and 5+ WorkflowExecution records seeded",
+        "All seeded records scoped to the demo organization"
+      ],
+      "priority": 3,
+      "passes": true
+    },
+    {
+      "id": "US-019",
+      "title": "Restructure sidebar navigation to 6 groups with submenus",
+      "description": "As a user, I want a cleaner sidebar with 6 logical groups instead of 9, with AI promoted to the top. Low-priority items live in nested submenus within their parent group — not removed entirely.",
+      "acceptanceCriteria": [
+        "resources/js/config/fleet-nav.ts restructured to 6 groups: 1) AI \u0026 Intelligence — Assistant, AI Insights, Electrification, Optimization. 2) Fleet Operations — Vehicles, Drivers, Trips \u0026 Routes. Submenu: Driver-vehicle assignments, Grey fleet vehicles, Pool vehicle bookings, Trailers. 3) Maintenance — Work Orders, Defects, Service Schedules. Submenu: Workshop bays, Parts inventory, Parts suppliers, Warranty claims. 4) Fuel \u0026 Energy — Fuel Transactions, EV Charging. Submenu: Fuel cards, Fuel stations, EV charging stations, EV battery data, Carbon targets, Emissions records, Sustainability goals. 5) Compliance \u0026 Safety — Compliance, Incidents, Insurance, Alerts. Submenu: Fines, Driver qualifications, Training courses/sessions/enrollments, Risk assessments, Safety observations, Toolbox talks, Permits to work, PPE assignments, Driver coaching plans, Driver wellness, Driver working time, Tachograph calibrations/downloads, Vehicle checks/templates, Vehicle discs, Vehicle tyres/inventory, Axle load readings, Operator licences, Safety policy acknowledgments, Dashcam clips, E-lock events, Behaviour events, Geofences/events, Telematics devices. 6) Reports \u0026 Admin — Reports, Locations. Submenu: Cost centers, Cost allocations, Parking allocations, API integrations, API logs, Data migration runs, Contractor management (contractors, compliance, invoices), Mileage claims, Vehicle leases, Vehicle recalls.",
+        "Submenus use a collapsible/expandable pattern (click parent to expand children)",
+        "All pages remain accessible — nothing is removed, just reorganized",
+        "npm run build passes"
+      ],
+      "priority": 6,
+      "passes": true
+    },
+    {
+      "id": "US-020",
+      "title": "AI sparkle and alert badge in navigation",
+      "description": "As a user, I want visual indicators in the sidebar showing that AI is active and how many unacknowledged alerts exist.",
+      "acceptanceCriteria": [
+        "resources/js/components/nav-main.tsx: pulsing dot/sparkle next to \"AI \u0026 Intelligence\" section label",
+        "Red badge on \"Alerts\" item showing unacknowledged alert count (from shared Inertia data)",
+        "Badge hidden when count is 0",
+        "Pulse animation is subtle (not distracting) and uses CSS/Tailwind animation",
+        "npm run build passes"
+      ],
+      "priority": 6,
+      "passes": true
+    },
+    {
+      "id": "US-021",
+      "title": "Share fleet alert count via Inertia",
+      "description": "As the navigation frontend, I need the unacknowledged alert count available as shared Inertia data so I can show a badge.",
+      "acceptanceCriteria": [
+        "app/Http/Middleware/HandleInertiaRequests.php: adds fleet_alert_count to shared data",
+        "Count is the number of alerts with status = 'active' and acknowledged = false for the current organization",
+        "Count is 0 when no fleet alerts exist (non-fleet users unaffected)",
+        "Query is efficient (single count query, not loading all alerts)",
+        "php artisan test --compact passes"
+      ],
+      "priority": 6,
+      "passes": true
+    },
+    {
+      "id": "US-022",
+      "title": "Add fleet pages to command palette",
+      "description": "As a user, I want to find any fleet page quickly via the command palette (Cmd+K), including pages that are nested in submenus.",
+      "acceptanceCriteria": [
+        "resources/js/components/command-dialog.tsx: new \"Fleet\" group listing all fleet pages",
+        "Pages show their full name (e.g., \"Vehicles\", \"Driver Qualifications\", \"Workshop Bays\")",
+        "Selecting a page navigates to it",
+        "Search/filter works across all fleet page names",
+        "npm run build passes"
+      ],
+      "priority": 6,
+      "passes": true
+    },
+    {
+      "id": "US-023",
+      "title": "Index page summary bars for 5 key pages",
+      "description": "As a user, I want a horizontal row of 3-4 summary stat cards above the data table on key index pages so I get context before diving into the list.",
+      "acceptanceCriteria": [
+        "New file: resources/js/components/fleet/fleet-index-summary-bar.tsx — reusable horizontal stat bar component",
+        "Vehicles Index (resources/js/pages/Fleet/Vehicles/Index.tsx): Total | Active | In Maintenance | Due for Service",
+        "Work Orders Index (resources/js/pages/Fleet/WorkOrders/Index.tsx): Open | Overdue | Completed This Week | Avg Resolution Time",
+        "Drivers Index (resources/js/pages/Fleet/Drivers/Index.tsx): Total | Active | Low Safety Score (\u003c70) | Qualifications Expiring",
+        "Fuel Transactions Index (resources/js/pages/Fleet/FuelTransactions/Index.tsx): Total Spend (30d) | Avg per Vehicle | Flagged | Most Expensive Route",
+        "Compliance Items Index (resources/js/pages/Fleet/ComplianceItems/Index.tsx): Total | Valid | Expiring Soon | Expired",
+        "Backend: each controller's index() method returns the summary stats as additional Inertia props",
+        "Stats render above the table in a clean horizontal row",
+        "Renders correctly in light and dark mode",
+        "npm run build passes",
+        "php artisan test --compact passes"
+      ],
+      "priority": 7,
+      "passes": true
+    },
+    {
+      "id": "US-024",
+      "title": "AI insight badges on Vehicle and Driver tables",
+      "description": "As a user, I want to see AI insight badges on vehicle and driver rows that have AI analysis results, so I know which entities need attention.",
+      "acceptanceCriteria": [
+        "VehicleController.php and DriverController.php: side-load latest AiAnalysisResult per entity (eager loaded, not N+1)",
+        "Vehicles/Index.tsx and Drivers/Index.tsx: render AiInsightBadge on rows where AI data exists",
+        "Badge shows the primary finding text and priority color",
+        "Clicking the badge navigates to the full analysis result",
+        "Rows without AI data show no badge (no empty space)",
+        "npm run build passes",
+        "php artisan test --compact passes"
+      ],
+      "priority": 7,
+      "passes": true
+    },
+    {
+      "id": "US-025",
+      "title": "AI insight banner on Vehicle and Driver show pages",
+      "description": "As a user, I want a prominent AI insight card at the top of Vehicle and Driver show pages when AI analysis exists, so I see AI value on every entity page.",
+      "acceptanceCriteria": [
+        "Vehicle Show and Driver Show pages: if AiAnalysisResult exists for the entity, show a Card at the top with: Icon (BrainCircuit or similar) + \"AI:\" prefix, Primary finding text, Action recommendation, \"[View Analysis -\u003e]\" link to the full result",
+        "Card uses priority-based border color (red/amber/blue)",
+        "Card hidden when no AI analysis exists",
+        "Renders correctly in light and dark mode",
+        "npm run build passes"
+      ],
+      "priority": 7,
+      "passes": true
+    },
+    {
+      "id": "US-026",
+      "title": "Enhanced empty states with AI suggestions",
+      "description": "As a user, when I land on an empty page, I want helpful guidance including AI-powered suggestions so I know what to do next.",
+      "acceptanceCriteria": [
+        "resources/js/components/fleet/fleet-empty-state.tsx: new optional prop aiSuggestion?: string",
+        "When provided, shows: \"Try: Ask the Fleet Assistant: '{suggestion}'\"",
+        "New optional prop features?: string[] renders a \"What you can do here\" feature list",
+        "Suggestions are contextual per page (e.g., Vehicles empty state: \"Ask the Fleet Assistant: 'What vehicles should I add first?'\")",
+        "npm run build passes"
+      ],
+      "priority": 7,
+      "passes": true
+    },
+    {
+      "id": "US-027",
+      "title": "Dashboard loading skeleton",
+      "description": "As a user, I want a polished loading skeleton while dashboard data loads, matching the final layout.",
+      "acceptanceCriteria": [
+        "New file: resources/js/components/fleet/fleet-dashboard-skeleton.tsx",
+        "Skeleton matches the dashboard layout: health banner skeleton, 4 KPI card skeletons, chart area skeletons, AI panel skeleton",
+        "Uses shadcn Skeleton component with pulse animation",
+        "Dashboard shows this skeleton while deferred props are loading",
+        "npm run build passes"
+      ],
+      "priority": 7,
+      "passes": true
+    },
+    {
+      "id": "US-028",
+      "title": "Enhance Fleet Assistant FAB",
+      "description": "As a user, I want the Fleet Assistant button to be more inviting on first visit and offer better conversation starters.",
+      "acceptanceCriteria": [
+        "resources/js/components/fleet/fleet-assistant-fab.tsx: Subtle pulse animation on first visit that fades after 3 seconds. Pulse only shows once (tracked via localStorage).",
+        "Suggestion chips updated to: \"What needs attention?\", \"Show driver safety trends\", \"Predict maintenance costs\", \"Fleet health summary\"",
+        "npm run build passes"
+      ],
+      "priority": 8,
+      "passes": true
+    },
+    {
+      "id": "US-029",
+      "title": "AI Analysis Results index page redesign",
+      "description": "As a user, I want the AI Analysis Results page to feel like an AI command center — with summary cards and card-based layout grouped by type.",
+      "acceptanceCriteria": [
+        "resources/js/pages/Fleet/AiAnalysisResults/Index.tsx redesigned: Summary cards at top: Total Results | High Priority | Medium Priority | Avg Confidence Score. Results displayed as cards (not a plain table), grouped by analysis_type. Each card shows: type icon, priority badge, primary finding, confidence score, entity link, date. Priority-coded left border: red (high), amber (medium), blue (low).",
+        "Backend provides summary stats and grouped data as Inertia props",
+        "Renders correctly in light and dark mode",
+        "npm run build passes"
+      ],
+      "priority": 8,
+      "passes": true
+    },
+    {
+      "id": "US-030",
+      "title": "AI Analysis Result show page redesign",
+      "description": "As a user, I want the individual AI result page to present findings as structured cards instead of raw JSON, with actionable recommendations.",
+      "acceptanceCriteria": [
+        "resources/js/pages/Fleet/AiAnalysisResults/Show.tsx redesigned: Header with analysis type icon + priority badge + confidence gauge (circular progress). Findings displayed as structured cards (parsed from JSON), not raw JSON dump. Recommendations displayed as an actionable checklist with checkboxes. Link back to the related entity (vehicle, driver, etc.). Metadata footer: created date, job run link, entity info.",
+        "Renders correctly in light and dark mode",
+        "npm run build passes"
+      ],
+      "priority": 8,
+      "passes": true
+    },
+    {
+      "id": "US-031",
+      "title": "Stagger animations for dashboard sections",
+      "description": "As a user, I want dashboard sections to animate in with a staggered entrance so the page feels polished and alive.",
+      "acceptanceCriteria": [
+        "KPI cards wrapped in existing StaggerList/StaggerItem from resources/js/components/motion/stagger-list.tsx",
+        "Chart sections stagger in after KPI cards",
+        "AI panel section animates after charts",
+        "Animation is subtle (200-300ms per item, 50-100ms stagger delay)",
+        "No jank or layout shift during animation",
+        "npm run build passes"
+      ],
+      "priority": 9,
+      "passes": true
+    },
+    {
+      "id": "US-032",
+      "title": "Number counter animation on KPI values",
+      "description": "As a user, I want KPI numbers to count up from 0 when the dashboard loads, adding a satisfying micro-interaction.",
+      "acceptanceCriteria": [
+        "FleetKpiCard and FleetHealthBanner use AnimatedNumber component",
+        "Numbers animate from 0 to their target value over 400ms",
+        "Animation uses easing (not linear) for natural feel",
+        "Prefix/suffix (e.g., \"GBP\", \"%\") renders correctly during and after animation",
+        "npm run build passes"
+      ],
+      "priority": 9,
+      "passes": true
+    },
+    {
+      "id": "US-033",
+      "title": "Chart entrance animations",
+      "description": "As a user, I want charts to animate their data in when they appear, using recharts built-in animation.",
+      "acceptanceCriteria": [
+        "All recharts components have isAnimationActive={true} (default)",
+        "Charts have a slight stagger delay so they appear after KPI cards (100-200ms offset)",
+        "Area charts fill in smoothly, donut charts draw clockwise, line charts draw left-to-right",
+        "npm run build passes"
+      ],
+      "priority": 9,
+      "passes": true
+    },
+    {
+      "id": "US-034",
+      "title": "Vehicles Index status distribution bar chart",
+      "description": "As a user, I want a small horizontal stacked bar on the Vehicles index showing status distribution at a glance.",
+      "acceptanceCriteria": [
+        "Vehicles Index: horizontal stacked bar chart above or in the summary bar",
+        "Shows segments: Active (green), In Maintenance (amber), Inactive (gray) with percentages",
+        "Uses recharts + shadcn chart styling",
+        "Backend provides status counts as Inertia props",
+        "npm run build passes"
+      ],
+      "priority": 10,
+      "passes": true
+    },
+    {
+      "id": "US-035",
+      "title": "Work Orders Index status donut",
+      "description": "As a user, I want a small status donut chart on the Work Orders index page.",
+      "acceptanceCriteria": [
+        "Work Orders Index: small donut chart in the summary bar area",
+        "Shows status segments: Open, In Progress, Completed, Overdue with color coding",
+        "Uses recharts + shadcn chart styling",
+        "Backend provides status counts as Inertia props",
+        "npm run build passes"
+      ],
+      "priority": 10,
+      "passes": true
+    },
+    {
+      "id": "US-036",
+      "title": "Fuel Transactions Index spend sparkline",
+      "description": "As a user, I want a 30-day spend sparkline in the Fuel Transactions summary area.",
+      "acceptanceCriteria": [
+        "Fuel Transactions Index: small sparkline chart showing daily spend over 30 days",
+        "Uses recharts line chart, minimal styling (no axes, just the line)",
+        "Backend provides daily aggregated spend as Inertia prop",
+        "npm run build passes"
+      ],
+      "priority": 10,
+      "passes": true
+    },
+    {
+      "id": "US-037",
+      "title": "Compliance Items Index health gauge",
+      "description": "As a user, I want a radial/gauge chart on the Compliance index showing overall compliance health percentage.",
+      "acceptanceCriteria": [
+        "Compliance Items Index: radial progress gauge showing percentage of items in \"valid\" status",
+        "Color: green (\u003e80%), amber (60-80%), red (\u003c60%)",
+        "Uses recharts radial bar chart",
+        "Backend provides compliance health percentage as Inertia prop",
+        "npm run build passes"
+      ],
+      "priority": 10,
+      "passes": true
+    }
+  ]
+}
