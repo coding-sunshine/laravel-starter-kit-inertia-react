@@ -1,135 +1,67 @@
-import AppLayout from '@/layouts/app-layout';
 import {
-    FleetBlockSectionHeader,
-    FleetDataCard,
-    fleetDataCardListClass,
-    fleetDataCardRowClass,
-    fleetDataCardRowPrimaryClass,
-    fleetDataCardRowSecondaryClass,
-    FleetGlassCard,
+    FleetAiPanel,
+    FleetChartCard,
+    FleetHealthBanner,
+    FleetKpiCard,
     FleetPageShell,
 } from '@/components/fleet';
+import {
+    FleetMap,
+    FleetMapInfoWindow,
+    FleetMapPolygon,
+    FleetMapPolyline,
+} from '@/components/fleet/FleetMap';
+import { FleetMapClusterer } from '@/components/fleet/FleetMapClusterer';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    ChartContainer,
+    ChartLegend,
+    ChartLegendContent,
+    ChartTooltip,
+    ChartTooltipContent,
+} from '@/components/ui/chart';
+import type { ChartConfig } from '@/components/ui/chart';
+import {
+    Sheet,
+    SheetContent,
+    SheetHeader,
+    SheetTitle,
+} from '@/components/ui/sheet';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useIsMobile } from '@/hooks/use-mobile';
+import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
 import {
-    Area,
-    Bar,
-    BarChart,
-    CartesianGrid,
-    Cell,
-    Legend,
-    Pie,
-    PieChart,
-    ResponsiveContainer,
-    Tooltip,
-    XAxis,
-    YAxis,
-    AreaChart,
-} from 'recharts';
-import {
     AlertTriangle,
     Bell,
-    Bot,
-    ClipboardList,
-    MapPin,
-    Route,
+    Calendar,
+    ChevronDown,
+    ChevronUp,
+    MapPinned,
     Truck,
     Users,
     Wrench,
 } from 'lucide-react';
-import { FleetMap, FleetMapMarker } from '@/components/fleet/FleetMap';
-import { useMemo } from 'react';
-interface Counts {
-    vehicles: number;
-    drivers: number;
-    driver_vehicle_assignments: number;
-    routes: number;
-    trips: number;
-    fuel_cards: number;
-    fuel_transactions: number;
-    service_schedules: number;
-    work_orders: number;
-    defects: number;
-    compliance_items: number;
-    driver_working_time: number;
-    tachograph_downloads: number;
-    behavior_events: number;
-    geofence_events: number;
-    emissions_records?: number;
-    carbon_targets?: number;
-    sustainability_goals?: number;
-    ai_analysis_results?: number;
-    ai_job_runs?: number;
-    insurance_policies?: number;
-    incidents?: number;
-    insurance_claims?: number;
-    workflow_definitions?: number;
-    workflow_executions?: number;
-    ev_charging_sessions?: number;
-    ev_battery_data?: number;
-    training_courses?: number;
-    training_sessions?: number;
-    driver_qualifications?: number;
-    training_enrollments?: number;
-    cost_allocations?: number;
-    alerts?: number;
-    alerts_open?: number;
-    compliance_due_soon?: number;
-    reports?: number;
-    report_executions?: number;
-    alert_preferences?: number;
-    api_integrations?: number;
-    api_logs?: number;
-    dashcam_clips?: number;
-    workshop_bays?: number;
-    parts_inventory?: number;
-    parts_suppliers?: number;
-    tyre_inventory?: number;
-    vehicle_tyres?: number;
-    grey_fleet_vehicles?: number;
-    mileage_claims?: number;
-    pool_vehicle_bookings?: number;
-    contractors?: number;
-    contractor_compliance?: number;
-    contractor_invoices?: number;
-    driver_wellness_records?: number;
-    driver_coaching_plans?: number;
-    vehicle_check_templates?: number;
-    vehicle_checks?: number;
-    risk_assessments?: number;
-    vehicle_discs?: number;
-    tachograph_calibrations?: number;
-    safety_policy_acknowledgments?: number;
-    permit_to_work?: number;
-    ppe_assignments?: number;
-    safety_observations?: number;
-    toolbox_talks?: number;
-    todays_vehicle_checks?: number;
-    fines?: number;
-    vehicle_leases?: number;
-    vehicle_recalls?: number;
-    warranty_claims?: number;
-    parking_allocations?: number;
-    e_lock_events?: number;
-    axle_load_readings?: number;
-    data_migration_runs?: number;
-}
-interface WorkOrderRow { id: number; work_order_number: string; title: string; status: string; vehicle?: { id: number; registration: string }; }
-interface DefectRow { id: number; defect_number: string; title: string; severity: string; vehicle?: { id: number; registration: string }; }
-interface ComplianceRow { id: number; title: string; expiry_date: string; status: string; entity_type: string; entity_id: number; }
-interface ComplianceAtRiskRow {
-    id: number;
-    primary_finding: string;
-    priority: string;
-    risk_score: number | null;
-    created_at: string;
-    detailed_analysis?: { at_risk_vehicles?: unknown[]; at_risk_drivers?: unknown[] };
-}
-interface ChartTripsOverTimeRow { date: string; label: string; trips: number; }
-interface ChartWorkOrdersByStatusRow { name: string; value: number; }
-interface ChartWorkOrdersOverTimeRow { date: string; label: string; work_orders: number; }
+import { useEffect, useMemo, useState } from 'react';
+import {
+    Area,
+    AreaChart,
+    CartesianGrid,
+    Cell,
+    Line,
+    LineChart,
+    Pie,
+    PieChart,
+    XAxis,
+    YAxis,
+} from 'recharts';
+
+/* ------------------------------------------------------------------ */
+/*  Types                                                              */
+/* ------------------------------------------------------------------ */
 
 interface MapVehicleRow {
     id: number;
@@ -139,506 +71,904 @@ interface MapVehicleRow {
     source: 'current' | 'home';
 }
 
-interface Props {
-    counts: Counts;
-    chartTripsOverTime: ChartTripsOverTimeRow[];
-    chartWorkOrdersByStatus: ChartWorkOrdersByStatusRow[];
-    chartWorkOrdersOverTime: ChartWorkOrdersOverTimeRow[];
-    recentWorkOrders: WorkOrderRow[];
-    recentDefects: DefectRow[];
-    expiringCompliance: ComplianceRow[];
-    complianceAtRisk?: ComplianceAtRiskRow | null;
-    aiJobRunsUrl?: string;
-    insights?: string[];
-    mapVehicles?: MapVehicleRow[];
+interface ChartData {
+    kpiTrends: Record<
+        string,
+        {
+            current: number;
+            previous: number;
+            change: number;
+            direction: string;
+        }
+    >;
+    kpiSparklines: Record<string, number[]>;
+    chartFleetActivity: {
+        date: string;
+        label: string;
+        trips: number;
+        work_orders: number;
+    }[];
+    chartCostBreakdown: { name: string; value: number }[];
+    chartFuelCostTrend: { date: string; label: string; cost: number }[];
+    chartDriverSafetyDistribution: { name: string; value: number }[];
+    aiPredictions: {
+        id: number;
+        priority: string;
+        primary_finding: string;
+        analysis_type: string;
+        entity_type: string;
+        entity_id: number;
+    }[];
+    upcomingMaintenance: {
+        id: number;
+        service_type: string;
+        next_service_due_date: string;
+        vehicle_name: string;
+    }[];
 }
 
-const CHART_COLORS = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)'];
-const CHART_COLORS_FALLBACK = ['#0ea5e9', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444'];
+interface Props {
+    counts: {
+        vehicles: number;
+        drivers: number;
+        work_orders: number;
+        alerts_open?: number;
+        alerts?: number;
+        [key: string]: number | undefined;
+    };
+    fleet_ai_summary?: string | null;
+    fleet_health_score?: number | null;
+    fleet_health_breakdown?: {
+        compliance_pct: number;
+        compliance_label: string;
+        open_alerts: number;
+        open_defects: number;
+        overdue_work_orders: number;
+        vehicles: number;
+    } | null;
+    chartData?: ChartData;
+    mapVehicles?: MapVehicleRow[];
+    mapGeofences?: {
+        id: number;
+        name: string;
+        paths: { lat: number; lng: number }[];
+    }[];
+    mapPolylines?: {
+        trip_id: number;
+        path: { lat: number; lng: number }[];
+    }[];
+    expiringCompliance?: {
+        id: number;
+        title: string;
+        expiry_date: string;
+        status: string;
+    }[];
+    recentWorkOrders?: {
+        id: number;
+        work_order_number: string;
+        title: string;
+        status: string;
+        vehicle?: { id: number; registration: string };
+    }[];
+    [key: string]: unknown;
+}
 
-const tooltipContentStyle = {
-    backgroundColor: 'hsl(var(--card))',
-    border: '1px solid hsl(var(--border))',
-    borderRadius: '8px',
-    fontSize: '12px',
-    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-};
+/* ------------------------------------------------------------------ */
+/*  Chart configs                                                      */
+/* ------------------------------------------------------------------ */
+
+const CHART_COLORS = [
+    'var(--chart-1)',
+    'var(--chart-2)',
+    'var(--chart-3)',
+    'var(--chart-4)',
+    'var(--chart-5)',
+];
+
+const fleetActivityConfig = {
+    trips: { label: 'Trips', color: 'var(--chart-1)' },
+    work_orders: { label: 'Work Orders', color: 'var(--chart-2)' },
+} satisfies ChartConfig;
+
+const costBreakdownConfig = {
+    value: { label: 'Cost' },
+    Fuel: { label: 'Fuel', color: 'var(--chart-1)' },
+    Maintenance: { label: 'Maintenance', color: 'var(--chart-2)' },
+    Insurance: { label: 'Insurance', color: 'var(--chart-3)' },
+} satisfies ChartConfig;
+
+const fuelTrendConfig = {
+    cost: { label: 'Fuel Spend', color: 'var(--chart-3)' },
+} satisfies ChartConfig;
+
+const safetyConfig = {
+    value: { label: 'Drivers' },
+    'Excellent (90+)': { label: 'Excellent (90+)', color: 'var(--chart-1)' },
+    'Good (70-89)': { label: 'Good (70-89)', color: 'var(--chart-4)' },
+    'Needs Attention (<70)': {
+        label: 'Needs Attention (<70)',
+        color: 'var(--chart-5)',
+    },
+} satisfies ChartConfig;
 
 const DEFAULT_MAP_CENTER = { lat: 51.5, lng: -0.1 };
 
+
+/* ------------------------------------------------------------------ */
+/*  Component                                                          */
+/* ------------------------------------------------------------------ */
+
 export default function FleetDashboard({
     counts,
-    chartTripsOverTime = [],
-    chartWorkOrdersByStatus = [],
-    chartWorkOrdersOverTime = [],
-    recentWorkOrders,
-    recentDefects,
-    expiringCompliance,
-    complianceAtRisk,
-    aiJobRunsUrl,
-    insights = [],
+    fleet_ai_summary,
+    fleet_health_score,
+    fleet_health_breakdown,
+    chartData,
     mapVehicles = [],
+    mapGeofences = [],
+    mapPolylines = [],
 }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard().url },
         { title: 'Fleet', href: '/fleet' },
     ];
 
-    const overviewBarData = [
-        { name: 'Vehicles', value: counts.vehicles },
-        { name: 'Drivers', value: counts.drivers },
-        { name: 'Routes', value: counts.routes },
-        { name: 'Trips', value: counts.trips },
-        { name: 'Work orders', value: counts.work_orders },
-    ];
-    const hasWorkOrdersByStatus = chartWorkOrdersByStatus.some((r) => r.value > 0);
+    /* -- Chart data (from deferred prop) -- */
+    const kpiTrends = chartData?.kpiTrends;
+    const kpiSparklines = chartData?.kpiSparklines;
+    const fleetActivity = chartData?.chartFleetActivity ?? [];
+    const costBreakdown = chartData?.chartCostBreakdown ?? [];
+    const fuelCostTrend = chartData?.chartFuelCostTrend ?? [];
+    const driverSafety = chartData?.chartDriverSafetyDistribution ?? [];
+    const aiPredictions = chartData?.aiPredictions ?? [];
+    const upcomingMaintenance = chartData?.upcomingMaintenance ?? [];
+
+    /* -- Overdue work orders (from breakdown or default) -- */
+    const overdueWorkOrders = fleet_health_breakdown?.overdue_work_orders ?? 0;
+
+    /* -- Recent alerts from chartData (reuse active alerts from breakdown) -- */
+    const activeAlerts = fleet_health_breakdown?.open_alerts ?? 0;
+
+    /* -- Map state -- */
+    const [liveMapVehicles, setLiveMapVehicles] =
+        useState<MapVehicleRow[]>(mapVehicles);
+    const [positionsUpdatedAt, setPositionsUpdatedAt] = useState<string | null>(
+        null,
+    );
+    const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(
+        null,
+    );
+    const [mapInstance, setMapInstance] = useState<google.maps.Map | null>(
+        null,
+    );
+    const isMobile = useIsMobile();
+    const selectedVehicle = useMemo(
+        () => liveMapVehicles.find((v) => v.id === selectedVehicleId) ?? null,
+        [liveMapVehicles, selectedVehicleId],
+    );
+    const [mapOpen, setMapOpen] = useState(false);
+
+    useEffect(() => {
+        // eslint-disable-next-line @eslint-react/hooks-extra/no-direct-set-state-in-use-effect -- sync server prop to local state for live updates
+        setLiveMapVehicles(mapVehicles);
+    }, [mapVehicles]);
+
+    useEffect(() => {
+        if (mapVehicles.length === 0) return;
+        const fetchPositions = () => {
+            fetch('/fleet/dashboard/positions', {
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            })
+                .then((res) => res.json())
+                .then(
+                    (data: {
+                        vehicles: MapVehicleRow[];
+                        updated_at: string;
+                    }) => {
+                        setLiveMapVehicles(data.vehicles);
+                        setPositionsUpdatedAt(data.updated_at);
+                    },
+                )
+                .catch(() => {
+                    /* ignore */
+                });
+        };
+        fetchPositions();
+        const interval = setInterval(fetchPositions, 20000);
+        return () => clearInterval(interval);
+    }, [mapVehicles.length]);
 
     const mapCenter = useMemo(() => {
-        if (mapVehicles.length === 0) return DEFAULT_MAP_CENTER;
-        const sum = mapVehicles.reduce((a, v) => ({ lat: a.lat + v.lat, lng: a.lng + v.lng }), { lat: 0, lng: 0 });
-        return { lat: sum.lat / mapVehicles.length, lng: sum.lng / mapVehicles.length };
-    }, [mapVehicles]);
+        if (liveMapVehicles.length === 0) return DEFAULT_MAP_CENTER;
+        const sum = liveMapVehicles.reduce(
+            (a, v) => ({ lat: a.lat + v.lat, lng: a.lng + v.lng }),
+            { lat: 0, lng: 0 },
+        );
+        return {
+            lat: sum.lat / liveMapVehicles.length,
+            lng: sum.lng / liveMapVehicles.length,
+        };
+    }, [liveMapVehicles]);
+
+    /* -- Loading state for deferred props -- */
+    const isChartDataLoading = !chartData;
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Fleet – Dashboard" />
             <FleetPageShell
                 title="Fleet dashboard"
-                subtitle="Overview and quick access to all fleet areas."
-                rightActions={
-                    <Button asChild size="sm" className="shrink-0 gap-2">
-                        <Link href="/fleet/assistant" prefetch="click">
-                            <Bot className="size-4" />
-                            Open Assistant
-                        </Link>
-                    </Button>
-                }
-                className="flex flex-1 flex-col gap-8 p-4 md:p-6"
-                contentWrapperClassName="flex flex-1 flex-col gap-8"
+                subtitle="Overview of your fleet at a glance."
+                className="flex flex-1 flex-col gap-6 p-4 md:p-6"
+                contentWrapperClassName="flex flex-1 flex-col gap-6"
             >
-                {insights.length > 0 && (
-                    <FleetGlassCard className="border-l-4 border-l-primary/70">
-                        <div className="space-y-1 text-sm text-muted-foreground">
-                            <h3 className="flex items-center gap-2 text-base font-semibold text-foreground">
-                                <Bot className="size-4 text-primary" />
-                                AI insights
-                            </h3>
-                            <ul className="list-inside list-disc space-y-0.5">
-                                {insights.map((line, i) => (
-                                    <li key={i}>{line}</li>
-                                ))}
-                            </ul>
-                            <Button asChild size="sm" variant="outline" className="mt-2">
-                                <Link href="/fleet/assistant" prefetch="click">
-                                    Ask assistant
-                                </Link>
-                            </Button>
-                        </div>
-                    </FleetGlassCard>
+                {/* ============================================= */}
+                {/* Section 1 — Fleet Health Banner (full width)   */}
+                {/* ============================================= */}
+                {fleet_health_score != null && (
+                    <FleetHealthBanner
+                        score={fleet_health_score}
+                        summary={fleet_ai_summary}
+                        breakdown={fleet_health_breakdown}
+                    />
                 )}
 
-                <FleetBlockSectionHeader>Critical metrics</FleetBlockSectionHeader>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 lg:gap-4">
-                    <Link href="/fleet/vehicles" className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                        <FleetGlassCard className="border-l-4 border-l-primary/70 p-4 transition-all hover:shadow-md">
-                            <div className="flex items-center gap-3">
-                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                                    <Truck className="size-5" />
-                                </div>
-                                <div className="min-w-0">
-                                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Vehicles</p>
-                                    <p className="text-2xl font-bold tabular-nums text-foreground">{counts.vehicles}</p>
-                                </div>
-                            </div>
-                        </FleetGlassCard>
-                    </Link>
-                    <Link href="/fleet/drivers" className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                        <FleetGlassCard className="border-l-4 border-l-violet-400/70 p-4 transition-all hover:shadow-md">
-                            <div className="flex items-center gap-3">
-                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-violet-500/10 text-violet-600">
-                                    <Users className="size-5" />
-                                </div>
-                                <div className="min-w-0">
-                                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Drivers</p>
-                                    <p className="text-2xl font-bold tabular-nums text-foreground">{counts.drivers}</p>
-                                </div>
-                            </div>
-                        </FleetGlassCard>
-                    </Link>
-                    <Link href="/fleet/trips" className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                        <FleetGlassCard className="border-l-4 border-l-emerald-400/70 p-4 transition-all hover:shadow-md">
-                            <div className="flex items-center gap-3">
-                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600">
-                                    <MapPin className="size-5" />
-                                </div>
-                                <div className="min-w-0">
-                                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Trips</p>
-                                    <p className="text-2xl font-bold tabular-nums text-foreground">{counts.trips}</p>
-                                </div>
-                            </div>
-                        </FleetGlassCard>
-                    </Link>
-                    <Link href="/fleet/work-orders" className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                        <FleetGlassCard className="border-l-4 border-l-sky-400/70 p-4 transition-all hover:shadow-md">
-                            <div className="flex items-center gap-3">
-                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-sky-500/10 text-sky-600">
-                                    <ClipboardList className="size-5" />
-                                </div>
-                                <div className="min-w-0">
-                                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Work orders</p>
-                                    <p className="text-2xl font-bold tabular-nums text-foreground">{counts.work_orders}</p>
-                                </div>
-                            </div>
-                        </FleetGlassCard>
-                    </Link>
-                    <Link href="/fleet/alerts?status=active" className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                        <FleetGlassCard className="border-l-4 border-l-rose-400/70 p-4 transition-all hover:shadow-md">
-                            <div className="flex items-center gap-3">
-                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-rose-500/10 text-rose-600">
-                                    <Bell className="size-5" />
-                                </div>
-                                <div className="min-w-0">
-                                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Alerts open</p>
-                                    <p className="text-2xl font-bold tabular-nums text-foreground">{counts.alerts_open ?? counts.alerts ?? 0}</p>
-                                </div>
-                            </div>
-                        </FleetGlassCard>
-                    </Link>
-                    <Link href="/fleet/compliance-items?status=expiring_soon" className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                        <FleetGlassCard className="border-l-4 border-l-amber-400/70 p-4 transition-all hover:shadow-md">
-                            <div className="flex items-center gap-3">
-                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600">
-                                    <AlertTriangle className="size-5" />
-                                </div>
-                                <div className="min-w-0">
-                                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Compliance due soon</p>
-                                    <p className="text-2xl font-bold tabular-nums text-foreground">{counts.compliance_due_soon ?? 0}</p>
-                                </div>
-                            </div>
-                        </FleetGlassCard>
-                    </Link>
+                {/* ============================================= */}
+                {/* Section 2 — Hero KPI Cards                     */}
+                {/* ============================================= */}
+                <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                    <FleetKpiCard
+                        title="Vehicles"
+                        value={counts.vehicles}
+                        trend={
+                            (kpiTrends?.vehicles?.direction as
+                                | 'up'
+                                | 'down'
+                                | 'flat') ?? undefined
+                        }
+                        trendValue={
+                            kpiTrends?.vehicles
+                                ? `${kpiTrends.vehicles.change >= 0 ? '+' : ''}${kpiTrends.vehicles.change}%`
+                                : undefined
+                        }
+                        sparklineData={kpiSparklines?.vehicles}
+                        icon={Truck}
+                    />
+                    <FleetKpiCard
+                        title="Active Drivers"
+                        value={counts.drivers}
+                        trend={
+                            (kpiTrends?.trips?.direction as
+                                | 'up'
+                                | 'down'
+                                | 'flat') ?? undefined
+                        }
+                        trendValue={
+                            kpiTrends?.trips
+                                ? `${kpiTrends.trips.change >= 0 ? '+' : ''}${kpiTrends.trips.change}%`
+                                : undefined
+                        }
+                        sparklineData={kpiSparklines?.trips}
+                        icon={Users}
+                    />
+                    <FleetKpiCard
+                        title="Open Work Orders"
+                        value={counts.work_orders}
+                        trend={
+                            (kpiTrends?.work_orders?.direction as
+                                | 'up'
+                                | 'down'
+                                | 'flat') ?? undefined
+                        }
+                        trendValue={
+                            kpiTrends?.work_orders
+                                ? `${kpiTrends.work_orders.change >= 0 ? '+' : ''}${kpiTrends.work_orders.change}%`
+                                : undefined
+                        }
+                        sparklineData={kpiSparklines?.work_orders}
+                        icon={Wrench}
+                        subtitle={
+                            overdueWorkOrders > 0
+                                ? `${overdueWorkOrders} overdue`
+                                : undefined
+                        }
+                    />
+                    <FleetKpiCard
+                        title="Active Alerts"
+                        value={
+                            counts.alerts_open ?? counts.alerts ?? activeAlerts
+                        }
+                        trend={
+                            (kpiTrends?.alerts?.direction as
+                                | 'up'
+                                | 'down'
+                                | 'flat') ?? undefined
+                        }
+                        trendValue={
+                            kpiTrends?.alerts
+                                ? `${kpiTrends.alerts.change >= 0 ? '+' : ''}${kpiTrends.alerts.change}%`
+                                : undefined
+                        }
+                        sparklineData={kpiSparklines?.alerts}
+                        icon={Bell}
+                    />
                 </div>
 
-                {/* Fleet map — glass card (reference UI) */}
-                <FleetGlassCard className="overflow-hidden p-0">
-                    <div className="border-b border-white/30 px-4 pb-2 pt-4">
-                        <h3 className="flex items-center gap-2 text-base font-semibold text-foreground">
-                            <MapPin className="size-4 text-primary" />
-                            Fleet map
-                        </h3>
-                        <p className="text-xs text-muted-foreground">
-                            {mapVehicles.length > 0
-                                ? `${mapVehicles.length} vehicle(s) with location — current position or home base`
-                                : 'Add vehicle locations or set home location to see the fleet on the map.'}
-                        </p>
-                    </div>
-                    <div className="p-0">
-                        <div className="relative">
-                            <FleetMap
-                                center={mapCenter}
-                                zoom={mapVehicles.length >= 2 ? 8 : 10}
-                                mapContainerStyle={{ width: '100%', height: '340px' }}
-                                className="rounded-b-lg"
+                {/* ============================================= */}
+                {/* Section 3 — Primary Charts                     */}
+                {/* ============================================= */}
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
+                    {/* Fleet Activity — col-span-4 */}
+                    <FleetChartCard
+                        title="Fleet Activity"
+                        description="Trips and work orders over the last 30 days"
+                        className="lg:col-span-4"
+                    >
+                        {isChartDataLoading ? (
+                            <Skeleton className="h-[280px] w-full rounded-lg" />
+                        ) : fleetActivity.length === 0 ? (
+                            <div className="flex h-[280px] items-center justify-center text-sm text-muted-foreground">
+                                No activity data available.
+                            </div>
+                        ) : (
+                            <ChartContainer
+                                config={fleetActivityConfig}
+                                className="h-[280px] w-full"
                             >
-                                {mapVehicles.map((v) => (
-                                    <FleetMapMarker
-                                        key={v.id}
-                                        position={{ lat: v.lat, lng: v.lng }}
-                                        title={`${v.registration}${v.source === 'home' ? ' (home)' : ''}`}
-                                        label={v.registration.slice(0, 2).toUpperCase()}
+                                <AreaChart
+                                    data={fleetActivity}
+                                    margin={{
+                                        top: 8,
+                                        right: 8,
+                                        left: 0,
+                                        bottom: 0,
+                                    }}
+                                >
+                                    <defs>
+                                        <linearGradient
+                                            id="fillTrips"
+                                            x1="0"
+                                            y1="0"
+                                            x2="0"
+                                            y2="1"
+                                        >
+                                            <stop
+                                                offset="0%"
+                                                stopColor="var(--color-trips)"
+                                                stopOpacity={0.3}
+                                            />
+                                            <stop
+                                                offset="100%"
+                                                stopColor="var(--color-trips)"
+                                                stopOpacity={0.05}
+                                            />
+                                        </linearGradient>
+                                        <linearGradient
+                                            id="fillWorkOrders"
+                                            x1="0"
+                                            y1="0"
+                                            x2="0"
+                                            y2="1"
+                                        >
+                                            <stop
+                                                offset="0%"
+                                                stopColor="var(--color-work_orders)"
+                                                stopOpacity={0.3}
+                                            />
+                                            <stop
+                                                offset="100%"
+                                                stopColor="var(--color-work_orders)"
+                                                stopOpacity={0.05}
+                                            />
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid
+                                        strokeDasharray="3 3"
+                                        vertical={false}
                                     />
-                                ))}
-                            </FleetMap>
-                            {mapVehicles.length === 0 && (
-                                <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-b-lg bg-muted/40">
-                                    <p className="rounded-lg border border-border bg-card/95 px-4 py-3 text-center text-sm text-muted-foreground shadow-sm">
-                                        No vehicle locations yet. Set current position or home location on vehicles to see them here.
-                                    </p>
-                                </div>
-                            )}
-                        </div>
-                        <div className="flex justify-end border-t border-white/30 bg-white/20 px-4 py-2">
-                            <Button variant="outline" size="sm" asChild>
-                                <Link href="/fleet/vehicles" prefetch="click">
-                                    Manage vehicles
-                                </Link>
-                            </Button>
-                        </div>
-                    </div>
-                </FleetGlassCard>
+                                    <XAxis
+                                        dataKey="label"
+                                        tickLine={false}
+                                        axisLine={false}
+                                        fontSize={11}
+                                        interval="preserveStartEnd"
+                                    />
+                                    <YAxis
+                                        tickLine={false}
+                                        axisLine={false}
+                                        fontSize={11}
+                                        allowDecimals={false}
+                                    />
+                                    <ChartTooltip
+                                        content={<ChartTooltipContent />}
+                                    />
+                                    <ChartLegend
+                                        content={<ChartLegendContent />}
+                                    />
+                                    <Area
+                                        type="monotone"
+                                        dataKey="trips"
+                                        stroke="var(--color-trips)"
+                                        fill="url(#fillTrips)"
+                                        strokeWidth={2}
+                                    />
+                                    <Area
+                                        type="monotone"
+                                        dataKey="work_orders"
+                                        stroke="var(--color-work_orders)"
+                                        fill="url(#fillWorkOrders)"
+                                        strokeWidth={2}
+                                    />
+                                </AreaChart>
+                            </ChartContainer>
+                        )}
+                    </FleetChartCard>
 
-                <section>
-                    <FleetBlockSectionHeader>Trends &amp; analytics</FleetBlockSectionHeader>
-                    <div className="grid gap-6 lg:grid-cols-2">
-                        <FleetGlassCard>
-                            <div className="pb-2">
-                                <div className="flex items-center justify-between text-base font-semibold text-foreground">
-                                    Trips (last 14 days)
-                                    <Link href="/fleet/trips" className="text-sm font-normal text-primary hover:underline">View all</Link>
-                                </div>
-                                <p className="text-xs text-muted-foreground">Daily trip count</p>
+                    {/* Cost Breakdown — col-span-3 */}
+                    <FleetChartCard
+                        title="Cost Breakdown"
+                        description="Fuel, maintenance, and insurance (30 days)"
+                        className="lg:col-span-3"
+                    >
+                        {isChartDataLoading ? (
+                            <Skeleton className="h-[280px] w-full rounded-lg" />
+                        ) : costBreakdown.every((c) => c.value === 0) ? (
+                            <div className="flex h-[280px] items-center justify-center text-sm text-muted-foreground">
+                                No cost data available.
                             </div>
-                            <div className="h-[240px] w-full">
-                                {chartTripsOverTime.length === 0 ? (
-                                    <div className="flex h-full items-center justify-center rounded-lg bg-muted/30 text-sm text-muted-foreground">
-                                        No trip data for this period.
-                                    </div>
-                                ) : (
-                                    <ResponsiveContainer width="100%" height={240}>
-                                        <AreaChart data={chartTripsOverTime} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                                            <defs>
-                                                <linearGradient id="tripsGradient" x1="0" y1="0" x2="0" y2="1">
-                                                    <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.4} />
-                                                    <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                                                </linearGradient>
-                                            </defs>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                                            <XAxis dataKey="label" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} />
-                                            <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} allowDecimals={false} />
-                                            <Tooltip contentStyle={tooltipContentStyle} formatter={(value: number | undefined) => [value ?? 0, 'Trips']} labelFormatter={(l) => `Date: ${l}`} />
-                                            <Area type="monotone" dataKey="trips" name="Trips" stroke="hsl(var(--primary))" fill="url(#tripsGradient)" strokeWidth={2} />
-                                        </AreaChart>
-                                    </ResponsiveContainer>
-                                )}
-                            </div>
-                        </FleetGlassCard>
-
-                        <FleetGlassCard>
-                            <div className="pb-2">
-                                <div className="flex items-center justify-between text-base font-semibold text-foreground">
-                                    Work orders created (last 14 days)
-                                    <Link href="/fleet/work-orders" className="text-sm font-normal text-primary hover:underline">View all</Link>
-                                </div>
-                                <p className="text-xs text-muted-foreground">New work orders per day</p>
-                            </div>
-                            <div className="h-[240px] w-full">
-                                {chartWorkOrdersOverTime.length === 0 ? (
-                                    <div className="flex h-full items-center justify-center rounded-lg bg-muted/30 text-sm text-muted-foreground">
-                                        No data for this period.
-                                    </div>
-                                ) : (
-                                    <ResponsiveContainer width="100%" height={240}>
-                                        <BarChart data={chartWorkOrdersOverTime} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                                            <XAxis dataKey="label" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} />
-                                            <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} allowDecimals={false} />
-                                            <Tooltip contentStyle={tooltipContentStyle} formatter={(value: number | undefined) => [value ?? 0, 'Work orders']} labelFormatter={(l) => `Date: ${l}`} />
-                                            <Bar dataKey="work_orders" name="Work orders" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                )}
-                            </div>
-                        </FleetGlassCard>
-
-                        <FleetGlassCard>
-                            <div className="pb-2">
-                                <h3 className="text-base font-semibold text-foreground">Fleet overview by category</h3>
-                                <p className="text-xs text-muted-foreground">Counts across main entities · click bar to open list</p>
-                            </div>
-                            <div className="h-[240px] w-full">
-                                <ResponsiveContainer width="100%" height={240}>
-                                    <BarChart data={overviewBarData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} layout="vertical" className="[&_.recharts-cartesian-grid-horizontal]:opacity-0">
-                                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
-                                        <XAxis type="number" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} allowDecimals={false} />
-                                        <YAxis type="category" dataKey="name" width={80} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} />
-                                        <Tooltip contentStyle={tooltipContentStyle} formatter={(value: number | undefined) => [value ?? 0, 'Count']} />
-                                        <Bar
-                                            dataKey="value"
-                                            name="Count"
-                                            fill="hsl(var(--primary))"
-                                            radius={[0, 4, 4, 0]}
-                                            cursor="pointer"
-                                            onClick={(data: { name?: string }) => {
-                                                const name = data?.name;
-                                                const url =
-                                                    name === 'Vehicles' ? '/fleet/vehicles'
-                                                    : name === 'Drivers' ? '/fleet/drivers'
-                                                    : name === 'Routes' ? '/fleet/routes'
-                                                    : name === 'Trips' ? '/fleet/trips'
-                                                    : name === 'Work orders' ? '/fleet/work-orders'
-                                                    : null;
-                                                if (url) window.location.href = url;
-                                            }}
-                                        />
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </FleetGlassCard>
-
-                        <FleetGlassCard>
-                            <div className="pb-2">
-                                <div className="flex items-center justify-between text-base font-semibold text-foreground">
-                                    Work orders by status
-                                    <Link href="/fleet/work-orders" className="text-sm font-normal text-primary hover:underline">View all</Link>
-                                </div>
-                                <p className="text-xs text-muted-foreground">Breakdown by status · click segment to filter list</p>
-                            </div>
-                            <div className="h-[240px] w-full">
-                                {!hasWorkOrdersByStatus ? (
-                                    <div className="flex h-full items-center justify-center rounded-lg bg-muted/30 text-sm text-muted-foreground">
-                                        No work orders yet.
-                                    </div>
-                                ) : (
-                                    <ResponsiveContainer width="100%" height={240}>
-                                        <PieChart>
-                                            <Pie
-                                                data={chartWorkOrdersByStatus}
-                                                dataKey="value"
-                                                nameKey="name"
-                                                cx="50%"
-                                                cy="50%"
-                                                innerRadius={56}
-                                                outerRadius={88}
-                                                paddingAngle={2}
-                                                label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
-                                                labelLine={{ stroke: 'hsl(var(--muted-foreground))' }}
-                                                cursor="pointer"
-                                                onClick={(data: { name?: string }) => {
-                                                    const name = data?.name ?? '';
-                                                    const status = name.toLowerCase().replace(/\s+/g, '_');
-                                                    if (status && status !== 'no_orders') window.location.href = `/fleet/work-orders?status=${status}`;
-                                                    else window.location.href = '/fleet/work-orders';
-                                                }}
-                                            >
-                                                {chartWorkOrdersByStatus.map((_, index) => (
-                                                    <Cell key={index} fill={CHART_COLORS[index % CHART_COLORS.length] || CHART_COLORS_FALLBACK[index % CHART_COLORS_FALLBACK.length]} />
-                                                ))}
-                                            </Pie>
-                                            <Tooltip contentStyle={tooltipContentStyle} formatter={(value: number | undefined, name: string | undefined) => [value ?? 0, name ?? '']} />
-                                            <Legend layout="horizontal" align="center" verticalAlign="bottom" wrapperStyle={{ fontSize: 11 }} />
-                                        </PieChart>
-                                    </ResponsiveContainer>
-                                )}
-                            </div>
-                        </FleetGlassCard>
-                    </div>
-                </section>
-
-                <section>
-                    <FleetBlockSectionHeader>Activity</FleetBlockSectionHeader>
-                    <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-4">
-                        <FleetDataCard
-                            title="Recent work orders"
-                            right={<Link href="/fleet/work-orders" className="text-sm font-normal text-primary hover:underline">View all</Link>}
-                        >
-                            {recentWorkOrders.length === 0 ? (
-                                <p className="text-sm text-muted-foreground">No work orders yet.</p>
-                            ) : (
-                                <ul className={fleetDataCardListClass}>
-                                    {recentWorkOrders.map((wo) => (
-                                        <li key={wo.id} className={fleetDataCardRowClass}>
-                                            <Link href={`/fleet/work-orders/${wo.id}`} className={fleetDataCardRowPrimaryClass}>
-                                                {wo.work_order_number}
-                                            </Link>
-                                            <span className={fleetDataCardRowSecondaryClass}>{wo.vehicle?.registration ?? wo.status}</span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            )}
-                        </FleetDataCard>
-                        <FleetDataCard
-                            title="Recent defects"
-                            right={<Link href="/fleet/defects" className="text-sm font-normal text-primary hover:underline">View all</Link>}
-                        >
-                            {recentDefects.length === 0 ? (
-                                <p className="text-sm text-muted-foreground">No defects reported.</p>
-                            ) : (
-                                <ul className={fleetDataCardListClass}>
-                                    {recentDefects.map((d) => (
-                                        <li key={d.id} className={fleetDataCardRowClass}>
-                                            <Link href={`/fleet/defects/${d.id}`} className={fleetDataCardRowPrimaryClass}>
-                                                {d.defect_number}
-                                            </Link>
-                                            <span className={fleetDataCardRowSecondaryClass}>{d.severity}</span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            )}
-                        </FleetDataCard>
-                        <FleetDataCard
-                            title="Expiring compliance"
-                            right={<Link href="/fleet/compliance-items" className="text-sm font-normal text-primary hover:underline">View all</Link>}
-                        >
-                            {expiringCompliance.length === 0 ? (
-                                <p className="text-sm text-muted-foreground">Nothing expiring soon.</p>
-                            ) : (
-                                <>
-                                    <ul className={fleetDataCardListClass}>
-                                        {expiringCompliance.map((c) => (
-                                            <li key={c.id} className={fleetDataCardRowClass}>
-                                                <Link href={`/fleet/compliance-items/${c.id}`} className={fleetDataCardRowPrimaryClass}>
-                                                    {c.title}
-                                                </Link>
-                                                <span className={fleetDataCardRowSecondaryClass}>{new Date(c.expiry_date).toLocaleDateString()}</span>
-                                            </li>
+                        ) : (
+                            <ChartContainer
+                                config={costBreakdownConfig}
+                                className="mx-auto h-[280px] w-full max-w-[300px]"
+                            >
+                                <PieChart>
+                                    <ChartTooltip
+                                        content={
+                                            <ChartTooltipContent
+                                                formatter={(value, name) =>
+                                                    `${name}: £${Number(value).toLocaleString()}`
+                                                }
+                                            />
+                                        }
+                                    />
+                                    <Pie
+                                        data={costBreakdown}
+                                        dataKey="value"
+                                        nameKey="name"
+                                        innerRadius={60}
+                                        outerRadius={90}
+                                        paddingAngle={3}
+                                    >
+                                        {costBreakdown.map((entry, index) => (
+                                            <Cell
+                                                key={entry.name}
+                                                fill={
+                                                    CHART_COLORS[
+                                                        index %
+                                                            CHART_COLORS.length
+                                                    ]
+                                                }
+                                            />
                                         ))}
-                                    </ul>
-                                    <Link href="/fleet/assistant?prompt=What%27s%20expiring%20soon%3F" className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline">
-                                        <Bot className="size-3.5" />
-                                        Ask assistant
-                                    </Link>
-                                </>
-                            )}
-                        </FleetDataCard>
-                        <FleetDataCard
-                            title="Compliance at risk (AI)"
-                            right={aiJobRunsUrl ? <Link href={aiJobRunsUrl} className="text-sm font-normal text-primary hover:underline">Run prediction</Link> : undefined}
-                        >
-                            {!complianceAtRisk ? (
-                                <p className="text-sm text-muted-foreground">No compliance prediction run yet. Run a job from AI job runs.</p>
+                                    </Pie>
+                                    <ChartLegend
+                                        content={<ChartLegendContent />}
+                                    />
+                                </PieChart>
+                            </ChartContainer>
+                        )}
+                    </FleetChartCard>
+                </div>
+
+                {/* ============================================= */}
+                {/* Section 4 — AI Intelligence Layer               */}
+                {/* ============================================= */}
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
+                    {/* AI Panel — col-span-4 */}
+                    {isChartDataLoading ? (
+                        <Card className="lg:col-span-4">
+                            <CardContent>
+                                <Skeleton className="h-[280px] w-full rounded-lg" />
+                            </CardContent>
+                        </Card>
+                    ) : (
+                        <FleetAiPanel
+                            predictions={aiPredictions}
+                            className="lg:col-span-4"
+                        />
+                    )}
+
+                    {/* Fuel Spend Trend — col-span-3 */}
+                    <FleetChartCard
+                        title="Fuel Spend Trend"
+                        description="Daily fuel cost over 30 days"
+                        className="lg:col-span-3"
+                    >
+                        {isChartDataLoading ? (
+                            <Skeleton className="h-[280px] w-full rounded-lg" />
+                        ) : fuelCostTrend.length === 0 ? (
+                            <div className="flex h-[280px] items-center justify-center text-sm text-muted-foreground">
+                                No fuel data available.
+                            </div>
+                        ) : (
+                            <ChartContainer
+                                config={fuelTrendConfig}
+                                className="h-[280px] w-full"
+                            >
+                                <LineChart
+                                    data={fuelCostTrend}
+                                    margin={{
+                                        top: 8,
+                                        right: 8,
+                                        left: 0,
+                                        bottom: 0,
+                                    }}
+                                >
+                                    <CartesianGrid
+                                        strokeDasharray="3 3"
+                                        vertical={false}
+                                    />
+                                    <XAxis
+                                        dataKey="label"
+                                        tickLine={false}
+                                        axisLine={false}
+                                        fontSize={11}
+                                        interval="preserveStartEnd"
+                                    />
+                                    <YAxis
+                                        tickLine={false}
+                                        axisLine={false}
+                                        fontSize={11}
+                                        tickFormatter={(v) => `£${v}`}
+                                    />
+                                    <ChartTooltip
+                                        content={
+                                            <ChartTooltipContent
+                                                formatter={(value) =>
+                                                    `£${Number(value).toLocaleString()}`
+                                                }
+                                            />
+                                        }
+                                    />
+                                    <Line
+                                        type="monotone"
+                                        dataKey="cost"
+                                        stroke="var(--color-cost)"
+                                        strokeWidth={2}
+                                        dot={false}
+                                    />
+                                </LineChart>
+                            </ChartContainer>
+                        )}
+                    </FleetChartCard>
+                </div>
+
+                {/* ============================================= */}
+                {/* Section 5 — Operational Detail                  */}
+                {/* ============================================= */}
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                    {/* Recent Alerts */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                                <AlertTriangle className="size-4 text-muted-foreground" />
+                                Recent Alerts
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="pt-0">
+                            {activeAlerts === 0 ? (
+                                <p className="text-sm text-muted-foreground">
+                                    No active alerts.
+                                </p>
                             ) : (
-                                <div className="space-y-2 text-sm">
-                                    <p className="font-medium">{complianceAtRisk.primary_finding}</p>
-                                    <p className="text-muted-foreground">
-                                        Priority: <span className="capitalize">{complianceAtRisk.priority}</span>
-                                        {complianceAtRisk.detailed_analysis && (
-                                            <> · {((complianceAtRisk.detailed_analysis.at_risk_vehicles?.length ?? 0) + (complianceAtRisk.detailed_analysis.at_risk_drivers?.length ?? 0))} at risk</>
-                                        )}
+                                <div className="space-y-3">
+                                    <p className="text-sm text-muted-foreground">
+                                        {activeAlerts} active alert
+                                        {activeAlerts !== 1 ? 's' : ''} in your
+                                        fleet.
                                     </p>
-                                    <p className="text-xs text-muted-foreground">Updated {new Date(complianceAtRisk.created_at).toLocaleString()}</p>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        asChild
+                                    >
+                                        <Link href="/fleet/alerts?status=active">
+                                            View all alerts
+                                        </Link>
+                                    </Button>
                                 </div>
                             )}
-                        </FleetDataCard>
-                    </div>
-                </section>
+                        </CardContent>
+                    </Card>
 
-                <section>
-                    <FleetBlockSectionHeader>Quick links</FleetBlockSectionHeader>
-                    <FleetGlassCard>
-                        <div className="flex flex-wrap gap-2">
-                        <Link href="/fleet/vehicles" className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/30 hover:bg-muted hover:text-primary">
-                            <Truck className="size-4" /> Vehicles
-                        </Link>
-                        <Link href="/fleet/drivers" className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/30 hover:bg-muted hover:text-primary">
-                            <Users className="size-4" /> Drivers
-                        </Link>
-                        <Link href="/fleet/trips" className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/30 hover:bg-muted hover:text-primary">
-                            <MapPin className="size-4" /> Trips
-                        </Link>
-                        <Link href="/fleet/routes" className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/30 hover:bg-muted hover:text-primary">
-                            <Route className="size-4" /> Routes
-                        </Link>
-                        <Link href="/fleet/work-orders" className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/30 hover:bg-muted hover:text-primary">
-                            <ClipboardList className="size-4" /> Work orders
-                        </Link>
-                        <Link href="/fleet/defects" className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/30 hover:bg-muted hover:text-primary">
-                            <AlertTriangle className="size-4" /> Defects
-                        </Link>
-                        <Link href="/fleet/assistant" className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/30 hover:bg-muted hover:text-primary">
-                            <Bot className="size-4" /> Assistant
-                        </Link>
-                        <Link href="/fleet/alerts" className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/30 hover:bg-muted hover:text-primary">
-                            <Bell className="size-4" /> Alerts
-                        </Link>
-                        <Link href="/fleet/locations" className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/30 hover:bg-muted hover:text-primary">
-                            <MapPin className="size-4" /> Locations
-                        </Link>
-                        <Link href="/fleet/garages" className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/30 hover:bg-muted hover:text-primary">
-                            <Wrench className="size-4" /> Garages
-                        </Link>
+                    {/* Upcoming Maintenance */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                                <Calendar className="size-4 text-muted-foreground" />
+                                Upcoming Maintenance
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="pt-0">
+                            {isChartDataLoading ? (
+                                <Skeleton className="h-32 w-full rounded-lg" />
+                            ) : upcomingMaintenance.length === 0 ? (
+                                <p className="text-sm text-muted-foreground">
+                                    No maintenance scheduled within 14 days.
+                                </p>
+                            ) : (
+                                <ul className="divide-y divide-border">
+                                    {upcomingMaintenance.map((item) => (
+                                        <li
+                                            key={item.id}
+                                            className="flex items-center justify-between gap-2 py-2 first:pt-0 last:pb-0"
+                                        >
+                                            <div className="min-w-0">
+                                                <p className="truncate text-sm font-medium">
+                                                    {item.vehicle_name}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {item.service_type
+                                                        .replace(/_/g, ' ')
+                                                        .replace(/^\w/, (c) =>
+                                                            c.toUpperCase(),
+                                                        )}
+                                                </p>
+                                            </div>
+                                            <span className="shrink-0 text-xs text-muted-foreground">
+                                                {new Date(
+                                                    item.next_service_due_date,
+                                                ).toLocaleDateString('en-GB', {
+                                                    day: 'numeric',
+                                                    month: 'short',
+                                                })}
+                                            </span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    {/* Driver Safety Distribution */}
+                    <FleetChartCard
+                        title="Driver Safety"
+                        description="Distribution by safety score"
+                    >
+                        {isChartDataLoading ? (
+                            <Skeleton className="h-[200px] w-full rounded-lg" />
+                        ) : driverSafety.every((d) => d.value === 0) ? (
+                            <div className="flex h-[200px] items-center justify-center text-sm text-muted-foreground">
+                                No driver data.
+                            </div>
+                        ) : (
+                            <ChartContainer
+                                config={safetyConfig}
+                                className="mx-auto h-[200px] w-full max-w-[240px]"
+                            >
+                                <PieChart>
+                                    <ChartTooltip
+                                        content={<ChartTooltipContent />}
+                                    />
+                                    <Pie
+                                        data={driverSafety}
+                                        dataKey="value"
+                                        nameKey="name"
+                                        innerRadius={45}
+                                        outerRadius={70}
+                                        paddingAngle={3}
+                                    >
+                                        {driverSafety.map((entry, index) => (
+                                            <Cell
+                                                key={entry.name}
+                                                fill={
+                                                    index === 0
+                                                        ? 'var(--chart-1)'
+                                                        : index === 1
+                                                          ? 'var(--chart-4)'
+                                                          : 'var(--chart-5)'
+                                                }
+                                            />
+                                        ))}
+                                    </Pie>
+                                    <ChartLegend
+                                        content={<ChartLegendContent />}
+                                    />
+                                </PieChart>
+                            </ChartContainer>
+                        )}
+                    </FleetChartCard>
+                </div>
+
+                {/* ============================================= */}
+                {/* Section 6 — Fleet Map (collapsible, closed)    */}
+                {/* ============================================= */}
+                <Card className="overflow-hidden">
+                    <button
+                        type="button"
+                        onClick={() => setMapOpen((prev) => !prev)}
+                        className="flex w-full items-center justify-between px-6 py-4 text-left"
+                    >
+                        <div className="flex items-center gap-2">
+                            <MapPinned className="size-4 text-primary" />
+                            <span className="text-sm font-semibold">
+                                Fleet Map
+                            </span>
+                            {liveMapVehicles.length > 0 && (
+                                <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                                    {liveMapVehicles.length} vehicle
+                                    {liveMapVehicles.length !== 1 ? 's' : ''}
+                                </span>
+                            )}
+                            {positionsUpdatedAt && (
+                                <span className="text-xs text-muted-foreground">
+                                    Updated{' '}
+                                    {new Date(
+                                        positionsUpdatedAt,
+                                    ).toLocaleTimeString()}
+                                </span>
+                            )}
                         </div>
-                    </FleetGlassCard>
-                </section>
+                        {mapOpen ? (
+                            <ChevronUp className="size-4 text-muted-foreground" />
+                        ) : (
+                            <ChevronDown className="size-4 text-muted-foreground" />
+                        )}
+                    </button>
+
+                    {mapOpen && (
+                        <div className="border-t">
+                            <div
+                                className="relative"
+                                style={{ height: '400px' }}
+                            >
+                                <FleetMap
+                                    center={mapCenter}
+                                    zoom={
+                                        liveMapVehicles.length >= 2 ? 8 : 10
+                                    }
+                                    mapContainerStyle={{
+                                        width: '100%',
+                                        height: '100%',
+                                    }}
+                                    onMapLoad={setMapInstance}
+                                    onMapUnmount={() => setMapInstance(null)}
+                                >
+                                    {mapGeofences?.map((gf) => (
+                                        <FleetMapPolygon
+                                            key={gf.id}
+                                            paths={[gf.paths]}
+                                        />
+                                    ))}
+                                    {mapPolylines?.map((pl) => (
+                                        <FleetMapPolyline
+                                            key={pl.trip_id}
+                                            path={pl.path}
+                                        />
+                                    ))}
+                                    <FleetMapClusterer
+                                        map={mapInstance}
+                                        vehicles={liveMapVehicles}
+                                        onSelectVehicle={(id) =>
+                                            setSelectedVehicleId((prev) =>
+                                                prev === id ? null : id,
+                                            )
+                                        }
+                                    />
+                                    {!isMobile &&
+                                        liveMapVehicles.map((v) =>
+                                            selectedVehicleId === v.id ? (
+                                                <FleetMapInfoWindow
+                                                    key={`iw-${v.id}`}
+                                                    position={{
+                                                        lat: v.lat,
+                                                        lng: v.lng,
+                                                    }}
+                                                    onCloseClick={() =>
+                                                        setSelectedVehicleId(
+                                                            null,
+                                                        )
+                                                    }
+                                                >
+                                                    <div className="min-w-[160px] space-y-2">
+                                                        <p className="font-semibold">
+                                                            {v.registration}
+                                                        </p>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            {v.source ===
+                                                            'home'
+                                                                ? 'Home location'
+                                                                : 'Current position'}
+                                                        </p>
+                                                        <div className="flex flex-col gap-1">
+                                                            <Link
+                                                                href={`/fleet/vehicles/${v.id}`}
+                                                                className="text-xs font-medium text-primary hover:underline"
+                                                            >
+                                                                View vehicle →
+                                                            </Link>
+                                                            <Link
+                                                                href={`/fleet/work-orders/create?vehicle_id=${v.id}`}
+                                                                className="text-xs font-medium text-primary hover:underline"
+                                                            >
+                                                                Create work
+                                                                order →
+                                                            </Link>
+                                                        </div>
+                                                    </div>
+                                                </FleetMapInfoWindow>
+                                            ) : null,
+                                        )}
+                                </FleetMap>
+                                {liveMapVehicles.length === 0 && (
+                                    <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-muted/40">
+                                        <p className="rounded-lg border border-border bg-card/95 px-4 py-3 text-center text-sm text-muted-foreground shadow-sm">
+                                            No vehicle locations yet. Set
+                                            current position or home location on
+                                            vehicles to see them here.
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </Card>
+
+                {/* Mobile map vehicle sheet */}
+                {isMobile && (
+                    <Sheet
+                        open={!!selectedVehicle}
+                        onOpenChange={(open) =>
+                            !open && setSelectedVehicleId(null)
+                        }
+                    >
+                        <SheetContent
+                            side="bottom"
+                            className="pb-[max(1rem,env(safe-area-inset-bottom))]"
+                        >
+                            <SheetHeader>
+                                <SheetTitle>
+                                    {selectedVehicle?.registration ?? 'Vehicle'}
+                                </SheetTitle>
+                            </SheetHeader>
+                            {selectedVehicle && (
+                                <div className="space-y-4 px-4">
+                                    <p className="text-sm text-muted-foreground">
+                                        {selectedVehicle.source === 'home'
+                                            ? 'Home location'
+                                            : 'Current position'}
+                                    </p>
+                                    <div className="flex flex-col gap-2">
+                                        <Button
+                                            asChild
+                                            className="min-h-11 w-full"
+                                        >
+                                            <Link
+                                                href={`/fleet/vehicles/${selectedVehicle.id}`}
+                                            >
+                                                View vehicle
+                                            </Link>
+                                        </Button>
+                                        <Button
+                                            asChild
+                                            variant="outline"
+                                            className="min-h-11 w-full"
+                                        >
+                                            <Link
+                                                href={`/fleet/work-orders/create?vehicle_id=${selectedVehicle.id}`}
+                                            >
+                                                Create work order
+                                            </Link>
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+                        </SheetContent>
+                    </Sheet>
+                )}
             </FleetPageShell>
         </AppLayout>
     );
