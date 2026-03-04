@@ -40,12 +40,25 @@ final class ComplianceItemController extends Controller
             ];
         }, 'summary');
 
+        $complianceHealth = Inertia::defer(function () {
+            $total = ComplianceItem::query()->count();
+
+            if ($total === 0) {
+                return ['percentage' => 100];
+            }
+
+            $valid = ComplianceItem::query()->where('status', 'valid')->count();
+
+            return ['percentage' => (int) round(($valid / $total) * 100)];
+        }, 'complianceHealth');
+
         return Inertia::render('Fleet/ComplianceItems/Index', [
             'complianceItems' => $items,
             'filters' => $request->only(['entity_type', 'entity_id', 'status']),
             'entityTypes' => array_map(fn (\App\Enums\Fleet\ComplianceEntityType $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\ComplianceEntityType::cases()),
             'statuses' => array_map(fn (\App\Enums\Fleet\ComplianceItemStatus $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\ComplianceItemStatus::cases()),
             'summary' => $summary,
+            'complianceHealth' => $complianceHealth,
         ]);
     }
 

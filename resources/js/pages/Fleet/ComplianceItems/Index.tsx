@@ -1,12 +1,64 @@
 import { FleetIndexSummaryBar } from '@/components/fleet';
 import type { SummaryStat } from '@/components/fleet';
 import { Button } from '@/components/ui/button';
+import { ChartContainer } from '@/components/ui/chart';
+import type { ChartConfig } from '@/components/ui/chart';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Form, Head, Link } from '@inertiajs/react';
-import { AlertTriangle, CheckCircle, Clock, Pencil, Plus, ShieldCheck, Trash2, XCircle } from 'lucide-react';
+import { CheckCircle, Clock, Pencil, Plus, ShieldCheck, Trash2, XCircle } from 'lucide-react';
+import { PolarAngleAxis, RadialBar, RadialBarChart } from 'recharts';
+
+const healthGaugeConfig = {
+    health: { label: 'Compliance Health', color: 'var(--chart-1)' },
+} satisfies ChartConfig;
+
+function getGaugeColor(percentage: number): string {
+    if (percentage > 80) return 'var(--color-emerald-500, #10b981)';
+    if (percentage >= 60) return 'var(--color-amber-500, #f59e0b)';
+    return 'var(--color-red-500, #ef4444)';
+}
+
+function ComplianceHealthGauge({ percentage }: { percentage: number }) {
+    const color = getGaugeColor(percentage);
+    const data = [{ name: 'health', value: percentage, fill: color }];
+
+    return (
+        <div className="flex flex-col items-center rounded-xl border bg-card p-4 shadow-sm">
+            <h4 className="mb-2 text-sm font-medium text-muted-foreground">Compliance Health</h4>
+            <ChartContainer config={healthGaugeConfig} className="mx-auto h-[160px] w-full max-w-[200px]">
+                <RadialBarChart
+                    innerRadius="70%"
+                    outerRadius="100%"
+                    data={data}
+                    startAngle={90}
+                    endAngle={-270}
+                    barSize={12}
+                >
+                    <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
+                    <RadialBar
+                        dataKey="value"
+                        background={{ fill: 'var(--color-muted, #e5e7eb)' }}
+                        cornerRadius={6}
+                        isAnimationActive={true}
+                        animationDuration={800}
+                        animationEasing="ease-out"
+                    />
+                    <text x="50%" y="50%" textAnchor="middle" dominantBaseline="central" className="fill-foreground">
+                        <tspan x="50%" dy="-0.3em" className="text-2xl font-bold" style={{ fontSize: '1.5rem', fontWeight: 700 }}>
+                            {percentage}%
+                        </tspan>
+                        <tspan x="50%" dy="1.5em" style={{ fontSize: '0.75rem', fill: 'var(--color-muted-foreground, #6b7280)' }}>
+                            Valid
+                        </tspan>
+                    </text>
+                </RadialBarChart>
+            </ChartContainer>
+        </div>
+    );
+}
 
 interface ItemRecord {
     id: number;
@@ -31,6 +83,9 @@ interface Props {
         expiring_soon: number;
         expired: number;
     };
+    complianceHealth?: {
+        percentage: number;
+    };
 }
 
 export default function FleetComplianceItemsIndex({
@@ -39,6 +94,7 @@ export default function FleetComplianceItemsIndex({
     entityTypes,
     statuses,
     summary,
+    complianceHealth,
 }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard().url },
@@ -59,17 +115,22 @@ export default function FleetComplianceItemsIndex({
                     </Button>
                 </div>
 
-                {summary && (
-                    <FleetIndexSummaryBar
-                        stats={
-                            [
-                                { label: 'Total', value: summary.total, icon: ShieldCheck },
-                                { label: 'Valid', value: summary.valid, icon: CheckCircle, variant: 'success' },
-                                { label: 'Expiring Soon', value: summary.expiring_soon, icon: Clock, variant: summary.expiring_soon > 0 ? 'warning' : 'default' },
-                                { label: 'Expired', value: summary.expired, icon: XCircle, variant: summary.expired > 0 ? 'danger' : 'default' },
-                            ] satisfies SummaryStat[]
-                        }
-                    />
+                {(summary || complianceHealth) && (
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
+                        {summary && (
+                            <FleetIndexSummaryBar
+                                stats={
+                                    [
+                                        { label: 'Total', value: summary.total, icon: ShieldCheck },
+                                        { label: 'Valid', value: summary.valid, icon: CheckCircle, variant: 'success' },
+                                        { label: 'Expiring Soon', value: summary.expiring_soon, icon: Clock, variant: summary.expiring_soon > 0 ? 'warning' : 'default' },
+                                        { label: 'Expired', value: summary.expired, icon: XCircle, variant: summary.expired > 0 ? 'danger' : 'default' },
+                                    ] satisfies SummaryStat[]
+                                }
+                            />
+                        )}
+                        {complianceHealth && <ComplianceHealthGauge percentage={complianceHealth.percentage} />}
+                    </div>
                 )}
 
                 <form
