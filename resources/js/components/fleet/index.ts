@@ -6,6 +6,7 @@ export { FleetAssistantFab } from './fleet-assistant-fab';
 export { FleetBlockSectionHeader } from './fleet-block-section-header';
 export { FleetAiPanel } from './fleet-ai-panel';
 export { FleetChartCard } from './fleet-chart-card';
+export { FleetDashboardSkeleton } from './fleet-dashboard-skeleton';
 export { FleetHealthBanner } from './fleet-health-banner';
 export { FleetIndexSummaryBar } from './fleet-index-summary-bar';
 export type { SummaryStat } from './fleet-index-summary-bar';

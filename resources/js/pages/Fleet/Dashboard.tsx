@@ -5,6 +5,7 @@ import {
     FleetKpiCard,
     FleetPageShell,
 } from '@/components/fleet';
+import { FleetDashboardSkeleton } from '@/components/fleet/fleet-dashboard-skeleton';
 import {
     FleetMap,
     FleetMapInfoWindow,
@@ -28,7 +29,6 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
-import { Skeleton } from '@/components/ui/skeleton';
 import { useIsMobile } from '@/hooks/use-mobile';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
@@ -317,471 +317,493 @@ export default function FleetDashboard({
                 )}
 
                 {/* ============================================= */}
-                {/* Section 2 — Hero KPI Cards                     */}
+                {/* Loading skeleton for deferred dashboard data    */}
                 {/* ============================================= */}
-                <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-                    <FleetKpiCard
-                        title="Vehicles"
-                        value={counts.vehicles}
-                        trend={
-                            (kpiTrends?.vehicles?.direction as
-                                | 'up'
-                                | 'down'
-                                | 'flat') ?? undefined
-                        }
-                        trendValue={
-                            kpiTrends?.vehicles
-                                ? `${kpiTrends.vehicles.change >= 0 ? '+' : ''}${kpiTrends.vehicles.change}%`
-                                : undefined
-                        }
-                        sparklineData={kpiSparklines?.vehicles}
-                        icon={Truck}
-                    />
-                    <FleetKpiCard
-                        title="Active Drivers"
-                        value={counts.drivers}
-                        trend={
-                            (kpiTrends?.trips?.direction as
-                                | 'up'
-                                | 'down'
-                                | 'flat') ?? undefined
-                        }
-                        trendValue={
-                            kpiTrends?.trips
-                                ? `${kpiTrends.trips.change >= 0 ? '+' : ''}${kpiTrends.trips.change}%`
-                                : undefined
-                        }
-                        sparklineData={kpiSparklines?.trips}
-                        icon={Users}
-                    />
-                    <FleetKpiCard
-                        title="Open Work Orders"
-                        value={counts.work_orders}
-                        trend={
-                            (kpiTrends?.work_orders?.direction as
-                                | 'up'
-                                | 'down'
-                                | 'flat') ?? undefined
-                        }
-                        trendValue={
-                            kpiTrends?.work_orders
-                                ? `${kpiTrends.work_orders.change >= 0 ? '+' : ''}${kpiTrends.work_orders.change}%`
-                                : undefined
-                        }
-                        sparklineData={kpiSparklines?.work_orders}
-                        icon={Wrench}
-                        subtitle={
-                            overdueWorkOrders > 0
-                                ? `${overdueWorkOrders} overdue`
-                                : undefined
-                        }
-                    />
-                    <FleetKpiCard
-                        title="Active Alerts"
-                        value={
-                            counts.alerts_open ?? counts.alerts ?? activeAlerts
-                        }
-                        trend={
-                            (kpiTrends?.alerts?.direction as
-                                | 'up'
-                                | 'down'
-                                | 'flat') ?? undefined
-                        }
-                        trendValue={
-                            kpiTrends?.alerts
-                                ? `${kpiTrends.alerts.change >= 0 ? '+' : ''}${kpiTrends.alerts.change}%`
-                                : undefined
-                        }
-                        sparklineData={kpiSparklines?.alerts}
-                        icon={Bell}
-                    />
-                </div>
+                {isChartDataLoading ? (
+                    <FleetDashboardSkeleton />
+                ) : (
+                    <>
+                        {/* ============================================= */}
+                        {/* Section 2 — Hero KPI Cards                     */}
+                        {/* ============================================= */}
+                        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                            <FleetKpiCard
+                                title="Vehicles"
+                                value={counts.vehicles}
+                                trend={
+                                    (kpiTrends?.vehicles?.direction as
+                                        | 'up'
+                                        | 'down'
+                                        | 'flat') ?? undefined
+                                }
+                                trendValue={
+                                    kpiTrends?.vehicles
+                                        ? `${kpiTrends.vehicles.change >= 0 ? '+' : ''}${kpiTrends.vehicles.change}%`
+                                        : undefined
+                                }
+                                sparklineData={kpiSparklines?.vehicles}
+                                icon={Truck}
+                            />
+                            <FleetKpiCard
+                                title="Active Drivers"
+                                value={counts.drivers}
+                                trend={
+                                    (kpiTrends?.trips?.direction as
+                                        | 'up'
+                                        | 'down'
+                                        | 'flat') ?? undefined
+                                }
+                                trendValue={
+                                    kpiTrends?.trips
+                                        ? `${kpiTrends.trips.change >= 0 ? '+' : ''}${kpiTrends.trips.change}%`
+                                        : undefined
+                                }
+                                sparklineData={kpiSparklines?.trips}
+                                icon={Users}
+                            />
+                            <FleetKpiCard
+                                title="Open Work Orders"
+                                value={counts.work_orders}
+                                trend={
+                                    (kpiTrends?.work_orders?.direction as
+                                        | 'up'
+                                        | 'down'
+                                        | 'flat') ?? undefined
+                                }
+                                trendValue={
+                                    kpiTrends?.work_orders
+                                        ? `${kpiTrends.work_orders.change >= 0 ? '+' : ''}${kpiTrends.work_orders.change}%`
+                                        : undefined
+                                }
+                                sparklineData={kpiSparklines?.work_orders}
+                                icon={Wrench}
+                                subtitle={
+                                    overdueWorkOrders > 0
+                                        ? `${overdueWorkOrders} overdue`
+                                        : undefined
+                                }
+                            />
+                            <FleetKpiCard
+                                title="Active Alerts"
+                                value={
+                                    counts.alerts_open ??
+                                    counts.alerts ??
+                                    activeAlerts
+                                }
+                                trend={
+                                    (kpiTrends?.alerts?.direction as
+                                        | 'up'
+                                        | 'down'
+                                        | 'flat') ?? undefined
+                                }
+                                trendValue={
+                                    kpiTrends?.alerts
+                                        ? `${kpiTrends.alerts.change >= 0 ? '+' : ''}${kpiTrends.alerts.change}%`
+                                        : undefined
+                                }
+                                sparklineData={kpiSparklines?.alerts}
+                                icon={Bell}
+                            />
+                        </div>
 
-                {/* ============================================= */}
-                {/* Section 3 — Primary Charts                     */}
-                {/* ============================================= */}
-                <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
-                    {/* Fleet Activity — col-span-4 */}
-                    <FleetChartCard
-                        title="Fleet Activity"
-                        description="Trips and work orders over the last 30 days"
-                        className="lg:col-span-4"
-                    >
-                        {isChartDataLoading ? (
-                            <Skeleton className="h-[280px] w-full rounded-lg" />
-                        ) : fleetActivity.length === 0 ? (
-                            <div className="flex h-[280px] items-center justify-center text-sm text-muted-foreground">
-                                No activity data available.
-                            </div>
-                        ) : (
-                            <ChartContainer
-                                config={fleetActivityConfig}
-                                className="h-[280px] w-full"
+                        {/* ============================================= */}
+                        {/* Section 3 — Primary Charts                     */}
+                        {/* ============================================= */}
+                        <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
+                            {/* Fleet Activity — col-span-4 */}
+                            <FleetChartCard
+                                title="Fleet Activity"
+                                description="Trips and work orders over the last 30 days"
+                                className="lg:col-span-4"
                             >
-                                <AreaChart
-                                    data={fleetActivity}
-                                    margin={{
-                                        top: 8,
-                                        right: 8,
-                                        left: 0,
-                                        bottom: 0,
-                                    }}
-                                >
-                                    <defs>
-                                        <linearGradient
-                                            id="fillTrips"
-                                            x1="0"
-                                            y1="0"
-                                            x2="0"
-                                            y2="1"
-                                        >
-                                            <stop
-                                                offset="0%"
-                                                stopColor="var(--color-trips)"
-                                                stopOpacity={0.3}
-                                            />
-                                            <stop
-                                                offset="100%"
-                                                stopColor="var(--color-trips)"
-                                                stopOpacity={0.05}
-                                            />
-                                        </linearGradient>
-                                        <linearGradient
-                                            id="fillWorkOrders"
-                                            x1="0"
-                                            y1="0"
-                                            x2="0"
-                                            y2="1"
-                                        >
-                                            <stop
-                                                offset="0%"
-                                                stopColor="var(--color-work_orders)"
-                                                stopOpacity={0.3}
-                                            />
-                                            <stop
-                                                offset="100%"
-                                                stopColor="var(--color-work_orders)"
-                                                stopOpacity={0.05}
-                                            />
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid
-                                        strokeDasharray="3 3"
-                                        vertical={false}
-                                    />
-                                    <XAxis
-                                        dataKey="label"
-                                        tickLine={false}
-                                        axisLine={false}
-                                        fontSize={11}
-                                        interval="preserveStartEnd"
-                                    />
-                                    <YAxis
-                                        tickLine={false}
-                                        axisLine={false}
-                                        fontSize={11}
-                                        allowDecimals={false}
-                                    />
-                                    <ChartTooltip
-                                        content={<ChartTooltipContent />}
-                                    />
-                                    <ChartLegend
-                                        content={<ChartLegendContent />}
-                                    />
-                                    <Area
-                                        type="monotone"
-                                        dataKey="trips"
-                                        stroke="var(--color-trips)"
-                                        fill="url(#fillTrips)"
-                                        strokeWidth={2}
-                                    />
-                                    <Area
-                                        type="monotone"
-                                        dataKey="work_orders"
-                                        stroke="var(--color-work_orders)"
-                                        fill="url(#fillWorkOrders)"
-                                        strokeWidth={2}
-                                    />
-                                </AreaChart>
-                            </ChartContainer>
-                        )}
-                    </FleetChartCard>
-
-                    {/* Cost Breakdown — col-span-3 */}
-                    <FleetChartCard
-                        title="Cost Breakdown"
-                        description="Fuel, maintenance, and insurance (30 days)"
-                        className="lg:col-span-3"
-                    >
-                        {isChartDataLoading ? (
-                            <Skeleton className="h-[280px] w-full rounded-lg" />
-                        ) : costBreakdown.every((c) => c.value === 0) ? (
-                            <div className="flex h-[280px] items-center justify-center text-sm text-muted-foreground">
-                                No cost data available.
-                            </div>
-                        ) : (
-                            <ChartContainer
-                                config={costBreakdownConfig}
-                                className="mx-auto h-[280px] w-full max-w-[300px]"
-                            >
-                                <PieChart>
-                                    <ChartTooltip
-                                        content={
-                                            <ChartTooltipContent
-                                                formatter={(value, name) =>
-                                                    `${name}: £${Number(value).toLocaleString()}`
-                                                }
-                                            />
-                                        }
-                                    />
-                                    <Pie
-                                        data={costBreakdown}
-                                        dataKey="value"
-                                        nameKey="name"
-                                        innerRadius={60}
-                                        outerRadius={90}
-                                        paddingAngle={3}
+                                {fleetActivity.length === 0 ? (
+                                    <div className="flex h-[280px] items-center justify-center text-sm text-muted-foreground">
+                                        No activity data available.
+                                    </div>
+                                ) : (
+                                    <ChartContainer
+                                        config={fleetActivityConfig}
+                                        className="h-[280px] w-full"
                                     >
-                                        {costBreakdown.map((entry, index) => (
-                                            <Cell
-                                                key={entry.name}
-                                                fill={
-                                                    CHART_COLORS[
-                                                        index %
-                                                            CHART_COLORS.length
-                                                    ]
-                                                }
-                                            />
-                                        ))}
-                                    </Pie>
-                                    <ChartLegend
-                                        content={<ChartLegendContent />}
-                                    />
-                                </PieChart>
-                            </ChartContainer>
-                        )}
-                    </FleetChartCard>
-                </div>
-
-                {/* ============================================= */}
-                {/* Section 4 — AI Intelligence Layer               */}
-                {/* ============================================= */}
-                <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
-                    {/* AI Panel — col-span-4 */}
-                    {isChartDataLoading ? (
-                        <Card className="lg:col-span-4">
-                            <CardContent>
-                                <Skeleton className="h-[280px] w-full rounded-lg" />
-                            </CardContent>
-                        </Card>
-                    ) : (
-                        <FleetAiPanel
-                            predictions={aiPredictions}
-                            className="lg:col-span-4"
-                        />
-                    )}
-
-                    {/* Fuel Spend Trend — col-span-3 */}
-                    <FleetChartCard
-                        title="Fuel Spend Trend"
-                        description="Daily fuel cost over 30 days"
-                        className="lg:col-span-3"
-                    >
-                        {isChartDataLoading ? (
-                            <Skeleton className="h-[280px] w-full rounded-lg" />
-                        ) : fuelCostTrend.length === 0 ? (
-                            <div className="flex h-[280px] items-center justify-center text-sm text-muted-foreground">
-                                No fuel data available.
-                            </div>
-                        ) : (
-                            <ChartContainer
-                                config={fuelTrendConfig}
-                                className="h-[280px] w-full"
-                            >
-                                <LineChart
-                                    data={fuelCostTrend}
-                                    margin={{
-                                        top: 8,
-                                        right: 8,
-                                        left: 0,
-                                        bottom: 0,
-                                    }}
-                                >
-                                    <CartesianGrid
-                                        strokeDasharray="3 3"
-                                        vertical={false}
-                                    />
-                                    <XAxis
-                                        dataKey="label"
-                                        tickLine={false}
-                                        axisLine={false}
-                                        fontSize={11}
-                                        interval="preserveStartEnd"
-                                    />
-                                    <YAxis
-                                        tickLine={false}
-                                        axisLine={false}
-                                        fontSize={11}
-                                        tickFormatter={(v) => `£${v}`}
-                                    />
-                                    <ChartTooltip
-                                        content={
-                                            <ChartTooltipContent
-                                                formatter={(value) =>
-                                                    `£${Number(value).toLocaleString()}`
-                                                }
-                                            />
-                                        }
-                                    />
-                                    <Line
-                                        type="monotone"
-                                        dataKey="cost"
-                                        stroke="var(--color-cost)"
-                                        strokeWidth={2}
-                                        dot={false}
-                                    />
-                                </LineChart>
-                            </ChartContainer>
-                        )}
-                    </FleetChartCard>
-                </div>
-
-                {/* ============================================= */}
-                {/* Section 5 — Operational Detail                  */}
-                {/* ============================================= */}
-                <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-                    {/* Recent Alerts */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                                <AlertTriangle className="size-4 text-muted-foreground" />
-                                Recent Alerts
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="pt-0">
-                            {activeAlerts === 0 ? (
-                                <p className="text-sm text-muted-foreground">
-                                    No active alerts.
-                                </p>
-                            ) : (
-                                <div className="space-y-3">
-                                    <p className="text-sm text-muted-foreground">
-                                        {activeAlerts} active alert
-                                        {activeAlerts !== 1 ? 's' : ''} in your
-                                        fleet.
-                                    </p>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        asChild
-                                    >
-                                        <Link href="/fleet/alerts?status=active">
-                                            View all alerts
-                                        </Link>
-                                    </Button>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-
-                    {/* Upcoming Maintenance */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                                <Calendar className="size-4 text-muted-foreground" />
-                                Upcoming Maintenance
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="pt-0">
-                            {isChartDataLoading ? (
-                                <Skeleton className="h-32 w-full rounded-lg" />
-                            ) : upcomingMaintenance.length === 0 ? (
-                                <p className="text-sm text-muted-foreground">
-                                    No maintenance scheduled within 14 days.
-                                </p>
-                            ) : (
-                                <ul className="divide-y divide-border">
-                                    {upcomingMaintenance.map((item) => (
-                                        <li
-                                            key={item.id}
-                                            className="flex items-center justify-between gap-2 py-2 first:pt-0 last:pb-0"
+                                        <AreaChart
+                                            data={fleetActivity}
+                                            margin={{
+                                                top: 8,
+                                                right: 8,
+                                                left: 0,
+                                                bottom: 0,
+                                            }}
                                         >
-                                            <div className="min-w-0">
-                                                <p className="truncate text-sm font-medium">
-                                                    {item.vehicle_name}
-                                                </p>
-                                                <p className="text-xs text-muted-foreground">
-                                                    {item.service_type
-                                                        .replace(/_/g, ' ')
-                                                        .replace(/^\w/, (c) =>
-                                                            c.toUpperCase(),
+                                            <defs>
+                                                <linearGradient
+                                                    id="fillTrips"
+                                                    x1="0"
+                                                    y1="0"
+                                                    x2="0"
+                                                    y2="1"
+                                                >
+                                                    <stop
+                                                        offset="0%"
+                                                        stopColor="var(--color-trips)"
+                                                        stopOpacity={0.3}
+                                                    />
+                                                    <stop
+                                                        offset="100%"
+                                                        stopColor="var(--color-trips)"
+                                                        stopOpacity={0.05}
+                                                    />
+                                                </linearGradient>
+                                                <linearGradient
+                                                    id="fillWorkOrders"
+                                                    x1="0"
+                                                    y1="0"
+                                                    x2="0"
+                                                    y2="1"
+                                                >
+                                                    <stop
+                                                        offset="0%"
+                                                        stopColor="var(--color-work_orders)"
+                                                        stopOpacity={0.3}
+                                                    />
+                                                    <stop
+                                                        offset="100%"
+                                                        stopColor="var(--color-work_orders)"
+                                                        stopOpacity={0.05}
+                                                    />
+                                                </linearGradient>
+                                            </defs>
+                                            <CartesianGrid
+                                                strokeDasharray="3 3"
+                                                vertical={false}
+                                            />
+                                            <XAxis
+                                                dataKey="label"
+                                                tickLine={false}
+                                                axisLine={false}
+                                                fontSize={11}
+                                                interval="preserveStartEnd"
+                                            />
+                                            <YAxis
+                                                tickLine={false}
+                                                axisLine={false}
+                                                fontSize={11}
+                                                allowDecimals={false}
+                                            />
+                                            <ChartTooltip
+                                                content={
+                                                    <ChartTooltipContent />
+                                                }
+                                            />
+                                            <ChartLegend
+                                                content={
+                                                    <ChartLegendContent />
+                                                }
+                                            />
+                                            <Area
+                                                type="monotone"
+                                                dataKey="trips"
+                                                stroke="var(--color-trips)"
+                                                fill="url(#fillTrips)"
+                                                strokeWidth={2}
+                                            />
+                                            <Area
+                                                type="monotone"
+                                                dataKey="work_orders"
+                                                stroke="var(--color-work_orders)"
+                                                fill="url(#fillWorkOrders)"
+                                                strokeWidth={2}
+                                            />
+                                        </AreaChart>
+                                    </ChartContainer>
+                                )}
+                            </FleetChartCard>
+
+                            {/* Cost Breakdown — col-span-3 */}
+                            <FleetChartCard
+                                title="Cost Breakdown"
+                                description="Fuel, maintenance, and insurance (30 days)"
+                                className="lg:col-span-3"
+                            >
+                                {costBreakdown.every((c) => c.value === 0) ? (
+                                    <div className="flex h-[280px] items-center justify-center text-sm text-muted-foreground">
+                                        No cost data available.
+                                    </div>
+                                ) : (
+                                    <ChartContainer
+                                        config={costBreakdownConfig}
+                                        className="mx-auto h-[280px] w-full max-w-[300px]"
+                                    >
+                                        <PieChart>
+                                            <ChartTooltip
+                                                content={
+                                                    <ChartTooltipContent
+                                                        formatter={(
+                                                            value,
+                                                            name,
+                                                        ) =>
+                                                            `${name}: £${Number(value).toLocaleString()}`
+                                                        }
+                                                    />
+                                                }
+                                            />
+                                            <Pie
+                                                data={costBreakdown}
+                                                dataKey="value"
+                                                nameKey="name"
+                                                innerRadius={60}
+                                                outerRadius={90}
+                                                paddingAngle={3}
+                                            >
+                                                {costBreakdown.map(
+                                                    (entry, index) => (
+                                                        <Cell
+                                                            key={entry.name}
+                                                            fill={
+                                                                CHART_COLORS[
+                                                                    index %
+                                                                        CHART_COLORS.length
+                                                                ]
+                                                            }
+                                                        />
+                                                    ),
+                                                )}
+                                            </Pie>
+                                            <ChartLegend
+                                                content={
+                                                    <ChartLegendContent />
+                                                }
+                                            />
+                                        </PieChart>
+                                    </ChartContainer>
+                                )}
+                            </FleetChartCard>
+                        </div>
+
+                        {/* ============================================= */}
+                        {/* Section 4 — AI Intelligence Layer               */}
+                        {/* ============================================= */}
+                        <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
+                            {/* AI Panel — col-span-4 */}
+                            <FleetAiPanel
+                                predictions={aiPredictions}
+                                className="lg:col-span-4"
+                            />
+
+                            {/* Fuel Spend Trend — col-span-3 */}
+                            <FleetChartCard
+                                title="Fuel Spend Trend"
+                                description="Daily fuel cost over 30 days"
+                                className="lg:col-span-3"
+                            >
+                                {fuelCostTrend.length === 0 ? (
+                                    <div className="flex h-[280px] items-center justify-center text-sm text-muted-foreground">
+                                        No fuel data available.
+                                    </div>
+                                ) : (
+                                    <ChartContainer
+                                        config={fuelTrendConfig}
+                                        className="h-[280px] w-full"
+                                    >
+                                        <LineChart
+                                            data={fuelCostTrend}
+                                            margin={{
+                                                top: 8,
+                                                right: 8,
+                                                left: 0,
+                                                bottom: 0,
+                                            }}
+                                        >
+                                            <CartesianGrid
+                                                strokeDasharray="3 3"
+                                                vertical={false}
+                                            />
+                                            <XAxis
+                                                dataKey="label"
+                                                tickLine={false}
+                                                axisLine={false}
+                                                fontSize={11}
+                                                interval="preserveStartEnd"
+                                            />
+                                            <YAxis
+                                                tickLine={false}
+                                                axisLine={false}
+                                                fontSize={11}
+                                                tickFormatter={(v) => `£${v}`}
+                                            />
+                                            <ChartTooltip
+                                                content={
+                                                    <ChartTooltipContent
+                                                        formatter={(value) =>
+                                                            `£${Number(value).toLocaleString()}`
+                                                        }
+                                                    />
+                                                }
+                                            />
+                                            <Line
+                                                type="monotone"
+                                                dataKey="cost"
+                                                stroke="var(--color-cost)"
+                                                strokeWidth={2}
+                                                dot={false}
+                                            />
+                                        </LineChart>
+                                    </ChartContainer>
+                                )}
+                            </FleetChartCard>
+                        </div>
+
+                        {/* ============================================= */}
+                        {/* Section 5 — Operational Detail                  */}
+                        {/* ============================================= */}
+                        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                            {/* Recent Alerts */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                                        <AlertTriangle className="size-4 text-muted-foreground" />
+                                        Recent Alerts
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="pt-0">
+                                    {activeAlerts === 0 ? (
+                                        <p className="text-sm text-muted-foreground">
+                                            No active alerts.
+                                        </p>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            <p className="text-sm text-muted-foreground">
+                                                {activeAlerts} active alert
+                                                {activeAlerts !== 1
+                                                    ? 's'
+                                                    : ''}{' '}
+                                                in your fleet.
+                                            </p>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                asChild
+                                            >
+                                                <Link href="/fleet/alerts?status=active">
+                                                    View all alerts
+                                                </Link>
+                                            </Button>
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+
+                            {/* Upcoming Maintenance */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                                        <Calendar className="size-4 text-muted-foreground" />
+                                        Upcoming Maintenance
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="pt-0">
+                                    {upcomingMaintenance.length === 0 ? (
+                                        <p className="text-sm text-muted-foreground">
+                                            No maintenance scheduled within 14
+                                            days.
+                                        </p>
+                                    ) : (
+                                        <ul className="divide-y divide-border">
+                                            {upcomingMaintenance.map((item) => (
+                                                <li
+                                                    key={item.id}
+                                                    className="flex items-center justify-between gap-2 py-2 first:pt-0 last:pb-0"
+                                                >
+                                                    <div className="min-w-0">
+                                                        <p className="truncate text-sm font-medium">
+                                                            {item.vehicle_name}
+                                                        </p>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            {item.service_type
+                                                                .replace(
+                                                                    /_/g,
+                                                                    ' ',
+                                                                )
+                                                                .replace(
+                                                                    /^\w/,
+                                                                    (c) =>
+                                                                        c.toUpperCase(),
+                                                                )}
+                                                        </p>
+                                                    </div>
+                                                    <span className="shrink-0 text-xs text-muted-foreground">
+                                                        {new Date(
+                                                            item.next_service_due_date,
+                                                        ).toLocaleDateString(
+                                                            'en-GB',
+                                                            {
+                                                                day: 'numeric',
+                                                                month: 'short',
+                                                            },
                                                         )}
-                                                </p>
-                                            </div>
-                                            <span className="shrink-0 text-xs text-muted-foreground">
-                                                {new Date(
-                                                    item.next_service_due_date,
-                                                ).toLocaleDateString('en-GB', {
-                                                    day: 'numeric',
-                                                    month: 'short',
-                                                })}
-                                            </span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            )}
-                        </CardContent>
-                    </Card>
+                                                    </span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                </CardContent>
+                            </Card>
 
-                    {/* Driver Safety Distribution */}
-                    <FleetChartCard
-                        title="Driver Safety"
-                        description="Distribution by safety score"
-                    >
-                        {isChartDataLoading ? (
-                            <Skeleton className="h-[200px] w-full rounded-lg" />
-                        ) : driverSafety.every((d) => d.value === 0) ? (
-                            <div className="flex h-[200px] items-center justify-center text-sm text-muted-foreground">
-                                No driver data.
-                            </div>
-                        ) : (
-                            <ChartContainer
-                                config={safetyConfig}
-                                className="mx-auto h-[200px] w-full max-w-[240px]"
+                            {/* Driver Safety Distribution */}
+                            <FleetChartCard
+                                title="Driver Safety"
+                                description="Distribution by safety score"
                             >
-                                <PieChart>
-                                    <ChartTooltip
-                                        content={<ChartTooltipContent />}
-                                    />
-                                    <Pie
-                                        data={driverSafety}
-                                        dataKey="value"
-                                        nameKey="name"
-                                        innerRadius={45}
-                                        outerRadius={70}
-                                        paddingAngle={3}
+                                {driverSafety.every((d) => d.value === 0) ? (
+                                    <div className="flex h-[200px] items-center justify-center text-sm text-muted-foreground">
+                                        No driver data.
+                                    </div>
+                                ) : (
+                                    <ChartContainer
+                                        config={safetyConfig}
+                                        className="mx-auto h-[200px] w-full max-w-[240px]"
                                     >
-                                        {driverSafety.map((entry, index) => (
-                                            <Cell
-                                                key={entry.name}
-                                                fill={
-                                                    index === 0
-                                                        ? 'var(--chart-1)'
-                                                        : index === 1
-                                                          ? 'var(--chart-4)'
-                                                          : 'var(--chart-5)'
+                                        <PieChart>
+                                            <ChartTooltip
+                                                content={
+                                                    <ChartTooltipContent />
                                                 }
                                             />
-                                        ))}
-                                    </Pie>
-                                    <ChartLegend
-                                        content={<ChartLegendContent />}
-                                    />
-                                </PieChart>
-                            </ChartContainer>
-                        )}
-                    </FleetChartCard>
-                </div>
+                                            <Pie
+                                                data={driverSafety}
+                                                dataKey="value"
+                                                nameKey="name"
+                                                innerRadius={45}
+                                                outerRadius={70}
+                                                paddingAngle={3}
+                                            >
+                                                {driverSafety.map(
+                                                    (entry, index) => (
+                                                        <Cell
+                                                            key={entry.name}
+                                                            fill={
+                                                                index === 0
+                                                                    ? 'var(--chart-1)'
+                                                                    : index ===
+                                                                        1
+                                                                      ? 'var(--chart-4)'
+                                                                      : 'var(--chart-5)'
+                                                            }
+                                                        />
+                                                    ),
+                                                )}
+                                            </Pie>
+                                            <ChartLegend
+                                                content={
+                                                    <ChartLegendContent />
+                                                }
+                                            />
+                                        </PieChart>
+                                    </ChartContainer>
+                                )}
+                            </FleetChartCard>
+                        </div>
+                    </>
+                )}
 
                 {/* ============================================= */}
                 {/* Section 6 — Fleet Map (collapsible, closed)    */}
