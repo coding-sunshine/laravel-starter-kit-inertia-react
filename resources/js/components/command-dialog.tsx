@@ -16,6 +16,7 @@ import { create as contactCreate } from '@/routes/contact';
 import { index as helpIndex } from '@/routes/help';
 import organizations from '@/routes/organizations';
 import { edit as editUserProfile } from '@/routes/user-profile';
+import { fleetNavItems } from '@/config/fleet-nav';
 import { type NavItem, type SharedData } from '@/types';
 import { router, usePage } from '@inertiajs/react';
 import { getHotkeyManager } from '@tanstack/hotkeys';
@@ -29,6 +30,7 @@ import {
     Mail,
     Megaphone,
     Settings,
+    Truck,
     Users,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -160,7 +162,8 @@ export function CommandPalette(): React.ReactElement {
     useEffect(() => {
         const handler = () => setOpen(true);
         window.addEventListener('open-command-palette', handler);
-        return () => window.removeEventListener('open-command-palette', handler);
+        return () =>
+            window.removeEventListener('open-command-palette', handler);
     }, []);
 
     useEffect(() => {
@@ -202,10 +205,7 @@ export function CommandPalette(): React.ReactElement {
                     }
                 })
                 .catch((error: unknown) => {
-                    if (
-                        error instanceof Error &&
-                        error.name !== 'AbortError'
-                    ) {
+                    if (error instanceof Error && error.name !== 'AbortError') {
                         setIsSearching(false);
                     }
                 });
@@ -228,8 +228,7 @@ export function CommandPalette(): React.ReactElement {
     const logoutUrl = logout();
     const isSearchMode = query.length > 0;
     const hasResults =
-        results &&
-        Object.values(results).some((arr) => arr.length > 0);
+        results && Object.values(results).some((arr) => arr.length > 0);
 
     return (
         <CommandDialog
@@ -256,46 +255,49 @@ export function CommandPalette(): React.ReactElement {
                         )}
                         {!isSearching &&
                             results &&
-                            (
-                                Object.keys(CATEGORY_CONFIG) as CategoryKey[]
-                            ).map((key) => {
-                                const config = CATEGORY_CONFIG[key];
-                                const items = results[key];
-                                if (!items || items.length === 0) return null;
-                                const Icon = config.icon;
-                                return (
-                                    <CommandGroup
-                                        key={key}
-                                        heading={config.label}
-                                    >
-                                        {items.map((item) => (
-                                            <CommandItem
-                                                key={`${item.type}-${item.id}`}
-                                                value={`${item.type}-${item.id}-${item.title}`}
-                                                onSelect={() => run(item.url)}
-                                            >
-                                                <Icon className="size-4 shrink-0" />
-                                                <div className="flex min-w-0 flex-1 flex-col">
-                                                    <span className="truncate">
-                                                        {item.title}
-                                                    </span>
-                                                    {item.subtitle && (
-                                                        <span className="truncate text-xs text-muted-foreground">
-                                                            {item.subtitle}
+                            (Object.keys(CATEGORY_CONFIG) as CategoryKey[]).map(
+                                (key) => {
+                                    const config = CATEGORY_CONFIG[key];
+                                    const items = results[key];
+                                    if (!items || items.length === 0)
+                                        return null;
+                                    const Icon = config.icon;
+                                    return (
+                                        <CommandGroup
+                                            key={key}
+                                            heading={config.label}
+                                        >
+                                            {items.map((item) => (
+                                                <CommandItem
+                                                    key={`${item.type}-${item.id}`}
+                                                    value={`${item.type}-${item.id}-${item.title}`}
+                                                    onSelect={() =>
+                                                        run(item.url)
+                                                    }
+                                                >
+                                                    <Icon className="size-4 shrink-0" />
+                                                    <div className="flex min-w-0 flex-1 flex-col">
+                                                        <span className="truncate">
+                                                            {item.title}
                                                         </span>
-                                                    )}
-                                                </div>
-                                                <span className="ml-auto shrink-0 text-xs text-muted-foreground capitalize">
-                                                    {item.type.replace(
-                                                        '_',
-                                                        ' ',
-                                                    )}
-                                                </span>
-                                            </CommandItem>
-                                        ))}
-                                    </CommandGroup>
-                                );
-                            })}
+                                                        {item.subtitle && (
+                                                            <span className="truncate text-xs text-muted-foreground">
+                                                                {item.subtitle}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <span className="ml-auto shrink-0 text-xs text-muted-foreground capitalize">
+                                                        {item.type.replace(
+                                                            '_',
+                                                            ' ',
+                                                        )}
+                                                    </span>
+                                                </CommandItem>
+                                            ))}
+                                        </CommandGroup>
+                                    );
+                                },
+                            )}
                     </>
                 ) : (
                     <>
@@ -313,9 +315,22 @@ export function CommandPalette(): React.ReactElement {
                                         value={item.title}
                                         onSelect={() => run(href)}
                                     >
-                                        {Icon && (
-                                            <Icon className="size-4" />
-                                        )}
+                                        {Icon && <Icon className="size-4" />}
+                                        {item.title}
+                                    </CommandItem>
+                                );
+                            })}
+                        </CommandGroup>
+                        <CommandGroup heading="Fleet">
+                            {fleetNavItems.map((item) => {
+                                const Icon = item.icon ?? Truck;
+                                return (
+                                    <CommandItem
+                                        key={item.href}
+                                        value={item.title}
+                                        onSelect={() => run(item.href)}
+                                    >
+                                        <Icon className="size-4" />
                                         {item.title}
                                     </CommandItem>
                                 );
@@ -340,6 +355,28 @@ export function CommandPalette(): React.ReactElement {
                     </>
                 )}
             </CommandList>
+            <footer
+                className="border-t px-3 py-2 text-center text-xs text-muted-foreground"
+                aria-label="Keyboard shortcuts"
+            >
+                <span className="sr-only">Keyboard shortcuts: </span>
+                <kbd className="rounded border bg-muted/80 px-1.5 py-0.5 font-mono text-[10px]">
+                    Esc
+                </kbd>{' '}
+                to close
+                {' · '}
+                <kbd className="rounded border bg-muted/80 px-1.5 py-0.5 font-mono text-[10px]">
+                    ⌘
+                </kbd>
+                <kbd className="rounded border bg-muted/80 px-1.5 py-0.5 font-mono text-[10px]">
+                    K
+                </kbd>{' '}
+                or{' '}
+                <kbd className="rounded border bg-muted/80 px-1.5 py-0.5 font-mono text-[10px]">
+                    Ctrl+K
+                </kbd>{' '}
+                to open again
+            </footer>
         </CommandDialog>
     );
 }
