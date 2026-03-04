@@ -7,6 +7,7 @@ import {
     SidebarGroup,
     SidebarGroupLabel,
     SidebarMenu,
+    SidebarMenuBadge,
     SidebarMenuButton,
     SidebarMenuItem,
     SidebarMenuSub,
@@ -14,7 +15,7 @@ import {
     SidebarMenuSubItem,
 } from '@/components/ui/sidebar';
 import type { FleetNavItem, FleetNavSection } from '@/config/fleet-nav';
-import { type NavItem } from '@/types';
+import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import { ChevronRight, MoreHorizontal } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -45,9 +46,10 @@ export function NavMain({
     fleetDashboardItem?: FleetNavItem;
     fleetNavSections?: FleetNavSection[];
 }) {
-    const page = usePage();
+    const page = usePage<SharedData>();
     const pageUrl = page.url;
     const isFleetPath = pageUrl.startsWith('/fleet');
+    const fleetAlertCount = page.props.fleet_alert_count ?? 0;
     const [fleetOpen, setFleetOpen] = useState(isFleetPath);
     const [openSubmenus, setOpenSubmenus] = useState<Record<string, boolean>>(
         {},
@@ -113,10 +115,19 @@ export function NavMain({
                                     <SectionIcon className="mr-1 size-3.5" />
                                 )}
                                 {section.label}
+                                {section.label === 'AI & Intelligence' && (
+                                    <span className="relative ml-1.5 flex size-2">
+                                        <span className="absolute inline-flex size-full animate-ping rounded-full bg-violet-400 opacity-75" />
+                                        <span className="relative inline-flex size-2 rounded-full bg-violet-500" />
+                                    </span>
+                                )}
                             </SidebarGroupLabel>
                             <SidebarMenu>
                                 {section.items.map((item) => {
                                     const ItemIcon = item.icon;
+                                    const showAlertBadge =
+                                        item.title === 'Alerts' &&
+                                        fleetAlertCount > 0;
                                     return (
                                         <SidebarMenuItem key={item.href}>
                                             <SidebarMenuButton
@@ -137,6 +148,11 @@ export function NavMain({
                                                     <span>{item.title}</span>
                                                 </Link>
                                             </SidebarMenuButton>
+                                            {showAlertBadge && (
+                                                <SidebarMenuBadge className="bg-red-500 text-white">
+                                                    {fleetAlertCount}
+                                                </SidebarMenuBadge>
+                                            )}
                                         </SidebarMenuItem>
                                     );
                                 })}
