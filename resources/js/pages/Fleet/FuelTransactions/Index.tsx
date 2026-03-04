@@ -1,12 +1,15 @@
 import { FleetIndexSummaryBar } from '@/components/fleet';
 import type { SummaryStat } from '@/components/fleet';
 import { Button } from '@/components/ui/button';
+import { ChartContainer } from '@/components/ui/chart';
+import type { ChartConfig } from '@/components/ui/chart';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Form, Head, Link } from '@inertiajs/react';
-import { AlertTriangle, Car, Fuel, Pencil, Plus, PoundSterling, Trash2 } from 'lucide-react';
+import { AlertTriangle, Car, Fuel, Pencil, Plus, PoundSterling, Trash2, TrendingUp } from 'lucide-react';
+import { Area, AreaChart } from 'recharts';
 
 interface TxRecord {
     id: number;
@@ -15,6 +18,10 @@ interface TxRecord {
     total_cost: number;
     vehicle?: { id: number; registration: string };
     fuel_card?: { id: number; card_number: string };
+}
+interface DailySpendPoint {
+    date: string;
+    spend: number;
 }
 interface Props {
     fuelTransactions: {
@@ -29,6 +36,40 @@ interface Props {
         avg_per_vehicle: number;
         flagged: number;
     };
+    dailySpend?: DailySpendPoint[];
+}
+
+const spendSparklineConfig = {
+    spend: { label: 'Daily Spend', color: 'var(--chart-1)' },
+} satisfies ChartConfig;
+
+function SpendSparkline({ data }: { data: DailySpendPoint[] }) {
+    return (
+        <div className="rounded-xl border bg-card p-4 shadow-sm">
+            <div className="mb-2 flex items-center gap-2">
+                <TrendingUp className="size-4 text-muted-foreground" />
+                <h4 className="text-sm font-medium text-muted-foreground">30-Day Spend Trend</h4>
+            </div>
+            <ChartContainer config={spendSparklineConfig} className="h-16 w-full">
+                <AreaChart data={data} margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>
+                    <defs>
+                        <linearGradient id="spendGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="var(--color-spend)" stopOpacity={0.3} />
+                            <stop offset="100%" stopColor="var(--color-spend)" stopOpacity={0.05} />
+                        </linearGradient>
+                    </defs>
+                    <Area
+                        type="monotone"
+                        dataKey="spend"
+                        stroke="var(--color-spend)"
+                        strokeWidth={2}
+                        fill="url(#spendGradient)"
+                        isAnimationActive={true}
+                    />
+                </AreaChart>
+            </ChartContainer>
+        </div>
+    );
 }
 
 export default function FleetFuelTransactionsIndex({
@@ -37,6 +78,7 @@ export default function FleetFuelTransactionsIndex({
     vehicles,
     fuelCards,
     summary,
+    dailySpend,
 }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard().url },
@@ -69,6 +111,10 @@ export default function FleetFuelTransactionsIndex({
                             ] satisfies SummaryStat[]
                         }
                     />
+                )}
+
+                {dailySpend && dailySpend.length > 0 && (
+                    <SpendSparkline data={dailySpend} />
                 )}
 
                 <form

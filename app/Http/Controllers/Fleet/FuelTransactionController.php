@@ -49,12 +49,35 @@ final class FuelTransactionController extends Controller
             ];
         }, 'summary');
 
+        $dailySpend = Inertia::defer(function () {
+            $thirtyDaysAgo = now()->subDays(29)->startOfDay();
+
+            $rows = FuelTransaction::query()
+                ->where('transaction_timestamp', '>=', $thirtyDaysAgo)
+                ->selectRaw('DATE(transaction_timestamp) as date, SUM(total_cost) as total')
+                ->groupByRaw('DATE(transaction_timestamp)')
+                ->orderBy('date')
+                ->pluck('total', 'date');
+
+            $result = [];
+            for ($i = 0; $i < 30; $i++) {
+                $date = now()->subDays(29 - $i)->format('Y-m-d');
+                $result[] = [
+                    'date' => $date,
+                    'spend' => round((float) ($rows[$date] ?? 0), 2),
+                ];
+            }
+
+            return $result;
+        }, 'dailySpend');
+
         return Inertia::render('Fleet/FuelTransactions/Index', [
             'fuelTransactions' => $transactions,
             'filters' => $request->only(['vehicle_id', 'fuel_card_id']),
             'vehicles' => \App\Models\Fleet\Vehicle::query()->orderBy('registration')->get(['id', 'registration']),
             'fuelCards' => \App\Models\Fleet\FuelCard::query()->orderBy('card_number')->get(['id', 'card_number']),
             'summary' => $summary,
+            'dailySpend' => $dailySpend,
         ]);
     }
 
