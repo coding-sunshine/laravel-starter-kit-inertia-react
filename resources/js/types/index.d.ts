@@ -95,6 +95,7 @@ export interface SharedData {
     theme?: ThemeProps;
     /** Org branding (logo, theme overrides). Resolved lazily after tenant context. */
     branding?: BrandingProps;
+    fleet_alert_count?: number;
     [key: string]: unknown;
 }
 
