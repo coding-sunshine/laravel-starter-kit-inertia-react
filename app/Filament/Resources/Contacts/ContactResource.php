@@ -22,13 +22,13 @@ final class ContactResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'first_name';
 
-    protected static string|UnitEnum|null $navigationGroup = 'CRM';
+    protected static string|UnitEnum|null $navigationGroup = 'Accounts';
 
     protected static ?int $navigationSort = 1;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUsers;
 
-    protected static ?string $navigationLabel = 'Contacts / Leads';
+    protected static ?string $navigationLabel = 'Clients';
 
     public static function getModelLabel(): string
     {
@@ -47,7 +47,7 @@ final class ContactResource extends Resource
 
     public static function table(Table $table): Table
     {
-        return \App\Filament\Resources\Contacts\Tables\ContactsTable::configure($table);
+        return Tables\ContactsTable::configure($table);
     }
 
     public static function getPages(): array

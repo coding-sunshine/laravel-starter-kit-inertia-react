@@ -16,7 +16,7 @@ use UnitEnum;
 
 final class ManageFilesystem extends SettingsPage
 {
-    protected static string|UnitEnum|null $navigationGroup = 'System';
+    protected static string|UnitEnum|null $navigationGroup = null;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedFolderOpen;
 
@@ -25,6 +25,11 @@ final class ManageFilesystem extends SettingsPage
     protected static ?int $navigationSort = 40;
 
     protected static string $settings = FilesystemSettings::class;
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
 
     public function form(Schema $schema): Schema
     {

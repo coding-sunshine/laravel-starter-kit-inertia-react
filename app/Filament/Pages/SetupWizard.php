@@ -35,7 +35,7 @@ final class SetupWizard extends Page implements HasForms
     /** @var array<string, mixed> */
     public ?array $data = [];
 
-    protected static string|UnitEnum|null $navigationGroup = 'Platform';
+    protected static string|UnitEnum|null $navigationGroup = null;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRocketLaunch;
 
@@ -48,6 +48,11 @@ final class SetupWizard extends Page implements HasForms
     protected static ?string $title = 'Setup Wizard';
 
     protected static ?string $slug = 'setup-wizard';
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
 
     public static function canAccess(): bool
     {

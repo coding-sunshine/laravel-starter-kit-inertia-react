@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Filament\Resources\Lots;
 
 use App\Filament\Resources\Lots\Pages\CreateLot;
@@ -17,10 +19,15 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use UnitEnum;
 
-class LotResource extends Resource
+final class LotResource extends Resource
 {
     protected static ?string $model = Lot::class;
+
+    protected static string|UnitEnum|null $navigationGroup = 'Property Portal';
+
+    protected static ?int $navigationSort = 2;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 

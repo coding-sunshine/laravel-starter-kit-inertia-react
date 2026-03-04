@@ -14,7 +14,7 @@ use UnitEnum;
 
 final class ManageLemonSqueezy extends SettingsPage
 {
-    protected static string|UnitEnum|null $navigationGroup = 'Integrations';
+    protected static string|UnitEnum|null $navigationGroup = null;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedReceiptPercent;
 
@@ -23,6 +23,11 @@ final class ManageLemonSqueezy extends SettingsPage
     protected static ?int $navigationSort = 40;
 
     protected static string $settings = LemonSqueezySettings::class;
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
 
     public function form(Schema $schema): Schema
     {

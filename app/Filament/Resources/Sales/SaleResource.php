@@ -26,9 +26,9 @@ final class SaleResource extends Resource
 
     protected static ?string $model = Sale::class;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Sales & Reservations';
+    protected static string|UnitEnum|null $navigationGroup = null;
 
-    protected static ?int $navigationSort = 40;
+    protected static ?int $navigationSort = 1;
 
     protected static ?string $recordTitleAttribute = 'id';
 

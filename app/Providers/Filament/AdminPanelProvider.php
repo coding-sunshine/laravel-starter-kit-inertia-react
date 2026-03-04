@@ -6,6 +6,7 @@ namespace App\Providers\Filament;
 
 use A909M\FilamentStateFusion\FilamentStateFusionPlugin;
 use AlizHarb\ActivityLog\ActivityLogPlugin;
+use App\Filament\Pages\Dashboard;
 use App\Http\Middleware\EnsureSetupComplete;
 use App\Http\Middleware\SetTenantContext;
 use Filament\Enums\ThemeMode;
@@ -14,7 +15,6 @@ use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Navigation\NavigationGroup;
-use App\Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
@@ -52,23 +52,24 @@ final class AdminPanelProvider extends PanelProvider
             ->maxContentWidth(Width::SevenExtraLarge)
             ->databaseNotifications()
             ->navigationGroups([
-                NavigationGroup::make('CRM')
-                    ->icon('heroicon-o-building-office'),
-                NavigationGroup::make('Properties')
-                    ->icon('heroicon-o-home'),
-                NavigationGroup::make('Sales & Reservations')
-                    ->icon('heroicon-o-currency-dollar'),
-                NavigationGroup::make('Tasks & Marketing')
-                    ->icon('heroicon-o-megaphone'),
-                NavigationGroup::make('AI Bot')
-                    ->icon('heroicon-o-cpu-chip')
-                    ->collapsed(),
-                NavigationGroup::make('Analytics')
-                    ->icon('heroicon-o-chart-pie')
-                    ->collapsed(),
+                NavigationGroup::make('Accounts')
+                    ->icon('heroicon-o-user-group')
+                    ->collapsible(),
+                NavigationGroup::make('Marketing Tools')
+                    ->icon('heroicon-o-briefcase')
+                    ->collapsible(),
+                NavigationGroup::make('Property Portal')
+                    ->icon('heroicon-o-building-office-2')
+                    ->collapsible(),
                 NavigationGroup::make('Reports')
                     ->icon('heroicon-o-chart-bar')
-                    ->collapsed(),
+                    ->collapsible(),
+                NavigationGroup::make('Online Forms')
+                    ->icon('heroicon-o-document-text')
+                    ->collapsible(),
+                NavigationGroup::make('Bot Management')
+                    ->icon('heroicon-o-cpu-chip')
+                    ->collapsible(),
                 NavigationGroup::make('System')
                     ->icon('heroicon-o-cog-6-tooth')
                     ->collapsed(),
@@ -83,38 +84,63 @@ final class AdminPanelProvider extends PanelProvider
                     ->navigationSort(110),
             ])
             ->resources([
-                // Core CRM
+                // Accounts
                 \App\Filament\Resources\Contacts\ContactResource::class,
-                \App\Filament\Resources\Notes\NoteResource::class,
-                \App\Filament\Resources\Relationships\RelationshipResource::class,
-                \App\Filament\Resources\Partners\PartnerResource::class,
-                // Properties
+                \App\Filament\Resources\Partners\PartnerResource::class, // Affiliates
+                \App\Filament\Resources\Users\UserResource::class, // Subscribers
+                \App\Filament\Resources\Developers\DeveloperResource::class,
+                \App\Filament\Resources\BDMs\BDMResource::class,
+                \App\Filament\Resources\SalesAgents\SalesAgentResource::class,
+                \App\Filament\Resources\ReferralPartners\ReferralPartnerResource::class,
+                \App\Filament\Resources\PIABAdmins\PIABAdminResource::class,
+                \App\Filament\Resources\PropertyManagers\PropertyManagerResource::class,
+
+                // Marketing Tools
+                \App\Filament\Resources\Websites\WebsiteResource::class,
+                \App\Filament\Resources\Flyers\FlyerResource::class, // Landing Page
+                \App\Filament\Resources\FlyerTemplates\FlyerTemplateResource::class, // Brochures
+
+                // Property Portal
                 \App\Filament\Resources\Projects\ProjectResource::class,
                 \App\Filament\Resources\Lots\LotResource::class,
-                \App\Filament\Resources\Developers\DeveloperResource::class,
-                \App\Filament\Resources\ProjectUpdates\ProjectUpdateResource::class,
-                // Sales & Reservations
+                \App\Filament\Resources\Favourites\FavouritesResource::class,
+                \App\Filament\Resources\Featured\FeaturedResource::class,
+                \App\Filament\Resources\PotentialProperties\PotentialPropertyResource::class, // Potential Properties
+
+                // Sales (standalone)
                 \App\Filament\Resources\Sales\SaleResource::class,
-                \App\Filament\Resources\PropertyReservations\PropertyReservationResource::class,
-                \App\Filament\Resources\PropertyEnquiries\PropertyEnquiryResource::class,
-                \App\Filament\Resources\PropertySearches\PropertySearchResource::class,
-                \App\Filament\Resources\Commissions\CommissionResource::class,
-                // Tasks & Marketing
-                \App\Filament\Resources\Tasks\TaskResource::class,
-                \App\Filament\Resources\MailLists\MailListResource::class,
-                // AI Bot
-                \App\Filament\Resources\AiBot\AiBotCategoryResource::class,
-                \App\Filament\Resources\AiBot\AiBotPromptCommandResource::class,
+
+                // Reports
+                \App\Filament\Resources\NetworkActivities\NetworkActivityResource::class, // Network Activity (sort 1)
+                \App\Filament\Resources\Notes\NoteResource::class, // Notes History (sort 2)
+                \App\Filament\Resources\LogInHistories\LogInHistoryResource::class, // Log In History (sort 3)
+                \App\Filament\Resources\SameDeviceDetections\SameDeviceDetectionResource::class, // Same Device Detection (sort 4)
+                \App\Filament\Resources\PropertyReservations\PropertyReservationResource::class, // Reservations (sort 5)
+                \App\Filament\Resources\Tasks\TaskResource::class, // Tasks (sort 6)
+                \App\Filament\Resources\SprRequests\SprRequestResource::class, // SPR History (sort 7)
+                \App\Filament\Resources\Reports\ReportsWebsiteResource::class, // Website (sort 8)
+                \App\Filament\Resources\WordpressWebsites\WordpressWebsiteResource::class, // WordPress Website (sort 9)
+                \App\Filament\Resources\Reports\ReportsLandingPageResource::class, // Landing Page (sort 10)
+                \App\Filament\Resources\ApprovedApiKeys\ApprovedApiKeysResource::class, // Approved API Keys (sort 11)
+
+                // Online Forms
+                \App\Filament\Resources\PropertyEnquiries\PropertyEnquiryResource::class, // Property Enquiry
+                \App\Filament\Resources\PropertySearches\PropertySearchResource::class, // Property Search Request
+                \App\Filament\Resources\FinanceAssessments\FinanceAssessmentResource::class, // Finance Assessment
+
+                // Bot Management
                 \App\Filament\Resources\AiBot\AiBotBoxResource::class,
+                \App\Filament\Resources\AiBot\AiBotCategoryResource::class,
                 \App\Filament\Resources\BrochureProcessings\BrochureProcessingResource::class,
+
+                // Standalone items
+                \App\Filament\Resources\MailLists\MailListResource::class,
+
                 // System
-                \App\Filament\Resources\Users\UserResource::class,
                 \App\Filament\Resources\Organizations\OrganizationResource::class,
             ])
-            ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([
                 Dashboard::class,
-                \App\Filament\Pages\ProductAnalytics::class,
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->middleware([

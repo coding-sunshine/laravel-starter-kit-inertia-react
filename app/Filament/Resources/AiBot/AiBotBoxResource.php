@@ -35,11 +35,11 @@ final class AiBotBoxResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedSquare3Stack3d;
 
-    protected static string|UnitEnum|null $navigationGroup = 'AI Bot';
+    protected static string|UnitEnum|null $navigationGroup = 'Bot Management';
 
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 2;
 
-    protected static ?string $navigationLabel = 'Bot boxes';
+    protected static ?string $navigationLabel = 'Bot In A Box';
 
     public static function form(Schema $schema): Schema
     {

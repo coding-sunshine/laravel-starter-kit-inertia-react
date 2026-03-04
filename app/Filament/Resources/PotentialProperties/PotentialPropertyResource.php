@@ -22,9 +22,9 @@ final class PotentialPropertyResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'title';
 
-    protected static string|UnitEnum|null $navigationGroup = 'Properties';
+    protected static string|UnitEnum|null $navigationGroup = 'Property Portal';
 
-    protected static ?int $navigationSort = 83;
+    protected static ?int $navigationSort = 3;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedHomeModern;
 

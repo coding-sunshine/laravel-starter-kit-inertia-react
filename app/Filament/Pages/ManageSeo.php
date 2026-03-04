@@ -15,7 +15,7 @@ use UnitEnum;
 
 final class ManageSeo extends SettingsPage
 {
-    protected static string|UnitEnum|null $navigationGroup = 'Platform';
+    protected static string|UnitEnum|null $navigationGroup = null;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedMagnifyingGlass;
 
@@ -24,6 +24,11 @@ final class ManageSeo extends SettingsPage
     protected static ?int $navigationSort = 40;
 
     protected static string $settings = SeoSettings::class;
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
 
     public function form(Schema $schema): Schema
     {

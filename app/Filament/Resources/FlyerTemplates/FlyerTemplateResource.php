@@ -22,13 +22,13 @@ final class FlyerTemplateResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'name';
 
-    protected static string|UnitEnum|null $navigationGroup = 'Properties';
+    protected static string|UnitEnum|null $navigationGroup = 'Marketing Tools';
 
-    protected static ?int $navigationSort = 86;
+    protected static ?int $navigationSort = 3;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocumentDuplicate;
 
-    protected static ?string $navigationLabel = 'Flyer Templates';
+    protected static ?string $navigationLabel = 'Brochures';
 
     public static function form(Schema $schema): Schema
     {

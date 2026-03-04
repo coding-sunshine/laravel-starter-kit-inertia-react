@@ -15,7 +15,7 @@ use UnitEnum;
 
 final class ManageMedia extends SettingsPage
 {
-    protected static string|UnitEnum|null $navigationGroup = 'System';
+    protected static string|UnitEnum|null $navigationGroup = null;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedPhoto;
 
@@ -24,6 +24,11 @@ final class ManageMedia extends SettingsPage
     protected static ?int $navigationSort = 30;
 
     protected static string $settings = MediaSettings::class;
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
 
     public function form(Schema $schema): Schema
     {

@@ -26,11 +26,13 @@ final class PropertyEnquiryResource extends Resource
 
     protected static ?string $model = PropertyEnquiry::class;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Sales & Reservations';
+    protected static string|UnitEnum|null $navigationGroup = 'Online Forms';
 
-    protected static ?int $navigationSort = 20;
+    protected static ?int $navigationSort = 1;
 
     protected static ?string $recordTitleAttribute = 'id';
+
+    protected static ?string $navigationLabel = 'Property Enquiry';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedEnvelope;
 

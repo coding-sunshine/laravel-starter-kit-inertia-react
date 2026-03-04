@@ -17,7 +17,7 @@ use UnitEnum;
 
 final class ManageTenancy extends SettingsPage
 {
-    protected static string|UnitEnum|null $navigationGroup = 'Platform';
+    protected static string|UnitEnum|null $navigationGroup = null;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBuildingOffice2;
 
@@ -26,6 +26,11 @@ final class ManageTenancy extends SettingsPage
     protected static ?int $navigationSort = 70;
 
     protected static string $settings = TenancySettings::class;
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
 
     public function form(Schema $schema): Schema
     {

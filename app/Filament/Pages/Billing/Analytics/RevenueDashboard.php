@@ -16,7 +16,7 @@ final class RevenueDashboard extends Page
 
     protected static ?int $navigationSort = 10;
 
-    protected static UnitEnum|string|null $navigationGroup = 'Billing';
+    protected static UnitEnum|string|null $navigationGroup = null;
 
     protected static ?string $navigationLabel = 'Revenue Analytics';
 
@@ -25,6 +25,11 @@ final class RevenueDashboard extends Page
     protected static ?string $slug = 'billing/revenue-analytics';
 
     protected string $view = 'filament.pages.billing.analytics.revenue-dashboard';
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
 
     public static function canAccess(): bool
     {

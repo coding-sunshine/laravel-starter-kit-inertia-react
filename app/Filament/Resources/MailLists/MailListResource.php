@@ -25,11 +25,13 @@ final class MailListResource extends Resource
 
     protected static ?string $model = MailList::class;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Tasks & Marketing';
+    protected static string|UnitEnum|null $navigationGroup = null;
 
-    protected static ?int $navigationSort = 90;
+    protected static ?int $navigationSort = 2;
 
     protected static ?string $recordTitleAttribute = 'name';
+
+    protected static ?string $navigationLabel = 'Mail List';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedEnvelope;
 

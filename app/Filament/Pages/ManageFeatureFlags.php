@@ -14,7 +14,7 @@ use UnitEnum;
 
 final class ManageFeatureFlags extends SettingsPage
 {
-    protected static string|UnitEnum|null $navigationGroup = 'Features & Access';
+    protected static string|UnitEnum|null $navigationGroup = null;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedFlag;
 
@@ -23,6 +23,11 @@ final class ManageFeatureFlags extends SettingsPage
     protected static ?int $navigationSort = 10;
 
     protected static string $settings = FeatureFlagSettings::class;
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
 
     public function form(Schema $schema): Schema
     {

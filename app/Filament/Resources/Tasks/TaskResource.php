@@ -22,9 +22,9 @@ final class TaskResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'title';
 
-    protected static string|UnitEnum|null $navigationGroup = 'Tasks & Marketing';
+    protected static string|UnitEnum|null $navigationGroup = 'Reports';
 
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 6;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedClipboardDocumentList;
 
@@ -37,7 +37,7 @@ final class TaskResource extends Resource
 
     public static function table(Table $table): Table
     {
-        return \App\Filament\Resources\Tasks\Tables\TasksTable::configure($table);
+        return Tables\TasksTable::configure($table);
     }
 
     public static function getPages(): array

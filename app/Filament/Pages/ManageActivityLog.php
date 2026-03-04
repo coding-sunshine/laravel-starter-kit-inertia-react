@@ -15,7 +15,7 @@ use UnitEnum;
 
 final class ManageActivityLog extends SettingsPage
 {
-    protected static string|UnitEnum|null $navigationGroup = 'Features & Access';
+    protected static string|UnitEnum|null $navigationGroup = null;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedClipboardDocumentList;
 
@@ -24,6 +24,11 @@ final class ManageActivityLog extends SettingsPage
     protected static ?int $navigationSort = 50;
 
     protected static string $settings = ActivityLogSettings::class;
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
 
     public function form(Schema $schema): Schema
     {

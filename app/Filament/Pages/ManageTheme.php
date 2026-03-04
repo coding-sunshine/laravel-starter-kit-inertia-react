@@ -14,7 +14,7 @@ use UnitEnum;
 
 final class ManageTheme extends SettingsPage
 {
-    protected static string|UnitEnum|null $navigationGroup = 'Platform';
+    protected static string|UnitEnum|null $navigationGroup = null;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedPaintBrush;
 
@@ -23,6 +23,11 @@ final class ManageTheme extends SettingsPage
     protected static ?int $navigationSort = 30;
 
     protected static string $settings = ThemeSettings::class;
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
 
     public static function canAccess(): bool
     {

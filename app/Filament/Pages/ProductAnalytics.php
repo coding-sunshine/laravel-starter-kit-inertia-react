@@ -19,7 +19,7 @@ final class ProductAnalytics extends Page
 
     protected static ?int $navigationSort = 90;
 
-    protected static UnitEnum|string|null $navigationGroup = 'System';
+    protected static UnitEnum|string|null $navigationGroup = null;
 
     protected static ?string $navigationLabel = 'Product Analytics';
 
@@ -28,6 +28,11 @@ final class ProductAnalytics extends Page
     protected static ?string $slug = 'analytics/product';
 
     protected string $view = 'filament.pages.product-analytics';
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
 
     public static function canAccess(): bool
     {

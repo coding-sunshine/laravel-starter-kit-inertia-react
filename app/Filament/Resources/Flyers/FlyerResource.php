@@ -17,9 +17,11 @@ final class FlyerResource extends Resource
 {
     protected static ?string $model = Flyer::class;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Properties';
+    protected static ?string $navigationLabel = 'Landing Page';
 
-    protected static ?int $navigationSort = 87;
+    protected static string|UnitEnum|null $navigationGroup = 'Marketing Tools';
+
+    protected static ?int $navigationSort = 2;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocument;
 

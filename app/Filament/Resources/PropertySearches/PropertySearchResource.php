@@ -26,11 +26,13 @@ final class PropertySearchResource extends Resource
 
     protected static ?string $model = PropertySearch::class;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Sales & Reservations';
+    protected static string|UnitEnum|null $navigationGroup = 'Online Forms';
 
-    protected static ?int $navigationSort = 30;
+    protected static ?int $navigationSort = 2;
 
     protected static ?string $recordTitleAttribute = 'id';
+
+    protected static ?string $navigationLabel = 'Property Search Request';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedMagnifyingGlass;
 

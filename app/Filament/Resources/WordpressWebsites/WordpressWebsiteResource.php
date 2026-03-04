@@ -22,13 +22,13 @@ final class WordpressWebsiteResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'name';
 
-    protected static string|UnitEnum|null $navigationGroup = 'Websites';
+    protected static string|UnitEnum|null $navigationGroup = 'Reports';
 
-    protected static ?int $navigationSort = 91;
+    protected static ?int $navigationSort = 9;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCodeBracket;
 
-    protected static ?string $navigationLabel = 'WordPress Websites';
+    protected static ?string $navigationLabel = 'WordPress Website';
 
     public static function form(Schema $schema): Schema
     {

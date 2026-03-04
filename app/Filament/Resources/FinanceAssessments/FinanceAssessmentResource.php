@@ -20,13 +20,13 @@ final class FinanceAssessmentResource extends Resource
 
     protected static ?string $model = FinanceAssessment::class;
 
-    protected static string|UnitEnum|null $navigationGroup = 'CRM';
+    protected static string|UnitEnum|null $navigationGroup = 'Online Forms';
 
-    protected static ?int $navigationSort = 72;
+    protected static ?int $navigationSort = 3;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBanknotes;
 
-    protected static ?string $navigationLabel = 'Finance Assessments';
+    protected static ?string $navigationLabel = 'Finance Assessment';
 
     public static function form(Schema $schema): Schema
     {

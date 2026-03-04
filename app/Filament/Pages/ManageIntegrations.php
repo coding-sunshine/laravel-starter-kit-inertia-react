@@ -15,7 +15,7 @@ use UnitEnum;
 
 final class ManageIntegrations extends SettingsPage
 {
-    protected static string|UnitEnum|null $navigationGroup = 'Integrations';
+    protected static string|UnitEnum|null $navigationGroup = null;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedPuzzlePiece;
 
@@ -24,6 +24,11 @@ final class ManageIntegrations extends SettingsPage
     protected static ?int $navigationSort = 80;
 
     protected static string $settings = IntegrationsSettings::class;
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
 
     public function form(Schema $schema): Schema
     {

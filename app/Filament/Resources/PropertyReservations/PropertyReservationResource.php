@@ -26,11 +26,13 @@ final class PropertyReservationResource extends Resource
 
     protected static ?string $model = PropertyReservation::class;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Sales & Reservations';
+    protected static string|UnitEnum|null $navigationGroup = 'Reports';
 
-    protected static ?int $navigationSort = 10;
+    protected static ?int $navigationSort = 5;
 
     protected static ?string $recordTitleAttribute = 'id';
+
+    protected static ?string $navigationLabel = 'Reservations';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCalendarDays;
 

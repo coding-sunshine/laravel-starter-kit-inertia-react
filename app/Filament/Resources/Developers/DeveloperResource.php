@@ -22,9 +22,11 @@ final class DeveloperResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'name';
 
-    protected static string|UnitEnum|null $navigationGroup = 'Properties';
+    protected static string|UnitEnum|null $navigationGroup = 'Accounts';
 
-    protected static ?int $navigationSort = 80;
+    protected static ?int $navigationSort = 4;
+
+    protected static ?string $navigationLabel = 'Developers';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBuildingOffice;
 

@@ -16,7 +16,7 @@ use UnitEnum;
 
 final class ApiDocs extends Page
 {
-    protected static string|UnitEnum|null $navigationGroup = 'System';
+    protected static string|UnitEnum|null $navigationGroup = null;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCodeBracketSquare;
 
@@ -25,6 +25,11 @@ final class ApiDocs extends Page
     protected static ?int $navigationSort = 100;
 
     protected static ?string $title = 'API documentation';
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
 
     public static function canAccess(): bool
     {

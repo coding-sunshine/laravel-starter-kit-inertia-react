@@ -16,7 +16,7 @@ use UnitEnum;
 
 final class ManagePrism extends SettingsPage
 {
-    protected static string|UnitEnum|null $navigationGroup = 'Integrations';
+    protected static string|UnitEnum|null $navigationGroup = null;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedSparkles;
 
@@ -25,6 +25,11 @@ final class ManagePrism extends SettingsPage
     protected static ?int $navigationSort = 50;
 
     protected static string $settings = PrismSettings::class;
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
 
     public function form(Schema $schema): Schema
     {

@@ -14,7 +14,7 @@ use UnitEnum;
 
 final class ManageAuth extends SettingsPage
 {
-    protected static string|UnitEnum|null $navigationGroup = 'Platform';
+    protected static string|UnitEnum|null $navigationGroup = null;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedShieldCheck;
 
@@ -23,6 +23,11 @@ final class ManageAuth extends SettingsPage
     protected static ?int $navigationSort = 20;
 
     protected static string $settings = AuthSettings::class;
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
 
     public function form(Schema $schema): Schema
     {

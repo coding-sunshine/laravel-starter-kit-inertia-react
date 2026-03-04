@@ -14,7 +14,7 @@ use UnitEnum;
 
 final class ManageBackup extends SettingsPage
 {
-    protected static string|UnitEnum|null $navigationGroup = 'System';
+    protected static string|UnitEnum|null $navigationGroup = null;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCloudArrowUp;
 
@@ -23,6 +23,11 @@ final class ManageBackup extends SettingsPage
     protected static ?int $navigationSort = 10;
 
     protected static string $settings = BackupSettings::class;
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
 
     public function form(Schema $schema): Schema
     {

@@ -33,11 +33,11 @@ final class AiBotCategoryResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedFolder;
 
-    protected static string|UnitEnum|null $navigationGroup = 'AI Bot';
+    protected static string|UnitEnum|null $navigationGroup = 'Bot Management';
 
     protected static ?int $navigationSort = 1;
 
-    protected static ?string $navigationLabel = 'Prompt categories';
+    protected static ?string $navigationLabel = 'Bot In A Box Category';
 
     public static function form(Schema $schema): Schema
     {

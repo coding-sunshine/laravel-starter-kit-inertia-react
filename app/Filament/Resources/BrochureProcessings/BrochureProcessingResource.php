@@ -21,9 +21,9 @@ final class BrochureProcessingResource extends Resource
 {
     protected static ?string $model = BrochureProcessing::class;
 
-    protected static string|UnitEnum|null $navigationGroup = 'AI Bot';
+    protected static string|UnitEnum|null $navigationGroup = 'Bot Management';
 
-    protected static ?int $navigationSort = 15;
+    protected static ?int $navigationSort = 3;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocument;
 
@@ -61,13 +61,13 @@ final class BrochureProcessingResource extends Resource
 
     public static function getNavigationBadge(): ?string
     {
-        return (string) static::getModel()::query()
+        return (string) self::getModel()::query()
             ->where('status', 'pending_approval')
             ->count();
     }
 
     public static function getNavigationBadgeColor(): string|array|null
     {
-        return static::getNavigationBadge() > 0 ? 'warning' : null;
+        return self::getNavigationBadge() > 0 ? 'warning' : null;
     }
 }

@@ -17,13 +17,13 @@ final class SprRequestResource extends Resource
 {
     protected static ?string $model = SprRequest::class;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Properties';
+    protected static string|UnitEnum|null $navigationGroup = 'Reports';
 
-    protected static ?int $navigationSort = 85;
+    protected static ?int $navigationSort = 7;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocumentArrowUp;
 
-    protected static ?string $navigationLabel = 'SPR Requests';
+    protected static ?string $navigationLabel = 'SPR History';
 
     public static function form(Schema $schema): Schema
     {
