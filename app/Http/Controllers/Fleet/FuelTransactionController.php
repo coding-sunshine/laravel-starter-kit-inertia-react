@@ -26,19 +26,44 @@ final class FuelTransactionController extends Controller
             ->paginate(15)
             ->withQueryString();
 
+        $summary = Inertia::defer(function () {
+            $thirtyDaysAgo = now()->subDays(30);
+            $totalSpend = FuelTransaction::query()
+                ->where('transaction_timestamp', '>=', $thirtyDaysAgo)
+                ->sum('total_cost');
+            $vehicleCount = FuelTransaction::query()
+                ->where('transaction_timestamp', '>=', $thirtyDaysAgo)
+                ->distinct('vehicle_id')
+                ->count('vehicle_id');
+            $avgPerVehicle = $vehicleCount > 0 ? round((float) $totalSpend / $vehicleCount, 2) : 0;
+            $flagged = \App\Models\Fleet\AiAnalysisResult::query()
+                ->where('entity_type', 'transaction')
+                ->whereIn('analysis_type', ['fraud_detection', 'fuel_efficiency'])
+                ->whereIn('status', ['pending', 'reviewed'])
+                ->count();
+
+            return [
+                'total_spend_30d' => round((float) $totalSpend, 2),
+                'avg_per_vehicle' => $avgPerVehicle,
+                'flagged' => $flagged,
+            ];
+        }, 'summary');
+
         return Inertia::render('Fleet/FuelTransactions/Index', [
             'fuelTransactions' => $transactions,
             'filters' => $request->only(['vehicle_id', 'fuel_card_id']),
             'vehicles' => \App\Models\Fleet\Vehicle::query()->orderBy('registration')->get(['id', 'registration']),
             'fuelCards' => \App\Models\Fleet\FuelCard::query()->orderBy('card_number')->get(['id', 'card_number']),
+            'summary' => $summary,
         ]);
     }
 
     public function create(): Response
     {
         $this->authorize('create', FuelTransaction::class);
+
         return Inertia::render('Fleet/FuelTransactions/Create', [
-            'fuelTypes' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\FuelType::cases()),
+            'fuelTypes' => array_map(fn (\App\Enums\Fleet\FuelType $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\FuelType::cases()),
             'vehicles' => \App\Models\Fleet\Vehicle::query()->orderBy('registration')->get(['id', 'registration']),
             'drivers' => \App\Models\Fleet\Driver::query()->orderBy('last_name')->get(['id', 'first_name', 'last_name']),
             'fuelCards' => \App\Models\Fleet\FuelCard::query()->orderBy('card_number')->get(['id', 'card_number']),
@@ -49,7 +74,8 @@ final class FuelTransactionController extends Controller
     public function store(StoreFuelTransactionRequest $request): RedirectResponse
     {
         $this->authorize('create', FuelTransaction::class);
-        FuelTransaction::create($request->validated());
+        FuelTransaction::query()->create($request->validated());
+
         return to_route('fleet.fuel-transactions.index')->with('flash', ['status' => 'success', 'message' => 'Fuel transaction created.']);
     }
 
@@ -64,9 +90,10 @@ final class FuelTransactionController extends Controller
     public function edit(FuelTransaction $fuel_transaction): Response
     {
         $this->authorize('update', $fuel_transaction);
+
         return Inertia::render('Fleet/FuelTransactions/Edit', [
             'fuelTransaction' => $fuel_transaction,
-            'fuelTypes' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\FuelType::cases()),
+            'fuelTypes' => array_map(fn (\App\Enums\Fleet\FuelType $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\FuelType::cases()),
             'vehicles' => \App\Models\Fleet\Vehicle::query()->orderBy('registration')->get(['id', 'registration']),
             'drivers' => \App\Models\Fleet\Driver::query()->orderBy('last_name')->get(['id', 'first_name', 'last_name']),
             'fuelCards' => \App\Models\Fleet\FuelCard::query()->orderBy('card_number')->get(['id', 'card_number']),
@@ -78,6 +105,7 @@ final class FuelTransactionController extends Controller
     {
         $this->authorize('update', $fuel_transaction);
         $fuel_transaction->update($request->validated());
+
         return to_route('fleet.fuel-transactions.show', $fuel_transaction)->with('flash', ['status' => 'success', 'message' => 'Fuel transaction updated.']);
     }
 
@@ -85,6 +113,7 @@ final class FuelTransactionController extends Controller
     {
         $this->authorize('delete', $fuel_transaction);
         $fuel_transaction->delete();
+
         return to_route('fleet.fuel-transactions.index')->with('flash', ['status' => 'success', 'message' => 'Fuel transaction deleted.']);
     }
 }

@@ -12,8 +12,10 @@ use App\Models\Fleet\DriverVehicleAssignment;
 use App\Services\TenantContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Response as ResponseFacade;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class DriverController extends Controller
 {
@@ -26,16 +28,92 @@ final class DriverController extends Controller
             ->paginate(15)
             ->withQueryString();
 
+        $summary = Inertia::defer(function () {
+            $total = Driver::query()->count();
+            $active = Driver::query()->where('status', 'active')->count();
+            $lowSafety = Driver::query()->where('safety_score', '<', 70)->count();
+            $qualExpiring = \App\Models\Fleet\DriverQualification::query()
+                ->whereNotNull('expiry_date')
+                ->where('expiry_date', '<=', now()->addDays(30))
+                ->where('expiry_date', '>=', now())
+                ->count();
+
+            return [
+                'total' => $total,
+                'active' => $active,
+                'low_safety' => $lowSafety,
+                'qualifications_expiring' => $qualExpiring,
+            ];
+        }, 'summary');
+
         return Inertia::render('Fleet/Drivers/Index', [
             'drivers' => $drivers,
             'filters' => $request->only(['status']),
+            'summary' => $summary,
         ]);
+    }
+
+    public function bulkDestroy(Request $request): RedirectResponse
+    {
+        $this->authorize('viewAny', Driver::class);
+        $request->validate(['ids' => ['required', 'array'], 'ids.*' => ['integer', 'min:1']]);
+        $ids = array_values(array_unique($request->input('ids', [])));
+        $deleted = 0;
+        foreach ($ids as $id) {
+            $driver = Driver::query()->find($id);
+            if ($driver !== null && $request->user()->can('delete', $driver)) {
+                $driver->delete();
+                $deleted++;
+            }
+        }
+
+        return to_route('fleet.drivers.index')
+            ->with('flash', ['status' => 'success', 'message' => "{$deleted} driver(s) deleted."]);
+    }
+
+    public function export(Request $request): StreamedResponse
+    {
+        $this->authorize('viewAny', Driver::class);
+        $drivers = Driver::query()
+            ->with('currentAssignment.vehicle')
+            ->when($request->input('status'), fn ($q, $status) => $q->where('status', $status))
+            ->orderBy('last_name')
+            ->get();
+
+        $filename = 'drivers-'.now()->format('Y-m-d').'.csv';
+
+        return ResponseFacade::streamDownload(
+            function () use ($drivers): void {
+                $out = fopen('php://output', 'w');
+                fputcsv($out, ['First name', 'Last name', 'Email', 'Status', 'License number', 'License expiry', 'Current vehicle'], escape: '\\');
+                foreach ($drivers as $d) {
+                    $vehicle = $d->currentAssignment?->vehicle;
+                    fputcsv($out, [
+                        $d->first_name,
+                        $d->last_name,
+                        $d->email ?? '',
+                        $d->status,
+                        $d->license_number ?? '',
+                        $d->license_expiry_date?->format('Y-m-d') ?? '',
+                        $vehicle?->registration ?? '',
+                    ],
+                        escape: '\\');
+                }
+                fclose($out);
+            },
+            $filename,
+            [
+                'Content-Type' => 'text/csv',
+                'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+            ],
+        );
     }
 
     public function create(): Response
     {
         $this->authorize('create', Driver::class);
-        $enum = fn ($cases) => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], $cases);
+        $enum = fn ($cases): array => array_map(fn ($c): array => ['value' => $c->value, 'name' => $c->name], $cases);
+
         return Inertia::render('Fleet/Drivers/Create', [
             'statuses' => $enum(\App\Enums\Fleet\DriverStatus::cases()),
             'licenseStatuses' => $enum(\App\Enums\Fleet\DriverLicenseStatus::cases()),
@@ -47,7 +125,8 @@ final class DriverController extends Controller
     public function store(StoreDriverRequest $request): RedirectResponse
     {
         $this->authorize('create', Driver::class);
-        Driver::create($request->validated());
+        Driver::query()->create($request->validated());
+
         return to_route('fleet.drivers.index')->with('flash', ['status' => 'success', 'message' => 'Driver created.']);
     }
 
@@ -59,10 +138,11 @@ final class DriverController extends Controller
             'vehicleAssignments' => fn ($q) => $q->with('vehicle')->orderByDesc('assigned_date'),
             'currentAssignment' => fn ($q) => $q->with('vehicle'),
         ]);
+
         return Inertia::render('Fleet/Drivers/Show', [
             'driver' => $driver,
             'vehicles' => \App\Models\Fleet\Vehicle::query()->orderBy('registration')->get(['id', 'registration']),
-            'assignmentTypes' => array_map(fn ($c) => ['name' => $c->name, 'value' => $c->value], \App\Enums\Fleet\AssignmentType::cases()),
+            'assignmentTypes' => array_map(fn (\App\Enums\Fleet\AssignmentType $c): array => ['name' => $c->name, 'value' => $c->value], \App\Enums\Fleet\AssignmentType::cases()),
         ]);
     }
 
@@ -80,12 +160,12 @@ final class DriverController extends Controller
         DriverVehicleAssignment::query()
             ->where('organization_id', $orgId)
             ->where('is_current', true)
-            ->where(function ($q) use ($driver, $validated) {
+            ->where(function ($q) use ($driver, $validated): void {
                 $q->where('driver_id', $driver->id)->orWhere('vehicle_id', $validated['vehicle_id']);
             })
             ->update(['is_current' => false, 'unassigned_date' => $validated['assigned_date']]);
 
-        DriverVehicleAssignment::create([
+        DriverVehicleAssignment::query()->create([
             'organization_id' => $orgId,
             'driver_id' => $driver->id,
             'vehicle_id' => $validated['vehicle_id'],
@@ -96,11 +176,11 @@ final class DriverController extends Controller
             'assigned_by' => $request->user()->id,
         ]);
 
-        \App\Models\Fleet\Vehicle::withoutGlobalScopes()->where('id', $validated['vehicle_id'])->update([
+        \App\Models\Fleet\Vehicle::query()->withoutGlobalScopes()->where('id', $validated['vehicle_id'])->update([
             'current_driver_id' => $driver->id,
         ]);
 
-        return redirect()->route('fleet.drivers.show', $driver)->with('flash', ['status' => 'success', 'message' => 'Vehicle assigned.']);
+        return to_route('fleet.drivers.show', $driver)->with('flash', ['status' => 'success', 'message' => 'Vehicle assigned.']);
     }
 
     public function unassignVehicle(Driver $driver): RedirectResponse
@@ -112,15 +192,17 @@ final class DriverController extends Controller
             ->first();
         if ($assignment) {
             $assignment->update(['is_current' => false, 'unassigned_date' => now()->toDateString()]);
-            \App\Models\Fleet\Vehicle::withoutGlobalScopes()->where('id', $assignment->vehicle_id)->update(['current_driver_id' => null]);
+            \App\Models\Fleet\Vehicle::query()->withoutGlobalScopes()->where('id', $assignment->vehicle_id)->update(['current_driver_id' => null]);
         }
-        return redirect()->route('fleet.drivers.show', $driver)->with('flash', ['status' => 'success', 'message' => 'Vehicle unassigned.']);
+
+        return to_route('fleet.drivers.show', $driver)->with('flash', ['status' => 'success', 'message' => 'Vehicle unassigned.']);
     }
 
     public function edit(Driver $driver): Response
     {
         $this->authorize('update', $driver);
-        $enum = fn ($cases) => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], $cases);
+        $enum = fn ($cases): array => array_map(fn ($c): array => ['value' => $c->value, 'name' => $c->name], $cases);
+
         return Inertia::render('Fleet/Drivers/Edit', [
             'driver' => $driver,
             'statuses' => $enum(\App\Enums\Fleet\DriverStatus::cases()),
@@ -134,6 +216,7 @@ final class DriverController extends Controller
     {
         $this->authorize('update', $driver);
         $driver->update($request->validated());
+
         return to_route('fleet.drivers.show', $driver)->with('flash', ['status' => 'success', 'message' => 'Driver updated.']);
     }
 
@@ -141,6 +224,7 @@ final class DriverController extends Controller
     {
         $this->authorize('delete', $driver);
         $driver->delete();
+
         return to_route('fleet.drivers.index')->with('flash', ['status' => 'success', 'message' => 'Driver deleted.']);
     }
 }

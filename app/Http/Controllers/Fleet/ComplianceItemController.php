@@ -22,24 +22,40 @@ final class ComplianceItemController extends Controller
             ->when($request->input('entity_type'), fn ($q, $v) => $q->where('entity_type', $v))
             ->when($request->input('entity_id'), fn ($q, $v) => $q->where('entity_id', $v))
             ->when($request->input('status'), fn ($q, $v) => $q->where('status', $v))
-            ->orderBy('expiry_date')
+            ->oldest('expiry_date')
             ->paginate(15)
             ->withQueryString();
+
+        $summary = Inertia::defer(function () {
+            $total = ComplianceItem::query()->count();
+            $valid = ComplianceItem::query()->where('status', 'valid')->count();
+            $expiringSoon = ComplianceItem::query()->where('status', 'expiring_soon')->count();
+            $expired = ComplianceItem::query()->where('status', 'expired')->count();
+
+            return [
+                'total' => $total,
+                'valid' => $valid,
+                'expiring_soon' => $expiringSoon,
+                'expired' => $expired,
+            ];
+        }, 'summary');
 
         return Inertia::render('Fleet/ComplianceItems/Index', [
             'complianceItems' => $items,
             'filters' => $request->only(['entity_type', 'entity_id', 'status']),
-            'entityTypes' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\ComplianceEntityType::cases()),
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\ComplianceItemStatus::cases()),
+            'entityTypes' => array_map(fn (\App\Enums\Fleet\ComplianceEntityType $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\ComplianceEntityType::cases()),
+            'statuses' => array_map(fn (\App\Enums\Fleet\ComplianceItemStatus $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\ComplianceItemStatus::cases()),
+            'summary' => $summary,
         ]);
     }
 
     public function create(): Response
     {
         $this->authorize('create', ComplianceItem::class);
+
         return Inertia::render('Fleet/ComplianceItems/Create', [
-            'entityTypes' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\ComplianceEntityType::cases()),
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\ComplianceItemStatus::cases()),
+            'entityTypes' => array_map(fn (\App\Enums\Fleet\ComplianceEntityType $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\ComplianceEntityType::cases()),
+            'statuses' => array_map(fn (\App\Enums\Fleet\ComplianceItemStatus $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\ComplianceItemStatus::cases()),
             'vehicles' => \App\Models\Fleet\Vehicle::query()->orderBy('registration')->get(['id', 'registration']),
             'drivers' => \App\Models\Fleet\Driver::query()->orderBy('last_name')->get(['id', 'first_name', 'last_name']),
         ]);
@@ -48,7 +64,8 @@ final class ComplianceItemController extends Controller
     public function store(StoreComplianceItemRequest $request): RedirectResponse
     {
         $this->authorize('create', ComplianceItem::class);
-        ComplianceItem::create($request->validated());
+        ComplianceItem::query()->create($request->validated());
+
         return to_route('fleet.compliance-items.index')->with('flash', ['status' => 'success', 'message' => 'Compliance item created.']);
     }
 
@@ -63,10 +80,11 @@ final class ComplianceItemController extends Controller
     public function edit(ComplianceItem $compliance_item): Response
     {
         $this->authorize('update', $compliance_item);
+
         return Inertia::render('Fleet/ComplianceItems/Edit', [
             'complianceItem' => $compliance_item,
-            'entityTypes' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\ComplianceEntityType::cases()),
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\ComplianceItemStatus::cases()),
+            'entityTypes' => array_map(fn (\App\Enums\Fleet\ComplianceEntityType $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\ComplianceEntityType::cases()),
+            'statuses' => array_map(fn (\App\Enums\Fleet\ComplianceItemStatus $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\ComplianceItemStatus::cases()),
             'vehicles' => \App\Models\Fleet\Vehicle::query()->orderBy('registration')->get(['id', 'registration']),
             'drivers' => \App\Models\Fleet\Driver::query()->orderBy('last_name')->get(['id', 'first_name', 'last_name']),
         ]);
@@ -76,6 +94,7 @@ final class ComplianceItemController extends Controller
     {
         $this->authorize('update', $compliance_item);
         $compliance_item->update($request->validated());
+
         return to_route('fleet.compliance-items.show', $compliance_item)->with('flash', ['status' => 'success', 'message' => 'Compliance item updated.']);
     }
 
@@ -83,6 +102,7 @@ final class ComplianceItemController extends Controller
     {
         $this->authorize('delete', $compliance_item);
         $compliance_item->delete();
+
         return to_route('fleet.compliance-items.index')->with('flash', ['status' => 'success', 'message' => 'Compliance item deleted.']);
     }
 }
