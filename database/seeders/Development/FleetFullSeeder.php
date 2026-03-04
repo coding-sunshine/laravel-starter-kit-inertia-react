@@ -11,8 +11,8 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Seeds Fleet data for Phases 1–11 with 4–5 records per entity
- * so every Fleet page has data to play with.
+ * Seeds Fleet data for Phases 1–11 with 25 records per core entity
+ * (vehicles, drivers) and 10 locations so every Fleet page looks alive.
  *
  * Run after: php artisan db:seed (Development) or
  * php artisan db:seed --class=Database\\Seeders\\Development\\FleetFullSeeder
@@ -21,14 +21,14 @@ use Illuminate\Support\Facades\DB;
  */
 final class FleetFullSeeder extends Seeder
 {
+    private const int COUNT = 25;
+
     /** @var list<string> */
     public array $dependencies = ['UsersSeeder'];
 
     private ?Organization $org = null;
 
     private ?User $user = null;
-
-    private const COUNT = 5;
 
     public function run(): void
     {
@@ -59,7 +59,7 @@ final class FleetFullSeeder extends Seeder
             $this->org = Organization::query()->first();
         }
         if (! $this->org) {
-            $this->org = Organization::create([
+            $this->org = Organization::query()->create([
                 'name' => 'Fleet Demo',
                 'slug' => 'fleet-demo',
                 'owner_id' => $this->user->id,
@@ -86,12 +86,17 @@ final class FleetFullSeeder extends Seeder
 
     private function seedPhase1Core(): void
     {
-        $locIds = $this->seedRecords(\App\Models\Fleet\Location::class, self::COUNT, [
+        $locIds = $this->seedRecords(\App\Models\Fleet\Location::class, 10, [
             ['name' => 'HQ Depot', 'type' => 'depot', 'address' => '1 Fleet Way', 'city' => 'London', 'country' => 'UK', 'lat' => 51.5074, 'lng' => -0.1278, 'is_active' => true],
             ['name' => 'North Yard', 'type' => 'yard', 'address' => '2 North Rd', 'city' => 'Manchester', 'country' => 'UK', 'lat' => 53.4808, 'lng' => -2.2426, 'is_active' => true],
             ['name' => 'South Hub', 'type' => 'depot', 'address' => '3 South St', 'city' => 'Birmingham', 'country' => 'UK', 'lat' => 52.4862, 'lng' => -1.8904, 'is_active' => true],
             ['name' => 'East Office', 'type' => 'office', 'address' => '4 East Ave', 'city' => 'Leeds', 'country' => 'UK', 'lat' => 53.8008, 'lng' => -1.5491, 'is_active' => true],
             ['name' => 'West Depot', 'type' => 'depot', 'address' => '5 West Lane', 'city' => 'Liverpool', 'country' => 'UK', 'lat' => 53.4084, 'lng' => -2.9916, 'is_active' => true],
+            ['name' => 'Scotland Hub', 'type' => 'depot', 'address' => '6 Clyde Rd', 'city' => 'Glasgow', 'country' => 'UK', 'lat' => 55.8642, 'lng' => -4.2518, 'is_active' => true],
+            ['name' => 'South West Depot', 'type' => 'depot', 'address' => '7 Harbour Way', 'city' => 'Bristol', 'country' => 'UK', 'lat' => 51.4545, 'lng' => -2.5879, 'is_active' => true],
+            ['name' => 'Edinburgh Office', 'type' => 'office', 'address' => '8 Princes St', 'city' => 'Edinburgh', 'country' => 'UK', 'lat' => 55.9533, 'lng' => -3.1883, 'is_active' => true],
+            ['name' => 'Wales Depot', 'type' => 'depot', 'address' => '9 Bay Rd', 'city' => 'Cardiff', 'country' => 'UK', 'lat' => 51.4816, 'lng' => -3.1791, 'is_active' => true],
+            ['name' => 'Belfast Hub', 'type' => 'yard', 'address' => '10 Dock St', 'city' => 'Belfast', 'country' => 'UK', 'lat' => 54.5973, 'lng' => -5.9301, 'is_active' => true],
         ]);
         $this->backfillLocationCoordinates();
 
@@ -109,6 +114,26 @@ final class FleetFullSeeder extends Seeder
             ['first_name' => 'Oliver', 'last_name' => 'Brown', 'employee_id' => 'E003', 'status' => 'active', 'license_number' => 'BROWN85OLIVER', 'license_expiry_date' => now()->addMonths(8), 'license_status' => 'valid', 'safety_score' => 78, 'risk_category' => 'medium', 'compliance_status' => 'compliant'],
             ['first_name' => 'Sophie', 'last_name' => 'Wilson', 'employee_id' => 'E004', 'status' => 'active', 'license_number' => 'WILSON92SOPHIE', 'license_expiry_date' => now()->addYear(), 'license_status' => 'valid', 'safety_score' => 88, 'risk_category' => 'low', 'compliance_status' => 'compliant'],
             ['first_name' => 'William', 'last_name' => 'Taylor', 'employee_id' => 'E005', 'status' => 'active', 'license_number' => 'TAYLOR88WILLIAM', 'license_expiry_date' => now()->addMonths(6), 'license_status' => 'valid', 'safety_score' => 82, 'risk_category' => 'low', 'compliance_status' => 'compliant'],
+            ['first_name' => 'Charlotte', 'last_name' => 'Davies', 'employee_id' => 'E006', 'status' => 'active', 'license_number' => 'DAVIE95CHARL', 'license_expiry_date' => now()->addYear(), 'license_status' => 'valid', 'safety_score' => 95, 'risk_category' => 'low', 'compliance_status' => 'compliant'],
+            ['first_name' => 'Harry', 'last_name' => 'Evans', 'employee_id' => 'E007', 'status' => 'active', 'license_number' => 'EVANS72HARRY', 'license_expiry_date' => now()->addMonths(10), 'license_status' => 'valid', 'safety_score' => 72, 'risk_category' => 'medium', 'compliance_status' => 'compliant'],
+            ['first_name' => 'Isabella', 'last_name' => 'Thomas', 'employee_id' => 'E008', 'status' => 'active', 'license_number' => 'THOMA91ISABE', 'license_expiry_date' => now()->addYear(), 'license_status' => 'valid', 'safety_score' => 91, 'risk_category' => 'low', 'compliance_status' => 'compliant'],
+            ['first_name' => 'George', 'last_name' => 'Roberts', 'employee_id' => 'E009', 'status' => 'active', 'license_number' => 'ROBER68GEORG', 'license_expiry_date' => now()->addMonths(4), 'license_status' => 'valid', 'safety_score' => 68, 'risk_category' => 'high', 'compliance_status' => 'compliant'],
+            ['first_name' => 'Amelia', 'last_name' => 'Walker', 'employee_id' => 'E010', 'status' => 'active', 'license_number' => 'WALKE86AMELI', 'license_expiry_date' => now()->addYear(), 'license_status' => 'valid', 'safety_score' => 86, 'risk_category' => 'low', 'compliance_status' => 'compliant'],
+            ['first_name' => 'Jack', 'last_name' => 'Robinson', 'employee_id' => 'E011', 'status' => 'active', 'license_number' => 'ROBIN77JACKR', 'license_expiry_date' => now()->addMonths(9), 'license_status' => 'valid', 'safety_score' => 77, 'risk_category' => 'medium', 'compliance_status' => 'compliant'],
+            ['first_name' => 'Mia', 'last_name' => 'Harris', 'employee_id' => 'E012', 'status' => 'active', 'license_number' => 'HARRI93MIAHR', 'license_expiry_date' => now()->addYear(), 'license_status' => 'valid', 'safety_score' => 93, 'risk_category' => 'low', 'compliance_status' => 'compliant'],
+            ['first_name' => 'Thomas', 'last_name' => 'Clark', 'employee_id' => 'E013', 'status' => 'active', 'license_number' => 'CLARK62THOMA', 'license_expiry_date' => now()->addMonths(3), 'license_status' => 'valid', 'safety_score' => 62, 'risk_category' => 'high', 'compliance_status' => 'non_compliant'],
+            ['first_name' => 'Emily', 'last_name' => 'Lewis', 'employee_id' => 'E014', 'status' => 'active', 'license_number' => 'LEWIS89EMILY', 'license_expiry_date' => now()->addYear(), 'license_status' => 'valid', 'safety_score' => 89, 'risk_category' => 'low', 'compliance_status' => 'compliant'],
+            ['first_name' => 'Charlie', 'last_name' => 'Hall', 'employee_id' => 'E015', 'status' => 'active', 'license_number' => 'HALLX74CHARL', 'license_expiry_date' => now()->addMonths(7), 'license_status' => 'valid', 'safety_score' => 74, 'risk_category' => 'medium', 'compliance_status' => 'compliant'],
+            ['first_name' => 'Olivia', 'last_name' => 'Young', 'employee_id' => 'E016', 'status' => 'active', 'license_number' => 'YOUNG96OLIVI', 'license_expiry_date' => now()->addYear(), 'license_status' => 'valid', 'safety_score' => 96, 'risk_category' => 'low', 'compliance_status' => 'compliant'],
+            ['first_name' => 'Henry', 'last_name' => 'King', 'employee_id' => 'E017', 'status' => 'active', 'license_number' => 'KINGX80HENRY', 'license_expiry_date' => now()->addMonths(11), 'license_status' => 'valid', 'safety_score' => 80, 'risk_category' => 'low', 'compliance_status' => 'compliant'],
+            ['first_name' => 'Lily', 'last_name' => 'Wright', 'employee_id' => 'E018', 'status' => 'active', 'license_number' => 'WRIGH87LILYW', 'license_expiry_date' => now()->addYear(), 'license_status' => 'valid', 'safety_score' => 87, 'risk_category' => 'low', 'compliance_status' => 'compliant'],
+            ['first_name' => 'Oscar', 'last_name' => 'Green', 'employee_id' => 'E019', 'status' => 'active', 'license_number' => 'GREEN65OSCAR', 'license_expiry_date' => now()->addMonths(5), 'license_status' => 'valid', 'safety_score' => 65, 'risk_category' => 'high', 'compliance_status' => 'compliant'],
+            ['first_name' => 'Grace', 'last_name' => 'Baker', 'employee_id' => 'E020', 'status' => 'active', 'license_number' => 'BAKER92GRACE', 'license_expiry_date' => now()->addYear(), 'license_status' => 'valid', 'safety_score' => 92, 'risk_category' => 'low', 'compliance_status' => 'compliant'],
+            ['first_name' => 'Daniel', 'last_name' => 'Adams', 'employee_id' => 'E021', 'status' => 'active', 'license_number' => 'ADAMS76DANIE', 'license_expiry_date' => now()->addMonths(8), 'license_status' => 'valid', 'safety_score' => 76, 'risk_category' => 'medium', 'compliance_status' => 'compliant'],
+            ['first_name' => 'Ella', 'last_name' => 'Mitchell', 'employee_id' => 'E022', 'status' => 'active', 'license_number' => 'MITCH98ELLAM', 'license_expiry_date' => now()->addYear(), 'license_status' => 'valid', 'safety_score' => 98, 'risk_category' => 'low', 'compliance_status' => 'compliant'],
+            ['first_name' => 'Alexander', 'last_name' => 'Campbell', 'employee_id' => 'E023', 'status' => 'active', 'license_number' => 'CAMPB71ALEXA', 'license_expiry_date' => now()->addMonths(6), 'license_status' => 'valid', 'safety_score' => 71, 'risk_category' => 'medium', 'compliance_status' => 'compliant'],
+            ['first_name' => 'Poppy', 'last_name' => 'Carter', 'employee_id' => 'E024', 'status' => 'active', 'license_number' => 'CARTE84POPPY', 'license_expiry_date' => now()->addYear(), 'license_status' => 'valid', 'safety_score' => 84, 'risk_category' => 'low', 'compliance_status' => 'compliant'],
+            ['first_name' => 'Samuel', 'last_name' => 'Parker', 'employee_id' => 'E025', 'status' => 'active', 'license_number' => 'PARKE69SAMUE', 'license_expiry_date' => now()->addMonths(4), 'license_status' => 'valid', 'safety_score' => 69, 'risk_category' => 'high', 'compliance_status' => 'compliant'],
         ]);
 
         $this->seedRecords(\App\Models\Fleet\Trailer::class, 4, [
@@ -122,8 +147,28 @@ final class FleetFullSeeder extends Seeder
             ['registration' => 'AB12 CDE', 'make' => 'Ford', 'model' => 'Transit', 'year' => 2022, 'fuel_type' => 'diesel', 'vehicle_type' => 'van', 'status' => 'active', 'odometer_reading' => 45000, 'compliance_status' => 'compliant', 'home_location_id' => $locIds[0] ?? null],
             ['registration' => 'FG34 HIJ', 'make' => 'Mercedes', 'model' => 'Sprinter', 'year' => 2023, 'fuel_type' => 'diesel', 'vehicle_type' => 'van', 'status' => 'active', 'odometer_reading' => 12000, 'compliance_status' => 'compliant', 'home_location_id' => $locIds[0] ?? null],
             ['registration' => 'KL56 MNO', 'make' => 'Volvo', 'model' => 'FH', 'year' => 2021, 'fuel_type' => 'diesel', 'vehicle_type' => 'truck', 'status' => 'active', 'odometer_reading' => 180000, 'compliance_status' => 'compliant', 'home_location_id' => $locIds[1] ?? null],
-            ['registration' => 'PQ78 RST', 'make' => 'Vauxhall', 'model' => 'Vivaro', 'year' => 2023, 'fuel_type' => 'diesel', 'vehicle_type' => 'van', 'status' => 'active', 'odometer_reading' => 8000, 'compliance_status' => 'compliant', 'home_location_id' => $locIds[0] ?? null],
+            ['registration' => 'PQ78 RST', 'make' => 'DAF', 'model' => 'XF', 'year' => 2022, 'fuel_type' => 'diesel', 'vehicle_type' => 'truck', 'status' => 'active', 'odometer_reading' => 160000, 'compliance_status' => 'compliant', 'home_location_id' => $locIds[2] ?? null],
             ['registration' => 'UV90 WXY', 'make' => 'Tesla', 'model' => 'Model 3', 'year' => 2024, 'fuel_type' => 'electric', 'vehicle_type' => 'car', 'status' => 'active', 'odometer_reading' => 3000, 'compliance_status' => 'compliant', 'home_location_id' => $locIds[0] ?? null],
+            ['registration' => 'BD23 FKL', 'make' => 'Ford', 'model' => 'Transit', 'year' => 2023, 'fuel_type' => 'diesel', 'vehicle_type' => 'van', 'status' => 'active', 'odometer_reading' => 28000, 'compliance_status' => 'compliant', 'home_location_id' => $locIds[1] ?? null],
+            ['registration' => 'CF21 HNP', 'make' => 'MAN', 'model' => 'TGX', 'year' => 2021, 'fuel_type' => 'diesel', 'vehicle_type' => 'truck', 'status' => 'active', 'odometer_reading' => 210000, 'compliance_status' => 'compliant', 'home_location_id' => $locIds[2] ?? null],
+            ['registration' => 'DK22 JRT', 'make' => 'Mercedes', 'model' => 'Sprinter', 'year' => 2022, 'fuel_type' => 'diesel', 'vehicle_type' => 'van', 'status' => 'active', 'odometer_reading' => 35000, 'compliance_status' => 'compliant', 'home_location_id' => $locIds[3] ?? null],
+            ['registration' => 'EP24 LVW', 'make' => 'Volvo', 'model' => 'FH', 'year' => 2024, 'fuel_type' => 'diesel', 'vehicle_type' => 'truck', 'status' => 'active', 'odometer_reading' => 15000, 'compliance_status' => 'compliant', 'home_location_id' => $locIds[4] ?? null],
+            ['registration' => 'FL20 NXB', 'make' => 'DAF', 'model' => 'XF', 'year' => 2020, 'fuel_type' => 'diesel', 'vehicle_type' => 'truck', 'status' => 'active', 'odometer_reading' => 245000, 'compliance_status' => 'compliant', 'home_location_id' => $locIds[5] ?? null],
+            ['registration' => 'GN23 PDG', 'make' => 'Ford', 'model' => 'Transit', 'year' => 2023, 'fuel_type' => 'diesel', 'vehicle_type' => 'van', 'status' => 'in_maintenance', 'odometer_reading' => 52000, 'compliance_status' => 'compliant', 'home_location_id' => $locIds[6] ?? null],
+            ['registration' => 'HT22 RFK', 'make' => 'MAN', 'model' => 'TGX', 'year' => 2022, 'fuel_type' => 'diesel', 'vehicle_type' => 'truck', 'status' => 'active', 'odometer_reading' => 195000, 'compliance_status' => 'compliant', 'home_location_id' => $locIds[7] ?? null],
+            ['registration' => 'JW24 SHN', 'make' => 'Tesla', 'model' => 'Model 3', 'year' => 2024, 'fuel_type' => 'electric', 'vehicle_type' => 'car', 'status' => 'active', 'odometer_reading' => 8000, 'compliance_status' => 'compliant', 'home_location_id' => $locIds[0] ?? null],
+            ['registration' => 'KY21 TLP', 'make' => 'Mercedes', 'model' => 'Sprinter', 'year' => 2021, 'fuel_type' => 'diesel', 'vehicle_type' => 'van', 'status' => 'active', 'odometer_reading' => 67000, 'compliance_status' => 'compliant', 'home_location_id' => $locIds[8] ?? null],
+            ['registration' => 'LB23 VNR', 'make' => 'Ford', 'model' => 'Transit', 'year' => 2023, 'fuel_type' => 'diesel', 'vehicle_type' => 'van', 'status' => 'active', 'odometer_reading' => 22000, 'compliance_status' => 'compliant', 'home_location_id' => $locIds[9] ?? null],
+            ['registration' => 'MC22 WPS', 'make' => 'DAF', 'model' => 'XF', 'year' => 2022, 'fuel_type' => 'diesel', 'vehicle_type' => 'truck', 'status' => 'active', 'odometer_reading' => 178000, 'compliance_status' => 'compliant', 'home_location_id' => $locIds[3] ?? null],
+            ['registration' => 'NE24 XRT', 'make' => 'Volvo', 'model' => 'FH', 'year' => 2024, 'fuel_type' => 'diesel', 'vehicle_type' => 'truck', 'status' => 'active', 'odometer_reading' => 9000, 'compliance_status' => 'compliant', 'home_location_id' => $locIds[5] ?? null],
+            ['registration' => 'PG21 YVW', 'make' => 'MAN', 'model' => 'TGX', 'year' => 2021, 'fuel_type' => 'diesel', 'vehicle_type' => 'truck', 'status' => 'in_maintenance', 'odometer_reading' => 230000, 'compliance_status' => 'compliant', 'home_location_id' => $locIds[6] ?? null],
+            ['registration' => 'RJ23 ABD', 'make' => 'Ford', 'model' => 'Transit', 'year' => 2023, 'fuel_type' => 'diesel', 'vehicle_type' => 'van', 'status' => 'active', 'odometer_reading' => 31000, 'compliance_status' => 'compliant', 'home_location_id' => $locIds[4] ?? null],
+            ['registration' => 'SK22 CEG', 'make' => 'Mercedes', 'model' => 'Sprinter', 'year' => 2022, 'fuel_type' => 'diesel', 'vehicle_type' => 'van', 'status' => 'active', 'odometer_reading' => 41000, 'compliance_status' => 'compliant', 'home_location_id' => $locIds[7] ?? null],
+            ['registration' => 'TL24 DFH', 'make' => 'Tesla', 'model' => 'Model 3', 'year' => 2024, 'fuel_type' => 'electric', 'vehicle_type' => 'car', 'status' => 'active', 'odometer_reading' => 5000, 'compliance_status' => 'compliant', 'home_location_id' => $locIds[8] ?? null],
+            ['registration' => 'VM21 GJK', 'make' => 'Volvo', 'model' => 'FH', 'year' => 2021, 'fuel_type' => 'diesel', 'vehicle_type' => 'truck', 'status' => 'active', 'odometer_reading' => 198000, 'compliance_status' => 'compliant', 'home_location_id' => $locIds[1] ?? null],
+            ['registration' => 'WN23 HLM', 'make' => 'DAF', 'model' => 'XF', 'year' => 2023, 'fuel_type' => 'diesel', 'vehicle_type' => 'truck', 'status' => 'active', 'odometer_reading' => 85000, 'compliance_status' => 'compliant', 'home_location_id' => $locIds[9] ?? null],
+            ['registration' => 'XP22 JNQ', 'make' => 'Ford', 'model' => 'Transit Custom', 'year' => 2022, 'fuel_type' => 'diesel', 'vehicle_type' => 'van', 'status' => 'active', 'odometer_reading' => 55000, 'compliance_status' => 'compliant', 'home_location_id' => $locIds[2] ?? null],
+            ['registration' => 'YR24 KPS', 'make' => 'MAN', 'model' => 'TGX', 'year' => 2024, 'fuel_type' => 'diesel', 'vehicle_type' => 'truck', 'status' => 'active', 'odometer_reading' => 12000, 'compliance_status' => 'compliant', 'home_location_id' => $locIds[5] ?? null],
         ]);
 
         $this->seedVehicleLiveTrackingPositions($vehicleIds);
@@ -170,29 +215,29 @@ final class FleetFullSeeder extends Seeder
         ]);
 
         $opLicenceIds = \App\Models\Fleet\OperatorLicence::query()->where('organization_id', $this->org->id)->pluck('id')->all();
-        for ($i = 0; $i < min(4, count($vehicleIds), count($driverIds)); $i++) {
-            \App\Models\Fleet\DriverVehicleAssignment::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
+        for ($i = 0; $i < min(count($vehicleIds), count($driverIds)); $i++) {
+            \App\Models\Fleet\DriverVehicleAssignment::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
                 ['organization_id' => $this->org->id, 'driver_id' => $driverIds[$i], 'vehicle_id' => $vehicleIds[$i]],
                 ['assignment_type' => 'primary', 'assigned_date' => now(), 'is_current' => true, 'assigned_by' => $this->user->id]
             );
         }
 
-        $this->seedPhase2TripsFuel($vehicleIds, $driverIds, $garageIds, $locIds);
-        $this->seedPhase3MaintenanceCompliance($vehicleIds, $driverIds, $garageIds);
+        $this->seedPhase2TripsFuel($vehicleIds, $driverIds, $locIds);
+        $this->seedPhase3MaintenanceCompliance($vehicleIds);
         $this->seedPhase4Telematics($vehicleIds);
         $this->seedPhase5CarbonInsurance($vehicleIds);
         $this->seedPhase6EvTrainingAlerts($vehicleIds, $driverIds, $evStationIds);
         $this->seedPhase7WorkshopContractors($garageIds);
         $this->seedPhase8WellnessCoaching($driverIds);
-        $this->seedPhase9ComplianceHs($vehicleIds, $driverIds, $locIds, $garageIds, $opLicenceIds);
-        $this->seedPhase10FinesLeaseWarranty($vehicleIds, $driverIds);
+        $this->seedPhase9ComplianceHs($vehicleIds, $driverIds, $opLicenceIds);
+        $this->seedPhase10FinesLeaseWarranty($vehicleIds);
         $this->seedPhase11ExtrasAudit($vehicleIds, $locIds);
 
         $this->seedFromLegacyDump($this->org);
 
         // Seed legacy data into every other org that already has fleet data,
         // so the dashboard shows updated counts in any org (e.g. Test Organization).
-        $orgIdsWithVehicles = \App\Models\Fleet\Vehicle::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)
+        $orgIdsWithVehicles = \App\Models\Fleet\Vehicle::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)
             ->distinct()
             ->pluck('organization_id');
         foreach ($orgIdsWithVehicles as $oid) {
@@ -225,11 +270,11 @@ final class FleetFullSeeder extends Seeder
         ];
         $legacyLocIds = [];
         foreach (array_slice($legacyCompanyNames, 0, 18) as $name) {
-            $loc = \App\Models\Fleet\Location::withoutGlobalScope($scope)->firstOrCreate(
+            $loc = \App\Models\Fleet\Location::query()->withoutGlobalScope($scope)->firstOrCreate(
                 ['organization_id' => $org->id, 'name' => $name],
                 [
                     'type' => 'depot',
-                    'address' => $name . ', UK',
+                    'address' => $name.', UK',
                     'city' => 'UK',
                     'country' => 'GB',
                     'is_active' => true,
@@ -297,7 +342,7 @@ final class FleetFullSeeder extends Seeder
             [$reg, $typeId, $status, $odometer, $motExpiry] = $row;
             $type = $legacyVehicleTypes[$typeId] ?? $legacyVehicleTypes[1];
             $ourStatus = $status === 'Archived' ? 'disposed' : 'active';
-            $v = \App\Models\Fleet\Vehicle::withoutGlobalScope($scope)->firstOrCreate(
+            $v = \App\Models\Fleet\Vehicle::query()->withoutGlobalScope($scope)->firstOrCreate(
                 ['organization_id' => $org->id, 'registration' => $reg],
                 [
                     'make' => $type['make'],
@@ -306,8 +351,8 @@ final class FleetFullSeeder extends Seeder
                     'fuel_type' => $type['fuel_type'],
                     'vehicle_type' => $type['vehicle_type'],
                     'status' => $ourStatus,
-                    'odometer_reading' => $odometer ?: rand(50000, 250000),
-                    'mot_expiry_date' => $motExpiry ? \Carbon\Carbon::parse($motExpiry) : null,
+                    'odometer_reading' => $odometer ?: random_int(50000, 250000),
+                    'mot_expiry_date' => $motExpiry ? \Illuminate\Support\Facades\Date::parse($motExpiry) : null,
                     'compliance_status' => 'compliant',
                     'home_location_id' => $homeLocId,
                 ]
@@ -334,7 +379,7 @@ final class FleetFullSeeder extends Seeder
             if ($newVehicleId === null) {
                 continue;
             }
-            \App\Models\Fleet\Defect::withoutGlobalScope($scope)->firstOrCreate(
+            \App\Models\Fleet\Defect::query()->withoutGlobalScope($scope)->firstOrCreate(
                 [
                     'organization_id' => $org->id,
                     'vehicle_id' => $newVehicleId,
@@ -354,25 +399,25 @@ final class FleetFullSeeder extends Seeder
 
         // Extra defects across legacy vehicles so lists look full
         $titles = ['Dashboard warning light', 'Brake wear indicator', 'Tyre pressure low', 'Windscreen chip', 'Mirror adjustment'];
-        foreach (array_slice($legacyVehicles, 0, 15, true) as $oldId => $row) {
+        foreach (array_keys(array_slice($legacyVehicles, 0, 15, true)) as $oldId) {
             $newVehicleId = $oldToNewVehicleId[$oldId] ?? null;
             if ($newVehicleId === null) {
                 continue;
             }
             $title = $titles[array_rand($titles)];
-            \App\Models\Fleet\Defect::withoutGlobalScope($scope)->firstOrCreate(
+            \App\Models\Fleet\Defect::query()->withoutGlobalScope($scope)->firstOrCreate(
                 [
                     'organization_id' => $org->id,
                     'vehicle_id' => $newVehicleId,
-                    'defect_number' => 'LEG-' . $oldId . '-' . rand(100, 999),
+                    'defect_number' => 'LEG-'.$oldId.'-'.random_int(100, 999),
                 ],
                 [
                     'title' => $title,
                     'description' => 'Reported from legacy system.',
                     'category' => 'safety',
                     'severity' => 'minor',
-                    'status' => rand(0, 2) === 0 ? 'resolved' : 'reported',
-                    'reported_at' => now()->subDays(rand(1, 60)),
+                    'status' => random_int(0, 2) === 0 ? 'resolved' : 'reported',
+                    'reported_at' => now()->subDays(random_int(1, 60)),
                 ]
             );
         }
@@ -381,7 +426,7 @@ final class FleetFullSeeder extends Seeder
         $serviceTypes = ['mot', 'annual_service_inspection', 'next_service_inspection', 'preventative_maintenance_inspection'];
         foreach (array_slice($oldToNewVehicleId, 0, 25, true) as $oldId => $newVehicleId) {
             $type = $serviceTypes[$oldId % count($serviceTypes)];
-            \App\Models\Fleet\ServiceSchedule::withoutGlobalScope($scope)->firstOrCreate(
+            \App\Models\Fleet\ServiceSchedule::query()->withoutGlobalScope($scope)->firstOrCreate(
                 [
                     'organization_id' => $org->id,
                     'vehicle_id' => $newVehicleId,
@@ -391,14 +436,14 @@ final class FleetFullSeeder extends Seeder
                     'interval_type' => 'time',
                     'interval_value' => 12,
                     'interval_unit' => 'months',
-                    'last_service_date' => now()->subMonths(rand(3, 8)),
+                    'last_service_date' => now()->subMonths(random_int(3, 8)),
                     'alert_days_before' => 14,
                     'is_active' => true,
                 ]
             );
         }
 
-        $this->command?->info('Legacy dump seed: ' . count($legacyVehicles) . ' vehicles, ' . count($legacyLocIds) . ' locations (from legacy companies), defects and service schedules.');
+        $this->command?->info('Legacy dump seed: '.count($legacyVehicles).' vehicles, '.count($legacyLocIds).' locations (from legacy companies), defects and service schedules.');
     }
 
     /** Derive approximate year from UK-style registration (e.g. EU15 → 2015, EY21 → 2021, LX70 → 2020). */
@@ -406,12 +451,14 @@ final class FleetFullSeeder extends Seeder
     {
         if (preg_match('/\d{2}/', $reg, $m)) {
             $yy = (int) $m[0];
+
             return $yy <= (int) date('y') + 1 ? 2000 + $yy : 1900 + $yy;
         }
-        return (int) date('Y') - rand(2, 6);
+
+        return (int) date('Y') - random_int(2, 6);
     }
 
-    private function seedPhase2TripsFuel(array $vehicleIds, array $driverIds, array $garageIds, array $locIds): void
+    private function seedPhase2TripsFuel(array $vehicleIds, array $driverIds, array $locIds): void
     {
         $routeIds = $this->seedRecords(\App\Models\Fleet\Route::class, 4, [
             ['name' => 'London-Manchester', 'route_type' => 'delivery', 'description' => 'A1 route', 'is_active' => true, 'start_location_id' => $locIds[0] ?? null, 'end_location_id' => $locIds[1] ?? null],
@@ -423,8 +470,8 @@ final class FleetFullSeeder extends Seeder
         $this->seedRouteStopsForMap($routeIds[0] ?? null, $locIds);
 
         for ($i = 0; $i < 4; $i++) {
-            $started = now()->subDays(rand(0, 14))->setTime(8, 0);
-            \App\Models\Fleet\Trip::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
+            $started = now()->subDays(random_int(0, 14))->setTime(8, 0);
+            \App\Models\Fleet\Trip::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
                 [
                     'organization_id' => $this->org->id,
                     'vehicle_id' => $vehicleIds[$i % count($vehicleIds)],
@@ -440,20 +487,20 @@ final class FleetFullSeeder extends Seeder
                 ]
             );
         }
-        $this->seedTripWaypointsForMap($locIds);
+        $this->seedTripWaypointsForMap();
 
-        $cardPrefix = 'FC****' . $this->org->id . '-';
+        $cardPrefix = 'FC****'.$this->org->id.'-';
         $fuelCardIds = $this->seedRecords(\App\Models\Fleet\FuelCard::class, self::COUNT, [
-            ['card_number' => $cardPrefix . '0001', 'provider' => 'Allstar', 'card_type' => 'fleet', 'status' => 'active'],
-            ['card_number' => $cardPrefix . '0002', 'provider' => 'Allstar', 'card_type' => 'fleet', 'status' => 'active'],
-            ['card_number' => $cardPrefix . '0003', 'provider' => 'KeyFuels', 'card_type' => 'fleet', 'status' => 'active'],
-            ['card_number' => $cardPrefix . '0004', 'provider' => 'Allstar', 'card_type' => 'fleet', 'status' => 'active'],
-            ['card_number' => $cardPrefix . '0005', 'provider' => 'KeyFuels', 'card_type' => 'fleet', 'status' => 'active'],
+            ['card_number' => $cardPrefix.'0001', 'provider' => 'Allstar', 'card_type' => 'fleet', 'status' => 'active'],
+            ['card_number' => $cardPrefix.'0002', 'provider' => 'Allstar', 'card_type' => 'fleet', 'status' => 'active'],
+            ['card_number' => $cardPrefix.'0003', 'provider' => 'KeyFuels', 'card_type' => 'fleet', 'status' => 'active'],
+            ['card_number' => $cardPrefix.'0004', 'provider' => 'Allstar', 'card_type' => 'fleet', 'status' => 'active'],
+            ['card_number' => $cardPrefix.'0005', 'provider' => 'KeyFuels', 'card_type' => 'fleet', 'status' => 'active'],
         ]);
 
         for ($i = 0; $i < self::COUNT; $i++) {
             $ts = now()->subDays($i);
-            \App\Models\Fleet\FuelTransaction::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
+            \App\Models\Fleet\FuelTransaction::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
                 [
                     'organization_id' => $this->org->id,
                     'vehicle_id' => $vehicleIds[$i % count($vehicleIds)],
@@ -471,11 +518,11 @@ final class FleetFullSeeder extends Seeder
         }
     }
 
-    private function seedPhase3MaintenanceCompliance(array $vehicleIds, array $driverIds, array $garageIds): void
+    private function seedPhase3MaintenanceCompliance(array $vehicleIds): void
     {
         $schedIds = [];
         for ($i = 0; $i < self::COUNT; $i++) {
-            $sched = \App\Models\Fleet\ServiceSchedule::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
+            $sched = \App\Models\Fleet\ServiceSchedule::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
                 [
                     'organization_id' => $this->org->id,
                     'vehicle_id' => $vehicleIds[$i % count($vehicleIds)],
@@ -497,14 +544,14 @@ final class FleetFullSeeder extends Seeder
 
         $woIds = [];
         for ($i = 0; $i < self::COUNT; $i++) {
-            $wo = \App\Models\Fleet\WorkOrder::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
+            $wo = \App\Models\Fleet\WorkOrder::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
                 [
                     'organization_id' => $this->org->id,
-                    'work_order_number' => 'WO-' . (2000 + $i),
+                    'work_order_number' => 'WO-'.(2000 + $i),
                 ],
                 [
                     'vehicle_id' => $vehicleIds[$i % count($vehicleIds)],
-                    'title' => 'Service ' . ($i + 1),
+                    'title' => 'Service '.($i + 1),
                     'work_type' => 'service',
                     'status' => $i === 0 ? 'completed' : 'in_progress',
                     'scheduled_date' => now()->addDays($i),
@@ -514,15 +561,15 @@ final class FleetFullSeeder extends Seeder
         }
 
         for ($i = 0; $i < 4; $i++) {
-            \App\Models\Fleet\Defect::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
+            \App\Models\Fleet\Defect::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
                 [
                     'organization_id' => $this->org->id,
                     'vehicle_id' => $vehicleIds[$i % count($vehicleIds)],
-                    'defect_number' => 'DEF-' . (100 + $i),
+                    'defect_number' => 'DEF-'.(100 + $i),
                 ],
                 [
-                    'title' => 'Minor defect ' . ($i + 1),
-                    'description' => 'Minor defect description ' . ($i + 1),
+                    'title' => 'Minor defect '.($i + 1),
+                    'description' => 'Minor defect description '.($i + 1),
                     'category' => 'safety',
                     'severity' => 'minor',
                     'status' => 'reported',
@@ -532,7 +579,7 @@ final class FleetFullSeeder extends Seeder
         }
 
         for ($i = 0; $i < 4; $i++) {
-            \App\Models\Fleet\ComplianceItem::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
+            \App\Models\Fleet\ComplianceItem::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
                 [
                     'organization_id' => $this->org->id,
                     'entity_type' => 'vehicle',
@@ -540,7 +587,7 @@ final class FleetFullSeeder extends Seeder
                     'compliance_type' => 'mot',
                 ],
                 [
-                    'title' => 'MOT Vehicle ' . ($i + 1),
+                    'title' => 'MOT Vehicle '.($i + 1),
                     'status' => 'valid',
                     'expiry_date' => now()->addYear(),
                 ]
@@ -551,10 +598,10 @@ final class FleetFullSeeder extends Seeder
     private function seedPhase4Telematics(array $vehicleIds): void
     {
         for ($i = 0; $i < 4; $i++) {
-            \App\Models\Fleet\TelematicsDevice::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
+            \App\Models\Fleet\TelematicsDevice::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
                 [
                     'organization_id' => $this->org->id,
-                    'device_id' => 'TEL-' . $this->org->id . '-' . (1000 + $i),
+                    'device_id' => 'TEL-'.$this->org->id.'-'.(1000 + $i),
                 ],
                 [
                     'vehicle_id' => $vehicleIds[$i % count($vehicleIds)],
@@ -567,7 +614,7 @@ final class FleetFullSeeder extends Seeder
 
     private function seedPhase5CarbonInsurance(array $vehicleIds): void
     {
-        $this->seedRecords(\App\Models\Fleet\EmissionsRecord::class, 4, array_map(fn ($i) => [
+        $this->seedRecords(\App\Models\Fleet\EmissionsRecord::class, 4, array_map(fn (int $i): array => [
             'vehicle_id' => $vehicleIds[$i % count($vehicleIds)],
             'record_date' => now()->subDays($i * 7),
             'scope' => 'vehicle',
@@ -591,13 +638,13 @@ final class FleetFullSeeder extends Seeder
         ]);
 
         for ($i = 0; $i < 5; $i++) {
-            \App\Models\Fleet\InsurancePolicy::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
+            \App\Models\Fleet\InsurancePolicy::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
                 [
                     'organization_id' => $this->org->id,
-                    'policy_number' => 'INS-' . $this->org->id . '-' . (5000 + $i),
+                    'policy_number' => 'INS-'.$this->org->id.'-'.(5000 + $i),
                 ],
                 [
-                    'insurer_name' => 'Fleet Insurer ' . ($i + 1),
+                    'insurer_name' => 'Fleet Insurer '.($i + 1),
                     'policy_type' => $i % 2 === 0 ? 'comprehensive' : 'fleet',
                     'coverage_type' => $i === 0 ? 'fleet' : 'any_driver',
                     'status' => 'active',
@@ -609,10 +656,10 @@ final class FleetFullSeeder extends Seeder
         }
 
         for ($i = 0; $i < 3; $i++) {
-            \App\Models\Fleet\Incident::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
+            \App\Models\Fleet\Incident::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
                 [
                     'organization_id' => $this->org->id,
-                    'incident_number' => 'INC-' . (100 + $i),
+                    'incident_number' => 'INC-'.(100 + $i),
                 ],
                 [
                     'vehicle_id' => $vehicleIds[$i % count($vehicleIds)],
@@ -621,7 +668,7 @@ final class FleetFullSeeder extends Seeder
                     'incident_timestamp' => now()->subDays($i * 30),
                     'incident_type' => 'collision',
                     'severity' => 'minor',
-                    'description' => 'Minor incident ' . ($i + 1),
+                    'description' => 'Minor incident '.($i + 1),
                     'status' => 'closed',
                 ]
             );
@@ -631,10 +678,10 @@ final class FleetFullSeeder extends Seeder
     private function seedPhase6EvTrainingAlerts(array $vehicleIds, array $driverIds, array $evStationIds): void
     {
         for ($i = 0; $i < 4; $i++) {
-            \App\Models\Fleet\EvChargingSession::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
+            \App\Models\Fleet\EvChargingSession::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
                 [
                     'organization_id' => $this->org->id,
-                    'session_id' => 'EVS-' . uniqid((string) $i),
+                    'session_id' => 'EVS-'.uniqid((string) $i),
                 ],
                 [
                     'vehicle_id' => $vehicleIds[min($i, count($vehicleIds) - 1)],
@@ -655,14 +702,14 @@ final class FleetFullSeeder extends Seeder
         $sessionIds = [];
         $schedDate = now()->addWeeks(1)->startOfDay();
         foreach ($courseIds as $idx => $cid) {
-            $s = \App\Models\Fleet\TrainingSession::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
+            $s = \App\Models\Fleet\TrainingSession::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
                 [
                     'organization_id' => $this->org->id,
                     'training_course_id' => $cid,
                     'scheduled_date' => $schedDate->copy()->addDays($idx),
                 ],
                 [
-                    'session_name' => 'Session ' . ($idx + 1),
+                    'session_name' => 'Session '.($idx + 1),
                     'start_time' => '09:00',
                     'end_time' => '17:00',
                     'status' => 'scheduled',
@@ -672,7 +719,7 @@ final class FleetFullSeeder extends Seeder
         }
 
         for ($i = 0; $i < 4; $i++) {
-            \App\Models\Fleet\DriverQualification::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
+            \App\Models\Fleet\DriverQualification::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
                 [
                     'organization_id' => $this->org->id,
                     'driver_id' => $driverIds[$i % count($driverIds)],
@@ -680,16 +727,16 @@ final class FleetFullSeeder extends Seeder
                 ],
                 [
                     'qualification_name' => 'Category C',
-                    'qualification_number' => 'QL-' . (1000 + $i),
+                    'qualification_number' => 'QL-'.(1000 + $i),
                     'status' => 'valid',
                     'expiry_date' => now()->addYear(),
                 ]
             );
         }
 
-        $costCenterIds = \App\Models\Fleet\CostCenter::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->where('organization_id', $this->org->id)->pluck('id')->all();
+        $costCenterIds = \App\Models\Fleet\CostCenter::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->where('organization_id', $this->org->id)->pluck('id')->all();
         for ($i = 0; $i < 4; $i++) {
-            \App\Models\Fleet\CostAllocation::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
+            \App\Models\Fleet\CostAllocation::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
                 [
                     'organization_id' => $this->org->id,
                     'cost_center_id' => $costCenterIds[$i % max(1, count($costCenterIds))],
@@ -707,14 +754,14 @@ final class FleetFullSeeder extends Seeder
         }
 
         for ($i = 0; $i < 5; $i++) {
-            \App\Models\Fleet\Alert::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
+            \App\Models\Fleet\Alert::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
                 [
                     'organization_id' => $this->org->id,
                     'alert_type' => $i % 2 === 0 ? 'maintenance_due' : 'compliance_expiry',
-                    'title' => 'Alert ' . ($i + 1),
+                    'title' => 'Alert '.($i + 1),
                 ],
                 [
-                    'description' => 'Alert description ' . ($i + 1),
+                    'description' => 'Alert description '.($i + 1),
                     'severity' => 'warning',
                     'status' => 'active',
                     'triggered_at' => now()->subDays($i),
@@ -722,7 +769,7 @@ final class FleetFullSeeder extends Seeder
             );
         }
 
-        $reportIds = $this->seedRecords(\App\Models\Fleet\Report::class, 4, [
+        $this->seedRecords(\App\Models\Fleet\Report::class, 4, [
             ['name' => 'Fleet Utilization', 'report_type' => 'fleet_utilization', 'schedule_frequency' => 'weekly', 'format' => 'pdf'],
             ['name' => 'Fuel Report', 'report_type' => 'fuel_efficiency', 'schedule_frequency' => 'monthly', 'format' => 'excel'],
             ['name' => 'Compliance Status', 'report_type' => 'compliance_status', 'schedule_frequency' => 'monthly', 'format' => 'pdf'],
@@ -740,25 +787,25 @@ final class FleetFullSeeder extends Seeder
         ]);
 
         for ($i = 0; $i < 5; $i++) {
-            \App\Models\Fleet\WorkshopBay::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
+            \App\Models\Fleet\WorkshopBay::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
                 [
                     'organization_id' => $this->org->id,
                     'garage_id' => $garageIds[$i % count($garageIds)],
-                    'name' => 'Bay ' . ($i + 1),
+                    'name' => 'Bay '.($i + 1),
                 ],
                 ['status' => 'available']
             );
         }
 
         for ($i = 0; $i < 5; $i++) {
-            \App\Models\Fleet\PartsInventory::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
+            \App\Models\Fleet\PartsInventory::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
                 [
                     'organization_id' => $this->org->id,
-                    'part_number' => 'P-' . (1000 + $i),
+                    'part_number' => 'P-'.(1000 + $i),
                 ],
                 [
                     'garage_id' => $garageIds[$i % count($garageIds)],
-                    'description' => 'Part ' . ($i + 1),
+                    'description' => 'Part '.($i + 1),
                     'quantity' => 20,
                     'supplier_id' => $supplierIds[$i % count($supplierIds)] ?? null,
                 ]
@@ -772,24 +819,24 @@ final class FleetFullSeeder extends Seeder
             ['size' => '195/65 R15', 'quantity' => 25, 'is_active' => true],
         ]);
 
-        $vehicleIds = \App\Models\Fleet\Vehicle::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->where('organization_id', $this->org->id)->pluck('id')->all();
+        $vehicleIds = \App\Models\Fleet\Vehicle::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->where('organization_id', $this->org->id)->pluck('id')->all();
         for ($i = 0; $i < 4; $i++) {
-            \App\Models\Fleet\GreyFleetVehicle::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
+            \App\Models\Fleet\GreyFleetVehicle::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
                 [
                     'organization_id' => $this->org->id,
-                    'registration' => 'GF' . $i . ' XXX',
+                    'registration' => 'GF'.$i.' XXX',
                 ],
                 [
                     'user_id' => $this->user->id,
-                    'make' => 'Private Car ' . ($i + 1),
+                    'make' => 'Private Car '.($i + 1),
                     'is_approved' => true,
                 ]
             );
         }
 
-        $greyIds = \App\Models\Fleet\GreyFleetVehicle::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->where('organization_id', $this->org->id)->pluck('id')->all();
+        $greyIds = \App\Models\Fleet\GreyFleetVehicle::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->where('organization_id', $this->org->id)->pluck('id')->all();
         for ($i = 0; $i < 4; $i++) {
-            \App\Models\Fleet\MileageClaim::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
+            \App\Models\Fleet\MileageClaim::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
                 [
                     'organization_id' => $this->org->id,
                     'grey_fleet_vehicle_id' => $greyIds[$i % count($greyIds)],
@@ -801,7 +848,7 @@ final class FleetFullSeeder extends Seeder
         }
 
         for ($i = 0; $i < 4; $i++) {
-            \App\Models\Fleet\PoolVehicleBooking::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
+            \App\Models\Fleet\PoolVehicleBooking::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
                 [
                     'organization_id' => $this->org->id,
                     'vehicle_id' => $vehicleIds[$i % count($vehicleIds)],
@@ -823,7 +870,7 @@ final class FleetFullSeeder extends Seeder
         ]);
 
         foreach ($contractorIds as $cid) {
-            \App\Models\Fleet\ContractorCompliance::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
+            \App\Models\Fleet\ContractorCompliance::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
                 [
                     'organization_id' => $this->org->id,
                     'contractor_id' => $cid,
@@ -834,11 +881,11 @@ final class FleetFullSeeder extends Seeder
         }
 
         for ($i = 0; $i < 4; $i++) {
-            \App\Models\Fleet\ContractorInvoice::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
+            \App\Models\Fleet\ContractorInvoice::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
                 [
                     'organization_id' => $this->org->id,
                     'contractor_id' => $contractorIds[$i % count($contractorIds)],
-                    'invoice_number' => 'INV-' . (3000 + $i),
+                    'invoice_number' => 'INV-'.(3000 + $i),
                 ],
                 [
                     'invoice_date' => now()->subDays($i * 10),
@@ -852,7 +899,7 @@ final class FleetFullSeeder extends Seeder
     private function seedPhase8WellnessCoaching(array $driverIds): void
     {
         for ($i = 0; $i < 5; $i++) {
-            \App\Models\Fleet\DriverWellnessRecord::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
+            \App\Models\Fleet\DriverWellnessRecord::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
                 [
                     'organization_id' => $this->org->id,
                     'driver_id' => $driverIds[$i % count($driverIds)],
@@ -863,22 +910,22 @@ final class FleetFullSeeder extends Seeder
         }
 
         for ($i = 0; $i < 5; $i++) {
-            \App\Models\Fleet\DriverCoachingPlan::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
+            \App\Models\Fleet\DriverCoachingPlan::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
                 [
                     'organization_id' => $this->org->id,
                     'driver_id' => $driverIds[$i % count($driverIds)],
                     'plan_type' => 'safety',
-                    'title' => 'Coaching plan ' . ($i + 1),
+                    'title' => 'Coaching plan '.($i + 1),
                 ],
                 ['status' => $i % 2 === 0 ? 'active' : 'completed', 'due_date' => now()->addMonth()]
             );
         }
 
         for ($i = 0; $i < 4; $i++) {
-            \App\Models\Fleet\WorkflowDefinition::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
+            \App\Models\Fleet\WorkflowDefinition::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
                 [
                     'organization_id' => $this->org->id,
-                    'name' => 'Workflow ' . ($i + 1),
+                    'name' => 'Workflow '.($i + 1),
                 ],
                 [
                     'trigger_type' => 'event',
@@ -888,7 +935,7 @@ final class FleetFullSeeder extends Seeder
         }
     }
 
-    private function seedPhase9ComplianceHs(array $vehicleIds, array $driverIds, array $locIds, array $garageIds, array $opLicenceIds): void
+    private function seedPhase9ComplianceHs(array $vehicleIds, array $driverIds, array $opLicenceIds): void
     {
         $templateIds = $this->seedRecords(\App\Models\Fleet\VehicleCheckTemplate::class, 4, [
             ['name' => 'Daily Check', 'check_type' => 'daily', 'is_active' => true],
@@ -898,7 +945,7 @@ final class FleetFullSeeder extends Seeder
         ]);
 
         for ($i = 0; $i < 5; $i++) {
-            \App\Models\Fleet\VehicleCheck::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
+            \App\Models\Fleet\VehicleCheck::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
                 [
                     'organization_id' => $this->org->id,
                     'vehicle_id' => $vehicleIds[$i % count($vehicleIds)],
@@ -910,12 +957,12 @@ final class FleetFullSeeder extends Seeder
         }
 
         for ($i = 0; $i < 4; $i++) {
-            \App\Models\Fleet\RiskAssessment::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
+            \App\Models\Fleet\RiskAssessment::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
                 [
                     'organization_id' => $this->org->id,
                     'subject_type' => 'vehicle',
                     'subject_id' => $vehicleIds[$i % count($vehicleIds)],
-                    'title' => 'Risk assessment ' . ($i + 1),
+                    'title' => 'Risk assessment '.($i + 1),
                 ],
                 [
                     'type' => 'driving',
@@ -925,12 +972,12 @@ final class FleetFullSeeder extends Seeder
         }
 
         for ($i = 0; $i < 4; $i++) {
-            \App\Models\Fleet\VehicleDisc::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
+            \App\Models\Fleet\VehicleDisc::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
                 [
                     'organization_id' => $this->org->id,
                     'vehicle_id' => $vehicleIds[$i % count($vehicleIds)],
                     'operator_licence_id' => $opLicenceIds[$i % count($opLicenceIds)],
-                    'disc_number' => 'DISC-' . (100 + $i),
+                    'disc_number' => 'DISC-'.(100 + $i),
                 ],
                 [
                     'valid_from' => now()->subMonth(),
@@ -941,7 +988,7 @@ final class FleetFullSeeder extends Seeder
         }
 
         for ($i = 0; $i < 4; $i++) {
-            \App\Models\Fleet\TachographCalibration::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
+            \App\Models\Fleet\TachographCalibration::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
                 [
                     'organization_id' => $this->org->id,
                     'vehicle_id' => $vehicleIds[$i % count($vehicleIds)],
@@ -955,28 +1002,28 @@ final class FleetFullSeeder extends Seeder
         }
 
         for ($i = 0; $i < 4; $i++) {
-            \App\Models\Fleet\SafetyPolicyAcknowledgment::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
+            \App\Models\Fleet\SafetyPolicyAcknowledgment::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
                 [
                     'organization_id' => $this->org->id,
                     'user_id' => $this->user->id,
-                    'policy_type' => 'Safety Policy v' . ($i + 1),
+                    'policy_type' => 'Safety Policy v'.($i + 1),
                 ],
                 [
-                    'policy_reference' => 'POL-' . ($i + 1),
+                    'policy_reference' => 'POL-'.($i + 1),
                     'acknowledged_at' => now()->subDays($i),
                 ]
             );
         }
 
         for ($i = 0; $i < 4; $i++) {
-            \App\Models\Fleet\PermitToWork::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
+            \App\Models\Fleet\PermitToWork::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
                 [
                     'organization_id' => $this->org->id,
-                    'permit_number' => 'PTW-' . (200 + $i),
+                    'permit_number' => 'PTW-'.(200 + $i),
                 ],
                 [
                     'issued_by' => $this->user->id,
-                    'title' => 'Permit ' . ($i + 1),
+                    'title' => 'Permit '.($i + 1),
                     'valid_from' => now(),
                     'valid_to' => now()->addDay(),
                     'status' => 'active',
@@ -985,14 +1032,14 @@ final class FleetFullSeeder extends Seeder
         }
 
         for ($i = 0; $i < 4; $i++) {
-            \App\Models\Fleet\PpeAssignment::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
+            \App\Models\Fleet\PpeAssignment::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
                 [
                     'organization_id' => $this->org->id,
                     'driver_id' => $driverIds[$i % count($driverIds)] ?? null,
                 ],
                 [
                     'ppe_type' => 'high_vis',
-                    'item_reference' => 'HV-' . ($i + 1),
+                    'item_reference' => 'HV-'.($i + 1),
                     'issued_date' => now()->subMonth(),
                     'status' => 'active',
                 ]
@@ -1000,11 +1047,11 @@ final class FleetFullSeeder extends Seeder
         }
 
         for ($i = 0; $i < 5; $i++) {
-            \App\Models\Fleet\SafetyObservation::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
+            \App\Models\Fleet\SafetyObservation::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
                 [
                     'organization_id' => $this->org->id,
                     'reported_by' => $this->user->id,
-                    'title' => 'Observation ' . ($i + 1),
+                    'title' => 'Observation '.($i + 1),
                 ],
                 [
                     'category' => 'near_miss',
@@ -1014,10 +1061,10 @@ final class FleetFullSeeder extends Seeder
         }
 
         for ($i = 0; $i < 4; $i++) {
-            \App\Models\Fleet\ToolboxTalk::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
+            \App\Models\Fleet\ToolboxTalk::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
                 [
                     'organization_id' => $this->org->id,
-                    'topic' => 'Toolbox talk ' . ($i + 1),
+                    'topic' => 'Toolbox talk '.($i + 1),
                 ],
                 [
                     'scheduled_date' => now()->addDays($i * 7),
@@ -1027,10 +1074,10 @@ final class FleetFullSeeder extends Seeder
         }
     }
 
-    private function seedPhase10FinesLeaseWarranty(array $vehicleIds, array $driverIds): void
+    private function seedPhase10FinesLeaseWarranty(array $vehicleIds): void
     {
         for ($i = 0; $i < 5; $i++) {
-            \App\Models\Fleet\Fine::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
+            \App\Models\Fleet\Fine::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
                 [
                     'organization_id' => $this->org->id,
                     'vehicle_id' => $vehicleIds[$i % count($vehicleIds)],
@@ -1045,13 +1092,13 @@ final class FleetFullSeeder extends Seeder
         }
 
         for ($i = 0; $i < 4; $i++) {
-            \App\Models\Fleet\VehicleLease::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
+            \App\Models\Fleet\VehicleLease::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
                 [
                     'organization_id' => $this->org->id,
                     'vehicle_id' => $vehicleIds[$i % count($vehicleIds)],
                 ],
                 [
-                    'lessor_name' => 'Lease Co ' . ($i + 1),
+                    'lessor_name' => 'Lease Co '.($i + 1),
                     'start_date' => now()->subYear(),
                     'end_date' => now()->addYears(2),
                     'status' => 'active',
@@ -1060,43 +1107,37 @@ final class FleetFullSeeder extends Seeder
         }
 
         for ($i = 0; $i < 4; $i++) {
-            \App\Models\Fleet\VehicleRecall::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
+            \App\Models\Fleet\VehicleRecall::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
                 [
                     'organization_id' => $this->org->id,
-                    'recall_reference' => 'REC-' . (500 + $i),
+                    'recall_reference' => 'REC-'.(500 + $i),
                 ],
                 [
                     'vehicle_id' => $vehicleIds[$i % count($vehicleIds)],
-                    'title' => 'Recall ' . ($i + 1),
+                    'title' => 'Recall '.($i + 1),
                     'status' => 'completed',
                 ]
             );
         }
 
-        $woIds = \App\Models\Fleet\WorkOrder::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->where('organization_id', $this->org->id)->pluck('id')->take(4)->all();
-        $partsInvIds = \App\Models\Fleet\PartsInventory::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->where('organization_id', $this->org->id)->pluck('id')->all();
+        $woIds = \App\Models\Fleet\WorkOrder::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->where('organization_id', $this->org->id)->pluck('id')->take(4)->all();
+        $partsInvIds = \App\Models\Fleet\PartsInventory::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->where('organization_id', $this->org->id)->pluck('id')->all();
         foreach ($woIds as $idx => $woId) {
-            \App\Models\Fleet\WorkOrderLine::firstOrCreate(
-                ['work_order_id' => $woId, 'line_type' => 'labour', 'sort_order' => 0],
-                ['description' => 'Labour', 'quantity' => 1, 'unit_price' => 75, 'total' => 75]
-            );
+            \App\Models\Fleet\WorkOrderLine::query()->firstOrCreate(['work_order_id' => $woId, 'line_type' => 'labour', 'sort_order' => 0], ['description' => 'Labour', 'quantity' => 1, 'unit_price' => 75, 'total' => 75]);
             if (count($partsInvIds) > 0) {
-                \App\Models\Fleet\WorkOrderPart::firstOrCreate(
-                    [
-                        'work_order_id' => $woId,
-                        'parts_inventory_id' => $partsInvIds[$idx % count($partsInvIds)],
-                    ],
-                    ['quantity_used' => 1, 'unit_cost' => 50, 'total_cost' => 50]
-                );
+                \App\Models\Fleet\WorkOrderPart::query()->firstOrCreate([
+                    'work_order_id' => $woId,
+                    'parts_inventory_id' => $partsInvIds[$idx % count($partsInvIds)],
+                ], ['quantity_used' => 1, 'unit_cost' => 50, 'total_cost' => 50]);
             }
         }
 
         foreach ($woIds as $idx => $woId) {
-            \App\Models\Fleet\WarrantyClaim::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
+            \App\Models\Fleet\WarrantyClaim::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
                 [
                     'organization_id' => $this->org->id,
                     'work_order_id' => $woId,
-                    'claim_number' => 'WCL-' . (1000 + $idx),
+                    'claim_number' => 'WCL-'.(1000 + $idx),
                 ],
                 [
                     'status' => 'submitted',
@@ -1110,7 +1151,7 @@ final class FleetFullSeeder extends Seeder
     private function seedPhase11ExtrasAudit(array $vehicleIds, array $locIds): void
     {
         for ($i = 0; $i < 5; $i++) {
-            \App\Models\Fleet\ParkingAllocation::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
+            \App\Models\Fleet\ParkingAllocation::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
                 [
                     'organization_id' => $this->org->id,
                     'vehicle_id' => $vehicleIds[$i % count($vehicleIds)],
@@ -1118,13 +1159,13 @@ final class FleetFullSeeder extends Seeder
                     'allocated_from' => now()->subDays($i),
                 ],
                 [
-                    'spot_identifier' => 'A-' . ($i + 1),
+                    'spot_identifier' => 'A-'.($i + 1),
                 ]
             );
         }
 
         for ($i = 0; $i < 5; $i++) {
-            \App\Models\Fleet\ElockEvent::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
+            \App\Models\Fleet\ElockEvent::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
                 [
                     'organization_id' => $this->org->id,
                     'vehicle_id' => $vehicleIds[$i % count($vehicleIds)],
@@ -1137,7 +1178,7 @@ final class FleetFullSeeder extends Seeder
         }
 
         for ($i = 0; $i < 4; $i++) {
-            \App\Models\Fleet\AxleLoadReading::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
+            \App\Models\Fleet\AxleLoadReading::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
                 [
                     'organization_id' => $this->org->id,
                     'vehicle_id' => $vehicleIds[$i % count($vehicleIds)],
@@ -1151,10 +1192,10 @@ final class FleetFullSeeder extends Seeder
         }
 
         for ($i = 0; $i < 4; $i++) {
-            \App\Models\Fleet\DataMigrationRun::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
+            \App\Models\Fleet\DataMigrationRun::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
                 [
                     'organization_id' => $this->org->id,
-                    'batch_id' => 'BAT-' . (100 + $i),
+                    'batch_id' => 'BAT-'.(100 + $i),
                 ],
                 [
                     'migration_type' => 'import',
@@ -1182,11 +1223,12 @@ final class FleetFullSeeder extends Seeder
                 $attrs['organization_id'] = $this->org->id;
             }
             $model = $modelClass::withoutGlobalScope($scope)->firstOrCreate(
-                $this->uniqueKeyFor($modelClass, $attrs),
+                $this->uniqueKeyFor($attrs),
                 $attrs
             );
             $ids[] = $model->id;
         }
+
         return $ids;
     }
 
@@ -1194,7 +1236,7 @@ final class FleetFullSeeder extends Seeder
      * @param  array<string, mixed>  $attrs
      * @return array<string, mixed>
      */
-    private function uniqueKeyFor(string $modelClass, array $attrs): array
+    private function uniqueKeyFor(array $attrs): array
     {
         $key = ['organization_id' => $this->org->id];
         if (isset($attrs['name'])) {
@@ -1224,6 +1266,7 @@ final class FleetFullSeeder extends Seeder
         if (isset($attrs['title'])) {
             $key['title'] = $attrs['title'];
         }
+
         return $key;
     }
 
@@ -1243,32 +1286,32 @@ final class FleetFullSeeder extends Seeder
         ];
         foreach ($vehicleIds as $i => $vid) {
             $pos = $positions[$i % count($positions)];
-            \App\Models\Fleet\Vehicle::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)
+            \App\Models\Fleet\Vehicle::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)
                 ->where('id', $vid)
                 ->update([
                     'current_lat' => $pos['lat'],
                     'current_lng' => $pos['lng'],
-                    'location_updated_at' => now()->subMinutes(rand(1, 60)),
+                    'location_updated_at' => now()->subMinutes(random_int(1, 60)),
                 ]);
         }
         // Backfill all other vehicles (e.g. in other orgs like "Test Organization") that have no position
-        $withoutPosition = \App\Models\Fleet\Vehicle::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)
+        $withoutPosition = \App\Models\Fleet\Vehicle::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)
             ->whereNull('current_lat')
             ->whereNull('current_lng')
             ->get(['id']);
         $updated = 0;
         foreach ($withoutPosition as $idx => $v) {
             $pos = $positions[$idx % count($positions)];
-            \App\Models\Fleet\Vehicle::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)
+            \App\Models\Fleet\Vehicle::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)
                 ->where('id', $v->id)
                 ->update([
                     'current_lat' => $pos['lat'],
                     'current_lng' => $pos['lng'],
-                    'location_updated_at' => now()->subMinutes(rand(1, 60)),
+                    'location_updated_at' => now()->subMinutes(random_int(1, 60)),
                 ]);
             $updated++;
         }
-        $this->command?->info('Seeded simulated live tracking positions for ' . count($vehicleIds) . ' vehicles' . ($updated > 0 ? " and backfilled {$updated} more without position." : '.'));
+        $this->command?->info('Seeded simulated live tracking positions for '.count($vehicleIds).' vehicles'.($updated > 0 ? " and backfilled {$updated} more without position." : '.'));
     }
 
     /** Backfill lat/lng for existing locations (by name) so Route/Trip maps have coordinates. */
@@ -1282,7 +1325,7 @@ final class FleetFullSeeder extends Seeder
             'West Depot' => ['lat' => 53.4084, 'lng' => -2.9916],
         ];
         foreach ($updates as $name => $coords) {
-            \App\Models\Fleet\Location::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)
+            \App\Models\Fleet\Location::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)
                 ->where('organization_id', $this->org->id)
                 ->where('name', $name)
                 ->update($coords);
@@ -1301,7 +1344,7 @@ final class FleetFullSeeder extends Seeder
             ['location_id' => $locIds[1], 'name' => 'North Yard (End)', 'sort_order' => 3],
         ];
         foreach ($stops as $stop) {
-            \App\Models\Fleet\RouteStop::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
+            \App\Models\Fleet\RouteStop::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->firstOrCreate(
                 [
                     'route_id' => $routeId,
                     'sort_order' => $stop['sort_order'],
@@ -1315,7 +1358,7 @@ final class FleetFullSeeder extends Seeder
     }
 
     /** Seed trip_waypoints so the Trip show page map has a path. Prefer Trip #1 so /fleet/trips/1 always shows the path. */
-    private function seedTripWaypointsForMap(array $locIds): void
+    private function seedTripWaypointsForMap(): void
     {
         $path = [
             [51.5074, -0.1278],
@@ -1327,13 +1370,12 @@ final class FleetFullSeeder extends Seeder
             [53.1, -2.12],
             [53.4808, -2.2426],
         ];
-
         // Prefer trip id=1 so /fleet/trips/1 always shows the path; otherwise first trip of this org
-        $trip = \App\Models\Fleet\Trip::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)
+        $trip = \App\Models\Fleet\Trip::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)
             ->where('id', 1)
             ->first();
         if ($trip === null) {
-            $trip = \App\Models\Fleet\Trip::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)
+            $trip = \App\Models\Fleet\Trip::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)
                 ->where('organization_id', $this->org->id)
                 ->orderBy('id')
                 ->first();
@@ -1341,12 +1383,12 @@ final class FleetFullSeeder extends Seeder
         if ($trip === null) {
             return;
         }
-        if (\App\Models\Fleet\TripWaypoint::where('trip_id', $trip->id)->exists()) {
+        if (\App\Models\Fleet\TripWaypoint::query()->where('trip_id', $trip->id)->exists()) {
             return;
         }
         $recorded = $trip->started_at ?? now()->subHours(2);
         foreach ($path as $seq => $point) {
-            \App\Models\Fleet\TripWaypoint::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->create([
+            \App\Models\Fleet\TripWaypoint::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->create([
                 'trip_id' => $trip->id,
                 'lat' => $point[0],
                 'lng' => $point[1],
