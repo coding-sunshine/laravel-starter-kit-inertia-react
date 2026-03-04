@@ -233,6 +233,8 @@ final class FleetFullSeeder extends Seeder
         $this->seedPhase10FinesLeaseWarranty($vehicleIds);
         $this->seedPhase11ExtrasAudit($vehicleIds, $locIds);
 
+        $this->seedHistoricalChartData($vehicleIds, $driverIds);
+
         $this->seedFromLegacyDump($this->org);
 
         // Seed legacy data into every other org that already has fleet data,
@@ -1207,6 +1209,271 @@ final class FleetFullSeeder extends Seeder
                 ]
             );
         }
+    }
+
+    /**
+     * Seed 30 days of historical chart data: trips, work orders, fuel transactions,
+     * alerts, compliance items, and service schedules with realistic distributions.
+     *
+     * @param  array<int>  $vehicleIds
+     * @param  array<int>  $driverIds
+     */
+    private function seedHistoricalChartData(array $vehicleIds, array $driverIds): void
+    {
+        $scope = \App\Models\Scopes\OrganizationScope::class;
+        $vCount = count($vehicleIds);
+        $dCount = count($driverIds);
+
+        // Fetch existing route & fuel card IDs seeded in Phase 2
+        $routeIds = \App\Models\Fleet\Route::query()->withoutGlobalScope($scope)
+            ->where('organization_id', $this->org->id)->pluck('id')->all();
+        $fuelCardIds = \App\Models\Fleet\FuelCard::query()->withoutGlobalScope($scope)
+            ->where('organization_id', $this->org->id)->pluck('id')->all();
+
+        // ---- Trips: 200+ records, 7-10/day weekdays, 3-5/day weekends ----
+        $tripCount = 0;
+        for ($day = 30; $day >= 0; $day--) {
+            $date = now()->subDays($day)->startOfDay();
+            $isWeekday = $date->isWeekday();
+            $tripsToday = $isWeekday ? random_int(7, 10) : random_int(3, 5);
+
+            for ($t = 0; $t < $tripsToday; $t++) {
+                $hour = random_int(5, 18);
+                $started = $date->copy()->setTime($hour, random_int(0, 59));
+                $durationMin = random_int(45, 240);
+
+                \App\Models\Fleet\Trip::query()->withoutGlobalScope($scope)->create([
+                    'organization_id' => $this->org->id,
+                    'vehicle_id' => $vehicleIds[$tripCount % $vCount],
+                    'driver_id' => $driverIds[$tripCount % $dCount],
+                    'route_id' => $routeIds[$tripCount % max(1, count($routeIds))] ?? null,
+                    'started_at' => $started,
+                    'ended_at' => $started->copy()->addMinutes($durationMin),
+                    'distance_km' => random_int(20, 350),
+                    'duration_minutes' => $durationMin,
+                    'status' => 'completed',
+                ]);
+                $tripCount++;
+            }
+        }
+        $this->command?->info("Seeded {$tripCount} historical trips over 30 days.");
+
+        // ---- Work Orders: 60+ records with status mix ----
+        $woStatuses = array_merge(
+            array_fill(0, 18, 'completed'),   // 30%
+            array_fill(0, 12, 'in_progress'),  // 20%
+            array_fill(0, 9, 'scheduled'),     // 15%
+            array_fill(0, 9, 'pending'),       // 15%
+            array_fill(0, 6, 'draft'),         // 10%
+            array_fill(0, 6, 'cancelled'),     // 10%
+        );
+        shuffle($woStatuses);
+        $woCount = count($woStatuses);
+
+        // Fetch existing max WO number to avoid conflicts
+        $maxWoNum = \App\Models\Fleet\WorkOrder::query()->withoutGlobalScope($scope)
+            ->where('organization_id', $this->org->id)
+            ->count();
+
+        for ($i = 0; $i < $woCount; $i++) {
+            $status = $woStatuses[$i];
+            // Completions cluster toward recent dates
+            $daysAgo = $status === 'completed'
+                ? random_int(0, 15)
+                : random_int(0, 30);
+            $createdDate = now()->subDays($daysAgo);
+
+            $completedDate = null;
+            if ($status === 'completed') {
+                $completedDate = $createdDate->copy()->addDays(random_int(1, 5));
+                if ($completedDate->isFuture()) {
+                    $completedDate = now();
+                }
+            }
+
+            $woNum = 'WO-'.($maxWoNum + 3000 + $i);
+            $types = ['service', 'repair', 'inspection', 'recall', 'preventive'];
+
+            \App\Models\Fleet\WorkOrder::query()->withoutGlobalScope($scope)->create([
+                'organization_id' => $this->org->id,
+                'vehicle_id' => $vehicleIds[$i % $vCount],
+                'work_order_number' => $woNum,
+                'title' => match ($status) {
+                    'completed' => 'Completed service #'.($i + 1),
+                    'in_progress' => 'Active repair #'.($i + 1),
+                    'scheduled' => 'Scheduled maintenance #'.($i + 1),
+                    'pending' => 'Pending approval #'.($i + 1),
+                    'draft' => 'Draft work order #'.($i + 1),
+                    default => 'Cancelled order #'.($i + 1),
+                },
+                'work_type' => $types[$i % count($types)],
+                'priority' => ['low', 'medium', 'high', 'critical'][$i % 4],
+                'status' => $status,
+                'urgency' => ['low', 'medium', 'high'][$i % 3],
+                'scheduled_date' => $createdDate->toDateString(),
+                'completed_date' => $completedDate?->toDateString(),
+                'total_cost' => $status === 'completed' ? random_int(80, 2500) : null,
+            ]);
+        }
+        $this->command?->info("Seeded {$woCount} historical work orders.");
+
+        // ---- Fuel Transactions: 120+ records, GBP 30-150, upward cost trend ----
+        $fuelCount = 0;
+        for ($day = 30; $day >= 0; $day--) {
+            $date = now()->subDays($day);
+            $txToday = random_int(3, 6);
+            // Subtle upward trend: base cost rises from 30 to ~50 over 30 days
+            $baseCost = 30 + (30 - $day) * 0.67;
+
+            for ($t = 0; $t < $txToday; $t++) {
+                $cost = round($baseCost + random_int(0, 100), 2);
+                $litres = round($cost / (1.42 + random_int(0, 10) / 100), 2);
+
+                \App\Models\Fleet\FuelTransaction::query()->withoutGlobalScope($scope)->create([
+                    'organization_id' => $this->org->id,
+                    'vehicle_id' => $vehicleIds[$fuelCount % $vCount],
+                    'fuel_card_id' => $fuelCardIds[$fuelCount % max(1, count($fuelCardIds))] ?? null,
+                    'transaction_timestamp' => $date->copy()->setTime(random_int(6, 20), random_int(0, 59)),
+                    'litres' => $litres,
+                    'price_per_litre' => round($cost / max(1, $litres), 4),
+                    'total_cost' => $cost,
+                    'fuel_type' => 'diesel',
+                    'validation_status' => 'validated',
+                ]);
+                $fuelCount++;
+            }
+        }
+        $this->command?->info("Seeded {$fuelCount} historical fuel transactions.");
+
+        // ---- Alerts: 20+ records with severity & status mix + burst clusters ----
+        $alertTypes = ['maintenance_due', 'compliance_expiry', 'defect_reported', 'incident_reported', 'behavior_violation', 'fuel_anomaly', 'geofence_violation', 'speed_violation'];
+        $alertData = [];
+
+        // 3-4 critical active
+        for ($i = 0; $i < 4; $i++) {
+            $alertData[] = ['severity' => 'critical', 'status' => 'active', 'days_ago' => random_int(0, 3)];
+        }
+        // 5-6 warning active
+        for ($i = 0; $i < 6; $i++) {
+            $alertData[] = ['severity' => 'warning', 'status' => 'active', 'days_ago' => random_int(0, 7)];
+        }
+        // 10+ resolved
+        for ($i = 0; $i < 12; $i++) {
+            $alertData[] = ['severity' => ['warning', 'critical', 'info'][$i % 3], 'status' => 'resolved', 'days_ago' => random_int(3, 28)];
+        }
+        // 2-3 burst clusters (same day, multiple alerts)
+        $burstDays = [random_int(5, 10), random_int(15, 20), random_int(22, 28)];
+        foreach ($burstDays as $burstDay) {
+            for ($b = 0; $b < random_int(2, 3); $b++) {
+                $alertData[] = ['severity' => 'critical', 'status' => 'resolved', 'days_ago' => $burstDay];
+            }
+        }
+
+        foreach ($alertData as $idx => $a) {
+            $triggered = now()->subDays($a['days_ago'])->setTime(random_int(0, 23), random_int(0, 59));
+            $type = $alertTypes[$idx % count($alertTypes)];
+            $resolvedAt = $a['status'] === 'resolved' ? $triggered->copy()->addHours(random_int(1, 48)) : null;
+
+            \App\Models\Fleet\Alert::query()->withoutGlobalScope($scope)->create([
+                'organization_id' => $this->org->id,
+                'alert_type' => $type,
+                'severity' => $a['severity'],
+                'status' => $a['status'],
+                'title' => ucfirst(str_replace('_', ' ', $type)).' — Vehicle '.($idx + 1),
+                'description' => 'Auto-generated historical alert for charting. Severity: '.$a['severity'],
+                'entity_type' => 'vehicle',
+                'entity_id' => $vehicleIds[$idx % $vCount],
+                'triggered_at' => $triggered,
+                'resolved_at' => $resolvedAt,
+                'notification_sent' => true,
+            ]);
+        }
+        $this->command?->info('Seeded '.count($alertData).' historical alerts.');
+
+        // ---- Compliance Items: 30+ records with status distribution ----
+        $compStatuses = array_merge(
+            array_fill(0, 18, 'valid'),          // 60%
+            array_fill(0, 6, 'expiring_soon'),    // 20%
+            array_fill(0, 3, 'expired'),          // 10%
+            array_fill(0, 3, 'pending'),          // 10%
+        );
+        shuffle($compStatuses);
+        $compTypes = ['mot', 'insurance', 'road_tax', 'operator_licence', 'tachograph', 'adr_certificate', 'cpc'];
+
+        foreach ($compStatuses as $idx => $status) {
+            $expiryDate = match ($status) {
+                'valid' => now()->addDays(random_int(30, 365)),
+                'expiring_soon' => now()->addDays(random_int(1, 29)),
+                'expired' => now()->subDays(random_int(1, 60)),
+                default => now()->addDays(random_int(60, 180)),
+            };
+
+            $entityType = $idx % 3 === 0 ? 'driver' : 'vehicle';
+            $entityId = $entityType === 'driver'
+                ? $driverIds[$idx % $dCount]
+                : $vehicleIds[$idx % $vCount];
+            $compType = $compTypes[$idx % count($compTypes)];
+
+            // Use firstOrCreate to avoid unique constraint violations (entity_type + entity_id + compliance_type)
+            \App\Models\Fleet\ComplianceItem::query()->withoutGlobalScope($scope)->firstOrCreate(
+                [
+                    'organization_id' => $this->org->id,
+                    'entity_type' => $entityType,
+                    'entity_id' => $entityId,
+                    'compliance_type' => $compType,
+                ],
+                [
+                    'title' => ucfirst($compType).' — '.($entityType === 'driver' ? 'Driver' : 'Vehicle').' #'.($idx + 1),
+                    'status' => $status,
+                    'expiry_date' => $expiryDate,
+                    'issue_date' => $expiryDate->copy()->subYear(),
+                ]
+            );
+        }
+        $this->command?->info('Seeded '.count($compStatuses).' historical compliance items.');
+
+        // ---- Service Schedules: 15+ records, 5 due within 14 days ----
+        $serviceTypes = ['oil_change', 'inspection', 'brake_service', 'tyre_rotation', 'full_service'];
+        $scheduleCount = 0;
+
+        // 5 due within 14 days (for upcoming maintenance panel)
+        for ($i = 0; $i < 5; $i++) {
+            \App\Models\Fleet\ServiceSchedule::query()->withoutGlobalScope($scope)->create([
+                'organization_id' => $this->org->id,
+                'vehicle_id' => $vehicleIds[$i % $vCount],
+                'service_type' => $serviceTypes[$i % count($serviceTypes)],
+                'interval_type' => 'time',
+                'interval_value' => 6,
+                'interval_unit' => 'months',
+                'last_service_date' => now()->subMonths(6),
+                'last_service_mileage' => random_int(20000, 80000),
+                'next_service_due_date' => now()->addDays(random_int(1, 14)),
+                'alert_days_before' => 14,
+                'alert_km_before' => 500,
+                'is_active' => true,
+            ]);
+            $scheduleCount++;
+        }
+
+        // 10+ not immediately due
+        for ($i = 0; $i < 12; $i++) {
+            \App\Models\Fleet\ServiceSchedule::query()->withoutGlobalScope($scope)->create([
+                'organization_id' => $this->org->id,
+                'vehicle_id' => $vehicleIds[($i + 5) % $vCount],
+                'service_type' => $serviceTypes[$i % count($serviceTypes)],
+                'interval_type' => 'distance',
+                'interval_value' => 15000,
+                'interval_unit' => 'km',
+                'last_service_date' => now()->subMonths(random_int(1, 4)),
+                'last_service_mileage' => random_int(30000, 150000),
+                'next_service_due_date' => now()->addDays(random_int(15, 90)),
+                'alert_days_before' => 14,
+                'alert_km_before' => 500,
+                'is_active' => true,
+            ]);
+            $scheduleCount++;
+        }
+        $this->command?->info("Seeded {$scheduleCount} historical service schedules.");
     }
 
     /**
