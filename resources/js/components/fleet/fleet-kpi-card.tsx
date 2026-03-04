@@ -2,6 +2,7 @@
 
 import { Card, CardContent } from '@/components/ui/card';
 import { ChartContainer } from '@/components/ui/chart';
+import { AnimatedNumber } from '@/components/fleet/animated-number';
 import { cn } from '@/lib/utils';
 import { ArrowDown, ArrowRight, ArrowUp } from 'lucide-react';
 import * as React from 'react';
@@ -61,9 +62,11 @@ export function FleetKpiCard({
 
                     {/* Value + trend */}
                     <div className="flex items-baseline gap-2">
-                        <span className="text-3xl font-bold tabular-nums tracking-tight">
-                            {value.toLocaleString()}
-                        </span>
+                        <AnimatedNumber
+                            value={value}
+                            duration={400}
+                            className="text-3xl font-bold tabular-nums tracking-tight"
+                        />
                         {trend && TrendIcon && (
                             <span
                                 className={cn(

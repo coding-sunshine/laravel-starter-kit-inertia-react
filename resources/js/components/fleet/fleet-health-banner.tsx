@@ -1,5 +1,6 @@
 'use client';
 
+import { AnimatedNumber } from '@/components/fleet/animated-number';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -57,7 +58,7 @@ function ScoreCircle({ score }: { score: number }) {
                 />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-2xl font-bold tabular-nums">{score}</span>
+                <AnimatedNumber value={score} duration={400} className="text-2xl font-bold tabular-nums" />
                 <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
                     / 100
                 </span>
