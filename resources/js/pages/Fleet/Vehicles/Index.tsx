@@ -508,6 +508,13 @@ export default function FleetVehiclesIndex({ vehicles, filters = {}, summary, ai
                                 illustration="/images/empty/vehicles.svg"
                                 title="No vehicles yet"
                                 description="Add your first vehicle to start managing your fleet."
+                                aiSuggestion="What vehicles should I add first?"
+                                features={[
+                                    'Track vehicle status, mileage, and location',
+                                    'Schedule maintenance and service reminders',
+                                    'Monitor fuel consumption and costs',
+                                    'Run AI-powered predictive maintenance',
+                                ]}
                                 action={
                                     <Button asChild>
                                         <Link href="/fleet/vehicles/create">

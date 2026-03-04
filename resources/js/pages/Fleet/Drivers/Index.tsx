@@ -439,6 +439,13 @@ export default function FleetDriversIndex({ drivers, filters = {}, summary, aiIn
                                 icon={Users}
                                 title="No drivers yet"
                                 description="Add your first driver to manage assignments and compliance."
+                                aiSuggestion="How should I set up driver profiles?"
+                                features={[
+                                    'Assign drivers to vehicles',
+                                    'Track qualifications and licence expiry',
+                                    'Monitor safety scores and behaviour',
+                                    'AI-powered coaching recommendations',
+                                ]}
                                 action={
                                     <Button asChild>
                                         <Link href="/fleet/drivers/create">

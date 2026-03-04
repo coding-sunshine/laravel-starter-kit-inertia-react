@@ -396,6 +396,13 @@ export default function FleetWorkOrdersIndex({
                                 icon={ClipboardList}
                                 title="No work orders yet"
                                 description="Create a work order to schedule maintenance or repairs."
+                                aiSuggestion="What maintenance should I schedule first?"
+                                features={[
+                                    'Schedule preventive and corrective maintenance',
+                                    'Track parts, labour, and costs per job',
+                                    'Set priority and assign to workshop bays',
+                                    'AI predicts when vehicles need servicing',
+                                ]}
                                 action={
                                     <Button asChild>
                                         <Link href="/fleet/work-orders/create">

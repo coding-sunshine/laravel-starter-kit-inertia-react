@@ -1,4 +1,3 @@
-import AppLayout from '@/layouts/app-layout';
 import {
     FleetActionIconButton,
     FleetActionIconLink,
@@ -9,6 +8,7 @@ import {
     FleetPageToolbarRight,
     FleetPagination,
 } from '@/components/fleet';
+import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogClose,
@@ -26,12 +26,12 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
 import { Eye, MapPin, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
 
 interface RouteRecord {
     id: number;
@@ -40,7 +40,10 @@ interface RouteRecord {
     is_active: boolean;
 }
 interface Props {
-    routes: { data: RouteRecord[]; links: { url: string | null; label: string; active: boolean }[] };
+    routes: {
+        data: RouteRecord[];
+        links: { url: string | null; label: string; active: boolean }[];
+    };
 }
 
 export default function FleetRoutesIndex({ routes }: Props) {
@@ -71,7 +74,10 @@ export default function FleetRoutesIndex({ routes }: Props) {
                 <FleetGlassCard className="min-w-0 overflow-hidden" noPadding>
                     <div className="mb-2 flex h-9 items-center justify-between border-b border-white/30 px-4 pt-4 pb-2">
                         <h3 className="text-base font-medium text-[#5b638d]">
-                            All routes — {routes.data.length === 0 ? 'No routes yet' : `${routes.data.length} route${routes.data.length === 1 ? '' : 's'}`}
+                            All routes —{' '}
+                            {routes.data.length === 0
+                                ? 'No routes yet'
+                                : `${routes.data.length} route${routes.data.length === 1 ? '' : 's'}`}
                         </h3>
                         <FleetPageToolbarRight>
                             <Button asChild size="sm">
@@ -88,9 +94,17 @@ export default function FleetRoutesIndex({ routes }: Props) {
                                 icon={MapPin}
                                 title="No routes yet"
                                 description="Create a route to organize trips and schedules."
+                                aiSuggestion="How can AI optimise my routes?"
+                                features={[
+                                    'Plan multi-stop delivery routes',
+                                    'AI-powered route optimisation',
+                                    'Track estimated vs actual journey times',
+                                ]}
                                 action={
                                     <Button asChild>
-                                        <Link href="/fleet/routes/create">Create route</Link>
+                                        <Link href="/fleet/routes/create">
+                                            Create route
+                                        </Link>
                                     </Button>
                                 }
                             />
@@ -101,38 +115,74 @@ export default function FleetRoutesIndex({ routes }: Props) {
                                 <Table>
                                     <TableHeader>
                                         <TableRow className="border-0 bg-transparent hover:bg-transparent">
-                                            <TableHead className="h-11 px-4 font-semibold">Name</TableHead>
-                                            <TableHead className="h-11 px-4 font-semibold">Type</TableHead>
-                                            <TableHead className="h-11 px-4 font-semibold">Status</TableHead>
-                                            <TableHead className="h-11 w-[120px] px-4 text-right font-semibold">Actions</TableHead>
+                                            <TableHead className="h-11 px-4 font-semibold">
+                                                Name
+                                            </TableHead>
+                                            <TableHead className="h-11 px-4 font-semibold">
+                                                Type
+                                            </TableHead>
+                                            <TableHead className="h-11 px-4 font-semibold">
+                                                Status
+                                            </TableHead>
+                                            <TableHead className="h-11 w-[120px] px-4 text-right font-semibold">
+                                                Actions
+                                            </TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {routes.data.map((row) => (
-                                            <TableRow key={row.id} className="group transition-colors">
+                                            <TableRow
+                                                key={row.id}
+                                                className="group transition-colors"
+                                            >
                                                 <TableCell className="px-4 py-3">
-                                                    <Link href={`/fleet/routes/${row.id}`} className="font-medium text-foreground hover:underline">
+                                                    <Link
+                                                        href={`/fleet/routes/${row.id}`}
+                                                        className="font-medium text-foreground hover:underline"
+                                                    >
                                                         {row.name}
                                                     </Link>
                                                 </TableCell>
-                                                <TableCell className="px-4 py-3 text-muted-foreground">{row.route_type}</TableCell>
+                                                <TableCell className="px-4 py-3 text-muted-foreground">
+                                                    {row.route_type}
+                                                </TableCell>
                                                 <TableCell className="px-4 py-3">
-                                                    <FleetGlassPill variant={row.is_active ? 'success' : 'default'}>
-                                                        {row.is_active ? 'Active' : 'Inactive'}
+                                                    <FleetGlassPill
+                                                        variant={
+                                                            row.is_active
+                                                                ? 'success'
+                                                                : 'default'
+                                                        }
+                                                    >
+                                                        {row.is_active
+                                                            ? 'Active'
+                                                            : 'Inactive'}
                                                     </FleetGlassPill>
                                                 </TableCell>
                                                 <TableCell className="px-4 py-3 text-right">
                                                     <div className="flex items-center justify-end gap-1">
-                                                        <FleetActionIconLink href={`/fleet/routes/${row.id}`} label="View" variant="view">
+                                                        <FleetActionIconLink
+                                                            href={`/fleet/routes/${row.id}`}
+                                                            label="View"
+                                                            variant="view"
+                                                        >
                                                             <Eye className="size-4" />
                                                         </FleetActionIconLink>
-                                                        <FleetActionIconLink href={`/fleet/routes/${row.id}/edit`} label="Edit" variant="edit">
+                                                        <FleetActionIconLink
+                                                            href={`/fleet/routes/${row.id}/edit`}
+                                                            label="Edit"
+                                                            variant="edit"
+                                                        >
                                                             <Pencil className="size-4" />
                                                         </FleetActionIconLink>
                                                         <FleetActionIconButton
                                                             label="Delete"
                                                             variant="delete"
-                                                            onClick={() => setDeleteTarget(row)}
+                                                            onClick={() =>
+                                                                setDeleteTarget(
+                                                                    row,
+                                                                )
+                                                            }
                                                         >
                                                             <Trash2 className="size-4" />
                                                         </FleetActionIconButton>
@@ -148,12 +198,17 @@ export default function FleetRoutesIndex({ routes }: Props) {
                     )}
                 </FleetGlassCard>
 
-                <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+                <Dialog
+                    open={!!deleteTarget}
+                    onOpenChange={(open) => !open && setDeleteTarget(null)}
+                >
                     <DialogContent>
                         <DialogHeader>
                             <DialogTitle>Delete route</DialogTitle>
                             <DialogDescription>
-                                Are you sure you want to delete <strong>{deleteTarget?.name}</strong>? This action cannot be undone.
+                                Are you sure you want to delete{' '}
+                                <strong>{deleteTarget?.name}</strong>? This
+                                action cannot be undone.
                             </DialogDescription>
                         </DialogHeader>
                         <DialogFooter>
@@ -164,7 +219,9 @@ export default function FleetRoutesIndex({ routes }: Props) {
                                 variant="destructive"
                                 onClick={() => {
                                     if (deleteTarget) {
-                                        router.delete(`/fleet/routes/${deleteTarget.id}`);
+                                        router.delete(
+                                            `/fleet/routes/${deleteTarget.id}`,
+                                        );
                                         setDeleteTarget(null);
                                     }
                                 }}
