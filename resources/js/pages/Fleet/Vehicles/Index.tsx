@@ -12,6 +12,12 @@ import {
 } from '@/components/fleet';
 import type { SummaryStat } from '@/components/fleet';
 import { Button } from '@/components/ui/button';
+import {
+    ChartContainer,
+    ChartTooltip,
+    ChartTooltipContent,
+} from '@/components/ui/chart';
+import type { ChartConfig } from '@/components/ui/chart';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
     Dialog,
@@ -56,6 +62,7 @@ import {
     Wrench,
 } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
+import { Bar, BarChart, XAxis, YAxis } from 'recharts';
 
 const COLUMN_STORAGE_KEY = 'fleet-vehicles-columns';
 
@@ -100,9 +107,101 @@ interface Props {
         total: number;
         active: number;
         in_maintenance: number;
+        inactive: number;
         due_for_service: number;
     };
     aiInsights?: Record<number, AiInsight>;
+}
+
+const statusDistributionConfig = {
+    active: { label: 'Active', color: 'var(--color-emerald-500, #10b981)' },
+    in_maintenance: { label: 'In Maintenance', color: 'var(--color-amber-500, #f59e0b)' },
+    inactive: { label: 'Inactive', color: 'var(--color-gray-400, #9ca3af)' },
+} satisfies ChartConfig;
+
+function StatusDistributionBar({
+    active,
+    inMaintenance,
+    inactive,
+    total,
+}: {
+    active: number;
+    inMaintenance: number;
+    inactive: number;
+    total: number;
+}) {
+    const data = [
+        {
+            name: 'Status',
+            active,
+            in_maintenance: inMaintenance,
+            inactive,
+        },
+    ];
+
+    const pct = (n: number) => (total > 0 ? Math.round((n / total) * 100) : 0);
+
+    return (
+        <div className="rounded-xl border bg-card p-4 shadow-sm">
+            <div className="mb-2 flex items-center justify-between">
+                <h4 className="text-sm font-medium text-muted-foreground">Status Distribution</h4>
+                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                        <span className="inline-block size-2.5 rounded-full bg-emerald-500" />
+                        Active {pct(active)}%
+                    </span>
+                    <span className="flex items-center gap-1">
+                        <span className="inline-block size-2.5 rounded-full bg-amber-500" />
+                        Maintenance {pct(inMaintenance)}%
+                    </span>
+                    <span className="flex items-center gap-1">
+                        <span className="inline-block size-2.5 rounded-full bg-gray-400" />
+                        Inactive {pct(inactive)}%
+                    </span>
+                </div>
+            </div>
+            <ChartContainer config={statusDistributionConfig} className="h-8 w-full">
+                <BarChart
+                    data={data}
+                    layout="vertical"
+                    margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
+                    barCategoryGap={0}
+                >
+                    <XAxis type="number" hide domain={[0, total]} />
+                    <YAxis type="category" dataKey="name" hide />
+                    <ChartTooltip
+                        content={<ChartTooltipContent />}
+                    />
+                    <Bar
+                        dataKey="active"
+                        stackId="status"
+                        fill="var(--color-active)"
+                        radius={[4, 0, 0, 4]}
+                        isAnimationActive={true}
+                        animationDuration={600}
+                    />
+                    <Bar
+                        dataKey="in_maintenance"
+                        stackId="status"
+                        fill="var(--color-in_maintenance)"
+                        radius={0}
+                        isAnimationActive={true}
+                        animationDuration={600}
+                        animationBegin={100}
+                    />
+                    <Bar
+                        dataKey="inactive"
+                        stackId="status"
+                        fill="var(--color-inactive)"
+                        radius={[0, 4, 4, 0]}
+                        isAnimationActive={true}
+                        animationDuration={600}
+                        animationBegin={200}
+                    />
+                </BarChart>
+            </ChartContainer>
+        </div>
+    );
 }
 
 export default function FleetVehiclesIndex({ vehicles, filters = {}, summary, aiInsights }: Props) {
@@ -257,16 +356,26 @@ export default function FleetVehiclesIndex({ vehicles, filters = {}, summary, ai
                 />
 
                 {summary && (
-                    <FleetIndexSummaryBar
-                        stats={
-                            [
-                                { label: 'Total', value: summary.total, icon: Car },
-                                { label: 'Active', value: summary.active, icon: CheckCircle, variant: 'success' },
-                                { label: 'In Maintenance', value: summary.in_maintenance, icon: Wrench, variant: 'warning' },
-                                { label: 'Due for Service', value: summary.due_for_service, icon: AlertTriangle, variant: summary.due_for_service > 0 ? 'danger' : 'default' },
-                            ] satisfies SummaryStat[]
-                        }
-                    />
+                    <>
+                        <FleetIndexSummaryBar
+                            stats={
+                                [
+                                    { label: 'Total', value: summary.total, icon: Car },
+                                    { label: 'Active', value: summary.active, icon: CheckCircle, variant: 'success' },
+                                    { label: 'In Maintenance', value: summary.in_maintenance, icon: Wrench, variant: 'warning' },
+                                    { label: 'Due for Service', value: summary.due_for_service, icon: AlertTriangle, variant: summary.due_for_service > 0 ? 'danger' : 'default' },
+                                ] satisfies SummaryStat[]
+                            }
+                        />
+                        {summary.total > 0 && (
+                            <StatusDistributionBar
+                                active={summary.active}
+                                inMaintenance={summary.in_maintenance}
+                                inactive={summary.inactive}
+                                total={summary.total}
+                            />
+                        )}
+                    </>
                 )}
 
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center">

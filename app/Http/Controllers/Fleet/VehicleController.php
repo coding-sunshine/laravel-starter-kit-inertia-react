@@ -47,6 +47,7 @@ final class VehicleController extends Controller
             $total = Vehicle::query()->count();
             $active = Vehicle::query()->where('status', 'active')->count();
             $inMaintenance = Vehicle::query()->where('status', 'maintenance')->count();
+            $inactive = Vehicle::query()->where('status', 'inactive')->count();
             $dueForService = \App\Models\Fleet\ServiceSchedule::query()
                 ->where('next_service_due_date', '<=', now()->addDays(14))
                 ->distinct('vehicle_id')
@@ -56,6 +57,7 @@ final class VehicleController extends Controller
                 'total' => $total,
                 'active' => $active,
                 'in_maintenance' => $inMaintenance,
+                'inactive' => $inactive,
                 'due_for_service' => $dueForService,
             ];
         }, 'summary');
