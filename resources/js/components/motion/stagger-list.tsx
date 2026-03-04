@@ -1,21 +1,30 @@
 'use client';
 
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { LazyMotion, domAnimation, m } from 'framer-motion';
 import type { ReactNode } from 'react';
-import { useReducedMotion } from '@/hooks/use-reduced-motion';
 
-const STAGGER_DELAY = 0.03;
-const DURATION = 0.2;
+const DEFAULT_STAGGER_DELAY = 0.03;
+const DEFAULT_DURATION = 0.2;
 
 interface StaggerListProps {
     children: ReactNode;
     className?: string;
+    /** Delay between each child animation in seconds (default: 0.03) */
+    staggerDelay?: number;
+    /** Delay before the first child starts animating in seconds (default: 0) */
+    delayChildren?: number;
 }
 
 /**
  * Wraps a list/grid so children animate in with a short stagger. Respects reduced motion.
  */
-export function StaggerList({ children, className }: StaggerListProps): ReactNode {
+export function StaggerList({
+    children,
+    className,
+    staggerDelay = DEFAULT_STAGGER_DELAY,
+    delayChildren = 0,
+}: StaggerListProps): ReactNode {
     const reduced = useReducedMotion();
 
     const container = {
@@ -24,13 +33,8 @@ export function StaggerList({ children, className }: StaggerListProps): ReactNod
             opacity: 1,
             transition: reduced
                 ? { duration: 0 }
-                : { staggerChildren: STAGGER_DELAY, delayChildren: 0 },
+                : { staggerChildren: staggerDelay, delayChildren },
         },
-    };
-
-    const item = {
-        hidden: reduced ? {} : { opacity: 0, y: 8 },
-        show: reduced ? {} : { opacity: 1, y: 0, transition: { duration: DURATION, ease: 'easeOut' } },
     };
 
     return (
@@ -52,18 +56,44 @@ export function StaggerList({ children, className }: StaggerListProps): ReactNod
  */
 export const staggerItemVariants = {
     hidden: { opacity: 0, y: 8 },
-    show: { opacity: 1, y: 0, transition: { duration: DURATION, ease: 'easeOut' as const } },
+    show: {
+        opacity: 1,
+        y: 0,
+        transition: { duration: DEFAULT_DURATION, ease: 'easeOut' as const },
+    },
 };
 
 export function StaggerItem({
     children,
     className,
-}: { children: ReactNode; className?: string }): ReactNode {
+    duration,
+}: {
+    children: ReactNode;
+    className?: string;
+    /** Animation duration in seconds (default: 0.2) */
+    duration?: number;
+}): ReactNode {
     const reduced = useReducedMotion();
+
+    const variants =
+        duration != null
+            ? {
+                  hidden: { opacity: 0, y: 8 },
+                  show: {
+                      opacity: 1,
+                      y: 0,
+                      transition: {
+                          duration,
+                          ease: 'easeOut' as const,
+                      },
+                  },
+              }
+            : staggerItemVariants;
+
     return (
         <m.div
             className={className}
-            variants={reduced ? undefined : staggerItemVariants}
+            variants={reduced ? undefined : variants}
         >
             {children}
         </m.div>

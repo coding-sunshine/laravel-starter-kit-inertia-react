@@ -13,6 +13,10 @@ import {
     FleetMapPolyline,
 } from '@/components/fleet/FleetMap';
 import { FleetMapClusterer } from '@/components/fleet/FleetMapClusterer';
+import {
+    StaggerItem,
+    StaggerList,
+} from '@/components/motion/stagger-list';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -322,11 +326,19 @@ export default function FleetDashboard({
                 {isChartDataLoading ? (
                     <FleetDashboardSkeleton />
                 ) : (
-                    <>
+                    <StaggerList
+                        className="flex flex-col gap-6"
+                        staggerDelay={0.08}
+                    >
                         {/* ============================================= */}
                         {/* Section 2 — Hero KPI Cards                     */}
                         {/* ============================================= */}
-                        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                        <StaggerItem duration={0.25}>
+                        <StaggerList
+                            className="grid grid-cols-2 gap-4 md:grid-cols-4"
+                            staggerDelay={0.06}
+                        >
+                            <StaggerItem duration={0.25}>
                             <FleetKpiCard
                                 title="Vehicles"
                                 value={counts.vehicles}
@@ -344,6 +356,8 @@ export default function FleetDashboard({
                                 sparklineData={kpiSparklines?.vehicles}
                                 icon={Truck}
                             />
+                            </StaggerItem>
+                            <StaggerItem duration={0.25}>
                             <FleetKpiCard
                                 title="Active Drivers"
                                 value={counts.drivers}
@@ -361,6 +375,8 @@ export default function FleetDashboard({
                                 sparklineData={kpiSparklines?.trips}
                                 icon={Users}
                             />
+                            </StaggerItem>
+                            <StaggerItem duration={0.25}>
                             <FleetKpiCard
                                 title="Open Work Orders"
                                 value={counts.work_orders}
@@ -383,6 +399,8 @@ export default function FleetDashboard({
                                         : undefined
                                 }
                             />
+                            </StaggerItem>
+                            <StaggerItem duration={0.25}>
                             <FleetKpiCard
                                 title="Active Alerts"
                                 value={
@@ -404,11 +422,14 @@ export default function FleetDashboard({
                                 sparklineData={kpiSparklines?.alerts}
                                 icon={Bell}
                             />
-                        </div>
+                            </StaggerItem>
+                        </StaggerList>
+                        </StaggerItem>
 
                         {/* ============================================= */}
                         {/* Section 3 — Primary Charts                     */}
                         {/* ============================================= */}
+                        <StaggerItem duration={0.25}>
                         <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
                             {/* Fleet Activity — col-span-4 */}
                             <FleetChartCard
@@ -578,10 +599,12 @@ export default function FleetDashboard({
                                 )}
                             </FleetChartCard>
                         </div>
+                        </StaggerItem>
 
                         {/* ============================================= */}
                         {/* Section 4 — AI Intelligence Layer               */}
                         {/* ============================================= */}
+                        <StaggerItem duration={0.25}>
                         <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
                             {/* AI Panel — col-span-4 */}
                             <FleetAiPanel
@@ -651,10 +674,12 @@ export default function FleetDashboard({
                                 )}
                             </FleetChartCard>
                         </div>
+                        </StaggerItem>
 
                         {/* ============================================= */}
                         {/* Section 5 — Operational Detail                  */}
                         {/* ============================================= */}
+                        <StaggerItem duration={0.25}>
                         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
                             {/* Recent Alerts */}
                             <Card>
@@ -802,7 +827,8 @@ export default function FleetDashboard({
                                 )}
                             </FleetChartCard>
                         </div>
-                    </>
+                        </StaggerItem>
+                    </StaggerList>
                 )}
 
                 {/* ============================================= */}
