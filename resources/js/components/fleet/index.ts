@@ -2,6 +2,7 @@ export type { FleetActionIconVariant } from './fleet-action-icon-button';
 export { FleetAssistantFab } from './fleet-assistant-fab';
 export { FleetBlockSectionHeader } from './fleet-block-section-header';
 export { FleetHealthBanner } from './fleet-health-banner';
+export { FleetKpiCard } from './fleet-kpi-card';
 export {
     FleetDataCard,
     fleetDataCardListClass,
