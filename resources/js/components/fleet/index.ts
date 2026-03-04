@@ -1,6 +1,7 @@
 export type { FleetActionIconVariant } from './fleet-action-icon-button';
 export { FleetAssistantFab } from './fleet-assistant-fab';
 export { FleetBlockSectionHeader } from './fleet-block-section-header';
+export { FleetAiPanel } from './fleet-ai-panel';
 export { FleetChartCard } from './fleet-chart-card';
 export { FleetHealthBanner } from './fleet-health-banner';
 export { FleetKpiCard } from './fleet-kpi-card';
