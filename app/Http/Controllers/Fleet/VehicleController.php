@@ -194,6 +194,12 @@ final class VehicleController extends Controller
             ->limit(5)
             ->get(['id', 'started_at', 'ended_at']);
 
+        $aiInsight = AiAnalysisResult::query()
+            ->where('entity_type', 'vehicle')
+            ->where('entity_id', $vehicle->id)
+            ->orderByDesc('created_at')
+            ->first(['id', 'primary_finding', 'priority', 'analysis_type', 'recommendations']);
+
         return Inertia::render('Fleet/Vehicles/Show', [
             'vehicle' => $vehicle,
             'drivers' => \App\Models\Fleet\Driver::query()->orderBy('last_name')->get(['id', 'first_name', 'last_name']),
@@ -201,6 +207,7 @@ final class VehicleController extends Controller
             'recentWorkOrders' => $recentWorkOrders,
             'recentDefects' => $recentDefects,
             'recentTrips' => $recentTrips,
+            'aiInsight' => $aiInsight,
         ]);
     }
 

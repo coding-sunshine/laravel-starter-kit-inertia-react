@@ -1,4 +1,5 @@
 export { AiInsightBadge } from './ai-insight-badge';
+export { AiInsightBanner } from './ai-insight-banner';
 export { AnimatedNumber } from './animated-number';
 export type { FleetActionIconVariant } from './fleet-action-icon-button';
 export { FleetAssistantFab } from './fleet-assistant-fab';

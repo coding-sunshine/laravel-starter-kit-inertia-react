@@ -161,10 +161,17 @@ final class DriverController extends Controller
             'currentAssignment' => fn ($q) => $q->with('vehicle'),
         ]);
 
+        $aiInsight = AiAnalysisResult::query()
+            ->where('entity_type', 'driver')
+            ->where('entity_id', $driver->id)
+            ->orderByDesc('created_at')
+            ->first(['id', 'primary_finding', 'priority', 'analysis_type', 'recommendations']);
+
         return Inertia::render('Fleet/Drivers/Show', [
             'driver' => $driver,
             'vehicles' => \App\Models\Fleet\Vehicle::query()->orderBy('registration')->get(['id', 'registration']),
             'assignmentTypes' => array_map(fn (\App\Enums\Fleet\AssignmentType $c): array => ['name' => $c->name, 'value' => $c->value], \App\Enums\Fleet\AssignmentType::cases()),
+            'aiInsight' => $aiInsight,
         ]);
     }
 
