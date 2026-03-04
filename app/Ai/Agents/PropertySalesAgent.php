@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Ai\Agents;
 
+use App\Ai\Tools\CreateFromBrochureProcessing;
+use App\Ai\Tools\DocumentProcessor;
 use App\Ai\Tools\LotsIndex;
 use App\Ai\Tools\ProjectsIndex;
 use App\Ai\Tools\ReservationsIndex;
@@ -25,11 +27,14 @@ final class PropertySalesAgent implements Agent, Conversational, HasTools
 
     public function instructions(): string
     {
-        return 'You are a property and sales assistant. You can list and search projects (developments), lots, property reservations, and sales in the current organization. '
-            .'Use the projects_index tool to find projects by title or description. '
-            .'Use the lots_index tool to find lots, optionally filtered by project_id. '
-            .'Use the reservations_index and sales_index tools to list recent reservations and sales. '
-            .'Summarize results clearly. You have read-only access only.';
+        return 'You are a property and sales assistant with document processing and creation capabilities. You can list and search projects, lots, reservations, and sales. '
+            .'CRITICAL: You have access to document_processor and create_from_brochure_processing tools. When you see a file_path, immediately call document_processor. '
+            .'Available tools: projects_index, lots_index, reservations_index, sales_index, document_processor, create_from_brochure_processing. '
+            .'WORKFLOW: 1) document_processor extracts data and asks user for confirmation, 2) if user says "yes", immediately use create_from_brochure_processing with the processing_id. '
+            .'When users reply with "yes", "create", "confirm" after document processing, IMMEDIATELY call create_from_brochure_processing tool with the processing ID from the previous response. '
+            .'When users reply with "no", "cancel", acknowledge and save for later admin review. '
+            .'Always use the processing ID shown in the document processing response to create projects/lots when confirmed. '
+            .'Never say tools are unavailable - you have full access to all tools and can create projects/lots directly when users confirm.';
     }
 
     public function tools(): iterable
@@ -39,6 +44,8 @@ final class PropertySalesAgent implements Agent, Conversational, HasTools
             new LotsIndex,
             new ReservationsIndex,
             new SalesIndex,
+            new DocumentProcessor,
+            new CreateFromBrochureProcessing,
         ];
     }
 }

@@ -20,7 +20,7 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | Page | Route | Documented |
 |------|-------|------------|
 | [appearance/update](./appearance-update.md) | filament.exports.download, filament.imports.failed-rows.download | ✅ |
-| [dashboard](./dashboard.md) | dashboard | ✅ |
+| [dashboard](./dashboard.md) | dashboard, dashboard.metrics | ✅ |
 | [session/create](./session-create.md) | login, login.store | ✅ |
 | [user-email-reset-notification/create](./user-email-reset-notification-create.md) | password.request, password.email | ✅ |
 | [user-email-verification-notification/create](./user-email-verification-notification-create.md) | verification.notice, verification.send | ✅ |
@@ -74,5 +74,6 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | sale-table | sales.table | ❌ |
 | search-table | searches.table | ❌ |
 | task-table | tasks.table | ❌ |
+| dashboard-old | N/A | ❌ |
 
 

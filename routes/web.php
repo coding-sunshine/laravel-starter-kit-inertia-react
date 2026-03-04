@@ -154,6 +154,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::prefix('api')->group(function (): void {
         Route::post('chat', ChatController::class)->name('api.chat');
         Route::get('chat/memories', ChatMemoryController::class)->name('chat.memories');
+        Route::post('temp-file-upload', [App\Http\Controllers\Api\TempFileUploadController::class, 'store'])->name('api.temp-file-upload');
         Route::get('conversations', [ConversationController::class, 'index'])->name('conversations.index');
         Route::get('conversations/{id}', [ConversationController::class, 'show'])->name('conversations.show');
         Route::patch('conversations/{id}', [ConversationController::class, 'update'])->name('conversations.update');

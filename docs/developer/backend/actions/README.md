@@ -40,5 +40,8 @@ All Actions:
 | [StoreEnterpriseInquiryAction](./StoreEnterpriseInquiryAction.md) | N/A | ✅ |
 | [BulkSoftDeleteUsers](./BulkSoftDeleteUsers.md) | N/A | ✅ |
 | [DuplicateUser](./DuplicateUser.md) | N/A | ✅ |
+| CreateFromBrochureProcessingAction | N/A | ❌ |
+| GetDashboardMetrics | N/A | ❌ |
+| GetDashboardMetricsAction | N/A | ❌ |
 
 

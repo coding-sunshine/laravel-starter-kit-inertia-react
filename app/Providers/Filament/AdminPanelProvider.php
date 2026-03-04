@@ -106,6 +106,7 @@ final class AdminPanelProvider extends PanelProvider
                 \App\Filament\Resources\AiBot\AiBotCategoryResource::class,
                 \App\Filament\Resources\AiBot\AiBotPromptCommandResource::class,
                 \App\Filament\Resources\AiBot\AiBotBoxResource::class,
+                \App\Filament\Resources\BrochureProcessings\BrochureProcessingResource::class,
                 // System
                 \App\Filament\Resources\Users\UserResource::class,
                 \App\Filament\Resources\Organizations\OrganizationResource::class,

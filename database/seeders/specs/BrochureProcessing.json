@@ -1,0 +1,114 @@
+{
+    "model": "BrochureProcessing",
+    "table": "brochure_processings",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "file_path": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "extracted_data": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "processed_by_user_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "approved_by_user_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_project_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_lot_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "admin_notes": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "approved_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "created_at_record": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "processedByUser": {
+            "type": "belongsTo",
+            "model": "ProcessedByUser"
+        },
+        "approvedByUser": {
+            "type": "belongsTo",
+            "model": "ApprovedByUser"
+        },
+        "createdProject": {
+            "type": "belongsTo",
+            "model": "CreatedProject"
+        },
+        "createdLot": {
+            "type": "belongsTo",
+            "model": "CreatedLot"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": {
+        "approved_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        },
+        "created_at_record": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        }
+    },
+    "scenarios": []
+}

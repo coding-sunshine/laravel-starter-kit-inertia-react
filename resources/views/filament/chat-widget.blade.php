@@ -193,6 +193,30 @@
     }
     .dark .cw-input-area { border-color: #374151; }
 
+    .cw-file-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        flex-shrink: 0;
+        border-radius: 0.5rem;
+        background: #6b7280;
+        color: white;
+        border: none;
+        cursor: pointer;
+        transition: background 0.2s;
+        position: relative;
+        overflow: hidden;
+    }
+    .cw-file-btn:hover { background: #4b5563; }
+    .cw-file-btn input[type="file"] {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        cursor: pointer;
+    }
+
     .cw-input-area textarea {
         flex: 1;
         min-height: 36px;
@@ -414,6 +438,119 @@
         } catch (e) { console.error('[ChatWidget] delete conversation', e); }
     }
 
+    async function handleFileUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        // Reset the file input
+        event.target.value = '';
+
+        // Check file size (limit to 100MB for all file types)
+        if (file.size > 100 * 1024 * 1024) {
+            state.messages.push({ role: 'assistant', content: 'File is too large. Please upload a file smaller than 100MB.' });
+            renderMessages();
+            return;
+        }
+
+        try {
+            // Show upload progress message
+            const uploadMessage = `📎 **Uploading file:** ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)
+
+Please wait while the file is being uploaded...`;
+
+            state.messages.push({ role: 'user', content: uploadMessage });
+            renderMessages();
+
+            // Upload file directly to server
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const uploadResponse = await fetch('/api/temp-file-upload', {
+                method: 'POST',
+                headers: {
+                    'X-XSRF-TOKEN': getCsrfToken(),
+                },
+                credentials: 'same-origin',
+                body: formData
+            });
+
+            if (!uploadResponse.ok) {
+                const errorData = await uploadResponse.json().catch(() => ({}));
+                throw new Error(errorData.message || `HTTP ${uploadResponse.status}`);
+            }
+
+            const uploadResult = await uploadResponse.json();
+
+            if (!uploadResult.success) {
+                throw new Error(uploadResult.message || 'Upload failed');
+            }
+
+            // Update the upload message to show success
+            state.messages[state.messages.length - 1].content = `📎 **File uploaded successfully:** ${file.name} (${uploadResult.data.file_size_formatted})
+
+Processing file with AI Assistant...`;
+            renderMessages();
+
+            // Send file processing request to AI with file path
+            const fileProcessingMessage = `I've uploaded a file: "${uploadResult.data.original_name}" (${uploadResult.data.file_type}, ${uploadResult.data.file_size_formatted}).
+
+The file has been stored at: ${uploadResult.data.file_path}
+
+PLEASE IMMEDIATELY USE THE DOCUMENT_PROCESSOR TOOL to extract property information from this uploaded file.
+
+Use the document_processor tool with these parameters:
+- file_path: ${uploadResult.data.file_path}
+- type: auto (to auto-detect if it's a project or lot)
+
+The document_processor tool is available to you and can process PDFs, images, Word docs, and all other file types.`;
+
+            state.loading = true;
+            renderMessages();
+
+            const payload = {
+                messages: [
+                    ...state.messages,
+                    { role: 'user', content: fileProcessingMessage }
+                ],
+                agent: state.agent,
+            };
+            if (state.conversationId) payload.conversation_id = state.conversationId;
+
+            if (state.abortController) state.abortController.abort();
+            state.abortController = new AbortController();
+
+            const res = await fetch('/api/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/x-ndjson',
+                    'X-XSRF-TOKEN': getCsrfToken(),
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify(payload),
+                signal: state.abortController.signal,
+            });
+
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.message || 'HTTP ' + res.status);
+            }
+
+            await parseNdjsonStream(res.body);
+
+        } catch (error) {
+            console.error('[ChatWidget] file upload failed', error);
+            state.messages.push({
+                role: 'assistant',
+                content: `❌ **File processing failed**\n\nError: ${error.message}\n\nPlease try:\n- Uploading a smaller file\n- Using a different file format\n- Refreshing the page and trying again`
+            });
+        } finally {
+            state.loading = false;
+            state.abortController = null;
+            renderMessages();
+        }
+    }
+
     async function sendMessage() {
         const text = (inputEl?.value || '').trim();
         if (!text || state.loading) return;
@@ -583,6 +720,12 @@
                     <div class="cw-messages-col">
                         <div class="cw-messages" id="cw-messages"></div>
                         <div class="cw-input-area">
+                            <button class="cw-file-btn" id="cw-file-btn" title="Upload any file">
+                                <input type="file" id="cw-file-input" accept="*/*" />
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                                </svg>
+                            </button>
                             <textarea id="cw-input" placeholder="Type a message..." rows="1"></textarea>
                             <button class="cw-send-btn" id="cw-send" title="Send">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -621,6 +764,10 @@
                 sendMessage();
             }
         });
+
+        // File upload handling
+        const fileInput = document.getElementById('cw-file-input');
+        fileInput.addEventListener('change', handleFileUpload);
 
         restoreState();
         updateUI();

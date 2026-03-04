@@ -88,6 +88,10 @@ You should see all tests passing. For the full suite (coverage, type coverage, l
 
 If this project is used for the Fusion CRM rebuild, see **[docs/FUSION-CRM-MIGRATION.md](docs/FUSION-CRM-MIGRATION.md)** for how to run migrations and import contacts from the legacy MySQL dump (PostgreSQL as app DB). Includes prerequisites, env config, import commands (resume, batch, details-only), verification, and troubleshooting.
 
+### Laravel Herd (`.test` domains)
+
+If you use [Laravel Herd](https://herd.laravel.com) and see **HTTP 413** when uploading files in the AI Assistant (e.g. PDFs &gt; 1 MB), raise Nginx’s upload limit. See **[docs/herd-upload-limit.md](docs/herd-upload-limit.md)** or run `./scripts/herd-fix-upload-limit.sh`, then restart Nginx from Herd.
+
 ## Available Tooling
 
 ### Development

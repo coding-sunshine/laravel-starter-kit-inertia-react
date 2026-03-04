@@ -106,24 +106,84 @@ final class ChatController
             default => AssistantAgent::make($context)->continue($conversationId, $user),
         };
 
-        // Use non-streaming prompt() — Prism streaming breaks under PHP-FPM (Herd)
-        // because its byte-by-byte SSE reader doesn't handle FastCGI buffering.
-        try {
-            $response = $agent->prompt($prompt);
-        } catch (Throwable $e) {
-            logger()->error('[Chat] Agent prompt failed', [
-                'exception' => get_class($e),
-                'message' => $e->getMessage(),
-                'file' => $e->getFile().':'.$e->getLine(),
-                'previous' => $e->getPrevious() ? get_class($e->getPrevious()).': '.$e->getPrevious()->getMessage() : null,
-            ]);
+        // Check if this is a confirmation response for creating from brochure processing
+        $lowerPrompt = strtolower(trim($prompt));
+        if (in_array($lowerPrompt, ['yes', 'y', 'create', 'confirm']) && $agentType === 'property') {
+            // Look for the most recent processing ID in the conversation
+            $messages = $request->input('messages', []);
+            $processingId = null;
 
-            return response()->json([
-                'message' => 'AI request failed: '.$e->getMessage(),
-            ], 502);
+            // Search for processing ID in recent messages
+            for ($i = count($messages) - 1; $i >= 0; $i--) {
+                $content = $messages[$i]['content'] ?? '';
+                if (preg_match('/Processing ID:\s*(\d+)/', $content, $matches)) {
+                    $processingId = (int) $matches[1];
+                    break;
+                }
+            }
+
+            if ($processingId) {
+                try {
+                    $createTool = new \App\Ai\Tools\CreateFromBrochureProcessing();
+                    $toolRequest = new \Laravel\Ai\Tools\Request([
+                        'processing_id' => $processingId,
+                        'confirmation' => 'yes'
+                    ]);
+                    $text = $createTool->handle($toolRequest);
+                } catch (Throwable $e) {
+                    logger()->error('[Chat] Create from brochure processing failed', [
+                        'processing_id' => $processingId,
+                        'exception' => get_class($e),
+                        'message' => $e->getMessage(),
+                    ]);
+                    $text = "❌ Error creating project/lot: {$e->getMessage()}";
+                }
+            } else {
+                // Fallback to normal AI response if no processing ID found
+                $response = $agent->prompt($prompt);
+                $text = $response->text ?? '';
+            }
         }
+        // Check if this is a file upload request that needs document processing
+        elseif (str_contains($prompt, 'file_path:') || str_contains($prompt, 'uploads/documents/')) {
+            if (preg_match('/uploads\/documents\/[^\s]+/', $prompt, $matches)) {
+                $filePath = $matches[0];
+                try {
+                    $documentProcessor = new \App\Ai\Tools\DocumentProcessor();
+                    $toolRequest = new \Laravel\Ai\Tools\Request(['file_path' => $filePath, 'type' => 'auto']);
+                    $processedFileText = (string) $documentProcessor->handle($toolRequest);
+                    $text = $processedFileText;
+                } catch (Throwable $e) {
+                    logger()->error('[Chat] Document processing failed', [
+                        'file_path' => $filePath,
+                        'exception' => get_class($e),
+                        'message' => $e->getMessage(),
+                    ]);
+                    $text = "❌ Error processing document: {$e->getMessage()}";
+                }
+            } else {
+                $text = '❌ Could not find a file path in the message. Please try uploading the file again.';
+            }
+        } else {
+            // Use non-streaming prompt() — Prism streaming breaks under PHP-FPM (Herd)
+            // because its byte-by-byte SSE reader doesn't handle FastCGI buffering.
+            try {
+                $response = $agent->prompt($prompt);
+            } catch (Throwable $e) {
+                logger()->error('[Chat] Agent prompt failed', [
+                    'exception' => get_class($e),
+                    'message' => $e->getMessage(),
+                    'file' => $e->getFile().':'.$e->getLine(),
+                    'previous' => $e->getPrevious() ? get_class($e->getPrevious()).': '.$e->getPrevious()->getMessage() : null,
+                ]);
 
-        $text = $response->text ?? '';
+                return response()->json([
+                    'message' => 'AI request failed: '.$e->getMessage(),
+                ], 502);
+            }
+
+            $text = $response->text ?? '';
+        }
         $runId = (string) Str::ulid();
         $messageId = (string) Str::ulid();
 

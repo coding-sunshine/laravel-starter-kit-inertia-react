@@ -67,6 +67,7 @@
         "pxlrbt/filament-excel": "^3.6.1",
         "saloonphp/saloon": "^3.14.3",
         "sentry/sentry-laravel": "^4.21.0",
+        "smalot/pdfparser": ">=2.12.3",
         "spatie/browsershot": "^5.2.3",
         "spatie/eloquent-sortable": "5.0.1 as 4.99.0",
         "spatie/laravel-activitylog": "^4.12.1",
