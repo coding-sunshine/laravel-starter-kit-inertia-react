@@ -526,6 +526,10 @@ export default function FleetDashboard({
                                                 stroke="var(--color-trips)"
                                                 fill="url(#fillTrips)"
                                                 strokeWidth={2}
+                                                isAnimationActive={true}
+                                                animationDuration={800}
+                                                animationBegin={150}
+                                                animationEasing="ease-out"
                                             />
                                             <Area
                                                 type="monotone"
@@ -533,6 +537,10 @@ export default function FleetDashboard({
                                                 stroke="var(--color-work_orders)"
                                                 fill="url(#fillWorkOrders)"
                                                 strokeWidth={2}
+                                                isAnimationActive={true}
+                                                animationDuration={800}
+                                                animationBegin={200}
+                                                animationEasing="ease-out"
                                             />
                                         </AreaChart>
                                     </ChartContainer>
@@ -574,6 +582,12 @@ export default function FleetDashboard({
                                                 innerRadius={60}
                                                 outerRadius={90}
                                                 paddingAngle={3}
+                                                startAngle={90}
+                                                endAngle={-270}
+                                                isAnimationActive={true}
+                                                animationDuration={800}
+                                                animationBegin={200}
+                                                animationEasing="ease-out"
                                             >
                                                 {costBreakdown.map(
                                                     (entry, index) => (
@@ -668,6 +682,10 @@ export default function FleetDashboard({
                                                 stroke="var(--color-cost)"
                                                 strokeWidth={2}
                                                 dot={false}
+                                                isAnimationActive={true}
+                                                animationDuration={800}
+                                                animationBegin={200}
+                                                animationEasing="ease-out"
                                             />
                                         </LineChart>
                                     </ChartContainer>
@@ -800,6 +818,12 @@ export default function FleetDashboard({
                                                 innerRadius={45}
                                                 outerRadius={70}
                                                 paddingAngle={3}
+                                                startAngle={90}
+                                                endAngle={-270}
+                                                isAnimationActive={true}
+                                                animationDuration={800}
+                                                animationBegin={200}
+                                                animationEasing="ease-out"
                                             >
                                                 {driverSafety.map(
                                                     (entry, index) => (
