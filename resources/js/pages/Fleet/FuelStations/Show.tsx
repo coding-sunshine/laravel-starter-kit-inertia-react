@@ -1,11 +1,16 @@
+import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
-import { Button } from '@/components/ui/button';
 
 interface Props {
-    fuelStation: { id: number; name: string; brand: string | null; address: string };
+    fuelStation: {
+        id: number;
+        name: string;
+        brand: string | null;
+        address: string;
+    };
 }
 
 export default function FleetFuelStationsShow({ fuelStation }: Props) {
@@ -13,7 +18,10 @@ export default function FleetFuelStationsShow({ fuelStation }: Props) {
         { title: 'Dashboard', href: dashboard().url },
         { title: 'Fleet', href: '/fleet/fuel-stations' },
         { title: 'Fuel stations', href: '/fleet/fuel-stations' },
-        { title: fuelStation.name, href: `/fleet/fuel-stations/${fuelStation.id}` },
+        {
+            title: fuelStation.name,
+            href: `/fleet/fuel-stations/${fuelStation.id}`,
+        },
     ];
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -25,7 +33,9 @@ export default function FleetFuelStationsShow({ fuelStation }: Props) {
                     {fuelStation.address}
                 </p>
                 <Button variant="outline" asChild>
-                    <Link href="/fleet/fuel-stations">Back to fuel stations</Link>
+                    <Link href="/fleet/fuel-stations">
+                        Back to fuel stations
+                    </Link>
                 </Button>
             </div>
         </AppLayout>

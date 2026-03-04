@@ -27,9 +27,10 @@ use Mattiverse\Userstamps\Traits\Userstamps;
  * @property string|null $external_reference
  * @property string|null $issuing_authority
  */
-class Fine extends Model
+final class Fine extends Model
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use SoftDeletes;
     use Userstamps;
 

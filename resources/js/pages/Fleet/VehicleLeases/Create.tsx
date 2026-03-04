@@ -1,18 +1,24 @@
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 
-interface Option { value: string; name: string; }
+interface Option {
+    value: string;
+    name: string;
+}
 interface Props {
     vehicles: { id: number; registration: string }[];
     statuses: Option[];
 }
 
-export default function FleetVehicleLeasesCreate({ vehicles, statuses }: Props) {
+export default function FleetVehicleLeasesCreate({
+    vehicles,
+    statuses,
+}: Props) {
     const form = useForm({
         vehicle_id: '' as number | '',
         contract_id: '',
@@ -36,8 +42,10 @@ export default function FleetVehicleLeasesCreate({ vehicles, statuses }: Props) 
         form.transform((d) => ({
             ...d,
             vehicle_id: d.vehicle_id === '' ? undefined : d.vehicle_id,
-            monthly_payment: d.monthly_payment === '' ? null : d.monthly_payment,
-            p11d_list_price: d.p11d_list_price === '' ? null : d.p11d_list_price,
+            monthly_payment:
+                d.monthly_payment === '' ? null : d.monthly_payment,
+            p11d_list_price:
+                d.p11d_list_price === '' ? null : d.p11d_list_price,
         }));
         form.post('/fleet/vehicle-leases');
     };
@@ -50,52 +58,142 @@ export default function FleetVehicleLeasesCreate({ vehicles, statuses }: Props) 
                 <form onSubmit={handleSubmit} className="max-w-xl space-y-4">
                     <div>
                         <Label>Vehicle *</Label>
-                        <select value={data.vehicle_id === '' ? '' : String(data.vehicle_id)} onChange={(e) => setData('vehicle_id', e.target.value === '' ? '' : Number(e.target.value))} className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm" required>
+                        <select
+                            value={
+                                data.vehicle_id === ''
+                                    ? ''
+                                    : String(data.vehicle_id)
+                            }
+                            onChange={(e) =>
+                                setData(
+                                    'vehicle_id',
+                                    e.target.value === ''
+                                        ? ''
+                                        : Number(e.target.value),
+                                )
+                            }
+                            className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                            required
+                        >
                             <option value="">Select</option>
-                            {vehicles.map((v) => <option key={v.id} value={v.id}>{v.registration}</option>)}
+                            {vehicles.map((v) => (
+                                <option key={v.id} value={v.id}>
+                                    {v.registration}
+                                </option>
+                            ))}
                         </select>
-                        {errors.vehicle_id && <p className="mt-1 text-sm text-destructive">{errors.vehicle_id}</p>}
+                        {errors.vehicle_id && (
+                            <p className="mt-1 text-sm text-destructive">
+                                {errors.vehicle_id}
+                            </p>
+                        )}
                     </div>
                     <div>
                         <Label>Lessor name *</Label>
-                        <Input value={data.lessor_name} onChange={(e) => setData('lessor_name', e.target.value)} className="mt-1" />
-                        {errors.lessor_name && <p className="mt-1 text-sm text-destructive">{errors.lessor_name}</p>}
+                        <Input
+                            value={data.lessor_name}
+                            onChange={(e) =>
+                                setData('lessor_name', e.target.value)
+                            }
+                            className="mt-1"
+                        />
+                        {errors.lessor_name && (
+                            <p className="mt-1 text-sm text-destructive">
+                                {errors.lessor_name}
+                            </p>
+                        )}
                     </div>
                     <div>
                         <Label>Contract ID</Label>
-                        <Input value={data.contract_id} onChange={(e) => setData('contract_id', e.target.value)} className="mt-1" />
+                        <Input
+                            value={data.contract_id}
+                            onChange={(e) =>
+                                setData('contract_id', e.target.value)
+                            }
+                            className="mt-1"
+                        />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <Label>Start date *</Label>
-                            <Input type="date" value={data.start_date} onChange={(e) => setData('start_date', e.target.value)} className="mt-1" />
-                            {errors.start_date && <p className="mt-1 text-sm text-destructive">{errors.start_date}</p>}
+                            <Input
+                                type="date"
+                                value={data.start_date}
+                                onChange={(e) =>
+                                    setData('start_date', e.target.value)
+                                }
+                                className="mt-1"
+                            />
+                            {errors.start_date && (
+                                <p className="mt-1 text-sm text-destructive">
+                                    {errors.start_date}
+                                </p>
+                            )}
                         </div>
                         <div>
                             <Label>End date *</Label>
-                            <Input type="date" value={data.end_date} onChange={(e) => setData('end_date', e.target.value)} className="mt-1" />
-                            {errors.end_date && <p className="mt-1 text-sm text-destructive">{errors.end_date}</p>}
+                            <Input
+                                type="date"
+                                value={data.end_date}
+                                onChange={(e) =>
+                                    setData('end_date', e.target.value)
+                                }
+                                className="mt-1"
+                            />
+                            {errors.end_date && (
+                                <p className="mt-1 text-sm text-destructive">
+                                    {errors.end_date}
+                                </p>
+                            )}
                         </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <Label>Monthly payment</Label>
-                            <Input type="number" step="0.01" value={data.monthly_payment} onChange={(e) => setData('monthly_payment', e.target.value)} className="mt-1" />
+                            <Input
+                                type="number"
+                                step="0.01"
+                                value={data.monthly_payment}
+                                onChange={(e) =>
+                                    setData('monthly_payment', e.target.value)
+                                }
+                                className="mt-1"
+                            />
                         </div>
                         <div>
                             <Label>P11D list price</Label>
-                            <Input type="number" step="0.01" value={data.p11d_list_price} onChange={(e) => setData('p11d_list_price', e.target.value)} className="mt-1" />
+                            <Input
+                                type="number"
+                                step="0.01"
+                                value={data.p11d_list_price}
+                                onChange={(e) =>
+                                    setData('p11d_list_price', e.target.value)
+                                }
+                                className="mt-1"
+                            />
                         </div>
                     </div>
                     <div>
                         <Label>Status *</Label>
-                        <select value={data.status} onChange={(e) => setData('status', e.target.value)} className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm">
-                            {statuses.map((s) => <option key={s.value} value={s.value}>{s.name}</option>)}
+                        <select
+                            value={data.status}
+                            onChange={(e) => setData('status', e.target.value)}
+                            className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                        >
+                            {statuses.map((s) => (
+                                <option key={s.value} value={s.value}>
+                                    {s.name}
+                                </option>
+                            ))}
                         </select>
                     </div>
                     <div className="flex gap-2">
-                        <Button type="submit" disabled={form.processing}>Save</Button>
-                        <Button type="button" variant="outline" asChild><Link href="/fleet/vehicle-leases">Cancel</Link></Button>
+                        <Button type="submit" disabled={form.processing}>
+                            Save
+                        </Button>
+                        <Button type="button" variant="outline" asChild>
+                            <Link href="/fleet/vehicle-leases">Cancel</Link>
+                        </Button>
                     </div>
                 </form>
             </div>

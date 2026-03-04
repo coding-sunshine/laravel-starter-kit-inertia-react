@@ -19,9 +19,9 @@ final class FleetOptimizationAgent implements Agent, HasStructuredOutput
     public function instructions(): string
     {
         return 'You are a fleet optimization analyst. Given vehicle list, utilization, and cost data, suggest: '
-            . '(1) right_sizing_summary – whether to add or reduce vehicles; (2) replacement_timing_summary – when to replace which assets; '
-            . '(3) fleet_mix_summary – ideal mix of vehicle types; (4) what_if_scenarios – 2-3 brief what-if options (e.g. "Add 2 vans: cost X, benefit Y"). '
-            . 'Return all four as strings or arrays. Be concise and actionable.';
+            .'(1) right_sizing_summary – whether to add or reduce vehicles; (2) replacement_timing_summary – when to replace which assets; '
+            .'(3) fleet_mix_summary – ideal mix of vehicle types; (4) what_if_scenarios – 2-3 brief what-if options (e.g. "Add 2 vans: cost X, benefit Y"). '
+            .'Return all four as strings or arrays. Be concise and actionable.';
     }
 
     public function schema(JsonSchema $schema): array

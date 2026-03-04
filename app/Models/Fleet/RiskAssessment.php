@@ -12,9 +12,10 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Mattiverse\Userstamps\Traits\Userstamps;
 
-class RiskAssessment extends Model
+final class RiskAssessment extends Model
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use SoftDeletes;
     use Userstamps;
 

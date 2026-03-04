@@ -19,9 +19,10 @@ final class ChunkAndEmbedMediaCommand extends Command
     public function handle(): int
     {
         $mediaId = (int) $this->argument('media_id');
-        $media = Media::find($mediaId);
+        $media = Media::query()->find($mediaId);
         if (! $media) {
             $this->error("Media id {$mediaId} not found.");
+
             return self::FAILURE;
         }
 
@@ -33,7 +34,7 @@ final class ChunkAndEmbedMediaCommand extends Command
             $this->warn('No organization_id; job may skip indexing. Pass --org=ID to set.');
         }
 
-        ChunkAndEmbedMediaJob::dispatch($mediaId, $orgId);
+        dispatch(new ChunkAndEmbedMediaJob($mediaId, $orgId));
         $this->info("Dispatched ChunkAndEmbedMediaJob for media {$mediaId}.");
 
         return self::SUCCESS;

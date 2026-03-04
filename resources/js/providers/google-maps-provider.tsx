@@ -2,7 +2,7 @@
 
 import { useJsApiLoader } from '@react-google-maps/api';
 import type { ReactNode } from 'react';
-import { createContext, useMemo, useContext } from 'react';
+import { createContext, use, useMemo } from 'react';
 
 const GOOGLE_MAPS_SCRIPT_ID = 'google-maps-fleet-script';
 
@@ -14,9 +14,15 @@ export interface GoogleMapsContextValue {
 
 const GoogleMapsContext = createContext<GoogleMapsContextValue | null>(null);
 
-const apiKey = (import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined)?.trim() || undefined;
+const apiKey =
+    (import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined)?.trim() ||
+    undefined;
 
-export function GoogleMapsProvider({ children }: { children: ReactNode }): ReactNode {
+export function GoogleMapsProvider({
+    children,
+}: {
+    children: ReactNode;
+}): ReactNode {
     const { isLoaded, loadError } = useJsApiLoader({
         id: GOOGLE_MAPS_SCRIPT_ID,
         googleMapsApiKey: apiKey ?? '',
@@ -32,15 +38,11 @@ export function GoogleMapsProvider({ children }: { children: ReactNode }): React
         [isLoaded, loadError],
     );
 
-    return (
-        <GoogleMapsContext.Provider value={value}>
-            {children}
-        </GoogleMapsContext.Provider>
-    );
+    return <GoogleMapsContext value={value}>{children}</GoogleMapsContext>;
 }
 
 export function useGoogleMaps(): GoogleMapsContextValue {
-    const context = useContext(GoogleMapsContext);
+    const context = use(GoogleMapsContext);
     if (context == null) {
         throw new Error('useGoogleMaps must be used inside GoogleMapsProvider');
     }

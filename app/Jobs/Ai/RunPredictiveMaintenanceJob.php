@@ -13,6 +13,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 final class RunPredictiveMaintenanceJob implements ShouldQueue
 {
@@ -30,7 +31,7 @@ final class RunPredictiveMaintenanceJob implements ShouldQueue
 
     public function handle(PredictiveMaintenanceService $service): void
     {
-        $run = AiJobRun::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)
+        $run = AiJobRun::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)
             ->find($this->aiJobRunId);
 
         if ($run === null || $run->organization_id !== $this->organizationId) {
@@ -38,6 +39,7 @@ final class RunPredictiveMaintenanceJob implements ShouldQueue
                 'ai_job_run_id' => $this->aiJobRunId,
                 'organization_id' => $this->organizationId,
             ]);
+
             return;
         }
 
@@ -52,7 +54,7 @@ final class RunPredictiveMaintenanceJob implements ShouldQueue
             $findings = $result['findings'] ?? [];
 
             foreach ($findings as $f) {
-                AiAnalysisResult::create([
+                AiAnalysisResult::query()->create([
                     'organization_id' => $this->organizationId,
                     'analysis_type' => 'predictive_maintenance',
                     'entity_type' => 'vehicle',
@@ -62,7 +64,7 @@ final class RunPredictiveMaintenanceJob implements ShouldQueue
                     'confidence_score' => $f['confidence'],
                     'risk_score' => 0,
                     'priority' => $f['urgency'],
-                    'primary_finding' => mb_substr($f['component'] . ': ' . $f['reason'], 0, 500),
+                    'primary_finding' => mb_substr($f['component'].': '.$f['reason'], 0, 500),
                     'detailed_analysis' => $f,
                     'recommendations' => ['action' => $f['recommended_action']],
                     'action_items' => null,
@@ -78,7 +80,7 @@ final class RunPredictiveMaintenanceJob implements ShouldQueue
                 'completed_at' => now(),
                 'result_data' => ['findings_count' => count($findings), 'findings' => $findings],
             ]);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('RunPredictiveMaintenanceJob: failed', [
                 'ai_job_run_id' => $this->aiJobRunId,
                 'error' => $e->getMessage(),

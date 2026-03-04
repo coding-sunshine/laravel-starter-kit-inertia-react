@@ -8,10 +8,10 @@ use App\Ai\Agents\FnolDraftAgent;
 use App\Models\Fleet\InsuranceClaim;
 use Laravel\Ai\Responses\StructuredAgentResponse;
 
-final class FnolDraftService
+final readonly class FnolDraftService
 {
     public function __construct(
-        private readonly FnolDraftAgent $agent
+        private FnolDraftAgent $agent
     ) {}
 
     /**
@@ -44,7 +44,7 @@ final class FnolDraftService
 
         $desc = $incident->description ?? '';
         if ($desc !== '') {
-            $parts[] = "Incident description:\n" . trim($desc);
+            $parts[] = "Incident description:\n".mb_trim((string) $desc);
         }
 
         $witnesses = $incident->witnesses;
@@ -52,7 +52,7 @@ final class FnolDraftService
             foreach ($witnesses as $i => $w) {
                 $statement = is_string($w) ? $w : (is_array($w) && isset($w['statement']) ? (string) $w['statement'] : json_encode($w));
                 if ($statement !== '' && $statement !== '[]') {
-                    $parts[] = 'Witness statement ' . ((int) $i + 1) . ":\n" . $statement;
+                    $parts[] = 'Witness statement '.((int) $i + 1).":\n".$statement;
                 }
             }
         }

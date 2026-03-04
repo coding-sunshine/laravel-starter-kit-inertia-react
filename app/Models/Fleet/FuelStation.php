@@ -28,8 +28,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property float|null $price_quality_rating
  * @property bool $is_active
  */
-class FuelStation extends Model
+final class FuelStation extends Model
 {
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
+
     protected $fillable = [
         'organization_id',
         'external_id',

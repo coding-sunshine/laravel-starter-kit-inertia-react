@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Fleet;
 
+use App\Enums\Fleet\TrainingSessionStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Fleet\StoreTrainingSessionRequest;
 use App\Http\Requests\Fleet\UpdateTrainingSessionRequest;
 use App\Models\Fleet\TrainingCourse;
 use App\Models\Fleet\TrainingSession;
-use App\Enums\Fleet\TrainingSessionStatus;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -24,7 +24,7 @@ final class TrainingSessionController extends Controller
             ->with('trainingCourse')
             ->when($request->input('training_course_id'), fn ($q, $v) => $q->where('training_course_id', $v))
             ->when($request->input('status'), fn ($q, $v) => $q->where('status', $v))
-            ->orderByDesc('scheduled_date')
+            ->latest('scheduled_date')
             ->paginate(15)
             ->withQueryString();
 
@@ -32,23 +32,25 @@ final class TrainingSessionController extends Controller
             'trainingSessions' => $sessions,
             'filters' => $request->only(['training_course_id', 'status']),
             'courses' => TrainingCourse::query()->orderBy('course_name')->get(['id', 'course_name']),
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], TrainingSessionStatus::cases()),
+            'statuses' => array_map(fn (TrainingSessionStatus $c): array => ['value' => $c->value, 'name' => $c->name], TrainingSessionStatus::cases()),
         ]);
     }
 
     public function create(): Response
     {
         $this->authorize('create', TrainingSession::class);
+
         return Inertia::render('Fleet/TrainingSessions/Create', [
             'courses' => TrainingCourse::query()->orderBy('course_name')->get(['id', 'course_name']),
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], TrainingSessionStatus::cases()),
+            'statuses' => array_map(fn (TrainingSessionStatus $c): array => ['value' => $c->value, 'name' => $c->name], TrainingSessionStatus::cases()),
         ]);
     }
 
     public function store(StoreTrainingSessionRequest $request): RedirectResponse
     {
         $this->authorize('create', TrainingSession::class);
-        TrainingSession::create($request->validated());
+        TrainingSession::query()->create($request->validated());
+
         return to_route('fleet.training-sessions.index')->with('flash', ['status' => 'success', 'message' => 'Training session created.']);
     }
 
@@ -63,10 +65,11 @@ final class TrainingSessionController extends Controller
     public function edit(TrainingSession $training_session): Response
     {
         $this->authorize('update', $training_session);
+
         return Inertia::render('Fleet/TrainingSessions/Edit', [
             'trainingSession' => $training_session,
             'courses' => TrainingCourse::query()->orderBy('course_name')->get(['id', 'course_name']),
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], TrainingSessionStatus::cases()),
+            'statuses' => array_map(fn (TrainingSessionStatus $c): array => ['value' => $c->value, 'name' => $c->name], TrainingSessionStatus::cases()),
         ]);
     }
 
@@ -74,6 +77,7 @@ final class TrainingSessionController extends Controller
     {
         $this->authorize('update', $training_session);
         $training_session->update($request->validated());
+
         return to_route('fleet.training-sessions.show', $training_session)->with('flash', ['status' => 'success', 'message' => 'Training session updated.']);
     }
 
@@ -81,6 +85,7 @@ final class TrainingSessionController extends Controller
     {
         $this->authorize('delete', $training_session);
         $training_session->delete();
+
         return to_route('fleet.training-sessions.index')->with('flash', ['status' => 'success', 'message' => 'Training session deleted.']);
     }
 }

@@ -21,9 +21,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $notes
  * @property int $assigned_by
  */
-class DriverVehicleAssignment extends Model
+final class DriverVehicleAssignment extends Model
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
 
     protected $fillable = [
         'driver_id',

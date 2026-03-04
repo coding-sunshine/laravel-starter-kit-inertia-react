@@ -22,7 +22,10 @@ final readonly class OrganizationController
     public function index(Request $request): Response
     {
         $user = $request->user();
-        $organizations = $user->organizations()->orderBy('name')->get();
+        $organizations = $user->organizations()
+            ->withCount('users')
+            ->orderBy('name')
+            ->get();
         $currentOrganization = TenantContext::get();
 
         return Inertia::render('organizations/index', [

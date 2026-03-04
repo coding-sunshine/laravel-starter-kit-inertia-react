@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import AuthLayout from '@/layouts/auth-layout';
+import AuthSplitLayout from '@/layouts/auth/auth-split-layout';
 import { register } from '@/routes';
 import { request } from '@/routes/password';
 import { Form, Head } from '@inertiajs/react';
@@ -21,7 +21,7 @@ const isErrorStatus = (s: string) =>
 
 export default function Login({ status, canResetPassword }: LoginProps) {
     return (
-        <AuthLayout
+        <AuthSplitLayout
             title="Log in to your account"
             description="Enter your email and password below to log in"
         >
@@ -49,7 +49,10 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                     <>
                         <div className="grid gap-5">
                             <div className="grid gap-2">
-                                <Label htmlFor="email" className="text-foreground">
+                                <Label
+                                    htmlFor="email"
+                                    className="text-foreground"
+                                >
                                     Email address
                                 </Label>
                                 <Input
@@ -61,7 +64,9 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                     tabIndex={1}
                                     autoComplete="email"
                                     placeholder="email@example.com"
-                                    aria-describedby={errors.email ? 'email-error' : undefined}
+                                    aria-describedby={
+                                        errors.email ? 'email-error' : undefined
+                                    }
                                     aria-invalid={!!errors.email}
                                 />
                                 <InputError
@@ -72,7 +77,10 @@ export default function Login({ status, canResetPassword }: LoginProps) {
 
                             <div className="grid gap-2">
                                 <div className="flex items-center justify-between gap-2">
-                                    <Label htmlFor="password" className="text-foreground">
+                                    <Label
+                                        htmlFor="password"
+                                        className="text-foreground"
+                                    >
                                         Password
                                     </Label>
                                     {canResetPassword && (
@@ -94,7 +102,11 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                     tabIndex={2}
                                     autoComplete="current-password"
                                     placeholder="Password"
-                                    aria-describedby={errors.password ? 'password-error' : undefined}
+                                    aria-describedby={
+                                        errors.password
+                                            ? 'password-error'
+                                            : undefined
+                                    }
                                     aria-invalid={!!errors.password}
                                 />
                                 <InputError
@@ -113,7 +125,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                 <Label
                                     id="remember-label"
                                     htmlFor="remember"
-                                    className="text-foreground cursor-pointer font-normal"
+                                    className="cursor-pointer font-normal text-foreground"
                                 >
                                     Remember me
                                 </Label>
@@ -149,9 +161,18 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                 Sign up
                             </TextLink>
                         </div>
+                        <p className="text-center text-xs text-muted-foreground">
+                            <TextLink
+                                href={`/chat?prompt=${encodeURIComponent('I need help logging in or resetting my password.')}`}
+                                tabIndex={7}
+                                data-pan="auth-trouble-ask-ai"
+                            >
+                                Trouble logging in? Ask AI
+                            </TextLink>
+                        </p>
                     </>
                 )}
             </Form>
-        </AuthLayout>
+        </AuthSplitLayout>
     );
 }

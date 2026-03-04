@@ -22,9 +22,10 @@ use Mattiverse\Userstamps\Traits\Userstamps;
  * @property string|null $document_url
  * @property string|null $notes
  */
-class ContractorCompliance extends Model
+final class ContractorCompliance extends Model
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use SoftDeletes;
     use Userstamps;
 

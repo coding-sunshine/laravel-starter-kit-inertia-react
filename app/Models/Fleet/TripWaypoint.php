@@ -7,8 +7,10 @@ namespace App\Models\Fleet;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class TripWaypoint extends Model
+final class TripWaypoint extends Model
 {
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
+
     protected $fillable = [
         'trip_id',
         'lat',

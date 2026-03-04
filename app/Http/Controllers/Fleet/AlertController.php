@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Fleet;
 
-use App\Http\Controllers\Controller;
 use App\Enums\Fleet\AlertSeverity;
 use App\Enums\Fleet\AlertStatus;
 use App\Enums\Fleet\AlertType;
+use App\Http\Controllers\Controller;
 use App\Models\Fleet\Alert;
 use App\Models\Fleet\Driver;
 use App\Models\Fleet\Vehicle;
@@ -25,12 +25,13 @@ final class AlertController extends Controller
             ->when($request->input('status'), fn ($q, $v) => $q->where('status', $v))
             ->when($request->input('severity'), fn ($q, $v) => $q->where('severity', $v))
             ->when($request->input('alert_type'), fn ($q, $v) => $q->where('alert_type', $v))
-            ->orderByDesc('triggered_at')
+            ->latest('triggered_at')
             ->paginate(15)
             ->withQueryString();
 
         $items = $alerts->getCollection()->map(function (Alert $alert): array {
             $entityLabel = $this->resolveEntityLabel($alert);
+
             return [
                 'id' => $alert->id,
                 'title' => $alert->title,
@@ -48,28 +49,10 @@ final class AlertController extends Controller
         return Inertia::render('Fleet/Alerts/Index', [
             'alerts' => $alerts,
             'filters' => $request->only(['status', 'severity', 'alert_type']),
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], AlertStatus::cases()),
-            'severities' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], AlertSeverity::cases()),
-            'alertTypes' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], AlertType::cases()),
+            'statuses' => array_map(fn (AlertStatus $c): array => ['value' => $c->value, 'name' => $c->name], AlertStatus::cases()),
+            'severities' => array_map(fn (AlertSeverity $c): array => ['value' => $c->value, 'name' => $c->name], AlertSeverity::cases()),
+            'alertTypes' => array_map(fn (AlertType $c): array => ['value' => $c->value, 'name' => $c->name], AlertType::cases()),
         ]);
-    }
-
-    private function resolveEntityLabel(Alert $alert): ?string
-    {
-        if (! $alert->entity_type || ! $alert->entity_id) {
-            return null;
-        }
-        $type = $alert->entity_type;
-        $id = $alert->entity_id;
-        if (str_ends_with($type, 'Vehicle')) {
-            $v = Vehicle::find($id);
-            return $v ? "Vehicle · {$v->registration}" : null;
-        }
-        if (str_ends_with($type, 'Driver')) {
-            $d = Driver::find($id);
-            return $d ? 'Driver · ' . trim($d->first_name . ' ' . $d->last_name) : null;
-        }
-        return $type . ' #' . $id;
     }
 
     public function show(Alert $alert): Response
@@ -77,6 +60,27 @@ final class AlertController extends Controller
         $this->authorize('view', $alert);
 
         return Inertia::render('Fleet/Alerts/Show', ['alert' => $alert]);
+    }
+
+    public function bulkAcknowledge(Request $request): RedirectResponse
+    {
+        $this->authorize('viewAny', Alert::class);
+        $request->validate(['ids' => ['required', 'array'], 'ids.*' => ['integer', 'min:1']]);
+        $ids = array_values(array_unique($request->input('ids', [])));
+        $count = 0;
+        foreach ($ids as $id) {
+            $alert = Alert::query()->find($id);
+            if ($alert !== null && $request->user()->can('update', $alert) && $alert->status === 'active') {
+                $alert->update([
+                    'status' => 'acknowledged',
+                    'acknowledged_at' => now(),
+                    'acknowledged_by' => $request->user()->id,
+                ]);
+                $count++;
+            }
+        }
+
+        return back()->with('flash', ['status' => 'success', 'message' => "{$count} alert(s) acknowledged."]);
     }
 
     public function acknowledge(Request $request, Alert $alert): RedirectResponse
@@ -87,6 +91,28 @@ final class AlertController extends Controller
             'acknowledged_at' => now(),
             'acknowledged_by' => $request->user()->id,
         ]);
-        return redirect()->back()->with('flash', ['status' => 'success', 'message' => 'Alert acknowledged.']);
+
+        return back()->with('flash', ['status' => 'success', 'message' => 'Alert acknowledged.']);
+    }
+
+    private function resolveEntityLabel(Alert $alert): ?string
+    {
+        if (! $alert->entity_type || ! $alert->entity_id) {
+            return null;
+        }
+        $type = $alert->entity_type;
+        $id = $alert->entity_id;
+        if (str_ends_with($type, 'Vehicle')) {
+            $v = Vehicle::query()->find($id);
+
+            return $v ? "Vehicle · {$v->registration}" : null;
+        }
+        if (str_ends_with($type, 'Driver')) {
+            $d = Driver::query()->find($id);
+
+            return $d ? 'Driver · '.mb_trim($d->first_name.' '.$d->last_name) : null;
+        }
+
+        return $type.' #'.$id;
     }
 }

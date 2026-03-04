@@ -33,7 +33,7 @@ return new class extends Migration
             throw $e;
         }
 
-        Schema::create('memories', function (Blueprint $table) {
+        Schema::create('memories', function (Blueprint $table): void {
             $table->id();
             $table->string('user_id')->nullable()->index();
             $table->text('content');

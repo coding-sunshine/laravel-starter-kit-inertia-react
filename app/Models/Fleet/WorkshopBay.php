@@ -20,9 +20,10 @@ use Mattiverse\Userstamps\Traits\Userstamps;
  * @property string|null $description
  * @property bool $is_active
  */
-class WorkshopBay extends Model
+final class WorkshopBay extends Model
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use SoftDeletes;
     use Userstamps;
 

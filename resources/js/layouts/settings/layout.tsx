@@ -1,5 +1,6 @@
 import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { onboarding } from '@/routes';
@@ -12,7 +13,8 @@ import { show } from '@/routes/two-factor';
 import { edit } from '@/routes/user-profile';
 import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { type PropsWithChildren, useMemo } from 'react';
+import { ChevronRight, Search } from 'lucide-react';
+import { type PropsWithChildren, useMemo, useState } from 'react';
 
 const sidebarNavItems: (NavItem & { feature?: string; dataPan: string })[] = [
     {
@@ -72,16 +74,24 @@ const sidebarNavItems: (NavItem & { feature?: string; dataPan: string })[] = [
 
 export default function SettingsLayout({ children }: PropsWithChildren) {
     const { features } = usePage<SharedData>().props;
+    const [search, setSearch] = useState('');
 
     const visibleNavItems = useMemo(() => {
         const f = features ?? {};
         return sidebarNavItems.filter((item) => {
             if (!item.feature) return true;
             const value = f[item.feature];
-            // Fail closed: only show when feature is explicitly active (true or 1)
             return value === true || value === 1;
         });
     }, [features]);
+
+    const filteredNavItems = useMemo(() => {
+        if (!search.trim()) return visibleNavItems;
+        const q = search.toLowerCase().trim();
+        return visibleNavItems.filter((item) =>
+            item.title.toLowerCase().includes(q),
+        );
+    }, [visibleNavItems, search]);
 
     // When server-side rendering, we only render the layout on the client...
     if (typeof window === 'undefined') {
@@ -89,6 +99,22 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
     }
 
     const currentPath = window.location.pathname;
+    const currentItem = visibleNavItems.find(
+        (item) =>
+            (typeof item.href === 'string' ? item.href : item.href.url) ===
+            currentPath,
+    );
+    const settingsHref =
+        visibleNavItems[0] &&
+        (typeof visibleNavItems[0].href === 'string'
+            ? visibleNavItems[0].href
+            : visibleNavItems[0].href.url);
+    const breadcrumbs = currentItem
+        ? [
+              { title: 'Settings', href: settingsHref ?? '#' },
+              { title: currentItem.title, href: null as string | null },
+          ]
+        : [{ title: 'Settings', href: settingsHref ?? '#' }];
 
     return (
         <div className="px-4 py-6">
@@ -97,10 +123,44 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
                 description="Manage your profile and account settings"
             />
 
+            <nav
+                className="mb-4 flex items-center gap-2 text-sm text-muted-foreground"
+                aria-label="Breadcrumb"
+            >
+                {breadcrumbs.map((b, i) => (
+                    <span key={i} className="flex items-center gap-2">
+                        {b.href ? (
+                            <Link
+                                href={b.href}
+                                className="hover:text-foreground"
+                            >
+                                {b.title}
+                            </Link>
+                        ) : (
+                            <span className="text-foreground">{b.title}</span>
+                        )}
+                        {i < breadcrumbs.length - 1 && (
+                            <ChevronRight className="size-4" />
+                        )}
+                    </span>
+                ))}
+            </nav>
+
             <div className="flex flex-col lg:flex-row lg:space-x-12">
-                <aside className="w-full max-w-xl lg:w-48">
+                <aside className="w-full max-w-xl lg:w-52">
+                    <div className="relative mb-2">
+                        <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                            type="search"
+                            placeholder="Search settings…"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            className="pl-8"
+                            aria-label="Search settings"
+                        />
+                    </div>
                     <nav className="flex flex-col space-y-1 space-x-0">
-                        {visibleNavItems.map((item) => (
+                        {filteredNavItems.map((item) => (
                             <Button
                                 key={
                                     typeof item.href === 'string'

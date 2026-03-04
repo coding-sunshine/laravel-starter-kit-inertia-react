@@ -31,9 +31,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property \Carbon\Carbon|null $auto_resolve_at
  * @property array|null $metadata
  */
-class Alert extends Model
+final class Alert extends Model
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
 
     protected $fillable = [
         'alert_type',

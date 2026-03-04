@@ -7,8 +7,10 @@ namespace App\Models\Fleet;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class RouteStop extends Model
+final class RouteStop extends Model
 {
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
+
     protected $fillable = [
         'route_id',
         'location_id',

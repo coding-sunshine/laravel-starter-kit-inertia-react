@@ -35,9 +35,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $validation_status
  * @property int|null $validated_by
  */
-class FuelTransaction extends Model
+final class FuelTransaction extends Model
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
 
     protected $fillable = [
         'vehicle_id',

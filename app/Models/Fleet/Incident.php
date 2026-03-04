@@ -24,9 +24,10 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  * @property string $severity
  * @property string $status
  */
-class Incident extends Model implements HasMedia
+final class Incident extends Model implements HasMedia
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use InteractsWithMedia;
     use SoftDeletes;
     use Userstamps;

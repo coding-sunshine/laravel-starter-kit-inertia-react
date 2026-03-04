@@ -20,9 +20,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property float|null $legal_limit_kg
  * @property array|null $metadata
  */
-class AxleLoadReading extends Model
+final class AxleLoadReading extends Model
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
 
     protected $fillable = [
         'vehicle_id',

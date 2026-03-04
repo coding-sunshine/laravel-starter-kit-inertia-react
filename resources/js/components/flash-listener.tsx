@@ -2,7 +2,12 @@ import { usePage } from '@inertiajs/react';
 import { useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 
-type Flash = { success?: string; error?: string; status?: string; message?: string };
+type Flash = {
+    success?: string;
+    error?: string;
+    status?: string;
+    message?: string;
+};
 
 declare module '@inertiajs/react' {
     interface PageProps {

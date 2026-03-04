@@ -10,7 +10,7 @@ use App\Services\TenantContext;
 
 final class PermitToWorkPolicy
 {
-    public function viewAny(User $user): bool
+    public function viewAny(): bool
     {
         return TenantContext::check();
     }
@@ -20,7 +20,7 @@ final class PermitToWorkPolicy
         return $permitToWork->organization_id === TenantContext::id();
     }
 
-    public function create(User $user): bool
+    public function create(): bool
     {
         return TenantContext::check();
     }

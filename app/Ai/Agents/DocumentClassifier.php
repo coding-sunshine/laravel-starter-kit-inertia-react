@@ -16,7 +16,7 @@ final class DocumentClassifier implements Agent, HasStructuredOutput
 {
     use Promptable;
 
-    public const SOURCE_TYPES = ['mot', 'v5c', 'insurance', 'service_history', 'other'];
+    public const array SOURCE_TYPES = ['mot', 'v5c', 'insurance', 'service_history', 'other'];
 
     public function instructions(): string
     {

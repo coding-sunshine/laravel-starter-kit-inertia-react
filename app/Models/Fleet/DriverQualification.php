@@ -29,9 +29,10 @@ use Mattiverse\Userstamps\Traits\Userstamps;
  * @property \Carbon\Carbon|null $verification_date
  * @property string|null $notes
  */
-class DriverQualification extends Model
+final class DriverQualification extends Model
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use SoftDeletes;
     use Userstamps;
 

@@ -30,9 +30,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property bool $interrupted
  * @property string|null $interruption_reason
  */
-class EvChargingSession extends Model
+final class EvChargingSession extends Model
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
 
     protected $fillable = [
         'vehicle_id',

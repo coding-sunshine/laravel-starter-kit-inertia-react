@@ -20,11 +20,11 @@ final class FuelFraudDetectionAgent implements Agent, HasStructuredOutput
     public function instructions(): string
     {
         return 'You are a fuel fraud analyst. Given fuel transaction data (timestamps, locations, volumes, costs, vehicles, drivers), '
-            . 'identify transactions that show anomalies suggesting possible fraud: e.g. impossible location or time patterns, '
-            . 'unusual volume or frequency, mismatched vehicle/driver patterns. '
-            . 'For each suspicious transaction return: transaction_id (the ID from the data), fraud_score (0-1), '
-            . 'a short reason, and severity (low, medium, high, or critical). '
-            . 'Return only transactions that warrant review; omit clearly normal ones.';
+            .'identify transactions that show anomalies suggesting possible fraud: e.g. impossible location or time patterns, '
+            .'unusual volume or frequency, mismatched vehicle/driver patterns. '
+            .'For each suspicious transaction return: transaction_id (the ID from the data), fraud_score (0-1), '
+            .'a short reason, and severity (low, medium, high, or critical). '
+            .'Return only transactions that warrant review; omit clearly normal ones.';
     }
 
     public function schema(JsonSchema $schema): array

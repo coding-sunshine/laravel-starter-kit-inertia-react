@@ -8,10 +8,10 @@ use App\Ai\Agents\IncidentAnalysisAgent;
 use App\Models\Fleet\Incident;
 use Laravel\Ai\Responses\StructuredAgentResponse;
 
-final class IncidentAnalysisService
+final readonly class IncidentAnalysisService
 {
     public function __construct(
-        private readonly IncidentAnalysisAgent $agent
+        private IncidentAnalysisAgent $agent
     ) {}
 
     /** @return array<string, string>|null */
@@ -29,6 +29,7 @@ final class IncidentAnalysisService
         }
 
         $s = $response->structured;
+
         return [
             'parties_involved' => (string) ($s['parties_involved'] ?? ''),
             'location' => (string) ($s['location'] ?? ''),
@@ -48,7 +49,7 @@ final class IncidentAnalysisService
 
         $desc = $incident->description ?? '';
         if ($desc !== '') {
-            $parts[] = "Incident description:\n" . trim($desc);
+            $parts[] = "Incident description:\n".mb_trim((string) $desc);
         }
 
         $witnesses = $incident->witnesses;
@@ -56,7 +57,7 @@ final class IncidentAnalysisService
             foreach ($witnesses as $i => $w) {
                 $statement = is_string($w) ? $w : (is_array($w) && isset($w['statement']) ? (string) $w['statement'] : json_encode($w));
                 if ($statement !== '' && $statement !== '[]') {
-                    $parts[] = 'Witness statement ' . ((int) $i + 1) . ":\n" . $statement;
+                    $parts[] = 'Witness statement '.((int) $i + 1).":\n".$statement;
                 }
             }
         }
@@ -65,12 +66,13 @@ final class IncidentAnalysisService
             return '';
         }
 
-        return "Analyze the following incident report and witness statements. Extract the requested structured information.\n\n" . implode("\n\n", $parts);
+        return "Analyze the following incident report and witness statements. Extract the requested structured information.\n\n".implode("\n\n", $parts);
     }
 
     private function normalizeSeverity(string $severity): string
     {
-        $s = strtolower(trim($severity));
+        $s = mb_strtolower(mb_trim($severity));
+
         return in_array($s, ['low', 'medium', 'high', 'critical'], true) ? $s : 'medium';
     }
 }

@@ -1,9 +1,9 @@
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface WorkflowExecutionRecord {
     id: number;
@@ -36,7 +36,9 @@ export default function FleetWorkflowExecutionsShow({
     ];
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title={`Fleet – Workflow execution #${workflowExecution.id}`} />
+            <Head
+                title={`Fleet – Workflow execution #${workflowExecution.id}`}
+            />
             <div className="flex h-full flex-1 flex-col gap-6 rounded-xl p-4">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                     <h1 className="text-2xl font-semibold">
@@ -48,14 +50,19 @@ export default function FleetWorkflowExecutionsShow({
                 </div>
                 <Card>
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-base">Execution details</CardTitle>
+                        <CardTitle className="text-base">
+                            Execution details
+                        </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-2 text-sm">
                         <p>
-                            <span className="font-medium">ID:</span> {workflowExecution.id}
+                            <span className="font-medium">ID:</span>{' '}
+                            {workflowExecution.id}
                         </p>
                         <p>
-                            <span className="font-medium">Workflow definition:</span>{' '}
+                            <span className="font-medium">
+                                Workflow definition:
+                            </span>{' '}
                             {workflowExecution.workflow_definition ? (
                                 <Link
                                     href={`/fleet/workflow-definitions/${workflowExecution.workflow_definition.id}`}
@@ -68,47 +75,69 @@ export default function FleetWorkflowExecutionsShow({
                             )}
                         </p>
                         <p>
-                            <span className="font-medium">Status:</span> {workflowExecution.status}
+                            <span className="font-medium">Status:</span>{' '}
+                            {workflowExecution.status}
                         </p>
                         <p>
                             <span className="font-medium">Started at:</span>{' '}
                             {workflowExecution.started_at
-                                ? new Date(workflowExecution.started_at).toLocaleString()
+                                ? new Date(
+                                      workflowExecution.started_at,
+                                  ).toLocaleString()
                                 : '—'}
                         </p>
                         <p>
                             <span className="font-medium">Completed at:</span>{' '}
                             {workflowExecution.completed_at
-                                ? new Date(workflowExecution.completed_at).toLocaleString()
+                                ? new Date(
+                                      workflowExecution.completed_at,
+                                  ).toLocaleString()
                                 : '—'}
                         </p>
-                        {(workflowExecution.steps_attempted != null || workflowExecution.steps_completed != null) && (
+                        {(workflowExecution.steps_attempted != null ||
+                            workflowExecution.steps_completed != null) && (
                             <p>
                                 <span className="font-medium">Steps:</span>{' '}
-                                {workflowExecution.steps_completed ?? 0} / {workflowExecution.steps_attempted ?? 0} completed
-                                {workflowExecution.steps_failed != null && workflowExecution.steps_failed > 0 && `, ${workflowExecution.steps_failed} failed`}
+                                {workflowExecution.steps_completed ?? 0} /{' '}
+                                {workflowExecution.steps_attempted ?? 0}{' '}
+                                completed
+                                {workflowExecution.steps_failed != null &&
+                                    workflowExecution.steps_failed > 0 &&
+                                    `, ${workflowExecution.steps_failed} failed`}
                             </p>
                         )}
                         {workflowExecution.error_message && (
                             <p>
-                                <span className="font-medium text-destructive">Error:</span>{' '}
-                                <span className="text-destructive">{workflowExecution.error_message}</span>
+                                <span className="font-medium text-destructive">
+                                    Error:
+                                </span>{' '}
+                                <span className="text-destructive">
+                                    {workflowExecution.error_message}
+                                </span>
                             </p>
                         )}
                     </CardContent>
                 </Card>
-                {workflowExecution.result_data != null && Object.keys(workflowExecution.result_data as object).length > 0 && (
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-base">Result data</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <pre className="max-h-64 overflow-auto rounded bg-muted p-3 text-xs">
-                                {JSON.stringify(workflowExecution.result_data, null, 2)}
-                            </pre>
-                        </CardContent>
-                    </Card>
-                )}
+                {workflowExecution.result_data != null &&
+                    Object.keys(workflowExecution.result_data as object)
+                        .length > 0 && (
+                        <Card>
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-base">
+                                    Result data
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <pre className="max-h-64 overflow-auto rounded bg-muted p-3 text-xs">
+                                    {JSON.stringify(
+                                        workflowExecution.result_data,
+                                        null,
+                                        2,
+                                    )}
+                                </pre>
+                            </CardContent>
+                        </Card>
+                    )}
             </div>
         </AppLayout>
     );

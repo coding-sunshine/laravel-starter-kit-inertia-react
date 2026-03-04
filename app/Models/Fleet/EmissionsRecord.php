@@ -21,9 +21,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property float|null $fuel_consumed_litres
  * @property float|null $distance_km
  */
-class EmissionsRecord extends Model
+final class EmissionsRecord extends Model
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
 
     protected $fillable = [
         'vehicle_id', 'driver_id', 'trip_id', 'scope', 'emissions_type',

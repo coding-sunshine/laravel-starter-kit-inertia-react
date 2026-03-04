@@ -30,4 +30,3 @@ final class StoreGeofenceRequest extends FormRequest
         ];
     }
 }
-

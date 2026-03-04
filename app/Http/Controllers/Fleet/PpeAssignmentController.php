@@ -24,34 +24,35 @@ final class PpeAssignmentController extends Controller
         $assignments = PpeAssignment::query()
             ->with(['user', 'driver'])
             ->when($request->input('status'), fn ($q, $v) => $q->where('status', $v))
-            ->orderByDesc('issued_date')
+            ->latest('issued_date')
             ->paginate(15)
             ->withQueryString();
 
         return Inertia::render('Fleet/PpeAssignments/Index', [
             'ppeAssignments' => $assignments,
             'filters' => $request->only(['status']),
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], PpeAssignmentStatus::cases()),
+            'statuses' => array_map(fn (PpeAssignmentStatus $c): array => ['value' => $c->value, 'name' => $c->name], PpeAssignmentStatus::cases()),
         ]);
     }
 
     public function create(): Response
     {
         $this->authorize('create', PpeAssignment::class);
-        $users = User::query()->orderBy('name')->get(['id', 'name'])->map(fn ($u) => ['id' => $u->id, 'name' => $u->name]);
-        $drivers = Driver::query()->orderBy('last_name')->get(['id', 'first_name', 'last_name'])->map(fn ($d) => ['id' => $d->id, 'name' => $d->first_name . ' ' . $d->last_name]);
+        $users = User::query()->orderBy('name')->get(['id', 'name'])->map(fn ($u): array => ['id' => $u->id, 'name' => $u->name]);
+        $drivers = Driver::query()->orderBy('last_name')->get(['id', 'first_name', 'last_name'])->map(fn ($d): array => ['id' => $d->id, 'name' => $d->first_name.' '.$d->last_name]);
 
         return Inertia::render('Fleet/PpeAssignments/Create', [
             'users' => $users,
             'drivers' => $drivers,
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], PpeAssignmentStatus::cases()),
+            'statuses' => array_map(fn (PpeAssignmentStatus $c): array => ['value' => $c->value, 'name' => $c->name], PpeAssignmentStatus::cases()),
         ]);
     }
 
     public function store(StorePpeAssignmentRequest $request): RedirectResponse
     {
         $this->authorize('create', PpeAssignment::class);
-        PpeAssignment::create($request->validated());
+        PpeAssignment::query()->create($request->validated());
+
         return to_route('fleet.ppe-assignments.index')->with('flash', ['status' => 'success', 'message' => 'PPE assignment created.']);
     }
 
@@ -59,20 +60,21 @@ final class PpeAssignmentController extends Controller
     {
         $this->authorize('view', $ppe_assignment);
         $ppe_assignment->load(['user', 'driver']);
+
         return Inertia::render('Fleet/PpeAssignments/Show', ['ppeAssignment' => $ppe_assignment]);
     }
 
     public function edit(PpeAssignment $ppe_assignment): Response
     {
         $this->authorize('update', $ppe_assignment);
-        $users = User::query()->orderBy('name')->get(['id', 'name'])->map(fn ($u) => ['id' => $u->id, 'name' => $u->name]);
-        $drivers = Driver::query()->orderBy('last_name')->get(['id', 'first_name', 'last_name'])->map(fn ($d) => ['id' => $d->id, 'name' => $d->first_name . ' ' . $d->last_name]);
+        $users = User::query()->orderBy('name')->get(['id', 'name'])->map(fn ($u): array => ['id' => $u->id, 'name' => $u->name]);
+        $drivers = Driver::query()->orderBy('last_name')->get(['id', 'first_name', 'last_name'])->map(fn ($d): array => ['id' => $d->id, 'name' => $d->first_name.' '.$d->last_name]);
 
         return Inertia::render('Fleet/PpeAssignments/Edit', [
             'ppeAssignment' => $ppe_assignment,
             'users' => $users,
             'drivers' => $drivers,
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], PpeAssignmentStatus::cases()),
+            'statuses' => array_map(fn (PpeAssignmentStatus $c): array => ['value' => $c->value, 'name' => $c->name], PpeAssignmentStatus::cases()),
         ]);
     }
 
@@ -80,6 +82,7 @@ final class PpeAssignmentController extends Controller
     {
         $this->authorize('update', $ppe_assignment);
         $ppe_assignment->update($request->validated());
+
         return to_route('fleet.ppe-assignments.show', $ppe_assignment)->with('flash', ['status' => 'success', 'message' => 'PPE assignment updated.']);
     }
 
@@ -87,6 +90,7 @@ final class PpeAssignmentController extends Controller
     {
         $this->authorize('delete', $ppe_assignment);
         $ppe_assignment->delete();
+
         return to_route('fleet.ppe-assignments.index')->with('flash', ['status' => 'success', 'message' => 'PPE assignment deleted.']);
     }
 }

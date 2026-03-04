@@ -93,7 +93,7 @@ return [
 
         'openrouter' => [
             'driver' => 'openrouter',
-            'key' => trim((string) env('OPENROUTER_API_KEY', '')),
+            'key' => mb_trim((string) env('OPENROUTER_API_KEY', '')),
             'models' => [
                 'text' => [
                     'default' => 'openai/gpt-4o-mini',
@@ -107,7 +107,7 @@ return [
         // Embeddings via OpenRouter only (no OpenAI key). Uses OPENROUTER_API_KEY.
         'openrouter_embeddings' => [
             'driver' => 'openrouter_embeddings',
-            'key' => trim((string) env('OPENROUTER_API_KEY', '')),
+            'key' => mb_trim((string) env('OPENROUTER_API_KEY', '')),
             'models' => [
                 'embeddings' => [
                     'default' => 'openai/text-embedding-3-small',

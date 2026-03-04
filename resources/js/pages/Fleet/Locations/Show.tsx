@@ -1,5 +1,5 @@
-import AppLayout from '@/layouts/app-layout';
 import { FleetMap, FleetMapMarker } from '@/components/fleet/FleetMap';
+import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
@@ -37,9 +37,20 @@ export default function FleetLocationsShow({ location }: Props) {
         { title: location.name, href: `/fleet/locations/${location.id}` },
     ];
 
-    const addressParts = [location.address, location.city, location.postcode, location.country].filter(Boolean);
-    const hasCoords = location.lat != null && location.lng != null && !Number.isNaN(Number(location.lat)) && !Number.isNaN(Number(location.lng));
-    const mapCenter = hasCoords ? { lat: Number(location.lat), lng: Number(location.lng) } : null;
+    const addressParts = [
+        location.address,
+        location.city,
+        location.postcode,
+        location.country,
+    ].filter(Boolean);
+    const hasCoords =
+        location.lat != null &&
+        location.lng != null &&
+        !Number.isNaN(Number(location.lat)) &&
+        !Number.isNaN(Number(location.lng));
+    const mapCenter = hasCoords
+        ? { lat: Number(location.lat), lng: Number(location.lng) }
+        : null;
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -66,10 +77,16 @@ export default function FleetLocationsShow({ location }: Props) {
                             <FleetMap
                                 center={mapCenter}
                                 zoom={14}
-                                mapContainerStyle={{ width: '100%', height: '280px' }}
+                                mapContainerStyle={{
+                                    width: '100%',
+                                    height: '280px',
+                                }}
                                 className="rounded-b-lg"
                             >
-                                <FleetMapMarker position={mapCenter} title={location.name} />
+                                <FleetMapMarker
+                                    position={mapCenter}
+                                    title={location.name}
+                                />
                             </FleetMap>
                         </CardContent>
                     </Card>
@@ -77,24 +94,38 @@ export default function FleetLocationsShow({ location }: Props) {
                 <div className="flex items-start gap-4 rounded-lg border p-4">
                     <MapPin className="mt-0.5 size-5 text-muted-foreground" />
                     <div className="space-y-1">
-                        <p className="text-sm font-medium text-muted-foreground">Type</p>
-                        <p className="capitalize">{location.type.replace('_', ' ')}</p>
-                        <p className="mt-2 text-sm font-medium text-muted-foreground">Address</p>
+                        <p className="text-sm font-medium text-muted-foreground">
+                            Type
+                        </p>
+                        <p className="capitalize">
+                            {location.type.replace('_', ' ')}
+                        </p>
+                        <p className="mt-2 text-sm font-medium text-muted-foreground">
+                            Address
+                        </p>
                         <p>{addressParts.join(', ')}</p>
                         {location.contact_name && (
                             <>
-                                <p className="mt-2 text-sm font-medium text-muted-foreground">Contact</p>
+                                <p className="mt-2 text-sm font-medium text-muted-foreground">
+                                    Contact
+                                </p>
                                 <p>
                                     {location.contact_name}
-                                    {location.contact_phone && ` · ${location.contact_phone}`}
-                                    {location.contact_email && ` · ${location.contact_email}`}
+                                    {location.contact_phone &&
+                                        ` · ${location.contact_phone}`}
+                                    {location.contact_email &&
+                                        ` · ${location.contact_email}`}
                                 </p>
                             </>
                         )}
                         {location.notes && (
                             <>
-                                <p className="mt-2 text-sm font-medium text-muted-foreground">Notes</p>
-                                <p className="whitespace-pre-wrap">{location.notes}</p>
+                                <p className="mt-2 text-sm font-medium text-muted-foreground">
+                                    Notes
+                                </p>
+                                <p className="whitespace-pre-wrap">
+                                    {location.notes}
+                                </p>
                             </>
                         )}
                         <p className="mt-2">

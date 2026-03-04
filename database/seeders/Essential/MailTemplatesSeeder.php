@@ -68,6 +68,22 @@ final class MailTemplatesSeeder extends Seeder
                 'recipients' => ['user'],
                 'attachments' => [],
             ],
+            [
+                'name' => 'Fleet daily digest',
+                'event' => \App\Events\Fleet\FleetDailyDigestReady::class,
+                'subject' => 'Fleet daily digest – {{ $organization->name }}',
+                'body' => '<p>Your fleet summary for today:</p>{!! $summaryHtml !!}<p><a href="{{ url("/fleet") }}">View Fleet Dashboard</a></p>',
+                'recipients' => ['owner'],
+                'attachments' => [],
+            ],
+            [
+                'name' => 'Critical fleet alert',
+                'event' => \App\Events\Fleet\CriticalAlertTriggered::class,
+                'subject' => '[{{ $alert->severity }}] {{ $alert->title }}',
+                'body' => '<p><strong>{{ $alert->title }}</strong></p><p>{{ $alert->description }}</p><p>Severity: {{ $alert->severity }} · Type: {{ $alert->alert_type }}</p><p><a href="{{ url("/fleet/alerts/" . $alert->id) }}">View alert</a></p>',
+                'recipients' => ['owner'],
+                'attachments' => [],
+            ],
         ];
 
         foreach ($templates as $data) {

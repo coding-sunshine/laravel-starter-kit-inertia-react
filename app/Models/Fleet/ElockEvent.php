@@ -21,9 +21,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property array|null $metadata
  * @property bool $alert_sent
  */
-class ElockEvent extends Model
+final class ElockEvent extends Model
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
 
     protected $table = 'e_lock_events';
 

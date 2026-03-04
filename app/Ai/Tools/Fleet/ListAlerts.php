@@ -9,14 +9,13 @@ use App\Models\Scopes\OrganizationScope;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Contracts\Tool;
 use Laravel\Ai\Tools\Request;
-use Stringable;
 
-final class ListAlerts implements Tool
+final readonly class ListAlerts implements Tool
 {
-    private const DEFAULT_LIMIT = 10;
+    private const int DEFAULT_LIMIT = 10;
 
     public function __construct(
-        private readonly int $organizationId,
+        private int $organizationId,
     ) {}
 
     public function description(): string
@@ -32,11 +31,11 @@ final class ListAlerts implements Tool
         ];
     }
 
-    public function handle(Request $request): string|Stringable
+    public function handle(Request $request): string
     {
-        $query = Alert::withoutGlobalScope(OrganizationScope::class)
+        $query = Alert::query()->withoutGlobalScope(OrganizationScope::class)
             ->where('organization_id', $this->organizationId)
-            ->orderByDesc('triggered_at');
+            ->latest('triggered_at');
 
         $status = $request['status'] ?? null;
         if (is_string($status) && $status !== '') {
@@ -52,7 +51,7 @@ final class ListAlerts implements Tool
             return 'No alerts found.';
         }
 
-        $lines = $alerts->map(fn ($a) => sprintf('#%d %s – %s (%s) %s', $a->id, $a->title, $a->alert_type, $a->severity, $a->triggered_at?->format('Y-m-d H:i') ?? ''));
+        $lines = $alerts->map(fn ($a): string => sprintf('#%d %s – %s (%s) %s', $a->id, $a->title, $a->alert_type, $a->severity, $a->triggered_at?->format('Y-m-d H:i') ?? ''));
 
         return 'Alerts: '."\n".$lines->implode("\n");
     }

@@ -25,9 +25,10 @@ use Mattiverse\Userstamps\Traits\Userstamps;
  * @property \Carbon\Carbon|null $completed_at
  * @property string|null $completion_notes
  */
-class VehicleRecall extends Model
+final class VehicleRecall extends Model
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use SoftDeletes;
     use Userstamps;
 

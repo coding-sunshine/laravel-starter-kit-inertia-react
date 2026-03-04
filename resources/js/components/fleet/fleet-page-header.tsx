@@ -1,4 +1,3 @@
-import { Button } from '@/components/ui/button';
 import type { ReactNode } from 'react';
 
 interface FleetPageHeaderProps {
@@ -7,7 +6,11 @@ interface FleetPageHeaderProps {
     action?: ReactNode;
 }
 
-export function FleetPageHeader({ title, description, action }: FleetPageHeaderProps) {
+export function FleetPageHeader({
+    title,
+    description,
+    action,
+}: FleetPageHeaderProps) {
     return (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>

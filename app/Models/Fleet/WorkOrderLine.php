@@ -18,8 +18,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property float|null $total
  * @property int $sort_order
  */
-class WorkOrderLine extends Model
+final class WorkOrderLine extends Model
 {
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
+
     protected $table = 'work_order_lines';
 
     protected $fillable = [

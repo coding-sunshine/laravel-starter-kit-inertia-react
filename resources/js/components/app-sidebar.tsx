@@ -1,5 +1,4 @@
 import PageController from '@/actions/App/Http/Controllers/PageController';
-import { fleetDashboardItem, fleetNavSections } from '@/config/fleet-nav';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -13,6 +12,7 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import { fleetDashboardItem, fleetNavSections } from '@/config/fleet-nav';
 import { chat, dashboard } from '@/routes';
 import { index as blogIndex } from '@/routes/blog';
 import { index as changelogIndex } from '@/routes/changelog';
@@ -22,25 +22,16 @@ import organizations from '@/routes/organizations';
 import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import {
-    AlertTriangle,
     BookOpen,
     Building2,
-    ClipboardList,
-    Clock,
     CreditCard,
-    Cpu,
-    FileDown,
     FileText,
     Folder,
-    Fuel,
     LayoutGrid,
     LifeBuoy,
     Mail,
-    MapPin,
     Megaphone,
     MessageCircle,
-    Route,
-    ShieldCheck,
     Truck,
     Users,
 } from 'lucide-react';
@@ -185,14 +176,26 @@ export function AppSidebar() {
     const visibleMainNavItems = useMemo(() => {
         if (fleetOnly) return [];
         return mainNavItems.filter((item) =>
-            canShowNavItem(item, permissions, canBypass, resolvedFeatures, tenancyEnabled),
+            canShowNavItem(
+                item,
+                permissions,
+                canBypass,
+                resolvedFeatures,
+                tenancyEnabled,
+            ),
         );
     }, [permissions, canBypass, resolvedFeatures, tenancyEnabled, fleetOnly]);
 
     const visibleFooterNavItems = useMemo(() => {
         if (fleetOnly) return [];
         return footerNavItems.filter((item) =>
-            canShowNavItem(item, permissions, canBypass, resolvedFeatures, tenancyEnabled),
+            canShowNavItem(
+                item,
+                permissions,
+                canBypass,
+                resolvedFeatures,
+                tenancyEnabled,
+            ),
         );
     }, [permissions, canBypass, resolvedFeatures, tenancyEnabled, fleetOnly]);
 
@@ -202,7 +205,10 @@ export function AppSidebar() {
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton size="lg" asChild>
-                            <Link href={fleetOnly ? '/fleet' : dashboard().url} prefetch="click">
+                            <Link
+                                href={fleetOnly ? '/fleet' : dashboard().url}
+                                prefetch="click"
+                            >
                                 <AppLogo />
                             </Link>
                         </SidebarMenuButton>
@@ -221,7 +227,9 @@ export function AppSidebar() {
                     fleetSubItems={fleetOnly ? [] : undefined}
                     groupLabel="Platform"
                     fleetOnlyLayout={fleetOnly}
-                    fleetDashboardItem={fleetOnly ? fleetDashboardItem : undefined}
+                    fleetDashboardItem={
+                        fleetOnly ? fleetDashboardItem : undefined
+                    }
                     fleetNavSections={fleetOnly ? fleetNavSections : undefined}
                 />
             </SidebarContent>

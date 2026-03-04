@@ -15,17 +15,9 @@ import {
     LifeBuoy,
     Mail,
     Settings,
+    Truck,
     UserPen,
 } from 'lucide-react';
-import {
-    Area,
-    AreaChart,
-    CartesianGrid,
-    ResponsiveContainer,
-    Tooltip,
-    XAxis,
-    YAxis,
-} from 'recharts';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -34,8 +26,23 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
+type FleetSummary = { vehicle_count: number; driver_count: number } | null;
+type ActivityItem = { id: number; description: string; created_at: string };
+
 export default function Dashboard() {
-    const { auth, features } = usePage<SharedData>().props;
+    const {
+        auth,
+        features,
+        fleetSummary,
+        activity = [],
+        aiSummary,
+    } = usePage<
+        SharedData & {
+            fleetSummary?: FleetSummary;
+            activity?: ActivityItem[];
+            aiSummary?: string | null;
+        }
+    >().props;
     const f = features ?? {};
     const showPdfExport = f.profile_pdf_export ?? false;
     const showApiDocs = f.scramble_api_docs ?? false;
@@ -48,6 +55,7 @@ export default function Dashboard() {
     const quickActions = [
         {
             label: 'Edit profile',
+            description: 'Update your name, email, and avatar',
             href: editProfile().url,
             icon: UserPen,
             show: true,
@@ -55,6 +63,7 @@ export default function Dashboard() {
         },
         {
             label: 'Settings',
+            description: 'Profile, password, branding, and more',
             href: '/settings',
             icon: Settings,
             show: true,
@@ -62,6 +71,7 @@ export default function Dashboard() {
         },
         {
             label: 'Export profile (PDF)',
+            description: 'Download your personal data as PDF',
             href: exportPdf().url,
             icon: FileText,
             show: showPdfExport,
@@ -70,6 +80,7 @@ export default function Dashboard() {
         },
         {
             label: 'Contact support',
+            description: 'Get help from the team',
             href: contactCreate().url,
             icon: LifeBuoy,
             show: showContact,
@@ -77,6 +88,7 @@ export default function Dashboard() {
         },
         {
             label: 'Email templates',
+            description: 'Manage database mail templates',
             href: '/admin/mail-templates',
             icon: Mail,
             show: isSuperAdmin,
@@ -85,6 +97,7 @@ export default function Dashboard() {
         },
         {
             label: 'Product analytics',
+            description: 'Impressions, hovers, and clicks',
             href: '/admin/analytics/product',
             icon: BarChart3,
             show: canAccessAdmin,
@@ -93,6 +106,7 @@ export default function Dashboard() {
         },
         {
             label: 'Horizon (queues)',
+            description: 'Monitor queue jobs and workers',
             href: '/horizon',
             icon: Activity,
             show: canAccessAdmin,
@@ -101,6 +115,7 @@ export default function Dashboard() {
         },
         {
             label: 'Waterline (workflows)',
+            description: 'View and manage durable workflows',
             href: '/waterline',
             icon: GitBranch,
             show: canAccessAdmin,
@@ -109,6 +124,7 @@ export default function Dashboard() {
         },
         {
             label: 'Telescope (debug)',
+            description: 'Requests, queries, and logs',
             href: '/telescope',
             icon: Bug,
             show: canAccessAdmin,
@@ -117,22 +133,12 @@ export default function Dashboard() {
         },
     ].filter((a) => a.show);
 
-    const chartData = [
-        { name: 'Mon', value: 12 },
-        { name: 'Tue', value: 19 },
-        { name: 'Wed', value: 15 },
-        { name: 'Thu', value: 22 },
-        { name: 'Fri', value: 18 },
-        { name: 'Sat', value: 25 },
-        { name: 'Sun', value: 20 },
-    ];
-
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dashboard" />
             <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h2 className="text-lg font-medium">
+                    <h2 className="heading-4 text-foreground">
                         Welcome back, {auth.user.name}
                     </h2>
                     <div className="flex flex-wrap items-center gap-2">
@@ -150,78 +156,135 @@ export default function Dashboard() {
                     </div>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {fleetSummary != null && (
+                    <div
+                        className="rounded-lg border border-border bg-card p-4 shadow-sm"
+                        data-pan="dashboard-fleet-summary"
+                    >
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex items-center gap-4">
+                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                    <Truck className="size-5" />
+                                </div>
+                                <div>
+                                    <h3 className="font-medium text-foreground">
+                                        Fleet summary
+                                    </h3>
+                                    <p className="text-sm text-muted-foreground">
+                                        {fleetSummary.vehicle_count} vehicle
+                                        {fleetSummary.vehicle_count !== 1
+                                            ? 's'
+                                            : ''}
+                                        {' · '}
+                                        {fleetSummary.driver_count} driver
+                                        {fleetSummary.driver_count !== 1
+                                            ? 's'
+                                            : ''}
+                                    </p>
+                                </div>
+                            </div>
+                            <Button
+                                size="sm"
+                                asChild
+                                data-pan="dashboard-view-fleet"
+                            >
+                                <Link href="/fleet">View fleet</Link>
+                            </Button>
+                        </div>
+                    </div>
+                )}
+
+                {aiSummary != null && aiSummary !== '' && (
+                    <div
+                        className="rounded-lg border border-border bg-card p-4 shadow-sm"
+                        data-pan="dashboard-ai-summary"
+                    >
+                        <h3 className="heading-5 mb-2 text-foreground">
+                            AI summary
+                        </h3>
+                        <p className="body-sm whitespace-pre-wrap text-muted-foreground">
+                            {aiSummary}
+                        </p>
+                    </div>
+                )}
+
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {quickActions.map((action) => (
-                        <Button
+                        <Link
                             key={action.label}
-                            variant="outline"
-                            className="h-auto flex-col items-center gap-2 py-6"
-                            asChild
+                            href={action.href}
+                            className="focus-visible-ring flex flex-col gap-2 rounded-lg border border-border bg-card p-4 shadow-sm transition-colors hover:bg-muted/50"
                             data-pan={action.dataPan}
+                            {...(action.external
+                                ? {
+                                      target: '_blank',
+                                      rel: 'noopener noreferrer',
+                                  }
+                                : {})}
                         >
-                            {action.external ? (
-                                <a href={action.href}>
-                                    <action.icon className="size-5 text-muted-foreground" />
-                                    <span className="text-sm">
-                                        {action.label}
-                                    </span>
-                                </a>
-                            ) : (
-                                <Link href={action.href}>
-                                    <action.icon className="size-5 text-muted-foreground" />
-                                    <span className="text-sm">
-                                        {action.label}
-                                    </span>
-                                </Link>
+                            <div className="flex items-center gap-3">
+                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                    <action.icon className="size-4" />
+                                </div>
+                                <span className="font-medium text-foreground">
+                                    {action.label}
+                                </span>
+                            </div>
+                            {action.description && (
+                                <p className="text-sm text-muted-foreground">
+                                    {action.description}
+                                </p>
                             )}
-                        </Button>
+                        </Link>
                     ))}
                 </div>
 
                 <div
-                    className="rounded-lg border bg-card p-4"
-                    data-pan="dashboard-chart"
+                    className="rounded-lg border border-border bg-card p-4 shadow-sm"
+                    data-pan="dashboard-activity"
                 >
-                    <h3 className="mb-2 font-medium">Activity (sample)</h3>
-                    {chartData.length === 0 ? (
-                        <p className="flex h-[200px] items-center justify-center text-sm text-muted-foreground">
-                            No data for this period.
-                        </p>
+                    <h3 className="heading-5 mb-2 text-foreground">Activity</h3>
+                    {activity.length > 0 ? (
+                        <ul className="space-y-2" aria-label="Recent activity">
+                            {activity.map((item) => (
+                                <li
+                                    key={item.id}
+                                    className="flex items-center justify-between gap-2 border-b border-border/50 py-2 last:border-0 last:pb-0"
+                                >
+                                    <span className="text-sm text-foreground">
+                                        {item.description}
+                                    </span>
+                                    <time
+                                        className="shrink-0 text-xs text-muted-foreground"
+                                        dateTime={item.created_at}
+                                    >
+                                        {new Date(
+                                            item.created_at,
+                                        ).toLocaleDateString(undefined, {
+                                            month: 'short',
+                                            day: 'numeric',
+                                            hour: '2-digit',
+                                            minute: '2-digit',
+                                        })}
+                                    </time>
+                                </li>
+                            ))}
+                        </ul>
                     ) : (
-                        <div className="h-[200px] w-full">
-                            <ResponsiveContainer
-                                width="100%"
-                                height={200}
-                                minHeight={200}
+                        <div className="flex flex-col items-center justify-center gap-3 py-8 text-center">
+                            <p className="body-sm text-muted-foreground">
+                                No recent activity yet.
+                            </p>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                asChild
+                                data-pan="dashboard-connect-data"
                             >
-                                <AreaChart data={chartData}>
-                                    <CartesianGrid
-                                        strokeDasharray="3 3"
-                                        className="stroke-muted"
-                                    />
-                                    <XAxis dataKey="name" className="text-xs" tick={{ fill: 'hsl(var(--foreground))' }} />
-                                    <YAxis className="text-xs" tick={{ fill: 'hsl(var(--foreground))' }} />
-                                    <Tooltip
-                                        contentStyle={{
-                                            backgroundColor: 'hsl(var(--card))',
-                                            border: '1px solid hsl(var(--border))',
-                                            borderRadius: '6px',
-                                            fontSize: '12px',
-                                        }}
-                                        labelStyle={{ color: 'hsl(var(--foreground))' }}
-                                        formatter={(value: number) => [value, 'Value']}
-                                        labelFormatter={(label) => `Day: ${label}`}
-                                    />
-                                    <Area
-                                        type="monotone"
-                                        dataKey="value"
-                                        name="Value"
-                                        stroke="hsl(var(--primary))"
-                                        fill="hsl(var(--primary))"
-                                        fillOpacity={0.3}
-                                    />
-                                </AreaChart>
-                            </ResponsiveContainer>
+                                <Link href="/settings">
+                                    Connect data or update settings
+                                </Link>
+                            </Button>
                         </div>
                     )}
                 </div>

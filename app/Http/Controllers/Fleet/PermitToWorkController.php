@@ -32,29 +32,30 @@ final class PermitToWorkController extends Controller
         return Inertia::render('Fleet/PermitToWork/Index', [
             'permitToWorkList' => $permits,
             'filters' => $request->only(['status']),
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], PermitToWorkStatus::cases()),
+            'statuses' => array_map(fn (PermitToWorkStatus $c): array => ['value' => $c->value, 'name' => $c->name], PermitToWorkStatus::cases()),
         ]);
     }
 
     public function create(): Response
     {
         $this->authorize('create', PermitToWork::class);
-        $users = User::query()->orderBy('name')->get(['id', 'name'])->map(fn ($u) => ['id' => $u->id, 'name' => $u->name]);
-        $locations = Location::query()->orderBy('name')->get(['id', 'name'])->map(fn ($l) => ['id' => $l->id, 'name' => $l->name]);
-        $vehicles = Vehicle::query()->orderBy('registration')->get(['id', 'registration'])->map(fn ($v) => ['id' => $v->id, 'name' => $v->registration]);
+        $users = User::query()->orderBy('name')->get(['id', 'name'])->map(fn ($u): array => ['id' => $u->id, 'name' => $u->name]);
+        $locations = Location::query()->orderBy('name')->get(['id', 'name'])->map(fn ($l): array => ['id' => $l->id, 'name' => $l->name]);
+        $vehicles = Vehicle::query()->orderBy('registration')->get(['id', 'registration'])->map(fn ($v): array => ['id' => $v->id, 'name' => $v->registration]);
 
         return Inertia::render('Fleet/PermitToWork/Create', [
             'users' => $users,
             'locations' => $locations,
             'vehicles' => $vehicles,
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], PermitToWorkStatus::cases()),
+            'statuses' => array_map(fn (PermitToWorkStatus $c): array => ['value' => $c->value, 'name' => $c->name], PermitToWorkStatus::cases()),
         ]);
     }
 
     public function store(StorePermitToWorkRequest $request): RedirectResponse
     {
         $this->authorize('create', PermitToWork::class);
-        PermitToWork::create($request->validated());
+        PermitToWork::query()->create($request->validated());
+
         return to_route('fleet.permit-to-work.index')->with('flash', ['status' => 'success', 'message' => 'Permit to work created.']);
     }
 
@@ -62,22 +63,23 @@ final class PermitToWorkController extends Controller
     {
         $this->authorize('view', $permit_to_work);
         $permit_to_work->load(['issuedBy', 'issuedTo', 'location', 'vehicle']);
+
         return Inertia::render('Fleet/PermitToWork/Show', ['permitToWork' => $permit_to_work]);
     }
 
     public function edit(PermitToWork $permit_to_work): Response
     {
         $this->authorize('update', $permit_to_work);
-        $users = User::query()->orderBy('name')->get(['id', 'name'])->map(fn ($u) => ['id' => $u->id, 'name' => $u->name]);
-        $locations = Location::query()->orderBy('name')->get(['id', 'name'])->map(fn ($l) => ['id' => $l->id, 'name' => $l->name]);
-        $vehicles = Vehicle::query()->orderBy('registration')->get(['id', 'registration'])->map(fn ($v) => ['id' => $v->id, 'name' => $v->registration]);
+        $users = User::query()->orderBy('name')->get(['id', 'name'])->map(fn ($u): array => ['id' => $u->id, 'name' => $u->name]);
+        $locations = Location::query()->orderBy('name')->get(['id', 'name'])->map(fn ($l): array => ['id' => $l->id, 'name' => $l->name]);
+        $vehicles = Vehicle::query()->orderBy('registration')->get(['id', 'registration'])->map(fn ($v): array => ['id' => $v->id, 'name' => $v->registration]);
 
         return Inertia::render('Fleet/PermitToWork/Edit', [
             'permitToWork' => $permit_to_work,
             'users' => $users,
             'locations' => $locations,
             'vehicles' => $vehicles,
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], PermitToWorkStatus::cases()),
+            'statuses' => array_map(fn (PermitToWorkStatus $c): array => ['value' => $c->value, 'name' => $c->name], PermitToWorkStatus::cases()),
         ]);
     }
 
@@ -85,6 +87,7 @@ final class PermitToWorkController extends Controller
     {
         $this->authorize('update', $permit_to_work);
         $permit_to_work->update($request->validated());
+
         return to_route('fleet.permit-to-work.show', $permit_to_work)->with('flash', ['status' => 'success', 'message' => 'Permit to work updated.']);
     }
 
@@ -92,6 +95,7 @@ final class PermitToWorkController extends Controller
     {
         $this->authorize('delete', $permit_to_work);
         $permit_to_work->delete();
+
         return to_route('fleet.permit-to-work.index')->with('flash', ['status' => 'success', 'message' => 'Permit to work deleted.']);
     }
 }

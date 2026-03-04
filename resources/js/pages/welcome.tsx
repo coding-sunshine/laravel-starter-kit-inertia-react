@@ -8,7 +8,11 @@ import { type SharedData } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/react';
 
 export default function Welcome() {
-    const { auth, features } = usePage<SharedData>().props;
+    const {
+        auth,
+        features,
+        fleet_only_app: fleetOnlyApp,
+    } = usePage<SharedData>().props;
     const f = features ?? {};
 
     return (
@@ -20,14 +24,20 @@ export default function Welcome() {
                     rel="stylesheet"
                 />
             </Head>
-            <div className="flex min-h-screen flex-col items-center bg-[#FDFDFC] p-6 text-[#1b1b18] lg:justify-center lg:p-8 dark:bg-[#0a0a0a]">
-                <header className="mb-6 w-full max-w-[335px] text-sm not-has-[nav]:hidden lg:max-w-4xl">
-                    <nav className="flex items-center justify-end gap-4">
+            <div className="flex min-h-screen flex-col items-center bg-background p-6 text-foreground lg:justify-center lg:p-8">
+                <header
+                    className="body-sm mb-6 w-full max-w-[335px] not-has-[nav]:hidden lg:max-w-4xl"
+                    role="banner"
+                >
+                    <nav
+                        className="flex items-center justify-end gap-4"
+                        aria-label="Primary"
+                    >
                         {auth.user ? (
                             <Link
                                 href={dashboard()}
                                 data-pan="welcome-dashboard"
-                                className="inline-block rounded-sm border border-[#19140035] px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#1915014a] dark:border-[#3E3E3A] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
+                                className="body-sm focus-visible-ring inline-block rounded-md border border-border px-5 py-1.5 leading-normal text-foreground hover:border-border/80"
                             >
                                 Dashboard
                             </Link>
@@ -37,7 +47,8 @@ export default function Welcome() {
                                     <Link
                                         href={blogIndex().url}
                                         data-pan="welcome-blog"
-                                        className="inline-block rounded-sm border border-transparent px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#19140035] dark:text-[#EDEDEC] dark:hover:border-[#3E3E3A]"
+                                        className="body-sm focus-visible-ring inline-block rounded-md border border-transparent px-5 py-1.5 text-foreground hover:border-border"
+                                        aria-label="Blog"
                                     >
                                         Blog
                                     </Link>
@@ -46,7 +57,8 @@ export default function Welcome() {
                                     <Link
                                         href={changelogIndex().url}
                                         data-pan="welcome-changelog"
-                                        className="inline-block rounded-sm border border-transparent px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#19140035] dark:text-[#EDEDEC] dark:hover:border-[#3E3E3A]"
+                                        className="body-sm focus-visible-ring inline-block rounded-md border border-transparent px-5 py-1.5 text-foreground hover:border-border"
+                                        aria-label="Changelog"
                                     >
                                         Changelog
                                     </Link>
@@ -55,7 +67,8 @@ export default function Welcome() {
                                     <Link
                                         href={helpIndex().url}
                                         data-pan="welcome-help"
-                                        className="inline-block rounded-sm border border-transparent px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#19140035] dark:text-[#EDEDEC] dark:hover:border-[#3E3E3A]"
+                                        className="body-sm focus-visible-ring inline-block rounded-md border border-transparent px-5 py-1.5 text-foreground hover:border-border"
+                                        aria-label="Help"
                                     >
                                         Help
                                     </Link>
@@ -64,7 +77,8 @@ export default function Welcome() {
                                     <Link
                                         href={contactCreate().url}
                                         data-pan="welcome-contact"
-                                        className="inline-block rounded-sm border border-transparent px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#19140035] dark:text-[#EDEDEC] dark:hover:border-[#3E3E3A]"
+                                        className="body-sm focus-visible-ring inline-block rounded-md border border-transparent px-5 py-1.5 text-foreground hover:border-border"
+                                        aria-label="Contact"
                                     >
                                         Contact
                                     </Link>
@@ -72,7 +86,8 @@ export default function Welcome() {
                                 <Link
                                     href={login()}
                                     data-pan="welcome-log-in"
-                                    className="inline-block rounded-sm border border-transparent px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#19140035] dark:text-[#EDEDEC] dark:hover:border-[#3E3E3A]"
+                                    className="body-sm focus-visible-ring inline-block rounded-md border border-transparent px-5 py-1.5 text-foreground hover:border-border"
+                                    aria-label="Log in"
                                 >
                                     Log in
                                 </Link>
@@ -80,7 +95,8 @@ export default function Welcome() {
                                     <Link
                                         href={register()}
                                         data-pan="welcome-register"
-                                        className="inline-block rounded-sm border border-[#19140035] px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#1915014a] dark:border-[#3E3E3A] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
+                                        className="body-sm focus-visible-ring inline-block rounded-md border border-border px-5 py-1.5 text-foreground hover:border-border/80"
+                                        aria-label="Register"
                                     >
                                         Register
                                     </Link>
@@ -90,93 +106,184 @@ export default function Welcome() {
                     </nav>
                 </header>
                 <div className="flex w-full items-center justify-center opacity-100 transition-opacity duration-750 lg:grow starting:opacity-0">
-                    <main className="flex w-full max-w-[335px] flex-col-reverse lg:max-w-4xl lg:flex-row">
-                        <div className="flex-1 rounded-br-lg rounded-bl-lg bg-white p-6 pb-12 text-[13px] leading-[20px] shadow-[inset_0px_0px_0px_1px_rgba(26,26,0,0.16)] lg:rounded-tl-lg lg:rounded-br-none lg:p-20 dark:bg-[#161615] dark:text-[#EDEDEC] dark:shadow-[inset_0px_0px_0px_1px_#fffaed2d]">
-                            <h1 className="mb-1 font-medium">
-                                Let's get started
-                            </h1>
-                            <p className="mb-2 text-[#706f6c] dark:text-[#A1A09A]">
-                                Laravel has an incredibly rich ecosystem.
-                                <br />
-                                We suggest starting with the following.
-                            </p>
-                            <ul className="mb-4 flex flex-col lg:mb-6">
-                                <li className="relative flex items-center gap-4 py-2 before:absolute before:top-1/2 before:bottom-0 before:left-[0.4rem] before:border-l before:border-[#e3e3e0] dark:before:border-[#3E3E3A]">
-                                    <span className="relative bg-white py-1 dark:bg-[#161615]">
-                                        <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full border border-[#e3e3e0] bg-[#FDFDFC] shadow-[0px_0px_1px_0px_rgba(0,0,0,0.03),0px_1px_2px_0px_rgba(0,0,0,0.06)] dark:border-[#3E3E3A] dark:bg-[#161615]">
-                                            <span className="h-1.5 w-1.5 rounded-full bg-[#dbdbd7] dark:bg-[#3E3E3A]" />
-                                        </span>
-                                    </span>
-                                    <span>
-                                        Read the
-                                        <a
-                                            href="https://laravel.com/docs"
-                                            target="_blank"
-                                            className="ml-1 inline-flex items-center space-x-1 font-medium text-[#f53003] underline underline-offset-4 dark:text-[#FF4433]"
-                                        >
-                                            <span>Documentation</span>
-                                            <svg
-                                                width={10}
-                                                height={11}
-                                                viewBox="0 0 10 11"
-                                                fill="none"
-                                                xmlns="http://www.w3.org/2000/svg"
-                                                className="h-2.5 w-2.5"
-                                            >
-                                                <path
-                                                    d="M7.70833 6.95834V2.79167H3.54167M2.5 8L7.5 3.00001"
-                                                    stroke="currentColor"
-                                                    strokeLinecap="square"
-                                                />
-                                            </svg>
-                                        </a>
-                                    </span>
-                                </li>
-                                <li className="relative flex items-center gap-4 py-2 before:absolute before:top-0 before:bottom-1/2 before:left-[0.4rem] before:border-l before:border-[#e3e3e0] dark:before:border-[#3E3E3A]">
-                                    <span className="relative bg-white py-1 dark:bg-[#161615]">
-                                        <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full border border-[#e3e3e0] bg-[#FDFDFC] shadow-[0px_0px_1px_0px_rgba(0,0,0,0.03),0px_1px_2px_0px_rgba(0,0,0,0.06)] dark:border-[#3E3E3A] dark:bg-[#161615]">
-                                            <span className="h-1.5 w-1.5 rounded-full bg-[#dbdbd7] dark:bg-[#3E3E3A]" />
-                                        </span>
-                                    </span>
-                                    <span>
-                                        Watch video tutorials at
-                                        <a
-                                            href="https://laracasts.com"
-                                            target="_blank"
-                                            className="ml-1 inline-flex items-center space-x-1 font-medium text-[#f53003] underline underline-offset-4 dark:text-[#FF4433]"
-                                        >
-                                            <span>Laracasts</span>
-                                            <svg
-                                                width={10}
-                                                height={11}
-                                                viewBox="0 0 10 11"
-                                                fill="none"
-                                                xmlns="http://www.w3.org/2000/svg"
-                                                className="h-2.5 w-2.5"
-                                            >
-                                                <path
-                                                    d="M7.70833 6.95834V2.79167H3.54167M2.5 8L7.5 3.00001"
-                                                    stroke="currentColor"
-                                                    strokeLinecap="square"
-                                                />
-                                            </svg>
-                                        </a>
-                                    </span>
-                                </li>
-                            </ul>
-                            <ul className="flex gap-3 text-sm leading-normal">
-                                <li>
-                                    <a
-                                        href="https://cloud.laravel.com"
-                                        target="_blank"
-                                        className="inline-block rounded-sm border border-black bg-[#1b1b18] px-5 py-1.5 text-sm leading-normal text-white hover:border-black hover:bg-black dark:border-[#eeeeec] dark:bg-[#eeeeec] dark:text-[#1C1C1A] dark:hover:border-white dark:hover:bg-white"
+                    <main
+                        id="main-content"
+                        className="flex w-full max-w-[335px] flex-col-reverse lg:max-w-4xl lg:flex-row"
+                        role="main"
+                    >
+                        <div className="body-sm flex-1 rounded-br-lg rounded-bl-lg border border-border bg-card p-6 pb-12 text-foreground shadow-[var(--shadow-sm)] lg:rounded-tl-lg lg:rounded-br-none lg:p-20">
+                            {fleetOnlyApp ? (
+                                <>
+                                    <h1 className="heading-2 mb-1 text-foreground">
+                                        Fleet management, simplified
+                                    </h1>
+                                    <p className="body mb-4 text-muted-foreground">
+                                        Real-time vehicle tracking, AI-powered
+                                        insights, and compliance in one place.
+                                    </p>
+                                    <ul
+                                        className="body-sm mb-4 list-none space-y-2 text-muted-foreground"
+                                        aria-label="Value propositions"
                                     >
-                                        Deploy now
-                                    </a>
-                                </li>
-                            </ul>
+                                        <li className="flex items-center gap-2">
+                                            <span
+                                                className="text-primary"
+                                                aria-hidden
+                                            >
+                                                •
+                                            </span>
+                                            Real-time map and live vehicle
+                                            positions
+                                        </li>
+                                        <li className="flex items-center gap-2">
+                                            <span
+                                                className="text-primary"
+                                                aria-hidden
+                                            >
+                                                •
+                                            </span>
+                                            AI assistant and daily digest
+                                        </li>
+                                        <li className="flex items-center gap-2">
+                                            <span
+                                                className="text-primary"
+                                                aria-hidden
+                                            >
+                                                •
+                                            </span>
+                                            DVIR, ELD, IFTA and compliance in
+                                            one place
+                                        </li>
+                                    </ul>
+                                    {auth.user ? (
+                                        <p className="mb-4">
+                                            <Link
+                                                href="/fleet/assistant"
+                                                data-pan="welcome-try-fleet-assistant"
+                                                className="body-sm focus-visible-ring inline-block rounded-md border border-border bg-primary px-5 py-2 font-medium text-primary-foreground hover:bg-primary/90"
+                                            >
+                                                Try Fleet Assistant
+                                            </Link>
+                                        </p>
+                                    ) : (
+                                        <p className="mb-4 flex flex-wrap gap-3">
+                                            <Link
+                                                href={register()}
+                                                data-pan="welcome-get-started"
+                                                className="body-sm focus-visible-ring inline-block rounded-md border border-border bg-primary px-5 py-2 font-medium text-primary-foreground hover:bg-primary/90"
+                                            >
+                                                Get started
+                                            </Link>
+                                            <Link
+                                                href={login()}
+                                                data-pan="welcome-log-in-hero"
+                                                className="body-sm focus-visible-ring inline-block rounded-md border border-border px-5 py-2 font-medium text-foreground hover:bg-muted"
+                                            >
+                                                Log in
+                                            </Link>
+                                        </p>
+                                    )}
+                                </>
+                            ) : (
+                                <>
+                                    <h1 className="heading-2 mb-1 text-foreground">
+                                        Let's get started
+                                    </h1>
+                                    <p className="body mb-2 text-muted-foreground">
+                                        Laravel has an incredibly rich
+                                        ecosystem.
+                                        <br />
+                                        We suggest starting with the following.
+                                    </p>
+                                </>
+                            )}
+                            {!fleetOnlyApp && (
+                                <>
+                                    <ul className="mb-4 flex flex-col lg:mb-6">
+                                        <li className="relative flex items-center gap-4 py-2 before:absolute before:top-1/2 before:bottom-0 before:left-[0.4rem] before:border-l before:border-border">
+                                            <span className="relative bg-card py-1">
+                                                <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full border border-border bg-background shadow-sm">
+                                                    <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50" />
+                                                </span>
+                                            </span>
+                                            <span>
+                                                Read the
+                                                <a
+                                                    href="https://laravel.com/docs"
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="focus-visible-ring ml-1 inline-flex items-center space-x-1 rounded font-medium text-primary underline underline-offset-4"
+                                                >
+                                                    <span>Documentation</span>
+                                                    <svg
+                                                        width={10}
+                                                        height={11}
+                                                        viewBox="0 0 10 11"
+                                                        fill="none"
+                                                        xmlns="http://www.w3.org/2000/svg"
+                                                        className="h-2.5 w-2.5"
+                                                    >
+                                                        <path
+                                                            d="M7.70833 6.95834V2.79167H3.54167M2.5 8L7.5 3.00001"
+                                                            stroke="currentColor"
+                                                            strokeLinecap="square"
+                                                        />
+                                                    </svg>
+                                                </a>
+                                            </span>
+                                        </li>
+                                        <li className="relative flex items-center gap-4 py-2 before:absolute before:top-0 before:bottom-1/2 before:left-[0.4rem] before:border-l before:border-border">
+                                            <span className="relative bg-card py-1">
+                                                <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full border border-border bg-background shadow-sm">
+                                                    <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50" />
+                                                </span>
+                                            </span>
+                                            <span>
+                                                Watch video tutorials at
+                                                <a
+                                                    href="https://laracasts.com"
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="focus-visible-ring ml-1 inline-flex items-center space-x-1 rounded font-medium text-primary underline underline-offset-4"
+                                                >
+                                                    <span>Laracasts</span>
+                                                    <svg
+                                                        width={10}
+                                                        height={11}
+                                                        viewBox="0 0 10 11"
+                                                        fill="none"
+                                                        xmlns="http://www.w3.org/2000/svg"
+                                                        className="h-2.5 w-2.5"
+                                                    >
+                                                        <path
+                                                            d="M7.70833 6.95834V2.79167H3.54167M2.5 8L7.5 3.00001"
+                                                            stroke="currentColor"
+                                                            strokeLinecap="square"
+                                                        />
+                                                    </svg>
+                                                </a>
+                                            </span>
+                                        </li>
+                                    </ul>
+                                    <ul className="body-sm flex gap-3">
+                                        <li>
+                                            <a
+                                                href="https://cloud.laravel.com"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="body-sm focus-visible-ring inline-block rounded-md border border-border bg-primary px-5 py-1.5 text-primary-foreground hover:bg-primary/90"
+                                            >
+                                                Deploy now
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </>
+                            )}
                         </div>
-                        <div className="relative -mb-px aspect-[335/376] w-full shrink-0 overflow-hidden rounded-t-lg bg-[#fff2f2] lg:mb-0 lg:-ml-px lg:aspect-auto lg:w-[438px] lg:rounded-t-none lg:rounded-r-lg dark:bg-[#1D0002]">
+                        <div
+                            className="relative -mb-px aspect-[335/376] w-full shrink-0 overflow-hidden rounded-t-lg bg-muted lg:mb-0 lg:-ml-px lg:aspect-auto lg:w-[438px] lg:rounded-t-none lg:rounded-r-lg"
+                            aria-hidden
+                        >
                             <svg
                                 className="w-full max-w-none translate-y-0 text-[#F53003] opacity-100 transition-all duration-750 dark:text-[#F61500] starting:translate-y-6 starting:opacity-0"
                                 viewBox="0 0 438 104"
@@ -841,16 +948,25 @@ export default function Welcome() {
                                     />
                                 </g>
                             </svg>
-                            <div className="absolute inset-0 rounded-t-lg shadow-[inset_0px_0px_0px_1px_rgba(26,26,0,0.16)] lg:rounded-t-none lg:rounded-r-lg dark:shadow-[inset_0px_0px_0px_1px_#fffaed2d]" />
+                            <div className="absolute inset-0 rounded-t-lg border border-border lg:rounded-t-none lg:rounded-r-lg" />
                         </div>
                     </main>
                 </div>
-                <footer className="mt-8 w-full max-w-[335px] border-t border-[#e3e3e0] pt-4 text-center text-sm text-[#706f6c] lg:max-w-4xl dark:border-[#3E3E3A] dark:text-[#A1A09A]">
-                    <Link href={legalTerms().url} className="hover:underline">
+                <footer
+                    className="caption mt-8 w-full max-w-[335px] border-t border-border pt-4 text-center text-muted-foreground lg:max-w-4xl"
+                    role="contentinfo"
+                >
+                    <Link
+                        href={legalTerms().url}
+                        className="focus-visible-ring rounded hover:underline"
+                    >
                         Terms of Service
                     </Link>
                     {' · '}
-                    <Link href={legalPrivacy().url} className="hover:underline">
+                    <Link
+                        href={legalPrivacy().url}
+                        className="focus-visible-ring rounded hover:underline"
+                    >
                         Privacy Policy
                     </Link>
                 </footer>

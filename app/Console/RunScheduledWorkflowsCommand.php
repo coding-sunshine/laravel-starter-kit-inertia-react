@@ -34,7 +34,7 @@ final class RunScheduledWorkflowsCommand extends Command
                 continue;
             }
 
-            $execution = WorkflowExecution::create([
+            $execution = WorkflowExecution::query()->create([
                 'workflow_definition_id' => $definition->id,
                 'started_at' => now(),
                 'trigger_event' => 'schedule',
@@ -44,7 +44,7 @@ final class RunScheduledWorkflowsCommand extends Command
                 'status' => 'pending',
             ]);
 
-            RunWorkflowExecutionJob::dispatch($execution->id);
+            dispatch(new RunWorkflowExecutionJob($execution->id));
             $started++;
         }
 
@@ -62,6 +62,7 @@ final class RunScheduledWorkflowsCommand extends Command
             ->where('trigger_event', 'schedule')
             ->whereDate('started_at', today())
             ->exists();
+
         return ! $last;
     }
 }

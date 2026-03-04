@@ -5,11 +5,13 @@ import AppLogoIcon from './app-logo-icon';
 export default function AppLogo() {
     const { name, branding, fleet_only_app } = usePage<SharedData>().props;
     const logoUrl = branding?.logoUrl ?? null;
-    const siteName = fleet_only_app ? 'Fleet Management' : (name ?? 'Laravel Starter Kit');
+    const siteName = fleet_only_app
+        ? 'Fleet Management'
+        : (name ?? 'Laravel Starter Kit');
 
     if (fleet_only_app) {
         return (
-            <span className="truncate text-sm font-semibold leading-tight">
+            <span className="truncate text-sm leading-tight font-semibold">
                 {siteName}
             </span>
         );

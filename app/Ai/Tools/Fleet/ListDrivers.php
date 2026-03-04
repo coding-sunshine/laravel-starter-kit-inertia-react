@@ -9,14 +9,13 @@ use App\Models\Scopes\OrganizationScope;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Contracts\Tool;
 use Laravel\Ai\Tools\Request;
-use Stringable;
 
-final class ListDrivers implements Tool
+final readonly class ListDrivers implements Tool
 {
-    private const DEFAULT_LIMIT = 15;
+    private const int DEFAULT_LIMIT = 15;
 
     public function __construct(
-        private readonly int $organizationId,
+        private int $organizationId,
     ) {}
 
     public function description(): string
@@ -32,9 +31,9 @@ final class ListDrivers implements Tool
         ];
     }
 
-    public function handle(Request $request): string|Stringable
+    public function handle(Request $request): string
     {
-        $query = Driver::withoutGlobalScope(OrganizationScope::class)
+        $query = Driver::query()->withoutGlobalScope(OrganizationScope::class)
             ->where('organization_id', $this->organizationId);
 
         $status = $request['status'] ?? null;
@@ -51,7 +50,7 @@ final class ListDrivers implements Tool
             return 'No drivers found for this organization.';
         }
 
-        $lines = $drivers->map(fn ($d) => sprintf('#%d %s %s (%s) – %s', $d->id, $d->first_name, $d->last_name, $d->employee_id ?? '—', $d->status));
+        $lines = $drivers->map(fn ($d): string => sprintf('#%d %s %s (%s) – %s', $d->id, $d->first_name, $d->last_name, $d->employee_id ?? '—', $d->status));
 
         return 'Drivers: '."\n".$lines->implode("\n");
     }

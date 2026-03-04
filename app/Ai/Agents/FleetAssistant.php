@@ -19,12 +19,11 @@ use App\Ai\Tools\Fleet\ListServiceSchedules;
 use App\Ai\Tools\Fleet\ListTrips;
 use App\Ai\Tools\Fleet\ListVehicles;
 use App\Ai\Tools\Fleet\ListWorkOrders;
+use Laravel\Ai\Concerns\RemembersConversations;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\Conversational;
 use Laravel\Ai\Contracts\HasTools;
-use Laravel\Ai\Concerns\RemembersConversations;
 use Laravel\Ai\Promptable;
-use Stringable;
 
 final class FleetAssistant implements Agent, Conversational, HasTools
 {
@@ -36,7 +35,7 @@ final class FleetAssistant implements Agent, Conversational, HasTools
         public ?int $userId = null,
     ) {}
 
-    public function instructions(): string|Stringable
+    public function instructions(): string
     {
         return 'You are the Fleet Intelligence Assistant. Answer only using fleet data and the documents provided by your tools. '
             .'You can: search fleet documents (MOT, V5C, insurance, service history) with the document search tool—when you use it, always cite the source (document name or reference). '

@@ -1,11 +1,11 @@
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
 import { Download } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface ReportExecution {
     id: number;
@@ -21,14 +21,24 @@ interface Props {
 }
 
 const statusVariant = (status: string) =>
-    status === 'completed' ? 'default' : status === 'failed' ? 'destructive' : 'secondary';
+    status === 'completed'
+        ? 'default'
+        : status === 'failed'
+          ? 'destructive'
+          : 'secondary';
 
-export default function FleetReportExecutionsShow({ reportExecution, downloadUrl }: Props) {
+export default function FleetReportExecutionsShow({
+    reportExecution,
+    downloadUrl,
+}: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard().url },
         { title: 'Fleet', href: '/fleet' },
         { title: 'Report executions', href: '/fleet/report-executions' },
-        { title: `Execution #${reportExecution.id}`, href: `/fleet/report-executions/${reportExecution.id}` },
+        {
+            title: `Execution #${reportExecution.id}`,
+            href: `/fleet/report-executions/${reportExecution.id}`,
+        },
     ];
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -47,28 +57,64 @@ export default function FleetReportExecutionsShow({ reportExecution, downloadUrl
                         )}
                         {reportExecution.report?.id && (
                             <Button variant="outline" size="sm" asChild>
-                                <Link href={`/fleet/reports/${reportExecution.report.id}`}>Back to report</Link>
+                                <Link
+                                    href={`/fleet/reports/${reportExecution.report.id}`}
+                                >
+                                    Back to report
+                                </Link>
                             </Button>
                         )}
                         <Button variant="ghost" size="sm" asChild>
-                            <Link href="/fleet/report-executions">Back to list</Link>
+                            <Link href="/fleet/report-executions">
+                                Back to list
+                            </Link>
                         </Button>
                     </div>
                 </div>
                 <Card>
-                    <CardHeader><CardTitle>Details</CardTitle></CardHeader>
+                    <CardHeader>
+                        <CardTitle>Details</CardTitle>
+                    </CardHeader>
                     <CardContent className="space-y-2 text-sm">
-                        <p><span className="font-medium">Report:</span>{' '}
+                        <p>
+                            <span className="font-medium">Report:</span>{' '}
                             {reportExecution.report ? (
-                                <Link href={`/fleet/reports/${reportExecution.report.id}`} className="text-primary hover:underline">{reportExecution.report.name}</Link>
+                                <Link
+                                    href={`/fleet/reports/${reportExecution.report.id}`}
+                                    className="text-primary hover:underline"
+                                >
+                                    {reportExecution.report.name}
+                                </Link>
                             ) : (
                                 '—'
                             )}
                         </p>
-                        <p><span className="font-medium">Started:</span> {new Date(reportExecution.execution_start).toLocaleString()}</p>
-                        {reportExecution.execution_end && <p><span className="font-medium">Ended:</span> {new Date(reportExecution.execution_end).toLocaleString()}</p>}
-                        <p><span className="font-medium">Status:</span> <Badge variant={statusVariant(reportExecution.status)}>{reportExecution.status}</Badge></p>
-                        <p><span className="font-medium">Triggered by:</span> {reportExecution.triggered_by}</p>
+                        <p>
+                            <span className="font-medium">Started:</span>{' '}
+                            {new Date(
+                                reportExecution.execution_start,
+                            ).toLocaleString()}
+                        </p>
+                        {reportExecution.execution_end && (
+                            <p>
+                                <span className="font-medium">Ended:</span>{' '}
+                                {new Date(
+                                    reportExecution.execution_end,
+                                ).toLocaleString()}
+                            </p>
+                        )}
+                        <p>
+                            <span className="font-medium">Status:</span>{' '}
+                            <Badge
+                                variant={statusVariant(reportExecution.status)}
+                            >
+                                {reportExecution.status}
+                            </Badge>
+                        </p>
+                        <p>
+                            <span className="font-medium">Triggered by:</span>{' '}
+                            {reportExecution.triggered_by}
+                        </p>
                     </CardContent>
                 </Card>
             </div>

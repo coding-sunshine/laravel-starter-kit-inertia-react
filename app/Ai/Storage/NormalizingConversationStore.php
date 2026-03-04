@@ -15,10 +15,10 @@ use Laravel\Ai\Responses\AgentResponse;
  * Wraps the default conversation store and ensures message content is never null
  * when loading history, so OpenRouter (and other APIs that require string content) do not reject the request.
  */
-final class NormalizingConversationStore implements ConversationStore
+final readonly class NormalizingConversationStore implements ConversationStore
 {
     public function __construct(
-        private readonly ConversationStore $store,
+        private ConversationStore $store,
     ) {}
 
     public function latestConversationId(string|int $userId): ?string
@@ -44,14 +44,8 @@ final class NormalizingConversationStore implements ConversationStore
     public function getLatestConversationMessages(string $conversationId, int $limit): Collection
     {
         return $this->store->getLatestConversationMessages($conversationId, $limit)
-            ->map(fn (Message $m) => new Message($m->role, $m->content === null ? '' : $m->content))
-            ->filter(function (Message $m): bool {
-                // OpenRouter rejects assistant messages with null or missing content. Drop empty assistant turns.
-                if ($m->role === MessageRole::Assistant && ($m->content === null || trim((string) $m->content) === '')) {
-                    return false;
-                }
-                return true;
-            })
+            ->map(fn (Message $m): Message => new Message($m->role, $m->content ?? ''))
+            ->reject(fn (Message $m): bool => $m->role === MessageRole::Assistant && ($m->content === null || mb_trim($m->content) === ''))
             ->values();
     }
 }

@@ -9,13 +9,12 @@ use App\Models\Scopes\OrganizationScope;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Contracts\Tool;
 use Laravel\Ai\Tools\Request;
-use Stringable;
 
-final class ListDefects implements Tool
+final readonly class ListDefects implements Tool
 {
-    private const DEFAULT_LIMIT = 15;
+    private const int DEFAULT_LIMIT = 15;
 
-    public function __construct(private readonly int $organizationId) {}
+    public function __construct(private int $organizationId) {}
 
     public function description(): string
     {
@@ -31,12 +30,12 @@ final class ListDefects implements Tool
         ];
     }
 
-    public function handle(Request $request): string|Stringable
+    public function handle(Request $request): string
     {
-        $query = Defect::withoutGlobalScope(OrganizationScope::class)
+        $query = Defect::query()->withoutGlobalScope(OrganizationScope::class)
             ->where('organization_id', $this->organizationId)
             ->with('vehicle:id,registration')
-            ->orderByDesc('reported_at');
+            ->latest('reported_at');
         if ($vid = $request['vehicle_id'] ?? null) {
             $query->where('vehicle_id', (int) $vid);
         }
@@ -48,7 +47,8 @@ final class ListDefects implements Tool
         if ($defects->isEmpty()) {
             return 'No defects found for this organization.';
         }
-        $lines = $defects->map(fn ($d) => sprintf('#%d %s - %s (%s)', $d->id, $d->defect_number, $d->title, $d->severity));
+        $lines = $defects->map(fn ($d): string => sprintf('#%d %s - %s (%s)', $d->id, $d->defect_number, $d->title, $d->severity));
+
         return 'Defects: '."\n".$lines->implode("\n");
     }
 }

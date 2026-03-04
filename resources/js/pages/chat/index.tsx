@@ -28,18 +28,51 @@ type ConversationItem = {
 };
 
 type ConversationDetail = ConversationItem & {
-    messages: Array<{ id: string; role: string; content: string }>;
+    messages: Array<{
+        id: string;
+        role: string;
+        content: string;
+        tool_calls?: Array<{
+            name?: string;
+            id?: string;
+            function?: { name?: string };
+        }>;
+    }>;
 };
 
 function serverMessageToUIMessage(m: {
     id: string;
     role: string;
     content: string;
+    tool_calls?: Array<{
+        name?: string;
+        id?: string;
+        function?: { name?: string };
+    }>;
 }): UIMessage {
+    const parts: Array<
+        | { type: 'text'; content: string }
+        | { type: 'tool-invocation'; toolName: string; toolCallId?: string }
+    > = [];
+    if (
+        m.tool_calls &&
+        Array.isArray(m.tool_calls) &&
+        m.tool_calls.length > 0
+    ) {
+        for (const tc of m.tool_calls) {
+            const name = tc.name ?? tc.function?.name ?? 'tool';
+            parts.push({
+                type: 'tool-invocation',
+                toolName: name,
+                toolCallId: tc.id,
+            });
+        }
+    }
+    parts.push({ type: 'text', content: m.content ?? '' });
     return {
         id: m.id,
         role: m.role as 'user' | 'assistant' | 'system',
-        parts: [{ type: 'text', content: m.content ?? '' }],
+        parts,
     };
 }
 
@@ -61,7 +94,9 @@ function getCsrfToken(): string {
 }
 
 export default function ChatPage() {
-    const { auth } = usePage<SharedData>().props;
+    const { auth, suggestedPrompts } = usePage<
+        SharedData & { suggestedPrompts?: string[] }
+    >().props;
     const isMobile = useIsMobile();
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [conversationIdFromUrl, setConversationIdFromUrl] = useState<
@@ -69,6 +104,7 @@ export default function ChatPage() {
     >(() => getConversationIdFromUrl());
     const conversationIdRef = useRef<string | null>(conversationIdFromUrl);
     const createdConversationIdRef = useRef<string | null>(null);
+    const pendingPromptRef = useRef<string | null>(null);
     const [conversations, setConversations] = useState<ConversationItem[]>([]);
     const [conversationsLoading, setConversationsLoading] = useState(true);
     const [csrfReady, setCsrfReady] = useState(false);
@@ -240,6 +276,14 @@ export default function ChatPage() {
         };
     }, [conversationIdFromUrl, setMessages]);
 
+    useEffect(() => {
+        if (conversationIdFromUrl !== null || messages.length > 0) return;
+        const prompt = pendingPromptRef.current;
+        if (!prompt) return;
+        pendingPromptRef.current = null;
+        sendMessage(prompt);
+    }, [conversationIdFromUrl, messages.length, sendMessage]);
+
     const handleNewChat = useCallback(() => {
         conversationIdRef.current = null;
         setConversationIdFromUrl(null);
@@ -271,6 +315,14 @@ export default function ChatPage() {
         [sendMessage],
     );
 
+    const handleSuggestedPromptClick = useCallback(
+        (prompt: string) => {
+            pendingPromptRef.current = prompt;
+            handleNewChat();
+        },
+        [handleNewChat],
+    );
+
     return (
         <AppSidebarLayout>
             <Head title="Chat" />
@@ -291,6 +343,10 @@ export default function ChatPage() {
                                 onConversationRenamed={
                                     handleConversationRenamed
                                 }
+                                suggestedPrompts={suggestedPrompts}
+                                onSuggestedPromptClick={
+                                    handleSuggestedPromptClick
+                                }
                                 isMobile
                             />
                         </SheetContent>
@@ -304,6 +360,8 @@ export default function ChatPage() {
                         onSelectConversation={handleSelectConversation}
                         onConversationDeleted={loadConversations}
                         onConversationRenamed={handleConversationRenamed}
+                        suggestedPrompts={suggestedPrompts}
+                        onSuggestedPromptClick={handleSuggestedPromptClick}
                     />
                 )}
 
@@ -323,7 +381,10 @@ export default function ChatPage() {
                     {error && <ErrorBanner error={error} />}
 
                     {messages.length === 0 && !isLoading ? (
-                        <EmptyState onSend={handleSend} />
+                        <EmptyState
+                            onSend={handleSend}
+                            suggestedPrompts={suggestedPrompts}
+                        />
                     ) : (
                         <MessageList
                             messages={messages}

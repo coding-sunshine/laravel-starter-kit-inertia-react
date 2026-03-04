@@ -42,6 +42,11 @@ return [
         'webhook_url' => null,
     ],
 
+    // SMS for fleet critical alerts. Set SMS_DRIVER=twilio and add credentials to use Twilio.
+    'sms' => [
+        'driver' => env('SMS_DRIVER', 'log'),
+    ],
+
     'example_api' => [
         'url' => env('EXAMPLE_API_URL', 'https://jsonplaceholder.typicode.com'),
     ],

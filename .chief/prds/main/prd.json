@@ -290,7 +290,8 @@
         "CI workflow (if modified) runs successfully on a test push"
       ],
       "priority": 1,
-      "passes": false
+      "passes": false,
+      "inProgress": true
     }
   ]
 }

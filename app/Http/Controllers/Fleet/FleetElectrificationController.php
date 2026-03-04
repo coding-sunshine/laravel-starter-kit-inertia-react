@@ -20,8 +20,7 @@ final class FleetElectrificationController extends Controller
         $this->authorize('viewAny', AiAnalysisResult::class);
         $latest = AiAnalysisResult::query()
             ->where('analysis_type', 'electrification_planning')
-            ->where('entity_type', 'organization')
-            ->orderByDesc('created_at')
+            ->where('entity_type', 'organization')->latest()
             ->first();
 
         return Inertia::render('Fleet/ElectrificationPlan/Index', [
@@ -38,7 +37,7 @@ final class FleetElectrificationController extends Controller
             return response()->json(['message' => 'No organization context.'], 422);
         }
 
-        $service = app(FleetElectrificationService::class);
+        $service = resolve(FleetElectrificationService::class);
         $result = $service->generate($organizationId);
         if ($result === null) {
             return response()->json(['message' => 'Failed to generate electrification plan.'], 422);
@@ -53,7 +52,7 @@ final class FleetElectrificationController extends Controller
             isset($result['tco_summary']['savings']) ? number_format((float) $result['tco_summary']['savings'], 0) : 'N/A'
         );
 
-        AiAnalysisResult::create([
+        AiAnalysisResult::query()->create([
             'organization_id' => $organizationId,
             'analysis_type' => 'electrification_planning',
             'entity_type' => 'organization',

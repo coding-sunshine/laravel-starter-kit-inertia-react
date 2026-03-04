@@ -1,9 +1,9 @@
+import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Form, Head, Link } from '@inertiajs/react';
 import { FileText, Pencil, Plus, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 
 interface InsurancePolicyRecord {
     id: number;
@@ -20,7 +20,10 @@ interface PaginationLink {
     active: boolean;
 }
 interface Props {
-    insurancePolicies: { data: InsurancePolicyRecord[]; links: PaginationLink[] };
+    insurancePolicies: {
+        data: InsurancePolicyRecord[];
+        links: PaginationLink[];
+    };
     policyTypes: { value: string; name: string }[];
     coverageTypes: { value: string; name: string }[];
     statuses: { value: string; name: string }[];
@@ -28,9 +31,9 @@ interface Props {
 
 export default function FleetInsurancePoliciesIndex({
     insurancePolicies,
-    policyTypes,
-    coverageTypes,
-    statuses,
+    policyTypes: _policyTypes,
+    coverageTypes: _coverageTypes,
+    statuses: _statuses,
 }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard().url },
@@ -42,7 +45,9 @@ export default function FleetInsurancePoliciesIndex({
             <Head title="Fleet – Insurance policies" />
             <div className="flex h-full flex-1 flex-col gap-6 rounded-xl p-4">
                 <div className="flex items-center justify-between">
-                    <h1 className="text-2xl font-semibold">Insurance policies</h1>
+                    <h1 className="text-2xl font-semibold">
+                        Insurance policies
+                    </h1>
                     <Button asChild>
                         <Link href="/fleet/insurance-policies/create">
                             <Plus className="mr-2 size-4" />
@@ -53,9 +58,13 @@ export default function FleetInsurancePoliciesIndex({
                 {insurancePolicies.data.length === 0 ? (
                     <div className="rounded-lg border border-dashed py-16 text-center">
                         <FileText className="mx-auto size-10 text-muted-foreground" />
-                        <p className="mt-2 text-sm text-muted-foreground">No insurance policies yet.</p>
+                        <p className="mt-2 text-sm text-muted-foreground">
+                            No insurance policies yet.
+                        </p>
                         <Button asChild className="mt-4">
-                            <Link href="/fleet/insurance-policies/create">Create insurance policy</Link>
+                            <Link href="/fleet/insurance-policies/create">
+                                Create insurance policy
+                            </Link>
                         </Button>
                     </div>
                 ) : (
@@ -64,18 +73,35 @@ export default function FleetInsurancePoliciesIndex({
                             <table className="w-full text-sm">
                                 <thead>
                                     <tr className="border-b bg-muted/50">
-                                        <th className="p-3 text-left font-medium">Policy number</th>
-                                        <th className="p-3 text-left font-medium">Insurer</th>
-                                        <th className="p-3 text-left font-medium">Policy type</th>
-                                        <th className="p-3 text-left font-medium">Start date</th>
-                                        <th className="p-3 text-left font-medium">End date</th>
-                                        <th className="p-3 text-left font-medium">Status</th>
-                                        <th className="p-3 text-right font-medium">Actions</th>
+                                        <th className="p-3 text-left font-medium">
+                                            Policy number
+                                        </th>
+                                        <th className="p-3 text-left font-medium">
+                                            Insurer
+                                        </th>
+                                        <th className="p-3 text-left font-medium">
+                                            Policy type
+                                        </th>
+                                        <th className="p-3 text-left font-medium">
+                                            Start date
+                                        </th>
+                                        <th className="p-3 text-left font-medium">
+                                            End date
+                                        </th>
+                                        <th className="p-3 text-left font-medium">
+                                            Status
+                                        </th>
+                                        <th className="p-3 text-right font-medium">
+                                            Actions
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {insurancePolicies.data.map((row) => (
-                                        <tr key={row.id} className="border-b last:border-0">
+                                        <tr
+                                            key={row.id}
+                                            className="border-b last:border-0"
+                                        >
                                             <td className="p-3">
                                                 <Link
                                                     href={`/fleet/insurance-policies/${row.id}`}
@@ -84,21 +110,49 @@ export default function FleetInsurancePoliciesIndex({
                                                     {row.policy_number}
                                                 </Link>
                                             </td>
-                                            <td className="p-3">{row.insurer_name}</td>
-                                            <td className="p-3">{row.policy_type}</td>
                                             <td className="p-3">
-                                                {row.start_date ? new Date(row.start_date).toLocaleDateString() : '—'}
+                                                {row.insurer_name}
                                             </td>
                                             <td className="p-3">
-                                                {row.end_date ? new Date(row.end_date).toLocaleDateString() : '—'}
+                                                {row.policy_type}
                                             </td>
-                                            <td className="p-3">{row.status}</td>
+                                            <td className="p-3">
+                                                {row.start_date
+                                                    ? new Date(
+                                                          row.start_date,
+                                                      ).toLocaleDateString()
+                                                    : '—'}
+                                            </td>
+                                            <td className="p-3">
+                                                {row.end_date
+                                                    ? new Date(
+                                                          row.end_date,
+                                                      ).toLocaleDateString()
+                                                    : '—'}
+                                            </td>
+                                            <td className="p-3">
+                                                {row.status}
+                                            </td>
                                             <td className="p-3 text-right">
-                                                <Button variant="outline" size="sm" asChild>
-                                                    <Link href={`/fleet/insurance-policies/${row.id}`}>View</Link>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    asChild
+                                                >
+                                                    <Link
+                                                        href={`/fleet/insurance-policies/${row.id}`}
+                                                    >
+                                                        View
+                                                    </Link>
                                                 </Button>
-                                                <Button variant="outline" size="sm" asChild>
-                                                    <Link href={`/fleet/insurance-policies/${row.id}/edit`}>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    asChild
+                                                >
+                                                    <Link
+                                                        href={`/fleet/insurance-policies/${row.id}/edit`}
+                                                    >
                                                         <Pencil className="ml-1 size-3.5" />
                                                     </Link>
                                                 </Button>
@@ -107,10 +161,15 @@ export default function FleetInsurancePoliciesIndex({
                                                     method="delete"
                                                     className="ml-2 inline"
                                                     onSubmit={(e) => {
-                                                        if (!confirm('Delete?')) e.preventDefault();
+                                                        if (!confirm('Delete?'))
+                                                            e.preventDefault();
                                                     }}
                                                 >
-                                                    <Button type="submit" variant="ghost" size="sm">
+                                                    <Button
+                                                        type="submit"
+                                                        variant="ghost"
+                                                        size="sm"
+                                                    >
                                                         <Trash2 className="size-3.5 text-destructive" />
                                                     </Button>
                                                 </Form>

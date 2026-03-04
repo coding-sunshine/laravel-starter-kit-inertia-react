@@ -49,7 +49,7 @@ final class ParkingAllocationController extends Controller
     public function store(StoreParkingAllocationRequest $request): RedirectResponse
     {
         $this->authorize('create', ParkingAllocation::class);
-        ParkingAllocation::create($request->validated());
+        ParkingAllocation::query()->create($request->validated());
 
         return to_route('fleet.parking-allocations.index')->with('flash', ['status' => 'success', 'message' => 'Parking allocation created.']);
     }

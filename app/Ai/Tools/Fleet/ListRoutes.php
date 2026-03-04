@@ -9,13 +9,12 @@ use App\Models\Scopes\OrganizationScope;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Contracts\Tool;
 use Laravel\Ai\Tools\Request;
-use Stringable;
 
-final class ListRoutes implements Tool
+final readonly class ListRoutes implements Tool
 {
-    private const DEFAULT_LIMIT = 15;
+    private const int DEFAULT_LIMIT = 15;
 
-    public function __construct(private readonly int $organizationId) {}
+    public function __construct(private int $organizationId) {}
 
     public function description(): string
     {
@@ -30,9 +29,9 @@ final class ListRoutes implements Tool
         ];
     }
 
-    public function handle(Request $request): string|Stringable
+    public function handle(Request $request): string
     {
-        $query = Route::withoutGlobalScope(OrganizationScope::class)
+        $query = Route::query()->withoutGlobalScope(OrganizationScope::class)
             ->where('organization_id', $this->organizationId)
             ->orderBy('name');
         if (($active = $request['is_active'] ?? null) !== null && $active !== '') {
@@ -43,7 +42,8 @@ final class ListRoutes implements Tool
         if ($routes->isEmpty()) {
             return 'No routes found for this organization.';
         }
-        $lines = $routes->map(fn ($r) => sprintf('#%d %s - %s (%s)', $r->id, $r->name, $r->route_type, $r->is_active ? 'active' : 'inactive'));
+        $lines = $routes->map(fn ($r): string => sprintf('#%d %s - %s (%s)', $r->id, $r->name, $r->route_type, $r->is_active ? 'active' : 'inactive'));
+
         return 'Routes: '."\n".$lines->implode("\n");
     }
 }

@@ -9,14 +9,13 @@ use App\Models\Scopes\OrganizationScope;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Contracts\Tool;
 use Laravel\Ai\Tools\Request;
-use Stringable;
 
-final class ListWorkOrders implements Tool
+final readonly class ListWorkOrders implements Tool
 {
-    private const DEFAULT_LIMIT = 15;
+    private const int DEFAULT_LIMIT = 15;
 
     public function __construct(
-        private readonly int $organizationId,
+        private int $organizationId,
     ) {}
 
     public function description(): string
@@ -33,12 +32,12 @@ final class ListWorkOrders implements Tool
         ];
     }
 
-    public function handle(Request $request): string|Stringable
+    public function handle(Request $request): string
     {
-        $query = WorkOrder::withoutGlobalScope(OrganizationScope::class)
+        $query = WorkOrder::query()->withoutGlobalScope(OrganizationScope::class)
             ->where('organization_id', $this->organizationId)
             ->with('vehicle:id,registration')
-            ->orderByDesc('scheduled_date');
+            ->latest('scheduled_date');
 
         $status = $request['status'] ?? null;
         if (is_string($status) && $status !== '') {
@@ -59,7 +58,7 @@ final class ListWorkOrders implements Tool
             return 'No work orders found for this organization.';
         }
 
-        $lines = $orders->map(fn ($w) => sprintf(
+        $lines = $orders->map(fn ($w): string => sprintf(
             '#%d %s – %s (%s) %s',
             $w->id,
             $w->work_order_number,

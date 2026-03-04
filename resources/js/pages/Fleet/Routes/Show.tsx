@@ -1,26 +1,31 @@
-import AppLayout from '@/layouts/app-layout';
-import {
-    FleetMap,
-    FleetMapMarker,
-} from '@/components/fleet/FleetMap';
+import { FleetMap, FleetMapMarker } from '@/components/fleet/FleetMap';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Form, Head, Link, router, useForm } from '@inertiajs/react';
 import { Sparkles, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
-interface LocationOption { id: number; name: string; }
+interface LocationOption {
+    id: number;
+    name: string;
+}
 interface StopRecord {
     id: number;
     name: string | null;
     sort_order: number;
     planned_arrival_time: string | null;
     planned_departure_time: string | null;
-    location?: { id: number; name: string; lat?: number | null; lng?: number | null };
+    location?: {
+        id: number;
+        name: string;
+        lat?: number | null;
+        lng?: number | null;
+    };
 }
 interface RouteRecord {
     id: number;
@@ -47,9 +52,15 @@ interface Props {
     applyOptimizedOrderUrl: string;
 }
 
-export default function FleetRoutesShow({ route, locations, optimizeUrl, applyOptimizedOrderUrl }: Props) {
+export default function FleetRoutesShow({
+    route,
+    locations,
+    optimizeUrl,
+    applyOptimizedOrderUrl,
+}: Props) {
     const [optimizing, setOptimizing] = useState(false);
-    const [optimizationResult, setOptimizationResult] = useState<OptimizationResult | null>(null);
+    const [optimizationResult, setOptimizationResult] =
+        useState<OptimizationResult | null>(null);
     const [applying, setApplying] = useState(false);
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard().url },
@@ -69,7 +80,11 @@ export default function FleetRoutesShow({ route, locations, optimizeUrl, applyOp
     const stopsWithCoords = useMemo(
         () =>
             stops.filter(
-                (s): s is StopRecord & { location: { lat: number | string; lng: number | string } } =>
+                (
+                    s,
+                ): s is StopRecord & {
+                    location: { lat: number | string; lng: number | string };
+                } =>
                     s.location != null &&
                     s.location.lat != null &&
                     s.location.lng != null &&
@@ -87,7 +102,10 @@ export default function FleetRoutesShow({ route, locations, optimizeUrl, applyOp
             }),
             { lat: 0, lng: 0 },
         );
-        return { lat: sum.lat / stopsWithCoords.length, lng: sum.lng / stopsWithCoords.length };
+        return {
+            lat: sum.lat / stopsWithCoords.length,
+            lng: sum.lng / stopsWithCoords.length,
+        };
     }, [stopsWithCoords]);
 
     return (
@@ -98,34 +116,53 @@ export default function FleetRoutesShow({ route, locations, optimizeUrl, applyOp
                     <div>
                         <h1 className="text-2xl font-semibold">{route.name}</h1>
                         <p className="text-muted-foreground">
-                            {route.route_type} · {route.is_active ? 'Active' : 'Inactive'}
-                            {route.start_location && ` · Start: ${route.start_location.name}`}
-                            {route.end_location && ` · End: ${route.end_location.name}`}
+                            {route.route_type} ·{' '}
+                            {route.is_active ? 'Active' : 'Inactive'}
+                            {route.start_location &&
+                                ` · Start: ${route.start_location.name}`}
+                            {route.end_location &&
+                                ` · End: ${route.end_location.name}`}
                         </p>
                     </div>
                     <Button variant="outline" asChild>
                         <Link href="/fleet/routes">Back to routes</Link>
                     </Button>
                 </div>
-                {route.description && <p className="text-sm text-muted-foreground">{route.description}</p>}
+                {route.description && (
+                    <p className="text-sm text-muted-foreground">
+                        {route.description}
+                    </p>
+                )}
 
                 {stopsWithCoords.length > 0 && (
                     <Card className="overflow-hidden border border-border">
                         <CardHeader className="pb-2">
-                            <CardTitle className="text-base font-semibold text-foreground">Route map</CardTitle>
+                            <CardTitle className="text-base font-semibold text-foreground">
+                                Route map
+                            </CardTitle>
                         </CardHeader>
                         <CardContent className="p-0">
                             <FleetMap
                                 center={mapCenter}
                                 zoom={stopsWithCoords.length >= 2 ? 10 : 12}
-                                mapContainerStyle={{ width: '100%', height: '320px' }}
+                                mapContainerStyle={{
+                                    width: '100%',
+                                    height: '320px',
+                                }}
                                 className="rounded-b-lg"
                             >
                                 {stopsWithCoords.map((s, i) => (
                                     <FleetMapMarker
                                         key={s.id}
-                                        position={{ lat: Number(s.location.lat), lng: Number(s.location.lng) }}
-                                        title={s.name ?? s.location.name ?? `Stop ${s.sort_order + 1}`}
+                                        position={{
+                                            lat: Number(s.location.lat),
+                                            lng: Number(s.location.lng),
+                                        }}
+                                        title={
+                                            s.name ??
+                                            s.location.name ??
+                                            `Stop ${s.sort_order + 1}`
+                                        }
                                         label={String(i + 1)}
                                     />
                                 ))}
@@ -148,18 +185,35 @@ export default function FleetRoutesShow({ route, locations, optimizeUrl, applyOp
                                         setOptimizing(true);
                                         setOptimizationResult(null);
                                         try {
-                                            const res = await fetch(optimizeUrl, {
-                                                method: 'POST',
-                                                headers: {
-                                                    'Accept': 'application/json',
-                                                    'Content-Type': 'application/json',
-                                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '',
-                                                    'X-Requested-With': 'XMLHttpRequest',
+                                            const res = await fetch(
+                                                optimizeUrl,
+                                                {
+                                                    method: 'POST',
+                                                    headers: {
+                                                        Accept: 'application/json',
+                                                        'Content-Type':
+                                                            'application/json',
+                                                        'X-CSRF-TOKEN':
+                                                            document
+                                                                .querySelector(
+                                                                    'meta[name="csrf-token"]',
+                                                                )
+                                                                ?.getAttribute(
+                                                                    'content',
+                                                                ) ?? '',
+                                                        'X-Requested-With':
+                                                            'XMLHttpRequest',
+                                                    },
+                                                    credentials: 'include',
                                                 },
-                                                credentials: 'include',
-                                            });
-                                            const data = await res.json().catch(() => ({}));
-                                            if (res.ok && data.suggested_stop_order) {
+                                            );
+                                            const data = await res
+                                                .json()
+                                                .catch(() => ({}));
+                                            if (
+                                                res.ok &&
+                                                data.suggested_stop_order
+                                            ) {
                                                 setOptimizationResult(data);
                                             }
                                         } finally {
@@ -168,7 +222,9 @@ export default function FleetRoutesShow({ route, locations, optimizeUrl, applyOp
                                     }}
                                 >
                                     <Sparkles className="mr-1.5 size-4" />
-                                    {optimizing ? 'Optimizing…' : 'Optimize with AI'}
+                                    {optimizing
+                                        ? 'Optimizing…'
+                                        : 'Optimize with AI'}
                                 </Button>
                             )}
                         </CardTitle>
@@ -176,10 +232,22 @@ export default function FleetRoutesShow({ route, locations, optimizeUrl, applyOp
                     <CardContent className="space-y-4">
                         {optimizationResult && (
                             <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm">
-                                <p className="font-medium">{optimizationResult.summary}</p>
+                                <p className="font-medium">
+                                    {optimizationResult.summary}
+                                </p>
                                 <p className="mt-1 text-muted-foreground">
-                                    Distance: {optimizationResult.estimated_total_distance_km.toFixed(1)} km · Duration: {optimizationResult.estimated_total_duration_minutes.toFixed(0)} min
-                                    {optimizationResult.estimated_carbon_kg > 0 && ` · CO₂: ${optimizationResult.estimated_carbon_kg.toFixed(1)} kg`}
+                                    Distance:{' '}
+                                    {optimizationResult.estimated_total_distance_km.toFixed(
+                                        1,
+                                    )}{' '}
+                                    km · Duration:{' '}
+                                    {optimizationResult.estimated_total_duration_minutes.toFixed(
+                                        0,
+                                    )}{' '}
+                                    min
+                                    {optimizationResult.estimated_carbon_kg >
+                                        0 &&
+                                        ` · CO₂: ${optimizationResult.estimated_carbon_kg.toFixed(1)} kg`}
                                 </p>
                                 <Button
                                     type="button"
@@ -189,17 +257,32 @@ export default function FleetRoutesShow({ route, locations, optimizeUrl, applyOp
                                     onClick={async () => {
                                         setApplying(true);
                                         try {
-                                            const res = await fetch(applyOptimizedOrderUrl, {
-                                                method: 'POST',
-                                                headers: {
-                                                    'Accept': 'application/json',
-                                                    'Content-Type': 'application/json',
-                                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '',
-                                                    'X-Requested-With': 'XMLHttpRequest',
+                                            const res = await fetch(
+                                                applyOptimizedOrderUrl,
+                                                {
+                                                    method: 'POST',
+                                                    headers: {
+                                                        Accept: 'application/json',
+                                                        'Content-Type':
+                                                            'application/json',
+                                                        'X-CSRF-TOKEN':
+                                                            document
+                                                                .querySelector(
+                                                                    'meta[name="csrf-token"]',
+                                                                )
+                                                                ?.getAttribute(
+                                                                    'content',
+                                                                ) ?? '',
+                                                        'X-Requested-With':
+                                                            'XMLHttpRequest',
+                                                    },
+                                                    credentials: 'include',
+                                                    body: JSON.stringify({
+                                                        stop_order:
+                                                            optimizationResult.suggested_stop_order,
+                                                    }),
                                                 },
-                                                credentials: 'include',
-                                                body: JSON.stringify({ stop_order: optimizationResult.suggested_stop_order }),
-                                            });
+                                            );
                                             if (res.ok) {
                                                 setOptimizationResult(null);
                                                 router.reload();
@@ -209,7 +292,9 @@ export default function FleetRoutesShow({ route, locations, optimizeUrl, applyOp
                                         }
                                     }}
                                 >
-                                    {applying ? 'Applying…' : 'Apply suggested order'}
+                                    {applying
+                                        ? 'Applying…'
+                                        : 'Apply suggested order'}
                                 </Button>
                             </div>
                         )}
@@ -218,55 +303,158 @@ export default function FleetRoutesShow({ route, locations, optimizeUrl, applyOp
                                 e.preventDefault();
                                 stopForm.transform((d) => ({
                                     ...d,
-                                    location_id: d.location_id === '' ? null : d.location_id,
-                                    planned_arrival_time: d.planned_arrival_time || null,
-                                    planned_departure_time: d.planned_departure_time || null,
+                                    location_id:
+                                        d.location_id === ''
+                                            ? null
+                                            : d.location_id,
+                                    planned_arrival_time:
+                                        d.planned_arrival_time || null,
+                                    planned_departure_time:
+                                        d.planned_departure_time || null,
                                 }));
-                                stopForm.post(`/fleet/routes/${route.id}/route-stops`);
+                                stopForm.post(
+                                    `/fleet/routes/${route.id}/route-stops`,
+                                );
                             }}
                             className="flex flex-wrap items-end gap-4"
                         >
                             <div className="space-y-2">
                                 <Label htmlFor="location_id">Location</Label>
-                                <select id="location_id" value={stopForm.data.location_id === '' ? '' : String(stopForm.data.location_id)} onChange={(e) => stopForm.setData('location_id', e.target.value === '' ? '' : Number(e.target.value))} className="h-9 min-w-[12rem] rounded-md border border-input bg-transparent px-3 py-1 text-sm">
+                                <select
+                                    id="location_id"
+                                    value={
+                                        stopForm.data.location_id === ''
+                                            ? ''
+                                            : String(stopForm.data.location_id)
+                                    }
+                                    onChange={(e) =>
+                                        stopForm.setData(
+                                            'location_id',
+                                            e.target.value === ''
+                                                ? ''
+                                                : Number(e.target.value),
+                                        )
+                                    }
+                                    className="h-9 min-w-[12rem] rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                                >
                                     <option value="">None</option>
-                                    {locations.map((l) => (<option key={l.id} value={l.id}>{l.name}</option>))}
+                                    {locations.map((l) => (
+                                        <option key={l.id} value={l.id}>
+                                            {l.name}
+                                        </option>
+                                    ))}
                                 </select>
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="name">Name</Label>
-                                <Input id="name" value={stopForm.data.name} onChange={(e) => stopForm.setData('name', e.target.value)} className="h-9 min-w-[10rem]" placeholder="Stop name" />
+                                <Input
+                                    id="name"
+                                    value={stopForm.data.name}
+                                    onChange={(e) =>
+                                        stopForm.setData('name', e.target.value)
+                                    }
+                                    className="h-9 min-w-[10rem]"
+                                    placeholder="Stop name"
+                                />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="sort_order">Order</Label>
-                                <Input id="sort_order" type="number" min={0} value={stopForm.data.sort_order} onChange={(e) => stopForm.setData('sort_order', Number(e.target.value))} className="h-9 w-20" />
+                                <Input
+                                    id="sort_order"
+                                    type="number"
+                                    min={0}
+                                    value={stopForm.data.sort_order}
+                                    onChange={(e) =>
+                                        stopForm.setData(
+                                            'sort_order',
+                                            Number(e.target.value),
+                                        )
+                                    }
+                                    className="h-9 w-20"
+                                />
                             </div>
-                            <Button type="submit" disabled={stopForm.processing}>{stopForm.processing ? 'Adding…' : 'Add stop'}</Button>
+                            <Button
+                                type="submit"
+                                disabled={stopForm.processing}
+                            >
+                                {stopForm.processing ? 'Adding…' : 'Add stop'}
+                            </Button>
                         </form>
                         {stops.length === 0 ? (
-                            <p className="text-sm text-muted-foreground">No stops yet.</p>
+                            <p className="text-sm text-muted-foreground">
+                                No stops yet.
+                            </p>
                         ) : (
                             <div className="overflow-x-auto rounded-md border">
                                 <table className="w-full min-w-[600px] text-sm">
                                     <thead>
                                         <tr className="border-b bg-muted/50">
-                                            <th className="p-3 text-left font-medium">Order</th>
-                                            <th className="p-3 text-left font-medium">Name / Location</th>
-                                            <th className="p-3 text-left font-medium">Planned arrival</th>
-                                            <th className="p-3 text-left font-medium">Planned departure</th>
-                                            <th className="p-3 text-right font-medium">Actions</th>
+                                            <th className="p-3 text-left font-medium">
+                                                Order
+                                            </th>
+                                            <th className="p-3 text-left font-medium">
+                                                Name / Location
+                                            </th>
+                                            <th className="p-3 text-left font-medium">
+                                                Planned arrival
+                                            </th>
+                                            <th className="p-3 text-left font-medium">
+                                                Planned departure
+                                            </th>
+                                            <th className="p-3 text-right font-medium">
+                                                Actions
+                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {stops.map((s) => (
-                                            <tr key={s.id} className="border-b last:border-0">
-                                                <td className="p-3">{s.sort_order}</td>
-                                                <td className="p-3">{s.name || s.location?.name || '—'}</td>
-                                                <td className="p-3">{s.planned_arrival_time ? new Date(s.planned_arrival_time).toLocaleString() : '—'}</td>
-                                                <td className="p-3">{s.planned_departure_time ? new Date(s.planned_departure_time).toLocaleString() : '—'}</td>
+                                            <tr
+                                                key={s.id}
+                                                className="border-b last:border-0"
+                                            >
+                                                <td className="p-3">
+                                                    {s.sort_order}
+                                                </td>
+                                                <td className="p-3">
+                                                    {s.name ||
+                                                        s.location?.name ||
+                                                        '—'}
+                                                </td>
+                                                <td className="p-3">
+                                                    {s.planned_arrival_time
+                                                        ? new Date(
+                                                              s.planned_arrival_time,
+                                                          ).toLocaleString()
+                                                        : '—'}
+                                                </td>
+                                                <td className="p-3">
+                                                    {s.planned_departure_time
+                                                        ? new Date(
+                                                              s.planned_departure_time,
+                                                          ).toLocaleString()
+                                                        : '—'}
+                                                </td>
                                                 <td className="p-3 text-right">
-                                                    <Form action={`/fleet/routes/${route.id}/route-stops/${s.id}`} method="delete" className="inline" onSubmit={(e) => { if (!confirm('Remove this stop?')) e.preventDefault(); }}>
-                                                        <Button type="submit" variant="ghost" size="sm"><Trash2 className="size-3.5 text-destructive" /></Button>
+                                                    <Form
+                                                        action={`/fleet/routes/${route.id}/route-stops/${s.id}`}
+                                                        method="delete"
+                                                        className="inline"
+                                                        onSubmit={(e) => {
+                                                            if (
+                                                                !confirm(
+                                                                    'Remove this stop?',
+                                                                )
+                                                            )
+                                                                e.preventDefault();
+                                                        }}
+                                                    >
+                                                        <Button
+                                                            type="submit"
+                                                            variant="ghost"
+                                                            size="sm"
+                                                        >
+                                                            <Trash2 className="size-3.5 text-destructive" />
+                                                        </Button>
                                                     </Form>
                                                 </td>
                                             </tr>

@@ -7,8 +7,8 @@ namespace App\Http\Controllers\Fleet;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Fleet\StorePartsInventoryRequest;
 use App\Http\Requests\Fleet\UpdatePartsInventoryRequest;
-use App\Models\Fleet\PartsInventory;
 use App\Models\Fleet\Garage;
+use App\Models\Fleet\PartsInventory;
 use App\Models\Fleet\PartsSupplier;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -29,6 +29,7 @@ final class PartsInventoryController extends Controller
     public function create(): Response
     {
         $this->authorize('create', PartsInventory::class);
+
         return Inertia::render('Fleet/PartsInventory/Create', [
             'garages' => Garage::query()->orderBy('name')->get(['id', 'name']),
             'partsSuppliers' => PartsSupplier::query()->orderBy('name')->get(['id', 'name']),
@@ -38,7 +39,8 @@ final class PartsInventoryController extends Controller
     public function store(StorePartsInventoryRequest $request): RedirectResponse
     {
         $this->authorize('create', PartsInventory::class);
-        PartsInventory::create($request->validated());
+        PartsInventory::query()->create($request->validated());
+
         return to_route('fleet.parts-inventory.index')->with('flash', ['status' => 'success', 'message' => 'Parts inventory item created.']);
     }
 
@@ -46,12 +48,14 @@ final class PartsInventoryController extends Controller
     {
         $this->authorize('view', $parts_inventory);
         $parts_inventory->load(['garage', 'supplier']);
+
         return Inertia::render('Fleet/PartsInventory/Show', ['partsInventory' => $parts_inventory]);
     }
 
     public function edit(PartsInventory $parts_inventory): Response
     {
         $this->authorize('update', $parts_inventory);
+
         return Inertia::render('Fleet/PartsInventory/Edit', [
             'partsInventory' => $parts_inventory,
             'garages' => Garage::query()->orderBy('name')->get(['id', 'name']),
@@ -63,6 +67,7 @@ final class PartsInventoryController extends Controller
     {
         $this->authorize('update', $parts_inventory);
         $parts_inventory->update($request->validated());
+
         return to_route('fleet.parts-inventory.show', $parts_inventory)->with('flash', ['status' => 'success', 'message' => 'Parts inventory item updated.']);
     }
 
@@ -70,6 +75,7 @@ final class PartsInventoryController extends Controller
     {
         $this->authorize('delete', $parts_inventory);
         $parts_inventory->delete();
+
         return to_route('fleet.parts-inventory.index')->with('flash', ['status' => 'success', 'message' => 'Parts inventory item deleted.']);
     }
 }

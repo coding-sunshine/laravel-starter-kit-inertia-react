@@ -13,8 +13,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property \Carbon\Carbon $started_at
  * @property string $status
  */
-class WorkflowExecution extends Model
+final class WorkflowExecution extends Model
 {
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
+
     protected $fillable = [
         'workflow_definition_id', 'started_at', 'completed_at',
         'trigger_event', 'trigger_entity_type', 'trigger_entity_id', 'trigger_data',

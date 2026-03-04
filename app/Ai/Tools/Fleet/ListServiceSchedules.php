@@ -9,13 +9,12 @@ use App\Models\Scopes\OrganizationScope;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Contracts\Tool;
 use Laravel\Ai\Tools\Request;
-use Stringable;
 
-final class ListServiceSchedules implements Tool
+final readonly class ListServiceSchedules implements Tool
 {
-    private const DEFAULT_LIMIT = 15;
+    private const int DEFAULT_LIMIT = 15;
 
-    public function __construct(private readonly int $organizationId) {}
+    public function __construct(private int $organizationId) {}
 
     public function description(): string
     {
@@ -32,13 +31,13 @@ final class ListServiceSchedules implements Tool
         ];
     }
 
-    public function handle(Request $request): string|Stringable
+    public function handle(Request $request): string
     {
-        $query = ServiceSchedule::withoutGlobalScope(OrganizationScope::class)
+        $query = ServiceSchedule::query()->withoutGlobalScope(OrganizationScope::class)
             ->where('organization_id', $this->organizationId)
             ->where('is_active', true)
             ->with('vehicle:id,registration')
-            ->orderBy('next_service_due_date');
+            ->oldest('next_service_due_date');
         if ($vid = $request['vehicle_id'] ?? null) {
             $query->where('vehicle_id', (int) $vid);
         }
@@ -53,7 +52,8 @@ final class ListServiceSchedules implements Tool
         if ($schedules->isEmpty()) {
             return 'No service schedules found for this organization.';
         }
-        $lines = $schedules->map(fn ($s) => sprintf('#%d %s - %s due %s', $s->id, $s->vehicle?->registration ?? '?', $s->service_type, $s->next_service_due_date?->format('Y-m-d') ?? 'not set'));
+        $lines = $schedules->map(fn ($s): string => sprintf('#%d %s - %s due %s', $s->id, $s->vehicle?->registration ?? '?', $s->service_type, $s->next_service_due_date?->format('Y-m-d') ?? 'not set'));
+
         return 'Service schedules: '."\n".$lines->implode("\n");
     }
 }

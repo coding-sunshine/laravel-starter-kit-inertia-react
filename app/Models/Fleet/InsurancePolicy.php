@@ -22,9 +22,10 @@ use Mattiverse\Userstamps\Traits\Userstamps;
  * @property float|null $premium_amount
  * @property string $status
  */
-class InsurancePolicy extends Model
+final class InsurancePolicy extends Model
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use SoftDeletes;
     use Userstamps;
 

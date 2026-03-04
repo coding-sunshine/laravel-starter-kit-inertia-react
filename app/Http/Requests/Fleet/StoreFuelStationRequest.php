@@ -33,4 +33,3 @@ final class StoreFuelStationRequest extends FormRequest
         ];
     }
 }
-

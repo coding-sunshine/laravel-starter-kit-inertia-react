@@ -22,9 +22,10 @@ use Mattiverse\Userstamps\Traits\Userstamps;
  * @property bool $renewal_required
  * @property bool $legal_requirement
  */
-class ComplianceItem extends Model
+final class ComplianceItem extends Model
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use SoftDeletes;
     use Userstamps;
 

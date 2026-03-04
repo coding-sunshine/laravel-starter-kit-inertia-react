@@ -13,7 +13,7 @@ final class StartWorkflowsForAiJobCompleted
 {
     public function handle(AiJobCompleted $event): void
     {
-        $eventName = 'ai.' . $event->jobType . '.completed';
+        $eventName = 'ai.'.$event->jobType.'.completed';
 
         $definitions = WorkflowDefinition::query()
             ->where('organization_id', $event->organizationId)
@@ -28,7 +28,7 @@ final class StartWorkflowsForAiJobCompleted
                 continue;
             }
 
-            $execution = WorkflowExecution::create([
+            $execution = WorkflowExecution::query()->create([
                 'workflow_definition_id' => $definition->id,
                 'started_at' => now(),
                 'trigger_event' => $eventName,
@@ -38,7 +38,7 @@ final class StartWorkflowsForAiJobCompleted
                 'status' => 'pending',
             ]);
 
-            RunWorkflowExecutionJob::dispatch($execution->id);
+            dispatch(new RunWorkflowExecutionJob($execution->id));
         }
     }
 }

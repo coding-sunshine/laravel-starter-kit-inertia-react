@@ -13,17 +13,15 @@ use Illuminate\Database\Eloquent\Model;
 use Laravel\Ai\Files\Image;
 use Laravel\Ai\Responses\StructuredAgentResponse;
 
-final class DamageAssessmentService
+final readonly class DamageAssessmentService
 {
     public function __construct(
-        private readonly DamageAssessmentAgent $agent
+        private DamageAssessmentAgent $agent
     ) {}
 
     public function analyze(array $imagePaths): array
     {
-        $attachments = array_map(function (string $path) {
-            return Image::fromPath($path);
-        }, $imagePaths);
+        $attachments = array_map(fn (string $path): \Laravel\Ai\Files\LocalImage => Image::fromPath($path), $imagePaths);
         $prompt = count($attachments) > 1
             ? 'Analyze these vehicle/damage photos (multiple angles). Provide a single combined assessment.'
             : 'Analyze this vehicle or damage photo.';
@@ -31,7 +29,8 @@ final class DamageAssessmentService
         $response = $this->agent->prompt($prompt, $attachments);
 
         if (! $response instanceof StructuredAgentResponse) {
-            $desc = (string) $response->text;
+            $desc = $response->text;
+
             return [
                 'damage_detected' => false,
                 'severity' => 'cosmetic',
@@ -49,6 +48,7 @@ final class DamageAssessmentService
         $description = (string) ($s['description'] ?? '');
         $costRange = isset($s['cost_range']) ? (string) $s['cost_range'] : null;
         $confidence = (float) ($s['confidence'] ?? 0.0);
+
         return [
             'damage_detected' => $damageDetected,
             'severity' => $severity,
@@ -74,7 +74,7 @@ final class DamageAssessmentService
             ? ['cost_range' => $result['cost_range']]
             : null;
 
-        $aiResult = AiAnalysisResult::create([
+        $aiResult = AiAnalysisResult::query()->create([
             'organization_id' => $entity->organization_id,
             'analysis_type' => $analysisType,
             'entity_type' => $entityType,
@@ -84,7 +84,7 @@ final class DamageAssessmentService
             'confidence_score' => $result['confidence'],
             'risk_score' => 0,
             'priority' => $priority,
-            'primary_finding' => mb_substr($result['description'], 0, 500),
+            'primary_finding' => mb_substr((string) $result['description'], 0, 500),
             'detailed_analysis' => $result,
             'recommendations' => $recommendations,
             'action_items' => null,
@@ -109,6 +109,7 @@ final class DamageAssessmentService
             return null;
         }
         $path = $media->getPath();
+
         return $path && file_exists($path) ? $path : null;
     }
 
@@ -123,6 +124,7 @@ final class DamageAssessmentService
         if ($entity instanceof InsuranceClaim) {
             return 'insurance_claim';
         }
+
         return 'organization';
     }
 
@@ -137,6 +139,7 @@ final class DamageAssessmentService
         if ($severity === 'cosmetic') {
             return 'low';
         }
+
         return 'medium';
     }
 

@@ -64,11 +64,21 @@ final class ConversationController extends Controller
             ->where('conversation_id', $id)
             ->orderBy('id')
             ->get()
-            ->map(fn ($m): array => [
-                'id' => $m->id,
-                'role' => $m->role,
-                'content' => $m->content ?? '',
-            ])
+            ->map(function ($m): array {
+                $payload = [
+                    'id' => $m->id,
+                    'role' => $m->role,
+                    'content' => $m->content ?? '',
+                ];
+                if (! empty($m->tool_calls)) {
+                    $decoded = json_decode((string) $m->tool_calls, true);
+                    if (is_array($decoded)) {
+                        $payload['tool_calls'] = $decoded;
+                    }
+                }
+
+                return $payload;
+            })
             ->values()
             ->all();
 

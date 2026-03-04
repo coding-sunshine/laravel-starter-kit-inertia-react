@@ -1,10 +1,10 @@
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 
 interface Props {
     vehicles: { id: number; name: string }[];
@@ -12,7 +12,11 @@ interface Props {
     statuses: { value: string; name: string }[];
 }
 
-export default function VehicleDiscsCreate({ vehicles, operatorLicences, statuses }: Props) {
+export default function VehicleDiscsCreate({
+    vehicles,
+    operatorLicences,
+    statuses,
+}: Props) {
     const form = useForm({
         vehicle_id: '' as number | '',
         operator_licence_id: '' as number | '',
@@ -32,47 +36,121 @@ export default function VehicleDiscsCreate({ vehicles, operatorLicences, statuse
             <Head title="Fleet – New vehicle disc" />
             <div className="flex h-full flex-1 flex-col gap-6 rounded-xl p-4">
                 <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="sm" asChild><Link href="/fleet/vehicle-discs">Back</Link></Button>
+                    <Button variant="ghost" size="sm" asChild>
+                        <Link href="/fleet/vehicle-discs">Back</Link>
+                    </Button>
                     <h1 className="text-2xl font-semibold">New vehicle disc</h1>
                 </div>
-                <form onSubmit={(e) => { e.preventDefault(); form.post('/fleet/vehicle-discs'); }} className="max-w-xl space-y-4 rounded-lg border p-6">
+                <form
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        form.post('/fleet/vehicle-discs');
+                    }}
+                    className="max-w-xl space-y-4 rounded-lg border p-6"
+                >
                     <div className="space-y-2">
                         <Label>Vehicle *</Label>
-                        <select required value={form.data.vehicle_id} onChange={e => form.setData('vehicle_id', e.target.value ? Number(e.target.value) : '')} className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm">
+                        <select
+                            required
+                            value={form.data.vehicle_id}
+                            onChange={(e) =>
+                                form.setData(
+                                    'vehicle_id',
+                                    e.target.value
+                                        ? Number(e.target.value)
+                                        : '',
+                                )
+                            }
+                            className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                        >
                             <option value="">—</option>
-                            {vehicles.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
+                            {vehicles.map((v) => (
+                                <option key={v.id} value={v.id}>
+                                    {v.name}
+                                </option>
+                            ))}
                         </select>
                     </div>
                     <div className="space-y-2">
                         <Label>Operator licence *</Label>
-                        <select required value={form.data.operator_licence_id} onChange={e => form.setData('operator_licence_id', e.target.value ? Number(e.target.value) : '')} className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm">
+                        <select
+                            required
+                            value={form.data.operator_licence_id}
+                            onChange={(e) =>
+                                form.setData(
+                                    'operator_licence_id',
+                                    e.target.value
+                                        ? Number(e.target.value)
+                                        : '',
+                                )
+                            }
+                            className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                        >
                             <option value="">—</option>
-                            {operatorLicences.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+                            {operatorLicences.map((o) => (
+                                <option key={o.id} value={o.id}>
+                                    {o.name}
+                                </option>
+                            ))}
                         </select>
                     </div>
                     <div className="space-y-2">
                         <Label>Disc number *</Label>
-                        <Input value={form.data.disc_number} onChange={e => form.setData('disc_number', e.target.value)} required />
+                        <Input
+                            value={form.data.disc_number}
+                            onChange={(e) =>
+                                form.setData('disc_number', e.target.value)
+                            }
+                            required
+                        />
                     </div>
                     <div className="grid gap-4 sm:grid-cols-2">
                         <div className="space-y-2">
                             <Label>Valid from *</Label>
-                            <Input type="date" value={form.data.valid_from} onChange={e => form.setData('valid_from', e.target.value)} required />
+                            <Input
+                                type="date"
+                                value={form.data.valid_from}
+                                onChange={(e) =>
+                                    form.setData('valid_from', e.target.value)
+                                }
+                                required
+                            />
                         </div>
                         <div className="space-y-2">
                             <Label>Valid to *</Label>
-                            <Input type="date" value={form.data.valid_to} onChange={e => form.setData('valid_to', e.target.value)} required />
+                            <Input
+                                type="date"
+                                value={form.data.valid_to}
+                                onChange={(e) =>
+                                    form.setData('valid_to', e.target.value)
+                                }
+                                required
+                            />
                         </div>
                     </div>
                     <div className="space-y-2">
                         <Label>Status</Label>
-                        <select value={form.data.status} onChange={e => form.setData('status', e.target.value)} className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm">
-                            {statuses.map((s) => <option key={s.value} value={s.value}>{s.name}</option>)}
+                        <select
+                            value={form.data.status}
+                            onChange={(e) =>
+                                form.setData('status', e.target.value)
+                            }
+                            className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                        >
+                            {statuses.map((s) => (
+                                <option key={s.value} value={s.value}>
+                                    {s.name}
+                                </option>
+                            ))}
                         </select>
                     </div>
                     <div className="flex gap-2">
-                        <Button type="submit" disabled={form.processing}>Save</Button>
-                        <Button type="button" variant="outline" asChild><Link href="/fleet/vehicle-discs">Cancel</Link></Button>
+                        <Button type="submit" disabled={form.processing}>
+                            Save
+                        </Button>
+                        <Button type="button" variant="outline" asChild>
+                            <Link href="/fleet/vehicle-discs">Cancel</Link>
+                        </Button>
                     </div>
                 </form>
             </div>

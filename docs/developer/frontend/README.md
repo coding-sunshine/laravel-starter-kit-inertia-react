@@ -13,6 +13,7 @@ This section covers all frontend components, pages, and patterns.
 - [AI Chat](./ai-chat.md) - TanStack AI + Laravel AI streaming
 - [Forms](./forms.md) - Inertia useForm and TanStack Form
 - [Utilities](./utilities.md) - Pacer, Ranger, Virtual
+- [Accessibility](./accessibility.md) - Focus, live regions, semantic HTML, contrast
 
 ## Technology Stack
 

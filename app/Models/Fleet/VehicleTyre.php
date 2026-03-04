@@ -19,8 +19,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int|null $odometer_at_fit
  * @property string|null $notes
  */
-class VehicleTyre extends Model
+final class VehicleTyre extends Model
 {
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
+
     protected $fillable = [
         'vehicle_id',
         'tyre_inventory_id',

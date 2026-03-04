@@ -35,8 +35,9 @@ final class CostCenterController extends Controller
     public function create(): Response
     {
         $this->authorize('create', CostCenter::class);
+
         return Inertia::render('Fleet/CostCenters/Create', [
-            'costCenterTypes' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\CostCenterType::cases()),
+            'costCenterTypes' => array_map(fn (\App\Enums\Fleet\CostCenterType $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\CostCenterType::cases()),
             'parents' => CostCenter::query()->orderBy('code')->get(['id', 'code', 'name']),
             'users' => \App\Models\User::query()->orderBy('name')->get(['id', 'name']),
         ]);
@@ -45,7 +46,8 @@ final class CostCenterController extends Controller
     public function store(StoreCostCenterRequest $request): RedirectResponse
     {
         $this->authorize('create', CostCenter::class);
-        CostCenter::create($request->validated());
+        CostCenter::query()->create($request->validated());
+
         return to_route('fleet.cost-centers.index')->with('flash', ['status' => 'success', 'message' => 'Cost center created.']);
     }
 
@@ -53,15 +55,17 @@ final class CostCenterController extends Controller
     {
         $this->authorize('view', $costCenter);
         $costCenter->load(['parent', 'manager', 'children']);
+
         return Inertia::render('Fleet/CostCenters/Show', ['costCenter' => $costCenter]);
     }
 
     public function edit(CostCenter $costCenter): Response
     {
         $this->authorize('update', $costCenter);
+
         return Inertia::render('Fleet/CostCenters/Edit', [
             'costCenter' => $costCenter,
-            'costCenterTypes' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\CostCenterType::cases()),
+            'costCenterTypes' => array_map(fn (\App\Enums\Fleet\CostCenterType $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\CostCenterType::cases()),
             'parents' => CostCenter::query()->where('id', '!=', $costCenter->id)->orderBy('code')->get(['id', 'code', 'name']),
             'users' => \App\Models\User::query()->orderBy('name')->get(['id', 'name']),
         ]);
@@ -71,6 +75,7 @@ final class CostCenterController extends Controller
     {
         $this->authorize('update', $costCenter);
         $costCenter->update($request->validated());
+
         return to_route('fleet.cost-centers.show', $costCenter)->with('flash', ['status' => 'success', 'message' => 'Cost center updated.']);
     }
 
@@ -78,6 +83,7 @@ final class CostCenterController extends Controller
     {
         $this->authorize('delete', $costCenter);
         $costCenter->delete();
+
         return to_route('fleet.cost-centers.index')->with('flash', ['status' => 'success', 'message' => 'Cost center deleted.']);
     }
 }

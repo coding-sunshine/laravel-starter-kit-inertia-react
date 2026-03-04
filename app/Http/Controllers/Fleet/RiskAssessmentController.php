@@ -26,30 +26,29 @@ final class RiskAssessmentController extends Controller
         $assessments = RiskAssessment::query()
             ->with(['subject', 'createdByUser'])
             ->when($request->input('type'), fn ($q, $v) => $q->where('type', $v))
-            ->when($request->input('status'), fn ($q, $v) => $q->where('status', $v))
-            ->orderByDesc('created_at')
+            ->when($request->input('status'), fn ($q, $v) => $q->where('status', $v))->latest()
             ->paginate(15)
             ->withQueryString();
 
         return Inertia::render('Fleet/RiskAssessments/Index', [
             'riskAssessments' => $assessments,
             'filters' => $request->only(['type', 'status']),
-            'types' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], RiskAssessmentType::cases()),
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], RiskAssessmentStatus::cases()),
+            'types' => array_map(fn (RiskAssessmentType $c): array => ['value' => $c->value, 'name' => $c->name], RiskAssessmentType::cases()),
+            'statuses' => array_map(fn (RiskAssessmentStatus $c): array => ['value' => $c->value, 'name' => $c->name], RiskAssessmentStatus::cases()),
         ]);
     }
 
     public function create(): Response
     {
         $this->authorize('create', RiskAssessment::class);
-        $vehicles = Vehicle::query()->orderBy('registration')->get(['id', 'registration'])->map(fn ($v) => ['id' => $v->id, 'name' => $v->registration, 'type' => 'vehicle']);
-        $drivers = Driver::query()->orderBy('last_name')->get(['id', 'first_name', 'last_name'])->map(fn ($d) => ['id' => $d->id, 'name' => $d->first_name . ' ' . $d->last_name, 'type' => 'driver']);
-        $locations = Location::query()->orderBy('name')->get(['id', 'name'])->map(fn ($l) => ['id' => $l->id, 'name' => $l->name, 'type' => 'location']);
+        $vehicles = Vehicle::query()->orderBy('registration')->get(['id', 'registration'])->map(fn ($v): array => ['id' => $v->id, 'name' => $v->registration, 'type' => 'vehicle']);
+        $drivers = Driver::query()->orderBy('last_name')->get(['id', 'first_name', 'last_name'])->map(fn ($d): array => ['id' => $d->id, 'name' => $d->first_name.' '.$d->last_name, 'type' => 'driver']);
+        $locations = Location::query()->orderBy('name')->get(['id', 'name'])->map(fn ($l): array => ['id' => $l->id, 'name' => $l->name, 'type' => 'location']);
         $subjectOptions = $vehicles->concat($drivers)->concat($locations)->values()->all();
 
         return Inertia::render('Fleet/RiskAssessments/Create', [
-            'types' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], RiskAssessmentType::cases()),
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], RiskAssessmentStatus::cases()),
+            'types' => array_map(fn (RiskAssessmentType $c): array => ['value' => $c->value, 'name' => $c->name], RiskAssessmentType::cases()),
+            'statuses' => array_map(fn (RiskAssessmentStatus $c): array => ['value' => $c->value, 'name' => $c->name], RiskAssessmentStatus::cases()),
             'subjectOptions' => $subjectOptions,
         ]);
     }
@@ -57,7 +56,8 @@ final class RiskAssessmentController extends Controller
     public function store(StoreRiskAssessmentRequest $request): RedirectResponse
     {
         $this->authorize('create', RiskAssessment::class);
-        RiskAssessment::create($request->validated());
+        RiskAssessment::query()->create($request->validated());
+
         return to_route('fleet.risk-assessments.index')->with('flash', ['status' => 'success', 'message' => 'Risk assessment created.']);
     }
 
@@ -65,21 +65,22 @@ final class RiskAssessmentController extends Controller
     {
         $this->authorize('view', $risk_assessment);
         $risk_assessment->load(['subject', 'createdByUser', 'approvedBy']);
+
         return Inertia::render('Fleet/RiskAssessments/Show', ['riskAssessment' => $risk_assessment]);
     }
 
     public function edit(RiskAssessment $risk_assessment): Response
     {
         $this->authorize('update', $risk_assessment);
-        $vehicles = Vehicle::query()->orderBy('registration')->get(['id', 'registration'])->map(fn ($v) => ['id' => $v->id, 'name' => $v->registration, 'type' => 'vehicle']);
-        $drivers = Driver::query()->orderBy('last_name')->get(['id', 'first_name', 'last_name'])->map(fn ($d) => ['id' => $d->id, 'name' => $d->first_name . ' ' . $d->last_name, 'type' => 'driver']);
-        $locations = Location::query()->orderBy('name')->get(['id', 'name'])->map(fn ($l) => ['id' => $l->id, 'name' => $l->name, 'type' => 'location']);
+        $vehicles = Vehicle::query()->orderBy('registration')->get(['id', 'registration'])->map(fn ($v): array => ['id' => $v->id, 'name' => $v->registration, 'type' => 'vehicle']);
+        $drivers = Driver::query()->orderBy('last_name')->get(['id', 'first_name', 'last_name'])->map(fn ($d): array => ['id' => $d->id, 'name' => $d->first_name.' '.$d->last_name, 'type' => 'driver']);
+        $locations = Location::query()->orderBy('name')->get(['id', 'name'])->map(fn ($l): array => ['id' => $l->id, 'name' => $l->name, 'type' => 'location']);
         $subjectOptions = $vehicles->concat($drivers)->concat($locations)->values()->all();
 
         return Inertia::render('Fleet/RiskAssessments/Edit', [
             'riskAssessment' => $risk_assessment,
-            'types' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], RiskAssessmentType::cases()),
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], RiskAssessmentStatus::cases()),
+            'types' => array_map(fn (RiskAssessmentType $c): array => ['value' => $c->value, 'name' => $c->name], RiskAssessmentType::cases()),
+            'statuses' => array_map(fn (RiskAssessmentStatus $c): array => ['value' => $c->value, 'name' => $c->name], RiskAssessmentStatus::cases()),
             'subjectOptions' => $subjectOptions,
         ]);
     }
@@ -88,6 +89,7 @@ final class RiskAssessmentController extends Controller
     {
         $this->authorize('update', $risk_assessment);
         $risk_assessment->update($request->validated());
+
         return to_route('fleet.risk-assessments.show', $risk_assessment)->with('flash', ['status' => 'success', 'message' => 'Risk assessment updated.']);
     }
 
@@ -95,6 +97,7 @@ final class RiskAssessmentController extends Controller
     {
         $this->authorize('delete', $risk_assessment);
         $risk_assessment->delete();
+
         return to_route('fleet.risk-assessments.index')->with('flash', ['status' => 'success', 'message' => 'Risk assessment deleted.']);
     }
 }

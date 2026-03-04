@@ -11,10 +11,10 @@ use App\Models\Fleet\SustainabilityGoal;
 use App\Models\Fleet\Vehicle;
 use Laravel\Ai\Responses\StructuredAgentResponse;
 
-final class FleetElectrificationService
+final readonly class FleetElectrificationService
 {
     public function __construct(
-        private readonly FleetElectrificationAgent $agent
+        private FleetElectrificationAgent $agent
     ) {}
 
     /**
@@ -32,6 +32,7 @@ final class FleetElectrificationService
         }
 
         $s = $response->structured;
+
         return [
             'readiness_score' => (float) ($s['readiness_score'] ?? 0),
             'replacement_order' => $this->normalizeArray($s['replacement_order'] ?? []),
@@ -50,7 +51,7 @@ final class FleetElectrificationService
         $vehicles = Vehicle::query()
             ->where('organization_id', $organizationId)
             ->get(['id', 'registration', 'make', 'model', 'fuel_type', 'vehicle_type', 'odometer_reading', 'monthly_distance_km', 'monthly_fuel_cost', 'co2_emissions'])
-            ->map(fn ($v) => [
+            ->map(fn ($v): array => [
                 'id' => $v->id,
                 'registration' => $v->registration,
                 'make' => $v->make,
@@ -61,7 +62,7 @@ final class FleetElectrificationService
                 'monthly_distance_km' => $v->monthly_distance_km,
                 'monthly_fuel_cost' => $v->monthly_fuel_cost,
                 'co2_emissions' => $v->co2_emissions,
-            ])->toArray();
+            ])->all();
 
         $chargingSessions = EvChargingSession::query()->where('organization_id', $organizationId)->count();
         $chargingTotalKwh = (float) EvChargingSession::query()->where('organization_id', $organizationId)->sum('energy_delivered_kwh');
@@ -70,24 +71,24 @@ final class FleetElectrificationService
             ->where('organization_id', $organizationId)
             ->where('is_active', true)
             ->get(['name', 'period', 'target_year', 'target_co2_kg', 'baseline_co2_kg'])
-            ->map(fn ($c) => [
+            ->map(fn ($c): array => [
                 'name' => $c->name,
                 'period' => $c->period,
                 'target_year' => $c->target_year,
                 'target_co2_kg' => $c->target_co2_kg,
                 'baseline_co2_kg' => $c->baseline_co2_kg,
-            ])->toArray();
+            ])->all();
 
         $goals = SustainabilityGoal::query()
             ->where('organization_id', $organizationId)
             ->get(['title', 'status', 'target_date', 'target_value', 'target_unit'])
-            ->map(fn ($g) => [
+            ->map(fn ($g): array => [
                 'title' => $g->title,
                 'status' => $g->status,
                 'target_date' => $g->target_date?->toDateString(),
                 'target_value' => $g->target_value,
                 'target_unit' => $g->target_unit,
-            ])->toArray();
+            ])->all();
 
         $data = [
             'vehicles' => $vehicles,
@@ -97,7 +98,7 @@ final class FleetElectrificationService
             'sustainability_goals' => $goals,
         ];
 
-        return "Generate a fleet electrification plan based on this data. Return readiness_score (0-100), replacement_order, charging_recommendations, tco_summary, and milestones.\n\n" . json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        return "Generate a fleet electrification plan based on this data. Return readiness_score (0-100), replacement_order, charging_recommendations, tco_summary, and milestones.\n\n".json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
     }
 
     private function normalizeArray(mixed $arr): array

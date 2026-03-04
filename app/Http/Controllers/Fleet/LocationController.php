@@ -37,13 +37,13 @@ final class LocationController extends Controller
         $this->authorize('create', Location::class);
 
         return Inertia::render('Fleet/Locations/Create', [
-            'locationTypes' => array_map(fn ($c) => ['name' => $c->name, 'value' => $c->value], \App\Enums\Fleet\LocationType::cases()),
+            'locationTypes' => array_map(fn (\App\Enums\Fleet\LocationType $c): array => ['name' => $c->name, 'value' => $c->value], \App\Enums\Fleet\LocationType::cases()),
         ]);
     }
 
     public function store(StoreLocationRequest $request): RedirectResponse
     {
-        Location::create($request->validated());
+        Location::query()->create($request->validated());
 
         return to_route('fleet.locations.index')->with('flash', ['status' => 'success', 'message' => 'Location created.']);
     }
@@ -64,7 +64,7 @@ final class LocationController extends Controller
 
         return Inertia::render('Fleet/Locations/Edit', [
             'location' => $location,
-            'locationTypes' => array_map(fn ($c) => ['name' => $c->name, 'value' => $c->value], \App\Enums\Fleet\LocationType::cases()),
+            'locationTypes' => array_map(fn (\App\Enums\Fleet\LocationType $c): array => ['name' => $c->name, 'value' => $c->value], \App\Enums\Fleet\LocationType::cases()),
         ]);
     }
 

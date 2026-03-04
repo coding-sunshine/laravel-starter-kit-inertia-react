@@ -6,6 +6,9 @@ import typescript from 'typescript-eslint';
 
 /** @type {import('eslint').Linter.Config[]} */
 export default [
+    {
+        ignores: ['demo/**', 'resources/js/actions/**', 'vendor/**', 'node_modules/**', 'public/**', 'bootstrap/ssr/**', 'tailwind.config.js'],
+    },
     js.configs.recommended,
     ...typescript.configs.recommended,
     {
@@ -16,15 +19,17 @@ export default [
             },
         },
     },
-    {
-        ignores: [
-            'resources/js/actions/**',
-            'vendor',
-            'node_modules',
-            'public',
-            'bootstrap/ssr',
-            'tailwind.config.js',
-        ],
-    },
     prettier, // Turn off all rules that might conflict with Prettier
+    {
+        rules: {
+            '@typescript-eslint/no-unused-vars': [
+                'error',
+                {
+                    argsIgnorePattern: '^_',
+                    varsIgnorePattern: '^_',
+                    caughtErrorsIgnorePattern: '^_',
+                },
+            ],
+        },
+    },
 ];

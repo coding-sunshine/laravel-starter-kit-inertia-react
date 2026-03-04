@@ -384,8 +384,8 @@ final class SettingsOverlayServiceProvider extends ServiceProvider
 
             foreach (self::AI_KEY_CROSS_MAP as $property => $configKey) {
                 $value = $prism->{$property};
-                if ($value !== null && trim((string) $value) !== '') {
-                    config()->set($configKey, trim((string) $value));
+                if ($value !== null && mb_trim((string) $value) !== '') {
+                    config()->set($configKey, mb_trim((string) $value));
                 }
             }
         } catch (Throwable) {

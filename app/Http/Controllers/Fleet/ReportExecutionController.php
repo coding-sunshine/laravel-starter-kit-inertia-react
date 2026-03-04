@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Fleet;
 
+use App\Enums\Fleet\ReportExecutionStatus;
+use App\Enums\Fleet\ReportTriggeredBy;
 use App\Http\Controllers\Controller;
 use App\Models\Fleet\Report;
 use App\Models\Fleet\ReportExecution;
-use App\Enums\Fleet\ReportExecutionStatus;
-use App\Enums\Fleet\ReportTriggeredBy;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -29,7 +29,7 @@ final class ReportExecutionController extends Controller
             ->withQueryString();
 
         $downloadAvailableIds = $executions->getCollection()
-            ->filter(fn (ReportExecution $e) => $e->file_path && Storage::disk('local')->exists($e->file_path))
+            ->filter(fn (ReportExecution $e): bool => $e->file_path && Storage::disk('local')->exists($e->file_path))
             ->pluck('id')
             ->all();
 
@@ -59,9 +59,9 @@ final class ReportExecutionController extends Controller
     {
         $this->authorize('view', $report_execution);
         if (! $report_execution->file_path || ! Storage::disk('local')->exists($report_execution->file_path)) {
-            return redirect()->back()->with('flash', ['status' => 'error', 'message' => 'Report file is not available.']);
+            return back()->with('flash', ['status' => 'error', 'message' => 'Report file is not available.']);
         }
-        $filename = basename($report_execution->file_path);
+        $filename = basename((string) $report_execution->file_path);
 
         return Storage::disk('local')->download($report_execution->file_path, $filename);
     }
@@ -69,7 +69,7 @@ final class ReportExecutionController extends Controller
     public function run(Request $request, Report $report): RedirectResponse
     {
         $this->authorize('view', $report);
-        $execution = ReportExecution::create([
+        $execution = ReportExecution::query()->create([
             'report_id' => $report->id,
             'execution_start' => now(),
             'status' => ReportExecutionStatus::Running,
@@ -77,12 +77,12 @@ final class ReportExecutionController extends Controller
             'triggered_by_user_id' => $request->user()->id,
         ]);
 
-        $ext = strtolower($report->format) === 'pdf' ? 'pdf' : 'csv';
-        $filename = 'report-' . $report->id . '-exec-' . $execution->id . '-' . now()->format('Y-m-d-His') . '.' . $ext;
-        $path = 'report-executions/' . $filename;
+        $ext = mb_strtolower($report->format) === 'pdf' ? 'pdf' : 'csv';
+        $filename = 'report-'.$report->id.'-exec-'.$execution->id.'-'.now()->format('Y-m-d-His').'.'.$ext;
+        $path = 'report-executions/'.$filename;
 
         if ($ext === 'csv') {
-            $csv = "Report,Generated\n\"{$report->name}\"," . now()->toIso8601String() . "\n";
+            $csv = "Report,Generated\n\"{$report->name}\",".now()->toIso8601String()."\n";
             Storage::disk('local')->put($path, $csv);
         } else {
             // Placeholder PDF (minimal text file for demo; real app would use Dompdf or similar)

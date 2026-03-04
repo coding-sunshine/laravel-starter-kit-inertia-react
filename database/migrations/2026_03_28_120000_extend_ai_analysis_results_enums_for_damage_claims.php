@@ -17,6 +17,11 @@ return new class extends Migration
         $this->extendEntityTypeEnum();
     }
 
+    public function down(): void
+    {
+        // Reverting would require restoring original enum values; leave as-is for safety
+    }
+
     private function extendAnalysisTypeEnum(): void
     {
         $constraint = 'ai_analysis_results_analysis_type_check';
@@ -43,16 +48,11 @@ return new class extends Migration
     {
         $constraint = DB::selectOne(
             "SELECT conname FROM pg_constraint WHERE conrelid = ?::regclass AND contype = 'c' AND pg_get_constraintdef(oid) LIKE ?",
-            [$table, '%' . $column . '%']
+            [$table, '%'.$column.'%']
         );
         $dropName = $constraint->conname ?? $constraintName;
         DB::statement("ALTER TABLE \"{$table}\" DROP CONSTRAINT IF EXISTS \"{$dropName}\"");
-        $quoted = implode(', ', array_map(fn (string $v) => "'" . addslashes($v) . "'", $allowedValues));
+        $quoted = implode(', ', array_map(fn (string $v): string => "'".addslashes($v)."'", $allowedValues));
         DB::statement("ALTER TABLE \"{$table}\" ADD CONSTRAINT \"{$constraintName}\" CHECK (\"{$column}\"::text = ANY (ARRAY[{$quoted}]::text[]))");
-    }
-
-    public function down(): void
-    {
-        // Reverting would require restoring original enum values; leave as-is for safety
     }
 };

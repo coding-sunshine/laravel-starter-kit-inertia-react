@@ -19,8 +19,8 @@ final class RouteOptimizationAgent implements Agent, HasStructuredOutput
     public function instructions(): string
     {
         return 'You are a route optimization analyst. Given a list of route stops with current order and optional time windows, '
-            . 'suggest a better visit order to minimize total distance and/or time while respecting constraints. '
-            . 'Return the suggested stop IDs in visit order, plus estimated total distance (km), duration (minutes), cost estimate, and carbon (kg CO2).';
+            .'suggest a better visit order to minimize total distance and/or time while respecting constraints. '
+            .'Return the suggested stop IDs in visit order, plus estimated total distance (km), duration (minutes), cost estimate, and carbon (kg CO2).';
     }
 
     public function schema(JsonSchema $schema): array

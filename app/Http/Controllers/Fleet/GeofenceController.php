@@ -34,8 +34,9 @@ final class GeofenceController extends Controller
     public function create(): Response
     {
         $this->authorize('create', Geofence::class);
+
         return Inertia::render('Fleet/Geofences/Create', [
-            'types' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\GeofenceType::cases()),
+            'types' => array_map(fn (\App\Enums\Fleet\GeofenceType $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\GeofenceType::cases()),
             'locations' => \App\Models\Fleet\Location::query()->orderBy('name')->get(['id', 'name']),
         ]);
     }
@@ -43,7 +44,8 @@ final class GeofenceController extends Controller
     public function store(StoreGeofenceRequest $request): RedirectResponse
     {
         $this->authorize('create', Geofence::class);
-        Geofence::create($request->validated());
+        Geofence::query()->create($request->validated());
+
         return to_route('fleet.geofences.index')->with('flash', ['status' => 'success', 'message' => 'Geofence created.']);
     }
 
@@ -51,15 +53,17 @@ final class GeofenceController extends Controller
     {
         $this->authorize('view', $geofence);
         $geofence->load('location');
+
         return Inertia::render('Fleet/Geofences/Show', ['geofence' => $geofence]);
     }
 
     public function edit(Geofence $geofence): Response
     {
         $this->authorize('update', $geofence);
+
         return Inertia::render('Fleet/Geofences/Edit', [
             'geofence' => $geofence,
-            'types' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\GeofenceType::cases()),
+            'types' => array_map(fn (\App\Enums\Fleet\GeofenceType $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\GeofenceType::cases()),
             'locations' => \App\Models\Fleet\Location::query()->orderBy('name')->get(['id', 'name']),
         ]);
     }
@@ -68,6 +72,7 @@ final class GeofenceController extends Controller
     {
         $this->authorize('update', $geofence);
         $geofence->update($request->validated());
+
         return to_route('fleet.geofences.show', $geofence)->with('flash', ['status' => 'success', 'message' => 'Geofence updated.']);
     }
 
@@ -75,6 +80,7 @@ final class GeofenceController extends Controller
     {
         $this->authorize('delete', $geofence);
         $geofence->delete();
+
         return to_route('fleet.geofences.index')->with('flash', ['status' => 'success', 'message' => 'Geofence deleted.']);
     }
 }

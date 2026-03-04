@@ -22,9 +22,10 @@ use Mattiverse\Userstamps\Traits\Userstamps;
  * @property string|null $storage_location
  * @property bool $is_active
  */
-class TyreInventory extends Model
+final class TyreInventory extends Model
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use SoftDeletes;
     use Userstamps;
 

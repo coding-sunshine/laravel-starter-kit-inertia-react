@@ -26,9 +26,10 @@ use Mattiverse\Userstamps\Traits\Userstamps;
  * @property \Carbon\Carbon|null $paid_date
  * @property string|null $payment_reference
  */
-class ContractorInvoice extends Model
+final class ContractorInvoice extends Model
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use SoftDeletes;
     use Userstamps;
 

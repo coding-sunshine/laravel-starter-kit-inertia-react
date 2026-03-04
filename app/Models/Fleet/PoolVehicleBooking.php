@@ -24,9 +24,10 @@ use Mattiverse\Userstamps\Traits\Userstamps;
  * @property int|null $odometer_start
  * @property int|null $odometer_end
  */
-class PoolVehicleBooking extends Model
+final class PoolVehicleBooking extends Model
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use SoftDeletes;
     use Userstamps;
 

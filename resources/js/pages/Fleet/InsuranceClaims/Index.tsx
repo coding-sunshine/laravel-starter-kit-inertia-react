@@ -1,9 +1,9 @@
+import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Form, Head, Link } from '@inertiajs/react';
 import { FileCheck, Pencil, Plus, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 
 interface InsuranceClaimRecord {
     id: number;
@@ -28,10 +28,10 @@ interface Props {
 
 export default function FleetInsuranceClaimsIndex({
     insuranceClaims,
-    incidents,
-    insurancePolicies,
-    claimTypes,
-    statuses,
+    incidents: _incidents,
+    insurancePolicies: _insurancePolicies,
+    claimTypes: _claimTypes,
+    statuses: _statuses,
 }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard().url },
@@ -54,9 +54,13 @@ export default function FleetInsuranceClaimsIndex({
                 {insuranceClaims.data.length === 0 ? (
                     <div className="rounded-lg border border-dashed py-16 text-center">
                         <FileCheck className="mx-auto size-10 text-muted-foreground" />
-                        <p className="mt-2 text-sm text-muted-foreground">No insurance claims yet.</p>
+                        <p className="mt-2 text-sm text-muted-foreground">
+                            No insurance claims yet.
+                        </p>
                         <Button asChild className="mt-4">
-                            <Link href="/fleet/insurance-claims/create">Create insurance claim</Link>
+                            <Link href="/fleet/insurance-claims/create">
+                                Create insurance claim
+                            </Link>
                         </Button>
                     </div>
                 ) : (
@@ -65,17 +69,32 @@ export default function FleetInsuranceClaimsIndex({
                             <table className="w-full text-sm">
                                 <thead>
                                     <tr className="border-b bg-muted/50">
-                                        <th className="p-3 text-left font-medium">Claim number</th>
-                                        <th className="p-3 text-left font-medium">Incident</th>
-                                        <th className="p-3 text-left font-medium">Policy</th>
-                                        <th className="p-3 text-left font-medium">Claim type</th>
-                                        <th className="p-3 text-left font-medium">Status</th>
-                                        <th className="p-3 text-right font-medium">Actions</th>
+                                        <th className="p-3 text-left font-medium">
+                                            Claim number
+                                        </th>
+                                        <th className="p-3 text-left font-medium">
+                                            Incident
+                                        </th>
+                                        <th className="p-3 text-left font-medium">
+                                            Policy
+                                        </th>
+                                        <th className="p-3 text-left font-medium">
+                                            Claim type
+                                        </th>
+                                        <th className="p-3 text-left font-medium">
+                                            Status
+                                        </th>
+                                        <th className="p-3 text-right font-medium">
+                                            Actions
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {insuranceClaims.data.map((row) => (
-                                        <tr key={row.id} className="border-b last:border-0">
+                                        <tr
+                                            key={row.id}
+                                            className="border-b last:border-0"
+                                        >
                                             <td className="p-3">
                                                 <Link
                                                     href={`/fleet/insurance-claims/${row.id}`}
@@ -90,7 +109,10 @@ export default function FleetInsuranceClaimsIndex({
                                                         href={`/fleet/incidents/${row.incident.id}`}
                                                         className="underline"
                                                     >
-                                                        {row.incident.incident_number}
+                                                        {
+                                                            row.incident
+                                                                .incident_number
+                                                        }
                                                     </Link>
                                                 ) : (
                                                     '—'
@@ -102,22 +124,41 @@ export default function FleetInsuranceClaimsIndex({
                                                         href={`/fleet/insurance-policies/${row.insurance_policy.id}`}
                                                         className="underline"
                                                     >
-                                                        {row.insurance_policy.policy_number}
+                                                        {
+                                                            row.insurance_policy
+                                                                .policy_number
+                                                        }
                                                     </Link>
                                                 ) : (
                                                     '—'
                                                 )}
                                             </td>
-                                            <td className="p-3">{row.claim_type}</td>
-                                            <td className="p-3">{row.status}</td>
+                                            <td className="p-3">
+                                                {row.claim_type}
+                                            </td>
+                                            <td className="p-3">
+                                                {row.status}
+                                            </td>
                                             <td className="p-3 text-right">
-                                                <Button variant="outline" size="sm" asChild>
-                                                    <Link href={`/fleet/insurance-claims/${row.id}`}>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    asChild
+                                                >
+                                                    <Link
+                                                        href={`/fleet/insurance-claims/${row.id}`}
+                                                    >
                                                         View
                                                     </Link>
                                                 </Button>
-                                                <Button variant="outline" size="sm" asChild>
-                                                    <Link href={`/fleet/insurance-claims/${row.id}/edit`}>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    asChild
+                                                >
+                                                    <Link
+                                                        href={`/fleet/insurance-claims/${row.id}/edit`}
+                                                    >
                                                         <Pencil className="ml-1 size-3.5" />
                                                     </Link>
                                                 </Button>
@@ -126,10 +167,15 @@ export default function FleetInsuranceClaimsIndex({
                                                     method="delete"
                                                     className="ml-2 inline"
                                                     onSubmit={(e) => {
-                                                        if (!confirm('Delete?')) e.preventDefault();
+                                                        if (!confirm('Delete?'))
+                                                            e.preventDefault();
                                                     }}
                                                 >
-                                                    <Button type="submit" variant="ghost" size="sm">
+                                                    <Button
+                                                        type="submit"
+                                                        variant="ghost"
+                                                        size="sm"
+                                                    >
                                                         <Trash2 className="size-3.5 text-destructive" />
                                                     </Button>
                                                 </Form>

@@ -1,8 +1,8 @@
 'use client';
 
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { LazyMotion, domAnimation, m } from 'framer-motion';
 import type { ReactNode } from 'react';
-import { useReducedMotion } from '@/hooks/use-reduced-motion';
 
 interface HoverCardProps {
     children: ReactNode;
@@ -19,8 +19,16 @@ export function HoverCard({ children, className }: HoverCardProps): ReactNode {
         <LazyMotion features={domAnimation} strict>
             <m.div
                 className={className}
-                whileHover={reduced ? undefined : { y: -2, transition: { duration: 0.2 } }}
-                whileTap={reduced ? undefined : { scale: 0.99, transition: { duration: 0.1 } }}
+                whileHover={
+                    reduced
+                        ? undefined
+                        : { y: -2, transition: { duration: 0.2 } }
+                }
+                whileTap={
+                    reduced
+                        ? undefined
+                        : { scale: 0.99, transition: { duration: 0.1 } }
+                }
             >
                 {children}
             </m.div>

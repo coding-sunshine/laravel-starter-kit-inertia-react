@@ -8,10 +8,10 @@ import { UserInfo } from '@/components/user-info';
 import { useMobileNavigation } from '@/hooks/use-mobile-navigation';
 import { logout } from '@/routes';
 import { type User } from '@/types';
-
-const userProfileEditUrl = '/settings/profile';
 import { Link, router } from '@inertiajs/react';
 import { LogOut, Settings } from 'lucide-react';
+
+const userProfileEditUrl = '/settings/profile';
 
 interface UserMenuContentProps {
     user: User;

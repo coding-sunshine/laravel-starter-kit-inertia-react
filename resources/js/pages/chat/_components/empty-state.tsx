@@ -1,12 +1,21 @@
 import { MessageSquare } from 'lucide-react';
 
-const suggestions = [
+const defaultSuggestions = [
     'Explain how this app works',
     'Help me write a blog post',
     'What can you help me with?',
 ];
 
-export function EmptyState({ onSend }: { onSend: (content: string) => void }) {
+export function EmptyState({
+    onSend,
+    suggestedPrompts,
+}: {
+    onSend: (content: string) => void;
+    suggestedPrompts?: string[];
+}) {
+    const suggestions = suggestedPrompts?.length
+        ? suggestedPrompts
+        : defaultSuggestions;
     return (
         <div className="flex min-h-0 flex-1 items-center justify-center p-4">
             <div className="flex max-w-sm flex-col items-center text-center">

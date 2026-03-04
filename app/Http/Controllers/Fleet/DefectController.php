@@ -26,7 +26,7 @@ final class DefectController extends Controller
             ->when($request->input('vehicle_id'), fn ($q, $v) => $q->where('vehicle_id', $v))
             ->when($request->input('status'), fn ($q, $v) => $q->where('status', $v))
             ->when($request->input('severity'), fn ($q, $v) => $q->where('severity', $v))
-            ->orderByDesc('reported_at')
+            ->latest('reported_at')
             ->paginate(15)
             ->withQueryString();
 
@@ -34,20 +34,21 @@ final class DefectController extends Controller
             'defects' => $defects,
             'filters' => $request->only(['vehicle_id', 'status', 'severity']),
             'vehicles' => \App\Models\Fleet\Vehicle::query()->orderBy('registration')->get(['id', 'registration']),
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\DefectStatus::cases()),
-            'severities' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\DefectSeverity::cases()),
+            'statuses' => array_map(fn (\App\Enums\Fleet\DefectStatus $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\DefectStatus::cases()),
+            'severities' => array_map(fn (\App\Enums\Fleet\DefectSeverity $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\DefectSeverity::cases()),
         ]);
     }
 
     public function create(): Response
     {
         $this->authorize('create', Defect::class);
+
         return Inertia::render('Fleet/Defects/Create', [
-            'categories' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\DefectCategory::cases()),
-            'severities' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\DefectSeverity::cases()),
+            'categories' => array_map(fn (\App\Enums\Fleet\DefectCategory $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\DefectCategory::cases()),
+            'severities' => array_map(fn (\App\Enums\Fleet\DefectSeverity $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\DefectSeverity::cases()),
             'vehicles' => \App\Models\Fleet\Vehicle::query()->orderBy('registration')->get(['id', 'registration']),
             'drivers' => \App\Models\Fleet\Driver::query()->orderBy('last_name')->get(['id', 'first_name', 'last_name']),
-            'workOrders' => \App\Models\Fleet\WorkOrder::query()->orderByDesc('created_at')->limit(100)->get(['id', 'work_order_number', 'title']),
+            'workOrders' => \App\Models\Fleet\WorkOrder::query()->latest()->limit(100)->get(['id', 'work_order_number', 'title']),
         ]);
     }
 
@@ -56,13 +57,14 @@ final class DefectController extends Controller
         $this->authorize('create', Defect::class);
         $validated = $request->validated();
         unset($validated['photos']);
-        $defect = Defect::create($validated);
+        $defect = Defect::query()->create($validated);
         if ($request->hasFile('photos')) {
             foreach ($request->file('photos') as $file) {
                 $defect->addMedia($file)->toMediaCollection('photos');
             }
-            RunDamageAssessmentJob::dispatch('defect', $defect->id, $request->user()?->id);
+            dispatch(new RunDamageAssessmentJob('defect', $defect->id, $request->user()?->id));
         }
+
         return to_route('fleet.defects.index')->with('flash', ['status' => 'success', 'message' => 'Defect created.']);
     }
 
@@ -71,12 +73,11 @@ final class DefectController extends Controller
         $this->authorize('view', $defect);
         $defect->load(['vehicle', 'reportedByDriver', 'reportedByUser', 'workOrder']);
         $defect->loadMedia('photos');
-        $photoUrls = $defect->getMedia('photos')->map(fn ($m) => ['id' => $m->id, 'url' => $m->getUrl()])->values()->all();
+        $photoUrls = $defect->getMedia('photos')->map(fn ($m): array => ['id' => $m->id, 'url' => $m->getUrl()])->values()->all();
         $damageAnalysis = AiAnalysisResult::query()
             ->where('entity_type', 'defect')
             ->where('entity_id', $defect->id)
-            ->where('analysis_type', 'damage_detection')
-            ->orderByDesc('created_at')
+            ->where('analysis_type', 'damage_detection')->latest()
             ->first();
 
         return Inertia::render('Fleet/Defects/Show', [
@@ -94,12 +95,12 @@ final class DefectController extends Controller
 
         return Inertia::render('Fleet/Defects/Edit', [
             'defect' => $defect,
-            'categories' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\DefectCategory::cases()),
-            'severities' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\DefectSeverity::cases()),
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\DefectStatus::cases()),
+            'categories' => array_map(fn (\App\Enums\Fleet\DefectCategory $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\DefectCategory::cases()),
+            'severities' => array_map(fn (\App\Enums\Fleet\DefectSeverity $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\DefectSeverity::cases()),
+            'statuses' => array_map(fn (\App\Enums\Fleet\DefectStatus $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\DefectStatus::cases()),
             'vehicles' => \App\Models\Fleet\Vehicle::query()->orderBy('registration')->get(['id', 'registration']),
             'drivers' => \App\Models\Fleet\Driver::query()->orderBy('last_name')->get(['id', 'first_name', 'last_name']),
-            'workOrders' => \App\Models\Fleet\WorkOrder::query()->orderByDesc('created_at')->limit(100)->get(['id', 'work_order_number', 'title']),
+            'workOrders' => \App\Models\Fleet\WorkOrder::query()->latest()->limit(100)->get(['id', 'work_order_number', 'title']),
         ]);
     }
 
@@ -113,8 +114,9 @@ final class DefectController extends Controller
             foreach ($request->file('photos') as $file) {
                 $defect->addMedia($file)->toMediaCollection('photos');
             }
-            RunDamageAssessmentJob::dispatch('defect', $defect->id, $request->user()?->id);
+            dispatch(new RunDamageAssessmentJob('defect', $defect->id, $request->user()?->id));
         }
+
         return to_route('fleet.defects.show', $defect)->with('flash', ['status' => 'success', 'message' => 'Defect updated.']);
     }
 
@@ -122,6 +124,7 @@ final class DefectController extends Controller
     {
         $this->authorize('delete', $defect);
         $defect->delete();
+
         return to_route('fleet.defects.index')->with('flash', ['status' => 'success', 'message' => 'Defect deleted.']);
     }
 
@@ -132,10 +135,11 @@ final class DefectController extends Controller
     {
         $this->authorize('update', $defect);
         $defect->loadMedia('photos');
-        if ($defect->getFirstMedia('photos') === null) {
+        if (! $defect->getFirstMedia('photos') instanceof \Spatie\MediaLibrary\MediaCollections\Models\Media) {
             return response()->json(['message' => 'No photo to analyze.', 'result_id' => null], 422);
         }
-        RunDamageAssessmentJob::dispatch('defect', $defect->id, $request->user()?->id);
+        dispatch(new RunDamageAssessmentJob('defect', $defect->id, $request->user()?->id));
+
         return response()->json([
             'message' => 'Damage analysis queued. Results will appear in AI Analysis and on this defect once complete.',
             'result_id' => null,

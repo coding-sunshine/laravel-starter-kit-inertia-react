@@ -6,6 +6,7 @@ namespace App\Ai\Gateway;
 
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
+use InvalidArgumentException;
 use Laravel\Ai\Contracts\Gateway\EmbeddingGateway;
 use Laravel\Ai\Contracts\Providers\EmbeddingProvider;
 use Laravel\Ai\Responses\Data\Meta;
@@ -13,7 +14,7 @@ use Laravel\Ai\Responses\EmbeddingsResponse;
 
 final class OpenRouterEmbeddingGateway implements EmbeddingGateway
 {
-    private const BASE_URL = 'https://openrouter.ai/api/v1';
+    private const string BASE_URL = 'https://openrouter.ai/api/v1';
 
     public function generateEmbeddings(
         EmbeddingProvider $provider,
@@ -22,9 +23,7 @@ final class OpenRouterEmbeddingGateway implements EmbeddingGateway
         int $dimensions
     ): EmbeddingsResponse {
         $key = $provider->providerCredentials()['key'] ?? '';
-        if ($key === '') {
-            throw new \InvalidArgumentException('OpenRouter API key is required for embeddings. Set OPENROUTER_API_KEY in .env.');
-        }
+        throw_if($key === '', InvalidArgumentException::class, 'OpenRouter API key is required for embeddings. Set OPENROUTER_API_KEY in .env.');
 
         $payload = [
             'model' => $model,
@@ -43,7 +42,7 @@ final class OpenRouterEmbeddingGateway implements EmbeddingGateway
             ->throw();
 
         $data = $response->json();
-        $embeddings = (new Collection($data['data'] ?? []))->pluck('embedding')->all();
+        $embeddings = new Collection($data['data'] ?? [])->pluck('embedding')->all();
 
         return new EmbeddingsResponse(
             $embeddings,

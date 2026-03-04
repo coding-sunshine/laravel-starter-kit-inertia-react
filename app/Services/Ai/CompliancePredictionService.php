@@ -9,13 +9,12 @@ use App\Models\Fleet\ComplianceItem;
 use App\Models\Fleet\Driver;
 use App\Models\Fleet\Vehicle;
 use App\Models\Scopes\OrganizationScope;
-use Illuminate\Support\Carbon;
 use Laravel\Ai\Responses\StructuredAgentResponse;
 
-final class CompliancePredictionService
+final readonly class CompliancePredictionService
 {
     public function __construct(
-        private readonly CompliancePredictionAgent $agent
+        private CompliancePredictionAgent $agent
     ) {}
 
     /**
@@ -44,11 +43,11 @@ final class CompliancePredictionService
         $base = fn ($model) => $model::withoutGlobalScope(OrganizationScope::class)
             ->where('organization_id', $organizationId);
 
-        $horizon = Carbon::now()->addDays(90)->toDateString();
+        $horizon = \Illuminate\Support\Facades\Date::now()->addDays(90)->toDateString();
 
         $vehicles = $base(Vehicle::class)->select('id', 'registration', 'make', 'model', 'mot_expiry_date', 'tax_expiry_date', 'insurance_expiry_date')
             ->get()
-            ->map(fn ($v) => [
+            ->map(fn ($v): array => [
                 'id' => $v->id,
                 'registration' => $v->registration,
                 'make' => $v->make,
@@ -60,7 +59,7 @@ final class CompliancePredictionService
 
         $drivers = $base(Driver::class)->select('id', 'first_name', 'last_name', 'license_expiry_date', 'cpc_expiry_date', 'medical_certificate_expiry')
             ->get()
-            ->map(fn ($d) => [
+            ->map(fn ($d): array => [
                 'id' => $d->id,
                 'first_name' => $d->first_name,
                 'last_name' => $d->last_name,
@@ -73,7 +72,7 @@ final class CompliancePredictionService
             ->where('expiry_date', '<=', $horizon)
             ->orderBy('expiry_date')
             ->get(['id', 'entity_type', 'entity_id', 'compliance_type', 'title', 'expiry_date', 'status'])
-            ->map(fn ($c) => [
+            ->map(fn ($c): array => [
                 'entity_type' => $c->entity_type,
                 'entity_id' => $c->entity_id,
                 'compliance_type' => $c->compliance_type,
@@ -86,10 +85,10 @@ final class CompliancePredictionService
             'vehicles' => $vehicles,
             'drivers' => $drivers,
             'compliance_items_due_90_days' => $complianceItems,
-            'today' => Carbon::now()->toDateString(),
+            'today' => \Illuminate\Support\Facades\Date::now()->toDateString(),
         ];
 
-        return "Analyze the following fleet compliance data. Identify vehicles and drivers at risk of missing renewals in the next 30, 60, or 90 days. Return at_risk_vehicles and at_risk_drivers.\n\n" . json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        return "Analyze the following fleet compliance data. Identify vehicles and drivers at risk of missing renewals in the next 30, 60, or 90 days. Return at_risk_vehicles and at_risk_drivers.\n\n".json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
     }
 
     private function normalizeRiskItems(mixed $items, string $type): array
@@ -99,7 +98,10 @@ final class CompliancePredictionService
         }
         $out = [];
         foreach ($items as $item) {
-            if (! is_array($item) || empty($item['id'])) {
+            if (! is_array($item)) {
+                continue;
+            }
+            if (empty($item['id'])) {
                 continue;
             }
             $out[] = [
@@ -111,12 +113,14 @@ final class CompliancePredictionService
                 'risk_level' => $this->normalizeRiskLevel((string) ($item['risk_level'] ?? 'medium')),
             ];
         }
+
         return $out;
     }
 
     private function normalizeRiskLevel(string $level): string
     {
-        $l = strtolower(trim($level));
+        $l = mb_strtolower(mb_trim($level));
+
         return in_array($l, ['low', 'medium', 'high', 'critical'], true) ? $l : 'medium';
     }
 }

@@ -44,15 +44,15 @@ export default function BillingInvoices() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Invoices" />
             <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-4">
-                <h2 className="text-lg font-medium">Invoices</h2>
+                <h2 className="heading-4 text-foreground">Invoices</h2>
 
-                <Card>
+                <Card className="border-border shadow-sm">
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
+                        <CardTitle className="heading-5 flex items-center gap-2 text-foreground">
                             <FileText className="size-5" />
                             Invoice history
                         </CardTitle>
-                        <CardDescription>
+                        <CardDescription className="body-sm text-muted-foreground">
                             View and download your invoices
                         </CardDescription>
                     </CardHeader>

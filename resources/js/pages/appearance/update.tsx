@@ -4,6 +4,7 @@ import AppearanceTabs from '@/components/appearance-tabs';
 import HeadingSmall from '@/components/heading-small';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 
+import { ExplainSettingLink } from '@/components/explain-setting-link';
 import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 import { edit as editAppearance } from '@/routes/appearance';
@@ -25,10 +26,16 @@ export default function Update() {
 
             <SettingsLayout>
                 <div className="space-y-6">
-                    <HeadingSmall
-                        title="Appearance settings"
-                        description="Update your account's appearance settings"
-                    />
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                        <HeadingSmall
+                            title="Appearance settings"
+                            description="Update your account's appearance settings"
+                        />
+                        <ExplainSettingLink
+                            settingName="Appearance settings"
+                            context="Theme (light/dark/system) and visual preferences."
+                        />
+                    </div>
                     {!allowUserCustomization ? (
                         <p className="text-sm text-muted-foreground">
                             Your organization has disabled appearance

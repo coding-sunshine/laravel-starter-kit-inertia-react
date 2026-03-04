@@ -22,7 +22,7 @@ final class VehicleLeaseController extends Controller
             ->with(['vehicle'])
             ->when($request->input('vehicle_id'), fn ($q, $v) => $q->where('vehicle_id', $v))
             ->when($request->input('status'), fn ($q, $v) => $q->where('status', $v))
-            ->orderByDesc('start_date')
+            ->latest('start_date')
             ->paginate(15)
             ->withQueryString();
 
@@ -30,7 +30,7 @@ final class VehicleLeaseController extends Controller
             'vehicleLeases' => $leases,
             'filters' => $request->only(['vehicle_id', 'status']),
             'vehicles' => \App\Models\Fleet\Vehicle::query()->orderBy('registration')->get(['id', 'registration']),
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\VehicleLeaseStatus::cases()),
+            'statuses' => array_map(fn (\App\Enums\Fleet\VehicleLeaseStatus $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\VehicleLeaseStatus::cases()),
         ]);
     }
 
@@ -40,14 +40,14 @@ final class VehicleLeaseController extends Controller
 
         return Inertia::render('Fleet/VehicleLeases/Create', [
             'vehicles' => \App\Models\Fleet\Vehicle::query()->orderBy('registration')->get(['id', 'registration']),
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\VehicleLeaseStatus::cases()),
+            'statuses' => array_map(fn (\App\Enums\Fleet\VehicleLeaseStatus $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\VehicleLeaseStatus::cases()),
         ]);
     }
 
     public function store(StoreVehicleLeaseRequest $request): RedirectResponse
     {
         $this->authorize('create', VehicleLease::class);
-        VehicleLease::create($request->validated());
+        VehicleLease::query()->create($request->validated());
 
         return to_route('fleet.vehicle-leases.index')->with('flash', ['status' => 'success', 'message' => 'Vehicle lease created.']);
     }
@@ -67,7 +67,7 @@ final class VehicleLeaseController extends Controller
         return Inertia::render('Fleet/VehicleLeases/Edit', [
             'vehicleLease' => $vehicle_lease,
             'vehicles' => \App\Models\Fleet\Vehicle::query()->orderBy('registration')->get(['id', 'registration']),
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\VehicleLeaseStatus::cases()),
+            'statuses' => array_map(fn (\App\Enums\Fleet\VehicleLeaseStatus $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\VehicleLeaseStatus::cases()),
         ]);
     }
 

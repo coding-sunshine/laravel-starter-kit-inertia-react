@@ -29,9 +29,10 @@ use Mattiverse\Userstamps\Traits\Userstamps;
  * @property \Carbon\Carbon|null $approved_at
  * @property string|null $rejection_reason
  */
-class MileageClaim extends Model
+final class MileageClaim extends Model
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use SoftDeletes;
     use Userstamps;
 

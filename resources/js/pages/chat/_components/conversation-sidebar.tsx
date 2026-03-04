@@ -51,6 +51,8 @@ export function ConversationSidebar({
     onSelectConversation,
     onConversationDeleted,
     onConversationRenamed,
+    suggestedPrompts,
+    onSuggestedPromptClick,
     isMobile,
 }: {
     conversations: ConversationItem[];
@@ -60,6 +62,8 @@ export function ConversationSidebar({
     onSelectConversation: (id: string) => void;
     onConversationDeleted: () => void;
     onConversationRenamed?: (id: string, title: string) => void;
+    suggestedPrompts?: string[];
+    onSuggestedPromptClick?: (prompt: string) => void;
     isMobile?: boolean;
 }) {
     const [deleteTarget, setDeleteTarget] = useState<ConversationItem | null>(
@@ -183,6 +187,34 @@ export function ConversationSidebar({
             </div>
 
             <div className="flex-1 overflow-y-auto px-2 py-2">
+                {suggestedPrompts &&
+                    suggestedPrompts.length > 0 &&
+                    onSuggestedPromptClick && (
+                        <div className="mb-4">
+                            <p className="mb-2 px-2 text-xs font-medium text-muted-foreground">
+                                Suggested
+                            </p>
+                            <ul className="space-y-1">
+                                {suggestedPrompts.map((prompt) => (
+                                    <li key={prompt}>
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                onSuggestedPromptClick(prompt)
+                                            }
+                                            className="line-clamp-2 w-full rounded-lg px-2 py-1.5 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                                            data-pan="chat-sidebar-suggested-prompt"
+                                        >
+                                            {prompt}
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                <p className="mb-1 px-2 text-xs font-medium text-muted-foreground">
+                    Recent
+                </p>
                 {conversationsLoading ? (
                     <div className="space-y-2 p-2">
                         {[1, 2, 3].map((i) => (

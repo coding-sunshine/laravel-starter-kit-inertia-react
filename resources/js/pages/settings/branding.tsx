@@ -1,5 +1,7 @@
 import { Head, useForm } from '@inertiajs/react';
+import { useState } from 'react';
 
+import { ExplainSettingLink } from '@/components/explain-setting-link';
 import HeadingSmall from '@/components/heading-small';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
@@ -53,6 +55,8 @@ export default function Branding({
         allow_user_ui_customization: branding.allowUserCustomization,
     });
 
+    const [suggestLoading, setSuggestLoading] = useState(false);
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         put(updateBranding().url, {
@@ -61,16 +65,49 @@ export default function Branding({
         });
     };
 
+    const handleSuggestFromLogo = async () => {
+        setSuggestLoading(true);
+        try {
+            const formData = new FormData();
+            if (data.logo) formData.append('logo', data.logo);
+            const res = await fetch('/settings/branding/suggest', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRF-TOKEN':
+                        document.querySelector<HTMLMetaElement>(
+                            'meta[name="csrf-token"]',
+                        )?.content ?? '',
+                    Accept: 'application/json',
+                },
+            });
+            const json = await res.json();
+            if (json.theme_preset != null)
+                setData('theme_preset', json.theme_preset);
+            if (json.theme_radius != null)
+                setData('theme_radius', json.theme_radius);
+            if (json.theme_font != null) setData('theme_font', json.theme_font);
+        } finally {
+            setSuggestLoading(false);
+        }
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Organization branding" />
 
             <SettingsLayout>
                 <div className="space-y-6">
-                    <HeadingSmall
-                        title="Organization branding"
-                        description="Logo and theme overrides for your organization"
-                    />
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                        <HeadingSmall
+                            title="Organization branding"
+                            description="Logo and theme overrides for your organization"
+                        />
+                        <ExplainSettingLink
+                            settingName="Organization branding"
+                            context="Logo, theme preset, radius, and font for your organization."
+                        />
+                    </div>
 
                     <form
                         onSubmit={handleSubmit}
@@ -102,6 +139,18 @@ export default function Branding({
                                 Image file. Max 2 MB. Leave empty to keep
                                 current.
                             </p>
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                onClick={handleSuggestFromLogo}
+                                disabled={suggestLoading}
+                                className="mt-2"
+                            >
+                                {suggestLoading
+                                    ? 'Suggesting…'
+                                    : 'Suggest branding from logo'}
+                            </Button>
                             <InputError message={errors.logo} />
                         </div>
 
@@ -207,6 +256,68 @@ export default function Branding({
                         <InputError
                             message={errors.allow_user_ui_customization}
                         />
+
+                        <div className="space-y-2">
+                            <Label>Live preview</Label>
+                            <div
+                                className="flex flex-wrap items-start gap-4 rounded-lg border border-border bg-muted/30 p-4"
+                                aria-live="polite"
+                                aria-label="Branding preview"
+                            >
+                                {branding.logoUrl && (
+                                    <div className="flex flex-col gap-1">
+                                        <span className="text-xs text-muted-foreground">
+                                            Logo
+                                        </span>
+                                        <img
+                                            src={branding.logoUrl}
+                                            alt=""
+                                            className="h-12 w-auto object-contain"
+                                            role="presentation"
+                                        />
+                                    </div>
+                                )}
+                                <div className="flex flex-col gap-1">
+                                    <span className="text-xs text-muted-foreground">
+                                        Sample card
+                                    </span>
+                                    <div
+                                        className="border border-border bg-card px-4 py-3 shadow-sm"
+                                        style={{
+                                            borderRadius:
+                                                data.theme_radius === 'sm'
+                                                    ? '4px'
+                                                    : data.theme_radius === 'lg'
+                                                      ? '8px'
+                                                      : '6px',
+                                        }}
+                                    >
+                                        <p
+                                            className="text-sm font-medium text-foreground"
+                                            style={{
+                                                fontFamily:
+                                                    data.theme_font ===
+                                                    'instrument-sans'
+                                                        ? 'Instrument Sans, sans-serif'
+                                                        : data.theme_font ===
+                                                            'geist'
+                                                          ? 'Geist, sans-serif'
+                                                          : undefined,
+                                            }}
+                                        >
+                                            {presetOptions[data.theme_preset] ??
+                                                'Theme'}{' '}
+                                            ·{' '}
+                                            {radiusOptions[data.theme_radius] ??
+                                                'Radius'}{' '}
+                                            ·{' '}
+                                            {fontOptions[data.theme_font] ??
+                                                'Font'}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
                         <Button type="submit" disabled={processing}>
                             {processing ? 'Saving…' : 'Save branding'}

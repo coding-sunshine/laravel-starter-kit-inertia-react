@@ -14,10 +14,12 @@ final class BulkSoftDeleteUsersRequest extends FormRequest
         if (! $user) {
             return false;
         }
+        if ($user->can('bypass-permissions')) {
+            return true;
+        }
 
-        return $user->can('bypass-permissions')
-            || (config('tenancy.enabled', true)
-                && $user->canInOrganization('org.members.view'));
+        return config('tenancy.enabled', true)
+            && $user->canInOrganization('org.members.view');
     }
 
     /**

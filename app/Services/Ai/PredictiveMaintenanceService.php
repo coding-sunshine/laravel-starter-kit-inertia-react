@@ -10,13 +10,12 @@ use App\Models\Fleet\ServiceSchedule;
 use App\Models\Fleet\Vehicle;
 use App\Models\Fleet\WorkOrder;
 use App\Models\Scopes\OrganizationScope;
-use Illuminate\Support\Carbon;
 use Laravel\Ai\Responses\StructuredAgentResponse;
 
-final class PredictiveMaintenanceService
+final readonly class PredictiveMaintenanceService
 {
     public function __construct(
-        private readonly PredictiveMaintenanceAgent $agent
+        private PredictiveMaintenanceAgent $agent
     ) {}
 
     /**
@@ -71,7 +70,7 @@ final class PredictiveMaintenanceService
         if ($vehicleIds !== null && $vehicleIds !== []) {
             $vehicleQuery->whereIn('id', $vehicleIds);
         }
-        $vehicles = $vehicleQuery->get()->map(fn ($v) => [
+        $vehicles = $vehicleQuery->get()->map(fn ($v): array => [
             'id' => $v->id,
             'registration' => $v->registration,
             'make' => $v->make,
@@ -80,14 +79,14 @@ final class PredictiveMaintenanceService
             'status' => $v->status,
         ])->toArray();
 
-        $workOrderQuery = $base(WorkOrder::class)->where(function ($q) use ($organizationId): void {
+        $workOrderQuery = $base(WorkOrder::class)->where(function ($q): void {
             $q->whereIn('status', ['open', 'pending', 'in_progress', 'scheduled'])
-                ->orWhere('completed_date', '>=', Carbon::now()->subDays(30));
+                ->orWhere('completed_date', '>=', \Illuminate\Support\Facades\Date::now()->subDays(30));
         });
         if ($vehicleIds !== null && $vehicleIds !== []) {
             $workOrderQuery->whereIn('vehicle_id', $vehicleIds);
         }
-        $workOrders = $workOrderQuery->get()->map(fn ($w) => [
+        $workOrders = $workOrderQuery->get()->map(fn ($w): array => [
             'id' => $w->id,
             'vehicle_id' => $w->vehicle_id,
             'work_order_number' => $w->work_order_number,
@@ -103,7 +102,7 @@ final class PredictiveMaintenanceService
         if ($vehicleIds !== null && $vehicleIds !== []) {
             $scheduleQuery->whereIn('vehicle_id', $vehicleIds);
         }
-        $schedules = $scheduleQuery->get()->map(fn ($s) => [
+        $schedules = $scheduleQuery->get()->map(fn ($s): array => [
             'id' => $s->id,
             'vehicle_id' => $s->vehicle_id,
             'service_type' => $s->service_type,
@@ -120,7 +119,7 @@ final class PredictiveMaintenanceService
         if ($vehicleIds !== null && $vehicleIds !== []) {
             $defectQuery->whereIn('vehicle_id', $vehicleIds);
         }
-        $defects = $defectQuery->get()->map(fn ($d) => [
+        $defects = $defectQuery->get()->map(fn ($d): array => [
             'id' => $d->id,
             'vehicle_id' => $d->vehicle_id,
             'defect_number' => $d->defect_number,
@@ -137,12 +136,13 @@ final class PredictiveMaintenanceService
             'defects' => $defects,
         ];
 
-        return "Analyze the following fleet data and identify maintenance likely needed in the next 2–4 weeks. Return only the structured findings.\n\n" . json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        return "Analyze the following fleet data and identify maintenance likely needed in the next 2–4 weeks. Return only the structured findings.\n\n".json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
     }
 
     private function normalizeUrgency(string $urgency): string
     {
-        $u = strtolower($urgency);
+        $u = mb_strtolower($urgency);
+
         return in_array($u, ['low', 'medium', 'high', 'critical'], true) ? $u : 'medium';
     }
 }

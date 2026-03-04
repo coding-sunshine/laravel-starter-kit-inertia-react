@@ -32,9 +32,10 @@ use Mattiverse\Userstamps\Traits\Userstamps;
  * @property string|null $notes
  * @property array|null $materials_provided
  */
-class TrainingSession extends Model
+final class TrainingSession extends Model
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use SoftDeletes;
     use Userstamps;
 

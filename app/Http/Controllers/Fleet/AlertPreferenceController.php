@@ -42,6 +42,7 @@ final class AlertPreferenceController extends Controller
     {
         $this->authorize('update', $alert_preference);
         $alert_preference->update($request->validated());
+
         return to_route('fleet.alert-preferences.index')->with('flash', ['status' => 'success', 'message' => 'Alert preference updated.']);
     }
 }

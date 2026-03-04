@@ -1,5 +1,6 @@
 'use client';
 
+import { useGoogleMaps } from '@/providers/google-maps-provider';
 import {
     GoogleMap as GoogleMapComponent,
     InfoWindow,
@@ -9,7 +10,6 @@ import {
 } from '@react-google-maps/api';
 import type { ReactNode } from 'react';
 import { useMemo } from 'react';
-import { useGoogleMaps } from '@/providers/google-maps-provider';
 
 /** Design system: primary #4348be, foreground #333333 */
 export const FLEET_MAP_PRIMARY = '#4348be';
@@ -27,6 +27,9 @@ export interface FleetMapProps {
     mapContainerStyle?: { width: string; height: string };
     className?: string;
     children?: ReactNode;
+    /** Called with the map instance when the map has loaded (e.g. for clustering). */
+    onMapLoad?: (map: google.maps.Map) => void;
+    onMapUnmount?: (map: google.maps.Map) => void;
 }
 
 const defaultContainerStyle: { width: string; height: string } = {
@@ -40,6 +43,8 @@ export function FleetMap({
     mapContainerStyle = defaultContainerStyle,
     className,
     children,
+    onMapLoad,
+    onMapUnmount,
 }: FleetMapProps): ReactNode {
     const { isLoaded, loadError, apiKeyConfigured } = useGoogleMaps();
 
@@ -60,12 +65,19 @@ export function FleetMap({
     if (!apiKeyConfigured) {
         return (
             <div
-                className={[className, placeholderClass, 'bg-muted/30 text-muted-foreground'].filter(Boolean).join(' ')}
+                className={[
+                    className,
+                    placeholderClass,
+                    'bg-muted/30 text-muted-foreground',
+                ]
+                    .filter(Boolean)
+                    .join(' ')}
                 style={mapContainerStyle}
                 role="status"
                 aria-live="polite"
             >
-                Map unavailable (no API key). Set VITE_GOOGLE_MAPS_API_KEY in .env
+                Map unavailable (no API key). Set VITE_GOOGLE_MAPS_API_KEY in
+                .env
             </div>
         );
     }
@@ -73,7 +85,13 @@ export function FleetMap({
     if (loadError) {
         return (
             <div
-                className={[className, placeholderClass, 'bg-destructive/5 text-destructive'].filter(Boolean).join(' ')}
+                className={[
+                    className,
+                    placeholderClass,
+                    'bg-destructive/5 text-destructive',
+                ]
+                    .filter(Boolean)
+                    .join(' ')}
                 style={mapContainerStyle}
                 role="alert"
             >
@@ -85,7 +103,13 @@ export function FleetMap({
     if (!isLoaded) {
         return (
             <div
-                className={[className, placeholderClass, 'bg-muted/30 text-muted-foreground'].filter(Boolean).join(' ')}
+                className={[
+                    className,
+                    placeholderClass,
+                    'bg-muted/30 text-muted-foreground',
+                ]
+                    .filter(Boolean)
+                    .join(' ')}
                 style={mapContainerStyle}
             >
                 Loading map…
@@ -100,6 +124,8 @@ export function FleetMap({
                 center={center}
                 zoom={zoom}
                 options={options}
+                onLoad={onMapLoad}
+                onUnmount={onMapUnmount}
             >
                 {children}
             </GoogleMapComponent>
@@ -194,7 +220,7 @@ export function FleetMapInfoWindow({
     return (
         <InfoWindow position={position} onCloseClick={onCloseClick}>
             <div
-                className="min-w-[120px] max-w-[280px] rounded border border-border bg-white p-2 text-sm text-[#333333] shadow-sm"
+                className="max-w-[280px] min-w-[120px] rounded border border-border bg-white p-2 text-sm text-[#333333] shadow-sm"
                 style={{ color: '#333333' }}
             >
                 {children}

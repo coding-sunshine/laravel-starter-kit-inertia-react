@@ -43,7 +43,34 @@ test('completed users can view onboarding page again for review', function (): v
 
     $response->assertInertia(fn ($page) => $page
         ->component('onboarding/show')
-        ->where('alreadyCompleted', true));
+        ->where('alreadyCompleted', true)
+        ->has('initialStep'));
+});
+
+test('onboarding show returns initial step for progress persistence', function (): void {
+    $user = User::factory()->needsOnboarding()->create([
+        'onboarding_steps_completed' => ['current_step' => 1],
+    ]);
+
+    $response = $this->actingAs($user)
+        ->get(route('onboarding'));
+
+    $response->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('onboarding/show')
+            ->where('initialStep', 1));
+});
+
+test('onboarding update persists current step', function (): void {
+    $user = User::factory()->needsOnboarding()->create();
+
+    $this->actingAs($user)
+        ->put(route('onboarding.update'), ['current_step' => 2])
+        ->assertRedirect();
+
+    $user->refresh();
+    expect($user->onboarding_steps_completed)->toBeArray();
+    expect($user->onboarding_steps_completed['current_step'] ?? null)->toBe(2);
 });
 
 test('can complete onboarding', function (): void {

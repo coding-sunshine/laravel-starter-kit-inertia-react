@@ -20,7 +20,7 @@ final class DataMigrationRunController extends Controller
         $runs = DataMigrationRun::query()
             ->with(['organization', 'triggeredBy'])
             ->where('organization_id', $orgId)
-            ->orderByDesc('started_at')
+            ->latest('started_at')
             ->paginate(15)
             ->withQueryString();
 

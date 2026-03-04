@@ -20,9 +20,9 @@ final class CompliancePredictionAgent implements Agent, HasStructuredOutput
     public function instructions(): string
     {
         return 'You are a fleet compliance analyst. Given a list of vehicles and drivers with key dates (MOT, tax, insurance, licence, CPC), '
-            . 'identify: (1) entities at risk of missing renewal in the next 30, 60, or 90 days; (2) suggested action (renew, book test, training); '
-            . '(3) risk level per entity (low, medium, high, critical); (4) any pattern (e.g. same driver missing CPC). '
-            . 'Return at_risk_vehicles and at_risk_drivers arrays. Use empty array when none at risk.';
+            .'identify: (1) entities at risk of missing renewal in the next 30, 60, or 90 days; (2) suggested action (renew, book test, training); '
+            .'(3) risk level per entity (low, medium, high, critical); (4) any pattern (e.g. same driver missing CPC). '
+            .'Return at_risk_vehicles and at_risk_drivers arrays. Use empty array when none at risk.';
     }
 
     public function schema(JsonSchema $schema): array

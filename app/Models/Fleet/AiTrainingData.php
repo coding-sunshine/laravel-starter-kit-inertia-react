@@ -15,9 +15,10 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $source_entity_id
  * @property array $feature_vector
  */
-class AiTrainingData extends Model
+final class AiTrainingData extends Model
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
 
     protected $fillable = [
         'data_type', 'source_entity_type', 'source_entity_id', 'training_label',

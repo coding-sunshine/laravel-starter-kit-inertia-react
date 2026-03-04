@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Fleet;
 
+use App\Enums\Fleet\TrainingCourseCategory;
+use App\Enums\Fleet\TrainingDeliveryMethod;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Fleet\StoreTrainingCourseRequest;
 use App\Http\Requests\Fleet\UpdateTrainingCourseRequest;
 use App\Models\Fleet\TrainingCourse;
-use App\Enums\Fleet\TrainingCourseCategory;
-use App\Enums\Fleet\TrainingDeliveryMethod;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -31,24 +31,26 @@ final class TrainingCourseController extends Controller
         return Inertia::render('Fleet/TrainingCourses/Index', [
             'trainingCourses' => $courses,
             'filters' => $request->only(['category', 'delivery_method', 'is_active']),
-            'categories' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], TrainingCourseCategory::cases()),
-            'deliveryMethods' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], TrainingDeliveryMethod::cases()),
+            'categories' => array_map(fn (TrainingCourseCategory $c): array => ['value' => $c->value, 'name' => $c->name], TrainingCourseCategory::cases()),
+            'deliveryMethods' => array_map(fn (TrainingDeliveryMethod $c): array => ['value' => $c->value, 'name' => $c->name], TrainingDeliveryMethod::cases()),
         ]);
     }
 
     public function create(): Response
     {
         $this->authorize('create', TrainingCourse::class);
+
         return Inertia::render('Fleet/TrainingCourses/Create', [
-            'categories' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], TrainingCourseCategory::cases()),
-            'deliveryMethods' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], TrainingDeliveryMethod::cases()),
+            'categories' => array_map(fn (TrainingCourseCategory $c): array => ['value' => $c->value, 'name' => $c->name], TrainingCourseCategory::cases()),
+            'deliveryMethods' => array_map(fn (TrainingDeliveryMethod $c): array => ['value' => $c->value, 'name' => $c->name], TrainingDeliveryMethod::cases()),
         ]);
     }
 
     public function store(StoreTrainingCourseRequest $request): RedirectResponse
     {
         $this->authorize('create', TrainingCourse::class);
-        TrainingCourse::create($request->validated());
+        TrainingCourse::query()->create($request->validated());
+
         return to_route('fleet.training-courses.index')->with('flash', ['status' => 'success', 'message' => 'Training course created.']);
     }
 
@@ -63,10 +65,11 @@ final class TrainingCourseController extends Controller
     public function edit(TrainingCourse $training_course): Response
     {
         $this->authorize('update', $training_course);
+
         return Inertia::render('Fleet/TrainingCourses/Edit', [
             'trainingCourse' => $training_course,
-            'categories' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], TrainingCourseCategory::cases()),
-            'deliveryMethods' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], TrainingDeliveryMethod::cases()),
+            'categories' => array_map(fn (TrainingCourseCategory $c): array => ['value' => $c->value, 'name' => $c->name], TrainingCourseCategory::cases()),
+            'deliveryMethods' => array_map(fn (TrainingDeliveryMethod $c): array => ['value' => $c->value, 'name' => $c->name], TrainingDeliveryMethod::cases()),
         ]);
     }
 
@@ -74,6 +77,7 @@ final class TrainingCourseController extends Controller
     {
         $this->authorize('update', $training_course);
         $training_course->update($request->validated());
+
         return to_route('fleet.training-courses.show', $training_course)->with('flash', ['status' => 'success', 'message' => 'Training course updated.']);
     }
 
@@ -81,6 +85,7 @@ final class TrainingCourseController extends Controller
     {
         $this->authorize('delete', $training_course);
         $training_course->delete();
+
         return to_route('fleet.training-courses.index')->with('flash', ['status' => 'success', 'message' => 'Training course deleted.']);
     }
 }

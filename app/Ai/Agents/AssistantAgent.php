@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Ai\Agents;
 
 use App\Ai\Middleware\WithMemoryUnlessUnavailable;
+use App\Ai\Tools\ListUserOrganizations;
+use App\Ai\Tools\SearchHelpArticles;
 use Eznix86\AI\Memory\Tools\RecallMemory;
 use Eznix86\AI\Memory\Tools\StoreMemory;
 use Laravel\Ai\Concerns\RemembersConversations;
@@ -34,7 +36,9 @@ final class AssistantAgent implements Agent, Conversational, HasMiddleware, HasT
     {
         return 'You are a helpful assistant with memory. You can store and recall information from previous conversations. '
             .'Use the Store Memory tool to save important facts the user shares (e.g. preferences, decisions). '
-            .'Use the Recall Memory tool when you need to look up what you already know about the user or the topic.';
+            .'Use the Recall Memory tool when you need to look up what you already know about the user or the topic. '
+            .'Use the Search Help Articles tool when the user asks how to do something, how the app works, or needs documentation. '
+            .'Use the List User Organizations tool when the user asks about their organizations, teams, or workspaces.';
     }
 
     public function tools(): iterable
@@ -42,6 +46,8 @@ final class AssistantAgent implements Agent, Conversational, HasMiddleware, HasT
         return [
             (new RecallMemory)->context($this->context)->limit($this->recallLimit),
             (new StoreMemory)->context($this->context),
+            new SearchHelpArticles,
+            new ListUserOrganizations($this->context['user_id'] ?? null),
         ];
     }
 

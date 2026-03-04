@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Fleet;
 
+use App\Enums\Fleet\EvBatteryChargingStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Fleet\StoreEvBatteryDataRequest;
 use App\Http\Requests\Fleet\UpdateEvBatteryDataRequest;
 use App\Models\Fleet\EvBatteryData;
 use App\Models\Fleet\Vehicle;
-use App\Enums\Fleet\EvBatteryChargingStatus;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -17,11 +17,6 @@ use Inertia\Response;
 
 final class EvBatteryDataController extends Controller
 {
-    private function vehicleIdsForOrganization(): \Illuminate\Support\Collection
-    {
-        return Vehicle::query()->pluck('id');
-    }
-
     public function index(Request $request): Response
     {
         $this->authorize('viewAny', EvBatteryData::class);
@@ -39,23 +34,25 @@ final class EvBatteryDataController extends Controller
             'evBatteryData' => $records,
             'filters' => $request->only(['vehicle_id', 'charging_status']),
             'vehicles' => Vehicle::query()->orderBy('registration')->get(['id', 'registration']),
-            'chargingStatuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], EvBatteryChargingStatus::cases()),
+            'chargingStatuses' => array_map(fn (EvBatteryChargingStatus $c): array => ['value' => $c->value, 'name' => $c->name], EvBatteryChargingStatus::cases()),
         ]);
     }
 
     public function create(): Response
     {
         $this->authorize('create', EvBatteryData::class);
+
         return Inertia::render('Fleet/EvBatteryData/Create', [
             'vehicles' => Vehicle::query()->orderBy('registration')->get(['id', 'registration']),
-            'chargingStatuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], EvBatteryChargingStatus::cases()),
+            'chargingStatuses' => array_map(fn (EvBatteryChargingStatus $c): array => ['value' => $c->value, 'name' => $c->name], EvBatteryChargingStatus::cases()),
         ]);
     }
 
     public function store(StoreEvBatteryDataRequest $request): RedirectResponse
     {
         $this->authorize('create', EvBatteryData::class);
-        EvBatteryData::create($request->validated());
+        EvBatteryData::query()->create($request->validated());
+
         return to_route('fleet.ev-battery-data.index')->with('flash', ['status' => 'success', 'message' => 'EV battery data created.']);
     }
 
@@ -70,10 +67,11 @@ final class EvBatteryDataController extends Controller
     public function edit(EvBatteryData $ev_battery_data): Response
     {
         $this->authorize('update', $ev_battery_data);
+
         return Inertia::render('Fleet/EvBatteryData/Edit', [
             'evBatteryData' => $ev_battery_data,
             'vehicles' => Vehicle::query()->orderBy('registration')->get(['id', 'registration']),
-            'chargingStatuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], EvBatteryChargingStatus::cases()),
+            'chargingStatuses' => array_map(fn (EvBatteryChargingStatus $c): array => ['value' => $c->value, 'name' => $c->name], EvBatteryChargingStatus::cases()),
         ]);
     }
 
@@ -81,6 +79,7 @@ final class EvBatteryDataController extends Controller
     {
         $this->authorize('update', $ev_battery_data);
         $ev_battery_data->update($request->validated());
+
         return to_route('fleet.ev-battery-data.show', $ev_battery_data)->with('flash', ['status' => 'success', 'message' => 'EV battery data updated.']);
     }
 
@@ -88,6 +87,12 @@ final class EvBatteryDataController extends Controller
     {
         $this->authorize('delete', $ev_battery_data);
         $ev_battery_data->delete();
+
         return to_route('fleet.ev-battery-data.index')->with('flash', ['status' => 'success', 'message' => 'EV battery data deleted.']);
+    }
+
+    private function vehicleIdsForOrganization(): \Illuminate\Support\Collection
+    {
+        return Vehicle::query()->pluck('id');
     }
 }

@@ -10,7 +10,7 @@ use App\Services\TenantContext;
 
 final class EvBatteryDataPolicy
 {
-    public function viewAny(User $user): bool
+    public function viewAny(): bool
     {
         return TenantContext::check();
     }
@@ -18,10 +18,11 @@ final class EvBatteryDataPolicy
     public function view(User $user, EvBatteryData $evBatteryData): bool
     {
         $vehicle = $evBatteryData->vehicle;
+
         return $vehicle && $vehicle->organization_id === TenantContext::id();
     }
 
-    public function create(User $user): bool
+    public function create(): bool
     {
         return TenantContext::check();
     }
@@ -29,12 +30,14 @@ final class EvBatteryDataPolicy
     public function update(User $user, EvBatteryData $evBatteryData): bool
     {
         $vehicle = $evBatteryData->vehicle;
+
         return $vehicle && $vehicle->organization_id === TenantContext::id();
     }
 
     public function delete(User $user, EvBatteryData $evBatteryData): bool
     {
         $vehicle = $evBatteryData->vehicle;
+
         return $vehicle && $vehicle->organization_id === TenantContext::id();
     }
 }

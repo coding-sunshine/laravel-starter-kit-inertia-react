@@ -18,9 +18,10 @@ use Illuminate\Database\Eloquent\Model;
  * @property float|null $baseline_co2_kg
  * @property bool $is_active
  */
-class CarbonTarget extends Model
+final class CarbonTarget extends Model
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
 
     protected $fillable = [
         'name', 'description', 'period', 'target_year', 'target_co2_kg',

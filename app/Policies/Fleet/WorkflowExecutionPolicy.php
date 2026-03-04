@@ -10,7 +10,7 @@ use App\Services\TenantContext;
 
 final class WorkflowExecutionPolicy
 {
-    public function viewAny(User $user): bool
+    public function viewAny(): bool
     {
         return TenantContext::check();
     }

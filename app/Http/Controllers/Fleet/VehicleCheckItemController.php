@@ -21,21 +21,23 @@ final class VehicleCheckItemController extends Controller
     {
         $this->authorize('view', $vehicle_check);
         $items = $vehicle_check->vehicleCheckItems()->orderBy('item_index')->get();
+
         return Inertia::render('Fleet/VehicleCheckItems/Index', [
             'vehicleCheck' => $vehicle_check,
             'vehicleCheckItems' => $items,
-            'resultTypes' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], VehicleCheckItemResultType::cases()),
-            'results' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], VehicleCheckItemResult::cases()),
+            'resultTypes' => array_map(fn (VehicleCheckItemResultType $c): array => ['value' => $c->value, 'name' => $c->name], VehicleCheckItemResultType::cases()),
+            'results' => array_map(fn (VehicleCheckItemResult $c): array => ['value' => $c->value, 'name' => $c->name], VehicleCheckItemResult::cases()),
         ]);
     }
 
     public function create(VehicleCheck $vehicle_check): Response
     {
         $this->authorize('update', $vehicle_check);
+
         return Inertia::render('Fleet/VehicleCheckItems/Create', [
             'vehicleCheck' => $vehicle_check,
-            'resultTypes' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], VehicleCheckItemResultType::cases()),
-            'results' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], VehicleCheckItemResult::cases()),
+            'resultTypes' => array_map(fn (VehicleCheckItemResultType $c): array => ['value' => $c->value, 'name' => $c->name], VehicleCheckItemResultType::cases()),
+            'results' => array_map(fn (VehicleCheckItemResult $c): array => ['value' => $c->value, 'name' => $c->name], VehicleCheckItemResult::cases()),
         ]);
     }
 
@@ -43,14 +45,16 @@ final class VehicleCheckItemController extends Controller
     {
         $this->authorize('update', $vehicle_check);
         $request->merge(['vehicle_check_id' => $vehicle_check->id]);
-        VehicleCheckItem::create($request->validated());
-        return redirect()->route('fleet.vehicle-checks.show', $vehicle_check)->with('flash', ['status' => 'success', 'message' => 'Check item created.']);
+        VehicleCheckItem::query()->create($request->validated());
+
+        return to_route('fleet.vehicle-checks.show', $vehicle_check)->with('flash', ['status' => 'success', 'message' => 'Check item created.']);
     }
 
     public function show(VehicleCheckItem $vehicle_check_item): Response
     {
         $this->authorize('view', $vehicle_check_item);
         $vehicle_check_item->load('vehicleCheck');
+
         return Inertia::render('Fleet/VehicleCheckItems/Show', ['vehicleCheckItem' => $vehicle_check_item]);
     }
 
@@ -58,10 +62,11 @@ final class VehicleCheckItemController extends Controller
     {
         $this->authorize('update', $vehicle_check_item);
         $vehicle_check_item->load('vehicleCheck');
+
         return Inertia::render('Fleet/VehicleCheckItems/Edit', [
             'vehicleCheckItem' => $vehicle_check_item,
-            'resultTypes' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], VehicleCheckItemResultType::cases()),
-            'results' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], VehicleCheckItemResult::cases()),
+            'resultTypes' => array_map(fn (VehicleCheckItemResultType $c): array => ['value' => $c->value, 'name' => $c->name], VehicleCheckItemResultType::cases()),
+            'results' => array_map(fn (VehicleCheckItemResult $c): array => ['value' => $c->value, 'name' => $c->name], VehicleCheckItemResult::cases()),
         ]);
     }
 
@@ -69,7 +74,8 @@ final class VehicleCheckItemController extends Controller
     {
         $this->authorize('update', $vehicle_check_item);
         $vehicle_check_item->update($request->validated());
-        return redirect()->route('fleet.vehicle-checks.show', $vehicle_check_item->vehicle_check_id)->with('flash', ['status' => 'success', 'message' => 'Check item updated.']);
+
+        return to_route('fleet.vehicle-checks.show', $vehicle_check_item->vehicle_check_id)->with('flash', ['status' => 'success', 'message' => 'Check item updated.']);
     }
 
     public function destroy(VehicleCheckItem $vehicle_check_item): RedirectResponse
@@ -77,6 +83,7 @@ final class VehicleCheckItemController extends Controller
         $this->authorize('delete', $vehicle_check_item);
         $vehicleCheckId = $vehicle_check_item->vehicle_check_id;
         $vehicle_check_item->delete();
-        return redirect()->route('fleet.vehicle-checks.show', $vehicleCheckId)->with('flash', ['status' => 'success', 'message' => 'Check item deleted.']);
+
+        return to_route('fleet.vehicle-checks.show', $vehicleCheckId)->with('flash', ['status' => 'success', 'message' => 'Check item deleted.']);
     }
 }

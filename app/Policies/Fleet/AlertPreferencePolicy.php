@@ -10,7 +10,7 @@ use App\Services\TenantContext;
 
 final class AlertPreferencePolicy
 {
-    public function viewAny(User $user): bool
+    public function viewAny(): bool
     {
         return TenantContext::check();
     }

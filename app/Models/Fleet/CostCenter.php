@@ -29,9 +29,10 @@ use Mattiverse\Userstamps\Traits\Userstamps;
  * @property int|null $deleted_by
  * @property \Carbon\Carbon|null $deleted_at
  */
-class CostCenter extends Model
+final class CostCenter extends Model
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use SoftDeletes;
     use Userstamps;
 
@@ -58,7 +59,7 @@ class CostCenter extends Model
      */
     public function parent(): BelongsTo
     {
-        return $this->belongsTo(CostCenter::class, 'parent_cost_center_id');
+        return $this->belongsTo(self::class, 'parent_cost_center_id');
     }
 
     /**
@@ -66,7 +67,7 @@ class CostCenter extends Model
      */
     public function children(): HasMany
     {
-        return $this->hasMany(CostCenter::class, 'parent_cost_center_id');
+        return $this->hasMany(self::class, 'parent_cost_center_id');
     }
 
     /**

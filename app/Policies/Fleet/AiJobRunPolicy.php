@@ -10,12 +10,12 @@ use App\Services\TenantContext;
 
 final class AiJobRunPolicy
 {
-    public function viewAny(User $user): bool
+    public function viewAny(): bool
     {
         return TenantContext::check();
     }
 
-    public function create(User $user): bool
+    public function create(): bool
     {
         return TenantContext::check();
     }

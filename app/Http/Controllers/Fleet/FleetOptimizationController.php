@@ -20,8 +20,7 @@ final class FleetOptimizationController extends Controller
         $this->authorize('viewAny', AiAnalysisResult::class);
         $latest = AiAnalysisResult::query()
             ->where('analysis_type', 'cost_optimization')
-            ->where('entity_type', 'organization')
-            ->orderByDesc('created_at')
+            ->where('entity_type', 'organization')->latest()
             ->first();
 
         return Inertia::render('Fleet/FleetOptimization/Index', [
@@ -38,15 +37,15 @@ final class FleetOptimizationController extends Controller
             return response()->json(['message' => 'No organization context.'], 422);
         }
 
-        $service = app(FleetOptimizationService::class);
+        $service = resolve(FleetOptimizationService::class);
         $result = $service->analyze($organizationId);
         if ($result === null) {
             return response()->json(['message' => 'Failed to run fleet optimization analysis.'], 422);
         }
 
-        $primaryFinding = 'Fleet optimization: right-sizing, replacement timing, and fleet mix recommendations with ' . count($result['what_if_scenarios'] ?? []) . ' what-if scenario(s).';
+        $primaryFinding = 'Fleet optimization: right-sizing, replacement timing, and fleet mix recommendations with '.count($result['what_if_scenarios'] ?? []).' what-if scenario(s).';
 
-        AiAnalysisResult::create([
+        AiAnalysisResult::query()->create([
             'organization_id' => $organizationId,
             'analysis_type' => 'cost_optimization',
             'entity_type' => 'organization',

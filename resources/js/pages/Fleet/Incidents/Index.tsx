@@ -1,9 +1,9 @@
+import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Form, Head, Link } from '@inertiajs/react';
 import { AlertTriangle, Pencil, Plus, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 
 interface IncidentRecord {
     id: number;
@@ -32,12 +32,12 @@ interface Props {
 
 export default function FleetIncidentsIndex({
     incidents,
-    vehicles,
-    drivers,
-    incidentTypes,
-    severities,
-    statuses,
-    faultDeterminations,
+    vehicles: _vehicles,
+    drivers: _drivers,
+    incidentTypes: _incidentTypes,
+    severities: _severities,
+    statuses: _statuses,
+    faultDeterminations: _faultDeterminations,
 }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard().url },
@@ -60,9 +60,13 @@ export default function FleetIncidentsIndex({
                 {incidents.data.length === 0 ? (
                     <div className="rounded-lg border border-dashed py-16 text-center">
                         <AlertTriangle className="mx-auto size-10 text-muted-foreground" />
-                        <p className="mt-2 text-sm text-muted-foreground">No incidents yet.</p>
+                        <p className="mt-2 text-sm text-muted-foreground">
+                            No incidents yet.
+                        </p>
                         <Button asChild className="mt-4">
-                            <Link href="/fleet/incidents/create">Report incident</Link>
+                            <Link href="/fleet/incidents/create">
+                                Report incident
+                            </Link>
                         </Button>
                     </div>
                 ) : (
@@ -71,18 +75,35 @@ export default function FleetIncidentsIndex({
                             <table className="w-full text-sm">
                                 <thead>
                                     <tr className="border-b bg-muted/50">
-                                        <th className="p-3 text-left font-medium">Number</th>
-                                        <th className="p-3 text-left font-medium">Date</th>
-                                        <th className="p-3 text-left font-medium">Type</th>
-                                        <th className="p-3 text-left font-medium">Severity</th>
-                                        <th className="p-3 text-left font-medium">Status</th>
-                                        <th className="p-3 text-left font-medium">Vehicle</th>
-                                        <th className="p-3 text-right font-medium">Actions</th>
+                                        <th className="p-3 text-left font-medium">
+                                            Number
+                                        </th>
+                                        <th className="p-3 text-left font-medium">
+                                            Date
+                                        </th>
+                                        <th className="p-3 text-left font-medium">
+                                            Type
+                                        </th>
+                                        <th className="p-3 text-left font-medium">
+                                            Severity
+                                        </th>
+                                        <th className="p-3 text-left font-medium">
+                                            Status
+                                        </th>
+                                        <th className="p-3 text-left font-medium">
+                                            Vehicle
+                                        </th>
+                                        <th className="p-3 text-right font-medium">
+                                            Actions
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {incidents.data.map((row) => (
-                                        <tr key={row.id} className="border-b last:border-0">
+                                        <tr
+                                            key={row.id}
+                                            className="border-b last:border-0"
+                                        >
                                             <td className="p-3">
                                                 <Link
                                                     href={`/fleet/incidents/${row.id}`}
@@ -93,21 +114,48 @@ export default function FleetIncidentsIndex({
                                             </td>
                                             <td className="p-3">
                                                 {row.incident_timestamp
-                                                    ? new Date(row.incident_timestamp).toLocaleDateString()
+                                                    ? new Date(
+                                                          row.incident_timestamp,
+                                                      ).toLocaleDateString()
                                                     : row.incident_date
-                                                      ? new Date(row.incident_date).toLocaleDateString()
+                                                      ? new Date(
+                                                            row.incident_date,
+                                                        ).toLocaleDateString()
                                                       : '—'}
                                             </td>
-                                            <td className="p-3">{row.incident_type}</td>
-                                            <td className="p-3">{row.severity}</td>
-                                            <td className="p-3">{row.status}</td>
-                                            <td className="p-3">{row.vehicle?.registration ?? '—'}</td>
+                                            <td className="p-3">
+                                                {row.incident_type}
+                                            </td>
+                                            <td className="p-3">
+                                                {row.severity}
+                                            </td>
+                                            <td className="p-3">
+                                                {row.status}
+                                            </td>
+                                            <td className="p-3">
+                                                {row.vehicle?.registration ??
+                                                    '—'}
+                                            </td>
                                             <td className="p-3 text-right">
-                                                <Button variant="outline" size="sm" asChild>
-                                                    <Link href={`/fleet/incidents/${row.id}`}>View</Link>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    asChild
+                                                >
+                                                    <Link
+                                                        href={`/fleet/incidents/${row.id}`}
+                                                    >
+                                                        View
+                                                    </Link>
                                                 </Button>
-                                                <Button variant="outline" size="sm" asChild>
-                                                    <Link href={`/fleet/incidents/${row.id}/edit`}>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    asChild
+                                                >
+                                                    <Link
+                                                        href={`/fleet/incidents/${row.id}/edit`}
+                                                    >
                                                         <Pencil className="ml-1 size-3.5" />
                                                     </Link>
                                                 </Button>
@@ -116,10 +164,15 @@ export default function FleetIncidentsIndex({
                                                     method="delete"
                                                     className="ml-2 inline"
                                                     onSubmit={(e) => {
-                                                        if (!confirm('Delete?')) e.preventDefault();
+                                                        if (!confirm('Delete?'))
+                                                            e.preventDefault();
                                                     }}
                                                 >
-                                                    <Button type="submit" variant="ghost" size="sm">
+                                                    <Button
+                                                        type="submit"
+                                                        variant="ghost"
+                                                        size="sm"
+                                                    >
                                                         <Trash2 className="size-3.5 text-destructive" />
                                                     </Button>
                                                 </Form>

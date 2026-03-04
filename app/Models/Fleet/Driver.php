@@ -49,9 +49,10 @@ use Mattiverse\Userstamps\Traits\Userstamps;
  * @property int|null $deleted_by
  * @property \Carbon\Carbon|null $deleted_at
  */
-class Driver extends Model
+final class Driver extends Model
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use SoftDeletes;
     use Userstamps;
 
@@ -150,8 +151,24 @@ class Driver extends Model
         return $this->hasMany(DriverCoachingPlan::class);
     }
 
-    public function getFullNameAttribute(): string
+    /**
+     * @return HasMany<BehaviorEvent, $this>
+     */
+    public function behaviorEvents(): HasMany
     {
-        return trim("{$this->first_name} {$this->last_name}");
+        return $this->hasMany(BehaviorEvent::class);
+    }
+
+    /**
+     * @return HasMany<Incident, $this>
+     */
+    public function incidents(): HasMany
+    {
+        return $this->hasMany(Incident::class);
+    }
+
+    protected function getFullNameAttribute(): string
+    {
+        return mb_trim("{$this->first_name} {$this->last_name}");
     }
 }

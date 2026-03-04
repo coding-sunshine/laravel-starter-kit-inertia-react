@@ -17,7 +17,7 @@ return new class extends Migration
             $table->enum('analysis_type', [
                 'fraud_detection', 'predictive_maintenance', 'route_optimization',
                 'driver_coaching', 'cost_optimization', 'compliance_prediction',
-                'risk_assessment', 'fuel_efficiency', 'safety_scoring'
+                'risk_assessment', 'fuel_efficiency', 'safety_scoring',
             ]);
             $table->enum('entity_type', ['vehicle', 'driver', 'trip', 'transaction', 'organization']);
             $table->unsignedBigInteger('entity_id');

@@ -8,6 +8,7 @@ Welcome to the User Guide. This documentation helps you understand and use the f
 - [Onboarding](./onboarding.md) - Getting started (one-time flow) and how to open it again
 - [Settings](./settings/README.md) - Profile, password, 2FA, appearance, Level & achievements, data export
 - [Managing roles and permissions](./roles-and-permissions.md) - Admin: roles, permissions, and user role assignment
+- [Keyboard shortcuts](./keyboard-shortcuts.md) - Command palette, focus, and skip link
 
 ## Getting Started
 

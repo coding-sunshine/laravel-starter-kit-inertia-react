@@ -26,9 +26,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $error_message
  * @property int|null $execution_time_seconds
  */
-class ReportExecution extends Model
+final class ReportExecution extends Model
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
 
     protected $fillable = [
         'report_id',

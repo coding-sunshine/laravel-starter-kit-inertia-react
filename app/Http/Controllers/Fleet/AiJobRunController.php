@@ -21,14 +21,13 @@ final class AiJobRunController extends Controller
     public function index(): Response
     {
         $this->authorize('viewAny', AiJobRun::class);
-        $runs = AiJobRun::query()
-            ->orderByDesc('created_at')
+        $runs = AiJobRun::query()->latest()
             ->paginate(15)
             ->withQueryString();
 
         return Inertia::render('Fleet/AiJobRuns/Index', [
             'aiJobRuns' => $runs,
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\AiJobRunStatus::cases()),
+            'statuses' => array_map(fn (\App\Enums\Fleet\AiJobRunStatus $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\AiJobRunStatus::cases()),
             'runPredictiveMaintenanceUrl' => route('fleet.ai-job-runs.run-predictive-maintenance'),
             'runFraudDetectionUrl' => route('fleet.ai-job-runs.run-fraud-detection'),
             'runCompliancePredictionUrl' => route('fleet.ai-job-runs.run-compliance-prediction'),
@@ -37,12 +36,12 @@ final class AiJobRunController extends Controller
 
     public function show(int $ai_job_run): Response
     {
-        $run = AiJobRun::withoutGlobalScope(OrganizationScope::class)->findOrFail($ai_job_run);
+        $run = AiJobRun::query()->withoutGlobalScope(OrganizationScope::class)->findOrFail($ai_job_run);
         $this->authorize('view', $run);
 
         return Inertia::render('Fleet/AiJobRuns/Show', [
             'aiJobRun' => $run,
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\AiJobRunStatus::cases()),
+            'statuses' => array_map(fn (\App\Enums\Fleet\AiJobRunStatus $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\AiJobRunStatus::cases()),
         ]);
     }
 
@@ -55,13 +54,9 @@ final class AiJobRunController extends Controller
         }
 
         $vehicleIds = $request->input('vehicle_ids');
-        if (is_array($vehicleIds)) {
-            $vehicleIds = array_filter(array_map('intval', $vehicleIds));
-        } else {
-            $vehicleIds = null;
-        }
+        $vehicleIds = is_array($vehicleIds) ? array_filter(array_map(intval(...), $vehicleIds)) : null;
 
-        $run = AiJobRun::create([
+        $run = AiJobRun::query()->create([
             'organization_id' => $organizationId,
             'job_type' => 'maintenance_prediction',
             'entity_type' => 'vehicle',
@@ -72,12 +67,7 @@ final class AiJobRunController extends Controller
             'updated_by' => $request->user()?->id,
         ]);
 
-        RunPredictiveMaintenanceJob::dispatch(
-            $organizationId,
-            $vehicleIds === [] ? null : $vehicleIds,
-            $run->id,
-            $request->user()?->id
-        );
+        dispatch(new RunPredictiveMaintenanceJob($organizationId, $vehicleIds === [] ? null : $vehicleIds, $run->id, $request->user()?->id));
 
         return response()->json([
             'message' => 'Predictive maintenance job queued.',
@@ -97,7 +87,7 @@ final class AiJobRunController extends Controller
         $dateFrom = $request->input('date_from');
         $dateTo = $request->input('date_to');
 
-        $run = AiJobRun::create([
+        $run = AiJobRun::query()->create([
             'organization_id' => $organizationId,
             'job_type' => 'fraud_detection',
             'entity_type' => 'fuel_transaction',
@@ -108,13 +98,7 @@ final class AiJobRunController extends Controller
             'updated_by' => $request->user()?->id,
         ]);
 
-        RunFraudDetectionJob::dispatch(
-            $organizationId,
-            $dateFrom,
-            $dateTo,
-            $run->id,
-            $request->user()?->id
-        );
+        dispatch(new RunFraudDetectionJob($organizationId, $dateFrom, $dateTo, $run->id, $request->user()?->id));
 
         return response()->json([
             'message' => 'Fraud detection job queued.',
@@ -131,7 +115,7 @@ final class AiJobRunController extends Controller
             return response()->json(['message' => 'No organization context.'], 422);
         }
 
-        $run = AiJobRun::create([
+        $run = AiJobRun::query()->create([
             'organization_id' => $organizationId,
             'job_type' => 'compliance_prediction',
             'entity_type' => 'organization',
@@ -142,11 +126,7 @@ final class AiJobRunController extends Controller
             'updated_by' => $request->user()?->id,
         ]);
 
-        RunCompliancePredictionJob::dispatch(
-            $organizationId,
-            $run->id,
-            $request->user()?->id
-        );
+        dispatch(new RunCompliancePredictionJob($organizationId, $run->id, $request->user()?->id));
 
         return response()->json([
             'message' => 'Compliance prediction job queued.',

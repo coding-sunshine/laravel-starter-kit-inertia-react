@@ -22,9 +22,10 @@ use Mattiverse\Userstamps\Traits\Userstamps;
  * @property float|null $p11d_list_price
  * @property string $status
  */
-class VehicleLease extends Model
+final class VehicleLease extends Model
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use SoftDeletes;
     use Userstamps;
 

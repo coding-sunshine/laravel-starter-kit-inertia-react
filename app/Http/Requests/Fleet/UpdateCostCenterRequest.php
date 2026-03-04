@@ -31,4 +31,3 @@ final class UpdateCostCenterRequest extends FormRequest
         ];
     }
 }
-

@@ -17,10 +17,13 @@ use App\Listeners\Fleet\StartWorkflowsForAiJobCompleted;
 use App\Listeners\Gamification\GrantGamificationOnUserCreated;
 use App\Listeners\LogImpersonationEvents;
 use App\Listeners\MigrationListener;
+use App\Listeners\SendCriticalFleetAlertNotifications;
 use App\Listeners\SendSlackAlertOnJobFailed;
+use App\Models\Fleet\Alert;
 use App\Models\Shareable;
 use App\Models\User;
 use App\Observers\ActivityLogObserver;
+use App\Observers\AlertObserver;
 use App\Observers\PermissionActivityObserver;
 use App\Observers\RoleActivityObserver;
 use App\Observers\UserObserver;
@@ -79,19 +82,15 @@ final class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // Wrap the default store so conversation history never sends null content to OpenRouter.
-        $this->app->extend(ConversationStore::class, function (ConversationStore $store) {
-            return new \App\Ai\Storage\NormalizingConversationStore($store);
-        });
+        $this->app->extend(ConversationStore::class, fn (ConversationStore $store): \App\Ai\Storage\NormalizingConversationStore => new \App\Ai\Storage\NormalizingConversationStore($store));
 
         // Fix Laravel AI manager to properly resolve custom embedding providers
-        $this->app->extend(\Laravel\Ai\AiManager::class, function (\Laravel\Ai\AiManager $manager, $app) {
+        $this->app->extend(\Laravel\Ai\AiManager::class, function (\Laravel\Ai\AiManager $manager, $app): \Laravel\Ai\AiManager {
             // Register the custom embedding driver
-            $manager->extend('openrouter_embeddings', function ($app, array $config) {
-                return new \App\Ai\Providers\OpenRouterEmbeddingProvider(
-                    $config,
-                    $app->make(Dispatcher::class)
-                );
-            });
+            $manager->extend('openrouter_embeddings', fn ($app, array $config): \App\Ai\Providers\OpenRouterEmbeddingProvider => new \App\Ai\Providers\OpenRouterEmbeddingProvider(
+                $config,
+                $app->make(Dispatcher::class)
+            ));
 
             return $manager;
         });
@@ -132,8 +131,10 @@ final class AppServiceProvider extends ServiceProvider
         Event::listen(OrganizationMemberRemoved::class, SyncSubscriptionSeatsOnMemberChange::class);
         Event::listen(OrderCreated::class, AddCreditsFromLemonSqueezyOrder::class);
         Event::listen(AiJobCompleted::class, StartWorkflowsForAiJobCompleted::class);
+        Event::listen(CriticalAlertTriggered::class, SendCriticalFleetAlertNotifications::class);
         Event::listen(\Spatie\MediaLibrary\MediaCollections\Events\MediaHasBeenAddedEvent::class, ChunkAndEmbedMediaOnUpload::class);
         User::observe(UserObserver::class);
+        Alert::observe(AlertObserver::class);
 
         foreach ([
             DataTableExportController::class,
@@ -233,7 +234,7 @@ final class AppServiceProvider extends ServiceProvider
             'driver_qualification' => \App\Models\Fleet\DriverQualification::class,
             'training_enrollment' => \App\Models\Fleet\TrainingEnrollment::class,
             'cost_allocation' => \App\Models\Fleet\CostAllocation::class,
-            'alert' => \App\Models\Fleet\Alert::class,
+            'alert' => Alert::class,
             'alert_preference' => \App\Models\Fleet\AlertPreference::class,
             'report' => \App\Models\Fleet\Report::class,
             'report_execution' => \App\Models\Fleet\ReportExecution::class,
@@ -270,15 +271,13 @@ final class AppServiceProvider extends ServiceProvider
             'axle_load_reading' => \App\Models\Fleet\AxleLoadReading::class,
         ];
         foreach ($bindings as $key => $modelClass) {
-            Route::bind($key, function (string $value) use ($modelClass, $scope) {
-                return $modelClass::withoutGlobalScope($scope)->findOrFail($value);
-            });
+            Route::bind($key, fn (string $value) => $modelClass::query()->withoutGlobalScope($scope)->findOrFail($value));
         }
-        Route::bind('api_log', fn (string $value) => \App\Models\Fleet\ApiLog::findOrFail($value));
-        Route::bind('data_migration_run', fn (string $value) => \App\Models\Fleet\DataMigrationRun::findOrFail($value));
-        Route::bind('dashcam_clip', fn (string $value) => \App\Models\Fleet\DashcamClip::withoutGlobalScope($scope)->findOrFail($value));
-        Route::bind('vehicle_tyre', fn (string $value) => \App\Models\Fleet\VehicleTyre::findOrFail($value));
-        Route::bind('vehicle_check_item', fn (string $value) => \App\Models\Fleet\VehicleCheckItem::findOrFail($value));
+        Route::bind('api_log', fn (string $value) => \App\Models\Fleet\ApiLog::query()->findOrFail($value));
+        Route::bind('data_migration_run', fn (string $value) => \App\Models\Fleet\DataMigrationRun::query()->findOrFail($value));
+        Route::bind('dashcam_clip', fn (string $value) => \App\Models\Fleet\DashcamClip::query()->withoutGlobalScope($scope)->findOrFail($value));
+        Route::bind('vehicle_tyre', fn (string $value) => \App\Models\Fleet\VehicleTyre::query()->findOrFail($value));
+        Route::bind('vehicle_check_item', fn (string $value) => \App\Models\Fleet\VehicleCheckItem::query()->findOrFail($value));
     }
 
     private function configurePan(): void
@@ -346,6 +345,17 @@ final class AppServiceProvider extends ServiceProvider
             'pages-edit-save',
             'pages-duplicate',
             'pages-delete',
+            'onboarding-progress',
+            'onboarding-next',
+            'onboarding-complete',
+            'fleet-assistant-open',
+            'fleet-assistant-ask',
+            'fleet-dashboard-vehicles',
+            'fleet-dashboard-drivers',
+            'fleet-dashboard-work-orders',
+            'fleet-add-vehicle',
+            'fleet-add-driver',
+            'fleet-suggested-action',
         ]);
     }
 

@@ -20,9 +20,9 @@ final class FleetElectrificationAgent implements Agent, HasStructuredOutput
     public function instructions(): string
     {
         return 'You are a fleet electrification analyst. Given fleet vehicles (types, fuel, mileage), EV charging data, '
-            . 'carbon targets, and sustainability goals, produce: (1) a readiness_score 0-100; (2) replacement_order for vehicles '
-            . 'to replace with EVs (vehicle_id, recommended_year, reason, priority); (3) charging_recommendations (type, count, location_type, reason); '
-            . '(4) tco_summary (current_tco, projected_ev_tco, savings); (5) milestones (year, description, target).';
+            .'carbon targets, and sustainability goals, produce: (1) a readiness_score 0-100; (2) replacement_order for vehicles '
+            .'to replace with EVs (vehicle_id, recommended_year, reason, priority); (3) charging_recommendations (type, count, location_type, reason); '
+            .'(4) tco_summary (current_tco, projected_ev_tco, savings); (5) milestones (year, description, target).';
     }
 
     public function schema(JsonSchema $schema): array

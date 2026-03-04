@@ -21,12 +21,13 @@ use Pgvector\Laravel\Vector;
  * @property string $content
  * @property array|null $metadata
  * @property array|null $embedding
- * @property \Pgvector\Laravel\Vector|null $embedding_vector
+ * @property Vector|null $embedding_vector
  */
-class DocumentChunk extends Model
+final class DocumentChunk extends Model
 {
     use BelongsToOrganization;
     use HasNeighbors;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
 
     protected $fillable = [
         'chunkable_type',

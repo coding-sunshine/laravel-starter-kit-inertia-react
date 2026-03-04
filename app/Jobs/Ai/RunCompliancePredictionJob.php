@@ -15,6 +15,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 final class RunCompliancePredictionJob implements ShouldQueue
 {
@@ -31,12 +32,13 @@ final class RunCompliancePredictionJob implements ShouldQueue
 
     public function handle(CompliancePredictionService $service): void
     {
-        $run = AiJobRun::withoutGlobalScope(OrganizationScope::class)->find($this->aiJobRunId);
+        $run = AiJobRun::query()->withoutGlobalScope(OrganizationScope::class)->find($this->aiJobRunId);
         if ($run === null || $run->organization_id !== $this->organizationId) {
             Log::warning('RunCompliancePredictionJob: AiJobRun not found or org mismatch', [
                 'ai_job_run_id' => $this->aiJobRunId,
                 'organization_id' => $this->organizationId,
             ]);
+
             return;
         }
 
@@ -64,7 +66,7 @@ final class RunCompliancePredictionJob implements ShouldQueue
                 }
             }
 
-            AiAnalysisResult::withoutGlobalScope(OrganizationScope::class)->create([
+            AiAnalysisResult::query()->withoutGlobalScope(OrganizationScope::class)->create([
                 'organization_id' => $this->organizationId,
                 'analysis_type' => 'compliance_prediction',
                 'entity_type' => 'organization',
@@ -99,7 +101,7 @@ final class RunCompliancePredictionJob implements ShouldQueue
                 $this->organizationId,
                 ['at_risk_count' => $total, 'at_risk_vehicles' => count($vehicles), 'at_risk_drivers' => count($drivers)],
             ));
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('RunCompliancePredictionJob: failed', [
                 'ai_job_run_id' => $this->aiJobRunId,
                 'error' => $e->getMessage(),

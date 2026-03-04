@@ -17,16 +17,16 @@ final class PredictiveMaintenanceAgent implements Agent, HasStructuredOutput
 {
     use Promptable;
 
-    public const URGENCIES = ['low', 'medium', 'high', 'critical'];
+    public const array URGENCIES = ['low', 'medium', 'high', 'critical'];
 
     public function instructions(): string
     {
         return 'You are a fleet maintenance analyst. Given data about vehicles, work orders, service schedules, and defects, '
-            . 'identify maintenance that will likely be needed in the next 2–4 weeks. '
-            . 'For each finding: specify vehicle_id, the component or system (e.g. brakes, oil, tyres, battery), '
-            . 'a short reason (e.g. due mileage, recurring defect, schedule due), recommended_action (what to do), '
-            . 'urgency (low, medium, high, or critical), and confidence between 0 and 1. '
-            . 'Return only findings you are confident about; omit vehicles with no near-term maintenance needs.';
+            .'identify maintenance that will likely be needed in the next 2–4 weeks. '
+            .'For each finding: specify vehicle_id, the component or system (e.g. brakes, oil, tyres, battery), '
+            .'a short reason (e.g. due mileage, recurring defect, schedule due), recommended_action (what to do), '
+            .'urgency (low, medium, high, or critical), and confidence between 0 and 1. '
+            .'Return only findings you are confident about; omit vehicles with no near-term maintenance needs.';
     }
 
     public function schema(JsonSchema $schema): array

@@ -34,9 +34,10 @@ final class FuelCardController extends Controller
     public function create(): Response
     {
         $this->authorize('create', FuelCard::class);
+
         return Inertia::render('Fleet/FuelCards/Create', [
-            'cardTypes' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\FuelCardType::cases()),
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\FuelCardStatus::cases()),
+            'cardTypes' => array_map(fn (\App\Enums\Fleet\FuelCardType $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\FuelCardType::cases()),
+            'statuses' => array_map(fn (\App\Enums\Fleet\FuelCardStatus $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\FuelCardStatus::cases()),
             'vehicles' => \App\Models\Fleet\Vehicle::query()->orderBy('registration')->get(['id', 'registration']),
             'drivers' => \App\Models\Fleet\Driver::query()->orderBy('last_name')->get(['id', 'first_name', 'last_name']),
         ]);
@@ -45,7 +46,8 @@ final class FuelCardController extends Controller
     public function store(StoreFuelCardRequest $request): RedirectResponse
     {
         $this->authorize('create', FuelCard::class);
-        FuelCard::create($request->validated());
+        FuelCard::query()->create($request->validated());
+
         return to_route('fleet.fuel-cards.index')->with('flash', ['status' => 'success', 'message' => 'Fuel card created.']);
     }
 
@@ -60,10 +62,11 @@ final class FuelCardController extends Controller
     public function edit(FuelCard $fuel_card): Response
     {
         $this->authorize('update', $fuel_card);
+
         return Inertia::render('Fleet/FuelCards/Edit', [
             'fuelCard' => $fuel_card,
-            'cardTypes' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\FuelCardType::cases()),
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\FuelCardStatus::cases()),
+            'cardTypes' => array_map(fn (\App\Enums\Fleet\FuelCardType $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\FuelCardType::cases()),
+            'statuses' => array_map(fn (\App\Enums\Fleet\FuelCardStatus $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\FuelCardStatus::cases()),
             'vehicles' => \App\Models\Fleet\Vehicle::query()->orderBy('registration')->get(['id', 'registration']),
             'drivers' => \App\Models\Fleet\Driver::query()->orderBy('last_name')->get(['id', 'first_name', 'last_name']),
         ]);
@@ -73,6 +76,7 @@ final class FuelCardController extends Controller
     {
         $this->authorize('update', $fuel_card);
         $fuel_card->update($request->validated());
+
         return to_route('fleet.fuel-cards.show', $fuel_card)->with('flash', ['status' => 'success', 'message' => 'Fuel card updated.']);
     }
 
@@ -80,6 +84,7 @@ final class FuelCardController extends Controller
     {
         $this->authorize('delete', $fuel_card);
         $fuel_card->delete();
+
         return to_route('fleet.fuel-cards.index')->with('flash', ['status' => 'success', 'message' => 'Fuel card deleted.']);
     }
 }

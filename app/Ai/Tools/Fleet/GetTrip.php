@@ -9,12 +9,11 @@ use App\Models\Scopes\OrganizationScope;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Contracts\Tool;
 use Laravel\Ai\Tools\Request;
-use Stringable;
 
-final class GetTrip implements Tool
+final readonly class GetTrip implements Tool
 {
     public function __construct(
-        private readonly int $organizationId,
+        private int $organizationId,
     ) {}
 
     public function description(): string
@@ -29,14 +28,14 @@ final class GetTrip implements Tool
         ];
     }
 
-    public function handle(Request $request): string|Stringable
+    public function handle(Request $request): string
     {
         $id = (int) ($request['id'] ?? 0);
         if ($id <= 0) {
             return 'Please provide a valid trip ID.';
         }
 
-        $trip = Trip::withoutGlobalScope(OrganizationScope::class)
+        $trip = Trip::query()->withoutGlobalScope(OrganizationScope::class)
             ->where('organization_id', $this->organizationId)
             ->with(['vehicle:id,registration', 'driver:id,first_name,last_name', 'route:id,name'])
             ->find($id);
@@ -46,8 +45,9 @@ final class GetTrip implements Tool
         }
 
         $driver = $trip->driver ? $trip->driver->first_name.' '.$trip->driver->last_name : '—';
+
         return sprintf(
-            "Trip #%d: Vehicle %s, Driver %s, Route %s. Planned start: %s. Status: %s. View: /fleet/trips/%d",
+            'Trip #%d: Vehicle %s, Driver %s, Route %s. Planned start: %s. Status: %s. View: /fleet/trips/%d',
             $trip->id,
             $trip->vehicle?->registration ?? '—',
             $driver,

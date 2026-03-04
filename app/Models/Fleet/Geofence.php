@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Models\Fleet;
 
 use App\Models\Concerns\BelongsToOrganization;
-use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -44,9 +43,10 @@ use Mattiverse\Userstamps\Traits\Userstamps;
  * @property int|null $deleted_by
  * @property \Carbon\Carbon|null $deleted_at
  */
-class Geofence extends Model
+final class Geofence extends Model
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use SoftDeletes;
     use Userstamps;
 

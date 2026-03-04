@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services\Fleet;
 
-use App\Models\Fleet\Alert;
 use App\Models\Fleet\AiJobRun;
+use App\Models\Fleet\Alert;
 use App\Models\Fleet\WorkflowDefinition;
 use App\Models\Fleet\WorkflowExecution;
 use App\Models\Fleet\WorkOrder;
@@ -14,8 +14,8 @@ use App\Services\Ai\FleetElectrificationService;
 use App\Services\Ai\FleetOptimizationService;
 use App\Services\Ai\FraudDetectionService;
 use App\Services\Ai\PredictiveMaintenanceService;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 /**
  * Runs workflow steps autonomously. Supports:
@@ -24,9 +24,9 @@ use Illuminate\Support\Facades\Log;
  * - create_work_order: from prior step output (source_step, foreach, vehicle_id_from, title_template, min_urgency)
  * Audit: creates AiJobRun per AI step linked to workflow_execution.
  */
-final class WorkflowExecutionService
+final readonly class WorkflowExecutionService
 {
-    private const AI_AGENTS = [
+    private const array AI_AGENTS = [
         'compliance_prediction',
         'predictive_maintenance',
         'fraud_detection',
@@ -35,11 +35,11 @@ final class WorkflowExecutionService
     ];
 
     public function __construct(
-        private readonly CompliancePredictionService $compliancePrediction,
-        private readonly PredictiveMaintenanceService $predictiveMaintenance,
-        private readonly FraudDetectionService $fraudDetection,
-        private readonly FleetElectrificationService $fleetElectrification,
-        private readonly FleetOptimizationService $fleetOptimization,
+        private CompliancePredictionService $compliancePrediction,
+        private PredictiveMaintenanceService $predictiveMaintenance,
+        private FraudDetectionService $fraudDetection,
+        private FleetElectrificationService $fleetElectrification,
+        private FleetOptimizationService $fleetOptimization,
     ) {}
 
     public function run(WorkflowExecution $execution): void
@@ -48,6 +48,7 @@ final class WorkflowExecutionService
         $definition = $execution->workflowDefinition;
         if (! $definition instanceof WorkflowDefinition) {
             $this->fail($execution, 'Workflow definition not found.');
+
             return;
         }
 
@@ -59,6 +60,7 @@ final class WorkflowExecutionService
                 'completed_at' => now(),
                 'result_data' => ['message' => 'No steps to run', 'step_outputs' => []],
             ]);
+
             return;
         }
 
@@ -83,6 +85,7 @@ final class WorkflowExecutionService
                     $stepResults[] = ['index' => $index, 'type' => $type, 'agent' => $agent, 'skipped' => true, 'reason' => 'Unknown or disallowed agent'];
                     $attempted++;
                     $failed++;
+
                     continue;
                 }
                 $attempted++;
@@ -94,7 +97,7 @@ final class WorkflowExecutionService
                     $this->createAiJobRunAudit($execution, $organizationId, $agent, $result);
 
                     $completed++;
-                } catch (\Throwable $e) {
+                } catch (Throwable $e) {
                     Log::warning('WorkflowExecutionService: AI step failed', [
                         'execution_id' => $execution->id,
                         'step_index' => $index,
@@ -103,9 +106,11 @@ final class WorkflowExecutionService
                     ]);
                     $stepResults[] = ['index' => $index, 'type' => $type, 'agent' => $agent, 'success' => false, 'error' => $e->getMessage()];
                     $failed++;
-                    $this->fail($execution, "Step {$index} ({$agent}): " . $e->getMessage(), $attempted, $completed, $failed, $stepResults, $stepOutputs);
+                    $this->fail($execution, "Step {$index} ({$agent}): ".$e->getMessage(), $attempted, $completed, $failed, $stepResults, $stepOutputs);
+
                     return;
                 }
+
                 continue;
             }
 
@@ -116,13 +121,15 @@ final class WorkflowExecutionService
                     $stepOutputs[$index] = ['alerts_created' => $created];
                     $stepResults[] = ['index' => $index, 'type' => $type, 'success' => true, 'alerts_created' => $created];
                     $completed++;
-                } catch (\Throwable $e) {
+                } catch (Throwable $e) {
                     Log::warning('WorkflowExecutionService: create_alert failed', ['execution_id' => $execution->id, 'step_index' => $index, 'error' => $e->getMessage()]);
                     $stepResults[] = ['index' => $index, 'type' => $type, 'success' => false, 'error' => $e->getMessage()];
                     $failed++;
-                    $this->fail($execution, "Step {$index} (create_alert): " . $e->getMessage(), $attempted, $completed, $failed, $stepResults, $stepOutputs);
+                    $this->fail($execution, "Step {$index} (create_alert): ".$e->getMessage(), $attempted, $completed, $failed, $stepResults, $stepOutputs);
+
                     return;
                 }
+
                 continue;
             }
 
@@ -133,13 +140,15 @@ final class WorkflowExecutionService
                     $stepOutputs[$index] = ['work_orders_created' => $created];
                     $stepResults[] = ['index' => $index, 'type' => $type, 'success' => true, 'work_orders_created' => $created];
                     $completed++;
-                } catch (\Throwable $e) {
+                } catch (Throwable $e) {
                     Log::warning('WorkflowExecutionService: create_work_order failed', ['execution_id' => $execution->id, 'step_index' => $index, 'error' => $e->getMessage()]);
                     $stepResults[] = ['index' => $index, 'type' => $type, 'success' => false, 'error' => $e->getMessage()];
                     $failed++;
-                    $this->fail($execution, "Step {$index} (create_work_order): " . $e->getMessage(), $attempted, $completed, $failed, $stepResults, $stepOutputs);
+                    $this->fail($execution, "Step {$index} (create_work_order): ".$e->getMessage(), $attempted, $completed, $failed, $stepResults, $stepOutputs);
+
                     return;
                 }
+
                 continue;
             }
 
@@ -168,7 +177,8 @@ final class WorkflowExecutionService
             'FleetElectrificationAgent' => 'fleet_electrification',
             'FleetOptimizationAgent' => 'fleet_optimization',
         ];
-        return $map[$name] ?? strtolower(str_replace(['-', ' '], '_', $name));
+
+        return $map[$name] ?? mb_strtolower(str_replace(['-', ' '], '_', $name));
     }
 
     /**
@@ -178,8 +188,8 @@ final class WorkflowExecutionService
     {
         return match ($agent) {
             'compliance_prediction' => $this->compliancePrediction->run($organizationId),
-            'predictive_maintenance' => $this->predictiveMaintenance->run($organizationId, null),
-            'fraud_detection' => $this->fraudDetection->run($organizationId, Carbon::now()->subDays(30), Carbon::now()),
+            'predictive_maintenance' => $this->predictiveMaintenance->run($organizationId),
+            'fraud_detection' => $this->fraudDetection->run($organizationId, \Illuminate\Support\Facades\Date::now()->subDays(30), \Illuminate\Support\Facades\Date::now()),
             'fleet_electrification' => $this->fleetElectrification->generate($organizationId),
             'fleet_optimization' => $this->fleetOptimization->analyze($organizationId),
             default => null,
@@ -194,7 +204,7 @@ final class WorkflowExecutionService
             'compliance_prediction' => 'compliance_prediction',
             default => 'cost_analysis',
         };
-        AiJobRun::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->create([
+        AiJobRun::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)->create([
             'organization_id' => $organizationId,
             'job_type' => $jobType,
             'entity_type' => 'workflow_execution',
@@ -208,7 +218,7 @@ final class WorkflowExecutionService
     }
 
     /**
-     * @param array<int, mixed> $stepOutputs
+     * @param  array<int, mixed>  $stepOutputs
      */
     private function executeCreateAlert(int $organizationId, array $config, array $stepOutputs, int $workflowExecutionId): int
     {
@@ -239,7 +249,7 @@ final class WorkflowExecutionService
             $entityType = $item['type'] ?? 'organization';
             $entityId = isset($item['id']) ? (int) $item['id'] : $organizationId;
 
-            Alert::create([
+            Alert::query()->create([
                 'organization_id' => $organizationId,
                 'alert_type' => $alertType,
                 'severity' => $severity,
@@ -253,11 +263,12 @@ final class WorkflowExecutionService
             ]);
             $created++;
         }
+
         return $created;
     }
 
     /**
-     * @param array<int, mixed> $stepOutputs
+     * @param  array<int, mixed>  $stepOutputs
      */
     private function executeCreateWorkOrder(int $organizationId, array $config, array $stepOutputs, int $workflowExecutionId): int
     {
@@ -289,13 +300,16 @@ final class WorkflowExecutionService
                 continue;
             }
             $vehicleId = isset($item[$vehicleIdKey]) ? (int) $item[$vehicleIdKey] : null;
-            if ($vehicleId === null || $vehicleId < 1) {
+            if ($vehicleId === null) {
+                continue;
+            }
+            if ($vehicleId < 1) {
                 continue;
             }
             $title = $this->interpolate($titleTemplate, $item);
-            $woNumber = 'WO-WF-' . $workflowExecutionId . '-' . ($created + 1);
+            $woNumber = 'WO-WF-'.$workflowExecutionId.'-'.($created + 1);
 
-            WorkOrder::create([
+            WorkOrder::query()->create([
                 'organization_id' => $organizationId,
                 'vehicle_id' => $vehicleId,
                 'work_order_number' => $woNumber,
@@ -308,6 +322,7 @@ final class WorkflowExecutionService
             ]);
             $created++;
         }
+
         return $created;
     }
 
@@ -316,9 +331,10 @@ final class WorkflowExecutionService
         $out = $template;
         foreach ($data as $k => $v) {
             if (is_scalar($v)) {
-                $out = str_replace(['{{' . $k . '}}', '{{ ' . $k . ' }}'], (string) $v, $out);
+                $out = str_replace(['{{'.$k.'}}', '{{ '.$k.' }}'], (string) $v, $out);
             }
         }
+
         return $out;
     }
 

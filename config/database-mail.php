@@ -55,5 +55,7 @@ return [
         App\Events\Billing\DunningFailedPaymentReminder::class,
         App\Events\Billing\InvoicePaid::class,
         App\Events\NewTermsVersionPublished::class,
+        App\Events\Fleet\FleetDailyDigestReady::class,
+        App\Events\Fleet\CriticalAlertTriggered::class,
     ],
 ];

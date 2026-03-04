@@ -33,30 +33,34 @@ final class OperatorLicenceController extends Controller
     public function create(): Response
     {
         $this->authorize('create', OperatorLicence::class);
+
         return Inertia::render('Fleet/OperatorLicences/Create', [
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\OperatorLicenceStatus::cases()),
+            'statuses' => array_map(fn (\App\Enums\Fleet\OperatorLicenceStatus $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\OperatorLicenceStatus::cases()),
         ]);
     }
 
     public function store(StoreOperatorLicenceRequest $request): RedirectResponse
     {
         $this->authorize('create', OperatorLicence::class);
-        OperatorLicence::create($request->validated());
+        OperatorLicence::query()->create($request->validated());
+
         return to_route('fleet.operator-licences.index')->with('flash', ['status' => 'success', 'message' => 'Operator licence created.']);
     }
 
     public function show(OperatorLicence $operatorLicence): Response
     {
         $this->authorize('view', $operatorLicence);
+
         return Inertia::render('Fleet/OperatorLicences/Show', ['operatorLicence' => $operatorLicence]);
     }
 
     public function edit(OperatorLicence $operatorLicence): Response
     {
         $this->authorize('update', $operatorLicence);
+
         return Inertia::render('Fleet/OperatorLicences/Edit', [
             'operatorLicence' => $operatorLicence,
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\OperatorLicenceStatus::cases()),
+            'statuses' => array_map(fn (\App\Enums\Fleet\OperatorLicenceStatus $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\OperatorLicenceStatus::cases()),
         ]);
     }
 
@@ -64,6 +68,7 @@ final class OperatorLicenceController extends Controller
     {
         $this->authorize('update', $operatorLicence);
         $operatorLicence->update($request->validated());
+
         return to_route('fleet.operator-licences.show', $operatorLicence)->with('flash', ['status' => 'success', 'message' => 'Operator licence updated.']);
     }
 
@@ -71,6 +76,7 @@ final class OperatorLicenceController extends Controller
     {
         $this->authorize('delete', $operatorLicence);
         $operatorLicence->delete();
+
         return to_route('fleet.operator-licences.index')->with('flash', ['status' => 'success', 'message' => 'Operator licence deleted.']);
     }
 }

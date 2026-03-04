@@ -34,9 +34,10 @@ use Mattiverse\Userstamps\Traits\Userstamps;
  * @property bool $is_mandatory
  * @property bool $is_active
  */
-class TrainingCourse extends Model
+final class TrainingCourse extends Model
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use SoftDeletes;
     use Userstamps;
 

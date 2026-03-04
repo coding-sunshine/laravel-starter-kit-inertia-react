@@ -133,13 +133,51 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 
     Route::get('dashboard', function () {
         if (config('app.fleet_only_app', false)) {
-            return redirect()->route('fleet.dashboard');
+            return to_route('fleet.dashboard');
         }
 
-        return Inertia::render('dashboard');
+        $fleetSummary = null;
+        $activity = [];
+        $aiSummary = null;
+
+        if (App\Services\TenantContext::check()) {
+            $fleetSummary = [
+                'vehicle_count' => App\Models\Fleet\Vehicle::query()->count(),
+                'driver_count' => App\Models\Fleet\Driver::query()->count(),
+            ];
+            $user = request()->user();
+            if ($user && class_exists(Spatie\Activitylog\Models\Activity::class)) {
+                $activity = Spatie\Activitylog\Models\Activity::query()
+                    ->where('causer_id', $user->getKey())
+                    ->where('causer_type', $user::class)
+                    ->latest()
+                    ->limit(10)
+                    ->get()
+                    ->map(fn ($log): array => [
+                        'id' => $log->id,
+                        'description' => $log->description,
+                        'created_at' => $log->created_at->toIso8601String(),
+                    ])
+                    ->values()
+                    ->all();
+            }
+        }
+
+        return Inertia::render('dashboard', [
+            'fleetSummary' => $fleetSummary,
+            'activity' => $activity,
+            'aiSummary' => $aiSummary,
+        ]);
     })->name('dashboard');
 
-    Route::get('chat', fn () => Inertia::render('chat/index'))->name('chat');
+    Route::get('chat', fn () => Inertia::render('chat/index', [
+        'suggestedPrompts' => [
+            'What can you help me with?',
+            'Summarize my recent activity',
+            'Recommend a billing plan for my usage',
+            'Find help articles about settings',
+        ],
+    ]))->name('chat');
 
     Route::get('users', [UsersTableController::class, 'index'])->name('users.table');
     Route::post('users/bulk-soft-delete', [UsersTableController::class, 'bulkSoftDelete'])->name('users.bulk-soft-delete');
@@ -172,10 +210,13 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::middleware(['tenant', 'permission:org.settings.manage'])->group(function (): void {
         Route::get('settings/branding', [BrandingController::class, 'edit'])->name('settings.branding.edit');
         Route::put('settings/branding', [BrandingController::class, 'update'])->name('settings.branding.update');
+        Route::post('settings/branding/suggest', [BrandingController::class, 'suggest'])->name('settings.branding.suggest');
     });
 
     Route::middleware('tenant')->prefix('fleet')->name('fleet.')->group(function (): void {
         Route::get('/', [App\Http\Controllers\Fleet\FleetDashboardController::class, 'index'])->name('dashboard');
+        Route::get('dashboard/positions', [App\Http\Controllers\Fleet\FleetDashboardController::class, 'vehiclePositions'])->name('dashboard.positions');
+        Route::post('filters/interpret', [App\Http\Controllers\Fleet\FleetFilterController::class, 'interpret'])->name('filters.interpret');
         Route::get('assistant', [App\Http\Controllers\Fleet\FleetAssistantController::class, 'index'])->name('assistant.index');
         Route::post('assistant/prompt', [App\Http\Controllers\Fleet\FleetAssistantController::class, 'prompt'])->name('assistant.prompt');
         Route::post('assistant/stream', [App\Http\Controllers\Fleet\FleetAssistantController::class, 'stream'])->name('assistant.stream');
@@ -183,10 +224,14 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         Route::delete('assistant/conversations/{id}', [App\Http\Controllers\Fleet\FleetAssistantController::class, 'destroyConversation'])->name('assistant.conversations.destroy');
         Route::resource('locations', App\Http\Controllers\Fleet\LocationController::class)->names('locations');
         Route::resource('cost-centers', App\Http\Controllers\Fleet\CostCenterController::class)->names('cost-centers');
+        Route::post('drivers/bulk-destroy', [App\Http\Controllers\Fleet\DriverController::class, 'bulkDestroy'])->name('drivers.bulk-destroy');
+        Route::get('drivers/export', [App\Http\Controllers\Fleet\DriverController::class, 'export'])->name('drivers.export');
         Route::post('drivers/{driver}/assign-vehicle', [App\Http\Controllers\Fleet\DriverController::class, 'assignVehicle'])->name('drivers.assign-vehicle');
         Route::post('drivers/{driver}/unassign-vehicle', [App\Http\Controllers\Fleet\DriverController::class, 'unassignVehicle'])->name('drivers.unassign-vehicle');
         Route::resource('drivers', App\Http\Controllers\Fleet\DriverController::class)->names('drivers');
         Route::resource('trailers', App\Http\Controllers\Fleet\TrailerController::class)->names('trailers');
+        Route::post('vehicles/bulk-destroy', [App\Http\Controllers\Fleet\VehicleController::class, 'bulkDestroy'])->name('vehicles.bulk-destroy');
+        Route::get('vehicles/export', [App\Http\Controllers\Fleet\VehicleController::class, 'export'])->name('vehicles.export');
         Route::post('vehicles/{vehicle}/assign-driver', [App\Http\Controllers\Fleet\VehicleController::class, 'assignDriver'])->name('vehicles.assign-driver');
         Route::post('vehicles/{vehicle}/unassign-driver', [App\Http\Controllers\Fleet\VehicleController::class, 'unassignDriver'])->name('vehicles.unassign-driver');
         Route::resource('vehicles', App\Http\Controllers\Fleet\VehicleController::class)->names('vehicles');
@@ -207,6 +252,8 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         Route::resource('fuel-cards', App\Http\Controllers\Fleet\FuelCardController::class)->names('fuel-cards');
         Route::resource('fuel-transactions', App\Http\Controllers\Fleet\FuelTransactionController::class)->names('fuel-transactions');
         Route::resource('service-schedules', App\Http\Controllers\Fleet\ServiceScheduleController::class)->names('service-schedules');
+        Route::post('work-orders/bulk-destroy', [App\Http\Controllers\Fleet\WorkOrderController::class, 'bulkDestroy'])->name('work-orders.bulk-destroy');
+        Route::get('work-orders/export', [App\Http\Controllers\Fleet\WorkOrderController::class, 'export'])->name('work-orders.export');
         Route::resource('work-orders', App\Http\Controllers\Fleet\WorkOrderController::class)->names('work-orders');
         Route::resource('work-orders.work-order-lines', App\Http\Controllers\Fleet\WorkOrderLineController::class)->only(['index', 'create', 'store', 'edit', 'update', 'destroy'])->names('work-orders.work-order-lines')->scoped();
         Route::resource('work-orders.work-order-parts', App\Http\Controllers\Fleet\WorkOrderPartController::class)->only(['index', 'create', 'store', 'edit', 'update', 'destroy'])->names('work-orders.work-order-parts')->scoped();
@@ -248,9 +295,12 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         Route::resource('driver-qualifications', App\Http\Controllers\Fleet\DriverQualificationController::class)->names('driver-qualifications');
         Route::resource('training-enrollments', App\Http\Controllers\Fleet\TrainingEnrollmentController::class)->names('training-enrollments');
         Route::resource('cost-allocations', App\Http\Controllers\Fleet\CostAllocationController::class)->names('cost-allocations');
+        Route::post('alerts/bulk-acknowledge', [App\Http\Controllers\Fleet\AlertController::class, 'bulkAcknowledge'])->name('alerts.bulk-acknowledge');
         Route::resource('alerts', App\Http\Controllers\Fleet\AlertController::class)->only(['index', 'show'])->names('alerts');
         Route::post('alerts/{alert}/acknowledge', [App\Http\Controllers\Fleet\AlertController::class, 'acknowledge'])->name('alerts.acknowledge');
         Route::resource('alert-preferences', App\Http\Controllers\Fleet\AlertPreferenceController::class)->only(['index', 'edit', 'update'])->names('alert-preferences');
+        Route::get('reports/eld', [App\Http\Controllers\Fleet\EldReportController::class, 'index'])->name('reports.eld');
+        Route::get('reports/ifta', [App\Http\Controllers\Fleet\IftaReportController::class, 'index'])->name('reports.ifta');
         Route::resource('reports', App\Http\Controllers\Fleet\ReportController::class)->names('reports');
         Route::post('reports/{report}/run', [App\Http\Controllers\Fleet\ReportExecutionController::class, 'run'])->name('reports.run');
         Route::get('report-executions/{report_execution}/download', [App\Http\Controllers\Fleet\ReportExecutionController::class, 'download'])->name('report-executions.download');
@@ -271,6 +321,8 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         Route::resource('contractor-invoices', App\Http\Controllers\Fleet\ContractorInvoiceController::class)->names('contractor-invoices');
         Route::resource('driver-wellness-records', App\Http\Controllers\Fleet\DriverWellnessRecordController::class)->names('driver-wellness-records');
         Route::resource('driver-coaching-plans', App\Http\Controllers\Fleet\DriverCoachingPlanController::class)->names('driver-coaching-plans');
+        Route::get('dvir', [App\Http\Controllers\Fleet\DvirWizardController::class, 'index'])->name('dvir.index');
+        Route::post('dvir', [App\Http\Controllers\Fleet\DvirWizardController::class, 'store'])->name('dvir.store');
         Route::resource('vehicle-check-templates', App\Http\Controllers\Fleet\VehicleCheckTemplateController::class)->names('vehicle-check-templates');
         Route::resource('vehicle-checks', App\Http\Controllers\Fleet\VehicleCheckController::class)->names('vehicle-checks');
         Route::resource('vehicle-checks.vehicle-check-items', App\Http\Controllers\Fleet\VehicleCheckItemController::class)->only(['index', 'create', 'store', 'show', 'edit', 'update', 'destroy'])->names('vehicle-checks.vehicle-check-items')->scoped();
@@ -316,6 +368,7 @@ Route::post('webhooks/paddle', PaddleWebhookController::class)->name('webhooks.p
 
 Route::middleware(['auth', 'feature:onboarding'])->group(function (): void {
     Route::get('onboarding', [OnboardingController::class, 'show'])->name('onboarding');
+    Route::put('onboarding', [OnboardingController::class, 'update'])->name('onboarding.update');
     Route::post('onboarding', [OnboardingController::class, 'store'])->name('onboarding.store');
 });
 

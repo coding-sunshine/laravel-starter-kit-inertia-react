@@ -9,10 +9,10 @@ use App\Http\Requests\Fleet\StoreInsuranceClaimRequest;
 use App\Http\Requests\Fleet\UpdateInsuranceClaimRequest;
 use App\Jobs\Ai\RunDamageAssessmentJob;
 use App\Models\Fleet\AiAnalysisResult;
-use App\Services\Ai\FnolDraftService;
 use App\Models\Fleet\Incident;
 use App\Models\Fleet\InsuranceClaim;
 use App\Models\Fleet\InsurancePolicy;
+use App\Services\Ai\FnolDraftService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,8 +25,7 @@ final class InsuranceClaimController extends Controller
     {
         $this->authorize('viewAny', InsuranceClaim::class);
         $claims = InsuranceClaim::query()
-            ->with(['incident', 'insurancePolicy'])
-            ->orderByDesc('created_at')
+            ->with(['incident', 'insurancePolicy'])->latest()
             ->paginate(15)
             ->withQueryString();
 
@@ -34,19 +33,20 @@ final class InsuranceClaimController extends Controller
             'insuranceClaims' => $claims,
             'incidents' => Incident::query()->orderByDesc('incident_timestamp')->get(['id', 'incident_number']),
             'insurancePolicies' => InsurancePolicy::query()->orderBy('policy_number')->get(['id', 'policy_number']),
-            'claimTypes' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\InsuranceClaimType::cases()),
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\InsuranceClaimStatus::cases()),
+            'claimTypes' => array_map(fn (\App\Enums\Fleet\InsuranceClaimType $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\InsuranceClaimType::cases()),
+            'statuses' => array_map(fn (\App\Enums\Fleet\InsuranceClaimStatus $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\InsuranceClaimStatus::cases()),
         ]);
     }
 
     public function create(): Response
     {
         $this->authorize('create', InsuranceClaim::class);
+
         return Inertia::render('Fleet/InsuranceClaims/Create', [
             'incidents' => Incident::query()->orderByDesc('incident_timestamp')->get(['id', 'incident_number']),
             'insurancePolicies' => InsurancePolicy::query()->orderBy('policy_number')->get(['id', 'policy_number']),
-            'claimTypes' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\InsuranceClaimType::cases()),
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\InsuranceClaimStatus::cases()),
+            'claimTypes' => array_map(fn (\App\Enums\Fleet\InsuranceClaimType $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\InsuranceClaimType::cases()),
+            'statuses' => array_map(fn (\App\Enums\Fleet\InsuranceClaimStatus $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\InsuranceClaimStatus::cases()),
         ]);
     }
 
@@ -55,13 +55,14 @@ final class InsuranceClaimController extends Controller
         $this->authorize('create', InsuranceClaim::class);
         $validated = $request->validated();
         unset($validated['photos']);
-        $claim = InsuranceClaim::create($validated);
+        $claim = InsuranceClaim::query()->create($validated);
         if ($request->hasFile('photos')) {
             foreach ($request->file('photos') as $file) {
                 $claim->addMedia($file)->toMediaCollection('photos');
             }
-            RunDamageAssessmentJob::dispatch('insurance_claim', $claim->id, $request->user()?->id);
+            dispatch(new RunDamageAssessmentJob('insurance_claim', $claim->id, $request->user()?->id));
         }
+
         return to_route('fleet.insurance-claims.index')->with('flash', ['status' => 'success', 'message' => 'Insurance claim created.']);
     }
 
@@ -70,13 +71,12 @@ final class InsuranceClaimController extends Controller
         $this->authorize('view', $insurance_claim);
         $insurance_claim->load(['incident', 'insurancePolicy']);
         $insurance_claim->loadMedia('photos');
-        $photoUrls = $insurance_claim->getMedia('photos')->map(fn ($m) => ['id' => $m->id, 'url' => $m->getUrl()])->values()->all();
+        $photoUrls = $insurance_claim->getMedia('photos')->map(fn ($m): array => ['id' => $m->id, 'url' => $m->getUrl()])->values()->all();
 
         $damageAnalysis = AiAnalysisResult::query()
             ->where('entity_type', 'insurance_claim')
             ->where('entity_id', $insurance_claim->id)
-            ->where('analysis_type', 'claims_processing')
-            ->orderByDesc('created_at')
+            ->where('analysis_type', 'claims_processing')->latest()
             ->first();
 
         return Inertia::render('Fleet/InsuranceClaims/Show', [
@@ -87,21 +87,22 @@ final class InsuranceClaimController extends Controller
             'generateFnolUrl' => route('fleet.insurance-claims.generate-fnol', $insurance_claim),
             'incidents' => Incident::query()->orderByDesc('incident_timestamp')->get(['id', 'incident_number']),
             'insurancePolicies' => InsurancePolicy::query()->orderBy('policy_number')->get(['id', 'policy_number']),
-            'claimTypes' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\InsuranceClaimType::cases()),
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\InsuranceClaimStatus::cases()),
+            'claimTypes' => array_map(fn (\App\Enums\Fleet\InsuranceClaimType $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\InsuranceClaimType::cases()),
+            'statuses' => array_map(fn (\App\Enums\Fleet\InsuranceClaimStatus $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\InsuranceClaimStatus::cases()),
         ]);
     }
 
     public function edit(InsuranceClaim $insurance_claim): Response
     {
         $this->authorize('update', $insurance_claim);
+
         return Inertia::render('Fleet/InsuranceClaims/Edit', [
             'insuranceClaim' => $insurance_claim,
             'generateFnolUrl' => route('fleet.insurance-claims.generate-fnol', $insurance_claim),
             'incidents' => Incident::query()->orderByDesc('incident_timestamp')->get(['id', 'incident_number']),
             'insurancePolicies' => InsurancePolicy::query()->orderBy('policy_number')->get(['id', 'policy_number']),
-            'claimTypes' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\InsuranceClaimType::cases()),
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\InsuranceClaimStatus::cases()),
+            'claimTypes' => array_map(fn (\App\Enums\Fleet\InsuranceClaimType $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\InsuranceClaimType::cases()),
+            'statuses' => array_map(fn (\App\Enums\Fleet\InsuranceClaimStatus $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\InsuranceClaimStatus::cases()),
         ]);
     }
 
@@ -115,8 +116,9 @@ final class InsuranceClaimController extends Controller
             foreach ($request->file('photos') as $file) {
                 $insurance_claim->addMedia($file)->toMediaCollection('photos');
             }
-            RunDamageAssessmentJob::dispatch('insurance_claim', $insurance_claim->id, $request->user()?->id);
+            dispatch(new RunDamageAssessmentJob('insurance_claim', $insurance_claim->id, $request->user()?->id));
         }
+
         return to_route('fleet.insurance-claims.show', $insurance_claim)->with('flash', ['status' => 'success', 'message' => 'Insurance claim updated.']);
     }
 
@@ -124,6 +126,7 @@ final class InsuranceClaimController extends Controller
     {
         $this->authorize('delete', $insurance_claim);
         $insurance_claim->delete();
+
         return to_route('fleet.insurance-claims.index')->with('flash', ['status' => 'success', 'message' => 'Insurance claim deleted.']);
     }
 
@@ -134,10 +137,11 @@ final class InsuranceClaimController extends Controller
     {
         $this->authorize('update', $insurance_claim);
         $insurance_claim->loadMedia('photos');
-        if ($insurance_claim->getFirstMedia('photos') === null) {
+        if (! $insurance_claim->getFirstMedia('photos') instanceof \Spatie\MediaLibrary\MediaCollections\Models\Media) {
             return response()->json(['message' => 'No photo to analyze.', 'result_id' => null], 422);
         }
-        RunDamageAssessmentJob::dispatch('insurance_claim', $insurance_claim->id, $request->user()?->id);
+        dispatch(new RunDamageAssessmentJob('insurance_claim', $insurance_claim->id, $request->user()?->id));
+
         return response()->json([
             'message' => 'Claims analysis queued. Results will appear in AI Analysis and on this claim once complete.',
             'result_id' => null,
@@ -150,11 +154,12 @@ final class InsuranceClaimController extends Controller
     public function generateFnol(Request $request, InsuranceClaim $insurance_claim): JsonResponse
     {
         $this->authorize('update', $insurance_claim);
-        $fnolText = app(FnolDraftService::class)->generate($insurance_claim);
+        $fnolText = resolve(FnolDraftService::class)->generate($insurance_claim);
         if ($fnolText === null) {
             return response()->json(['message' => 'Could not generate FNOL (no incident or analysis failed).'], 422);
         }
         $insurance_claim->update(['claim_narrative' => $fnolText]);
+
         return response()->json([
             'message' => 'FNOL draft generated.',
             'fnol_text' => $fnolText,

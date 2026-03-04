@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Fleet;
 
-use App\Ai\Agents\FleetAssistant;
+use App\Ai\Agents\UnifiedAssistant;
 use App\Http\Controllers\Controller;
 use App\Services\Fleet\FleetInsightsService;
 use Illuminate\Http\JsonResponse;
@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
+use Laravel\Ai\Exceptions\AiException;
 use Laravel\Ai\Streaming\Events\ReasoningDelta;
 use Laravel\Ai\Streaming\Events\ReasoningStart;
 use Laravel\Ai\Streaming\Events\StreamEnd;
@@ -21,24 +22,14 @@ use Laravel\Ai\Streaming\Events\StreamStart;
 use Laravel\Ai\Streaming\Events\TextDelta;
 use Laravel\Ai\Streaming\Events\TextEnd;
 use Laravel\Ai\Streaming\Events\TextStart;
-use Laravel\Ai\Exceptions\AiException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
 
 final class FleetAssistantController extends Controller
 {
-    private const CONVERSATION_TITLE = 'Fleet Assistant';
+    private const string CONVERSATION_TITLE = 'Fleet Assistant';
 
-    private const AGENT_FLEET = 'fleet_assistant';
-
-    /** @param \Illuminate\Database\Query\Builder $query */
-    private function scopeFleetConversations($query): void
-    {
-        $query->where(function ($q): void {
-            $q->where('agent', self::AGENT_FLEET)
-                ->orWhere(fn ($q2): mixed => $q2->whereNull('agent')->where('title', self::CONVERSATION_TITLE));
-        });
-    }
+    private const string AGENT_FLEET = 'fleet_assistant';
 
     public function index(Request $request): Response
     {
@@ -53,7 +44,7 @@ final class FleetAssistantController extends Controller
                 ->where(function ($q): void {
                     $this->scopeFleetConversations($q);
                 })
-                ->orderByDesc('updated_at')
+                ->latest('updated_at')
                 ->limit(20)
                 ->get(['id', 'title', 'updated_at'])
                 ->map(fn ($row): array => [
@@ -69,14 +60,13 @@ final class FleetAssistantController extends Controller
                     ->where('id', $requestedId)
                     ->where('user_id', $user->id)
                     ->where(function ($q): void {
-                    $this->scopeFleetConversations($q);
-                })
+                        $this->scopeFleetConversations($q);
+                    })
                     ->first();
                 if ($conv !== null) {
                     $conversationId = $conv->id;
                     $initialMessages = DB::table('agent_conversation_messages')
-                        ->where('conversation_id', $conversationId)
-                        ->orderBy('created_at')
+                        ->where('conversation_id', $conversationId)->oldest()
                         ->get(['id', 'role', 'content'])
                         ->map(fn ($m): array => [
                             'id' => $m->id,
@@ -90,7 +80,7 @@ final class FleetAssistantController extends Controller
         }
 
         $organizationId = \App\Services\TenantContext::id();
-        $insightsService = app(FleetInsightsService::class);
+        $insightsService = resolve(FleetInsightsService::class);
         $insights = $organizationId !== null ? $insightsService->forOrganization($organizationId) : [];
         $suggestedQuestions = $organizationId !== null ? $insightsService->suggestedQuestions($organizationId) : [];
 
@@ -100,11 +90,11 @@ final class FleetAssistantController extends Controller
         if (is_string($contextParam) && $contextParam !== '') {
             $context = $contextParam;
             if (preg_match('/^vehicle:(\d+)$/i', $contextParam, $m)) {
-                $contextPrompt = 'Tell me about vehicle ID ' . $m[1];
+                $contextPrompt = 'Tell me about vehicle ID '.$m[1];
             } elseif (preg_match('/^work_order:(\d+)$/i', $contextParam, $m)) {
-                $contextPrompt = 'Tell me about work order ID ' . $m[1];
+                $contextPrompt = 'Tell me about work order ID '.$m[1];
             } elseif (preg_match('/^driver:(\d+)$/i', $contextParam, $m)) {
-                $contextPrompt = 'Tell me about driver ID ' . $m[1];
+                $contextPrompt = 'Tell me about driver ID '.$m[1];
             }
         }
 
@@ -167,7 +157,7 @@ final class FleetAssistantController extends Controller
             }
         }
 
-        $agent = FleetAssistant::make($organizationId, $user->id)->continue($conversationId, $user);
+        $agent = UnifiedAssistant::forFleet($organizationId, $user->id)->continue($conversationId, $user);
 
         try {
             $response = $agent->prompt($request->input('message'));
@@ -233,7 +223,7 @@ final class FleetAssistantController extends Controller
             }
         }
 
-        $agent = FleetAssistant::make($organizationId, $user->id)->continue($conversationId, $user);
+        $agent = UnifiedAssistant::forFleet($organizationId, $user->id)->continue($conversationId, $user);
 
         try {
             $stream = $agent->stream($request->input('message'));
@@ -279,6 +269,7 @@ final class FleetAssistantController extends Controller
                                 ob_flush();
                             }
                             flush();
+
                             continue;
                         }
 
@@ -296,6 +287,7 @@ final class FleetAssistantController extends Controller
                                 }
                                 flush();
                             }
+
                             continue;
                         }
 
@@ -313,6 +305,7 @@ final class FleetAssistantController extends Controller
                                 }
                                 flush();
                             }
+
                             continue;
                         }
 
@@ -342,6 +335,7 @@ final class FleetAssistantController extends Controller
                                 ob_flush();
                             }
                             flush();
+
                             continue;
                         }
 
@@ -371,6 +365,7 @@ final class FleetAssistantController extends Controller
                                 ob_flush();
                             }
                             flush();
+
                             continue;
                         }
 
@@ -384,6 +379,7 @@ final class FleetAssistantController extends Controller
                                 ob_flush();
                             }
                             flush();
+
                             continue;
                         }
 
@@ -459,8 +455,8 @@ final class FleetAssistantController extends Controller
             ->where('id', $id)
             ->where('user_id', $user->id)
             ->where(function ($q): void {
-                    $this->scopeFleetConversations($q);
-                })
+                $this->scopeFleetConversations($q);
+            })
             ->update(['title' => $request->input('title'), 'updated_at' => now()]);
 
         if (! $updated) {
@@ -471,7 +467,7 @@ final class FleetAssistantController extends Controller
             return response()->json(['data' => ['id' => $id, 'title' => $request->input('title')]]);
         }
 
-        return redirect()->back();
+        return back();
     }
 
     /**
@@ -488,8 +484,8 @@ final class FleetAssistantController extends Controller
             ->where('id', $id)
             ->where('user_id', $user->id)
             ->where(function ($q): void {
-                    $this->scopeFleetConversations($q);
-                })
+                $this->scopeFleetConversations($q);
+            })
             ->delete();
 
         if (! $deleted) {
@@ -503,5 +499,14 @@ final class FleetAssistantController extends Controller
         }
 
         return redirect()->to($id === $request->query('conversation_id') ? '/fleet/assistant' : $request->header('Referer', '/fleet/assistant'));
+    }
+
+    /** @param \Illuminate\Database\Query\Builder $query */
+    private function scopeFleetConversations($query): void
+    {
+        $query->where(function ($q): void {
+            $q->where('agent', self::AGENT_FLEET)
+                ->orWhere(fn ($q2): mixed => $q2->whereNull('agent')->where('title', self::CONVERSATION_TITLE));
+        });
     }
 }

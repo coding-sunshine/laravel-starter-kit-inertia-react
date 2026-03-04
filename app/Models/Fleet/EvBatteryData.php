@@ -22,8 +22,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $charging_status
  * @property array|null $battery_warnings
  */
-class EvBatteryData extends Model
+final class EvBatteryData extends Model
 {
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
+
     protected $table = 'ev_battery_data';
 
     protected $fillable = [

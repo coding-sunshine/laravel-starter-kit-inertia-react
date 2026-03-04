@@ -36,9 +36,10 @@ use Mattiverse\Userstamps\Traits\Userstamps;
  * @property \Carbon\Carbon|null $vor_start_time
  * @property \Carbon\Carbon|null $vor_end_time
  */
-class WorkOrder extends Model
+final class WorkOrder extends Model
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use SoftDeletes;
     use Userstamps;
 

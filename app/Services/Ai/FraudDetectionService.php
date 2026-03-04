@@ -10,10 +10,10 @@ use App\Models\Scopes\OrganizationScope;
 use Carbon\CarbonInterface;
 use Laravel\Ai\Responses\StructuredAgentResponse;
 
-final class FraudDetectionService
+final readonly class FraudDetectionService
 {
     public function __construct(
-        private readonly FuelFraudDetectionAgent $agent
+        private FuelFraudDetectionAgent $agent
     ) {}
 
     /**
@@ -58,20 +58,20 @@ final class FraudDetectionService
 
     private function buildContext(int $organizationId, ?CarbonInterface $dateFrom, ?CarbonInterface $dateTo): string
     {
-        $query = FuelTransaction::withoutGlobalScope(OrganizationScope::class)
+        $query = FuelTransaction::query()->withoutGlobalScope(OrganizationScope::class)
             ->where('organization_id', $organizationId)
             ->orderBy('transaction_timestamp', 'desc');
 
-        if ($dateFrom !== null) {
+        if ($dateFrom instanceof CarbonInterface) {
             $query->where('transaction_timestamp', '>=', $dateFrom);
         }
-        if ($dateTo !== null) {
+        if ($dateTo instanceof CarbonInterface) {
             $query->where('transaction_timestamp', '<=', $dateTo);
         }
 
         $str = static fn (mixed $v): ?string => $v === null ? null : (string) $v;
 
-        $transactions = $query->limit(500)->get()->map(fn ($t) => [
+        $transactions = $query->limit(500)->get()->map(fn ($t): array => [
             'id' => $t->id,
             'vehicle_id' => $t->vehicle_id,
             'driver_id' => $t->driver_id,
@@ -88,15 +88,17 @@ final class FraudDetectionService
             'validation_status' => $t->validation_status,
             'fraud_risk_score' => $str($t->fraud_risk_score),
             'anomaly_flags' => $t->anomaly_flags,
-        ])->toArray();
+        ])->all();
 
         $json = ['fuel_transactions' => $transactions];
-        return "Analyze these fuel transactions for anomalies suggesting possible fraud (location, time, volume, patterns). Return only the structured findings.\n\n" . json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+
+        return "Analyze these fuel transactions for anomalies suggesting possible fraud (location, time, volume, patterns). Return only the structured findings.\n\n".json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
     }
 
     private function normalizeSeverity(string $severity): string
     {
-        $s = strtolower($severity);
+        $s = mb_strtolower($severity);
+
         return in_array($s, ['low', 'medium', 'high', 'critical'], true) ? $s : 'low';
     }
 }

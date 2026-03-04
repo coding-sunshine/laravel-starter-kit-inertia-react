@@ -449,7 +449,7 @@ final class UserDataTable extends AbstractDataTable
     }
 
     /** Group rows by this column (e.g. onboarding status). Full usage example. */
-    public static function tableGroupByColumn(): ?string
+    public static function tableGroupByColumn(): string
     {
         return 'onboarding_completed';
     }
@@ -512,7 +512,7 @@ final class UserDataTable extends AbstractDataTable
         }
         $request->validate(self::tableInlineEditRules($columnId));
         $modelClass = self::tableInlineEditModel();
-        $model = $modelClass::findOrFail($id);
+        $model = $modelClass::query()->findOrFail($id);
         $oldValue = $model->{$columnId};
         $model->update([$columnId => $value]);
         self::logInlineEdit($model, $columnId, $oldValue, $model->{$columnId});
@@ -581,20 +581,20 @@ final class UserDataTable extends AbstractDataTable
         }
 
         try {
-            if (in_array($extension, ['csv'], true)) {
+            if ($extension === 'csv') {
                 $handle = fopen($filePath, 'r');
                 if ($handle === false) {
                     $errors[] = 'Could not open file.';
 
                     return ['created' => 0, 'updated' => 0, 'errors' => $errors];
                 }
-                $header = fgetcsv($handle);
+                $header = fgetcsv($handle, escape: '\\');
                 if ($header === false) {
                     fclose($handle);
 
                     return ['created' => 0, 'updated' => 0, 'errors' => $errors];
                 }
-                while (($row = fgetcsv($handle)) !== false) {
+                while (($row = fgetcsv($handle, escape: '\\')) !== false) {
                     $assoc = array_combine($header, $row);
                     if ($assoc === false) {
                         continue;

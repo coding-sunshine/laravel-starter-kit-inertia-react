@@ -1,0 +1,222 @@
+/**
+ * Design tokens — Metronic-inspired clean professional design.
+ * Semantic palette (primary, success, warning, error, info, neutral), spacing (4pt),
+ * typography (scale 2xs–4xl, 45–75ch body via .prose-read), motion, near-flat shadows.
+ * WCAG AA contrast; prefers-reduced-motion respected.
+ */
+
+:root {
+    /* Semantic palette (oklch) — light mode */
+    --color-primary: oklch(0.546 0.245 262.881);
+    --color-primary-foreground: oklch(0.985 0 0);
+    --color-success: oklch(0.55 0.18 145);
+    --color-success-foreground: oklch(0.985 0 0);
+    --color-warning: oklch(0.75 0.15 85);
+    --color-warning-foreground: oklch(0.25 0.02 85);
+    --color-error: oklch(0.577 0.245 27.325);
+    --color-error-foreground: oklch(0.985 0 0);
+    --color-info: oklch(0.546 0.245 262.881);
+    --color-info-foreground: oklch(0.985 0 0);
+    --color-neutral-50: oklch(0.985 0 0);
+    --color-neutral-100: oklch(0.967 0.001 286.375);
+    --color-neutral-200: oklch(0.92 0.004 286.32);
+    --color-neutral-300: oklch(0.871 0.006 286.286);
+    --color-neutral-400: oklch(0.552 0.016 285.938);
+    --color-neutral-500: oklch(0.442 0.017 285.786);
+    --color-neutral-600: oklch(0.37 0.013 285.805);
+    --color-neutral-700: oklch(0.274 0.006 286.033);
+    --color-neutral-800: oklch(0.21 0.006 285.885);
+    --color-neutral-900: oklch(0.141 0.005 285.823);
+
+    /* Spacing — 4pt base scale */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-10: 40px;
+    --space-12: 48px;
+    --space-16: 64px;
+    --space-24: 96px;
+
+    /* Typography scale */
+    --text-2xs: 0.6875rem;
+    --text-xs: 0.75rem;
+    --text-2sm: 0.8125rem;
+    --text-sm: 0.875rem;
+    --text-base: 1rem;
+    --text-lg: 1.125rem;
+    --text-xl: 1.25rem;
+    --text-2xl: 1.5rem;
+    --text-3xl: 1.875rem;
+    --text-4xl: 2.25rem;
+    --line-height-tight: 1.25;
+    --line-height-normal: 1.5;
+    --line-height-relaxed: 1.75;
+    --letter-spacing-tight: -0.025em;
+    --letter-spacing-normal: 0;
+    --letter-spacing-wide: 0.025em;
+
+    /* Radius */
+    --radius-sm: calc(var(--radius) - 4px);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) + 4px);
+
+    /* Shadow — near-flat (border-based separation, subtle lifts) */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+    --shadow-md:
+        0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.06);
+    --shadow-lg:
+        0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+    --shadow-xl:
+        0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.04);
+
+    /* Motion (respect prefers-reduced-motion in components) */
+    --duration-fast: 100ms;
+    --duration-normal: 150ms;
+    --duration-slow: 250ms;
+    --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-in: cubic-bezier(0.4, 0, 1, 1);
+    --ease-out: cubic-bezier(0, 0, 0.2, 1);
+}
+
+.dark {
+    --color-primary: oklch(0.623 0.214 259.815);
+    --color-primary-foreground: oklch(0.985 0 0);
+    --color-success: oklch(0.65 0.2 145);
+    --color-success-foreground: oklch(0.2 0.02 145);
+    --color-warning: oklch(0.8 0.14 85);
+    --color-warning-foreground: oklch(0.25 0.02 85);
+    --color-error: oklch(0.6 0.22 27);
+    --color-error-foreground: oklch(0.985 0 0);
+    --color-info: oklch(0.623 0.214 259.815);
+    --color-info-foreground: oklch(0.985 0 0);
+}
+
+/* Body line length for readability (45–75ch) */
+.prose-read {
+    max-width: 65ch;
+}
+
+/* Typography hierarchy — use with existing font-sans from theme */
+.heading-1 {
+    font-size: var(--text-4xl);
+    font-weight: 700;
+    line-height: var(--line-height-tight);
+    letter-spacing: var(--letter-spacing-tight);
+}
+.heading-2 {
+    font-size: var(--text-3xl);
+    font-weight: 600;
+    line-height: var(--line-height-tight);
+}
+.heading-3 {
+    font-size: var(--text-2xl);
+    font-weight: 600;
+    line-height: var(--line-height-normal);
+}
+.heading-4 {
+    font-size: var(--text-xl);
+    font-weight: 600;
+    line-height: var(--line-height-normal);
+}
+.heading-5 {
+    font-size: var(--text-lg);
+    font-weight: 600;
+    line-height: var(--line-height-normal);
+}
+.heading-6 {
+    font-size: var(--text-base);
+    font-weight: 600;
+    line-height: var(--line-height-normal);
+}
+.body-lg {
+    font-size: var(--text-lg);
+    line-height: var(--line-height-relaxed);
+}
+.body {
+    font-size: var(--text-base);
+    line-height: var(--line-height-normal);
+}
+.body-sm {
+    font-size: var(--text-sm);
+    line-height: var(--line-height-normal);
+}
+.caption {
+    font-size: var(--text-xs);
+    line-height: var(--line-height-normal);
+    color: var(--color-neutral-400);
+}
+
+/* Shimmer animation for skeleton placeholders */
+@keyframes shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+.animate-shimmer {
+    animation: shimmer 1.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .animate-shimmer {
+        animation: none;
+        opacity: 0.7;
+    }
+}
+
+/* Accessibility: respect reduced motion globally for design-token consumers */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* Skip link (WCAG 2.2) — first focusable element, visible on focus */
+.skip-link {
+    position: absolute;
+    top: var(--space-2);
+    left: var(--space-2);
+    z-index: 9999;
+    padding: var(--space-2) var(--space-4);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: oklch(0.2 0 0);
+    background: oklch(0.98 0 0);
+    border: 2px solid oklch(0.45 0 0);
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    clip: rect(0, 0, 0, 0);
+    clip-path: inset(50%);
+}
+.skip-link:focus {
+    clip: auto;
+    clip-path: none;
+    outline: 2px solid oklch(0.546 0.245 262.881);
+    outline-offset: 2px;
+}
+.dark .skip-link {
+    color: oklch(0.95 0 0);
+    background: oklch(0.22 0 0);
+    border-color: oklch(0.6 0 0);
+}
+
+/* Focus visible ring — use on interactive elements for keyboard focus (WCAG 2.2) */
+.focus-visible-ring:focus {
+    outline: none;
+}
+.focus-visible-ring:focus-visible {
+    outline: 2px solid oklch(0.546 0.245 262.881);
+    outline-offset: 2px;
+}

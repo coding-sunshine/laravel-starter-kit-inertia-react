@@ -8,7 +8,7 @@ use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
-class DocumentChunksCreated
+final class DocumentChunksCreated
 {
     use Dispatchable;
     use SerializesModels;

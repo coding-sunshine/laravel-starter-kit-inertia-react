@@ -37,6 +37,7 @@ final class DriverWorkingTimeController extends Controller
     public function create(): Response
     {
         $this->authorize('create', DriverWorkingTime::class);
+
         return Inertia::render('Fleet/DriverWorkingTime/Create', [
             'drivers' => \App\Models\Fleet\Driver::query()->orderBy('last_name')->get(['id', 'first_name', 'last_name']),
         ]);
@@ -45,7 +46,8 @@ final class DriverWorkingTimeController extends Controller
     public function store(StoreDriverWorkingTimeRequest $request): RedirectResponse
     {
         $this->authorize('create', DriverWorkingTime::class);
-        DriverWorkingTime::create($request->validated());
+        DriverWorkingTime::query()->create($request->validated());
+
         return to_route('fleet.driver-working-time.index')->with('flash', ['status' => 'success', 'message' => 'Driver working time record created.']);
     }
 
@@ -60,6 +62,7 @@ final class DriverWorkingTimeController extends Controller
     public function edit(DriverWorkingTime $driver_working_time): Response
     {
         $this->authorize('update', $driver_working_time);
+
         return Inertia::render('Fleet/DriverWorkingTime/Edit', [
             'driverWorkingTime' => $driver_working_time,
             'drivers' => \App\Models\Fleet\Driver::query()->orderBy('last_name')->get(['id', 'first_name', 'last_name']),
@@ -70,6 +73,7 @@ final class DriverWorkingTimeController extends Controller
     {
         $this->authorize('update', $driver_working_time);
         $driver_working_time->update($request->validated());
+
         return to_route('fleet.driver-working-time.show', $driver_working_time)->with('flash', ['status' => 'success', 'message' => 'Driver working time updated.']);
     }
 
@@ -77,6 +81,7 @@ final class DriverWorkingTimeController extends Controller
     {
         $this->authorize('delete', $driver_working_time);
         $driver_working_time->delete();
+
         return to_route('fleet.driver-working-time.index')->with('flash', ['status' => 'success', 'message' => 'Driver working time deleted.']);
     }
 }

@@ -8,6 +8,7 @@ use App\Ai\Agents\DocumentImageOcrAgent;
 use Illuminate\Support\Str;
 use Laravel\Ai\Files\Image;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
+use Throwable;
 
 /**
  * Extracts plain text from Spatie Media files for RAG chunking.
@@ -23,7 +24,7 @@ final class DocumentTextExtractor
         }
 
         $mime = $media->mime_type ?? '';
-        $extension = strtolower($media->extension ?? '');
+        $extension = mb_strtolower($media->extension ?? '');
 
         if (Str::contains($mime, 'text/plain') || $extension === 'txt') {
             return $this->extractTextPlain($path);
@@ -50,6 +51,7 @@ final class DocumentTextExtractor
         if ($content === false) {
             return '';
         }
+
         return $content;
     }
 
@@ -61,8 +63,9 @@ final class DocumentTextExtractor
         try {
             $parser = new \Smalot\PdfParser\Parser;
             $pdf = $parser->parseFile($path);
-            return (string) $pdf->getText();
-        } catch (\Throwable) {
+
+            return $pdf->getText();
+        } catch (Throwable) {
             return '';
         }
     }
@@ -81,14 +84,15 @@ final class DocumentTextExtractor
                     $text .= $this->getTextFromPhpWordElement($element);
                 }
             }
+
             return $text;
-        } catch (\Throwable) {
+        } catch (Throwable) {
             return '';
         }
     }
 
     /**
-     * @param object $element PhpOffice\PhpWord\Element\AbstractElement
+     * @param  object  $element  PhpOffice\PhpWord\Element\AbstractElement
      */
     private function getTextFromPhpWordElement(object $element): string
     {
@@ -100,25 +104,28 @@ final class DocumentTextExtractor
             foreach ($element->getElements() as $child) {
                 $out .= $this->getTextFromPhpWordElement($child);
             }
+
             return $out;
         }
+
         return '';
     }
 
     private function extractImageOcr(string $path): string
     {
         try {
-            $agent = app(DocumentImageOcrAgent::class);
+            $agent = resolve(DocumentImageOcrAgent::class);
             $response = $agent->prompt(
                 'Extract all text from this document or photo. Return only the raw text, or NONE if there is no text.',
                 [Image::fromPath($path)]
             );
-            $text = trim((string) $response->text);
-            if (strtoupper($text) === 'NONE' || $text === '') {
+            $text = mb_trim((string) $response->text);
+            if (mb_strtoupper($text) === 'NONE' || $text === '') {
                 return '';
             }
+
             return $text;
-        } catch (\Throwable) {
+        } catch (Throwable) {
             return '';
         }
     }

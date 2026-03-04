@@ -28,7 +28,7 @@ return new class extends Migration
             'damage_detection', 'claims_processing', 'incident_analysis',
             'electrification_planning',
         ];
-        $quoted = implode(', ', array_map(fn (string $v) => "'" . addslashes($v) . "'", $values));
+        $quoted = implode(', ', array_map(fn (string $v): string => "'".addslashes($v)."'", $values));
         DB::statement("ALTER TABLE ai_analysis_results ADD CONSTRAINT \"{$constraint}\" CHECK (analysis_type::text = ANY (ARRAY[{$quoted}]::text[]))");
     }
 

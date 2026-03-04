@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Models\Fleet;
 
 use App\Models\Concerns\BelongsToOrganization;
-use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -18,9 +17,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $status
  * @property \Carbon\Carbon|null $analysed_at
  */
-class TachographDownload extends Model
+final class TachographDownload extends Model
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
 
     protected $fillable = [
         'driver_id',

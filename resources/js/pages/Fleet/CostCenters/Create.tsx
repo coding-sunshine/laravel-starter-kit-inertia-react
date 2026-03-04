@@ -221,9 +221,7 @@ export default function FleetCostCentersCreate({
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <Label htmlFor="budget_annual">
-                                Annual budget
-                            </Label>
+                            <Label htmlFor="budget_annual">Annual budget</Label>
                             <Input
                                 id="budget_annual"
                                 type="number"

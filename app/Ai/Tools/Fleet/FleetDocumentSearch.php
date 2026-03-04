@@ -11,14 +11,14 @@ use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Str;
 use Laravel\Ai\Contracts\Tool;
 use Laravel\Ai\Tools\Request;
-use Stringable;
+use Throwable;
 
-final class FleetDocumentSearch implements Tool
+final readonly class FleetDocumentSearch implements Tool
 {
-    private const LIMIT = 8;
+    private const int LIMIT = 8;
 
     public function __construct(
-        private readonly int $organizationId,
+        private int $organizationId,
     ) {}
 
     public function description(): string
@@ -33,23 +33,23 @@ final class FleetDocumentSearch implements Tool
         ];
     }
 
-    public function handle(Request $request): string|Stringable
+    public function handle(Request $request): string
     {
         $query = (string) ($request['query'] ?? '');
         if ($query === '') {
             return 'Please provide a search query.';
         }
 
-        $chunks = DocumentChunk::withoutGlobalScope(OrganizationScope::class)
+        DocumentChunk::query()->withoutGlobalScope(OrganizationScope::class)
             ->where('organization_id', $this->organizationId);
 
         // Use professional-grade vector search service
         try {
             $queryEmbedding = Str::of($query)->toEmbeddings(provider: 'openrouter_embeddings', dimensions: 1536);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return 'Embedding service unavailable: '.$e->getMessage();
         }
-        if (! is_array($queryEmbedding) || empty($queryEmbedding)) {
+        if (! is_array($queryEmbedding) || $queryEmbedding === []) {
             return 'Could not generate query embedding.';
         }
 
@@ -74,11 +74,10 @@ final class FleetDocumentSearch implements Tool
             $out[] = sprintf('[%d] (%s%% match) %s',
                 $i + 1,
                 $similarityPercent,
-                trim($chunk->content)
+                mb_trim($chunk->content)
             );
         }
 
         return 'Relevant document excerpts (cite by number):'."\n\n".implode("\n\n", $out);
     }
-
 }

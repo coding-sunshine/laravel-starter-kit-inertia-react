@@ -16,9 +16,10 @@ use Mattiverse\Userstamps\Traits\Userstamps;
  * @property string $trigger_type
  * @property bool $is_active
  */
-class WorkflowDefinition extends Model
+final class WorkflowDefinition extends Model
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use Userstamps;
 
     protected $fillable = ['name', 'description', 'trigger_type', 'trigger_config', 'steps', 'is_active'];

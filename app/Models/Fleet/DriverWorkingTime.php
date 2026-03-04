@@ -26,9 +26,10 @@ use Mattiverse\Userstamps\Traits\Userstamps;
  * @property bool $rtd_compliant
  * @property bool $manual_entry
  */
-class DriverWorkingTime extends Model
+final class DriverWorkingTime extends Model
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use SoftDeletes;
     use Userstamps;
 

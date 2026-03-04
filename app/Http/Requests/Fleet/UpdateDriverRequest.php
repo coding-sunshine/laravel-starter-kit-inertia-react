@@ -33,4 +33,3 @@ final class UpdateDriverRequest extends FormRequest
         ];
     }
 }
-

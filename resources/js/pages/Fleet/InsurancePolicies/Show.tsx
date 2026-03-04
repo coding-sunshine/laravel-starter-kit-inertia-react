@@ -1,9 +1,9 @@
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface InsurancePolicyRecord {
     id: number;
@@ -36,14 +36,18 @@ export default function FleetInsurancePoliciesShow({ insurancePolicy }: Props) {
             <Head title={`Fleet – ${insurancePolicy.policy_number}`} />
             <div className="flex h-full flex-1 flex-col gap-6 rounded-xl p-4">
                 <div className="flex flex-wrap items-center justify-between gap-4">
-                    <h1 className="text-2xl font-semibold">{insurancePolicy.policy_number}</h1>
+                    <h1 className="text-2xl font-semibold">
+                        {insurancePolicy.policy_number}
+                    </h1>
                     <Button variant="outline" asChild>
                         <Link href="/fleet/insurance-policies">Back</Link>
                     </Button>
                 </div>
                 <Card>
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-base">Insurance policy</CardTitle>
+                        <CardTitle className="text-base">
+                            Insurance policy
+                        </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-2 text-sm">
                         <p>
@@ -65,29 +69,42 @@ export default function FleetInsurancePoliciesShow({ insurancePolicy }: Props) {
                         <p>
                             <span className="font-medium">Start date:</span>{' '}
                             {insurancePolicy.start_date
-                                ? new Date(insurancePolicy.start_date).toLocaleDateString()
+                                ? new Date(
+                                      insurancePolicy.start_date,
+                                  ).toLocaleDateString()
                                 : '—'}
                         </p>
                         <p>
                             <span className="font-medium">End date:</span>{' '}
                             {insurancePolicy.end_date
-                                ? new Date(insurancePolicy.end_date).toLocaleDateString()
+                                ? new Date(
+                                      insurancePolicy.end_date,
+                                  ).toLocaleDateString()
                                 : '—'}
                         </p>
                         {insurancePolicy.premium_amount != null && (
                             <p>
-                                <span className="font-medium">Premium amount:</span>{' '}
-                                {Number(insurancePolicy.premium_amount).toLocaleString()}
+                                <span className="font-medium">
+                                    Premium amount:
+                                </span>{' '}
+                                {Number(
+                                    insurancePolicy.premium_amount,
+                                ).toLocaleString()}
                             </p>
                         )}
                         {insurancePolicy.excess_amount != null && (
                             <p>
-                                <span className="font-medium">Excess amount:</span>{' '}
-                                {Number(insurancePolicy.excess_amount).toLocaleString()}
+                                <span className="font-medium">
+                                    Excess amount:
+                                </span>{' '}
+                                {Number(
+                                    insurancePolicy.excess_amount,
+                                ).toLocaleString()}
                             </p>
                         )}
                         <p>
-                            <span className="font-medium">Status:</span> {insurancePolicy.status}
+                            <span className="font-medium">Status:</span>{' '}
+                            {insurancePolicy.status}
                         </p>
                     </CardContent>
                 </Card>

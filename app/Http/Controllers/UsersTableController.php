@@ -26,7 +26,7 @@ final class UsersTableController extends Controller
 
     public function bulkSoftDelete(BulkSoftDeleteUsersRequest $request, BulkSoftDeleteUsers $action): RedirectResponse
     {
-        $count = $action->handle(array_map('intval', $request->validated('ids')), $request->user());
+        $count = $action->handle(array_map(intval(...), $request->validated('ids')), $request->user());
 
         return back()->with('flash', ['type' => 'success', 'message' => "{$count} user(s) soft-deleted."]);
     }
@@ -36,7 +36,7 @@ final class UsersTableController extends Controller
         $this->ensureCanViewUser($user, $request);
         $copy = $action->handle($user);
 
-        return redirect()->route('users.table')->with('flash', ['type' => 'success', 'message' => 'User duplicated as '.$copy->name.'.']);
+        return to_route('users.table')->with('flash', ['type' => 'success', 'message' => 'User duplicated as '.$copy->name.'.']);
     }
 
     public function show(User $user, Request $request): Response

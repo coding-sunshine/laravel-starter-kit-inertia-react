@@ -25,25 +25,29 @@ final class TyreInventoryController extends Controller
     public function create(): Response
     {
         $this->authorize('create', TyreInventory::class);
+
         return Inertia::render('Fleet/TyreInventory/Create');
     }
 
     public function store(StoreTyreInventoryRequest $request): RedirectResponse
     {
         $this->authorize('create', TyreInventory::class);
-        TyreInventory::create($request->validated());
+        TyreInventory::query()->create($request->validated());
+
         return to_route('fleet.tyre-inventory.index')->with('flash', ['status' => 'success', 'message' => 'Tyre inventory item created.']);
     }
 
     public function show(TyreInventory $tyre_inventory): Response
     {
         $this->authorize('view', $tyre_inventory);
+
         return Inertia::render('Fleet/TyreInventory/Show', ['tyreInventory' => $tyre_inventory]);
     }
 
     public function edit(TyreInventory $tyre_inventory): Response
     {
         $this->authorize('update', $tyre_inventory);
+
         return Inertia::render('Fleet/TyreInventory/Edit', ['tyreInventory' => $tyre_inventory]);
     }
 
@@ -51,6 +55,7 @@ final class TyreInventoryController extends Controller
     {
         $this->authorize('update', $tyre_inventory);
         $tyre_inventory->update($request->validated());
+
         return to_route('fleet.tyre-inventory.show', $tyre_inventory)->with('flash', ['status' => 'success', 'message' => 'Tyre inventory item updated.']);
     }
 
@@ -58,6 +63,7 @@ final class TyreInventoryController extends Controller
     {
         $this->authorize('delete', $tyre_inventory);
         $tyre_inventory->delete();
+
         return to_route('fleet.tyre-inventory.index')->with('flash', ['status' => 'success', 'message' => 'Tyre inventory item deleted.']);
     }
 }

@@ -15,9 +15,10 @@ use Illuminate\Database\Eloquent\Model;
  * @property \Carbon\Carbon|null $started_at
  * @property \Carbon\Carbon|null $completed_at
  */
-class AiJobRun extends Model
+final class AiJobRun extends Model
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
 
     protected $fillable = [
         'job_type', 'entity_type', 'entity_ids', 'parameters', 'status', 'priority',

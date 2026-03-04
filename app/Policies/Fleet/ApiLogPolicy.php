@@ -10,7 +10,7 @@ use App\Services\TenantContext;
 
 final class ApiLogPolicy
 {
-    public function viewAny(User $user): bool
+    public function viewAny(): bool
     {
         return TenantContext::check();
     }

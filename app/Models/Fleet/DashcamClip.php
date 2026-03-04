@@ -27,9 +27,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property float|null $speed_kmh
  * @property array|null $metadata
  */
-class DashcamClip extends Model
+final class DashcamClip extends Model
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
 
     protected $fillable = [
         'vehicle_id',

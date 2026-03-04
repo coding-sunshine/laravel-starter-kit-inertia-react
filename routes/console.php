@@ -34,3 +34,7 @@ Schedule::job(new App\Jobs\Billing\ProcessTrialEndingReminders)->daily()->at('04
 Schedule::job(new App\Jobs\Billing\ProcessDunningReminders)->daily()->at('05:00');
 
 Schedule::command('workflows:run-scheduled')->daily();
+
+Schedule::job(new App\Jobs\Fleet\SendFleetDailyDigestJob)->daily()->at('06:00');
+Schedule::job(new App\Jobs\Fleet\DetectFleetAnomaliesJob)->daily()->at('05:30');
+Schedule::job(new App\Jobs\Fleet\SyncDriverSafetyScoresJob)->daily()->at('04:30');

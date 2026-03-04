@@ -17,9 +17,10 @@ use Illuminate\Database\Eloquent\Model;
  * @property float|null $target_value
  * @property string|null $target_unit
  */
-class SustainabilityGoal extends Model
+final class SustainabilityGoal extends Model
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
 
     protected $fillable = [
         'title', 'description', 'status', 'target_date', 'target_value', 'target_unit', 'metrics',

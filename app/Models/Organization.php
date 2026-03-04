@@ -113,7 +113,7 @@ final class Organization extends Model
      */
     public function parent(): BelongsTo
     {
-        return $this->belongsTo(Organization::class, 'parent_id');
+        return $this->belongsTo(self::class, 'parent_id');
     }
 
     /**
@@ -121,7 +121,7 @@ final class Organization extends Model
      */
     public function children(): HasMany
     {
-        return $this->hasMany(Organization::class, 'parent_id');
+        return $this->hasMany(self::class, 'parent_id');
     }
 
     /**

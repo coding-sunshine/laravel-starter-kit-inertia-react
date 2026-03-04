@@ -17,16 +17,17 @@ final class IncidentAnalysisAgent implements Agent, HasStructuredOutput
 {
     use Promptable;
 
-    public const CATEGORIES = ['rear_end', 'side_swipe', 'single_vehicle', 'pedestrian', 'property_damage', 'other'];
-    public const SEVERITIES = ['low', 'medium', 'high', 'critical'];
+    public const array CATEGORIES = ['rear_end', 'side_swipe', 'single_vehicle', 'pedestrian', 'property_damage', 'other'];
+
+    public const array SEVERITIES = ['low', 'medium', 'high', 'critical'];
 
     public function instructions(): string
     {
         return 'You are an incident analyst. Given an incident report or witness statement (free text), extract: '
-            . '(1) parties involved (drivers, vehicles, third parties); (2) location and time; (3) weather/road conditions if mentioned; '
-            . '(4) severity (low, medium, high, or critical); (5) incident category (e.g. rear_end, side_swipe, single_vehicle, pedestrian, property_damage, or other); '
-            . '(6) a short structured summary (2–3 sentences); (7) any training or policy issues suggested; (8) inconsistencies between statements if multiple. '
-            . 'Be factual and only use information present in the text. Use empty string or "unknown" when not stated.';
+            .'(1) parties involved (drivers, vehicles, third parties); (2) location and time; (3) weather/road conditions if mentioned; '
+            .'(4) severity (low, medium, high, or critical); (5) incident category (e.g. rear_end, side_swipe, single_vehicle, pedestrian, property_damage, or other); '
+            .'(6) a short structured summary (2–3 sentences); (7) any training or policy issues suggested; (8) inconsistencies between statements if multiple. '
+            .'Be factual and only use information present in the text. Use empty string or "unknown" when not stated.';
     }
 
     public function schema(JsonSchema $schema): array

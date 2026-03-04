@@ -39,7 +39,7 @@ final class WorkOrderPartController extends Controller
     public function store(StoreWorkOrderPartRequest $request, WorkOrder $work_order): RedirectResponse
     {
         $this->authorize('update', $work_order);
-        WorkOrderPart::create(array_merge($request->validated(), ['work_order_id' => $work_order->id]));
+        WorkOrderPart::query()->create(array_merge($request->validated(), ['work_order_id' => $work_order->id]));
 
         return to_route('fleet.work-orders.show', $work_order)->with('flash', ['status' => 'success', 'message' => 'Work order part created.']);
     }

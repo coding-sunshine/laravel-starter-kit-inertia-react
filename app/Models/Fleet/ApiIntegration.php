@@ -6,7 +6,6 @@ namespace App\Models\Fleet;
 
 use App\Models\Concerns\BelongsToOrganization;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Mattiverse\Userstamps\Traits\Userstamps;
@@ -31,9 +30,10 @@ use Mattiverse\Userstamps\Traits\Userstamps;
  * @property string|null $webhook_url
  * @property bool $is_active
  */
-class ApiIntegration extends Model
+final class ApiIntegration extends Model
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use SoftDeletes;
     use Userstamps;
 

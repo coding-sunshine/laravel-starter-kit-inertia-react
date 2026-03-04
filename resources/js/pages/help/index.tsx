@@ -1,8 +1,12 @@
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import { index as helpIndex, show as helpShow } from '@/routes/help';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
+import { Search } from 'lucide-react';
+import { useState } from 'react';
 
 interface HelpArticle {
     id: number;
@@ -15,19 +19,42 @@ interface HelpArticle {
 interface Props {
     featured: HelpArticle[];
     byCategory: Record<string, HelpArticle[]>;
+    searchQuery?: string;
 }
 
-export default function HelpIndex({ featured, byCategory }: Props) {
+export default function HelpIndex({
+    featured,
+    byCategory,
+    searchQuery = '',
+}: Props) {
+    const [q, setQ] = useState(searchQuery);
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard().url },
         { title: 'Help', href: helpIndex().url },
     ];
+
+    const handleSearch = (e: React.FormEvent) => {
+        e.preventDefault();
+        router.get(helpIndex().url, q ? { q } : {}, { preserveState: true });
+    };
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Help Center" />
             <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-4">
                 <h1 className="text-2xl font-semibold">Help Center</h1>
+                <form onSubmit={handleSearch} className="flex max-w-md gap-2">
+                    <Input
+                        type="search"
+                        placeholder="Search help articles…"
+                        value={q}
+                        onChange={(e) => setQ(e.target.value)}
+                        className="flex-1"
+                    />
+                    <Button type="submit" variant="secondary" size="icon">
+                        <Search className="size-4" />
+                    </Button>
+                </form>
                 {featured.length === 0 &&
                 Object.keys(byCategory).length === 0 ? (
                     <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16 text-center">

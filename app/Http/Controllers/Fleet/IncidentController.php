@@ -13,7 +13,6 @@ use App\Models\Fleet\AiAnalysisResult;
 use App\Models\Fleet\Driver;
 use App\Models\Fleet\Incident;
 use App\Models\Fleet\Vehicle;
-use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -22,16 +21,6 @@ use Inertia\Response;
 
 final class IncidentController extends Controller
 {
-    private function enumOptions(): array
-    {
-        return [
-            'incidentTypes' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\IncidentType::cases()),
-            'severities' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\IncidentSeverity::cases()),
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\IncidentStatus::cases()),
-            'faultDeterminations' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\FaultDetermination::cases()),
-        ];
-    }
-
     public function index(): Response
     {
         $this->authorize('viewAny', Incident::class);
@@ -52,6 +41,7 @@ final class IncidentController extends Controller
     public function create(): Response
     {
         $this->authorize('create', Incident::class);
+
         return Inertia::render('Fleet/Incidents/Create', [
             'vehicles' => Vehicle::query()->orderBy('registration')->get(['id', 'registration']),
             'drivers' => Driver::query()->orderBy('last_name')->get(['id', 'first_name', 'last_name']),
@@ -64,17 +54,18 @@ final class IncidentController extends Controller
         $this->authorize('create', Incident::class);
         $validated = $request->validated();
         unset($validated['photos']);
-        $validated['incident_timestamp'] = Carbon::parse($validated['incident_date'] . ' ' . $validated['incident_time']);
-        $incident = Incident::create($validated);
+        $validated['incident_timestamp'] = \Illuminate\Support\Facades\Date::parse($validated['incident_date'].' '.$validated['incident_time']);
+        $incident = Incident::query()->create($validated);
         if ($request->hasFile('photos')) {
             foreach ($request->file('photos') as $file) {
                 $incident->addMedia($file)->toMediaCollection('photos');
             }
-            RunDamageAssessmentJob::dispatch('incident', $incident->id, $request->user()?->id);
+            dispatch(new RunDamageAssessmentJob('incident', $incident->id, $request->user()?->id));
         }
-        if (! empty(trim((string) ($validated['description'] ?? '')))) {
-            RunIncidentAnalysisJob::dispatch($incident->id, $request->user()?->id);
+        if (! in_array(mb_trim((string) ($validated['description'] ?? '')), ['', '0'], true)) {
+            dispatch(new RunIncidentAnalysisJob($incident->id, $request->user()?->id));
         }
+
         return to_route('fleet.incidents.index')->with('flash', ['status' => 'success', 'message' => 'Incident created.']);
     }
 
@@ -83,7 +74,7 @@ final class IncidentController extends Controller
         $this->authorize('view', $incident);
         $incident->load(['vehicle', 'driver', 'reportedByUser', 'investigatingOfficerUser']);
         $incident->loadMedia('photos');
-        $mediaItems = $incident->getMedia('photos')->map(fn ($m) => [
+        $mediaItems = $incident->getMedia('photos')->map(fn ($m): array => [
             'id' => $m->id,
             'url' => $m->getUrl(),
             'mime_type' => $m->mime_type ?? '',
@@ -93,15 +84,13 @@ final class IncidentController extends Controller
         $damageAnalysis = AiAnalysisResult::query()
             ->where('entity_type', 'incident')
             ->where('entity_id', $incident->id)
-            ->where('analysis_type', 'damage_detection')
-            ->orderByDesc('created_at')
+            ->where('analysis_type', 'damage_detection')->latest()
             ->first();
 
         $incidentAnalysis = AiAnalysisResult::query()
             ->where('entity_type', 'incident')
             ->where('entity_id', $incident->id)
-            ->where('analysis_type', 'incident_analysis')
-            ->orderByDesc('created_at')
+            ->where('analysis_type', 'incident_analysis')->latest()
             ->first();
 
         return Inertia::render('Fleet/Incidents/Show', [
@@ -121,7 +110,7 @@ final class IncidentController extends Controller
     {
         $this->authorize('update', $incident);
         $incident->loadMedia('photos');
-        $mediaItems = $incident->getMedia('photos')->map(fn ($m) => [
+        $mediaItems = $incident->getMedia('photos')->map(fn ($m): array => [
             'id' => $m->id,
             'url' => $m->getUrl(),
             'mime_type' => $m->mime_type ?? '',
@@ -142,17 +131,18 @@ final class IncidentController extends Controller
         $this->authorize('update', $incident);
         $validated = $request->validated();
         unset($validated['photos']);
-        $validated['incident_timestamp'] = Carbon::parse($validated['incident_date'] . ' ' . $validated['incident_time']);
+        $validated['incident_timestamp'] = \Illuminate\Support\Facades\Date::parse($validated['incident_date'].' '.$validated['incident_time']);
         $incident->update($validated);
         if ($request->hasFile('photos')) {
             foreach ($request->file('photos') as $file) {
                 $incident->addMedia($file)->toMediaCollection('photos');
             }
-            RunDamageAssessmentJob::dispatch('incident', $incident->id, $request->user()?->id);
+            dispatch(new RunDamageAssessmentJob('incident', $incident->id, $request->user()?->id));
         }
-        if (! empty(trim((string) ($validated['description'] ?? '')))) {
-            RunIncidentAnalysisJob::dispatch($incident->id, $request->user()?->id);
+        if (! in_array(mb_trim((string) ($validated['description'] ?? '')), ['', '0'], true)) {
+            dispatch(new RunIncidentAnalysisJob($incident->id, $request->user()?->id));
         }
+
         return to_route('fleet.incidents.show', $incident)->with('flash', ['status' => 'success', 'message' => 'Incident updated.']);
     }
 
@@ -160,6 +150,7 @@ final class IncidentController extends Controller
     {
         $this->authorize('delete', $incident);
         $incident->delete();
+
         return to_route('fleet.incidents.index')->with('flash', ['status' => 'success', 'message' => 'Incident deleted.']);
     }
 
@@ -170,10 +161,11 @@ final class IncidentController extends Controller
     {
         $this->authorize('update', $incident);
         $incident->loadMedia('photos');
-        if ($incident->getFirstMedia('photos') === null) {
+        if (! $incident->getFirstMedia('photos') instanceof \Spatie\MediaLibrary\MediaCollections\Models\Media) {
             return response()->json(['message' => 'No photo to analyze.', 'result_id' => null], 422);
         }
-        RunDamageAssessmentJob::dispatch('incident', $incident->id, $request->user()?->id);
+        dispatch(new RunDamageAssessmentJob('incident', $incident->id, $request->user()?->id));
+
         return response()->json([
             'message' => 'Damage analysis queued. Results will appear in AI Analysis and on this incident once complete.',
             'result_id' => null,
@@ -187,12 +179,23 @@ final class IncidentController extends Controller
     {
         $this->authorize('update', $incident);
         $desc = $incident->description ?? '';
-        if (trim($desc) === '') {
+        if (mb_trim($desc) === '') {
             return response()->json(['message' => 'No description to analyze.'], 422);
         }
-        RunIncidentAnalysisJob::dispatch($incident->id, $request->user()?->id);
+        dispatch(new RunIncidentAnalysisJob($incident->id, $request->user()?->id));
+
         return response()->json([
             'message' => 'Incident analysis queued. Results will appear shortly.',
         ]);
+    }
+
+    private function enumOptions(): array
+    {
+        return [
+            'incidentTypes' => array_map(fn (\App\Enums\Fleet\IncidentType $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\IncidentType::cases()),
+            'severities' => array_map(fn (\App\Enums\Fleet\IncidentSeverity $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\IncidentSeverity::cases()),
+            'statuses' => array_map(fn (\App\Enums\Fleet\IncidentStatus $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\IncidentStatus::cases()),
+            'faultDeterminations' => array_map(fn (\App\Enums\Fleet\FaultDetermination $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\FaultDetermination::cases()),
+        ];
     }
 }

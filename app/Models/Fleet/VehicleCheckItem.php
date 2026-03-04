@@ -7,8 +7,10 @@ namespace App\Models\Fleet;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class VehicleCheckItem extends Model
+final class VehicleCheckItem extends Model
 {
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
+
     protected $fillable = [
         'vehicle_check_id',
         'item_index',

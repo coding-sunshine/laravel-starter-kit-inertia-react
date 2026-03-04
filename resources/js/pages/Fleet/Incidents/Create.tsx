@@ -1,10 +1,10 @@
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 
 interface Option {
     value: string;
@@ -24,7 +24,7 @@ export default function FleetIncidentsCreate({
     drivers,
     incidentTypes,
     severities,
-    statuses,
+    statuses: _statuses,
     faultDeterminations,
 }: Props) {
     const form = useForm({
@@ -68,9 +68,18 @@ export default function FleetIncidentsCreate({
                         <Label htmlFor="vehicle_id">Vehicle *</Label>
                         <select
                             id="vehicle_id"
-                            value={data.vehicle_id === '' ? '' : String(data.vehicle_id)}
+                            value={
+                                data.vehicle_id === ''
+                                    ? ''
+                                    : String(data.vehicle_id)
+                            }
                             onChange={(e) =>
-                                setData('vehicle_id', e.target.value === '' ? '' : Number(e.target.value))
+                                setData(
+                                    'vehicle_id',
+                                    e.target.value === ''
+                                        ? ''
+                                        : Number(e.target.value),
+                                )
                             }
                             className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
                             required
@@ -83,16 +92,27 @@ export default function FleetIncidentsCreate({
                             ))}
                         </select>
                         {errors.vehicle_id && (
-                            <p className="mt-1 text-sm text-destructive">{errors.vehicle_id}</p>
+                            <p className="mt-1 text-sm text-destructive">
+                                {errors.vehicle_id}
+                            </p>
                         )}
                     </div>
                     <div>
                         <Label htmlFor="driver_id">Driver</Label>
                         <select
                             id="driver_id"
-                            value={data.driver_id === '' ? '' : String(data.driver_id)}
+                            value={
+                                data.driver_id === ''
+                                    ? ''
+                                    : String(data.driver_id)
+                            }
                             onChange={(e) =>
-                                setData('driver_id', e.target.value === '' ? '' : Number(e.target.value))
+                                setData(
+                                    'driver_id',
+                                    e.target.value === ''
+                                        ? ''
+                                        : Number(e.target.value),
+                                )
                             }
                             className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
                         >
@@ -105,52 +125,74 @@ export default function FleetIncidentsCreate({
                         </select>
                     </div>
                     <div>
-                        <Label htmlFor="incident_number">Incident number *</Label>
+                        <Label htmlFor="incident_number">
+                            Incident number *
+                        </Label>
                         <Input
                             id="incident_number"
                             value={data.incident_number}
-                            onChange={(e) => setData('incident_number', e.target.value)}
+                            onChange={(e) =>
+                                setData('incident_number', e.target.value)
+                            }
                             className="mt-1"
                         />
                         {errors.incident_number && (
-                            <p className="mt-1 text-sm text-destructive">{errors.incident_number}</p>
+                            <p className="mt-1 text-sm text-destructive">
+                                {errors.incident_number}
+                            </p>
                         )}
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <Label htmlFor="incident_date">Incident date *</Label>
+                            <Label htmlFor="incident_date">
+                                Incident date *
+                            </Label>
                             <Input
                                 id="incident_date"
                                 type="date"
                                 value={data.incident_date}
-                                onChange={(e) => setData('incident_date', e.target.value)}
+                                onChange={(e) =>
+                                    setData('incident_date', e.target.value)
+                                }
                                 className="mt-1"
                             />
                             {errors.incident_date && (
-                                <p className="mt-1 text-sm text-destructive">{errors.incident_date}</p>
+                                <p className="mt-1 text-sm text-destructive">
+                                    {errors.incident_date}
+                                </p>
                             )}
                         </div>
                         <div>
-                            <Label htmlFor="incident_time">Incident time *</Label>
+                            <Label htmlFor="incident_time">
+                                Incident time *
+                            </Label>
                             <Input
                                 id="incident_time"
                                 type="time"
                                 value={data.incident_time}
-                                onChange={(e) => setData('incident_time', e.target.value)}
+                                onChange={(e) =>
+                                    setData('incident_time', e.target.value)
+                                }
                                 className="mt-1"
                             />
                             {errors.incident_time && (
-                                <p className="mt-1 text-sm text-destructive">{errors.incident_time}</p>
+                                <p className="mt-1 text-sm text-destructive">
+                                    {errors.incident_time}
+                                </p>
                             )}
                         </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <Label htmlFor="incident_type">Incident type *</Label>
+                            <Label htmlFor="incident_type">
+                                Incident type *
+                            </Label>
                             <select
                                 id="incident_type"
                                 value={data.incident_type}
-                                onChange={(e) => setData('incident_type', e.target.value)}
+                                onChange={(e) =>
+                                    setData('incident_type', e.target.value)
+                                }
                                 className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
                             >
                                 {incidentTypes.map((o) => (
@@ -165,7 +207,9 @@ export default function FleetIncidentsCreate({
                             <select
                                 id="severity"
                                 value={data.severity}
-                                onChange={(e) => setData('severity', e.target.value)}
+                                onChange={(e) =>
+                                    setData('severity', e.target.value)
+                                }
                                 className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
                             >
                                 {severities.map((o) => (
@@ -181,11 +225,15 @@ export default function FleetIncidentsCreate({
                         <textarea
                             id="description"
                             value={data.description}
-                            onChange={(e) => setData('description', e.target.value)}
+                            onChange={(e) =>
+                                setData('description', e.target.value)
+                            }
                             className="mt-1 flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
                         />
                         {errors.description && (
-                            <p className="mt-1 text-sm text-destructive">{errors.description}</p>
+                            <p className="mt-1 text-sm text-destructive">
+                                {errors.description}
+                            </p>
                         )}
                     </div>
                     <div>
@@ -193,16 +241,22 @@ export default function FleetIncidentsCreate({
                         <Input
                             id="location_description"
                             value={data.location_description}
-                            onChange={(e) => setData('location_description', e.target.value)}
+                            onChange={(e) =>
+                                setData('location_description', e.target.value)
+                            }
                             className="mt-1"
                         />
                     </div>
                     <div>
-                        <Label htmlFor="fault_determination">Fault determination</Label>
+                        <Label htmlFor="fault_determination">
+                            Fault determination
+                        </Label>
                         <select
                             id="fault_determination"
                             value={data.fault_determination}
-                            onChange={(e) => setData('fault_determination', e.target.value)}
+                            onChange={(e) =>
+                                setData('fault_determination', e.target.value)
+                            }
                             className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
                         >
                             {faultDeterminations.map((o) => (
@@ -221,11 +275,18 @@ export default function FleetIncidentsCreate({
                             multiple
                             className="mt-1 block w-full text-sm text-muted-foreground file:mr-4 file:rounded-md file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-medium file:text-primary-foreground file:transition-colors"
                             onChange={(e) =>
-                                setData('photos', e.target.files ? Array.from(e.target.files) : [])
+                                setData(
+                                    'photos',
+                                    e.target.files
+                                        ? Array.from(e.target.files)
+                                        : [],
+                                )
                             }
                         />
                         {errors.photos && (
-                            <p className="mt-1 text-sm text-destructive">{errors.photos}</p>
+                            <p className="mt-1 text-sm text-destructive">
+                                {errors.photos}
+                            </p>
                         )}
                         {data.photos.length > 0 && (
                             <p className="mt-1 text-sm text-muted-foreground">

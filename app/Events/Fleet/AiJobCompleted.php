@@ -7,7 +7,7 @@ namespace App\Events\Fleet;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class AiJobCompleted
+final class AiJobCompleted
 {
     use Dispatchable;
     use SerializesModels;

@@ -9,13 +9,12 @@ use App\Models\Scopes\OrganizationScope;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Contracts\Tool;
 use Laravel\Ai\Tools\Request;
-use Stringable;
 
-final class ListTrips implements Tool
+final readonly class ListTrips implements Tool
 {
-    private const DEFAULT_LIMIT = 10;
+    private const int DEFAULT_LIMIT = 10;
 
-    public function __construct(private readonly int $organizationId) {}
+    public function __construct(private int $organizationId) {}
 
     public function description(): string
     {
@@ -31,12 +30,12 @@ final class ListTrips implements Tool
         ];
     }
 
-    public function handle(Request $request): string|Stringable
+    public function handle(Request $request): string
     {
-        $query = Trip::withoutGlobalScope(OrganizationScope::class)
+        $query = Trip::query()->withoutGlobalScope(OrganizationScope::class)
             ->where('organization_id', $this->organizationId)
             ->with(['vehicle:id,registration', 'driver:id,first_name,last_name'])
-            ->orderByDesc('started_at');
+            ->latest('started_at');
 
         $vehicleId = $request['vehicle_id'] ?? null;
         if (is_numeric($vehicleId)) {
@@ -56,10 +55,11 @@ final class ListTrips implements Tool
             return 'No trips found.';
         }
 
-        $lines = $trips->map(function ($t) {
+        $lines = $trips->map(function ($t): string {
             $reg = $t->vehicle?->registration ?? '—';
             $driver = $t->driver ? $t->driver->first_name.' '.$t->driver->last_name : '—';
             $dist = $t->distance_km ? round((float) $t->distance_km, 1).' km' : '—';
+
             return sprintf('#%d %s | Vehicle %s | Driver %s | %s', $t->id, $t->started_at?->format('Y-m-d H:i') ?? '—', $reg, $driver, $dist);
         });
 

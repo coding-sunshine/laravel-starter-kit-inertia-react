@@ -26,9 +26,10 @@ use Mattiverse\Userstamps\Traits\Userstamps;
  * @property bool $preferred
  * @property bool $is_active
  */
-class PartsSupplier extends Model
+final class PartsSupplier extends Model
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use SoftDeletes;
     use Userstamps;
 

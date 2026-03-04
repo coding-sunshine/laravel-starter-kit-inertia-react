@@ -76,6 +76,11 @@
             "type": "timestamp",
             "nullable": true,
             "default": null
+        },
+        "phone": {
+            "type": "string",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {

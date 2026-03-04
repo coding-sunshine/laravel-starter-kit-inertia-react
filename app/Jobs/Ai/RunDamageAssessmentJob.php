@@ -10,12 +10,13 @@ use App\Models\Fleet\InsuranceClaim;
 use App\Models\Scopes\OrganizationScope;
 use App\Services\Ai\DamageAssessmentService;
 use Illuminate\Bus\Queueable;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 /**
  * Runs damage assessment (vision) on the first photo of a Defect, Incident, or InsuranceClaim
@@ -37,17 +38,18 @@ final class RunDamageAssessmentJob implements ShouldQueue
     public function handle(DamageAssessmentService $service): void
     {
         $entity = $this->resolveEntity();
-        if ($entity === null) {
+        if (! $entity instanceof Model) {
             Log::warning('RunDamageAssessmentJob: entity not found', [
                 'entity_type' => $this->entityType,
                 'entity_id' => $this->entityId,
             ]);
+
             return;
         }
 
         try {
             $service->runAndPersist($entity, $this->userId);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('RunDamageAssessmentJob: assessment failed', [
                 'entity_type' => $this->entityType,
                 'entity_id' => $this->entityId,
@@ -58,7 +60,7 @@ final class RunDamageAssessmentJob implements ShouldQueue
     }
 
     /** @return Defect|Incident|InsuranceClaim|null */
-    private function resolveEntity(): Model|null
+    private function resolveEntity(): ?Model
     {
         $withoutScope = fn (string $model) => $model::withoutGlobalScope(OrganizationScope::class)->find($this->entityId);
 

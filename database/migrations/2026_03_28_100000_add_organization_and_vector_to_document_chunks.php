@@ -29,6 +29,12 @@ return new class extends Migration
             return;
         }
 
+        if (Schema::hasColumn('document_chunks', 'embedding_vector')) {
+            Schema::table('document_chunks', function (Blueprint $table): void {
+                $table->dropColumn('embedding_vector');
+            });
+        }
+
         Schema::table('document_chunks', function (Blueprint $table): void {
             $table->vector('embedding_vector', 1536)->nullable()->after('embedding');
         });

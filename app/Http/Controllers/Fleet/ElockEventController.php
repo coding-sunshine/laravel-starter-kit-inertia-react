@@ -31,7 +31,7 @@ final class ElockEventController extends Controller
             'elockEvents' => $events,
             'filters' => $request->only(['vehicle_id', 'from_date', 'to_date', 'event_type']),
             'vehicles' => Vehicle::query()->orderBy('registration')->get(['id', 'registration']),
-            'eventTypes' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], ElockEventType::cases()),
+            'eventTypes' => array_map(fn (ElockEventType $c): array => ['value' => $c->value, 'name' => $c->name], ElockEventType::cases()),
         ]);
     }
 

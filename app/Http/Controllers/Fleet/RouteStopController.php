@@ -20,20 +20,23 @@ final class RouteStopController extends Controller
         $route->stops()->create(array_merge($request->validated(), [
             'sort_order' => $request->input('sort_order', $maxOrder + 1),
         ]));
-        return redirect()->route('fleet.routes.show', $route)->with('flash', ['status' => 'success', 'message' => 'Stop added.']);
+
+        return to_route('fleet.routes.show', $route)->with('flash', ['status' => 'success', 'message' => 'Stop added.']);
     }
 
     public function update(UpdateRouteStopRequest $request, Route $route, RouteStop $routeStop): RedirectResponse
     {
         $this->authorize('update', $routeStop);
         $routeStop->update($request->validated());
-        return redirect()->route('fleet.routes.show', $route)->with('flash', ['status' => 'success', 'message' => 'Stop updated.']);
+
+        return to_route('fleet.routes.show', $route)->with('flash', ['status' => 'success', 'message' => 'Stop updated.']);
     }
 
     public function destroy(Route $route, RouteStop $routeStop): RedirectResponse
     {
         $this->authorize('delete', $routeStop);
         $routeStop->delete();
-        return redirect()->route('fleet.routes.show', $route)->with('flash', ['status' => 'success', 'message' => 'Stop removed.']);
+
+        return to_route('fleet.routes.show', $route)->with('flash', ['status' => 'success', 'message' => 'Stop removed.']);
     }
 }

@@ -1625,7 +1625,28 @@ final class FleetFullSeeder extends Seeder
                 'confidence_score' => 0.7600,
                 'risk_score' => 18.00,
                 'status' => 'reviewed',
-                'detailed_analysis' => ['finding' => '8 of 25 fleet vehicles have daily ranges under 100 miles with predictable routes, making them strong EV candidates. Analysis includes charging infrastructure requirements.', 'ev_candidates' => 8, 'total_fleet' => 25, 'avg_daily_range' => 62, 'roi_months' => 18, 'charging_stations_needed' => 4],
+                'detailed_analysis' => [
+                    'readiness_score' => 72.0,
+                    'replacement_order' => [
+                        ['vehicle_id' => 1, 'recommended_year' => 2025, 'reason' => 'High daily mileage under 100mi with predictable route', 'priority' => 'high'],
+                        ['vehicle_id' => 3, 'recommended_year' => 2025, 'reason' => 'Diesel vehicle with highest fuel cost per km', 'priority' => 'high'],
+                        ['vehicle_id' => 5, 'recommended_year' => 2026, 'reason' => 'Urban delivery route ideal for EV range', 'priority' => 'medium'],
+                    ],
+                    'charging_recommendations' => [
+                        ['type' => 'Level 2 AC', 'count' => 3, 'location_type' => 'HQ Depot', 'reason' => 'Overnight charging for 3 pilot EVs'],
+                        ['type' => 'Level 2 AC', 'count' => 1, 'location_type' => 'North Yard', 'reason' => 'Daytime top-up for field vehicles'],
+                    ],
+                    'tco_summary' => [
+                        'current_tco' => 185000,
+                        'projected_ev_tco' => 148000,
+                        'savings' => 37000,
+                    ],
+                    'milestones' => [
+                        ['year' => 2025, 'description' => 'Pilot 3 EVs and install 4 charging points', 'target' => '3 EVs deployed'],
+                        ['year' => 2026, 'description' => 'Expand to 8 EVs across all depots', 'target' => '32% fleet electrified'],
+                        ['year' => 2028, 'description' => 'Full transition for eligible vehicles', 'target' => '60% fleet electrified'],
+                    ],
+                ],
                 'recommendations' => ['Start with 3-vehicle pilot using Tesla Model 3 or equivalent', 'Install 4 charging points at HQ Depot and North Yard', 'Apply for government OZEV workplace charging grant'],
                 'action_items' => ['Identify 3 pilot vehicles for replacement', 'Get charging infrastructure quotes', 'Submit OZEV grant application'],
                 'business_impact' => ['annual_fuel_saving' => 'GBP 2,400 per vehicle (fuel vs electricity)', 'carbon_reduction' => '12 tonnes CO2 annually for 8 vehicles', 'grant_available' => 'Up to GBP 14,000 OZEV workplace charging grant'],
@@ -1690,14 +1711,14 @@ final class FleetFullSeeder extends Seeder
 
         $now = now();
         $resultIds = [];
-        foreach ($analysisResults as $i => $result) {
+        foreach ($analysisResults as $result) {
             $result['organization_id'] = $this->org->id;
             $result['model_name'] = 'gpt-4o-mini';
             $result['model_version'] = '2024-07-18';
             $result['created_at'] = $now->copy()->subDays(random_int(1, 14))->subHours(random_int(0, 12));
             $result['updated_at'] = $result['created_at'];
 
-            $model = \App\Models\Fleet\AiAnalysisResult::withoutGlobalScope($scope)->firstOrCreate(
+            $model = \App\Models\Fleet\AiAnalysisResult::query()->withoutGlobalScope($scope)->firstOrCreate(
                 [
                     'organization_id' => $this->org->id,
                     'analysis_type' => $result['analysis_type'],
@@ -1790,7 +1811,7 @@ final class FleetFullSeeder extends Seeder
             $run['created_at'] = $run['started_at'];
             $run['updated_at'] = $run['completed_at'];
 
-            \App\Models\Fleet\AiJobRun::withoutGlobalScope($scope)->firstOrCreate(
+            \App\Models\Fleet\AiJobRun::query()->withoutGlobalScope($scope)->firstOrCreate(
                 [
                     'organization_id' => $this->org->id,
                     'job_type' => $run['job_type'],

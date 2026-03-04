@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Settings;
 
+use App\Actions\Settings\SuggestBrandingFromLogo;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\UpdateBrandingRequest;
 use App\Models\Organization;
 use App\Services\OrganizationSettingsService;
 use App\Services\TenantContext;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -77,5 +79,18 @@ final class BrandingController extends Controller
         }
 
         return to_route('settings.branding.edit')->with('flash', ['status' => 'success', 'message' => 'Branding updated.']);
+    }
+
+    public function suggest(Request $request, SuggestBrandingFromLogo $action): JsonResponse
+    {
+        $organization = TenantContext::get();
+        if (! $organization instanceof Organization) {
+            return response()->json(['message' => 'No organization selected.'], 403);
+        }
+        abort_unless($request->user()?->canInOrganization('org.settings.manage', $organization), 403);
+
+        $suggestion = $action->handle($request->file('logo'));
+
+        return response()->json($suggestion);
     }
 }

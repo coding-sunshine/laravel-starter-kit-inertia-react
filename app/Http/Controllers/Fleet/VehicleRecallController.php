@@ -22,7 +22,7 @@ final class VehicleRecallController extends Controller
             ->with(['vehicle'])
             ->when($request->input('vehicle_id'), fn ($q, $v) => $q->where('vehicle_id', $v))
             ->when($request->input('status'), fn ($q, $v) => $q->where('status', $v))
-            ->orderByDesc('issued_date')
+            ->latest('issued_date')
             ->paginate(15)
             ->withQueryString();
 
@@ -30,7 +30,7 @@ final class VehicleRecallController extends Controller
             'vehicleRecalls' => $recalls,
             'filters' => $request->only(['vehicle_id', 'status']),
             'vehicles' => \App\Models\Fleet\Vehicle::query()->orderBy('registration')->get(['id', 'registration']),
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\VehicleRecallStatus::cases()),
+            'statuses' => array_map(fn (\App\Enums\Fleet\VehicleRecallStatus $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\VehicleRecallStatus::cases()),
         ]);
     }
 
@@ -40,14 +40,14 @@ final class VehicleRecallController extends Controller
 
         return Inertia::render('Fleet/VehicleRecalls/Create', [
             'vehicles' => \App\Models\Fleet\Vehicle::query()->orderBy('registration')->get(['id', 'registration']),
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\VehicleRecallStatus::cases()),
+            'statuses' => array_map(fn (\App\Enums\Fleet\VehicleRecallStatus $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\VehicleRecallStatus::cases()),
         ]);
     }
 
     public function store(StoreVehicleRecallRequest $request): RedirectResponse
     {
         $this->authorize('create', VehicleRecall::class);
-        VehicleRecall::create($request->validated());
+        VehicleRecall::query()->create($request->validated());
 
         return to_route('fleet.vehicle-recalls.index')->with('flash', ['status' => 'success', 'message' => 'Vehicle recall created.']);
     }
@@ -67,7 +67,7 @@ final class VehicleRecallController extends Controller
         return Inertia::render('Fleet/VehicleRecalls/Edit', [
             'vehicleRecall' => $vehicle_recall,
             'vehicles' => \App\Models\Fleet\Vehicle::query()->orderBy('registration')->get(['id', 'registration']),
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\VehicleRecallStatus::cases()),
+            'statuses' => array_map(fn (\App\Enums\Fleet\VehicleRecallStatus $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\VehicleRecallStatus::cases()),
         ]);
     }
 

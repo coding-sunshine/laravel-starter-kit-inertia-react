@@ -34,30 +34,34 @@ final class GarageController extends Controller
     public function create(): Response
     {
         $this->authorize('create', Garage::class);
+
         return Inertia::render('Fleet/Garages/Create', [
-            'types' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\GarageType::cases()),
+            'types' => array_map(fn (\App\Enums\Fleet\GarageType $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\GarageType::cases()),
         ]);
     }
 
     public function store(StoreGarageRequest $request): RedirectResponse
     {
         $this->authorize('create', Garage::class);
-        Garage::create($request->validated());
+        Garage::query()->create($request->validated());
+
         return to_route('fleet.garages.index')->with('flash', ['status' => 'success', 'message' => 'Garage created.']);
     }
 
     public function show(Garage $garage): Response
     {
         $this->authorize('view', $garage);
+
         return Inertia::render('Fleet/Garages/Show', ['garage' => $garage]);
     }
 
     public function edit(Garage $garage): Response
     {
         $this->authorize('update', $garage);
+
         return Inertia::render('Fleet/Garages/Edit', [
             'garage' => $garage,
-            'types' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\GarageType::cases()),
+            'types' => array_map(fn (\App\Enums\Fleet\GarageType $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\GarageType::cases()),
         ]);
     }
 
@@ -65,6 +69,7 @@ final class GarageController extends Controller
     {
         $this->authorize('update', $garage);
         $garage->update($request->validated());
+
         return to_route('fleet.garages.show', $garage)->with('flash', ['status' => 'success', 'message' => 'Garage updated.']);
     }
 
@@ -72,6 +77,7 @@ final class GarageController extends Controller
     {
         $this->authorize('delete', $garage);
         $garage->delete();
+
         return to_route('fleet.garages.index')->with('flash', ['status' => 'success', 'message' => 'Garage deleted.']);
     }
 }

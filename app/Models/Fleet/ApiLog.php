@@ -27,8 +27,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int|null $user_id
  * @property \Carbon\Carbon $created_at
  */
-class ApiLog extends Model
+final class ApiLog extends Model
 {
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
+
     public const UPDATED_AT = null;
 
     protected $fillable = [

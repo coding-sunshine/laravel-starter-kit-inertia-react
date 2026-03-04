@@ -21,7 +21,7 @@ final class AxleLoadReadingController extends Controller
             ->when($request->input('vehicle_id'), fn ($q, $id) => $q->where('vehicle_id', $id))
             ->when($request->input('date'), fn ($q, $date) => $q->whereDate('recorded_at', $date))
             ->when($request->has('overload_flag') && $request->input('overload_flag') !== '', fn ($q) => $q->where('overload_flag', (bool) $request->input('overload_flag')))
-            ->orderByDesc('recorded_at')
+            ->latest('recorded_at')
             ->paginate(15)
             ->withQueryString();
 

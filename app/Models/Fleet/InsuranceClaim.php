@@ -21,9 +21,10 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  * @property string $claim_type
  * @property string $status
  */
-class InsuranceClaim extends Model implements HasMedia
+final class InsuranceClaim extends Model implements HasMedia
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use InteractsWithMedia;
     use SoftDeletes;
     use Userstamps;

@@ -2,7 +2,7 @@ import AppLayout from '@/layouts/app-layout';
 import organizations from '@/routes/organizations';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Form, Head, Link, usePage } from '@inertiajs/react';
-import { Building2, Users } from 'lucide-react';
+import { Building2, LayoutDashboard, Users } from 'lucide-react';
 
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
@@ -31,7 +31,12 @@ interface Props {
 }
 
 export default function OrganizationsShow() {
-    const { organization, organizations = [], flash, errors } = usePage<
+    const {
+        organization,
+        organizations: _organizations = [],
+        flash,
+        errors,
+    } = usePage<
         Props & {
             flash?: { status?: string };
             errors?: Record<string, string>;
@@ -51,7 +56,9 @@ export default function OrganizationsShow() {
             <Head title={organization.name} />
             <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h2 className="text-lg font-medium">{organization.name}</h2>
+                    <h2 className="heading-4 text-foreground">
+                        {organization.name}
+                    </h2>
                     <Button variant="outline" asChild>
                         <Link
                             href={`/organizations/${organization.slug}/members`}
@@ -68,67 +75,125 @@ export default function OrganizationsShow() {
                     </p>
                 )}
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Building2 className="size-5" />
-                            Settings
-                        </CardTitle>
-                        <CardDescription>Organization details</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        <Form
-                            action={organizations.update.url({
-                                organization: organization.slug,
-                            })}
-                            method="put"
-                            disableWhileProcessing
-                            className="max-w-md space-y-4"
-                        >
-                            {({ processing }) => (
-                                <>
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="name">Name</Label>
-                                        <Input
-                                            id="name"
-                                            name="name"
-                                            type="text"
-                                            required
-                                            defaultValue={organization.name}
-                                        />
-                                        <InputError message={errors?.name} />
-                                    </div>
-                                    {organizations.length > 0 && (
+                <div className="grid gap-4 md:grid-cols-2">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-base">
+                                <Users className="size-5" />
+                                Quick actions
+                            </CardTitle>
+                            <CardDescription>Members and usage</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-2">
+                            <Button
+                                variant="outline"
+                                className="w-full justify-start"
+                                asChild
+                            >
+                                <Link href="/dashboard">
+                                    <LayoutDashboard className="mr-2 size-4" />
+                                    Dashboard
+                                </Link>
+                            </Button>
+                            <Button
+                                variant="outline"
+                                className="w-full justify-start"
+                                asChild
+                            >
+                                <Link
+                                    href={`/organizations/${organization.slug}/members`}
+                                >
+                                    <Users className="mr-2 size-4" />
+                                    Manage members
+                                </Link>
+                            </Button>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-base">
+                                <Building2 className="size-5" />
+                                Details
+                            </CardTitle>
+                            <CardDescription>
+                                Organization name and settings
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            <Form
+                                action={organizations.update.url({
+                                    organization: organization.slug,
+                                })}
+                                method="put"
+                                disableWhileProcessing
+                                className="max-w-md space-y-4"
+                            >
+                                {({ processing }) => (
+                                    <>
                                         <div className="grid gap-2">
-                                            <Label htmlFor="parent_id">Parent organization</Label>
-                                            <select
-                                                id="parent_id"
-                                                name="parent_id"
-                                                defaultValue={organization.parent_id ?? ''}
-                                                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
-                                            >
-                                                <option value="">None</option>
-                                                {organizations.map((org) => (
-                                                    <option key={org.id} value={org.id}>{org.name}</option>
-                                                ))}
-                                            </select>
-                                            <InputError message={errors?.parent_id} />
+                                            <Label htmlFor="name">Name</Label>
+                                            <Input
+                                                id="name"
+                                                name="name"
+                                                type="text"
+                                                required
+                                                defaultValue={organization.name}
+                                            />
+                                            <InputError
+                                                message={errors?.name}
+                                            />
                                         </div>
-                                    )}
-                                    <Button type="submit" disabled={processing}>
-                                        {processing ? 'Saving…' : 'Save'}
-                                    </Button>
-                                </>
+                                        {organizations.length > 0 && (
+                                            <div className="grid gap-2">
+                                                <Label htmlFor="parent_id">
+                                                    Parent organization
+                                                </Label>
+                                                <select
+                                                    id="parent_id"
+                                                    name="parent_id"
+                                                    defaultValue={
+                                                        organization.parent_id ??
+                                                        ''
+                                                    }
+                                                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                                                >
+                                                    <option value="">
+                                                        None
+                                                    </option>
+                                                    {organizations.map(
+                                                        (org) => (
+                                                            <option
+                                                                key={org.id}
+                                                                value={org.id}
+                                                            >
+                                                                {org.name}
+                                                            </option>
+                                                        ),
+                                                    )}
+                                                </select>
+                                                <InputError
+                                                    message={errors?.parent_id}
+                                                />
+                                            </div>
+                                        )}
+                                        <Button
+                                            type="submit"
+                                            disabled={processing}
+                                        >
+                                            {processing ? 'Saving…' : 'Save'}
+                                        </Button>
+                                    </>
+                                )}
+                            </Form>
+                            {organization.owner && (
+                                <p className="text-sm text-muted-foreground">
+                                    Owner: {organization.owner.name} (
+                                    {organization.owner.email})
+                                </p>
                             )}
-                        </Form>
-                        {organization.owner && (
-                            <p className="text-sm text-muted-foreground">
-                                Owner: {organization.owner.name} (
-                                {organization.owner.email})
-                            </p>
-                        )}
-                    </CardContent>
-                </Card>
+                        </CardContent>
+                    </Card>
+                </div>
             </div>
         </AppLayout>
     );

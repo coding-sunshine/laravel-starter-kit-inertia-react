@@ -1,10 +1,10 @@
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 
 interface Option {
     value: string;
@@ -66,7 +66,7 @@ function getIncidentTime(incident: IncidentRecord): string {
 
 export default function FleetIncidentsEdit({
     incident,
-    mediaItems,
+    mediaItems: _mediaItems,
     vehicles,
     drivers,
     incidentTypes,
@@ -84,7 +84,8 @@ export default function FleetIncidentsEdit({
         severity: incident.severity,
         description: incident.description,
         location_description: incident.location_description ?? '',
-        fault_determination: incident.fault_determination ?? faultDeterminations[0]?.value ?? '',
+        fault_determination:
+            incident.fault_determination ?? faultDeterminations[0]?.value ?? '',
         status: incident.status,
         photos: [] as File[],
     });
@@ -93,7 +94,10 @@ export default function FleetIncidentsEdit({
         { title: 'Dashboard', href: dashboard().url },
         { title: 'Fleet', href: '/fleet/incidents' },
         { title: 'Incidents', href: '/fleet/incidents' },
-        { title: incident.incident_number, href: `/fleet/incidents/${incident.id}` },
+        {
+            title: incident.incident_number,
+            href: `/fleet/incidents/${incident.id}`,
+        },
         { title: 'Edit', href: `/fleet/incidents/${incident.id}/edit` },
     ];
 
@@ -117,7 +121,9 @@ export default function FleetIncidentsEdit({
                         <Label>Vehicle *</Label>
                         <select
                             value={data.vehicle_id}
-                            onChange={(e) => setData('vehicle_id', Number(e.target.value))}
+                            onChange={(e) =>
+                                setData('vehicle_id', Number(e.target.value))
+                            }
                             className="mt-1 flex h-9 w-full rounded-md border border-input px-3 py-1 text-sm"
                         >
                             {vehicles.map((v) => (
@@ -127,15 +133,26 @@ export default function FleetIncidentsEdit({
                             ))}
                         </select>
                         {errors.vehicle_id && (
-                            <p className="mt-1 text-sm text-destructive">{errors.vehicle_id}</p>
+                            <p className="mt-1 text-sm text-destructive">
+                                {errors.vehicle_id}
+                            </p>
                         )}
                     </div>
                     <div>
                         <Label>Driver</Label>
                         <select
-                            value={data.driver_id === '' ? '' : String(data.driver_id)}
+                            value={
+                                data.driver_id === ''
+                                    ? ''
+                                    : String(data.driver_id)
+                            }
                             onChange={(e) =>
-                                setData('driver_id', e.target.value === '' ? '' : Number(e.target.value))
+                                setData(
+                                    'driver_id',
+                                    e.target.value === ''
+                                        ? ''
+                                        : Number(e.target.value),
+                                )
                             }
                             className="mt-1 flex h-9 w-full rounded-md border border-input px-3 py-1 text-sm"
                         >
@@ -151,11 +168,15 @@ export default function FleetIncidentsEdit({
                         <Label>Incident number *</Label>
                         <Input
                             value={data.incident_number}
-                            onChange={(e) => setData('incident_number', e.target.value)}
+                            onChange={(e) =>
+                                setData('incident_number', e.target.value)
+                            }
                             className="mt-1"
                         />
                         {errors.incident_number && (
-                            <p className="mt-1 text-sm text-destructive">{errors.incident_number}</p>
+                            <p className="mt-1 text-sm text-destructive">
+                                {errors.incident_number}
+                            </p>
                         )}
                     </div>
                     <div className="grid grid-cols-2 gap-4">
@@ -164,7 +185,9 @@ export default function FleetIncidentsEdit({
                             <Input
                                 type="date"
                                 value={data.incident_date}
-                                onChange={(e) => setData('incident_date', e.target.value)}
+                                onChange={(e) =>
+                                    setData('incident_date', e.target.value)
+                                }
                                 className="mt-1"
                             />
                         </div>
@@ -173,7 +196,9 @@ export default function FleetIncidentsEdit({
                             <Input
                                 type="time"
                                 value={data.incident_time}
-                                onChange={(e) => setData('incident_time', e.target.value)}
+                                onChange={(e) =>
+                                    setData('incident_time', e.target.value)
+                                }
                                 className="mt-1"
                             />
                         </div>
@@ -183,7 +208,9 @@ export default function FleetIncidentsEdit({
                             <Label>Incident type</Label>
                             <select
                                 value={data.incident_type}
-                                onChange={(e) => setData('incident_type', e.target.value)}
+                                onChange={(e) =>
+                                    setData('incident_type', e.target.value)
+                                }
                                 className="mt-1 flex h-9 w-full rounded-md border border-input px-3 py-1 text-sm"
                             >
                                 {incidentTypes.map((o) => (
@@ -197,7 +224,9 @@ export default function FleetIncidentsEdit({
                             <Label>Severity</Label>
                             <select
                                 value={data.severity}
-                                onChange={(e) => setData('severity', e.target.value)}
+                                onChange={(e) =>
+                                    setData('severity', e.target.value)
+                                }
                                 className="mt-1 flex h-9 w-full rounded-md border border-input px-3 py-1 text-sm"
                             >
                                 {severities.map((o) => (
@@ -212,19 +241,25 @@ export default function FleetIncidentsEdit({
                         <Label>Description *</Label>
                         <textarea
                             value={data.description}
-                            onChange={(e) => setData('description', e.target.value)}
+                            onChange={(e) =>
+                                setData('description', e.target.value)
+                            }
                             rows={3}
                             className="mt-1 flex w-full rounded-md border border-input px-3 py-2 text-sm"
                         />
                         {errors.description && (
-                            <p className="mt-1 text-sm text-destructive">{errors.description}</p>
+                            <p className="mt-1 text-sm text-destructive">
+                                {errors.description}
+                            </p>
                         )}
                     </div>
                     <div>
                         <Label>Location</Label>
                         <Input
                             value={data.location_description}
-                            onChange={(e) => setData('location_description', e.target.value)}
+                            onChange={(e) =>
+                                setData('location_description', e.target.value)
+                            }
                             className="mt-1"
                         />
                     </div>
@@ -232,7 +267,9 @@ export default function FleetIncidentsEdit({
                         <Label>Fault determination</Label>
                         <select
                             value={data.fault_determination}
-                            onChange={(e) => setData('fault_determination', e.target.value)}
+                            onChange={(e) =>
+                                setData('fault_determination', e.target.value)
+                            }
                             className="mt-1 flex h-9 w-full rounded-md border border-input px-3 py-1 text-sm"
                         >
                             {faultDeterminations.map((o) => (
@@ -264,7 +301,12 @@ export default function FleetIncidentsEdit({
                             multiple
                             className="mt-1 block w-full text-sm text-muted-foreground file:mr-4 file:rounded-md file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-medium file:text-primary-foreground"
                             onChange={(e) =>
-                                setData('photos', e.target.files ? Array.from(e.target.files) : [])
+                                setData(
+                                    'photos',
+                                    e.target.files
+                                        ? Array.from(e.target.files)
+                                        : [],
+                                )
                             }
                         />
                         {data.photos.length > 0 && (
@@ -278,7 +320,9 @@ export default function FleetIncidentsEdit({
                             Update
                         </Button>
                         <Button variant="outline" asChild>
-                            <Link href={`/fleet/incidents/${incident.id}`}>Cancel</Link>
+                            <Link href={`/fleet/incidents/${incident.id}`}>
+                                Cancel
+                            </Link>
                         </Button>
                     </div>
                 </form>

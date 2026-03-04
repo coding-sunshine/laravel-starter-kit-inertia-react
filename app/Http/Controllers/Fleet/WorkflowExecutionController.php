@@ -18,7 +18,7 @@ final class WorkflowExecutionController extends Controller
         $executions = WorkflowExecution::query()
             ->with('workflowDefinition')
             ->when($request->input('workflow_definition_id'), fn ($q, $id) => $q->where('workflow_definition_id', $id))
-            ->orderByDesc('started_at')
+            ->latest('started_at')
             ->paginate(15)
             ->withQueryString();
 

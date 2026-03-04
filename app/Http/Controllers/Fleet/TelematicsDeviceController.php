@@ -35,8 +35,9 @@ final class TelematicsDeviceController extends Controller
     public function create(): Response
     {
         $this->authorize('create', TelematicsDevice::class);
+
         return Inertia::render('Fleet/TelematicsDevices/Create', [
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\TelematicsDeviceStatus::cases()),
+            'statuses' => array_map(fn (\App\Enums\TelematicsDeviceStatus $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\TelematicsDeviceStatus::cases()),
             'vehicles' => \App\Models\Fleet\Vehicle::query()->orderBy('registration')->get(['id', 'registration']),
         ]);
     }
@@ -44,7 +45,8 @@ final class TelematicsDeviceController extends Controller
     public function store(StoreTelematicsDeviceRequest $request): RedirectResponse
     {
         $this->authorize('create', TelematicsDevice::class);
-        TelematicsDevice::create($request->validated());
+        TelematicsDevice::query()->create($request->validated());
+
         return to_route('fleet.telematics-devices.index')->with('flash', ['status' => 'success', 'message' => 'Telematics device created.']);
     }
 
@@ -59,9 +61,10 @@ final class TelematicsDeviceController extends Controller
     public function edit(TelematicsDevice $telematics_device): Response
     {
         $this->authorize('update', $telematics_device);
+
         return Inertia::render('Fleet/TelematicsDevices/Edit', [
             'telematicsDevice' => $telematics_device,
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\TelematicsDeviceStatus::cases()),
+            'statuses' => array_map(fn (\App\Enums\TelematicsDeviceStatus $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\TelematicsDeviceStatus::cases()),
             'vehicles' => \App\Models\Fleet\Vehicle::query()->orderBy('registration')->get(['id', 'registration']),
         ]);
     }
@@ -70,6 +73,7 @@ final class TelematicsDeviceController extends Controller
     {
         $this->authorize('update', $telematics_device);
         $telematics_device->update($request->validated());
+
         return to_route('fleet.telematics-devices.show', $telematics_device)->with('flash', ['status' => 'success', 'message' => 'Telematics device updated.']);
     }
 
@@ -77,6 +81,7 @@ final class TelematicsDeviceController extends Controller
     {
         $this->authorize('delete', $telematics_device);
         $telematics_device->delete();
+
         return to_route('fleet.telematics-devices.index')->with('flash', ['status' => 'success', 'message' => 'Telematics device deleted.']);
     }
 }

@@ -32,7 +32,7 @@ final class WorkOrderLineController extends Controller
 
         return Inertia::render('Fleet/WorkOrderLines/Create', [
             'workOrder' => $work_order,
-            'lineTypes' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\WorkOrderLineType::cases()),
+            'lineTypes' => array_map(fn (\App\Enums\Fleet\WorkOrderLineType $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\WorkOrderLineType::cases()),
             'partsInventory' => \App\Models\Fleet\PartsInventory::query()->orderBy('part_number')->get(['id', 'part_number', 'description', 'unit_cost']),
         ]);
     }
@@ -41,8 +41,8 @@ final class WorkOrderLineController extends Controller
     {
         $this->authorize('update', $work_order);
         $data = array_merge($request->validated(), ['work_order_id' => $work_order->id]);
-        $data['sort_order'] = $data['sort_order'] ?? ($work_order->workOrderLines()->max('sort_order') ?? 0) + 1;
-        WorkOrderLine::create($data);
+        $data['sort_order'] ??= ($work_order->workOrderLines()->max('sort_order') ?? 0) + 1;
+        WorkOrderLine::query()->create($data);
 
         return to_route('fleet.work-orders.show', $work_order)->with('flash', ['status' => 'success', 'message' => 'Work order line created.']);
     }
@@ -54,7 +54,7 @@ final class WorkOrderLineController extends Controller
         return Inertia::render('Fleet/WorkOrderLines/Edit', [
             'workOrder' => $work_order,
             'workOrderLine' => $work_order_line,
-            'lineTypes' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\WorkOrderLineType::cases()),
+            'lineTypes' => array_map(fn (\App\Enums\Fleet\WorkOrderLineType $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\WorkOrderLineType::cases()),
             'partsInventory' => \App\Models\Fleet\PartsInventory::query()->orderBy('part_number')->get(['id', 'part_number', 'description', 'unit_cost']),
         ]);
     }

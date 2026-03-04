@@ -10,18 +10,21 @@ use App\Services\TenantContext;
 
 final class FuelStationPolicy
 {
-    public function viewAny(User $user): bool
+    public function viewAny(): bool
     {
         return TenantContext::check();
     }
 
     public function view(User $user, FuelStation $fuelStation): bool
     {
-        return $fuelStation->organization_id === TenantContext::id()
-            || $fuelStation->organization_id === null;
+        if ($fuelStation->organization_id === TenantContext::id()) {
+            return true;
+        }
+
+        return $fuelStation->organization_id === null;
     }
 
-    public function create(User $user): bool
+    public function create(): bool
     {
         return TenantContext::check();
     }

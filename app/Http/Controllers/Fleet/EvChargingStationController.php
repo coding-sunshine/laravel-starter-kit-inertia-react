@@ -34,6 +34,7 @@ final class EvChargingStationController extends Controller
     public function create(): Response
     {
         $this->authorize('create', EvChargingStation::class);
+
         return Inertia::render('Fleet/EvChargingStations/Create', [
             'locations' => \App\Models\Fleet\Location::query()->orderBy('name')->get(['id', 'name']),
         ]);
@@ -42,7 +43,8 @@ final class EvChargingStationController extends Controller
     public function store(StoreEvChargingStationRequest $request): RedirectResponse
     {
         $this->authorize('create', EvChargingStation::class);
-        EvChargingStation::create($request->validated());
+        EvChargingStation::query()->create($request->validated());
+
         return to_route('fleet.ev-charging-stations.index')->with('flash', ['status' => 'success', 'message' => 'EV charging station created.']);
     }
 
@@ -50,12 +52,14 @@ final class EvChargingStationController extends Controller
     {
         $this->authorize('view', $evChargingStation);
         $evChargingStation->load('location');
+
         return Inertia::render('Fleet/EvChargingStations/Show', ['evChargingStation' => $evChargingStation]);
     }
 
     public function edit(EvChargingStation $evChargingStation): Response
     {
         $this->authorize('update', $evChargingStation);
+
         return Inertia::render('Fleet/EvChargingStations/Edit', [
             'evChargingStation' => $evChargingStation,
             'locations' => \App\Models\Fleet\Location::query()->orderBy('name')->get(['id', 'name']),
@@ -66,6 +70,7 @@ final class EvChargingStationController extends Controller
     {
         $this->authorize('update', $evChargingStation);
         $evChargingStation->update($request->validated());
+
         return to_route('fleet.ev-charging-stations.show', $evChargingStation)->with('flash', ['status' => 'success', 'message' => 'EV charging station updated.']);
     }
 
@@ -73,6 +78,7 @@ final class EvChargingStationController extends Controller
     {
         $this->authorize('delete', $evChargingStation);
         $evChargingStation->delete();
+
         return to_route('fleet.ev-charging-stations.index')->with('flash', ['status' => 'success', 'message' => 'EV charging station deleted.']);
     }
 }

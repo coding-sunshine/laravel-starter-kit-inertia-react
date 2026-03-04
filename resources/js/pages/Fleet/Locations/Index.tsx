@@ -33,7 +33,10 @@ interface Props {
     filters: { type?: string; is_active?: string };
 }
 
-export default function FleetLocationsIndex({ locations, filters }: Props) {
+export default function FleetLocationsIndex({
+    locations,
+    filters: _filters,
+}: Props) {
     const { auth } = usePage<SharedData>().props;
     const hasOrganization = Boolean(auth?.current_organization);
 
@@ -62,16 +65,24 @@ export default function FleetLocationsIndex({ locations, filters }: Props) {
                 {!hasOrganization ? (
                     <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16 text-center">
                         <MapPin className="size-10 text-muted-foreground" />
-                        <p className="mt-2 text-sm font-medium text-muted-foreground">Select an organization to view locations</p>
+                        <p className="mt-2 text-sm font-medium text-muted-foreground">
+                            Select an organization to view locations
+                        </p>
                         <p className="mt-1 text-xs text-muted-foreground">
-                            Use &quot;Select organization&quot; in the sidebar to choose an organization. Locations are listed per organization.
+                            Use &quot;Select organization&quot; in the sidebar
+                            to choose an organization. Locations are listed per
+                            organization.
                         </p>
                     </div>
                 ) : locations.data.length === 0 ? (
                     <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16 text-center">
                         <MapPin className="size-10 text-muted-foreground" />
-                        <p className="mt-2 text-sm font-medium text-muted-foreground">No locations yet</p>
-                        <p className="mt-1 text-xs text-muted-foreground">Create a location to get started.</p>
+                        <p className="mt-2 text-sm font-medium text-muted-foreground">
+                            No locations yet
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                            Create a location to get started.
+                        </p>
                         <Button asChild className="mt-4">
                             <Link href="/fleet/locations/create">
                                 <Plus className="mr-2 size-4" />
@@ -85,16 +96,29 @@ export default function FleetLocationsIndex({ locations, filters }: Props) {
                             <table className="w-full text-sm">
                                 <thead>
                                     <tr className="border-b bg-muted/50">
-                                        <th className="p-3 text-left font-medium">Name</th>
-                                        <th className="p-3 text-left font-medium">Type</th>
-                                        <th className="p-3 text-left font-medium">Address</th>
-                                        <th className="p-3 text-left font-medium">Status</th>
-                                        <th className="p-3 text-right font-medium">Actions</th>
+                                        <th className="p-3 text-left font-medium">
+                                            Name
+                                        </th>
+                                        <th className="p-3 text-left font-medium">
+                                            Type
+                                        </th>
+                                        <th className="p-3 text-left font-medium">
+                                            Address
+                                        </th>
+                                        <th className="p-3 text-left font-medium">
+                                            Status
+                                        </th>
+                                        <th className="p-3 text-right font-medium">
+                                            Actions
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {locations.data.map((loc) => (
-                                        <tr key={loc.id} className="border-b last:border-0">
+                                        <tr
+                                            key={loc.id}
+                                            className="border-b last:border-0"
+                                        >
                                             <td className="p-3">
                                                 <Link
                                                     href={`/fleet/locations/${loc.id}`}
@@ -103,9 +127,17 @@ export default function FleetLocationsIndex({ locations, filters }: Props) {
                                                     {loc.name}
                                                 </Link>
                                             </td>
-                                            <td className="p-3 text-muted-foreground">{loc.type}</td>
+                                            <td className="p-3 text-muted-foreground">
+                                                {loc.type}
+                                            </td>
                                             <td className="p-3">
-                                                {[loc.address, loc.city, loc.postcode].filter(Boolean).join(', ')}
+                                                {[
+                                                    loc.address,
+                                                    loc.city,
+                                                    loc.postcode,
+                                                ]
+                                                    .filter(Boolean)
+                                                    .join(', ')}
                                             </td>
                                             <td className="p-3">
                                                 <span
@@ -115,12 +147,20 @@ export default function FleetLocationsIndex({ locations, filters }: Props) {
                                                             : 'rounded bg-muted px-1.5 py-0.5 text-xs'
                                                     }
                                                 >
-                                                    {loc.is_active ? 'Active' : 'Inactive'}
+                                                    {loc.is_active
+                                                        ? 'Active'
+                                                        : 'Inactive'}
                                                 </span>
                                             </td>
                                             <td className="p-3 text-right">
-                                                <Button variant="outline" size="sm" asChild>
-                                                    <Link href={`/fleet/locations/${loc.id}/edit`}>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    asChild
+                                                >
+                                                    <Link
+                                                        href={`/fleet/locations/${loc.id}/edit`}
+                                                    >
                                                         <Pencil className="mr-1 size-3.5" />
                                                         Edit
                                                     </Link>
@@ -130,10 +170,19 @@ export default function FleetLocationsIndex({ locations, filters }: Props) {
                                                     method="delete"
                                                     className="ml-2 inline"
                                                     onSubmit={(e) => {
-                                                        if (!confirm('Delete this location?')) e.preventDefault();
+                                                        if (
+                                                            !confirm(
+                                                                'Delete this location?',
+                                                            )
+                                                        )
+                                                            e.preventDefault();
                                                     }}
                                                 >
-                                                    <Button type="submit" variant="ghost" size="sm">
+                                                    <Button
+                                                        type="submit"
+                                                        variant="ghost"
+                                                        size="sm"
+                                                    >
                                                         <Trash2 className="size-3.5 text-destructive" />
                                                     </Button>
                                                 </Form>
@@ -159,10 +208,13 @@ export default function FleetLocationsIndex({ locations, filters }: Props) {
                                             {link.label}
                                         </Link>
                                     ) : (
-                                        <span key={link.label} className="px-3 py-1 text-sm text-muted-foreground">
+                                        <span
+                                            key={link.label}
+                                            className="px-3 py-1 text-sm text-muted-foreground"
+                                        >
                                             {link.label}
                                         </span>
-                                    )
+                                    ),
                                 )}
                             </nav>
                         )}

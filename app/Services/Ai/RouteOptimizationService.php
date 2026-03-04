@@ -8,10 +8,10 @@ use App\Ai\Agents\RouteOptimizationAgent;
 use App\Models\Fleet\Route;
 use Laravel\Ai\Responses\StructuredAgentResponse;
 
-final class RouteOptimizationService
+final readonly class RouteOptimizationService
 {
     public function __construct(
-        private readonly RouteOptimizationAgent $agent
+        private RouteOptimizationAgent $agent
     ) {}
 
     /**
@@ -39,7 +39,7 @@ final class RouteOptimizationService
         if (! is_array($order)) {
             return null;
         }
-        $order = array_values(array_filter(array_map('intval', $order)));
+        $order = array_values(array_filter(array_map(intval(...), $order)));
         $stopIds = $stops->pluck('id')->all();
         $order = array_values(array_intersect($order, $stopIds));
         if ($order === []) {
@@ -58,7 +58,7 @@ final class RouteOptimizationService
 
     private function buildContext(Route $route, $stops): string
     {
-        $stopData = $stops->map(fn ($s) => [
+        $stopData = $stops->map(fn ($s): array => [
             'id' => $s->id,
             'name' => $s->name,
             'location_id' => $s->location_id,
@@ -77,6 +77,6 @@ final class RouteOptimizationService
             'stops' => $stopData,
         ];
 
-        return "Optimize the visit order for this route. Return suggested_stop_order as an array of stop IDs in the best visit sequence.\n\n" . json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        return "Optimize the visit order for this route. Return suggested_stop_order as an array of stop IDs in the best visit sequence.\n\n".json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
     }
 }

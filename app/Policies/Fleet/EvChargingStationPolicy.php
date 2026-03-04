@@ -10,18 +10,21 @@ use App\Services\TenantContext;
 
 final class EvChargingStationPolicy
 {
-    public function viewAny(User $user): bool
+    public function viewAny(): bool
     {
         return TenantContext::check();
     }
 
     public function view(User $user, EvChargingStation $evChargingStation): bool
     {
-        return $evChargingStation->organization_id === TenantContext::id()
-            || $evChargingStation->organization_id === null;
+        if ($evChargingStation->organization_id === TenantContext::id()) {
+            return true;
+        }
+
+        return $evChargingStation->organization_id === null;
     }
 
-    public function create(User $user): bool
+    public function create(): bool
     {
         return TenantContext::check();
     }

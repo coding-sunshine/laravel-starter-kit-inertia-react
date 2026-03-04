@@ -1,11 +1,11 @@
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
-import { Play, Eye, Wrench, ShieldAlert, ClipboardCheck } from 'lucide-react';
+import { ClipboardCheck, Eye, Play, ShieldAlert, Wrench } from 'lucide-react';
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 
 interface AiJobRunRecord {
     id: number;
@@ -14,16 +14,28 @@ interface AiJobRunRecord {
     started_at: string | null;
     completed_at: string | null;
 }
-interface Option { value: string; name: string; }
+interface Option {
+    value: string;
+    name: string;
+}
 interface Props {
-    aiJobRuns: { data: AiJobRunRecord[]; links: { url: string | null; label: string; active: boolean }[] };
+    aiJobRuns: {
+        data: AiJobRunRecord[];
+        links: { url: string | null; label: string; active: boolean }[];
+    };
     statuses: Option[];
     runPredictiveMaintenanceUrl: string;
     runFraudDetectionUrl: string;
     runCompliancePredictionUrl: string;
 }
 
-export default function FleetAiJobRunsIndex({ aiJobRuns, statuses, runPredictiveMaintenanceUrl, runFraudDetectionUrl, runCompliancePredictionUrl }: Props) {
+export default function FleetAiJobRunsIndex({
+    aiJobRuns,
+    statuses,
+    runPredictiveMaintenanceUrl,
+    runFraudDetectionUrl,
+    runCompliancePredictionUrl,
+}: Props) {
     const [predictiveLoading, setPredictiveLoading] = useState(false);
     const [fraudLoading, setFraudLoading] = useState(false);
     const [complianceLoading, setComplianceLoading] = useState(false);
@@ -33,7 +45,19 @@ export default function FleetAiJobRunsIndex({ aiJobRuns, statuses, runPredictive
         setError(null);
         setLoading(true);
         try {
-            const res = await fetch(url, { method: 'POST', headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '', 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'include' });
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    Accept: 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN':
+                        document
+                            .querySelector('meta[name="csrf-token"]')
+                            ?.getAttribute('content') ?? '',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                credentials: 'include',
+            });
             const data = await res.json().catch(() => ({}));
             if (!res.ok) {
                 setError(data?.message ?? 'Request failed');
@@ -58,35 +82,84 @@ export default function FleetAiJobRunsIndex({ aiJobRuns, statuses, runPredictive
                 <div className="flex flex-wrap items-center justify-between gap-4">
                     <h1 className="text-2xl font-semibold">AI job runs</h1>
                     <div className="flex flex-wrap items-center gap-2">
-                        <Button type="button" variant="default" size="sm" disabled={predictiveLoading} onClick={() => runJob(runPredictiveMaintenanceUrl, setPredictiveLoading)}>
+                        <Button
+                            type="button"
+                            variant="default"
+                            size="sm"
+                            disabled={predictiveLoading}
+                            onClick={() =>
+                                runJob(
+                                    runPredictiveMaintenanceUrl,
+                                    setPredictiveLoading,
+                                )
+                            }
+                        >
                             <Wrench className="mr-1.5 size-4" />
-                            {predictiveLoading ? 'Queuing…' : 'Run predictive maintenance'}
+                            {predictiveLoading
+                                ? 'Queuing…'
+                                : 'Run predictive maintenance'}
                         </Button>
-                        <Button type="button" variant="secondary" size="sm" disabled={fraudLoading} onClick={() => runJob(runFraudDetectionUrl, setFraudLoading)}>
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            disabled={fraudLoading}
+                            onClick={() =>
+                                runJob(runFraudDetectionUrl, setFraudLoading)
+                            }
+                        >
                             <ShieldAlert className="mr-1.5 size-4" />
                             {fraudLoading ? 'Queuing…' : 'Run fraud detection'}
                         </Button>
-                        <Button type="button" variant="secondary" size="sm" disabled={complianceLoading} onClick={() => runJob(runCompliancePredictionUrl, setComplianceLoading)}>
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            disabled={complianceLoading}
+                            onClick={() =>
+                                runJob(
+                                    runCompliancePredictionUrl,
+                                    setComplianceLoading,
+                                )
+                            }
+                        >
                             <ClipboardCheck className="mr-1.5 size-4" />
-                            {complianceLoading ? 'Queuing…' : 'Run compliance prediction'}
+                            {complianceLoading
+                                ? 'Queuing…'
+                                : 'Run compliance prediction'}
                         </Button>
                     </div>
                 </div>
                 {error && <p className="text-sm text-destructive">{error}</p>}
-                <form method="get" className="flex flex-wrap items-end gap-4 rounded-lg border p-4">
+                <form
+                    method="get"
+                    className="flex flex-wrap items-end gap-4 rounded-lg border p-4"
+                >
                     <div className="space-y-1">
                         <Label>Status</Label>
-                        <select name="status" defaultValue="" className="h-9 w-40 rounded-md border border-input bg-transparent px-3 py-1 text-sm">
+                        <select
+                            name="status"
+                            defaultValue=""
+                            className="h-9 w-40 rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                        >
                             <option value="">All</option>
-                            {statuses.map((s) => <option key={s.value} value={s.value}>{s.name}</option>)}
+                            {statuses.map((s) => (
+                                <option key={s.value} value={s.value}>
+                                    {s.name}
+                                </option>
+                            ))}
                         </select>
                     </div>
-                    <Button type="submit" variant="secondary" size="sm">Filter</Button>
+                    <Button type="submit" variant="secondary" size="sm">
+                        Filter
+                    </Button>
                 </form>
                 {aiJobRuns.data.length === 0 ? (
                     <div className="rounded-lg border border-dashed py-16 text-center">
                         <Play className="mx-auto size-10 text-muted-foreground" />
-                        <p className="mt-2 text-sm text-muted-foreground">No AI job runs yet.</p>
+                        <p className="mt-2 text-sm text-muted-foreground">
+                            No AI job runs yet.
+                        </p>
                     </div>
                 ) : (
                     <>
@@ -94,24 +167,66 @@ export default function FleetAiJobRunsIndex({ aiJobRuns, statuses, runPredictive
                             <table className="w-full text-sm">
                                 <thead>
                                     <tr className="border-b bg-muted/50">
-                                        <th className="p-3 text-left font-medium">ID</th>
-                                        <th className="p-3 text-left font-medium">Job type</th>
-                                        <th className="p-3 text-left font-medium">Status</th>
-                                        <th className="p-3 text-left font-medium">Started at</th>
-                                        <th className="p-3 text-left font-medium">Completed at</th>
-                                        <th className="p-3 text-right font-medium">Actions</th>
+                                        <th className="p-3 text-left font-medium">
+                                            ID
+                                        </th>
+                                        <th className="p-3 text-left font-medium">
+                                            Job type
+                                        </th>
+                                        <th className="p-3 text-left font-medium">
+                                            Status
+                                        </th>
+                                        <th className="p-3 text-left font-medium">
+                                            Started at
+                                        </th>
+                                        <th className="p-3 text-left font-medium">
+                                            Completed at
+                                        </th>
+                                        <th className="p-3 text-right font-medium">
+                                            Actions
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {aiJobRuns.data.map((row) => (
-                                        <tr key={row.id} className="border-b last:border-0">
+                                        <tr
+                                            key={row.id}
+                                            className="border-b last:border-0"
+                                        >
                                             <td className="p-3">{row.id}</td>
-                                            <td className="p-3">{row.job_type}</td>
-                                            <td className="p-3">{row.status}</td>
-                                            <td className="p-3">{row.started_at ? new Date(row.started_at).toLocaleString() : '—'}</td>
-                                            <td className="p-3">{row.completed_at ? new Date(row.completed_at).toLocaleString() : '—'}</td>
+                                            <td className="p-3">
+                                                {row.job_type}
+                                            </td>
+                                            <td className="p-3">
+                                                {row.status}
+                                            </td>
+                                            <td className="p-3">
+                                                {row.started_at
+                                                    ? new Date(
+                                                          row.started_at,
+                                                      ).toLocaleString()
+                                                    : '—'}
+                                            </td>
+                                            <td className="p-3">
+                                                {row.completed_at
+                                                    ? new Date(
+                                                          row.completed_at,
+                                                      ).toLocaleString()
+                                                    : '—'}
+                                            </td>
                                             <td className="p-3 text-right">
-                                                <Button variant="outline" size="sm" asChild><Link href={`/fleet/ai-job-runs/${row.id}`}><Eye className="mr-1 size-3.5" />View</Link></Button>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    asChild
+                                                >
+                                                    <Link
+                                                        href={`/fleet/ai-job-runs/${row.id}`}
+                                                    >
+                                                        <Eye className="mr-1 size-3.5" />
+                                                        View
+                                                    </Link>
+                                                </Button>
                                             </td>
                                         </tr>
                                     ))}
@@ -121,7 +236,13 @@ export default function FleetAiJobRunsIndex({ aiJobRuns, statuses, runPredictive
                         {aiJobRuns.links?.length > 1 && (
                             <div className="flex flex-wrap gap-2">
                                 {aiJobRuns.links.map((link, i) => (
-                                    <Link key={i} href={link.url ?? '#'} className={`rounded border px-3 py-1 text-sm ${link.active ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}>{link.label}</Link>
+                                    <Link
+                                        key={i}
+                                        href={link.url ?? '#'}
+                                        className={`rounded border px-3 py-1 text-sm ${link.active ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
+                                    >
+                                        {link.label}
+                                    </Link>
                                 ))}
                             </div>
                         )}

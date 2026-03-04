@@ -1,10 +1,10 @@
 'use client';
 
-import * as React from 'react';
-import { Link } from '@inertiajs/react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { Link } from '@inertiajs/react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import * as React from 'react';
 
 export interface FleetPaginationLink {
     url: string | null;
@@ -41,13 +41,15 @@ export function FleetPagination({
         <div
             className={cn(
                 'flex flex-wrap items-center justify-between gap-3 border-t border-white/30 px-4 py-3',
-                className
+                className,
             )}
         >
             <div className="flex flex-wrap items-center gap-4">
                 {leftContent}
                 {showingLabel != null && (
-                    <span className="text-sm text-muted-foreground">{showingLabel}</span>
+                    <span className="text-sm text-muted-foreground">
+                        {showingLabel}
+                    </span>
                 )}
             </div>
             <div className="flex items-center gap-1">
@@ -72,7 +74,10 @@ export function FleetPagination({
                 </Button>
                 {pages.map((link, i) =>
                     link.label === '...' ? (
-                        <span key={`ellipsis-${i}`} className="px-2 text-muted-foreground">
+                        <span
+                            key={`ellipsis-${i}`}
+                            className="px-2 text-muted-foreground"
+                        >
                             …
                         </span>
                     ) : link.active ? (
@@ -98,7 +103,7 @@ export function FleetPagination({
                         </Button>
                     ) : (
                         <span key={i} className="size-8 min-w-8 shrink-0" />
-                    )
+                    ),
                 )}
                 <Button
                     variant="outline"

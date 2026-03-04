@@ -10,10 +10,10 @@ use App\Models\Fleet\Trip;
 use App\Models\Fleet\Vehicle;
 use Laravel\Ai\Responses\StructuredAgentResponse;
 
-final class FleetOptimizationService
+final readonly class FleetOptimizationService
 {
     public function __construct(
-        private readonly FleetOptimizationAgent $agent
+        private FleetOptimizationAgent $agent
     ) {}
 
     /**
@@ -49,7 +49,7 @@ final class FleetOptimizationService
         $vehicles = Vehicle::query()
             ->where('organization_id', $organizationId)
             ->get(['id', 'registration', 'make', 'model', 'fuel_type', 'vehicle_type', 'status', 'odometer_reading', 'monthly_distance_km', 'monthly_fuel_cost'])
-            ->map(fn ($v) => [
+            ->map(fn ($v): array => [
                 'id' => $v->id,
                 'registration' => $v->registration,
                 'make' => $v->make,
@@ -60,7 +60,7 @@ final class FleetOptimizationService
                 'odometer_reading' => $v->odometer_reading,
                 'monthly_distance_km' => $v->monthly_distance_km,
                 'monthly_fuel_cost' => $v->monthly_fuel_cost,
-            ])->toArray();
+            ])->all();
 
         $tripCount = Trip::query()->where('organization_id', $organizationId)->count();
         $totalCost = (float) CostAllocation::query()->where('organization_id', $organizationId)->sum('amount');
@@ -72,6 +72,6 @@ final class FleetOptimizationService
             'total_allocated_cost' => $totalCost,
         ];
 
-        return "Analyze this fleet and provide right_sizing_summary, replacement_timing_summary, fleet_mix_summary, and what_if_scenarios (2-3 scenarios with title, description, estimated_impact).\n\n" . json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        return "Analyze this fleet and provide right_sizing_summary, replacement_timing_summary, fleet_mix_summary, and what_if_scenarios (2-3 scenarios with title, description, estimated_impact).\n\n".json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
     }
 }

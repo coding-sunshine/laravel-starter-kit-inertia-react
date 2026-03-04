@@ -1,9 +1,9 @@
 'use client';
 
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
+import { usePage } from '@inertiajs/react';
 import { LazyMotion, domAnimation, m } from 'framer-motion';
 import type { ReactNode } from 'react';
-import { usePage } from '@inertiajs/react';
-import { useReducedMotion } from '@/hooks/use-reduced-motion';
 
 const PAGE_TRANSITION_MS = 200;
 

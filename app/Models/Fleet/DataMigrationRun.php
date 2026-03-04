@@ -25,8 +25,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $error_summary
  * @property array|null $error_log
  */
-class DataMigrationRun extends Model
+final class DataMigrationRun extends Model
 {
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
+
     protected $fillable = [
         'organization_id',
         'triggered_by',

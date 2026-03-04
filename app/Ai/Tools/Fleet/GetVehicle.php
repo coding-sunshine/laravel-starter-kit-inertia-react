@@ -10,11 +10,10 @@ use App\Services\Fleet\GeocodingService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Contracts\Tool;
 use Laravel\Ai\Tools\Request;
-use Stringable;
 
-final class GetVehicle implements Tool
+final readonly class GetVehicle implements Tool
 {
-    public function __construct(private readonly int $organizationId) {}
+    public function __construct(private int $organizationId) {}
 
     public function description(): string
     {
@@ -26,13 +25,13 @@ final class GetVehicle implements Tool
         return ['id' => $schema->integer()->description('Vehicle ID')];
     }
 
-    public function handle(Request $request): string|Stringable
+    public function handle(Request $request): string
     {
         $id = (int) ($request['id'] ?? 0);
         if ($id <= 0) {
             return 'Please provide a valid vehicle ID.';
         }
-        $v = Vehicle::withoutGlobalScope(OrganizationScope::class)
+        $v = Vehicle::query()->withoutGlobalScope(OrganizationScope::class)
             ->where('organization_id', $this->organizationId)
             ->find($id);
         if ($v === null) {
@@ -61,15 +60,14 @@ final class GetVehicle implements Tool
                 $lng,
                 $v->location_updated_at?->format('Y-m-d H:i') ?? 'unknown'
             );
-            $address = app(GeocodingService::class)->reverseGeocode($lat, $lng);
+            $address = resolve(GeocodingService::class)->reverseGeocode($lat, $lng);
             if ($address !== null && $address !== '') {
-                $out .= ' Address: ' . $address . '.';
+                $out .= ' Address: '.$address.'.';
             }
         } else {
             $out .= ' No current position reported.';
         }
-        $out .= ' View: /fleet/vehicles/' . $v->id;
 
-        return $out;
+        return $out.(' View: /fleet/vehicles/'.$v->id);
     }
 }

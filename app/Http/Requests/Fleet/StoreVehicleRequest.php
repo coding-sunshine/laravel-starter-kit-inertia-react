@@ -47,6 +47,4 @@ final class StoreVehicleRequest extends FormRequest
             'compliance_status' => ['nullable', 'string', new Enum(VehicleComplianceStatus::class)],
         ];
     }
-
 }
-

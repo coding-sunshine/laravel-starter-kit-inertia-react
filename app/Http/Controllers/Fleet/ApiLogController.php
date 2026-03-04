@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Fleet;
 
 use App\Http\Controllers\Controller;
-use App\Models\Fleet\ApiLog;
 use App\Models\Fleet\ApiIntegration;
+use App\Models\Fleet\ApiLog;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -20,8 +20,7 @@ final class ApiLogController extends Controller
             ->with('apiIntegration')
             ->when($request->input('integration_id'), fn ($q, $v) => $q->where('integration_id', $v))
             ->when($request->input('date_from'), fn ($q, $v) => $q->whereDate('created_at', '>=', $v))
-            ->when($request->input('date_to'), fn ($q, $v) => $q->whereDate('created_at', '<=', $v))
-            ->orderByDesc('created_at')
+            ->when($request->input('date_to'), fn ($q, $v) => $q->whereDate('created_at', '<=', $v))->latest()
             ->paginate(20)
             ->withQueryString();
 
@@ -36,6 +35,7 @@ final class ApiLogController extends Controller
     {
         $this->authorize('view', $api_log);
         $api_log->load('apiIntegration', 'user');
+
         return Inertia::render('Fleet/ApiLogs/Show', ['apiLog' => $api_log]);
     }
 }

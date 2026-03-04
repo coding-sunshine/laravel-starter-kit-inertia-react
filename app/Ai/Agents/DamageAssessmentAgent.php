@@ -17,17 +17,17 @@ final class DamageAssessmentAgent implements Agent, HasStructuredOutput
 {
     use Promptable;
 
-    public const SEVERITIES = ['cosmetic', 'functional', 'safety_critical'];
+    public const array SEVERITIES = ['cosmetic', 'functional', 'safety_critical'];
 
     public function instructions(): string
     {
         return 'You are a vehicle damage assessment specialist. Analyze the provided vehicle or damage photo and return structured data. '
-            . 'Identify: (1) Any visible damage (dents, scratches, breaks, panel damage). '
-            . '(2) Severity: cosmetic (aesthetic only), functional (impairs use but not safety), or safety_critical (affects safety/roadworthiness). '
-            . '(3) Body parts or areas affected (e.g. bumper, door, windscreen, wing, bonnet). '
-            . '(4) A short description suitable for a defect/incident/claim report. '
-            . '(5) An optional rough cost range: low (e.g. under £500), medium (£500–£2000), or high (over £2000), or a brief numeric range if possible. '
-            . 'Set damage_detected to false only if there is clearly no damage visible. Set confidence between 0 and 1.';
+            .'Identify: (1) Any visible damage (dents, scratches, breaks, panel damage). '
+            .'(2) Severity: cosmetic (aesthetic only), functional (impairs use but not safety), or safety_critical (affects safety/roadworthiness). '
+            .'(3) Body parts or areas affected (e.g. bumper, door, windscreen, wing, bonnet). '
+            .'(4) A short description suitable for a defect/incident/claim report. '
+            .'(5) An optional rough cost range: low (e.g. under £500), medium (£500–£2000), or high (over £2000), or a brief numeric range if possible. '
+            .'Set damage_detected to false only if there is clearly no damage visible. Set confidence between 0 and 1.';
     }
 
     public function schema(JsonSchema $schema): array

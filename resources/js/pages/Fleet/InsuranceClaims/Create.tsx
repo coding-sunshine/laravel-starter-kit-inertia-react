@@ -1,10 +1,10 @@
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 
 interface Option {
     value: string;
@@ -45,7 +45,9 @@ export default function FleetInsuranceClaimsCreate({
             ...d,
             incident_id: d.incident_id === '' ? undefined : d.incident_id,
             insurance_policy_id:
-                d.insurance_policy_id === '' ? undefined : d.insurance_policy_id,
+                d.insurance_policy_id === ''
+                    ? undefined
+                    : d.insurance_policy_id,
         }));
         form.post('/fleet/insurance-claims', { forceFormData: true });
     };
@@ -60,11 +62,17 @@ export default function FleetInsuranceClaimsCreate({
                         <Label htmlFor="incident_id">Incident *</Label>
                         <select
                             id="incident_id"
-                            value={data.incident_id === '' ? '' : String(data.incident_id)}
+                            value={
+                                data.incident_id === ''
+                                    ? ''
+                                    : String(data.incident_id)
+                            }
                             onChange={(e) =>
                                 setData(
                                     'incident_id',
-                                    e.target.value === '' ? '' : Number(e.target.value)
+                                    e.target.value === ''
+                                        ? ''
+                                        : Number(e.target.value),
                                 )
                             }
                             className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
@@ -78,11 +86,15 @@ export default function FleetInsuranceClaimsCreate({
                             ))}
                         </select>
                         {errors.incident_id && (
-                            <p className="mt-1 text-sm text-destructive">{errors.incident_id}</p>
+                            <p className="mt-1 text-sm text-destructive">
+                                {errors.incident_id}
+                            </p>
                         )}
                     </div>
                     <div>
-                        <Label htmlFor="insurance_policy_id">Insurance policy *</Label>
+                        <Label htmlFor="insurance_policy_id">
+                            Insurance policy *
+                        </Label>
                         <select
                             id="insurance_policy_id"
                             value={
@@ -93,7 +105,9 @@ export default function FleetInsuranceClaimsCreate({
                             onChange={(e) =>
                                 setData(
                                     'insurance_policy_id',
-                                    e.target.value === '' ? '' : Number(e.target.value)
+                                    e.target.value === ''
+                                        ? ''
+                                        : Number(e.target.value),
                                 )
                             }
                             className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
@@ -117,11 +131,15 @@ export default function FleetInsuranceClaimsCreate({
                         <Input
                             id="claim_number"
                             value={data.claim_number}
-                            onChange={(e) => setData('claim_number', e.target.value)}
+                            onChange={(e) =>
+                                setData('claim_number', e.target.value)
+                            }
                             className="mt-1"
                         />
                         {errors.claim_number && (
-                            <p className="mt-1 text-sm text-destructive">{errors.claim_number}</p>
+                            <p className="mt-1 text-sm text-destructive">
+                                {errors.claim_number}
+                            </p>
                         )}
                     </div>
                     <div className="grid grid-cols-2 gap-4">
@@ -130,7 +148,9 @@ export default function FleetInsuranceClaimsCreate({
                             <select
                                 id="claim_type"
                                 value={data.claim_type}
-                                onChange={(e) => setData('claim_type', e.target.value)}
+                                onChange={(e) =>
+                                    setData('claim_type', e.target.value)
+                                }
                                 className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
                             >
                                 {claimTypes.map((o) => (
@@ -145,7 +165,9 @@ export default function FleetInsuranceClaimsCreate({
                             <select
                                 id="status"
                                 value={data.status}
-                                onChange={(e) => setData('status', e.target.value)}
+                                onChange={(e) =>
+                                    setData('status', e.target.value)
+                                }
                                 className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
                             >
                                 {statuses.map((o) => (
@@ -157,17 +179,28 @@ export default function FleetInsuranceClaimsCreate({
                         </div>
                     </div>
                     <div>
-                        <Label htmlFor="photos">Photos (optional, for AI damage analysis)</Label>
+                        <Label htmlFor="photos">
+                            Photos (optional, for AI damage analysis)
+                        </Label>
                         <input
                             id="photos"
                             type="file"
                             accept="image/*"
                             multiple
                             className="mt-1 block w-full text-sm text-muted-foreground file:mr-4 file:rounded-md file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-medium file:text-primary-foreground file:transition-colors"
-                            onChange={(e) => setData('photos', e.target.files ? Array.from(e.target.files) : [])}
+                            onChange={(e) =>
+                                setData(
+                                    'photos',
+                                    e.target.files
+                                        ? Array.from(e.target.files)
+                                        : [],
+                                )
+                            }
                         />
                         {data.photos.length > 0 && (
-                            <p className="mt-1 text-sm text-muted-foreground">{data.photos.length} file(s) selected</p>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                                {data.photos.length} file(s) selected
+                            </p>
                         )}
                     </div>
                     <div className="flex gap-2">

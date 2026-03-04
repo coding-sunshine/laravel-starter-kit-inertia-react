@@ -21,9 +21,10 @@ use Mattiverse\Userstamps\Traits\Userstamps;
  * @property \Carbon\Carbon|null $submitted_date
  * @property \Carbon\Carbon|null $settled_at
  */
-class WarrantyClaim extends Model
+final class WarrantyClaim extends Model
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use SoftDeletes;
     use Userstamps;
 

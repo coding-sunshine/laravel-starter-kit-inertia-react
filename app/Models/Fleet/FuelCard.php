@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Models\Fleet;
 
 use App\Models\Concerns\BelongsToOrganization;
-use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -32,9 +31,10 @@ use Mattiverse\Userstamps\Traits\Userstamps;
  * @property int|null $assigned_vehicle_id
  * @property int|null $assigned_driver_id
  */
-class FuelCard extends Model
+final class FuelCard extends Model
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use SoftDeletes;
     use Userstamps;
 

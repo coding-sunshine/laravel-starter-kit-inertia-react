@@ -209,6 +209,14 @@
             "type": "hasMany",
             "model": "CoachingPlan"
         },
+        "behaviorEvents": {
+            "type": "hasMany",
+            "model": "BehaviorEvent"
+        },
+        "incidents": {
+            "type": "hasMany",
+            "model": "Incident"
+        },
         "organization": {
             "type": "belongsTo",
             "model": "Organization"

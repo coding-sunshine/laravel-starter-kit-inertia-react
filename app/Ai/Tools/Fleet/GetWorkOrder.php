@@ -9,11 +9,10 @@ use App\Models\Scopes\OrganizationScope;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Contracts\Tool;
 use Laravel\Ai\Tools\Request;
-use Stringable;
 
-final class GetWorkOrder implements Tool
+final readonly class GetWorkOrder implements Tool
 {
-    public function __construct(private readonly int $organizationId) {}
+    public function __construct(private int $organizationId) {}
 
     public function description(): string
     {
@@ -25,13 +24,13 @@ final class GetWorkOrder implements Tool
         return ['id' => $schema->integer()->description('Work order ID')];
     }
 
-    public function handle(Request $request): string|Stringable
+    public function handle(Request $request): string
     {
         $id = (int) ($request['id'] ?? 0);
         if ($id <= 0) {
             return 'Please provide a valid work order ID.';
         }
-        $wo = WorkOrder::withoutGlobalScope(OrganizationScope::class)
+        $wo = WorkOrder::query()->withoutGlobalScope(OrganizationScope::class)
             ->where('organization_id', $this->organizationId)
             ->with('vehicle:id,registration')
             ->find($id);
@@ -39,6 +38,7 @@ final class GetWorkOrder implements Tool
             return 'Work order not found.';
         }
         $reg = $wo->vehicle?->registration ?? '—';
+
         return sprintf(
             'Work order #%d: %s – %s. Status: %s. Vehicle: %s. Due: %s. Total cost: %s. View: /fleet/work-orders/%d',
             $wo->id,

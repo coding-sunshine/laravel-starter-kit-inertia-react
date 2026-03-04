@@ -1,10 +1,10 @@
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 
 interface Option {
     value: string;
@@ -44,8 +44,10 @@ export default function FleetInsurancePoliciesCreate({
         e.preventDefault();
         form.transform((d) => ({
             ...d,
-            premium_amount: d.premium_amount === '' ? undefined : Number(d.premium_amount),
-            excess_amount: d.excess_amount === '' ? undefined : Number(d.excess_amount),
+            premium_amount:
+                d.premium_amount === '' ? undefined : Number(d.premium_amount),
+            excess_amount:
+                d.excess_amount === '' ? undefined : Number(d.excess_amount),
         }));
         form.post('/fleet/insurance-policies');
     };
@@ -61,11 +63,15 @@ export default function FleetInsurancePoliciesCreate({
                         <Input
                             id="policy_number"
                             value={data.policy_number}
-                            onChange={(e) => setData('policy_number', e.target.value)}
+                            onChange={(e) =>
+                                setData('policy_number', e.target.value)
+                            }
                             className="mt-1"
                         />
                         {errors.policy_number && (
-                            <p className="mt-1 text-sm text-destructive">{errors.policy_number}</p>
+                            <p className="mt-1 text-sm text-destructive">
+                                {errors.policy_number}
+                            </p>
                         )}
                     </div>
                     <div>
@@ -73,11 +79,15 @@ export default function FleetInsurancePoliciesCreate({
                         <Input
                             id="insurer_name"
                             value={data.insurer_name}
-                            onChange={(e) => setData('insurer_name', e.target.value)}
+                            onChange={(e) =>
+                                setData('insurer_name', e.target.value)
+                            }
                             className="mt-1"
                         />
                         {errors.insurer_name && (
-                            <p className="mt-1 text-sm text-destructive">{errors.insurer_name}</p>
+                            <p className="mt-1 text-sm text-destructive">
+                                {errors.insurer_name}
+                            </p>
                         )}
                     </div>
                     <div className="grid grid-cols-2 gap-4">
@@ -86,7 +96,9 @@ export default function FleetInsurancePoliciesCreate({
                             <select
                                 id="policy_type"
                                 value={data.policy_type}
-                                onChange={(e) => setData('policy_type', e.target.value)}
+                                onChange={(e) =>
+                                    setData('policy_type', e.target.value)
+                                }
                                 className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
                             >
                                 {policyTypes.map((o) => (
@@ -97,11 +109,15 @@ export default function FleetInsurancePoliciesCreate({
                             </select>
                         </div>
                         <div>
-                            <Label htmlFor="coverage_type">Coverage type *</Label>
+                            <Label htmlFor="coverage_type">
+                                Coverage type *
+                            </Label>
                             <select
                                 id="coverage_type"
                                 value={data.coverage_type}
-                                onChange={(e) => setData('coverage_type', e.target.value)}
+                                onChange={(e) =>
+                                    setData('coverage_type', e.target.value)
+                                }
                                 className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
                             >
                                 {coverageTypes.map((o) => (
@@ -119,11 +135,15 @@ export default function FleetInsurancePoliciesCreate({
                                 id="start_date"
                                 type="date"
                                 value={data.start_date}
-                                onChange={(e) => setData('start_date', e.target.value)}
+                                onChange={(e) =>
+                                    setData('start_date', e.target.value)
+                                }
                                 className="mt-1"
                             />
                             {errors.start_date && (
-                                <p className="mt-1 text-sm text-destructive">{errors.start_date}</p>
+                                <p className="mt-1 text-sm text-destructive">
+                                    {errors.start_date}
+                                </p>
                             )}
                         </div>
                         <div>
@@ -132,30 +152,47 @@ export default function FleetInsurancePoliciesCreate({
                                 id="end_date"
                                 type="date"
                                 value={data.end_date}
-                                onChange={(e) => setData('end_date', e.target.value)}
+                                onChange={(e) =>
+                                    setData('end_date', e.target.value)
+                                }
                                 className="mt-1"
                             />
                             {errors.end_date && (
-                                <p className="mt-1 text-sm text-destructive">{errors.end_date}</p>
+                                <p className="mt-1 text-sm text-destructive">
+                                    {errors.end_date}
+                                </p>
                             )}
                         </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <Label htmlFor="premium_amount">Premium amount</Label>
+                            <Label htmlFor="premium_amount">
+                                Premium amount
+                            </Label>
                             <Input
                                 id="premium_amount"
                                 type="number"
                                 step="0.01"
                                 min="0"
-                                value={data.premium_amount === '' ? '' : data.premium_amount}
+                                value={
+                                    data.premium_amount === ''
+                                        ? ''
+                                        : data.premium_amount
+                                }
                                 onChange={(e) =>
-                                    setData('premium_amount', e.target.value === '' ? '' : e.target.value)
+                                    setData(
+                                        'premium_amount',
+                                        e.target.value === ''
+                                            ? ''
+                                            : e.target.value,
+                                    )
                                 }
                                 className="mt-1"
                             />
                             {errors.premium_amount && (
-                                <p className="mt-1 text-sm text-destructive">{errors.premium_amount}</p>
+                                <p className="mt-1 text-sm text-destructive">
+                                    {errors.premium_amount}
+                                </p>
                             )}
                         </div>
                         <div>
@@ -165,14 +202,25 @@ export default function FleetInsurancePoliciesCreate({
                                 type="number"
                                 step="0.01"
                                 min="0"
-                                value={data.excess_amount === '' ? '' : data.excess_amount}
+                                value={
+                                    data.excess_amount === ''
+                                        ? ''
+                                        : data.excess_amount
+                                }
                                 onChange={(e) =>
-                                    setData('excess_amount', e.target.value === '' ? '' : e.target.value)
+                                    setData(
+                                        'excess_amount',
+                                        e.target.value === ''
+                                            ? ''
+                                            : e.target.value,
+                                    )
                                 }
                                 className="mt-1"
                             />
                             {errors.excess_amount && (
-                                <p className="mt-1 text-sm text-destructive">{errors.excess_amount}</p>
+                                <p className="mt-1 text-sm text-destructive">
+                                    {errors.excess_amount}
+                                </p>
                             )}
                         </div>
                     </div>

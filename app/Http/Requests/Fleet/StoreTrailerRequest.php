@@ -31,4 +31,3 @@ final class StoreTrailerRequest extends FormRequest
         ];
     }
 }
-

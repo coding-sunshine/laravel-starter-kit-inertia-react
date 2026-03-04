@@ -31,4 +31,3 @@ final class StoreCostCenterRequest extends FormRequest
         ];
     }
 }
-

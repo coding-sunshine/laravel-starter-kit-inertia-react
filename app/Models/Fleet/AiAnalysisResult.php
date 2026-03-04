@@ -21,9 +21,10 @@ use Mattiverse\Userstamps\Traits\Userstamps;
  * @property float $confidence_score
  * @property string $status
  */
-class AiAnalysisResult extends Model
+final class AiAnalysisResult extends Model
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use SoftDeletes;
     use Userstamps;
 

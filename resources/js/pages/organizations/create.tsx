@@ -60,7 +60,9 @@ export default function OrganizationsCreate({ organizations = [] }: Props) {
                             </div>
                             {organizations.length > 0 && (
                                 <div className="grid gap-2">
-                                    <Label htmlFor="parent_id">Parent organization</Label>
+                                    <Label htmlFor="parent_id">
+                                        Parent organization
+                                    </Label>
                                     <select
                                         id="parent_id"
                                         name="parent_id"
@@ -68,7 +70,9 @@ export default function OrganizationsCreate({ organizations = [] }: Props) {
                                     >
                                         <option value="">None</option>
                                         {organizations.map((org) => (
-                                            <option key={org.id} value={org.id}>{org.name}</option>
+                                            <option key={org.id} value={org.id}>
+                                                {org.name}
+                                            </option>
                                         ))}
                                     </select>
                                     <InputError message={errors.parent_id} />

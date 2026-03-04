@@ -25,9 +25,10 @@ use Mattiverse\Userstamps\Traits\Userstamps;
  * @property string|null $storage_location
  * @property int|null $supplier_id
  */
-class PartsInventory extends Model
+final class PartsInventory extends Model
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use SoftDeletes;
     use Userstamps;
 

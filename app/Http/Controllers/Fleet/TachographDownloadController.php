@@ -22,7 +22,7 @@ final class TachographDownloadController extends Controller
             ->with('driver')
             ->when($request->input('driver_id'), fn ($q, $v) => $q->where('driver_id', $v))
             ->when($request->input('status'), fn ($q, $v) => $q->where('status', $v))
-            ->orderByDesc('download_date')
+            ->latest('download_date')
             ->paginate(15)
             ->withQueryString();
 
@@ -30,23 +30,25 @@ final class TachographDownloadController extends Controller
             'tachographDownloads' => $downloads,
             'filters' => $request->only(['driver_id', 'status']),
             'drivers' => \App\Models\Fleet\Driver::query()->orderBy('last_name')->get(['id', 'first_name', 'last_name']),
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\TachographDownloadStatus::cases()),
+            'statuses' => array_map(fn (\App\Enums\Fleet\TachographDownloadStatus $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\TachographDownloadStatus::cases()),
         ]);
     }
 
     public function create(): Response
     {
         $this->authorize('create', TachographDownload::class);
+
         return Inertia::render('Fleet/TachographDownloads/Create', [
             'drivers' => \App\Models\Fleet\Driver::query()->orderBy('last_name')->get(['id', 'first_name', 'last_name']),
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\TachographDownloadStatus::cases()),
+            'statuses' => array_map(fn (\App\Enums\Fleet\TachographDownloadStatus $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\TachographDownloadStatus::cases()),
         ]);
     }
 
     public function store(StoreTachographDownloadRequest $request): RedirectResponse
     {
         $this->authorize('create', TachographDownload::class);
-        TachographDownload::create($request->validated());
+        TachographDownload::query()->create($request->validated());
+
         return to_route('fleet.tachograph-downloads.index')->with('flash', ['status' => 'success', 'message' => 'Tachograph download created.']);
     }
 
@@ -61,10 +63,11 @@ final class TachographDownloadController extends Controller
     public function edit(TachographDownload $tachograph_download): Response
     {
         $this->authorize('update', $tachograph_download);
+
         return Inertia::render('Fleet/TachographDownloads/Edit', [
             'tachographDownload' => $tachograph_download,
             'drivers' => \App\Models\Fleet\Driver::query()->orderBy('last_name')->get(['id', 'first_name', 'last_name']),
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\TachographDownloadStatus::cases()),
+            'statuses' => array_map(fn (\App\Enums\Fleet\TachographDownloadStatus $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\TachographDownloadStatus::cases()),
         ]);
     }
 
@@ -72,6 +75,7 @@ final class TachographDownloadController extends Controller
     {
         $this->authorize('update', $tachograph_download);
         $tachograph_download->update($request->validated());
+
         return to_route('fleet.tachograph-downloads.show', $tachograph_download)->with('flash', ['status' => 'success', 'message' => 'Tachograph download updated.']);
     }
 
@@ -79,6 +83,7 @@ final class TachographDownloadController extends Controller
     {
         $this->authorize('delete', $tachograph_download);
         $tachograph_download->delete();
+
         return to_route('fleet.tachograph-downloads.index')->with('flash', ['status' => 'success', 'message' => 'Tachograph download deleted.']);
     }
 }

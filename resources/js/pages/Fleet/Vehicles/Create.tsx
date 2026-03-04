@@ -1,9 +1,15 @@
-import AppLayout from '@/layouts/app-layout';
 import { FleetPageHeader } from '@/components/fleet';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
@@ -59,7 +65,9 @@ export default function FleetVehiclesCreate({
     });
 
     const { data, setData, processing, errors: formErrors } = form;
-    const pageErrors = usePage().props.errors as Record<string, string> | undefined;
+    const pageErrors = usePage().props.errors as
+        | Record<string, string>
+        | undefined;
     const errors = { ...pageErrors, ...formErrors };
     const hasErrors = Object.keys(errors).length > 0;
 
@@ -75,8 +83,10 @@ export default function FleetVehiclesCreate({
         form.transform((d) => ({
             ...d,
             year: d.year === '' ? null : Number(d.year),
-            home_location_id: d.home_location_id === '' ? null : Number(d.home_location_id),
-            current_driver_id: d.current_driver_id === '' ? null : Number(d.current_driver_id),
+            home_location_id:
+                d.home_location_id === '' ? null : Number(d.home_location_id),
+            current_driver_id:
+                d.current_driver_id === '' ? null : Number(d.current_driver_id),
             compliance_status: d.compliance_status || null,
         }));
         form.post('/fleet/vehicles', {
@@ -106,11 +116,15 @@ export default function FleetVehiclesCreate({
                     {hasErrors && (
                         <Card className="border-destructive/50 bg-destructive/5">
                             <CardContent className="pt-6">
-                                <p className="font-medium text-destructive">Please fix the following errors:</p>
+                                <p className="font-medium text-destructive">
+                                    Please fix the following errors:
+                                </p>
                                 <ul className="mt-2 list-inside list-disc space-y-0.5 text-sm text-destructive">
-                                    {Object.entries(errors).map(([key, msg]) => (
-                                        <li key={key}>{msg}</li>
-                                    ))}
+                                    {Object.entries(errors).map(
+                                        ([key, msg]) => (
+                                            <li key={key}>{msg}</li>
+                                        ),
+                                    )}
                                 </ul>
                             </CardContent>
                         </Card>
@@ -118,21 +132,38 @@ export default function FleetVehiclesCreate({
 
                     <Card className="border border-border shadow-sm">
                         <CardHeader>
-                            <CardTitle className="text-base">Identity</CardTitle>
-                            <CardDescription>Registration, VIN, and fleet number.</CardDescription>
+                            <CardTitle className="text-base">
+                                Identity
+                            </CardTitle>
+                            <CardDescription>
+                                Registration, VIN, and fleet number.
+                            </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="grid gap-4 sm:grid-cols-2">
                                 <div className="space-y-2">
-                                    <Label htmlFor="registration">Registration *</Label>
+                                    <Label htmlFor="registration">
+                                        Registration *
+                                    </Label>
                                     <Input
                                         id="registration"
                                         value={data.registration}
-                                        onChange={(e) => setData('registration', e.target.value)}
-                                        className={errors.registration ? 'border-destructive' : ''}
+                                        onChange={(e) =>
+                                            setData(
+                                                'registration',
+                                                e.target.value,
+                                            )
+                                        }
+                                        className={
+                                            errors.registration
+                                                ? 'border-destructive'
+                                                : ''
+                                        }
                                     />
                                     {errors.registration && (
-                                        <p className="text-sm text-destructive">{errors.registration}</p>
+                                        <p className="text-sm text-destructive">
+                                            {errors.registration}
+                                        </p>
                                     )}
                                 </div>
                                 <div className="space-y-2">
@@ -140,23 +171,43 @@ export default function FleetVehiclesCreate({
                                     <Input
                                         id="vin"
                                         value={data.vin}
-                                        onChange={(e) => setData('vin', e.target.value)}
+                                        onChange={(e) =>
+                                            setData('vin', e.target.value)
+                                        }
                                         maxLength={17}
-                                        className={errors.vin ? 'border-destructive' : ''}
+                                        className={
+                                            errors.vin
+                                                ? 'border-destructive'
+                                                : ''
+                                        }
                                     />
-                                    {errors.vin && <p className="text-sm text-destructive">{errors.vin}</p>}
+                                    {errors.vin && (
+                                        <p className="text-sm text-destructive">
+                                            {errors.vin}
+                                        </p>
+                                    )}
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="fleet_number">Fleet number</Label>
+                                <Label htmlFor="fleet_number">
+                                    Fleet number
+                                </Label>
                                 <Input
                                     id="fleet_number"
                                     value={data.fleet_number}
-                                    onChange={(e) => setData('fleet_number', e.target.value)}
-                                    className={errors.fleet_number ? 'border-destructive' : ''}
+                                    onChange={(e) =>
+                                        setData('fleet_number', e.target.value)
+                                    }
+                                    className={
+                                        errors.fleet_number
+                                            ? 'border-destructive'
+                                            : ''
+                                    }
                                 />
                                 {errors.fleet_number && (
-                                    <p className="text-sm text-destructive">{errors.fleet_number}</p>
+                                    <p className="text-sm text-destructive">
+                                        {errors.fleet_number}
+                                    </p>
                                 )}
                             </div>
                         </CardContent>
@@ -164,8 +215,12 @@ export default function FleetVehiclesCreate({
 
                     <Card className="border border-border shadow-sm">
                         <CardHeader>
-                            <CardTitle className="text-base">Vehicle details</CardTitle>
-                            <CardDescription>Make, model, year, fuel and type.</CardDescription>
+                            <CardTitle className="text-base">
+                                Vehicle details
+                            </CardTitle>
+                            <CardDescription>
+                                Make, model, year, fuel and type.
+                            </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="grid gap-4 sm:grid-cols-2">
@@ -174,20 +229,40 @@ export default function FleetVehiclesCreate({
                                     <Input
                                         id="make"
                                         value={data.make}
-                                        onChange={(e) => setData('make', e.target.value)}
-                                        className={errors.make ? 'border-destructive' : ''}
+                                        onChange={(e) =>
+                                            setData('make', e.target.value)
+                                        }
+                                        className={
+                                            errors.make
+                                                ? 'border-destructive'
+                                                : ''
+                                        }
                                     />
-                                    {errors.make && <p className="text-sm text-destructive">{errors.make}</p>}
+                                    {errors.make && (
+                                        <p className="text-sm text-destructive">
+                                            {errors.make}
+                                        </p>
+                                    )}
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="model">Model *</Label>
                                     <Input
                                         id="model"
                                         value={data.model}
-                                        onChange={(e) => setData('model', e.target.value)}
-                                        className={errors.model ? 'border-destructive' : ''}
+                                        onChange={(e) =>
+                                            setData('model', e.target.value)
+                                        }
+                                        className={
+                                            errors.model
+                                                ? 'border-destructive'
+                                                : ''
+                                        }
                                     />
-                                    {errors.model && <p className="text-sm text-destructive">{errors.model}</p>}
+                                    {errors.model && (
+                                        <p className="text-sm text-destructive">
+                                            {errors.model}
+                                        </p>
+                                    )}
                                 </div>
                             </div>
                             <div className="space-y-2">
@@ -197,49 +272,85 @@ export default function FleetVehiclesCreate({
                                     type="number"
                                     min={1900}
                                     max={2100}
-                                    value={data.year === '' ? '' : String(data.year)}
-                                    onChange={(e) =>
-                                        setData('year', e.target.value === '' ? '' : Number(e.target.value))
+                                    value={
+                                        data.year === ''
+                                            ? ''
+                                            : String(data.year)
                                     }
-                                    className={errors.year ? 'border-destructive' : ''}
+                                    onChange={(e) =>
+                                        setData(
+                                            'year',
+                                            e.target.value === ''
+                                                ? ''
+                                                : Number(e.target.value),
+                                        )
+                                    }
+                                    className={
+                                        errors.year ? 'border-destructive' : ''
+                                    }
                                 />
-                                {errors.year && <p className="text-sm text-destructive">{errors.year}</p>}
+                                {errors.year && (
+                                    <p className="text-sm text-destructive">
+                                        {errors.year}
+                                    </p>
+                                )}
                             </div>
                             <div className="grid gap-4 sm:grid-cols-2">
                                 <div className="space-y-2">
-                                    <Label htmlFor="fuel_type">Fuel type *</Label>
+                                    <Label htmlFor="fuel_type">
+                                        Fuel type *
+                                    </Label>
                                     <select
                                         id="fuel_type"
                                         value={data.fuel_type}
-                                        onChange={(e) => setData('fuel_type', e.target.value)}
+                                        onChange={(e) =>
+                                            setData('fuel_type', e.target.value)
+                                        }
                                         className={inputClass}
                                     >
                                         {fuelTypes.map((o) => (
-                                            <option key={o.value} value={o.value}>
+                                            <option
+                                                key={o.value}
+                                                value={o.value}
+                                            >
                                                 {o.name}
                                             </option>
                                         ))}
                                     </select>
                                     {errors.fuel_type && (
-                                        <p className="text-sm text-destructive">{errors.fuel_type}</p>
+                                        <p className="text-sm text-destructive">
+                                            {errors.fuel_type}
+                                        </p>
                                     )}
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="vehicle_type">Vehicle type *</Label>
+                                    <Label htmlFor="vehicle_type">
+                                        Vehicle type *
+                                    </Label>
                                     <select
                                         id="vehicle_type"
                                         value={data.vehicle_type}
-                                        onChange={(e) => setData('vehicle_type', e.target.value)}
+                                        onChange={(e) =>
+                                            setData(
+                                                'vehicle_type',
+                                                e.target.value,
+                                            )
+                                        }
                                         className={inputClass}
                                     >
                                         {vehicleTypes.map((o) => (
-                                            <option key={o.value} value={o.value}>
+                                            <option
+                                                key={o.value}
+                                                value={o.value}
+                                            >
                                                 {o.name}
                                             </option>
                                         ))}
                                     </select>
                                     {errors.vehicle_type && (
-                                        <p className="text-sm text-destructive">{errors.vehicle_type}</p>
+                                        <p className="text-sm text-destructive">
+                                            {errors.vehicle_type}
+                                        </p>
                                     )}
                                 </div>
                             </div>
@@ -248,20 +359,32 @@ export default function FleetVehiclesCreate({
 
                     <Card className="border border-border shadow-sm">
                         <CardHeader>
-                            <CardTitle className="text-base">Assignment & status</CardTitle>
-                            <CardDescription>Home location, current driver, and status.</CardDescription>
+                            <CardTitle className="text-base">
+                                Assignment & status
+                            </CardTitle>
+                            <CardDescription>
+                                Home location, current driver, and status.
+                            </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="grid gap-4 sm:grid-cols-2">
                                 <div className="space-y-2">
-                                    <Label htmlFor="home_location_id">Home location</Label>
+                                    <Label htmlFor="home_location_id">
+                                        Home location
+                                    </Label>
                                     <select
                                         id="home_location_id"
-                                        value={data.home_location_id === '' ? '' : String(data.home_location_id)}
+                                        value={
+                                            data.home_location_id === ''
+                                                ? ''
+                                                : String(data.home_location_id)
+                                        }
                                         onChange={(e) =>
                                             setData(
                                                 'home_location_id',
-                                                e.target.value === '' ? '' : Number(e.target.value),
+                                                e.target.value === ''
+                                                    ? ''
+                                                    : Number(e.target.value),
                                             )
                                         }
                                         className={inputClass}
@@ -274,18 +397,28 @@ export default function FleetVehiclesCreate({
                                         ))}
                                     </select>
                                     {errors.home_location_id && (
-                                        <p className="text-sm text-destructive">{errors.home_location_id}</p>
+                                        <p className="text-sm text-destructive">
+                                            {errors.home_location_id}
+                                        </p>
                                     )}
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="current_driver_id">Current driver</Label>
+                                    <Label htmlFor="current_driver_id">
+                                        Current driver
+                                    </Label>
                                     <select
                                         id="current_driver_id"
-                                        value={data.current_driver_id === '' ? '' : String(data.current_driver_id)}
+                                        value={
+                                            data.current_driver_id === ''
+                                                ? ''
+                                                : String(data.current_driver_id)
+                                        }
                                         onChange={(e) =>
                                             setData(
                                                 'current_driver_id',
-                                                e.target.value === '' ? '' : Number(e.target.value),
+                                                e.target.value === ''
+                                                    ? ''
+                                                    : Number(e.target.value),
                                             )
                                         }
                                         className={inputClass}
@@ -298,7 +431,9 @@ export default function FleetVehiclesCreate({
                                         ))}
                                     </select>
                                     {errors.current_driver_id && (
-                                        <p className="text-sm text-destructive">{errors.current_driver_id}</p>
+                                        <p className="text-sm text-destructive">
+                                            {errors.current_driver_id}
+                                        </p>
                                     )}
                                 </div>
                             </div>
@@ -308,34 +443,54 @@ export default function FleetVehiclesCreate({
                                     <select
                                         id="status"
                                         value={data.status}
-                                        onChange={(e) => setData('status', e.target.value)}
+                                        onChange={(e) =>
+                                            setData('status', e.target.value)
+                                        }
                                         className={inputClass}
                                     >
                                         {statuses.map((o) => (
-                                            <option key={o.value} value={o.value}>
+                                            <option
+                                                key={o.value}
+                                                value={o.value}
+                                            >
                                                 {o.name}
                                             </option>
                                         ))}
                                     </select>
                                     {errors.status && (
-                                        <p className="text-sm text-destructive">{errors.status}</p>
+                                        <p className="text-sm text-destructive">
+                                            {errors.status}
+                                        </p>
                                     )}
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="compliance_status">Compliance status</Label>
+                                    <Label htmlFor="compliance_status">
+                                        Compliance status
+                                    </Label>
                                     <select
                                         id="compliance_status"
                                         value={data.compliance_status}
-                                        onChange={(e) => setData('compliance_status', e.target.value)}
+                                        onChange={(e) =>
+                                            setData(
+                                                'compliance_status',
+                                                e.target.value,
+                                            )
+                                        }
                                         className={inputClass}
                                     >
                                         <option value="">—</option>
-                                        <option value="compliant">Compliant</option>
-                                        <option value="expiring_soon">Expiring soon</option>
+                                        <option value="compliant">
+                                            Compliant
+                                        </option>
+                                        <option value="expiring_soon">
+                                            Expiring soon
+                                        </option>
                                         <option value="expired">Expired</option>
                                     </select>
                                     {errors.compliance_status && (
-                                        <p className="text-sm text-destructive">{errors.compliance_status}</p>
+                                        <p className="text-sm text-destructive">
+                                            {errors.compliance_status}
+                                        </p>
                                     )}
                                 </div>
                             </div>

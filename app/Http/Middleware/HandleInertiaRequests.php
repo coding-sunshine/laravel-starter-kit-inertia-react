@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Models\Fleet\Alert;
 use App\Models\Organization;
 use App\Services\OrganizationSettingsService;
 use App\Services\TenantContext;
@@ -90,6 +91,9 @@ final class HandleInertiaRequests extends Middleware
             'seo' => $this->seoSharedData(),
             'theme' => $theme,
             'branding' => $this->resolveBranding(...),
+            'fleet_alert_count' => fn () => $user && $currentOrganization
+                ? Alert::query()->where('status', 'active')->whereNull('acknowledged_at')->count()
+                : 0,
         ];
     }
 

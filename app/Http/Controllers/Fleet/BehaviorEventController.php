@@ -22,11 +22,11 @@ final class BehaviorEventController extends Controller
             ->when($request->input('event_type'), fn ($q, $type) => $q->where('event_type', $type))
             ->when($request->input('from_date'), fn ($q, $date) => $q->whereDate('occurred_at', '>=', $date))
             ->when($request->input('to_date'), fn ($q, $date) => $q->whereDate('occurred_at', '<=', $date))
-            ->orderByDesc('occurred_at')
+            ->latest('occurred_at')
             ->paginate(15)
             ->withQueryString();
 
-        $eventTypes = array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\BehaviorEventType::cases());
+        $eventTypes = array_map(fn (\App\Enums\BehaviorEventType $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\BehaviorEventType::cases());
 
         return Inertia::render('Fleet/BehaviorEvents/Index', [
             'behaviorEvents' => $events,

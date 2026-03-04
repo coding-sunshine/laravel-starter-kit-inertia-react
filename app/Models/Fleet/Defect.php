@@ -32,9 +32,10 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  * @property bool $affects_roadworthiness
  * @property bool $affects_safety
  */
-class Defect extends Model implements HasMedia
+final class Defect extends Model implements HasMedia
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use InteractsWithMedia;
     use SoftDeletes;
     use Userstamps;

@@ -34,7 +34,8 @@ final class TrailerController extends Controller
     public function create(): Response
     {
         $this->authorize('create', Trailer::class);
-        $enum = fn ($cases) => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], $cases);
+        $enum = fn ($cases): array => array_map(fn ($c): array => ['value' => $c->value, 'name' => $c->name], $cases);
+
         return Inertia::render('Fleet/Trailers/Create', [
             'types' => $enum(\App\Enums\Fleet\TrailerType::cases()),
             'statuses' => $enum(\App\Enums\Fleet\TrailerStatus::cases()),
@@ -45,7 +46,8 @@ final class TrailerController extends Controller
     public function store(StoreTrailerRequest $request): RedirectResponse
     {
         $this->authorize('create', Trailer::class);
-        Trailer::create($request->validated());
+        Trailer::query()->create($request->validated());
+
         return to_route('fleet.trailers.index')->with('flash', ['status' => 'success', 'message' => 'Trailer created.']);
     }
 
@@ -53,13 +55,15 @@ final class TrailerController extends Controller
     {
         $this->authorize('view', $trailer);
         $trailer->load('homeLocation');
+
         return Inertia::render('Fleet/Trailers/Show', ['trailer' => $trailer]);
     }
 
     public function edit(Trailer $trailer): Response
     {
         $this->authorize('update', $trailer);
-        $enum = fn ($cases) => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], $cases);
+        $enum = fn ($cases): array => array_map(fn ($c): array => ['value' => $c->value, 'name' => $c->name], $cases);
+
         return Inertia::render('Fleet/Trailers/Edit', [
             'trailer' => $trailer,
             'types' => $enum(\App\Enums\Fleet\TrailerType::cases()),
@@ -72,6 +76,7 @@ final class TrailerController extends Controller
     {
         $this->authorize('update', $trailer);
         $trailer->update($request->validated());
+
         return to_route('fleet.trailers.show', $trailer)->with('flash', ['status' => 'success', 'message' => 'Trailer updated.']);
     }
 
@@ -79,6 +84,7 @@ final class TrailerController extends Controller
     {
         $this->authorize('delete', $trailer);
         $trailer->delete();
+
         return to_route('fleet.trailers.index')->with('flash', ['status' => 'success', 'message' => 'Trailer deleted.']);
     }
 }

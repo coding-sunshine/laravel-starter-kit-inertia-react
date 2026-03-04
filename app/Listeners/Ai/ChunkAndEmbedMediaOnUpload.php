@@ -10,7 +10,7 @@ use Spatie\MediaLibrary\MediaCollections\Events\MediaHasBeenAddedEvent;
 final class ChunkAndEmbedMediaOnUpload
 {
     /** Collections that should be indexed for RAG (per model). */
-    private const INDEXABLE_COLLECTIONS = ['documents', 'photos'];
+    private const array INDEXABLE_COLLECTIONS = ['documents', 'photos'];
 
     public function handle(MediaHasBeenAddedEvent $event): void
     {
@@ -24,6 +24,6 @@ final class ChunkAndEmbedMediaOnUpload
             return;
         }
 
-        ChunkAndEmbedMediaJob::dispatch($media->id, $model->organization_id);
+        dispatch(new ChunkAndEmbedMediaJob($media->id, $model->organization_id));
     }
 }

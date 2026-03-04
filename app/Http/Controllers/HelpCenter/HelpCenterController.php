@@ -4,34 +4,59 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\HelpCenter;
 
+use App\Actions\GetHelpArticleFaqsAction;
+use App\Actions\SummarizeHelpArticleAction;
 use App\Models\HelpArticle;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 final class HelpCenterController
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
-        $featured = HelpArticle::query()
-            ->published()
-            ->featured()
-            ->orderBy('order')
-            ->limit(6)
-            ->get();
-
-        $byCategory = HelpArticle::query()
-            ->published()
-            ->orderBy('order')
-            ->get()
-            ->groupBy('category');
+        $query = $request->query('q', '');
+        if ($query !== '') {
+            $ids = HelpArticle::search($query)
+                ->query(fn ($builder) => $builder->published())
+                ->take(50)
+                ->get()
+                ->pluck('id');
+            $featured = HelpArticle::query()
+                ->published()
+                ->whereIn('id', $ids)
+                ->featured()
+                ->orderBy('order')
+                ->limit(6)
+                ->get();
+            $byCategory = HelpArticle::query()
+                ->published()
+                ->whereIn('id', $ids)
+                ->orderBy('order')
+                ->get()
+                ->groupBy('category');
+        } else {
+            $featured = HelpArticle::query()
+                ->published()
+                ->featured()
+                ->orderBy('order')
+                ->limit(6)
+                ->get();
+            $byCategory = HelpArticle::query()
+                ->published()
+                ->orderBy('order')
+                ->get()
+                ->groupBy('category');
+        }
 
         return Inertia::render('help/index', [
             'featured' => $featured,
             'byCategory' => $byCategory->map(fn ($articles) => $articles->values()->all())->all(),
+            'searchQuery' => $query,
         ]);
     }
 
-    public function show(HelpArticle $helpArticle): Response
+    public function show(HelpArticle $helpArticle, SummarizeHelpArticleAction $summarize, GetHelpArticleFaqsAction $getFaqs): Response
     {
         abort_unless($helpArticle->is_published, 404);
 
@@ -46,9 +71,14 @@ final class HelpCenterController
             ->limit(5)
             ->get();
 
+        $summary = Inertia::defer(fn (): ?string => $summarize->handle($helpArticle));
+        $peopleAlsoAsked = Inertia::defer(fn (): array => $getFaqs->handle($helpArticle));
+
         return Inertia::render('help/show', [
             'article' => $helpArticle,
             'related' => $related,
+            'summary' => $summary,
+            'peopleAlsoAsked' => $peopleAlsoAsked,
         ]);
     }
 }

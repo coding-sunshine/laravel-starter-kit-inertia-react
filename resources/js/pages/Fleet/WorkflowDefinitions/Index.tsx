@@ -1,9 +1,9 @@
+import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Form, Head, Link } from '@inertiajs/react';
 import { GitBranch, Pencil, Plus, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 
 interface WorkflowDefinitionRecord {
     id: number;
@@ -17,13 +17,16 @@ interface PaginationLink {
     active: boolean;
 }
 interface Props {
-    workflowDefinitions: { data: WorkflowDefinitionRecord[]; links: PaginationLink[] };
+    workflowDefinitions: {
+        data: WorkflowDefinitionRecord[];
+        links: PaginationLink[];
+    };
     triggerTypes: { value: string; name: string }[];
 }
 
 export default function FleetWorkflowDefinitionsIndex({
     workflowDefinitions,
-    triggerTypes,
+    triggerTypes: _triggerTypes,
 }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard().url },
@@ -35,7 +38,9 @@ export default function FleetWorkflowDefinitionsIndex({
             <Head title="Fleet – Workflow definitions" />
             <div className="flex h-full flex-1 flex-col gap-6 rounded-xl p-4">
                 <div className="flex items-center justify-between">
-                    <h1 className="text-2xl font-semibold">Workflow definitions</h1>
+                    <h1 className="text-2xl font-semibold">
+                        Workflow definitions
+                    </h1>
                     <Button asChild>
                         <Link href="/fleet/workflow-definitions/create">
                             <Plus className="mr-2 size-4" />
@@ -61,15 +66,26 @@ export default function FleetWorkflowDefinitionsIndex({
                             <table className="w-full text-sm">
                                 <thead>
                                     <tr className="border-b bg-muted/50">
-                                        <th className="p-3 text-left font-medium">Name</th>
-                                        <th className="p-3 text-left font-medium">Trigger type</th>
-                                        <th className="p-3 text-left font-medium">Active</th>
-                                        <th className="p-3 text-right font-medium">Actions</th>
+                                        <th className="p-3 text-left font-medium">
+                                            Name
+                                        </th>
+                                        <th className="p-3 text-left font-medium">
+                                            Trigger type
+                                        </th>
+                                        <th className="p-3 text-left font-medium">
+                                            Active
+                                        </th>
+                                        <th className="p-3 text-right font-medium">
+                                            Actions
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {workflowDefinitions.data.map((row) => (
-                                        <tr key={row.id} className="border-b last:border-0">
+                                        <tr
+                                            key={row.id}
+                                            className="border-b last:border-0"
+                                        >
                                             <td className="p-3">
                                                 <Link
                                                     href={`/fleet/workflow-definitions/${row.id}`}
@@ -78,17 +94,29 @@ export default function FleetWorkflowDefinitionsIndex({
                                                     {row.name}
                                                 </Link>
                                             </td>
-                                            <td className="p-3">{row.trigger_type}</td>
+                                            <td className="p-3">
+                                                {row.trigger_type}
+                                            </td>
                                             <td className="p-3">
                                                 {row.is_active ? 'Yes' : 'No'}
                                             </td>
                                             <td className="p-3 text-right">
-                                                <Button variant="outline" size="sm" asChild>
-                                                    <Link href={`/fleet/workflow-definitions/${row.id}`}>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    asChild
+                                                >
+                                                    <Link
+                                                        href={`/fleet/workflow-definitions/${row.id}`}
+                                                    >
                                                         View
                                                     </Link>
                                                 </Button>
-                                                <Button variant="outline" size="sm" asChild>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    asChild
+                                                >
                                                     <Link
                                                         href={`/fleet/workflow-definitions/${row.id}/edit`}
                                                     >
@@ -100,10 +128,15 @@ export default function FleetWorkflowDefinitionsIndex({
                                                     method="delete"
                                                     className="ml-2 inline"
                                                     onSubmit={(e) => {
-                                                        if (!confirm('Delete?')) e.preventDefault();
+                                                        if (!confirm('Delete?'))
+                                                            e.preventDefault();
                                                     }}
                                                 >
-                                                    <Button type="submit" variant="ghost" size="sm">
+                                                    <Button
+                                                        type="submit"
+                                                        variant="ghost"
+                                                        size="sm"
+                                                    >
                                                         <Trash2 className="size-3.5 text-destructive" />
                                                     </Button>
                                                 </Form>

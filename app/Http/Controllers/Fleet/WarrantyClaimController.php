@@ -22,25 +22,25 @@ final class WarrantyClaimController extends Controller
             ->with(['workOrder'])
             ->when($request->input('work_order_id'), fn ($q, $v) => $q->where('work_order_id', $v))
             ->when($request->input('status'), fn ($q, $v) => $q->where('status', $v))
-            ->orderByDesc('submitted_date')
+            ->latest('submitted_date')
             ->paginate(15)
             ->withQueryString();
 
         return Inertia::render('Fleet/WarrantyClaims/Index', [
             'warrantyClaims' => $claims,
             'filters' => $request->only(['work_order_id', 'status']),
-            'workOrders' => \App\Models\Fleet\WorkOrder::query()->orderByDesc('created_at')->limit(200)->get(['id', 'work_order_number', 'title']),
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\WarrantyClaimStatus::cases()),
+            'workOrders' => \App\Models\Fleet\WorkOrder::query()->latest()->limit(200)->get(['id', 'work_order_number', 'title']),
+            'statuses' => array_map(fn (\App\Enums\Fleet\WarrantyClaimStatus $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\WarrantyClaimStatus::cases()),
         ]);
     }
 
-    public function create(\Illuminate\Http\Request $request): Response
+    public function create(Request $request): Response
     {
         $this->authorize('create', WarrantyClaim::class);
 
         return Inertia::render('Fleet/WarrantyClaims/Create', [
-            'workOrders' => \App\Models\Fleet\WorkOrder::query()->orderByDesc('created_at')->limit(200)->get(['id', 'work_order_number', 'title']),
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\WarrantyClaimStatus::cases()),
+            'workOrders' => \App\Models\Fleet\WorkOrder::query()->latest()->limit(200)->get(['id', 'work_order_number', 'title']),
+            'statuses' => array_map(fn (\App\Enums\Fleet\WarrantyClaimStatus $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\WarrantyClaimStatus::cases()),
             'presetWorkOrderId' => $request->integer('work_order_id', 0) ?: null,
         ]);
     }
@@ -48,7 +48,7 @@ final class WarrantyClaimController extends Controller
     public function store(StoreWarrantyClaimRequest $request): RedirectResponse
     {
         $this->authorize('create', WarrantyClaim::class);
-        WarrantyClaim::create($request->validated());
+        WarrantyClaim::query()->create($request->validated());
 
         return to_route('fleet.warranty-claims.index')->with('flash', ['status' => 'success', 'message' => 'Warranty claim created.']);
     }
@@ -67,8 +67,8 @@ final class WarrantyClaimController extends Controller
 
         return Inertia::render('Fleet/WarrantyClaims/Edit', [
             'warrantyClaim' => $warranty_claim,
-            'workOrders' => \App\Models\Fleet\WorkOrder::query()->orderByDesc('created_at')->limit(200)->get(['id', 'work_order_number', 'title']),
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\WarrantyClaimStatus::cases()),
+            'workOrders' => \App\Models\Fleet\WorkOrder::query()->latest()->limit(200)->get(['id', 'work_order_number', 'title']),
+            'statuses' => array_map(fn (\App\Enums\Fleet\WarrantyClaimStatus $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\WarrantyClaimStatus::cases()),
         ]);
     }
 

@@ -28,9 +28,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int|null $approved_by
  * @property \Carbon\Carbon|null $approved_at
  */
-class CostAllocation extends Model
+final class CostAllocation extends Model
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
 
     protected $fillable = [
         'cost_center_id',

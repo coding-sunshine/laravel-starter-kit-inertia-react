@@ -36,6 +36,7 @@ final class FuelStationController extends Controller
     public function create(): Response
     {
         $this->authorize('create', FuelStation::class);
+
         return Inertia::render('Fleet/FuelStations/Create');
     }
 
@@ -44,19 +45,22 @@ final class FuelStationController extends Controller
         $this->authorize('create', FuelStation::class);
         $validated = $request->validated();
         $validated['organization_id'] = TenantContext::id();
-        FuelStation::create($validated);
+        FuelStation::query()->create($validated);
+
         return to_route('fleet.fuel-stations.index')->with('flash', ['status' => 'success', 'message' => 'Fuel station created.']);
     }
 
     public function show(FuelStation $fuelStation): Response
     {
         $this->authorize('view', $fuelStation);
+
         return Inertia::render('Fleet/FuelStations/Show', ['fuelStation' => $fuelStation]);
     }
 
     public function edit(FuelStation $fuelStation): Response
     {
         $this->authorize('update', $fuelStation);
+
         return Inertia::render('Fleet/FuelStations/Edit', ['fuelStation' => $fuelStation]);
     }
 
@@ -64,6 +68,7 @@ final class FuelStationController extends Controller
     {
         $this->authorize('update', $fuelStation);
         $fuelStation->update($request->validated());
+
         return to_route('fleet.fuel-stations.show', $fuelStation)->with('flash', ['status' => 'success', 'message' => 'Fuel station updated.']);
     }
 
@@ -71,6 +76,7 @@ final class FuelStationController extends Controller
     {
         $this->authorize('delete', $fuelStation);
         $fuelStation->delete();
+
         return to_route('fleet.fuel-stations.index')->with('flash', ['status' => 'success', 'message' => 'Fuel station deleted.']);
     }
 }

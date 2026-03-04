@@ -13,7 +13,8 @@ use App\Models\Fleet\ServiceSchedule;
 use App\Models\Fleet\Trip;
 use App\Models\Fleet\Vehicle;
 use App\Models\Fleet\WorkOrder;
-use Illuminate\Support\Carbon;
+use Carbon\CarbonInterface;
+use Illuminate\Support\Facades\Date;
 
 /**
  * Compute chart data, KPI trends, sparklines, and operational props for the fleet dashboard.
@@ -27,7 +28,7 @@ final readonly class GetFleetDashboardChartDataAction
      */
     public function handle(): array
     {
-        $now = Carbon::now();
+        $now = Date::now();
         $thisWeekStart = $now->copy()->subDays(7)->startOfDay();
         $lastWeekStart = $now->copy()->subDays(14)->startOfDay();
 
@@ -46,7 +47,7 @@ final readonly class GetFleetDashboardChartDataAction
     /**
      * @return array{vehicles: array{current: int, previous: int, change: float, direction: string}, trips: array{current: int, previous: int, change: float, direction: string}, work_orders: array{current: int, previous: int, change: float, direction: string}, alerts: array{current: int, previous: int, change: float, direction: string}}
      */
-    private function computeKpiTrends(Carbon $thisWeekStart, Carbon $lastWeekStart, Carbon $now): array
+    private function computeKpiTrends(CarbonInterface $thisWeekStart, CarbonInterface $lastWeekStart, CarbonInterface $now): array
     {
         return [
             'vehicles' => $this->trendForModel(Vehicle::class, 'created_at', $thisWeekStart, $lastWeekStart, $now),
@@ -60,7 +61,7 @@ final readonly class GetFleetDashboardChartDataAction
      * @param  class-string<\Illuminate\Database\Eloquent\Model>  $model
      * @return array{current: int, previous: int, change: float, direction: string}
      */
-    private function trendForModel(string $model, string $dateColumn, Carbon $thisWeekStart, Carbon $lastWeekStart, Carbon $now): array
+    private function trendForModel(string $model, string $dateColumn, CarbonInterface $thisWeekStart, CarbonInterface $lastWeekStart, CarbonInterface $now): array
     {
         $current = $model::query()
             ->where($dateColumn, '>=', $thisWeekStart)
@@ -89,7 +90,7 @@ final readonly class GetFleetDashboardChartDataAction
     /**
      * @return array{vehicles: list<int>, trips: list<int>, work_orders: list<int>, alerts: list<int>}
      */
-    private function computeKpiSparklines(Carbon $now): array
+    private function computeKpiSparklines(CarbonInterface $now): array
     {
         $sparklines = ['vehicles' => [], 'trips' => [], 'work_orders' => [], 'alerts' => []];
 
@@ -108,7 +109,7 @@ final readonly class GetFleetDashboardChartDataAction
     /**
      * @return list<array{date: string, label: string, trips: int, work_orders: int}>
      */
-    private function computeFleetActivity(Carbon $now): array
+    private function computeFleetActivity(CarbonInterface $now): array
     {
         $activity = [];
 
@@ -130,7 +131,7 @@ final readonly class GetFleetDashboardChartDataAction
     /**
      * @return list<array{name: string, value: float}>
      */
-    private function computeCostBreakdown(Carbon $now): array
+    private function computeCostBreakdown(CarbonInterface $now): array
     {
         $thirtyDaysAgo = $now->copy()->subDays(30);
 
@@ -157,7 +158,7 @@ final readonly class GetFleetDashboardChartDataAction
     /**
      * @return list<array{date: string, label: string, cost: float}>
      */
-    private function computeFuelCostTrend(Carbon $now): array
+    private function computeFuelCostTrend(CarbonInterface $now): array
     {
         $trend = [];
 
@@ -219,7 +220,7 @@ final readonly class GetFleetDashboardChartDataAction
     /**
      * @return array<int, array{id: int, service_type: string, next_service_due_date: string, vehicle_name: string}>
      */
-    private function computeUpcomingMaintenance(Carbon $now): array
+    private function computeUpcomingMaintenance(CarbonInterface $now): array
     {
         return ServiceSchedule::query()
             ->with('vehicle:id,registration,make,model')
@@ -227,7 +228,7 @@ final readonly class GetFleetDashboardChartDataAction
             ->whereNotNull('next_service_due_date')
             ->where('next_service_due_date', '>=', $now->toDateString())
             ->where('next_service_due_date', '<=', $now->copy()->addDays(14)->toDateString())
-            ->orderBy('next_service_due_date')
+            ->oldest('next_service_due_date')
             ->limit(5)
             ->get()
             ->map(fn (ServiceSchedule $schedule): array => [

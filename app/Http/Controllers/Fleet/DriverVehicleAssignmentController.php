@@ -24,7 +24,7 @@ final class DriverVehicleAssignmentController extends Controller
         $assignments = DriverVehicleAssignment::query()
             ->with(['driver', 'vehicle', 'assignedByUser'])
             ->when($request->boolean('is_current'), fn ($q) => $q->where('is_current', true))
-            ->orderByDesc('assigned_date')
+            ->latest('assigned_date')
             ->paginate(15)
             ->withQueryString();
 
@@ -47,7 +47,7 @@ final class DriverVehicleAssignmentController extends Controller
             ->where('is_current', true)
             ->update(['is_current' => false, 'unassigned_date' => $validated['assigned_date']]);
 
-        DriverVehicleAssignment::create([
+        DriverVehicleAssignment::query()->create([
             'organization_id' => $orgId,
             'driver_id' => $validated['driver_id'],
             'vehicle_id' => $validated['vehicle_id'],
@@ -59,7 +59,7 @@ final class DriverVehicleAssignmentController extends Controller
         ]);
 
         // Keep vehicles.current_driver_id in sync
-        Vehicle::withoutGlobalScopes()->where('id', $validated['vehicle_id'])->update([
+        Vehicle::query()->withoutGlobalScopes()->where('id', $validated['vehicle_id'])->update([
             'current_driver_id' => $validated['driver_id'],
         ]);
 
@@ -73,7 +73,7 @@ final class DriverVehicleAssignmentController extends Controller
 
         if (isset($validated['unassigned_date']) && $validated['unassigned_date']) {
             $driverVehicleAssignment->update(['is_current' => false]);
-            Vehicle::withoutGlobalScopes()->where('id', $driverVehicleAssignment->vehicle_id)->update([
+            Vehicle::query()->withoutGlobalScopes()->where('id', $driverVehicleAssignment->vehicle_id)->update([
                 'current_driver_id' => null,
             ]);
         }
@@ -88,7 +88,7 @@ final class DriverVehicleAssignmentController extends Controller
         $driverVehicleAssignment->delete();
 
         if ($driverVehicleAssignment->is_current) {
-            Vehicle::withoutGlobalScopes()->where('id', $vehicleId)->update(['current_driver_id' => null]);
+            Vehicle::query()->withoutGlobalScopes()->where('id', $vehicleId)->update(['current_driver_id' => null]);
         }
 
         return back()->with('flash', ['status' => 'success', 'message' => 'Assignment removed.']);

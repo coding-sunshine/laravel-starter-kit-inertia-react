@@ -29,9 +29,10 @@ use Mattiverse\Userstamps\Traits\Userstamps;
  * @property string|null $notes
  * @property bool $is_active
  */
-class Contractor extends Model
+final class Contractor extends Model
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use SoftDeletes;
     use Userstamps;
 

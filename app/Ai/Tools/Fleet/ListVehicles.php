@@ -7,17 +7,15 @@ namespace App\Ai\Tools\Fleet;
 use App\Models\Fleet\Vehicle;
 use App\Models\Scopes\OrganizationScope;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
-use Illuminate\Support\Str;
 use Laravel\Ai\Contracts\Tool;
 use Laravel\Ai\Tools\Request;
-use Stringable;
 
-final class ListVehicles implements Tool
+final readonly class ListVehicles implements Tool
 {
-    private const DEFAULT_LIMIT = 15;
+    private const int DEFAULT_LIMIT = 15;
 
     public function __construct(
-        private readonly int $organizationId,
+        private int $organizationId,
     ) {}
 
     public function description(): string
@@ -33,9 +31,9 @@ final class ListVehicles implements Tool
         ];
     }
 
-    public function handle(Request $request): string|Stringable
+    public function handle(Request $request): string
     {
-        $query = Vehicle::withoutGlobalScope(OrganizationScope::class)
+        $query = Vehicle::query()->withoutGlobalScope(OrganizationScope::class)
             ->where('organization_id', $this->organizationId);
 
         $status = $request['status'] ?? null;
@@ -52,7 +50,7 @@ final class ListVehicles implements Tool
             return 'No vehicles found for this organization.';
         }
 
-        $lines = $vehicles->map(fn ($v) => sprintf('#%d %s – %s %s (%s)', $v->id, $v->registration, $v->make, $v->model, $v->status));
+        $lines = $vehicles->map(fn ($v): string => sprintf('#%d %s – %s %s (%s)', $v->id, $v->registration, $v->make, $v->model, $v->status));
 
         return 'Vehicles: '."\n".$lines->implode("\n");
     }

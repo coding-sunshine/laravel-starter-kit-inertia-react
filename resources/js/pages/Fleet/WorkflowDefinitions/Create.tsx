@@ -1,10 +1,10 @@
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 
 interface Option {
     value: string;
@@ -14,7 +14,9 @@ interface Props {
     triggerTypes: Option[];
 }
 
-export default function FleetWorkflowDefinitionsCreate({ triggerTypes }: Props) {
+export default function FleetWorkflowDefinitionsCreate({
+    triggerTypes,
+}: Props) {
     const form = useForm({
         name: '',
         description: '',
@@ -40,7 +42,9 @@ export default function FleetWorkflowDefinitionsCreate({ triggerTypes }: Props) 
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Fleet – New workflow definition" />
             <div className="flex h-full flex-1 flex-col gap-6 rounded-xl p-4">
-                <h1 className="text-2xl font-semibold">New workflow definition</h1>
+                <h1 className="text-2xl font-semibold">
+                    New workflow definition
+                </h1>
                 <form onSubmit={handleSubmit} className="max-w-xl space-y-4">
                     <div>
                         <Label htmlFor="name">Name *</Label>
@@ -51,7 +55,9 @@ export default function FleetWorkflowDefinitionsCreate({ triggerTypes }: Props) 
                             className="mt-1"
                         />
                         {errors.name && (
-                            <p className="mt-1 text-sm text-destructive">{errors.name}</p>
+                            <p className="mt-1 text-sm text-destructive">
+                                {errors.name}
+                            </p>
                         )}
                     </div>
                     <div>
@@ -59,11 +65,15 @@ export default function FleetWorkflowDefinitionsCreate({ triggerTypes }: Props) 
                         <textarea
                             id="description"
                             value={data.description}
-                            onChange={(e) => setData('description', e.target.value)}
+                            onChange={(e) =>
+                                setData('description', e.target.value)
+                            }
                             className="mt-1 flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
                         />
                         {errors.description && (
-                            <p className="mt-1 text-sm text-destructive">{errors.description}</p>
+                            <p className="mt-1 text-sm text-destructive">
+                                {errors.description}
+                            </p>
                         )}
                     </div>
                     <div>
@@ -71,7 +81,9 @@ export default function FleetWorkflowDefinitionsCreate({ triggerTypes }: Props) 
                         <select
                             id="trigger_type"
                             value={data.trigger_type}
-                            onChange={(e) => setData('trigger_type', e.target.value)}
+                            onChange={(e) =>
+                                setData('trigger_type', e.target.value)
+                            }
                             className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
                         >
                             {triggerTypes.map((o) => (
@@ -81,17 +93,38 @@ export default function FleetWorkflowDefinitionsCreate({ triggerTypes }: Props) 
                             ))}
                         </select>
                         {errors.trigger_type && (
-                            <p className="mt-1 text-sm text-destructive">{errors.trigger_type}</p>
+                            <p className="mt-1 text-sm text-destructive">
+                                {errors.trigger_type}
+                            </p>
                         )}
                     </div>
                     <div>
-                        <Label htmlFor="trigger_config">Trigger config (JSON, optional)</Label>
+                        <Label htmlFor="trigger_config">
+                            Trigger config (JSON, optional)
+                        </Label>
                         <textarea
                             id="trigger_config"
-                            value={typeof data.trigger_config === 'object' && data.trigger_config !== null ? JSON.stringify(data.trigger_config, null, 2) : (data.trigger_config && typeof data.trigger_config === 'string' ? data.trigger_config : '{}')}
+                            value={
+                                typeof data.trigger_config === 'object' &&
+                                data.trigger_config !== null
+                                    ? JSON.stringify(
+                                          data.trigger_config,
+                                          null,
+                                          2,
+                                      )
+                                    : data.trigger_config &&
+                                        typeof data.trigger_config === 'string'
+                                      ? data.trigger_config
+                                      : '{}'
+                            }
                             onChange={(e) => {
                                 try {
-                                    setData('trigger_config', e.target.value ? JSON.parse(e.target.value) : {});
+                                    setData(
+                                        'trigger_config',
+                                        e.target.value
+                                            ? JSON.parse(e.target.value)
+                                            : {},
+                                    );
                                 } catch {
                                     setData('trigger_config', {});
                                 }
@@ -99,14 +132,20 @@ export default function FleetWorkflowDefinitionsCreate({ triggerTypes }: Props) 
                             className="mt-1 flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 font-mono text-sm"
                             placeholder='{"event": "ai.compliance_prediction.completed"} or {"frequency": "daily"}'
                         />
-                        <p className="mt-1 text-xs text-muted-foreground">Event: &quot;event&quot;: &quot;ai.&lt;job_type&gt;.completed&quot;. Schedule: &quot;frequency&quot;: &quot;daily&quot;.</p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                            Event: &quot;event&quot;:
+                            &quot;ai.&lt;job_type&gt;.completed&quot;. Schedule:
+                            &quot;frequency&quot;: &quot;daily&quot;.
+                        </p>
                     </div>
                     <div className="flex items-center gap-2">
                         <input
                             id="is_active"
                             type="checkbox"
                             checked={data.is_active}
-                            onChange={(e) => setData('is_active', e.target.checked)}
+                            onChange={(e) =>
+                                setData('is_active', e.target.checked)
+                            }
                             className="size-4 rounded border-input"
                         />
                         <Label htmlFor="is_active">Active</Label>
@@ -115,10 +154,19 @@ export default function FleetWorkflowDefinitionsCreate({ triggerTypes }: Props) 
                         <Label htmlFor="steps">Steps (JSON array)</Label>
                         <textarea
                             id="steps"
-                            value={Array.isArray(data.steps) ? JSON.stringify(data.steps, null, 2) : '[]'}
+                            value={
+                                Array.isArray(data.steps)
+                                    ? JSON.stringify(data.steps, null, 2)
+                                    : '[]'
+                            }
                             onChange={(e) => {
                                 try {
-                                    setData('steps', e.target.value ? JSON.parse(e.target.value) : []);
+                                    setData(
+                                        'steps',
+                                        e.target.value
+                                            ? JSON.parse(e.target.value)
+                                            : [],
+                                    );
                                 } catch {
                                     setData('steps', []);
                                 }
@@ -127,18 +175,28 @@ export default function FleetWorkflowDefinitionsCreate({ triggerTypes }: Props) 
                             placeholder='[{"type":"run_ai","config":{"agent":"compliance_prediction"}}]'
                         />
                         <p className="mt-1 text-xs text-muted-foreground">
-                            Types: run_ai / ai_agent (config.agent: compliance_prediction, predictive_maintenance, fraud_detection, fleet_electrification, fleet_optimization), create_alert (source_step, foreach, title_template), create_work_order (source_step, foreach, vehicle_id_from, title_template, min_urgency).
+                            Types: run_ai / ai_agent (config.agent:
+                            compliance_prediction, predictive_maintenance,
+                            fraud_detection, fleet_electrification,
+                            fleet_optimization), create_alert (source_step,
+                            foreach, title_template), create_work_order
+                            (source_step, foreach, vehicle_id_from,
+                            title_template, min_urgency).
                         </p>
                     </div>
                     {errors.is_active && (
-                        <p className="text-sm text-destructive">{errors.is_active}</p>
+                        <p className="text-sm text-destructive">
+                            {errors.is_active}
+                        </p>
                     )}
                     <div className="flex gap-2">
                         <Button type="submit" disabled={processing}>
                             Create workflow definition
                         </Button>
                         <Button variant="outline" asChild>
-                            <Link href="/fleet/workflow-definitions">Cancel</Link>
+                            <Link href="/fleet/workflow-definitions">
+                                Cancel
+                            </Link>
                         </Button>
                     </div>
                 </form>

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
-use App\Ai\Agents\AssistantAgent;
+use App\Ai\Agents\UnifiedAssistant;
 use App\Services\PrismService;
 use Closure;
 use Illuminate\Http\Request;
@@ -92,7 +92,7 @@ final class ChatController
             $conversationId = $newConversationId;
         }
 
-        $agent = AssistantAgent::make(['user_id' => $user->id])
+        $agent = UnifiedAssistant::forOrg($user->id)
             ->continue($conversationId, $user);
 
         try {

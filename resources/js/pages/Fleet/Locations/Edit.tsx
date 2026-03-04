@@ -75,7 +75,11 @@ export default function FleetLocationsEdit({ location, locationTypes }: Props) {
                             onChange={(e) => setData('name', e.target.value)}
                             className="mt-1"
                         />
-                        {errors.name && <p className="mt-1 text-sm text-destructive">{errors.name}</p>}
+                        {errors.name && (
+                            <p className="mt-1 text-sm text-destructive">
+                                {errors.name}
+                            </p>
+                        )}
                     </div>
                     <div>
                         <Label htmlFor="type">Type *</Label>
@@ -101,7 +105,11 @@ export default function FleetLocationsEdit({ location, locationTypes }: Props) {
                             rows={2}
                             className="mt-1 flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
                         />
-                        {errors.address && <p className="mt-1 text-sm text-destructive">{errors.address}</p>}
+                        {errors.address && (
+                            <p className="mt-1 text-sm text-destructive">
+                                {errors.address}
+                            </p>
+                        )}
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
@@ -109,7 +117,9 @@ export default function FleetLocationsEdit({ location, locationTypes }: Props) {
                             <Input
                                 id="city"
                                 value={data.city}
-                                onChange={(e) => setData('city', e.target.value)}
+                                onChange={(e) =>
+                                    setData('city', e.target.value)
+                                }
                                 className="mt-1"
                             />
                         </div>
@@ -118,7 +128,9 @@ export default function FleetLocationsEdit({ location, locationTypes }: Props) {
                             <Input
                                 id="postcode"
                                 value={data.postcode}
-                                onChange={(e) => setData('postcode', e.target.value)}
+                                onChange={(e) =>
+                                    setData('postcode', e.target.value)
+                                }
                                 className="mt-1"
                             />
                         </div>
@@ -128,7 +140,9 @@ export default function FleetLocationsEdit({ location, locationTypes }: Props) {
                             type="checkbox"
                             id="is_active"
                             checked={data.is_active}
-                            onChange={(e) => setData('is_active', e.target.checked)}
+                            onChange={(e) =>
+                                setData('is_active', e.target.checked)
+                            }
                             className="h-4 w-4 rounded border-input"
                         />
                         <Label htmlFor="is_active">Active</Label>
@@ -138,7 +152,9 @@ export default function FleetLocationsEdit({ location, locationTypes }: Props) {
                             Update location
                         </Button>
                         <Button type="button" variant="outline" asChild>
-                            <a href={`/fleet/locations/${location.id}`}>Cancel</a>
+                            <a href={`/fleet/locations/${location.id}`}>
+                                Cancel
+                            </a>
                         </Button>
                     </div>
                 </form>

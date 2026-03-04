@@ -1,17 +1,20 @@
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 
 interface Props {
     categories: { value: string; name: string }[];
     deliveryMethods: { value: string; name: string }[];
 }
 
-export default function FleetTrainingCoursesCreate({ categories, deliveryMethods }: Props) {
+export default function FleetTrainingCoursesCreate({
+    categories,
+    deliveryMethods,
+}: Props) {
     const form = useForm({
         course_name: '',
         course_code: '',
@@ -36,35 +39,86 @@ export default function FleetTrainingCoursesCreate({ categories, deliveryMethods
             <Head title="Fleet – New training course" />
             <div className="flex h-full flex-1 flex-col gap-6 rounded-xl p-4">
                 <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="sm" asChild><Link href="/fleet/training-courses">Back</Link></Button>
-                    <h1 className="text-2xl font-semibold">New training course</h1>
+                    <Button variant="ghost" size="sm" asChild>
+                        <Link href="/fleet/training-courses">Back</Link>
+                    </Button>
+                    <h1 className="text-2xl font-semibold">
+                        New training course
+                    </h1>
                 </div>
-                <form onSubmit={(e) => { e.preventDefault(); form.post('/fleet/training-courses'); }} className="max-w-xl space-y-4 rounded-lg border p-6">
+                <form
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        form.post('/fleet/training-courses');
+                    }}
+                    className="max-w-xl space-y-4 rounded-lg border p-6"
+                >
                     <div className="space-y-2">
                         <Label>Course name</Label>
-                        <Input value={form.data.course_name} onChange={e => form.setData('course_name', e.target.value)} required />
+                        <Input
+                            value={form.data.course_name}
+                            onChange={(e) =>
+                                form.setData('course_name', e.target.value)
+                            }
+                            required
+                        />
                     </div>
                     <div className="grid gap-4 sm:grid-cols-2">
                         <div className="space-y-2">
                             <Label>Category</Label>
-                            <select value={form.data.category} onChange={e => form.setData('category', e.target.value)} className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm">
-                                {categories.map((c) => <option key={c.value} value={c.value}>{c.name}</option>)}
+                            <select
+                                value={form.data.category}
+                                onChange={(e) =>
+                                    form.setData('category', e.target.value)
+                                }
+                                className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                            >
+                                {categories.map((c) => (
+                                    <option key={c.value} value={c.value}>
+                                        {c.name}
+                                    </option>
+                                ))}
                             </select>
                         </div>
                         <div className="space-y-2">
                             <Label>Delivery method</Label>
-                            <select value={form.data.delivery_method} onChange={e => form.setData('delivery_method', e.target.value)} className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm">
-                                {deliveryMethods.map((d) => <option key={d.value} value={d.value}>{d.name}</option>)}
+                            <select
+                                value={form.data.delivery_method}
+                                onChange={(e) =>
+                                    form.setData(
+                                        'delivery_method',
+                                        e.target.value,
+                                    )
+                                }
+                                className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                            >
+                                {deliveryMethods.map((d) => (
+                                    <option key={d.value} value={d.value}>
+                                        {d.name}
+                                    </option>
+                                ))}
                             </select>
                         </div>
                     </div>
                     <div className="space-y-2">
                         <Label>Duration (hours)</Label>
-                        <Input type="number" step="0.5" min={0} value={form.data.duration_hours} onChange={e => form.setData('duration_hours', e.target.value)} />
+                        <Input
+                            type="number"
+                            step="0.5"
+                            min={0}
+                            value={form.data.duration_hours}
+                            onChange={(e) =>
+                                form.setData('duration_hours', e.target.value)
+                            }
+                        />
                     </div>
                     <div className="flex gap-2">
-                        <Button type="submit" disabled={form.processing}>Save</Button>
-                        <Button type="button" variant="outline" asChild><Link href="/fleet/training-courses">Cancel</Link></Button>
+                        <Button type="submit" disabled={form.processing}>
+                            Save
+                        </Button>
+                        <Button type="button" variant="outline" asChild>
+                            <Link href="/fleet/training-courses">Cancel</Link>
+                        </Button>
                     </div>
                 </form>
             </div>

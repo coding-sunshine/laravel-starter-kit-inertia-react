@@ -16,8 +16,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property float|null $total_cost
  * @property string|null $notes
  */
-class WorkOrderPart extends Model
+final class WorkOrderPart extends Model
 {
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
+
     protected $table = 'work_order_parts';
 
     protected $fillable = [

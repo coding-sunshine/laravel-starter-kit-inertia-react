@@ -1,11 +1,11 @@
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 
 interface Option {
     value: string;
@@ -51,11 +51,16 @@ export default function FleetInsuranceClaimsEdit({
 
     const handleGenerateFnol = () => {
         setGeneratingFnol(true);
-        const csrf = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content ?? '';
+        const csrf =
+            (
+                document.querySelector(
+                    'meta[name="csrf-token"]',
+                ) as HTMLMetaElement
+            )?.content ?? '';
         fetch(generateFnolUrl, {
             method: 'POST',
             headers: {
-                'Accept': 'application/json',
+                Accept: 'application/json',
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': csrf,
                 'X-Requested-With': 'XMLHttpRequest',
@@ -83,13 +88,18 @@ export default function FleetInsuranceClaimsEdit({
             title: insuranceClaim.claim_number,
             href: `/fleet/insurance-claims/${insuranceClaim.id}`,
         },
-        { title: 'Edit', href: `/fleet/insurance-claims/${insuranceClaim.id}/edit` },
+        {
+            title: 'Edit',
+            href: `/fleet/insurance-claims/${insuranceClaim.id}/edit`,
+        },
     ];
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         form.transform((d) => ({ ...d, _method: 'PUT' }));
-        form.post(`/fleet/insurance-claims/${insuranceClaim.id}`, { forceFormData: true });
+        form.post(`/fleet/insurance-claims/${insuranceClaim.id}`, {
+            forceFormData: true,
+        });
     };
 
     return (
@@ -103,7 +113,9 @@ export default function FleetInsuranceClaimsEdit({
                         <select
                             id="incident_id"
                             value={data.incident_id}
-                            onChange={(e) => setData('incident_id', Number(e.target.value))}
+                            onChange={(e) =>
+                                setData('incident_id', Number(e.target.value))
+                            }
                             className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
                         >
                             {incidents.map((i) => (
@@ -113,16 +125,23 @@ export default function FleetInsuranceClaimsEdit({
                             ))}
                         </select>
                         {errors.incident_id && (
-                            <p className="mt-1 text-sm text-destructive">{errors.incident_id}</p>
+                            <p className="mt-1 text-sm text-destructive">
+                                {errors.incident_id}
+                            </p>
                         )}
                     </div>
                     <div>
-                        <Label htmlFor="insurance_policy_id">Insurance policy *</Label>
+                        <Label htmlFor="insurance_policy_id">
+                            Insurance policy *
+                        </Label>
                         <select
                             id="insurance_policy_id"
                             value={data.insurance_policy_id}
                             onChange={(e) =>
-                                setData('insurance_policy_id', Number(e.target.value))
+                                setData(
+                                    'insurance_policy_id',
+                                    Number(e.target.value),
+                                )
                             }
                             className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
                         >
@@ -143,11 +162,15 @@ export default function FleetInsuranceClaimsEdit({
                         <Input
                             id="claim_number"
                             value={data.claim_number}
-                            onChange={(e) => setData('claim_number', e.target.value)}
+                            onChange={(e) =>
+                                setData('claim_number', e.target.value)
+                            }
                             className="mt-1"
                         />
                         {errors.claim_number && (
-                            <p className="mt-1 text-sm text-destructive">{errors.claim_number}</p>
+                            <p className="mt-1 text-sm text-destructive">
+                                {errors.claim_number}
+                            </p>
                         )}
                     </div>
                     <div className="grid grid-cols-2 gap-4">
@@ -156,7 +179,9 @@ export default function FleetInsuranceClaimsEdit({
                             <select
                                 id="claim_type"
                                 value={data.claim_type}
-                                onChange={(e) => setData('claim_type', e.target.value)}
+                                onChange={(e) =>
+                                    setData('claim_type', e.target.value)
+                                }
                                 className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
                             >
                                 {claimTypes.map((o) => (
@@ -171,7 +196,9 @@ export default function FleetInsuranceClaimsEdit({
                             <select
                                 id="status"
                                 value={data.status}
-                                onChange={(e) => setData('status', e.target.value)}
+                                onChange={(e) =>
+                                    setData('status', e.target.value)
+                                }
                                 className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
                             >
                                 {statuses.map((o) => (
@@ -185,7 +212,9 @@ export default function FleetInsuranceClaimsEdit({
                     {insuranceClaim.incident_id && (
                         <div>
                             <div className="flex items-center justify-between">
-                                <Label htmlFor="claim_narrative">Claim narrative (FNOL)</Label>
+                                <Label htmlFor="claim_narrative">
+                                    Claim narrative (FNOL)
+                                </Label>
                                 <Button
                                     type="button"
                                     variant="secondary"
@@ -193,33 +222,50 @@ export default function FleetInsuranceClaimsEdit({
                                     onClick={handleGenerateFnol}
                                     disabled={generatingFnol}
                                 >
-                                    {generatingFnol ? 'Generating…' : 'Generate FNOL'}
+                                    {generatingFnol
+                                        ? 'Generating…'
+                                        : 'Generate FNOL'}
                                 </Button>
                             </div>
                             <textarea
                                 id="claim_narrative"
                                 value={data.claim_narrative}
-                                onChange={(e) => setData('claim_narrative', e.target.value)}
+                                onChange={(e) =>
+                                    setData('claim_narrative', e.target.value)
+                                }
                                 rows={6}
                                 className="mt-1 flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
                             />
                             {errors.claim_narrative && (
-                                <p className="mt-1 text-sm text-destructive">{errors.claim_narrative}</p>
+                                <p className="mt-1 text-sm text-destructive">
+                                    {errors.claim_narrative}
+                                </p>
                             )}
                         </div>
                     )}
                     <div>
-                        <Label htmlFor="photos">Photos (optional, for AI damage analysis)</Label>
+                        <Label htmlFor="photos">
+                            Photos (optional, for AI damage analysis)
+                        </Label>
                         <input
                             id="photos"
                             type="file"
                             accept="image/*"
                             multiple
                             className="mt-1 block w-full text-sm text-muted-foreground file:mr-4 file:rounded-md file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-medium file:text-primary-foreground file:transition-colors"
-                            onChange={(e) => setData('photos', e.target.files ? Array.from(e.target.files) : [])}
+                            onChange={(e) =>
+                                setData(
+                                    'photos',
+                                    e.target.files
+                                        ? Array.from(e.target.files)
+                                        : [],
+                                )
+                            }
                         />
                         {data.photos.length > 0 && (
-                            <p className="mt-1 text-sm text-muted-foreground">{data.photos.length} file(s) selected</p>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                                {data.photos.length} file(s) selected
+                            </p>
                         )}
                     </div>
                     <div className="flex gap-2">
@@ -227,7 +273,9 @@ export default function FleetInsuranceClaimsEdit({
                             Update
                         </Button>
                         <Button variant="outline" asChild>
-                            <Link href={`/fleet/insurance-claims/${insuranceClaim.id}`}>
+                            <Link
+                                href={`/fleet/insurance-claims/${insuranceClaim.id}`}
+                            >
                                 Cancel
                             </Link>
                         </Button>

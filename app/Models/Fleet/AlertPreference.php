@@ -23,8 +23,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $quiet_hours_end
  * @property bool $weekend_enabled
  */
-class AlertPreference extends Model
+final class AlertPreference extends Model
 {
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
+
     protected $fillable = [
         'user_id',
         'organization_id',

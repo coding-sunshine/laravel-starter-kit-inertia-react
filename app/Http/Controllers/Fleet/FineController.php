@@ -23,7 +23,7 @@ final class FineController extends Controller
             ->when($request->input('vehicle_id'), fn ($q, $v) => $q->where('vehicle_id', $v))
             ->when($request->input('driver_id'), fn ($q, $v) => $q->where('driver_id', $v))
             ->when($request->input('status'), fn ($q, $v) => $q->where('status', $v))
-            ->orderByDesc('offence_date')
+            ->latest('offence_date')
             ->paginate(15)
             ->withQueryString();
 
@@ -32,8 +32,8 @@ final class FineController extends Controller
             'filters' => $request->only(['vehicle_id', 'driver_id', 'status']),
             'vehicles' => \App\Models\Fleet\Vehicle::query()->orderBy('registration')->get(['id', 'registration']),
             'drivers' => \App\Models\Fleet\Driver::query()->orderBy('last_name')->get(['id', 'first_name', 'last_name']),
-            'fineTypes' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\FineType::cases()),
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\FineStatus::cases()),
+            'fineTypes' => array_map(fn (\App\Enums\Fleet\FineType $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\FineType::cases()),
+            'statuses' => array_map(fn (\App\Enums\Fleet\FineStatus $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\FineStatus::cases()),
         ]);
     }
 
@@ -44,15 +44,15 @@ final class FineController extends Controller
         return Inertia::render('Fleet/Fines/Create', [
             'vehicles' => \App\Models\Fleet\Vehicle::query()->orderBy('registration')->get(['id', 'registration']),
             'drivers' => \App\Models\Fleet\Driver::query()->orderBy('last_name')->get(['id', 'first_name', 'last_name']),
-            'fineTypes' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\FineType::cases()),
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\FineStatus::cases()),
+            'fineTypes' => array_map(fn (\App\Enums\Fleet\FineType $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\FineType::cases()),
+            'statuses' => array_map(fn (\App\Enums\Fleet\FineStatus $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\FineStatus::cases()),
         ]);
     }
 
     public function store(StoreFineRequest $request): RedirectResponse
     {
         $this->authorize('create', Fine::class);
-        Fine::create($request->validated());
+        Fine::query()->create($request->validated());
 
         return to_route('fleet.fines.index')->with('flash', ['status' => 'success', 'message' => 'Fine created.']);
     }
@@ -73,8 +73,8 @@ final class FineController extends Controller
             'fine' => $fine,
             'vehicles' => \App\Models\Fleet\Vehicle::query()->orderBy('registration')->get(['id', 'registration']),
             'drivers' => \App\Models\Fleet\Driver::query()->orderBy('last_name')->get(['id', 'first_name', 'last_name']),
-            'fineTypes' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\FineType::cases()),
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\FineStatus::cases()),
+            'fineTypes' => array_map(fn (\App\Enums\Fleet\FineType $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\FineType::cases()),
+            'statuses' => array_map(fn (\App\Enums\Fleet\FineStatus $c): array => ['value' => $c->value, 'name' => $c->name], \App\Enums\Fleet\FineStatus::cases()),
         ]);
     }
 

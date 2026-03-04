@@ -12,6 +12,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 final class RunWorkflowExecutionJob implements ShouldQueue
 {
@@ -26,15 +27,16 @@ final class RunWorkflowExecutionJob implements ShouldQueue
 
     public function handle(WorkflowExecutionService $service): void
     {
-        $execution = WorkflowExecution::find($this->workflowExecutionId);
+        $execution = WorkflowExecution::query()->find($this->workflowExecutionId);
         if ($execution === null) {
             Log::warning('RunWorkflowExecutionJob: execution not found', ['id' => $this->workflowExecutionId]);
+
             return;
         }
 
         try {
             $service->run($execution);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('RunWorkflowExecutionJob: failed', [
                 'execution_id' => $this->workflowExecutionId,
                 'error' => $e->getMessage(),

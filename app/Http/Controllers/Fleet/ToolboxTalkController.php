@@ -24,34 +24,35 @@ final class ToolboxTalkController extends Controller
         $talks = ToolboxTalk::query()
             ->with('presenter')
             ->when($request->input('status'), fn ($q, $v) => $q->where('status', $v))
-            ->orderByDesc('scheduled_date')
+            ->latest('scheduled_date')
             ->paginate(15)
             ->withQueryString();
 
         return Inertia::render('Fleet/ToolboxTalks/Index', [
             'toolboxTalks' => $talks,
             'filters' => $request->only(['status']),
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], ToolboxTalkStatus::cases()),
+            'statuses' => array_map(fn (ToolboxTalkStatus $c): array => ['value' => $c->value, 'name' => $c->name], ToolboxTalkStatus::cases()),
         ]);
     }
 
     public function create(): Response
     {
         $this->authorize('create', ToolboxTalk::class);
-        $users = User::query()->orderBy('name')->get(['id', 'name'])->map(fn ($u) => ['id' => $u->id, 'name' => $u->name]);
-        $drivers = Driver::query()->orderBy('last_name')->get(['id', 'first_name', 'last_name'])->map(fn ($d) => ['id' => $d->id, 'name' => $d->first_name . ' ' . $d->last_name]);
+        $users = User::query()->orderBy('name')->get(['id', 'name'])->map(fn ($u): array => ['id' => $u->id, 'name' => $u->name]);
+        $drivers = Driver::query()->orderBy('last_name')->get(['id', 'first_name', 'last_name'])->map(fn ($d): array => ['id' => $d->id, 'name' => $d->first_name.' '.$d->last_name]);
 
         return Inertia::render('Fleet/ToolboxTalks/Create', [
             'users' => $users,
             'drivers' => $drivers,
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], ToolboxTalkStatus::cases()),
+            'statuses' => array_map(fn (ToolboxTalkStatus $c): array => ['value' => $c->value, 'name' => $c->name], ToolboxTalkStatus::cases()),
         ]);
     }
 
     public function store(StoreToolboxTalkRequest $request): RedirectResponse
     {
         $this->authorize('create', ToolboxTalk::class);
-        ToolboxTalk::create($request->validated());
+        ToolboxTalk::query()->create($request->validated());
+
         return to_route('fleet.toolbox-talks.index')->with('flash', ['status' => 'success', 'message' => 'Toolbox talk created.']);
     }
 
@@ -59,20 +60,21 @@ final class ToolboxTalkController extends Controller
     {
         $this->authorize('view', $toolbox_talk);
         $toolbox_talk->load('presenter');
+
         return Inertia::render('Fleet/ToolboxTalks/Show', ['toolboxTalk' => $toolbox_talk]);
     }
 
     public function edit(ToolboxTalk $toolbox_talk): Response
     {
         $this->authorize('update', $toolbox_talk);
-        $users = User::query()->orderBy('name')->get(['id', 'name'])->map(fn ($u) => ['id' => $u->id, 'name' => $u->name]);
-        $drivers = Driver::query()->orderBy('last_name')->get(['id', 'first_name', 'last_name'])->map(fn ($d) => ['id' => $d->id, 'name' => $d->first_name . ' ' . $d->last_name]);
+        $users = User::query()->orderBy('name')->get(['id', 'name'])->map(fn ($u): array => ['id' => $u->id, 'name' => $u->name]);
+        $drivers = Driver::query()->orderBy('last_name')->get(['id', 'first_name', 'last_name'])->map(fn ($d): array => ['id' => $d->id, 'name' => $d->first_name.' '.$d->last_name]);
 
         return Inertia::render('Fleet/ToolboxTalks/Edit', [
             'toolboxTalk' => $toolbox_talk,
             'users' => $users,
             'drivers' => $drivers,
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], ToolboxTalkStatus::cases()),
+            'statuses' => array_map(fn (ToolboxTalkStatus $c): array => ['value' => $c->value, 'name' => $c->name], ToolboxTalkStatus::cases()),
         ]);
     }
 
@@ -80,6 +82,7 @@ final class ToolboxTalkController extends Controller
     {
         $this->authorize('update', $toolbox_talk);
         $toolbox_talk->update($request->validated());
+
         return to_route('fleet.toolbox-talks.show', $toolbox_talk)->with('flash', ['status' => 'success', 'message' => 'Toolbox talk updated.']);
     }
 
@@ -87,6 +90,7 @@ final class ToolboxTalkController extends Controller
     {
         $this->authorize('delete', $toolbox_talk);
         $toolbox_talk->delete();
+
         return to_route('fleet.toolbox-talks.index')->with('flash', ['status' => 'success', 'message' => 'Toolbox talk deleted.']);
     }
 }

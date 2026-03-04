@@ -5,11 +5,9 @@ import { AppSidebarHeader } from '@/components/app-sidebar-header';
 import { CloseSidebarOnNavigate } from '@/components/close-sidebar-on-navigate';
 import { CommandPalette } from '@/components/command-dialog';
 import { FleetAssistantFab } from '@/components/fleet';
-import { type BreadcrumbItem } from '@/types';
-import { type PropsWithChildren } from 'react';
-import { useEffect } from 'react';
+import { type BreadcrumbItem, type SharedData } from '@/types';
 import { usePage } from '@inertiajs/react';
-import { type SharedData } from '@/types';
+import { useEffect, type PropsWithChildren } from 'react';
 
 export default function AppSidebarLayout({
     children,

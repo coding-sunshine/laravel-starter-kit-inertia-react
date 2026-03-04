@@ -7,13 +7,13 @@ namespace App\Jobs\Ai;
 use App\Models\Fleet\AiAnalysisResult;
 use App\Models\Fleet\AiJobRun;
 use App\Services\Ai\FraudDetectionService;
-use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 final class RunFraudDetectionJob implements ShouldQueue
 {
@@ -32,7 +32,7 @@ final class RunFraudDetectionJob implements ShouldQueue
 
     public function handle(FraudDetectionService $service): void
     {
-        $run = AiJobRun::withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)
+        $run = AiJobRun::query()->withoutGlobalScope(\App\Models\Scopes\OrganizationScope::class)
             ->find($this->aiJobRunId);
 
         if ($run === null || $run->organization_id !== $this->organizationId) {
@@ -40,6 +40,7 @@ final class RunFraudDetectionJob implements ShouldQueue
                 'ai_job_run_id' => $this->aiJobRunId,
                 'organization_id' => $this->organizationId,
             ]);
+
             return;
         }
 
@@ -49,15 +50,15 @@ final class RunFraudDetectionJob implements ShouldQueue
             'laravel_job_id' => $this->job?->uuid(),
         ]);
 
-        $dateFrom = $this->dateFrom !== null ? Carbon::parse($this->dateFrom) : null;
-        $dateTo = $this->dateTo !== null ? Carbon::parse($this->dateTo) : null;
+        $dateFrom = $this->dateFrom !== null ? \Illuminate\Support\Facades\Date::parse($this->dateFrom) : null;
+        $dateTo = $this->dateTo !== null ? \Illuminate\Support\Facades\Date::parse($this->dateTo) : null;
 
         try {
             $result = $service->run($this->organizationId, $dateFrom, $dateTo);
             $findings = $result['findings'] ?? [];
 
             foreach ($findings as $f) {
-                AiAnalysisResult::create([
+                AiAnalysisResult::query()->create([
                     'organization_id' => $this->organizationId,
                     'analysis_type' => 'fraud_detection',
                     'entity_type' => 'fuel_transaction',
@@ -83,7 +84,7 @@ final class RunFraudDetectionJob implements ShouldQueue
                 'completed_at' => now(),
                 'result_data' => ['findings_count' => count($findings), 'findings' => $findings],
             ]);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('RunFraudDetectionJob: failed', [
                 'ai_job_run_id' => $this->aiJobRunId,
                 'error' => $e->getMessage(),

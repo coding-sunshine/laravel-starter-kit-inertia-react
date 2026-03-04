@@ -63,7 +63,7 @@
             "default": null
         },
         "embedding_vector": {
-            "type": "json",
+            "type": "vector",
             "nullable": true,
             "default": null
         }

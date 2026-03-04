@@ -10,7 +10,7 @@ use App\Services\TenantContext;
 
 final class ComplianceItemPolicy
 {
-    public function viewAny(User $user): bool
+    public function viewAny(): bool
     {
         return TenantContext::check();
     }
@@ -20,7 +20,7 @@ final class ComplianceItemPolicy
         return $complianceItem->organization_id === TenantContext::id();
     }
 
-    public function create(User $user): bool
+    public function create(): bool
     {
         return TenantContext::check();
     }

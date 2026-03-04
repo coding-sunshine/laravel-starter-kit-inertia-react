@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Fleet;
 
+use App\Enums\Fleet\ReportFormat;
+use App\Enums\Fleet\ReportScheduleFrequency;
+use App\Enums\Fleet\ReportType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Fleet\StoreReportRequest;
 use App\Http\Requests\Fleet\UpdateReportRequest;
 use App\Models\Fleet\Report;
-use App\Enums\Fleet\ReportFormat;
-use App\Enums\Fleet\ReportScheduleFrequency;
-use App\Enums\Fleet\ReportType;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -33,26 +33,28 @@ final class ReportController extends Controller
         return Inertia::render('Fleet/Reports/Index', [
             'reports' => $reports,
             'filters' => $request->only(['report_type', 'schedule_frequency', 'is_active']),
-            'reportTypes' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], ReportType::cases()),
-            'scheduleFrequencies' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], ReportScheduleFrequency::cases()),
-            'formats' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], ReportFormat::cases()),
+            'reportTypes' => array_map(fn (ReportType $c): array => ['value' => $c->value, 'name' => $c->name], ReportType::cases()),
+            'scheduleFrequencies' => array_map(fn (ReportScheduleFrequency $c): array => ['value' => $c->value, 'name' => $c->name], ReportScheduleFrequency::cases()),
+            'formats' => array_map(fn (ReportFormat $c): array => ['value' => $c->value, 'name' => $c->name], ReportFormat::cases()),
         ]);
     }
 
     public function create(): Response
     {
         $this->authorize('create', Report::class);
+
         return Inertia::render('Fleet/Reports/Create', [
-            'reportTypes' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], ReportType::cases()),
-            'scheduleFrequencies' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], ReportScheduleFrequency::cases()),
-            'formats' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], ReportFormat::cases()),
+            'reportTypes' => array_map(fn (ReportType $c): array => ['value' => $c->value, 'name' => $c->name], ReportType::cases()),
+            'scheduleFrequencies' => array_map(fn (ReportScheduleFrequency $c): array => ['value' => $c->value, 'name' => $c->name], ReportScheduleFrequency::cases()),
+            'formats' => array_map(fn (ReportFormat $c): array => ['value' => $c->value, 'name' => $c->name], ReportFormat::cases()),
         ]);
     }
 
     public function store(StoreReportRequest $request): RedirectResponse
     {
         $this->authorize('create', Report::class);
-        Report::create($request->validated());
+        Report::query()->create($request->validated());
+
         return to_route('fleet.reports.index')->with('flash', ['status' => 'success', 'message' => 'Report created.']);
     }
 
@@ -69,11 +71,12 @@ final class ReportController extends Controller
     public function edit(Report $report): Response
     {
         $this->authorize('update', $report);
+
         return Inertia::render('Fleet/Reports/Edit', [
             'report' => $report,
-            'reportTypes' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], ReportType::cases()),
-            'scheduleFrequencies' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], ReportScheduleFrequency::cases()),
-            'formats' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], ReportFormat::cases()),
+            'reportTypes' => array_map(fn (ReportType $c): array => ['value' => $c->value, 'name' => $c->name], ReportType::cases()),
+            'scheduleFrequencies' => array_map(fn (ReportScheduleFrequency $c): array => ['value' => $c->value, 'name' => $c->name], ReportScheduleFrequency::cases()),
+            'formats' => array_map(fn (ReportFormat $c): array => ['value' => $c->value, 'name' => $c->name], ReportFormat::cases()),
         ]);
     }
 
@@ -81,6 +84,7 @@ final class ReportController extends Controller
     {
         $this->authorize('update', $report);
         $report->update($request->validated());
+
         return to_route('fleet.reports.show', $report)->with('flash', ['status' => 'success', 'message' => 'Report updated.']);
     }
 
@@ -88,6 +92,7 @@ final class ReportController extends Controller
     {
         $this->authorize('delete', $report);
         $report->delete();
+
         return to_route('fleet.reports.index')->with('flash', ['status' => 'success', 'message' => 'Report deleted.']);
     }
 }

@@ -28,9 +28,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $feedback_comments
  * @property int $enrolled_by
  */
-class TrainingEnrollment extends Model
+final class TrainingEnrollment extends Model
 {
     use BelongsToOrganization;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
 
     protected $fillable = [
         'training_session_id',

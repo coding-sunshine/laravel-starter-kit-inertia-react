@@ -19,8 +19,8 @@ final class FnolDraftAgent implements Agent, HasStructuredOutput
     public function instructions(): string
     {
         return 'You are an insurance claims specialist. Given incident and witness details, produce a First Notification of Loss (FNOL) narrative suitable for insurer submission. '
-            . 'Include: date, time, location, what happened, vehicles/drivers involved, injuries/damage, and any immediate actions taken. '
-            . 'Write in clear, factual prose (one or two paragraphs). Also extract key_facts as structured fields for reference.';
+            .'Include: date, time, location, what happened, vehicles/drivers involved, injuries/damage, and any immediate actions taken. '
+            .'Write in clear, factual prose (one or two paragraphs). Also extract key_facts as structured fields for reference.';
     }
 
     public function schema(JsonSchema $schema): array

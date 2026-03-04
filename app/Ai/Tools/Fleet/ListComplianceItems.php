@@ -9,14 +9,13 @@ use App\Models\Scopes\OrganizationScope;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Contracts\Tool;
 use Laravel\Ai\Tools\Request;
-use Stringable;
 
-final class ListComplianceItems implements Tool
+final readonly class ListComplianceItems implements Tool
 {
-    private const DEFAULT_LIMIT = 20;
+    private const int DEFAULT_LIMIT = 20;
 
     public function __construct(
-        private readonly int $organizationId,
+        private int $organizationId,
     ) {}
 
     public function description(): string
@@ -34,11 +33,11 @@ final class ListComplianceItems implements Tool
         ];
     }
 
-    public function handle(Request $request): string|Stringable
+    public function handle(Request $request): string
     {
-        $query = ComplianceItem::withoutGlobalScope(OrganizationScope::class)
+        $query = ComplianceItem::query()->withoutGlobalScope(OrganizationScope::class)
             ->where('organization_id', $this->organizationId)
-            ->orderBy('expiry_date');
+            ->oldest('expiry_date');
 
         $expiringDays = $request['expiring_within_days'] ?? null;
         if ($expiringDays !== null && $expiringDays !== '') {
@@ -65,7 +64,7 @@ final class ListComplianceItems implements Tool
             return 'No compliance items found for this organization.';
         }
 
-        $lines = $items->map(fn ($c) => sprintf(
+        $lines = $items->map(fn ($c): string => sprintf(
             '#%d %s – %s expires %s (%s)',
             $c->id,
             $c->title,

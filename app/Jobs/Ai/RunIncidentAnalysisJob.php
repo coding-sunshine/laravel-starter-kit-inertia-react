@@ -14,6 +14,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 final class RunIncidentAnalysisJob implements ShouldQueue
 {
@@ -29,10 +30,11 @@ final class RunIncidentAnalysisJob implements ShouldQueue
 
     public function handle(IncidentAnalysisService $service): void
     {
-        $incident = Incident::withoutGlobalScope(OrganizationScope::class)->find($this->incidentId);
+        $incident = Incident::query()->withoutGlobalScope(OrganizationScope::class)->find($this->incidentId);
 
         if ($incident === null) {
             Log::warning('RunIncidentAnalysisJob: incident not found', ['incident_id' => $this->incidentId]);
+
             return;
         }
 
@@ -40,12 +42,13 @@ final class RunIncidentAnalysisJob implements ShouldQueue
             $result = $service->run($incident);
             if ($result === null) {
                 Log::info('RunIncidentAnalysisJob: no text to analyze or no structured result', ['incident_id' => $this->incidentId]);
+
                 return;
             }
 
             $priority = $result['severity'] === 'critical' ? 'critical' : ($result['severity'] === 'high' ? 'high' : ($result['severity'] === 'medium' ? 'medium' : 'low'));
 
-            AiAnalysisResult::create([
+            AiAnalysisResult::query()->create([
                 'organization_id' => $incident->organization_id,
                 'analysis_type' => 'incident_analysis',
                 'entity_type' => 'incident',
@@ -64,7 +67,7 @@ final class RunIncidentAnalysisJob implements ShouldQueue
                 'created_by' => $this->userId,
                 'updated_by' => $this->userId,
             ]);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('RunIncidentAnalysisJob: failed', [
                 'incident_id' => $this->incidentId,
                 'error' => $e->getMessage(),

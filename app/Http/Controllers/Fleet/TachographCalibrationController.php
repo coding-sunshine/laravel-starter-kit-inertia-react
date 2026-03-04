@@ -8,8 +8,8 @@ use App\Enums\Fleet\TachographCalibrationStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Fleet\StoreTachographCalibrationRequest;
 use App\Http\Requests\Fleet\UpdateTachographCalibrationRequest;
-use App\Models\Fleet\TelematicsDevice;
 use App\Models\Fleet\TachographCalibration;
+use App\Models\Fleet\TelematicsDevice;
 use App\Models\Fleet\Vehicle;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -24,34 +24,35 @@ final class TachographCalibrationController extends Controller
         $calibrations = TachographCalibration::query()
             ->with(['vehicle', 'telematicsDevice'])
             ->when($request->input('status'), fn ($q, $v) => $q->where('status', $v))
-            ->orderByDesc('calibration_date')
+            ->latest('calibration_date')
             ->paginate(15)
             ->withQueryString();
 
         return Inertia::render('Fleet/TachographCalibrations/Index', [
             'tachographCalibrations' => $calibrations,
             'filters' => $request->only(['status']),
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], TachographCalibrationStatus::cases()),
+            'statuses' => array_map(fn (TachographCalibrationStatus $c): array => ['value' => $c->value, 'name' => $c->name], TachographCalibrationStatus::cases()),
         ]);
     }
 
     public function create(): Response
     {
         $this->authorize('create', TachographCalibration::class);
-        $vehicles = Vehicle::query()->orderBy('registration')->get(['id', 'registration'])->map(fn ($v) => ['id' => $v->id, 'name' => $v->registration]);
-        $telematicsDevices = TelematicsDevice::query()->orderBy('device_id')->get(['id', 'device_id'])->map(fn ($t) => ['id' => $t->id, 'name' => $t->device_id]);
+        $vehicles = Vehicle::query()->orderBy('registration')->get(['id', 'registration'])->map(fn ($v): array => ['id' => $v->id, 'name' => $v->registration]);
+        $telematicsDevices = TelematicsDevice::query()->orderBy('device_id')->get(['id', 'device_id'])->map(fn ($t): array => ['id' => $t->id, 'name' => $t->device_id]);
 
         return Inertia::render('Fleet/TachographCalibrations/Create', [
             'vehicles' => $vehicles,
             'telematicsDevices' => $telematicsDevices,
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], TachographCalibrationStatus::cases()),
+            'statuses' => array_map(fn (TachographCalibrationStatus $c): array => ['value' => $c->value, 'name' => $c->name], TachographCalibrationStatus::cases()),
         ]);
     }
 
     public function store(StoreTachographCalibrationRequest $request): RedirectResponse
     {
         $this->authorize('create', TachographCalibration::class);
-        TachographCalibration::create($request->validated());
+        TachographCalibration::query()->create($request->validated());
+
         return to_route('fleet.tachograph-calibrations.index')->with('flash', ['status' => 'success', 'message' => 'Tachograph calibration created.']);
     }
 
@@ -59,20 +60,21 @@ final class TachographCalibrationController extends Controller
     {
         $this->authorize('view', $tachograph_calibration);
         $tachograph_calibration->load(['vehicle', 'telematicsDevice']);
+
         return Inertia::render('Fleet/TachographCalibrations/Show', ['tachographCalibration' => $tachograph_calibration]);
     }
 
     public function edit(TachographCalibration $tachograph_calibration): Response
     {
         $this->authorize('update', $tachograph_calibration);
-        $vehicles = Vehicle::query()->orderBy('registration')->get(['id', 'registration'])->map(fn ($v) => ['id' => $v->id, 'name' => $v->registration]);
-        $telematicsDevices = TelematicsDevice::query()->orderBy('device_id')->get(['id', 'device_id'])->map(fn ($t) => ['id' => $t->id, 'name' => $t->device_id]);
+        $vehicles = Vehicle::query()->orderBy('registration')->get(['id', 'registration'])->map(fn ($v): array => ['id' => $v->id, 'name' => $v->registration]);
+        $telematicsDevices = TelematicsDevice::query()->orderBy('device_id')->get(['id', 'device_id'])->map(fn ($t): array => ['id' => $t->id, 'name' => $t->device_id]);
 
         return Inertia::render('Fleet/TachographCalibrations/Edit', [
             'tachographCalibration' => $tachograph_calibration,
             'vehicles' => $vehicles,
             'telematicsDevices' => $telematicsDevices,
-            'statuses' => array_map(fn ($c) => ['value' => $c->value, 'name' => $c->name], TachographCalibrationStatus::cases()),
+            'statuses' => array_map(fn (TachographCalibrationStatus $c): array => ['value' => $c->value, 'name' => $c->name], TachographCalibrationStatus::cases()),
         ]);
     }
 
@@ -80,6 +82,7 @@ final class TachographCalibrationController extends Controller
     {
         $this->authorize('update', $tachograph_calibration);
         $tachograph_calibration->update($request->validated());
+
         return to_route('fleet.tachograph-calibrations.show', $tachograph_calibration)->with('flash', ['status' => 'success', 'message' => 'Tachograph calibration updated.']);
     }
 
@@ -87,6 +90,7 @@ final class TachographCalibrationController extends Controller
     {
         $this->authorize('delete', $tachograph_calibration);
         $tachograph_calibration->delete();
+
         return to_route('fleet.tachograph-calibrations.index')->with('flash', ['status' => 'success', 'message' => 'Tachograph calibration deleted.']);
     }
 }

@@ -9,11 +9,10 @@ use App\Models\Fleet\ComplianceItem;
 use App\Models\Fleet\ServiceSchedule;
 use App\Models\Fleet\WorkOrder;
 use App\Models\Scopes\OrganizationScope;
-use Carbon\Carbon;
 
 final class FleetInsightsService
 {
-    private const MOT_DAYS_AHEAD = 14;
+    private const int MOT_DAYS_AHEAD = 14;
 
     /**
      * Return an array of short insight strings for the organization (e.g. "3 vehicles with MOT due in 14 days").
@@ -24,12 +23,10 @@ final class FleetInsightsService
     {
         $insights = [];
 
-        $expiringQuery = function () use ($organizationId): \Illuminate\Database\Eloquent\Builder {
-            return ComplianceItem::withoutGlobalScope(OrganizationScope::class)
-                ->where('organization_id', $organizationId)
-                ->where('expiry_date', '>=', now())
-                ->where('expiry_date', '<=', now()->addDays(self::MOT_DAYS_AHEAD));
-        };
+        $expiringQuery = (fn (): \Illuminate\Database\Eloquent\Builder => ComplianceItem::query()->withoutGlobalScope(OrganizationScope::class)
+            ->where('organization_id', $organizationId)
+            ->where('expiry_date', '>=', now())
+            ->where('expiry_date', '<=', now()->addDays(self::MOT_DAYS_AHEAD)));
 
         // MOT due in next N days (proactive compliance insight)
         $motCount = $expiringQuery()->where('compliance_type', 'mot')->count();
@@ -52,7 +49,7 @@ final class FleetInsightsService
         }
 
         // Service schedules due soon
-        $serviceDueCount = ServiceSchedule::withoutGlobalScope(OrganizationScope::class)
+        $serviceDueCount = ServiceSchedule::query()->withoutGlobalScope(OrganizationScope::class)
             ->where('organization_id', $organizationId)
             ->where('is_active', true)
             ->whereNotNull('next_service_due_date')
@@ -64,7 +61,7 @@ final class FleetInsightsService
         }
 
         // Unacknowledged alerts
-        $unackCount = Alert::withoutGlobalScope(OrganizationScope::class)
+        $unackCount = Alert::query()->withoutGlobalScope(OrganizationScope::class)
             ->where('organization_id', $organizationId)
             ->whereNull('acknowledged_at')
             ->count();
@@ -73,11 +70,11 @@ final class FleetInsightsService
         }
 
         // Overdue work orders (open, due in the past)
-        $overdueCount = WorkOrder::withoutGlobalScope(OrganizationScope::class)
+        $overdueCount = WorkOrder::query()->withoutGlobalScope(OrganizationScope::class)
             ->where('organization_id', $organizationId)
             ->whereIn('status', ['open', 'pending', 'in_progress', 'scheduled'])
             ->whereNotNull('due_date')
-            ->where('due_date', '<', Carbon::today())
+            ->where('due_date', '<', \Illuminate\Support\Facades\Date::today())
             ->count();
         if ($overdueCount > 0) {
             $insights[] = sprintf('%d work order(s) overdue.', $overdueCount);
@@ -95,7 +92,7 @@ final class FleetInsightsService
     {
         $insights = $this->forOrganization($organizationId);
         $suggested = [];
-        if (! empty($insights)) {
+        if ($insights !== []) {
             $suggested[] = 'What needs attention in my fleet right now?';
             $suggested[] = 'Which vehicles have MOT or insurance expiring soon?';
         }
