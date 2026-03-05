@@ -113,6 +113,22 @@ export function RRTabs({
                         </Card>
                         <Card>
                             <CardHeader className="pb-2">
+                                <CardDescription>From Station / Siding</CardDescription>
+                                <CardTitle className="text-base">
+                                    {overviewData.fromStation}
+                                </CardTitle>
+                            </CardHeader>
+                        </Card>
+                        <Card>
+                            <CardHeader className="pb-2">
+                                <CardDescription>To Station / Power Plant</CardDescription>
+                                <CardTitle className="text-base">
+                                    {overviewData.toStation}
+                                </CardTitle>
+                            </CardHeader>
+                        </Card>
+                        <Card>
+                            <CardHeader className="pb-2">
                                 <CardDescription>Distance (KM)</CardDescription>
                                 <CardTitle className="text-base">
                                     {overviewData.distanceKm}
@@ -148,6 +164,22 @@ export function RRTabs({
                                 <CardDescription>Freight Total</CardDescription>
                                 <CardTitle className="text-base">
                                     {overviewData.freightTotal}
+                                </CardTitle>
+                            </CardHeader>
+                        </Card>
+                        <Card>
+                            <CardHeader className="pb-2">
+                                <CardDescription>Rate</CardDescription>
+                                <CardTitle className="text-base">
+                                    {overviewData.rate}
+                                </CardTitle>
+                            </CardHeader>
+                        </Card>
+                        <Card>
+                            <CardHeader className="pb-2">
+                                <CardDescription>Class</CardDescription>
+                                <CardTitle className="text-base">
+                                    {overviewData.class}
                                 </CardTitle>
                             </CardHeader>
                         </Card>

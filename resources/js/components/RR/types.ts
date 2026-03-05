@@ -1,11 +1,15 @@
 export interface OverviewData {
     rrNumber: string;
     fnr: string;
+    fromStation: string;
+    toStation: string;
     distanceKm: string;
     commodity: string;
     totalWagons: number;
     totalWeight: string;
     freightTotal: string;
+    rate: string;
+    class: string;
 }
 
 export interface WagonRow {

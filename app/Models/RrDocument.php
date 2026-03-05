@@ -30,6 +30,8 @@ final class RrDocument extends Model implements HasMedia
         'commodity_description',
         'invoice_number',
         'invoice_date',
+        'rate',
+        'class',
         'rr_details',
         'document_status',
         'data_source',
@@ -75,6 +77,7 @@ final class RrDocument extends Model implements HasMedia
             'rr_details' => 'array',
             'freight_total' => 'decimal:2',
             'distance_km' => 'decimal:2',
+            'rate' => 'decimal:2',
         ];
     }
 }

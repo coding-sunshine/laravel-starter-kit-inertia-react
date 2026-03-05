@@ -91,10 +91,25 @@ final class RrDocumentController extends Controller
     {
         // $this->authorize('view', $rrDocument);
 
-        $rrDocument->load('rake.siding:id,name,code');
+        $rrDocument->load([
+            'rake.siding:id,name,code',
+            'rake.wagons',
+            'rake.appliedPenalties.penaltyType:id,code,name,calculation_type',
+            'rrCharges',
+        ]);
+
+        $fromSiding = $rrDocument->from_station_code
+            ? Siding::query()->where('code', $rrDocument->from_station_code)->first(['id', 'name', 'code'])
+            : null;
+
+        $toPowerPlant = $rrDocument->to_station_code
+            ? PowerPlant::query()->where('code', $rrDocument->to_station_code)->first(['id', 'name', 'code'])
+            : null;
 
         return Inertia::render('railway-receipts/show', [
             'rrDocument' => $rrDocument,
+            'fromSiding' => $fromSiding,
+            'toPowerPlant' => $toPowerPlant,
         ]);
     }
 

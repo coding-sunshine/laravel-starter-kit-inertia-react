@@ -116,6 +116,16 @@
             "type": "date",
             "nullable": true,
             "default": null
+        },
+        "class": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "rate": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {

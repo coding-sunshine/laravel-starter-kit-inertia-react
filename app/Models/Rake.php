@@ -103,6 +103,11 @@ final class Rake extends Model
         return $this->hasMany(Penalty::class);
     }
 
+    public function appliedPenalties(): HasMany
+    {
+        return $this->hasMany(AppliedPenalty::class);
+    }
+
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

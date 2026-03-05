@@ -35,32 +35,52 @@ final readonly class RrImportService
     {
         $userId = $request->user()->id;
 
-        return DB::transaction(function () use ($parsed, $validated, $userId) {
-            $this->validateNoDuplicates($parsed);
+        try {
+            return DB::transaction(function () use ($parsed, $validated, $userId) {
+                $this->validateNoDuplicates($parsed);
 
-            $rrDate = $this->parseDate($parsed['rr_date'] ?? $parsed['rr_received_date'] ?? null);
+                $rrDate = $this->parseDate($parsed['rr_date'] ?? $parsed['rr_received_date'] ?? null);
 
-            $rake = $this->createRake($parsed, $validated, $rrDate, $userId);
-            $rrDocument = $this->createRrDocument($rake, $parsed, $validated, $userId);
+                Log::debug('RR import: creating rake and document');
+                $rake = $this->createRake($parsed, $validated, $rrDate, $userId);
+                $rrDocument = $this->createRrDocument($rake, $parsed, $validated, $userId);
 
-            $pdfFile = $validated['pdf'] ?? $request->file('pdf');
-            if ($pdfFile) {
-                $rrDocument->addMedia($pdfFile)->toMediaCollection('rr_pdf');
-            } else {
-                $rrDocument->addMediaFromRequest('pdf')->toMediaCollection('rr_pdf');
-            }
+                $pdfFile = $validated['pdf'] ?? $request->file('pdf');
+                if ($pdfFile) {
+                    Log::debug('RR import: adding PDF media');
+                    $rrDocument->addMedia($pdfFile)->toMediaCollection('rr_pdf');
+                } else {
+                    $rrDocument->addMediaFromRequest('pdf')->toMediaCollection('rr_pdf');
+                }
 
-            $wagonsToInsert = $parsed['wagons'] ?? [];
-            Log::debug('RR import: wagons to insert', ['rake_id' => $rake->id, 'count' => count($wagonsToInsert)]);
+                $wagonsToInsert = $parsed['wagons'] ?? [];
+                Log::debug('RR import: wagons to insert', ['rake_id' => $rake->id, 'count' => count($wagonsToInsert)]);
 
-            $this->insertWagons($rake, $wagonsToInsert);
-            $this->insertRrCharges($rrDocument, $parsed['charges'] ?? []);
-            $this->applyPenaltiesFromCharges($rake, $parsed['charges'] ?? []);
+                $this->insertWagons($rake, $wagonsToInsert);
 
-            $this->updateRakeSummary($rake, $parsed, $rrDate);
+                Log::debug('RR import: inserting charges');
+                $this->insertRrCharges($rrDocument, $parsed['charges'] ?? []);
 
-            return $rrDocument->fresh(['rrCharges', 'rake.wagons']);
-        });
+                Log::debug('RR import: applying penalties');
+                $this->applyPenaltiesFromCharges($rake, $parsed['charges'] ?? []);
+
+                Log::debug('RR import: updating rake summary');
+                $this->updateRakeSummary($rake, $parsed, $rrDate);
+
+                Log::debug('RR import: transaction committing');
+
+                return $rrDocument->fresh(['rrCharges', 'rake.wagons']);
+            });
+        } catch (Throwable $e) {
+            Log::error('RR import: transaction rolled back', [
+                'error' => $e->getMessage(),
+                'exception' => get_class($e),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            throw $e;
+        }
     }
 
     private function validateNoDuplicates(array $parsed): void
@@ -138,6 +158,8 @@ final readonly class RrImportService
             'commodity_description' => $parsed['commodity_description'] ?? null,
             'invoice_number' => $parsed['invoice_number'] ?? null,
             'invoice_date' => $parsed['invoice_date'] ?? null,
+            'rate' => isset($parsed['rate']) ? (float) $parsed['rate'] : null,
+            'class' => $parsed['class'] ?? null,
             'document_status' => 'parsed',
             'data_source' => 'historical_rr',
             'rr_details' => array_filter([

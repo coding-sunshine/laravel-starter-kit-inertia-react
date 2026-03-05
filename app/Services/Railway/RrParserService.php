@@ -121,6 +121,8 @@ final readonly class RrParserService
             'commodity_description' => $header['commodity_description'] ?? null,
             'invoice_number' => $header['invoice_number'] ?? null,
             'invoice_date' => $header['invoice_date'] ?? null,
+            'rate' => isset($header['rate']) ? (float) $header['rate'] : null,
+            'class' => $header['class'] ?? null,
             'wagons' => $wagons,
             'charges' => $charges,
             'raw_text' => $text,
@@ -209,11 +211,21 @@ final readonly class RrParserService
             $result['rr_received_date'] = $this->normalizeDate($m[1]);
         }
 
-        if (preg_match('/Station\s+From\s*:\s*([A-Z]{2,6})/i', $headerText, $m) || preg_match('/From\s+Station\s*[\/]?\s*Siding[^\d]*Code\s*:\s*([A-Z]{2,6})/i', $headerText, $m)) {
-            $result['from_station_code'] = mb_trim($m[1]);
+        // From Station / Siding: code is looked up in sidings table (alphabetical codes)
+        if (! isset($result['from_station_code'])) {
+            if (preg_match('/Station\s+From\s*:\s*([A-Za-z0-9]+)/i', $headerText, $m)) {
+                $result['from_station_code'] = mb_trim($m[1]);
+            } elseif (preg_match('/From\s+Station\s*[\/]?\s*Siding[^:]*[Cc]ode\s*:\s*([A-Za-z0-9]+)/i', $headerText, $m)) {
+                $result['from_station_code'] = mb_trim($m[1]);
+            }
         }
-        if (preg_match('/Station\s+To\s*:\s*([A-Z]{2,6})/i', $headerText, $m) || preg_match('/To\s+Station\s*[\/]?\s*Siding[^\d]*Code\s*:\s*([A-Z]{2,6})/i', $headerText, $m)) {
-            $result['to_station_code'] = mb_trim($m[1]);
+        // To Station / Siding: code is looked up in power_plants table (alphabetical codes)
+        if (! isset($result['to_station_code'])) {
+            if (preg_match('/Station\s+To\s*:\s*([A-Za-z0-9]+)/i', $headerText, $m)) {
+                $result['to_station_code'] = mb_trim($m[1]);
+            } elseif (preg_match('/To\s+Station\s*[\/]?\s*Siding[^:]*[Cc]ode\s*:\s*([A-Za-z0-9]+)/i', $headerText, $m)) {
+                $result['to_station_code'] = mb_trim($m[1]);
+            }
         }
 
         if (preg_match('/Distance\s*\(In\s*KM\)\s*:\s*(\d+)/i', $headerText, $m)) {
@@ -253,6 +265,19 @@ final readonly class RrParserService
         }
         if (preg_match('/Invoice\s*Date\s*:\s*(\d{2}[-\/]\d{2}[-\/]\d{4})/i', $headerText, $m)) {
             $result['invoice_date'] = $this->normalizeDate($m[1]);
+        }
+
+        if (preg_match('/Class\s*:\s*(\S+)/i', $headerText, $m)) {
+            $class = mb_trim($m[1]);
+            if ($class !== '-' && $class !== '') {
+                $result['class'] = $class;
+            }
+        }
+        if (preg_match('/\bRate\s*:\s*([\d.]+)/i', $headerText, $m)) {
+            $rate = (float) $m[1];
+            if ($rate > 0) {
+                $result['rate'] = $rate;
+            }
         }
 
         return $result;
