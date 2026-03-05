@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Head } from '@inertiajs/react';
-import { Toaster } from 'react-hot-toast';
 import BulkDocumentUpload from '@/components/BulkDocumentUpload';
 import DocumentProcessingStatus from '@/components/DocumentProcessingStatus';
 
@@ -205,17 +204,6 @@ const DocumentProcessing: React.FC<DocumentProcessingProps> = ({ batchId: initia
                     </div>
                 </div>
             </div>
-
-            <Toaster
-                position="top-right"
-                toastOptions={{
-                    duration: 4000,
-                    style: {
-                        background: '#363636',
-                        color: '#fff',
-                    },
-                }}
-            />
         </>
     );
 };

@@ -7,6 +7,7 @@ namespace App\Providers\Filament;
 use A909M\FilamentStateFusion\FilamentStateFusionPlugin;
 use AlizHarb\ActivityLog\ActivityLogPlugin;
 use App\Filament\Pages\Dashboard;
+use App\Filament\Pages\SetupWizard;
 use App\Http\Middleware\EnsureSetupComplete;
 use App\Http\Middleware\SetTenantContext;
 use Filament\Enums\ThemeMode;
@@ -141,6 +142,7 @@ final class AdminPanelProvider extends PanelProvider
             ])
             ->pages([
                 Dashboard::class,
+                SetupWizard::class,
                 \App\Filament\Pages\BulkDocumentProcessing::class,
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')

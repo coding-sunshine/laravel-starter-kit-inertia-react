@@ -75,5 +75,6 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | search-table | searches.table | ❌ |
 | task-table | tasks.table | ❌ |
 | dashboard-old | N/A | ❌ |
+| DocumentProcessing | N/A | ❌ |
 
 
