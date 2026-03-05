@@ -35,25 +35,29 @@ export function PenaltiesTable({ data }: PenaltiesTableProps) {
                             <TableHead>Penalty Code</TableHead>
                             <TableHead>Penalty Name</TableHead>
                             <TableHead>Calculation Type</TableHead>
+                            <TableHead>Wagon Number</TableHead>
+                            <TableHead>Overload Weight</TableHead>
                             <TableHead className="text-right">
                                 Amount
                             </TableHead>
-                            <TableHead>Wagon Reference</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {rows.map((row, i) => (
-                            <TableRow key={`${row.penaltyCode}-${i}`}>
+                            <TableRow key={`${row.penaltyCode}-${row.wagonReference ?? ''}-${i}`}>
                                 <TableCell className="font-medium">
                                     {row.penaltyCode}
                                 </TableCell>
                                 <TableCell>{row.penaltyName}</TableCell>
                                 <TableCell>{row.calculationType}</TableCell>
-                                <TableCell className="text-right">
-                                    {row.amount}
-                                </TableCell>
                                 <TableCell className="text-muted-foreground">
                                     {row.wagonReference ?? '-'}
+                                </TableCell>
+                                <TableCell>
+                                    {row.overloadWeight ?? '-'}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                    {row.amount}
                                 </TableCell>
                             </TableRow>
                         ))}

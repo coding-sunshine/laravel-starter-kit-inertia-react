@@ -31,8 +31,10 @@ interface RrCharge {
 interface AppliedPenalty {
     id: number;
     amount: string | number;
+    quantity?: string | number | null;
     wagon_id?: number | null;
     penalty_type?: { id: number; code: string; name: string; calculation_type: string };
+    wagon?: { id: number; wagon_number: string; overload_weight_mt?: string | number | null };
 }
 
 interface Rake {
@@ -235,15 +237,20 @@ function buildPenaltiesData(doc: RrDocument): PenaltyRow[] {
         return appliedPenalties.map((ap) => {
             const pt = ap.penalty_type;
             const wagonRef =
-                ap.wagon_id != null
+                ap.wagon?.wagon_number ??
+                (ap.wagon_id != null
                     ? wagons.find((w) => w.id === ap.wagon_id)?.wagon_number
-                    : undefined;
+                    : undefined);
+            const overloadWt =
+                ap.wagon?.overload_weight_mt ?? ap.quantity ?? undefined;
             return {
                 penaltyCode: pt?.code ?? '-',
                 penaltyName: pt?.name ?? '-',
                 calculationType: pt?.calculation_type ?? '-',
                 amount: `₹${Number(ap.amount ?? 0).toLocaleString('en-IN')}`,
                 wagonReference: wagonRef,
+                overloadWeight:
+                    overloadWt != null ? `${overloadWt} MT` : undefined,
             };
         });
     }
@@ -260,6 +267,7 @@ function buildPenaltiesData(doc: RrDocument): PenaltyRow[] {
         calculationType: (p.calculation_type ?? '-') as string,
         amount: `₹${Number(p.amount ?? 0).toLocaleString('en-IN')}`,
         wagonReference: p.wagon_reference as string | undefined,
+        overloadWeight: (p.overload_weight as string | undefined) ?? undefined,
     }));
 }
 

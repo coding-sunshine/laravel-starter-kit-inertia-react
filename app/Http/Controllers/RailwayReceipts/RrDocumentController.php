@@ -95,6 +95,7 @@ final class RrDocumentController extends Controller
             'rake.siding:id,name,code',
             'rake.wagons',
             'rake.appliedPenalties.penaltyType:id,code,name,calculation_type',
+            'rake.appliedPenalties.wagon:id,wagon_number,overload_weight_mt',
             'rrCharges',
         ]);
 

@@ -35,4 +35,5 @@ export interface PenaltyRow {
     calculationType: string;
     amount: string;
     wagonReference?: string;
+    overloadWeight?: string;
 }

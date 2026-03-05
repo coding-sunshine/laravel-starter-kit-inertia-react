@@ -252,10 +252,19 @@ final readonly class RrImportService
     }
 
     /**
+     * Create applied_penalties from RR charges. For POL1 (wagon-level), create one
+     * record per overloaded wagon with proportional amount. For rake-level types
+     * (POLA, DEM, etc.), create a single record.
+     *
      * @param  array<int, array{code: string, name?: string|null, amount: float}>  $charges
      */
     private function applyPenaltiesFromCharges(Rake $rake, array $charges): void
     {
+        $overloadedWagons = $rake->wagons()
+            ->where('overload_weight_mt', '>', 0)
+            ->orderBy('wagon_sequence')
+            ->get();
+
         foreach ($charges as $c) {
             $code = $c['code'] ?? $c['charge_code'] ?? '';
             $amount = (float) ($c['amount'] ?? 0);
@@ -267,6 +276,35 @@ final readonly class RrImportService
             $penaltyType = PenaltyType::query()->where('code', mb_strtoupper($code))->first();
             if ($penaltyType === null) {
                 continue;
+            }
+
+            if (mb_strtoupper($code) === 'POL1' && $overloadedWagons->isNotEmpty()) {
+                $totalOverload = (float) $overloadedWagons->sum('overload_weight_mt');
+                if ($totalOverload > 0) {
+                    $allocated = 0.0;
+                    $last = $overloadedWagons->last();
+                    foreach ($overloadedWagons as $wagon) {
+                        $proportion = (float) $wagon->overload_weight_mt / $totalOverload;
+                        $wagonAmount = $wagon->id === $last?->id
+                            ? round($amount - $allocated, 2)
+                            : round($amount * $proportion, 2);
+                        $allocated += $wagonAmount;
+
+                        AppliedPenalty::query()->create([
+                            'penalty_type_id' => $penaltyType->id,
+                            'rake_id' => $rake->id,
+                            'wagon_id' => $wagon->id,
+                            'quantity' => $wagon->overload_weight_mt,
+                            'amount' => $wagonAmount,
+                            'meta' => [
+                                'source' => 'rr_charge',
+                                'overload_weight_mt' => (float) $wagon->overload_weight_mt,
+                            ],
+                        ]);
+                    }
+
+                    continue;
+                }
             }
 
             AppliedPenalty::query()->create([
