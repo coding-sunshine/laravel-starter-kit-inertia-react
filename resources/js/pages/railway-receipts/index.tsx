@@ -1,8 +1,7 @@
 import { DataTable } from 'laravel-data-table';
 import type { DataTableResponse } from 'laravel-data-table';
-import { GlossaryTerm } from '@/components/glossary-term';
-import Heading from '@/components/heading';
 import { RrmcsGuidance } from '@/components/rrmcs-guidance';
+import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -13,8 +12,9 @@ import {
 } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, router } from '@inertiajs/react';
-import { FileText } from 'lucide-react';
+import { Head, router } from '@inertiajs/react';
+import { Upload } from 'lucide-react';
+import { useRef, useState } from 'react';
 
 interface Siding {
     id: number;
@@ -39,10 +39,35 @@ interface Props {
 }
 
 export default function RailwayReceiptsIndex({ tableData }: Props) {
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [uploading, setUploading] = useState(false);
+
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: '/dashboard' },
         { title: 'Railway Receipts', href: '/railway-receipts' },
     ];
+
+    const handleUploadClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) {
+            return;
+        }
+        setUploading(true);
+        const formData = new FormData();
+        formData.append('pdf', file);
+
+        router.post('/railway-receipts/upload', formData, {
+            forceFormData: true,
+            onFinish: () => {
+                setUploading(false);
+                e.target.value = '';
+            },
+        });
+    };
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -52,13 +77,22 @@ export default function RailwayReceiptsIndex({ tableData }: Props) {
                     title="Railway Receipts"
                     description="RR documents and receipts by rake"
                 />
-                <div className="flex flex-wrap items-center gap-2">
-                    <Link href="/railway-receipts/create">
-                        <Button>
-                            <FileText className="mr-2 size-4" />
-                            Add RR document
-                        </Button>
-                    </Link>
+                <div className="flex flex-wrap items-center gap-3">
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".pdf"
+                        className="hidden"
+                        onChange={handleFileChange}
+                    />
+                    <Button
+                        onClick={handleUploadClick}
+                        disabled={uploading}
+                        data-pan="rr-upload-pdf-button"
+                    >
+                        <Upload className="mr-2 size-4" />
+                        {uploading ? 'Uploading…' : 'Upload RR PDF'}
+                    </Button>
                 </div>
                 <RrmcsGuidance
                     title="What this section is for"
@@ -69,7 +103,8 @@ export default function RailwayReceiptsIndex({ tableData }: Props) {
                     <CardHeader>
                         <CardTitle>RR documents</CardTitle>
                         <CardDescription>
-                            Filter by siding or rake
+                            Filter by siding or rake. Click View to see
+                            details.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>

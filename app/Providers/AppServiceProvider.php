@@ -197,6 +197,13 @@ final class AppServiceProvider extends ServiceProvider
             'vehicle-workorders-table',
             'vehicle-workorder-edit',
             'vehicle-workorder-update',
+            'rr-details-tabs',
+            'rr-tab-overview',
+            'rr-tab-wagons',
+            'rr-tab-charges',
+            'rr-tab-penalties',
+            'rr-tab-raw',
+            'rr-upload-pdf-button',
         ]);
     }
 

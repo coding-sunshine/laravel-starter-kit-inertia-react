@@ -68,5 +68,6 @@ All Actions:
 | [GeneratePenaltyPredictionsAction](./GeneratePenaltyPredictionsAction.md) | N/A | ✅ |
 | [RecommendDisputeAction](./RecommendDisputeAction.md) | N/A | ✅ |
 | CreateUnloadFromArrival | N/A | ❌ |
+| GenerateDispatchReport | N/A | ❌ |
 
 

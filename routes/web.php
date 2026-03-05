@@ -50,6 +50,7 @@ use App\Http\Controllers\Reconciliation\ReconciliationController;
 use App\Http\Controllers\Reports\ReportsController;
 use App\Http\Controllers\RoadDispatch\VehicleArrivalController;
 use App\Http\Controllers\RoadDispatch\VehicleUnloadController;
+use App\Http\Controllers\RR\RrUploadController;
 use App\Http\Controllers\SectionTimersController;
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\Settings\AchievementsController;
@@ -275,6 +276,8 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 
     // Railway Receipts (RR) and Penalties
     Route::get('railway-receipts', [RrDocumentController::class, 'index'])->name('railway-receipts.index');
+    Route::post('railway-receipts/import', [RrUploadController::class, 'store'])->name('railway-receipts.import');
+    Route::post('railway-receipts/upload', [RrDocumentController::class, 'upload'])->name('railway-receipts.upload');
     Route::get('railway-receipts/create', [RrDocumentController::class, 'create'])->name('railway-receipts.create');
     Route::post('railway-receipts', [RrDocumentController::class, 'store'])->name('railway-receipts.store');
     Route::get('railway-receipts/{rrDocument}', [RrDocumentController::class, 'show'])->name('railway-receipts.show');

@@ -20,6 +20,7 @@ final class Rake extends Model
         'siding_id',
         'indent_id',
         'rake_number',
+        'data_source',
         'rake_type',
         'wagon_count',
         'loaded_weight_mt',

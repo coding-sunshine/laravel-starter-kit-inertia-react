@@ -73,5 +73,8 @@ All Controllers:
 | SidingsController | N/A | ❌ |
 | TxrController | N/A | ❌ |
 | WagonUnfitController | N/A | ❌ |
+| GenerateDispatchReportController | N/A | ❌ |
+| VehicleDispatchController | N/A | ❌ |
+| VehicleWorkorderController | N/A | ❌ |
 
 

@@ -83,6 +83,7 @@
         "spatie/laravel-sitemap": "^7.3.8",
         "spatie/laravel-sluggable": "^3.7.5",
         "spatie/laravel-tags": "^4.10.2",
+        "spatie/pdf-to-text": "^1.55",
         "stechstudio/filament-impersonate": "^5.0",
         "stephenjude/filament-feature-flags": "^5.0.1",
         "stripe/stripe-php": "^19.3",
@@ -210,6 +211,7 @@
         "preferred-install": "dist",
         "sort-packages": true,
         "allow-plugins": {
+            "cweagans/composer-patches": true,
             "pestphp/pest-plugin": true,
             "php-http/discovery": true
         }

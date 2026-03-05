@@ -19,6 +19,9 @@ final class Wagon extends Model
         'wagon_type',
         'tare_weight_mt',
         'pcc_weight_mt',
+        'loaded_weight_mt',
+        'permissible_weight_mt',
+        'overload_weight_mt',
         'is_unfit',
         'state',
     ];

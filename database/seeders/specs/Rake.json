@@ -131,6 +131,11 @@
             "type": "timestamp",
             "nullable": true,
             "default": null
+        },
+        "data_source": {
+            "type": "string",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {

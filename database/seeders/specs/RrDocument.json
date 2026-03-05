@@ -86,12 +86,46 @@
             "type": "numeric",
             "nullable": true,
             "default": null
+        },
+        "data_source": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "distance_km": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "commodity_code": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "commodity_description": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "invoice_number": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "invoice_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {
         "rake": {
             "type": "belongsTo",
             "model": "Rake"
+        },
+        "rrCharges": {
+            "type": "hasMany",
+            "model": "RrCharge"
         },
         "createdBy": {
             "type": "belongsTo",
