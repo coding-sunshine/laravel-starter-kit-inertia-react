@@ -544,7 +544,7 @@ export default function VehicleDispatchIndex({
                     </Button>
                 </div>
 
-                {/* Tabbed Content: Main Data | DPR */}
+                {/* Tabbed Content: JIMMS Data | DPR */}
                 <VehicleDispatchTabs activeTab={activeTab} onTabChange={setActiveTab}>
                     {activeTab === 'main-data' && (
                         <MainDataTab

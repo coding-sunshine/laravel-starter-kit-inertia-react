@@ -115,16 +115,22 @@ const mainNavItems: NavItem[] = [
         dataPan: 'nav-indents',
     },
     {
-        title: 'Road Dispatch',
+        title: 'Railway Siding Record Data',
         href: '/road-dispatch/daily-vehicle-entries',
         icon: Truck,
         dataPan: 'nav-road-dispatch',
     },
     {
-        title: 'Vehicle Dispatch Register',
+        title: 'Mines Dispatch Data',
         href: '/vehicle-dispatch',
         icon: Truck,
         dataPan: 'nav-vehicle-dispatch',
+    },
+    {
+        title: 'Transport',
+        href: '/vehicle-workorders',
+        icon: FileText,
+        dataPan: 'nav-vehicle-workorders',
     },
     {
         title: 'Railway Receipts',

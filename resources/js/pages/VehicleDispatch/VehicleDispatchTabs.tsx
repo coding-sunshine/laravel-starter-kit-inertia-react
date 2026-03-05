@@ -11,7 +11,7 @@ interface VehicleDispatchTabsProps {
 }
 
 const tabs: { value: VehicleDispatchTabValue; icon: typeof Database; label: string }[] = [
-    { value: 'main-data', icon: Database, label: 'Main Data' },
+    { value: 'main-data', icon: Database, label: 'JIMMS Data' },
     { value: 'dpr', icon: FileBarChart, label: 'DPR' },
 ];
 

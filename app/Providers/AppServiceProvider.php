@@ -192,6 +192,11 @@ final class AppServiceProvider extends ServiceProvider
             'vehicle-dispatch-tab-main-data',
             'vehicle-dispatch-tab-dpr',
             'vehicle-dispatch-generate-dpr',
+            'nav-vehicle-workorders',
+            'vehicle-workorders-filters',
+            'vehicle-workorders-table',
+            'vehicle-workorder-edit',
+            'vehicle-workorder-update',
         ]);
     }
 
