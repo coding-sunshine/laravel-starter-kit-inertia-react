@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -116,5 +117,22 @@ final class Rake extends Model
     public function updatedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    protected function rrDocumentId(): Attribute
+    {
+        return Attribute::get(fn () => $this->rrDocument?->id);
+    }
+
+    protected function pdfDownloadUrl(): Attribute
+    {
+        return Attribute::get(function () {
+            $doc = $this->rrDocument;
+            if (! $doc || ! $doc->hasMedia('rr_pdf')) {
+                return null;
+            }
+
+            return route('railway-receipts.pdf', $doc);
+        });
     }
 }

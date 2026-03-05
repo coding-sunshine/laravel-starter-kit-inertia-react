@@ -281,6 +281,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('railway-receipts/create', [RrDocumentController::class, 'create'])->name('railway-receipts.create');
     Route::post('railway-receipts', [RrDocumentController::class, 'store'])->name('railway-receipts.store');
     Route::get('railway-receipts/{rrDocument}', [RrDocumentController::class, 'show'])->name('railway-receipts.show');
+    Route::get('railway-receipts/{rrDocument}/pdf', [RrDocumentController::class, 'downloadPdf'])->name('railway-receipts.pdf');
     Route::put('railway-receipts/{rrDocument}', [RrDocumentController::class, 'update'])->name('railway-receipts.update');
     Route::get('penalties', [PenaltyController::class, 'index'])->name('penalties.index');
     Route::get('penalties/analytics', [PenaltyController::class, 'analytics'])->name('penalties.analytics');

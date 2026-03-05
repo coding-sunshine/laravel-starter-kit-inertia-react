@@ -87,7 +87,17 @@ final class RrDocumentController extends Controller
         }
     }
 
-    public function show(Request $request, RrDocument $rrDocument): Response
+    public function downloadPdf(RrDocument $rrDocument): \Illuminate\Contracts\Support\Responsable
+    {
+        $media = $rrDocument->getFirstMedia('rr_pdf');
+        if (! $media) {
+            abort(404, 'No PDF attached to this Railway Receipt.');
+        }
+
+        return $media;
+    }
+
+    public function show(Request $request, RrDocument $rrDocument): Inertia\Response
     {
         // $this->authorize('view', $rrDocument);
 
