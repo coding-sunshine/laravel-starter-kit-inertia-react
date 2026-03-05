@@ -22,6 +22,7 @@ use App\Http\Controllers\ContactSubmissionController;
 use App\Http\Controllers\CookieConsentController;
 use App\Http\Controllers\DailyVehicleEntryController;
 use App\Http\Controllers\EnterpriseInquiryController;
+use App\Http\Controllers\GenerateDispatchReportController;
 use App\Http\Controllers\HelpCenter\HelpCenterController;
 use App\Http\Controllers\HelpCenter\RateHelpArticleController;
 use App\Http\Controllers\Indents\IndentsController;
@@ -264,6 +265,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::put('vehicle-dispatch/{vehicle_dispatch}', [VehicleDispatchController::class, 'update'])->name('vehicle-dispatch.update');
     Route::post('vehicle-dispatch/import', [VehicleDispatchController::class, 'import'])->name('vehicle-dispatch.import');
     Route::post('vehicle-dispatch/save', [VehicleDispatchController::class, 'saveImport'])->name('vehicle-dispatch.save');
+    Route::post('dispatch-reports/generate', [GenerateDispatchReportController::class, 'generate'])->name('dispatch-reports.generate');
 
     // Railway Receipts (RR) and Penalties
     Route::get('railway-receipts', [RrDocumentController::class, 'index'])->name('railway-receipts.index');

@@ -191,6 +191,7 @@ final class AppServiceProvider extends ServiceProvider
             'penalty-cost-savings',
             'vehicle-dispatch-tab-main-data',
             'vehicle-dispatch-tab-dpr',
+            'vehicle-dispatch-generate-dpr',
         ]);
     }
 

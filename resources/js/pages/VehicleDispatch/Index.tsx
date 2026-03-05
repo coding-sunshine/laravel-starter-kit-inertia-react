@@ -50,10 +50,39 @@ interface Props {
     preview_data?: Record<string, unknown>[];
     import_target_date?: string;
     flash?: { success?: string };
+    dispatchReports?: DispatchReport[];
+    tab?: string;
+}
+
+export interface DispatchReport {
+    id: number;
+    siding_id: number;
+    siding?: { id: number; name: string; code: string };
+    ref_no: number | null;
+    e_challan_no: string;
+    issued_on: string | null;
+    truck_no: string | null;
+    shift: string | null;
+    date: string | null;
+    trips: number | null;
+    wo_no: string | null;
+    transport_name: string | null;
+    mineral_wt: number | string | null;
+    gross_wt_siding_rec_wt: number | string | null;
+    tare_wt: number | string | null;
+    net_wt_siding_rec_wt: number | string | null;
+    tyres: number | null;
+    coal_ton_variation: number | string | null;
+    reached_datetime: string | null;
+    time_taken_trip: string | null;
+    remarks: string | null;
+    wb: string | null;
+    trip_id_no: string | null;
 }
 
 export default function VehicleDispatchIndex({
     vehicleDispatches,
+    dispatchReports = [],
     filters,
     shifts,
     availableDates,
@@ -62,12 +91,35 @@ export default function VehicleDispatchIndex({
     preview_data,
     import_target_date,
     flash,
+    tab = 'main-data',
 }: Props) {
     const pageProps = usePage<Props>().props;
-    const [searchFilters, setSearchFilters] = useState<Filters>(filters);
-    const [dateRange, setDateRange] = useState<DateRange | undefined>({
-        from: filters.date_from ? new Date(filters.date_from) : undefined,
-        to: filters.date_to ? new Date(filters.date_to) : undefined,
+    const [searchFilters, setSearchFilters] = useState<Filters>(() => filters);
+    const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
+        if (filters.date_from || filters.date_to) {
+            return {
+                from: filters.date_from ? new Date(filters.date_from) : undefined,
+                to: filters.date_to ? new Date(filters.date_to) : undefined,
+            };
+        }
+        if (filters.date) {
+            const d = new Date(filters.date);
+            return { from: d, to: d };
+        }
+        return undefined;
+    });
+    const [tempDateRange, setTempDateRange] = useState<DateRange | undefined>(() => {
+        if (filters.date_from || filters.date_to) {
+            return {
+                from: filters.date_from ? new Date(filters.date_from) : undefined,
+                to: filters.date_to ? new Date(filters.date_to) : undefined,
+            };
+        }
+        if (filters.date) {
+            const d = new Date(filters.date);
+            return { from: d, to: d };
+        }
+        return undefined;
     });
     const [importData, setImportData] = useState('');
     const [isImporting, setIsImporting] = useState(false);
@@ -83,9 +135,16 @@ export default function VehicleDispatchIndex({
     const [editingDispatch, setEditingDispatch] = useState<VehicleDispatch | null>(null);
     const [editForm, setEditForm] = useState<Record<string, string | number | null>>({});
     const [isUpdating, setIsUpdating] = useState(false);
-    const [activeTab, setActiveTab] = useState<VehicleDispatchTabValue>('main-data');
+    const [activeTab, setActiveTab] = useState<VehicleDispatchTabValue>(
+        (tab === 'dpr' ? 'dpr' : 'main-data') as VehicleDispatchTabValue
+    );
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-    const isInitialMount = useRef(true);
+    const prevFiltersRef = useRef<Filters>(filters);
+
+    // Sync activeTab when tab prop changes (e.g. after Generate DPR redirect)
+    useEffect(() => {
+        setActiveTab((tab === 'dpr' ? 'dpr' : 'main-data') as VehicleDispatchTabValue);
+    }, [tab]);
 
     // Handle preview data from props (after import redirect)
     useEffect(() => {
@@ -98,53 +157,90 @@ export default function VehicleDispatchIndex({
         }
     }, [preview_data, import_target_date]);
 
-    // Only update searchFilters when props change, but don't trigger useEffect on initial mount
+    // Handle import errors from session
     useEffect(() => {
-        if (isInitialMount.current) {
-            isInitialMount.current = false;
-            return;
+        const sessionErrors = pageProps.flash?.import_errors;
+        if (sessionErrors && Array.isArray(sessionErrors) && sessionErrors.length > 0) {
+            setImportErrors(sessionErrors);
+            setShowImportDialog(true);
         }
+    }, [pageProps.flash]);
+
+    const clearImportErrors = () => {
+        setImportErrors([]);
+        setShowImportDialog(false);
+    };
+
+    // Sync searchFilters when backend filters change (e.g. after navigation)
+    useEffect(() => {
         setSearchFilters(filters);
     }, [filters]);
 
+    // Update searchFilters when URL parameters change for DPR tab
     useEffect(() => {
-        // Skip on initial mount
-        if (isInitialMount.current) {
-            return;
+        if (tab === 'dpr' && filters.date && !filters.date_from && !filters.date_to) {
+            setSearchFilters(prev => ({
+                ...prev,
+                date: filters.date,
+            }));
         }
+    }, [tab, filters.date]);
 
-        // Clear previous timeout
+    // Sync dateRange and tempDateRange when filters change
+    useEffect(() => {
+        let newDateRange: DateRange | undefined;
+        if (filters.date_from || filters.date_to) {
+            newDateRange = {
+                from: filters.date_from ? new Date(filters.date_from) : undefined,
+                to: filters.date_to ? new Date(filters.date_to) : undefined,
+            };
+        } else if (filters.date) {
+            const d = new Date(filters.date);
+            newDateRange = { from: d, to: d };
+        } else {
+            newDateRange = undefined;
+        }
+        setDateRange(newDateRange);
+        setTempDateRange(newDateRange);
+    }, [filters.date_from, filters.date_to, filters.date]);
+
+    // Debounced navigation when user changes filters (not when props sync from server)
+    useEffect(() => {
         if (timeoutRef.current) {
             clearTimeout(timeoutRef.current);
         }
 
-        // Only make request if filters have actually changed from initial values
-        const hasChanges = Object.keys(searchFilters).some(key => {
+        // If filters came from server (props changed), skip - sync effect handles it
+        const filtersChanged = JSON.stringify(filters) !== JSON.stringify(prevFiltersRef.current);
+        if (filtersChanged) {
+            prevFiltersRef.current = filters;
+            return;
+        }
+
+        // Only request when searchFilters differs from filters (user made a change)
+        const hasUserChanges = Object.keys(searchFilters).some(key => {
             const filterValue = searchFilters[key as keyof Filters];
             const propValue = filters[key as keyof Filters];
             return filterValue !== propValue;
         });
 
-        if (!hasChanges) {
+        if (!hasUserChanges) {
             return;
         }
 
-        // Set new timeout to debounce filter changes
         timeoutRef.current = setTimeout(() => {
-            const params = new URLSearchParams();
+            const params: Record<string, string> = {};
             Object.entries(searchFilters).forEach(([key, value]) => {
-                if (value) params.append(key, value);
+                if (value != null && value !== '') {
+                    params[key] = String(value);
+                }
             });
-            
-            const queryString = params.toString();
-            router.get(
-                '/vehicle-dispatch',
-                queryString ? { ...searchFilters } : {},
-                { preserveState: true, preserveScroll: true }
-            );
-        }, 500); // 500ms debounce
+            router.get('/vehicle-dispatch', params, {
+                preserveState: true,
+                preserveScroll: true,
+            });
+        }, 500);
 
-        // Cleanup
         return () => {
             if (timeoutRef.current) {
                 clearTimeout(timeoutRef.current);
@@ -345,18 +441,65 @@ export default function VehicleDispatchIndex({
                                         <Calendar
                                             initialFocus
                                             mode="range"
-                                            defaultMonth={dateRange?.from}
-                                            selected={dateRange}
-                                            onSelect={(range) => {
-                                                setDateRange(range);
-                                                setSearchFilters(prev => ({
-                                                    ...prev,
-                                                    date_from: range?.from ? format(range.from, 'yyyy-MM-dd') : undefined,
-                                                    date_to: range?.to ? format(range.to, 'yyyy-MM-dd') : undefined,
-                                                }));
-                                            }}
+                                            defaultMonth={tempDateRange?.from}
+                                            selected={tempDateRange}
+                                            onSelect={(range) => setTempDateRange(range)}
                                             numberOfMonths={2}
+                                            modifiers={{
+                                                available: availableDates.map(date => {
+                                                    // Handle date parsing more robustly to avoid timezone issues
+                                                    const [year, month, day] = date.split('-').map(Number);
+                                                    return new Date(year, month - 1, day); // month is 0-indexed in JS
+                                                }),
+                                            }}
+                                            modifiersStyles={{
+                                                available: {
+                                                    backgroundColor: '#10b981',
+                                                    color: 'white',
+                                                    borderRadius: '4px',
+                                                    fontWeight: 'bold',
+                                                },
+                                            }}
                                         />
+                                        <div className="mt-2 text-xs text-gray-500 px-3 pb-2">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-3 h-3 bg-green-500 rounded"></div>
+                                                <span>Dates with available data</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-2 p-3 border-t">
+                                            <Button 
+                                                variant="default" 
+                                                onClick={() => {
+                                                    const from = tempDateRange?.from ? format(tempDateRange.from, 'yyyy-MM-dd') : undefined;
+                                                    const to = tempDateRange?.to ? format(tempDateRange.to, 'yyyy-MM-dd') : undefined;
+                                                    
+                                                    setDateRange(tempDateRange);
+                                                    
+                                                    // Only update date_from/date_to if not on DPR tab
+                                                    if (tab !== 'dpr') {
+                                                        setSearchFilters(prev => ({
+                                                        ...prev,
+                                                        date_from: from,
+                                                        date_to: to,
+                                                        date: undefined,
+                                                    }));
+                                                    }
+                                                }}
+                                                className="flex-1"
+                                            >
+                                                Apply
+                                            </Button>
+                                            <Button 
+                                                variant="outline" 
+                                                onClick={() => {
+                                                    setTempDateRange(dateRange);
+                                                }}
+                                                className="flex-1"
+                                            >
+                                                Cancel
+                                            </Button>
+                                        </div>
                                     </PopoverContent>
                                 </Popover>
                             </div>
@@ -418,7 +561,13 @@ export default function VehicleDispatchIndex({
                             onSaveImport={handleSaveImport}
                         />
                     )}
-                    {activeTab === 'dpr' && <DPRTab />}
+                    {activeTab === 'dpr' && (
+                        <DPRTab
+                            dispatchReports={dispatchReports}
+                            filters={filters}
+                            flashSuccess={flash?.success ?? pageProps.flash?.success}
+                        />
+                    )}
                 </VehicleDispatchTabs>
             </div>
 
@@ -601,7 +750,7 @@ export default function VehicleDispatchIndex({
                                 </p>
                             </div>
                             <button
-                                onClick={() => setShowImportDialog(false)}
+                                onClick={clearImportErrors}
                                 className="text-gray-400 hover:text-gray-600"
                             >
                                 ×
@@ -667,7 +816,7 @@ export default function VehicleDispatchIndex({
                             <div className="flex justify-end gap-2">
                                 <Button
                                     variant="outline"
-                                    onClick={() => setShowImportDialog(false)}
+                                    onClick={clearImportErrors}
                                     disabled={isImporting}
                                 >
                                     Cancel

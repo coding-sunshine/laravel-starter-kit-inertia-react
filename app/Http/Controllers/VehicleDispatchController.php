@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateVehicleDispatchRequest;
+use App\Models\DispatchReport;
 use App\Models\PowerplantSidingDistance;
 use App\Models\Siding;
 use App\Models\VehicleDispatch;
+use App\Services\SidingContext;
 use DateTimeImmutable;
 use DOMDocument;
 use Exception;
@@ -20,22 +22,32 @@ use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use InvalidArgumentException;
+use Throwable;
 
 final class VehicleDispatchController extends Controller
 {
-    public function index(Request $request): Response
+    public function index(Request $request): Response|RedirectResponse
     {
         $user = Auth::user();
-        $currentSiding = session('current_siding');
+        $currentSiding = SidingContext::get();
 
-        // Default to current date if no date filter is provided
-        $date = $request->get('date') ?: now()->format('Y-m-d');
+        // Default to current date when no date filters are provided
+        if (! $request->date && ! $request->date_from && ! $request->date_to) {
+            return redirect()->route('vehicle-dispatch.index', array_merge(
+                ['date' => now()->format('Y-m-d')],
+                $request->only(['shift', 'permit_no', 'truck_regd_no', 'tab'])
+            ));
+        }
+
+        $sidingIds = $user->isSuperAdmin()
+            ? Siding::query()->pluck('id')->all()
+            : $user->accessibleSidings()->get()->pluck('id')->all();
 
         $query = VehicleDispatch::with(['siding', 'creator'])
-            ->when($currentSiding, fn ($q) => $q->forSiding($currentSiding->id))
+            // ->when($currentSiding, fn ($q) => $q->forSiding($currentSiding->id), fn ($q) => $q->whereIn('siding_id', $sidingIds))
             ->when($request->date_from, fn ($q) => $q->whereDate('issued_on', '>=', $request->date_from))
             ->when($request->date_to, fn ($q) => $q->whereDate('issued_on', '<=', $request->date_to))
-            ->when($date && ! $request->date_from && ! $request->date_to, fn ($q) => $q->forDate($date))
+            ->when($request->date && ! $request->date_from && ! $request->date_to, fn ($q) => $q->forDate($request->get('date')))
             ->when($request->shift, fn ($q) => $q->forShift($request->shift))
             ->when($request->permit_no, fn ($q) => $q->byPermitNo($request->permit_no))
             ->when($request->truck_regd_no, fn ($q) => $q->byTruckRegdNo($request->truck_regd_no))
@@ -43,7 +55,7 @@ final class VehicleDispatchController extends Controller
             ->orderBy('created_at', 'desc');
 
         $vehicleDispatches = $query->paginate(25);
-
+        // dd($vehicleDispatches);
         $shifts = ['1st', '2nd', '3rd'];
         $availableDates = VehicleDispatch::selectRaw('DATE(issued_on) as date')
             ->whereNotNull('issued_on')
@@ -52,19 +64,26 @@ final class VehicleDispatchController extends Controller
             ->pluck('date');
 
         // Get available sidings for import dropdown
-        $user = $request->user();
-        $sidingIds = $user->isSuperAdmin()
-            ? Siding::query()->pluck('id')->all()
-            : $user->accessibleSidings()->get()->pluck('id')->all();
-
         $sidings = Siding::query()
             ->whereIn('id', $sidingIds)
             ->orderBy('name')
             ->get(['id', 'name', 'code']);
+        
+        $dispatchReportsQuery = DispatchReport::with('siding')
+            // ->when($currentSiding, fn ($q) => $q->where('siding_id', $currentSiding->id), fn ($q) => $q->whereIn('siding_id', $sidingIds))
+            ->when($request->date_from, fn ($q) => $q->where('issued_on', '>=', $request->date_from))
+            ->when($request->date_to, fn ($q) => $q->where('issued_on', '<=', $request->date_to))
+            ->when($request->get('date') && ! $request->date_from && ! $request->date_to, fn ($q) => $q->where('issued_on', $request->get('date')))
+            ->orderBy('issued_on', 'desc')
+            ->orderBy('id', 'asc');
 
+        $dispatchReports = $dispatchReportsQuery->get();
+        // dd($dispatchReports);
         return Inertia::render('VehicleDispatch/Index', [
             'vehicleDispatches' => $vehicleDispatches,
-            'filters' => array_merge(['date' => $date], $request->only(['date_from', 'date_to', 'shift', 'permit_no', 'truck_regd_no'])),
+            'dispatchReports' => $dispatchReports,
+            'filters' => $request->only(['date_from', 'date_to', 'date', 'shift', 'permit_no', 'truck_regd_no']),
+            'tab' => $request->get('tab', 'main-data'),
             'shifts' => $shifts,
             'availableDates' => $availableDates,
             'currentSiding' => $currentSiding,
@@ -73,6 +92,7 @@ final class VehicleDispatchController extends Controller
             'import_target_date' => $request->session()->get('import_target_date'),
             'flash' => [
                 'success' => $request->session()->get('success'),
+                'import_errors' => $request->session()->get('import_errors'),
             ],
         ]);
     }
@@ -89,7 +109,7 @@ final class VehicleDispatchController extends Controller
                 if ($dt) {
                     $data['shift'] = VehicleDispatch::shiftFromIssuedOn($dt);
                 }
-            } catch (\Throwable) {
+            } catch (Throwable) {
                 // Leave shift unchanged if date parse fails
             }
         }
@@ -131,16 +151,29 @@ final class VehicleDispatchController extends Controller
         foreach ($rows as $index => $row) {
             try {
                 $parsedData = $this->parseVehicleDispatchRow($row);
+                 
+                // Check for unique Pass No during import preview
+                if (!empty($parsedData['pass_no'])) {
+                    $existingPass = VehicleDispatch::where('pass_no', $parsedData['pass_no'])->first();
+                    if ($existingPass) {
+                        // Stop immediately and throw error for duplicate Pass No
+                        throw new InvalidArgumentException("Pass No '{$parsedData['pass_no']}' already exists. Import stopped.");
+                    }
+                }
+                
                 $parsedRows[] = $parsedData;
             } catch (Exception $e) {
+                // Stop processing on first error
                 $errors[] = 'Row '.($index + 2).': '.$e->getMessage();
+                break; // Exit the loop immediately
             }
         }
 
         if (! empty($errors)) {
-            throw ValidationException::withMessages([
-                'import_errors' => $errors,
-            ]);
+            return redirect()
+                ->route('vehicle-dispatch.index', array_merge(['date' => $targetDate], $request->only(['shift', 'permit_no', 'truck_regd_no'])))
+                ->with('import_errors', $errors)
+                ->with('import_target_date', $targetDate);
         }
 
         // Redirect back to index with preview data in session (keeps URL as /vehicle-dispatch)
@@ -174,13 +207,13 @@ final class VehicleDispatchController extends Controller
                     if (isset($row['siding'])) {
                         unset($row['siding']);
                     }
-                    
+
                     // Validate required fields before saving
                     $this->validateVehicleDispatchData($row);
 
                     // Apply target date to each record if no issued_on is present
                     if (empty($row['issued_on'])) {
-                        $row['issued_on'] = $targetDate . ' ' . now()->format('H:i:s');
+                        $row['issued_on'] = $targetDate.' '.now()->format('H:i:s');
                     }
 
                     VehicleDispatch::create($row);
@@ -217,9 +250,9 @@ final class VehicleDispatchController extends Controller
         return $query->paginate(25);
     }
 
-    private function getCurrentSiding($request)
+    private function getCurrentSiding($request): ?Siding
     {
-        return session('current_siding');
+        return SidingContext::get();
     }
 
     private function getAvailableSidings($request)
@@ -299,11 +332,12 @@ final class VehicleDispatchController extends Controller
      */
     private function getSidingInfo(?int $sidingId): ?array
     {
-        if (!$sidingId) {
+        if (! $sidingId) {
             return null;
         }
 
         $siding = Siding::find($sidingId);
+
         return $siding ? [
             'id' => $siding->id,
             'name' => $siding->name,
@@ -478,6 +512,7 @@ final class VehicleDispatchController extends Controller
         if (count($row) >= 14) {
             $formatD = $this->mapFormatD($row);
             if ($this->hasValidRequiredFields($formatD)) {
+               
                 $data = $formatD;
             }
         }
@@ -540,7 +575,7 @@ final class VehicleDispatchController extends Controller
         $distance = $this->parseNullableInt($row[14] ?? null);
         $sidingId = $this->findSidingByDistance($distance);
         $sidingInfo = $this->getSidingInfo($sidingId);
-        
+
         return [
             'siding_id' => $sidingId,
             'siding' => $sidingInfo,
@@ -570,7 +605,7 @@ final class VehicleDispatchController extends Controller
         $distance = $this->parseNullableInt($row[13] ?? null);
         $sidingId = $this->findSidingByDistance($distance);
         $sidingInfo = $this->getSidingInfo($sidingId);
-        
+
         return [
             'siding_id' => $sidingId,
             'siding' => $sidingInfo,
@@ -599,7 +634,7 @@ final class VehicleDispatchController extends Controller
     {
         $sidingId = $this->findSidingByDistance(null); // No distance in this format
         $sidingInfo = $this->getSidingInfo($sidingId);
-        
+
         return [
             'siding_id' => $sidingId,
             'siding' => $sidingInfo,
@@ -634,7 +669,7 @@ final class VehicleDispatchController extends Controller
             'siding_id' => $sidingId,
             'siding' => $sidingInfo,
             'serial_no' => $this->parseNullableInt($row[0] ?? null),
-            'ref_no' => null,
+            'ref_no' => $this->parseNullableInt($row[0] ?? null),
             'permit_no' => $this->parseNullableString($row[1] ?? null),
             'pass_no' => $this->parseNullableString($row[2] ?? null),
             'stack_do_no' => $this->parseNullableString($row[3] ?? null),
@@ -681,7 +716,7 @@ final class VehicleDispatchController extends Controller
             // Mineral at 6, Weight at 7 (6 used for both truck and mineral when only 8 cols)
             $sidingId = $this->findSidingByDistance(null); // No distance in this format
             $sidingInfo = $this->getSidingInfo($sidingId);
-            
+
             return [
                 'siding_id' => $sidingId,
                 'siding' => $sidingInfo,
@@ -744,7 +779,7 @@ final class VehicleDispatchController extends Controller
 
         // Clean the value first
         $cleanValue = mb_trim($value);
-        
+
         // Try to parse various date formats (02-Mar-2026 23:59 = 11:59 PM = 3rd shift)
         // Note: H:i A misparses "23:59 PM" as 11:59 AM; use H:i * to treat 23:59 as 24h and absorb trailing AM/PM
         $formats = [
@@ -783,24 +818,24 @@ final class VehicleDispatchController extends Controller
             $day = $matches[1];
             $month = $matches[2];
             $year = $matches[3];
-            $hour = (int)$matches[4];
+            $hour = (int) $matches[4];
             $minute = $matches[5];
-            $ampm = isset($matches[7]) ? strtoupper($matches[7]) : null;
-            
+            $ampm = isset($matches[7]) ? mb_strtoupper($matches[7]) : null;
+
             // Convert month name to number
             $monthNum = date('m', strtotime("$day-$month-$year"));
             if ($monthNum === false) {
                 return null;
             }
-            
+
             // Convert to 24-hour format only if AM/PM is present
             if ($ampm === 'PM' && $hour < 12) {
                 $hour += 12;
-            } elseif ($ampm === 'AM' && $hour == 12) {
+            } elseif ($ampm === 'AM' && $hour === 12) {
                 $hour = 0;
             }
             // If no AM/PM, assume 24-hour format (don't convert)
-            
+
             $date = DateTimeImmutable::createFromFormat('Y-m-d H:i', "$year-$monthNum-$day $hour:$minute");
             if ($date) {
                 return $date->format('Y-m-d H:i:s');
