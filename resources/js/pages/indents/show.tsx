@@ -8,8 +8,8 @@ import {
 } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, router } from '@inertiajs/react';
-import { FileText, Train, Plus } from 'lucide-react';
+import { Head, Link } from '@inertiajs/react';
+import { Download, FileText, Train, Plus } from 'lucide-react';
 
 interface Siding {
     id: number;
@@ -25,19 +25,28 @@ interface Rake {
 
 interface Indent {
     id: number;
+    siding_id: number;
     indent_number: string | null;
-    target_quantity_mt: string | null;
-    allocated_quantity_mt: string;
-    state: string;
+    demanded_stock: string | null;
+    total_units: number | null;
+    target_quantity_mt: string | number | null;
+    allocated_quantity_mt: string | number | null;
+    available_stock_mt: string | number | null;
     indent_date: string | null;
+    indent_time: string | null;
+    expected_loading_date: string | null;
     required_by_date: string | null;
-    remarks: string | null;
+    railway_reference_no: string | null;
     e_demand_reference_id: string | null;
     fnr_number: string | null;
-    expected_loading_date: string | null;
-    demanded_stock: string | null;
-    total_units: string | null;
+    state: string;
+    remarks: string | null;
+    created_at: string;
+    updated_at: string;
     indent_confirmation_pdf_url?: string | null;
+    indent_pdf_url?: string | null;
+    /** URL to download PDF via app route (prefer over direct media URL) */
+    indent_pdf_download_url?: string | null;
     siding?: Siding | null;
 }
 
@@ -102,16 +111,16 @@ export default function IndentsShow({ indent, rake }: Props) {
                                     Indent number
                                 </dt>
                                 <dd className="font-medium">
-                                    {indent.indent_number || '—'}
+                                    {indent.indent_number ?? '—'}
                                 </dd>
                             </div>
                             <div>
                                 <dt className="text-muted-foreground">
-                                    Siding
+                                    Siding (Station From)
                                 </dt>
                                 <dd>
                                     {indent.siding?.name ?? '—'}{' '}
-                                    {indent.siding?.code && (
+                                    {indent.siding?.code != null && (
                                         <span className="text-muted-foreground">
                                             ({indent.siding.code})
                                         </span>
@@ -120,71 +129,179 @@ export default function IndentsShow({ indent, rake }: Props) {
                             </div>
                             <div>
                                 <dt className="text-muted-foreground">State</dt>
-                                <dd className="capitalize">{indent.state}</dd>
+                                <dd className="capitalize">
+                                    {indent.state ?? '—'}
+                                </dd>
                             </div>
-                            {indent.e_demand_reference_id && (
-                                <div>
-                                    <dt className="text-muted-foreground">
-                                        e-Demand reference ID
-                                    </dt>
-                                    <dd>{indent.e_demand_reference_id}</dd>
-                                </div>
-                            )}
-                            {indent.fnr_number && (
-                                <div>
-                                    <dt className="text-muted-foreground">
-                                        FNR number
-                                    </dt>
-                                    <dd>{indent.fnr_number}</dd>
-                                </div>
-                            )}
-                            {indent.expected_loading_date && (
-                                <div>
-                                    <dt className="text-muted-foreground">
-                                        Expected Loading Date
-                                    </dt>
-                                    <dd>
-                                        {new Date(
-                                            indent.expected_loading_date,
-                                        ).toLocaleDateString()}
-                                    </dd>
-                                </div>
-                            )}
-                            {indent.demanded_stock && (
-                                <div>
-                                    <dt className="text-muted-foreground">
-                                        Rake Type
-                                    </dt>
-                                    <dd>{indent.demanded_stock}</dd>
-                                </div>
-                            )}
-                            {indent.total_units && (
-                                <div>
-                                    <dt className="text-muted-foreground">
-                                        Total Wagons
-                                    </dt>
-                                    <dd>{indent.total_units}</dd>
-                                </div>
-                            )}
+                            <div>
+                                <dt className="text-muted-foreground">
+                                    Demanded stock
+                                </dt>
+                                <dd>{indent.demanded_stock ?? '—'}</dd>
+                            </div>
+                            <div>
+                                <dt className="text-muted-foreground">
+                                    Total units
+                                </dt>
+                                <dd>
+                                    {indent.total_units != null
+                                        ? indent.total_units
+                                        : '—'}
+                                </dd>
+                            </div>
+                            <div>
+                                <dt className="text-muted-foreground">
+                                    Target quantity (MT)
+                                </dt>
+                                <dd>
+                                    {indent.target_quantity_mt != null
+                                        ? indent.target_quantity_mt
+                                        : '—'}
+                                </dd>
+                            </div>
+                            <div>
+                                <dt className="text-muted-foreground">
+                                    Allocated quantity (MT)
+                                </dt>
+                                <dd>
+                                    {indent.allocated_quantity_mt != null
+                                        ? indent.allocated_quantity_mt
+                                        : '—'}
+                                </dd>
+                            </div>
+                            <div>
+                                <dt className="text-muted-foreground">
+                                    Available stock (MT)
+                                </dt>
+                                <dd>
+                                    {indent.available_stock_mt != null
+                                        ? indent.available_stock_mt
+                                        : '—'}
+                                </dd>
+                            </div>
+                            <div>
+                                <dt className="text-muted-foreground">
+                                    Indent date
+                                </dt>
+                                <dd>
+                                    {indent.indent_date
+                                        ? new Date(
+                                              indent.indent_date,
+                                          ).toLocaleString()
+                                        : '—'}
+                                </dd>
+                            </div>
+                            <div>
+                                <dt className="text-muted-foreground">
+                                    Indent time
+                                </dt>
+                                <dd>
+                                    {indent.indent_time
+                                        ? new Date(
+                                              indent.indent_time,
+                                          ).toLocaleTimeString()
+                                        : '—'}
+                                </dd>
+                            </div>
+                            <div>
+                                <dt className="text-muted-foreground">
+                                    Expected loading date
+                                </dt>
+                                <dd>
+                                    {indent.expected_loading_date
+                                        ? new Date(
+                                              indent.expected_loading_date,
+                                          ).toLocaleDateString()
+                                        : '—'}
+                                </dd>
+                            </div>
+                            <div>
+                                <dt className="text-muted-foreground">
+                                    Required by date
+                                </dt>
+                                <dd>
+                                    {indent.required_by_date
+                                        ? new Date(
+                                              indent.required_by_date,
+                                          ).toLocaleString()
+                                        : '—'}
+                                </dd>
+                            </div>
+                            <div>
+                                <dt className="text-muted-foreground">
+                                    Railway reference no.
+                                </dt>
+                                <dd>
+                                    {indent.railway_reference_no ?? '—'}
+                                </dd>
+                            </div>
+                            <div>
+                                <dt className="text-muted-foreground">
+                                    e-Demand reference ID
+                                </dt>
+                                <dd>
+                                    {indent.e_demand_reference_id ?? '—'}
+                                </dd>
+                            </div>
+                            <div>
+                                <dt className="text-muted-foreground">
+                                    FNR number
+                                </dt>
+                                <dd>{indent.fnr_number ?? '—'}</dd>
+                            </div>
+                            <div>
+                                <dt className="text-muted-foreground">
+                                    Created at
+                                </dt>
+                                <dd>
+                                    {indent.created_at
+                                        ? new Date(
+                                              indent.created_at,
+                                          ).toLocaleString()
+                                        : '—'}
+                                </dd>
+                            </div>
+                            <div>
+                                <dt className="text-muted-foreground">
+                                    Updated at
+                                </dt>
+                                <dd>
+                                    {indent.updated_at
+                                        ? new Date(
+                                              indent.updated_at,
+                                          ).toLocaleString()
+                                        : '—'}
+                                </dd>
+                            </div>
                         </dl>
-                        {indent.indent_confirmation_pdf_url && (
-                            <p>
-                                <a
-                                    href={indent.indent_confirmation_pdf_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-primary underline underline-offset-2"
-                                >
-                                    View confirmation (PDF)
-                                </a>
-                            </p>
-                        )}
-                        {indent.remarks && (
+                        {indent.remarks != null && indent.remarks !== '' && (
                             <div>
                                 <dt className="text-muted-foreground">
                                     Remarks
                                 </dt>
-                                <p className="mt-1 text-sm">{indent.remarks}</p>
+                                <p className="mt-1 text-sm whitespace-pre-wrap">
+                                    {indent.remarks}
+                                </p>
+                            </div>
+                        )}
+                        {(indent.indent_pdf_download_url ??
+                            indent.indent_pdf_url ??
+                            indent.indent_confirmation_pdf_url) && (
+                            <div className="mt-4">
+                                <a
+                                    href={
+                                        indent.indent_pdf_download_url ??
+                                        indent.indent_pdf_url ??
+                                        indent.indent_confirmation_pdf_url ??
+                                        '#'
+                                    }
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium ring-offset-background hover:bg-accent hover:text-accent-foreground"
+                                >
+                                    <Download className="size-4" />
+                                    Download PDF
+                                </a>
                             </div>
                         )}
                     </CardContent>

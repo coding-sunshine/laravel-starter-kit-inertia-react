@@ -204,6 +204,7 @@ final class AppServiceProvider extends ServiceProvider
             'rr-tab-penalties',
             'rr-tab-raw',
             'rr-upload-pdf-button',
+            'indents-upload-pdf-button',
         ]);
     }
 
