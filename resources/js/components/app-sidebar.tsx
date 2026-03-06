@@ -157,6 +157,12 @@ const mainNavItems: NavItem[] = [
         dataPan: 'nav-reconciliation',
     },
     {
+        title: 'Weighments',
+        href: '/weighments',
+        icon: Scale,
+        dataPan: 'nav-weighments',
+    },
+    {
         title: 'Reports',
         href: '/reports',
         icon: BarChart3,

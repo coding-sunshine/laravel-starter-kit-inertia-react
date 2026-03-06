@@ -16,13 +16,12 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
-use Inertia\Response;
 use InvalidArgumentException;
 use Throwable;
 
 final class RrDocumentController extends Controller
 {
-    public function index(Request $request): Response
+    public function index(Request $request): \Inertia\Response
     {
         $user = $request->user();
         $sidingIds = $user->isSuperAdmin()
@@ -97,7 +96,7 @@ final class RrDocumentController extends Controller
         return $media;
     }
 
-    public function show(Request $request, RrDocument $rrDocument): Inertia\Response
+    public function show(Request $request, RrDocument $rrDocument): \Inertia\Response
     {
         // $this->authorize('view', $rrDocument);
 
@@ -124,7 +123,7 @@ final class RrDocumentController extends Controller
         ]);
     }
 
-    public function create(Request $request): Response
+    public function create(Request $request): \Inertia\Response
     {
         // $this->authorize('create', RrDocument::class);
         $user = $request->user();

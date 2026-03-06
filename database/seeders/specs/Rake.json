@@ -175,6 +175,10 @@
             "type": "hasMany",
             "model": "Penalty"
         },
+        "appliedPenalties": {
+            "type": "hasMany",
+            "model": "AppliedPenalty"
+        },
         "createdBy": {
             "type": "belongsTo",
             "model": "CreatedBy"

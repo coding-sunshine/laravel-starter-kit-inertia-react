@@ -21,7 +21,7 @@ final class DailyVehicleEntryController extends Controller
         private ShiftValidationService $shiftValidation
     ) {}
 
-    public function index(Request $request): InertiaResponse
+    public function index(Request $request): InertiaResponse|RedirectResponse
     {
         $date = $request->get('date', now()->format('Y-m-d'));
         $activeShift = (int) $request->get('shift', 1);

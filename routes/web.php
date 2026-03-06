@@ -68,6 +68,7 @@ use App\Http\Controllers\UserTwoFactorAuthenticationController;
 use App\Http\Controllers\VehicleDispatchController;
 use App\Http\Controllers\VehicleWorkorderController;
 use App\Http\Controllers\WagonUnfitController;
+use App\Http\Controllers\Weighments\WeighmentsController;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
@@ -302,6 +303,11 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     // Reports
     Route::get('reports', [ReportsController::class, 'index'])->name('reports.index');
     Route::post('reports/generate', [ReportsController::class, 'generate'])->name('reports.generate');
+
+    // Weighments (historical rake weighment imports)
+    Route::get('weighments', [WeighmentsController::class, 'index'])->name('weighments.index');
+    Route::get('weighments/{weighment}', [WeighmentsController::class, 'show'])->name('weighments.show');
+    Route::post('weighments/import', [WeighmentsController::class, 'store'])->name('weighments.import');
 
     // AI Chatbot
     Route::get('chat/conversations', [ChatController::class, 'index'])->name('chat.conversations.index');
