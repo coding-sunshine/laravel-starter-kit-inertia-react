@@ -6,6 +6,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Mattiverse\Userstamps\Traits\Userstamps;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
@@ -24,8 +25,16 @@ final class RrDocument extends Model implements HasMedia
         'from_station_code',
         'to_station_code',
         'freight_total',
+        'distance_km',
+        'commodity_code',
+        'commodity_description',
+        'invoice_number',
+        'invoice_date',
+        'rate',
+        'class',
         'rr_details',
         'document_status',
+        'data_source',
         'has_discrepancy',
         'discrepancy_details',
         'created_by',
@@ -44,6 +53,11 @@ final class RrDocument extends Model implements HasMedia
         return $this->belongsTo(Rake::class);
     }
 
+    public function rrCharges(): HasMany
+    {
+        return $this->hasMany(RrCharge::class);
+    }
+
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
@@ -58,9 +72,12 @@ final class RrDocument extends Model implements HasMedia
     {
         return [
             'rr_received_date' => 'datetime',
+            'invoice_date' => 'date',
             'has_discrepancy' => 'boolean',
             'rr_details' => 'array',
             'freight_total' => 'decimal:2',
+            'distance_km' => 'decimal:2',
+            'rate' => 'decimal:2',
         ];
     }
 }

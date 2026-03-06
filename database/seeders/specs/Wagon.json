@@ -56,6 +56,21 @@
             "type": "timestamp",
             "nullable": true,
             "default": null
+        },
+        "loaded_weight_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "permissible_weight_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "overload_weight_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {

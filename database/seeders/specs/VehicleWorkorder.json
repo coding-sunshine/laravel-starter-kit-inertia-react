@@ -1,0 +1,188 @@
+{
+    "model": "VehicleWorkorder",
+    "table": "vehicle_workorders",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "siding_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "vehicle_no": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "rcd_pin_no": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "transport_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "wo_no": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "wo_no_2": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "work_order_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "issued_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "proprietor_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "represented_by": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "place": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "address": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "tyres": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "tare_weight": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "mobile_no_1": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "mobile_no_2": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "owner_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "regd_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "permit_validity_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "tax_validity_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "fitness_validity_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "insurance_validity_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "maker_model": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "make": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "model": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "remarks": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "recommended_by": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "referenced": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "local_or_non_local": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "pan_no": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "gst_no": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": [],
+    "value_hints": {
+        "transport_name": {
+            "type": "name",
+            "example": "John Doe"
+        },
+        "proprietor_name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    },
+    "scenarios": []
+}

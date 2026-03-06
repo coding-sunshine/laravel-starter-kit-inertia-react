@@ -131,6 +131,11 @@
             "type": "timestamp",
             "nullable": true,
             "default": null
+        },
+        "data_source": {
+            "type": "string",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {
@@ -169,6 +174,10 @@
         "penalties": {
             "type": "hasMany",
             "model": "Penalty"
+        },
+        "appliedPenalties": {
+            "type": "hasMany",
+            "model": "AppliedPenalty"
         },
         "createdBy": {
             "type": "belongsTo",

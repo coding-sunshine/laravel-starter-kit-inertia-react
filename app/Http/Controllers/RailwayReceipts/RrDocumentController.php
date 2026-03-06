@@ -4,20 +4,24 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\RailwayReceipts;
 
-use App\Actions\ProcessRrDocument;
 use App\DataTables\RrDocumentDataTable;
 use App\Http\Controllers\Controller;
+use App\Models\PowerPlant;
 use App\Models\Rake;
 use App\Models\RrDocument;
 use App\Models\Siding;
+use App\Services\Railway\RrImportService;
+use App\Services\Railway\RrParserService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
-use Inertia\Response;
+use InvalidArgumentException;
+use Throwable;
 
 final class RrDocumentController extends Controller
 {
-    public function index(Request $request): Response
+    public function index(Request $request): \Inertia\Response
     {
         $user = $request->user();
         $sidingIds = $user->isSuperAdmin()
@@ -35,18 +39,91 @@ final class RrDocumentController extends Controller
         ]);
     }
 
-    public function show(Request $request, RrDocument $rrDocument): Response
+    public function upload(
+        Request $request,
+        RrParserService $parser,
+        RrImportService $rrImportService,
+    ): RedirectResponse {
+        $request->validate([
+            'pdf' => ['required', 'file', 'mimes:pdf', 'max:10240'],
+            'siding_id' => ['nullable', 'integer', 'exists:sidings,id'],
+            'power_plant_id' => ['nullable', 'integer', 'exists:power_plants,id'],
+        ]);
+
+        $user = $request->user();
+        $sidingIds = $user->isSuperAdmin()
+            ? Siding::query()->pluck('id')->all()
+            : $user->accessibleSidings()->get()->pluck('id')->all();
+        $sidingId = $request->input('siding_id') ?? $sidingIds[0] ?? null;
+        $powerPlantId = $request->input('power_plant_id') ?? PowerPlant::query()->orderBy('id')->value('id');
+
+        if ($sidingId === null) {
+            return back()->withErrors(['pdf' => 'No siding available. Create a siding first.']);
+        }
+        if ($powerPlantId === null) {
+            return back()->withErrors(['pdf' => 'No power plant available. Create a power plant first.']);
+        }
+
+        try {
+            $parsed = $parser->parse($request->file('pdf'));
+            $validated = [
+                'pdf' => $request->file('pdf'),
+                'siding_id' => $sidingId,
+                'power_plant_id' => $powerPlantId,
+            ];
+            $rrDocument = $rrImportService->importWithValidated($parsed, $request, $validated);
+
+            return to_route('railway-receipts.show', $rrDocument)
+                ->with('success', 'RR document uploaded and parsed successfully.');
+        } catch (InvalidArgumentException $e) {
+            Log::warning('RR upload validation failed', ['error' => $e->getMessage()]);
+
+            return back()->withErrors(['pdf' => $e->getMessage()]);
+        } catch (Throwable $e) {
+            Log::error('RR upload failed', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+
+            return back()->withErrors(['pdf' => 'Failed to process Railway Receipt. Please ensure the PDF is valid and try again.']);
+        }
+    }
+
+    public function downloadPdf(RrDocument $rrDocument): \Illuminate\Contracts\Support\Responsable
+    {
+        $media = $rrDocument->getFirstMedia('rr_pdf');
+        if (! $media) {
+            abort(404, 'No PDF attached to this Railway Receipt.');
+        }
+
+        return $media;
+    }
+
+    public function show(Request $request, RrDocument $rrDocument): \Inertia\Response
     {
         // $this->authorize('view', $rrDocument);
 
-        $rrDocument->load('rake.siding:id,name,code');
+        $rrDocument->load([
+            'rake.siding:id,name,code',
+            'rake.wagons',
+            'rake.appliedPenalties.penaltyType:id,code,name,calculation_type',
+            'rake.appliedPenalties.wagon:id,wagon_number,overload_weight_mt',
+            'rrCharges',
+        ]);
+
+        $fromSiding = $rrDocument->from_station_code
+            ? Siding::query()->where('code', $rrDocument->from_station_code)->first(['id', 'name', 'code'])
+            : null;
+
+        $toPowerPlant = $rrDocument->to_station_code
+            ? PowerPlant::query()->where('code', $rrDocument->to_station_code)->first(['id', 'name', 'code'])
+            : null;
 
         return Inertia::render('railway-receipts/show', [
             'rrDocument' => $rrDocument,
+            'fromSiding' => $fromSiding,
+            'toPowerPlant' => $toPowerPlant,
         ]);
     }
 
-    public function create(Request $request): Response
+    public function create(Request $request): \Inertia\Response
     {
         // $this->authorize('create', RrDocument::class);
         $user = $request->user();

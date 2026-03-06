@@ -22,9 +22,22 @@ export function StatusPill({
     status,
     className,
 }: {
-    status: string;
+    status: string | null | undefined;
     className?: string;
 }) {
+    if (status == null || status === '') {
+        return (
+            <span
+                className={cn(
+                    'inline-flex rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground',
+                    'bg-muted',
+                    className,
+                )}
+            >
+                —
+            </span>
+        );
+    }
     const normalized = status.toLowerCase();
     const style = statusStyles[normalized] ?? 'bg-muted text-muted-foreground';
 

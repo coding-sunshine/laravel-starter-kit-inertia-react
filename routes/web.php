@@ -22,16 +22,21 @@ use App\Http\Controllers\ContactSubmissionController;
 use App\Http\Controllers\CookieConsentController;
 use App\Http\Controllers\DailyVehicleEntryController;
 use App\Http\Controllers\EnterpriseInquiryController;
+use App\Http\Controllers\GenerateDispatchReportController;
 use App\Http\Controllers\HelpCenter\HelpCenterController;
 use App\Http\Controllers\HelpCenter\RateHelpArticleController;
 use App\Http\Controllers\Indents\IndentsController;
 use App\Http\Controllers\InvitationAcceptController;
+use App\Http\Controllers\LoadersController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\OrganizationInvitationController;
 use App\Http\Controllers\OrganizationMemberController;
 use App\Http\Controllers\OrganizationSwitchController;
+use App\Http\Controllers\PenaltyTypesController;
 use App\Http\Controllers\PersonalDataExportController;
+use App\Http\Controllers\PowerPlantController;
+use App\Http\Controllers\PowerplantSidingDistancesController;
 use App\Http\Controllers\RailwayReceipts\PenaltyController;
 use App\Http\Controllers\RailwayReceipts\RrDocumentController;
 use App\Http\Controllers\Rakes\RakeGuardInspectionController;
@@ -45,11 +50,14 @@ use App\Http\Controllers\Reconciliation\ReconciliationController;
 use App\Http\Controllers\Reports\ReportsController;
 use App\Http\Controllers\RoadDispatch\VehicleArrivalController;
 use App\Http\Controllers\RoadDispatch\VehicleUnloadController;
+use App\Http\Controllers\RR\RrUploadController;
+use App\Http\Controllers\SectionTimersController;
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\Settings\AchievementsController;
+use App\Http\Controllers\SidingsController;
 use App\Http\Controllers\SidingSwitchController;
-use App\Http\Controllers\TxrController;
 use App\Http\Controllers\TermsAcceptController;
+use App\Http\Controllers\TxrController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserEmailResetNotificationController;
 use App\Http\Controllers\UserEmailVerificationController;
@@ -57,13 +65,10 @@ use App\Http\Controllers\UserEmailVerificationNotificationController;
 use App\Http\Controllers\UserPasswordController;
 use App\Http\Controllers\UserProfileController;
 use App\Http\Controllers\UserTwoFactorAuthenticationController;
+use App\Http\Controllers\VehicleDispatchController;
+use App\Http\Controllers\VehicleWorkorderController;
 use App\Http\Controllers\WagonUnfitController;
-use App\Http\Controllers\LoadersController;
-use App\Http\Controllers\PenaltyTypesController;
-use App\Http\Controllers\PowerPlantController;
-use App\Http\Controllers\PowerplantSidingDistancesController;
-use App\Http\Controllers\SidingsController;
-use App\Http\Controllers\SectionTimersController;
+use App\Http\Controllers\Weighments\WeighmentsController;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
@@ -208,8 +213,10 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('rakes/{rake}/comparison', [RakesController::class, 'comparison'])->name('rakes.comparison');
     Route::post('rakes/{rake}/guard-inspection', [RakeGuardInspectionController::class, 'store'])->name('rakes.guard-inspection.store');
     Route::get('indents', [IndentsController::class, 'index'])->name('indents.index');
+    Route::post('indents/import', [IndentsController::class, 'import'])->name('indents.import');
     Route::get('indents/create', [IndentsController::class, 'create'])->name('indents.create');
     Route::post('indents', [IndentsController::class, 'store'])->name('indents.store');
+    Route::get('indents/{indent}/pdf', [IndentsController::class, 'downloadPdf'])->name('indents.pdf');
     Route::get('indents/{indent}', [IndentsController::class, 'show'])->name('indents.show');
     Route::get('indents/{indent}/edit', [IndentsController::class, 'edit'])->name('indents.edit');
     Route::put('indents/{indent}', [IndentsController::class, 'update'])->name('indents.update');
@@ -258,11 +265,26 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::post('road-dispatch/daily-vehicle-entries/{entry}/complete', [DailyVehicleEntryController::class, 'markCompleted'])->name('road-dispatch.daily-vehicle-entries.complete');
     Route::get('road-dispatch/daily-vehicle-entries/export', [DailyVehicleEntryController::class, 'export'])->name('road-dispatch.daily-vehicle-entries.export');
 
+    // Vehicle Dispatch Register
+    Route::get('vehicle-dispatch', [VehicleDispatchController::class, 'index'])->name('vehicle-dispatch.index');
+    Route::put('vehicle-dispatch/{vehicle_dispatch}', [VehicleDispatchController::class, 'update'])->name('vehicle-dispatch.update');
+    Route::post('vehicle-dispatch/import', [VehicleDispatchController::class, 'import'])->name('vehicle-dispatch.import');
+    Route::post('vehicle-dispatch/save', [VehicleDispatchController::class, 'saveImport'])->name('vehicle-dispatch.save');
+    Route::post('dispatch-reports/generate', [GenerateDispatchReportController::class, 'generate'])->name('dispatch-reports.generate');
+
+    // Vehicle Work Orders
+    Route::get('vehicle-workorders', [VehicleWorkorderController::class, 'index'])->name('vehicle-workorders.index');
+    Route::get('vehicle-workorders/{vehicle_workorder}/edit', [VehicleWorkorderController::class, 'edit'])->name('vehicle-workorders.edit');
+    Route::put('vehicle-workorders/{vehicle_workorder}', [VehicleWorkorderController::class, 'update'])->name('vehicle-workorders.update');
+
     // Railway Receipts (RR) and Penalties
     Route::get('railway-receipts', [RrDocumentController::class, 'index'])->name('railway-receipts.index');
+    Route::post('railway-receipts/import', [RrUploadController::class, 'store'])->name('railway-receipts.import');
+    Route::post('railway-receipts/upload', [RrDocumentController::class, 'upload'])->name('railway-receipts.upload');
     Route::get('railway-receipts/create', [RrDocumentController::class, 'create'])->name('railway-receipts.create');
     Route::post('railway-receipts', [RrDocumentController::class, 'store'])->name('railway-receipts.store');
     Route::get('railway-receipts/{rrDocument}', [RrDocumentController::class, 'show'])->name('railway-receipts.show');
+    Route::get('railway-receipts/{rrDocument}/pdf', [RrDocumentController::class, 'downloadPdf'])->name('railway-receipts.pdf');
     Route::put('railway-receipts/{rrDocument}', [RrDocumentController::class, 'update'])->name('railway-receipts.update');
     Route::get('penalties', [PenaltyController::class, 'index'])->name('penalties.index');
     Route::get('penalties/analytics', [PenaltyController::class, 'analytics'])->name('penalties.analytics');
@@ -283,6 +305,11 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     // Reports
     Route::get('reports', [ReportsController::class, 'index'])->name('reports.index');
     Route::post('reports/generate', [ReportsController::class, 'generate'])->name('reports.generate');
+
+    // Weighments (historical rake weighment imports)
+    Route::get('weighments', [WeighmentsController::class, 'index'])->name('weighments.index');
+    Route::get('weighments/{weighment}', [WeighmentsController::class, 'show'])->name('weighments.show');
+    Route::post('weighments/import', [WeighmentsController::class, 'store'])->name('weighments.import');
 
     // AI Chatbot
     Route::get('chat/conversations', [ChatController::class, 'index'])->name('chat.conversations.index');

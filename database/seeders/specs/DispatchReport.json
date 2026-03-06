@@ -1,0 +1,143 @@
+{
+    "model": "DispatchReport",
+    "table": "dispatch_reports",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "siding_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "e_challan_no": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "ref_no": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "issued_on": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "truck_no": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "shift": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "trips": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "wo_no": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "transport_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "mineral_wt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "gross_wt_siding_rec_wt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "tare_wt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "net_wt_siding_rec_wt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "tyres": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "coal_ton_variation": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "reached_datetime": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "time_taken_trip": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "remarks": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "wb": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "trip_id_no": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "siding": {
+            "type": "belongsTo",
+            "model": "Siding"
+        }
+    },
+    "value_hints": {
+        "reached_datetime": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        },
+        "transport_name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    },
+    "scenarios": []
+}

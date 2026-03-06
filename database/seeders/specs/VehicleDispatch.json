@@ -1,0 +1,123 @@
+{
+    "model": "VehicleDispatch",
+    "table": "siding_vehicle_dispatches",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "siding_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "serial_no": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "ref_no": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "permit_no": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "pass_no": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "stack_do_no": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "issued_on": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "truck_regd_no": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "mineral": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "mineral_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "mineral_weight": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "source": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "destination": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "consignee": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "check_gate": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "distance_km": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "shift": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "siding": {
+            "type": "belongsTo",
+            "model": "Siding"
+        },
+        "creator": {
+            "type": "belongsTo",
+            "model": "Creator"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

@@ -189,6 +189,22 @@ final class AppServiceProvider extends ServiceProvider
             'penalty-root-cause-drill',
             'penalty-dispute-drill',
             'penalty-cost-savings',
+            'vehicle-dispatch-tab-main-data',
+            'vehicle-dispatch-tab-dpr',
+            'vehicle-dispatch-generate-dpr',
+            'nav-vehicle-workorders',
+            'vehicle-workorders-filters',
+            'vehicle-workorders-table',
+            'vehicle-workorder-edit',
+            'vehicle-workorder-update',
+            'rr-details-tabs',
+            'rr-tab-overview',
+            'rr-tab-wagons',
+            'rr-tab-charges',
+            'rr-tab-penalties',
+            'rr-tab-raw',
+            'rr-upload-pdf-button',
+            'indents-upload-pdf-button',
         ]);
     }
 

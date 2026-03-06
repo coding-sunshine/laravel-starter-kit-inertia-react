@@ -9,14 +9,54 @@ use App\Models\Indent;
 use App\Models\Rake;
 use App\Models\Siding;
 use App\Models\Wagon;
+use App\Services\IndentPdfImporter;
 use DateTimeImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use InvalidArgumentException;
+use Throwable;
 
 final class IndentsController extends Controller
 {
+    public function import(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'pdf' => ['required', 'file', 'mimes:pdf', 'max:10240'],
+        ]);
+
+        $user = $request->user();
+        $sidingIds = $user->isSuperAdmin()
+            ? Siding::query()->pluck('id')->all()
+            : $user->accessibleSidings()->get()->pluck('id')->all();
+
+        try {
+            $indent = app(IndentPdfImporter::class)->import(
+                $validated['pdf'],
+                $user->id
+            );
+            if (! in_array($indent->siding_id, $sidingIds, true)) {
+                $indent->delete();
+
+                return back()->withErrors([
+                    'pdf' => 'The PDF was parsed but the detected siding is not accessible to you.',
+                ]);
+            }
+
+            return to_route('indents.show', $indent)
+                ->with('success', 'Indent imported from PDF successfully.');
+        } catch (InvalidArgumentException $e) {
+            return back()->withErrors(['pdf' => $e->getMessage()]);
+        } catch (Throwable $e) {
+            report($e);
+
+            return back()->withErrors([
+                'pdf' => 'Import failed: '.$e->getMessage(),
+            ]);
+        }
+    }
+
     public function index(Request $request): Response
     {
         $user = $request->user();
@@ -100,6 +140,17 @@ final class IndentsController extends Controller
             ->with('success', 'Indent created.');
     }
 
+    public function downloadPdf(Indent $indent): \Illuminate\Contracts\Support\Responsable
+    {
+        $media = $indent->getFirstMedia('indent_pdf')
+            ?? $indent->getFirstMedia('indent_confirmation_pdf');
+        if (! $media) {
+            abort(404, 'No PDF attached to this indent.');
+        }
+
+        return $media;
+    }
+
     public function show(Request $request, Indent $indent): Response
     {
         // $this->authorize('view', $indent);
@@ -112,6 +163,10 @@ final class IndentsController extends Controller
         $rake = Rake::where('indent_id', $indent->id)
             ->select('id', 'rake_number', 'state')
             ->first();
+
+        $hasPdf = $indent->getFirstMedia('indent_pdf')
+            || $indent->getFirstMedia('indent_confirmation_pdf');
+        $indent->setAttribute('indent_pdf_download_url', $hasPdf ? route('indents.pdf', $indent) : null);
 
         return Inertia::render('indents/show', [
             'indent' => $indent,

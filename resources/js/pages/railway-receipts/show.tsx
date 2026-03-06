@@ -1,480 +1,393 @@
-import InputError from '@/components/input-error';
-import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { RRHeader } from '@/components/RR/RRHeader';
+import { RRTabs } from '@/components/RR/RRTabs';
+import type {
+    ChargeRow,
+    OverviewData,
+    PenaltyRow,
+    WagonRow,
+} from '@/components/RR/types';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, router, useForm, usePage } from '@inertiajs/react';
+import { Head } from '@inertiajs/react';
+
+interface Wagon {
+    id: number;
+    wagon_sequence: number;
+    wagon_number: string;
+    wagon_type: string | null;
+    pcc_weight_mt: string | number | null;
+    loaded_weight_mt: string | number | null;
+    permissible_weight_mt: string | number | null;
+    overload_weight_mt: string | number | null;
+}
+
+interface RrCharge {
+    id: number;
+    charge_code: string;
+    charge_name: string | null;
+    amount: string | number;
+}
+
+interface AppliedPenalty {
+    id: number;
+    amount: string | number;
+    quantity?: string | number | null;
+    wagon_id?: number | null;
+    penalty_type?: { id: number; code: string; name: string; calculation_type: string };
+    wagon?: { id: number; wagon_number: string; overload_weight_mt?: string | number | null };
+}
 
 interface Rake {
     id: number;
     rake_number: string;
+    wagon_count?: number;
+    loaded_weight_mt?: string | number | null;
     siding?: { id: number; name: string; code: string };
-}
-
-interface RrWagon {
-    wagon_number?: string;
-    wagon_type?: string;
-    cc_mt?: number;
-    tare_mt?: number;
-    gross_mt?: number;
-    actual_mt?: number;
-    permissible_mt?: number;
-    over_weight_mt?: number;
-    chargeable_mt?: number;
+    wagons?: Wagon[];
+    applied_penalties?: AppliedPenalty[];
 }
 
 interface RrDocument {
     id: number;
-    rake_id: number;
     rr_number: string;
     rr_received_date: string;
     rr_weight_mt: string | null;
-    fnr: string | null;
-    from_station_code: string | null;
-    to_station_code: string | null;
-    freight_total: string | null;
     document_status: string;
-    has_discrepancy: boolean;
-    discrepancy_details: string | null;
-    rr_details?: {
-        charges?: Record<string, number>;
-        wagons?: RrWagon[];
-    } | null;
+    fnr: string | null;
+    freight_total: string | null;
+    distance_km?: string | number | null;
+    commodity_code?: string | null;
+    commodity_description?: string | null;
+    rate?: string | number | null;
+    class?: string | null;
+    from_station_code?: string | null;
+    to_station_code?: string | null;
+    rr_details: Record<string, unknown> | null;
     rake?: Rake;
+    rr_charges?: RrCharge[];
+}
+
+interface FromSiding {
+    id: number;
+    name: string;
+    code: string;
+}
+
+interface ToPowerPlant {
+    id: number;
+    name: string;
+    code: string;
 }
 
 interface Props {
     rrDocument: RrDocument;
+    fromSiding?: FromSiding | null;
+    toPowerPlant?: ToPowerPlant | null;
 }
 
-export default function RailwayReceiptsShow({ rrDocument }: Props) {
-    const { errors } = usePage<{ errors?: Record<string, string> }>().props;
+function mapStatus(
+    status: string,
+): 'parsed' | 'pending' | 'error' {
+    const s = status.toLowerCase();
+    if (s === 'verified' || s === 'parsed') return 'parsed';
+    if (s === 'discrepancy' || s === 'error') return 'error';
+    return 'pending';
+}
+
+function buildHeaderData(
+    doc: RrDocument,
+    fromSiding?: FromSiding | null,
+    toPowerPlant?: ToPowerPlant | null,
+) {
+    const date = doc.rr_received_date
+        ? new Date(doc.rr_received_date).toLocaleDateString('en-GB', {
+              day: '2-digit',
+              month: 'short',
+              year: 'numeric',
+          })
+        : '-';
+
+    return {
+        rrNumber: doc.rr_number,
+        siding:
+            fromSiding?.name ??
+            doc.rake?.siding?.name ??
+            doc.from_station_code ??
+            '-',
+        powerPlant:
+            toPowerPlant?.name ?? doc.to_station_code ?? '-',
+        rrDate: date,
+        totalWeightMt: doc.rr_weight_mt ? `${doc.rr_weight_mt} MT` : '-',
+        status: mapStatus(doc.document_status),
+    };
+}
+
+function buildOverviewData(
+    doc: RrDocument,
+    fromSiding?: FromSiding | null,
+    toPowerPlant?: ToPowerPlant | null,
+): OverviewData {
+    const rrDetails = doc.rr_details as Record<string, unknown> | null;
+    const rakeWagons = doc.rake?.wagons ?? [];
+    const legacyWagons = (rrDetails?.wagons as unknown[] | null) ?? [];
+    const totalWagons =
+        rakeWagons.length > 0
+            ? rakeWagons.length
+            : Array.isArray(legacyWagons)
+              ? legacyWagons.length
+              : doc.rake?.wagon_count ?? 0;
+    const freight = doc.freight_total
+        ? `₹${Number(doc.freight_total).toLocaleString('en-IN')}`
+        : '-';
+
+    return {
+        rrNumber: doc.rr_number,
+        fnr: doc.fnr ?? '-',
+        fromStation:
+            fromSiding?.name ?? doc.from_station_code ?? '-',
+        toStation:
+            toPowerPlant?.name ?? doc.to_station_code ?? '-',
+        distanceKm:
+            doc.distance_km != null
+                ? String(doc.distance_km)
+                : (rrDetails?.distance_km as string) ?? '-',
+        commodity:
+            doc.commodity_description ??
+            doc.commodity_code ??
+            (rrDetails?.coal_grade as string) ??
+            '-',
+        totalWagons,
+        totalWeight: doc.rr_weight_mt ? `${doc.rr_weight_mt} MT` : '-',
+        freightTotal: freight,
+        rate: doc.rate != null ? String(doc.rate) : '-',
+        class: doc.class ?? '-',
+    };
+}
+
+function buildWagonsData(doc: RrDocument): WagonRow[] {
+    const rakeWagons = doc.rake?.wagons ?? [];
+    if (rakeWagons.length > 0) {
+        return rakeWagons.map((w) => ({
+            sequence: w.wagon_sequence,
+            wagonNumber: w.wagon_number ?? '-',
+            wagonType: w.wagon_type ?? '-',
+            pccWeight: String(w.pcc_weight_mt ?? '-'),
+            loadedWeight: String(w.loaded_weight_mt ?? '-'),
+            permissibleWeight: String(w.permissible_weight_mt ?? '-'),
+            overloadWeight: String(w.overload_weight_mt ?? '0'),
+            status:
+                Number(w.overload_weight_mt) > 0 ? 'Overload' : 'Loaded',
+        }));
+    }
+
+    const rrDetails = doc.rr_details as Record<string, unknown> | null;
+    const legacyWagons =
+        (rrDetails?.wagons as Record<string, unknown>[] | null) ?? [];
+
+    return legacyWagons.map((w, i) => ({
+        sequence: i + 1,
+        wagonNumber: (w.wagon_number ?? w.wagonNumber ?? '-') as string,
+        wagonType: (w.wagon_type ?? w.wagonType ?? '-') as string,
+        pccWeight: String(w.cc_mt ?? w.chargeable_mt ?? '-'),
+        loadedWeight: String(w.actual_mt ?? w.gross_mt ?? '-'),
+        permissibleWeight: String(w.permissible_mt ?? '-'),
+        overloadWeight: String(w.over_weight_mt ?? '-'),
+        status: (w.over_weight_mt as number) > 0 ? 'Overload' : 'Loaded',
+    }));
+}
+
+function buildChargesData(doc: RrDocument): ChargeRow[] {
+    const rrCharges =
+        (doc as Record<string, unknown>).rr_charges ??
+        (doc as Record<string, unknown>).rrCharges;
+
+    if (Array.isArray(rrCharges) && rrCharges.length > 0) {
+        return rrCharges.map((c: Record<string, unknown>) => ({
+            chargeCode: String(c.charge_code ?? c.chargeCode ?? ''),
+            chargeName: String(c.charge_name ?? c.chargeName ?? c.charge_code ?? c.chargeCode ?? ''),
+            amount: `₹${Number(c.amount ?? 0).toLocaleString('en-IN')}`,
+        }));
+    }
+
+    const rrDetails = doc.rr_details as Record<string, unknown> | null;
+    const legacyCharges = rrDetails?.charges as Record<string, number> | null;
+
+    if (!legacyCharges || typeof legacyCharges !== 'object') {
+        return [];
+    }
+
+    const labels: Record<string, string> = {
+        POL1: 'POL1',
+        OTC: 'OTC',
+        GST: 'GST',
+        FRT: 'Freight',
+    };
+
+    return Object.entries(legacyCharges).map(([code, amount]) => ({
+        chargeCode: code,
+        chargeName: labels[code] ?? code,
+        amount: `₹${Number(amount).toLocaleString('en-IN')}`,
+    }));
+}
+
+function buildPenaltiesData(doc: RrDocument): PenaltyRow[] {
+    const appliedPenalties = doc.rake?.applied_penalties ?? [];
+    if (appliedPenalties.length > 0) {
+        const wagons = doc.rake?.wagons ?? [];
+        return appliedPenalties.map((ap) => {
+            const pt = ap.penalty_type;
+            const wagonRef =
+                ap.wagon?.wagon_number ??
+                (ap.wagon_id != null
+                    ? wagons.find((w) => w.id === ap.wagon_id)?.wagon_number
+                    : undefined);
+            const overloadWt =
+                ap.wagon?.overload_weight_mt ?? ap.quantity ?? undefined;
+            return {
+                penaltyCode: pt?.code ?? '-',
+                penaltyName: pt?.name ?? '-',
+                calculationType: pt?.calculation_type ?? '-',
+                amount: `₹${Number(ap.amount ?? 0).toLocaleString('en-IN')}`,
+                wagonReference: wagonRef,
+                overloadWeight:
+                    overloadWt != null ? `${overloadWt} MT` : undefined,
+            };
+        });
+    }
+
+    const rrDetails = doc.rr_details as Record<string, unknown> | null;
+    const penalties = rrDetails?.penalties as Record<string, unknown>[] | null;
+    if (!penalties || !Array.isArray(penalties)) {
+        return [];
+    }
+
+    return penalties.map((p) => ({
+        penaltyCode: (p.penalty_code ?? p.code ?? '-') as string,
+        penaltyName: (p.penalty_name ?? p.name ?? '-') as string,
+        calculationType: (p.calculation_type ?? '-') as string,
+        amount: `₹${Number(p.amount ?? 0).toLocaleString('en-IN')}`,
+        wagonReference: p.wagon_reference as string | undefined,
+        overloadWeight: (p.overload_weight as string | undefined) ?? undefined,
+    }));
+}
+
+const MOCK_HEADER = {
+    rrNumber: '461003908',
+    siding: 'Dumka',
+    powerPlant: 'BTPC',
+    rrDate: '03 Nov 2025',
+    totalWeightMt: '3691 MT',
+    status: 'parsed' as const,
+};
+
+const MOCK_OVERVIEW: OverviewData = {
+    rrNumber: '461003908',
+    fnr: 'FNR-2025-001',
+    fromStation: 'BMGK',
+    toStation: 'PSPM',
+    distanceKm: '156',
+    commodity: 'Coal',
+    totalWagons: 58,
+    totalWeight: '3691 MT',
+    freightTotal: '₹4,52,890',
+    rate: '448.9',
+    class: '145A',
+};
+
+const MOCK_WAGONS: WagonRow[] = [
+    {
+        sequence: 1,
+        wagonNumber: 'BCN-12345',
+        wagonType: 'BCN',
+        pccWeight: '60.5',
+        loadedWeight: '63.2',
+        permissibleWeight: '63.0',
+        overloadWeight: '0.2',
+        status: 'Loaded',
+    },
+    {
+        sequence: 2,
+        wagonNumber: 'BCN-12346',
+        wagonType: 'BCN',
+        pccWeight: '61.0',
+        loadedWeight: '64.1',
+        permissibleWeight: '63.0',
+        overloadWeight: '1.1',
+        status: 'Overload',
+    },
+];
+
+const MOCK_CHARGES: ChargeRow[] = [
+    { chargeCode: 'FRT', chargeName: 'Freight', amount: '₹4,20,000' },
+    { chargeCode: 'DST', chargeName: 'Development Surcharge', amount: '₹18,450' },
+];
+
+const MOCK_PENALTIES: PenaltyRow[] = [
+    {
+        penaltyCode: 'OL',
+        penaltyName: 'Overload',
+        calculationType: 'Per Ton',
+        amount: '₹2,500',
+        wagonReference: 'BCN-12346',
+    },
+];
+
+export default function RailwayReceiptShow({
+    rrDocument,
+    fromSiding,
+    toPowerPlant,
+}: Props) {
+    const hasData = rrDocument?.id;
+
+    const headerData = hasData
+        ? buildHeaderData(rrDocument, fromSiding, toPowerPlant)
+        : MOCK_HEADER;
+    const overviewData = hasData
+        ? buildOverviewData(rrDocument, fromSiding, toPowerPlant)
+        : MOCK_OVERVIEW;
+    const wagons = hasData ? buildWagonsData(rrDocument) : MOCK_WAGONS;
+    const charges = hasData ? buildChargesData(rrDocument) : MOCK_CHARGES;
+    const penalties = hasData ? buildPenaltiesData(rrDocument) : MOCK_PENALTIES;
+    const rawData = hasData
+        ? (rrDocument.rr_details ?? { id: rrDocument.id, rr_number: rrDocument.rr_number })
+        : {
+              rr_number: '461003908',
+              parsed_at: '2025-11-03T10:30:00Z',
+              wagons_count: 58,
+              metadata: { source: 'pdf', version: '1.0' },
+          };
+
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: '/dashboard' },
         { title: 'Railway Receipts', href: '/railway-receipts' },
         {
-            title: rrDocument.rr_number,
-            href: `/railway-receipts/${rrDocument.id}`,
+            title: headerData.rrNumber,
+            href: `/railway-receipts/${rrDocument?.id ?? 1}`,
         },
     ];
 
-    const form = useForm({
-        rr_number: rrDocument.rr_number,
-        rr_received_date: rrDocument.rr_received_date.split('T')[0],
-        rr_weight_mt: rrDocument.rr_weight_mt ?? '',
-        fnr: rrDocument.fnr ?? '',
-        from_station_code: rrDocument.from_station_code ?? '',
-        to_station_code: rrDocument.to_station_code ?? '',
-        freight_total: rrDocument.freight_total ?? '',
-        document_status: rrDocument.document_status,
-        has_discrepancy: rrDocument.has_discrepancy,
-        discrepancy_details: rrDocument.discrepancy_details ?? '',
-    });
-
-    const charges = rrDocument.rr_details?.charges ?? {};
-    const wagons = rrDocument.rr_details?.wagons ?? [];
-
-    const handleUpdate = (e: React.FormEvent) => {
-        e.preventDefault();
-        form.put(`/railway-receipts/${rrDocument.id}`);
-    };
-
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title={`RR ${rrDocument.rr_number}`} />
+            <Head title="Railway Receipt Details" />
             <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                    <h2 className="text-lg font-medium">
-                        RR {rrDocument.rr_number}
-                    </h2>
-                    <Button
-                        variant="outline"
-                        onClick={() => router.get('/railway-receipts')}
-                    >
-                        Back to list
-                    </Button>
+                <div>
+                    <h1 className="text-2xl font-semibold tracking-tight">
+                        Railway Receipt Details
+                    </h1>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                        View RR document details, wagons, charges, and penalties
+                    </p>
                 </div>
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Details</CardTitle>
-                        <CardDescription>
-                            Rake: {rrDocument.rake?.rake_number} —{' '}
-                            {rrDocument.rake?.siding?.name}
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <dl className="grid gap-2 text-sm">
-                            <dt className="font-medium">RR number</dt>
-                            <dd>{rrDocument.rr_number}</dd>
-                            {rrDocument.fnr && (
-                                <>
-                                    <dt className="font-medium">FNR</dt>
-                                    <dd>{rrDocument.fnr}</dd>
-                                </>
-                            )}
-                            <dt className="font-medium">Received date</dt>
-                            <dd>{rrDocument.rr_received_date}</dd>
-                            <dt className="font-medium">Weight (MT)</dt>
-                            <dd>{rrDocument.rr_weight_mt ?? '-'}</dd>
-                            {rrDocument.from_station_code && (
-                                <>
-                                    <dt className="font-medium">
-                                        From station
-                                    </dt>
-                                    <dd>{rrDocument.from_station_code}</dd>
-                                </>
-                            )}
-                            {rrDocument.to_station_code && (
-                                <>
-                                    <dt className="font-medium">To station</dt>
-                                    <dd>{rrDocument.to_station_code}</dd>
-                                </>
-                            )}
-                            {rrDocument.freight_total != null &&
-                                rrDocument.freight_total !== '' && (
-                                    <>
-                                        <dt className="font-medium">
-                                            Freight total (₹)
-                                        </dt>
-                                        <dd>
-                                            {Number(
-                                                rrDocument.freight_total,
-                                            ).toLocaleString('en-IN')}
-                                        </dd>
-                                    </>
-                                )}
-                            {Object.keys(charges).length > 0 && (
-                                <>
-                                    <dt className="font-medium">Charges</dt>
-                                    <dd className="space-y-1">
-                                        {Object.entries(charges).map(
-                                            ([code, amount]) => (
-                                                <span
-                                                    key={code}
-                                                    className="block"
-                                                >
-                                                    {code}: ₹
-                                                    {Number(
-                                                        amount,
-                                                    ).toLocaleString('en-IN')}
-                                                </span>
-                                            ),
-                                        )}
-                                    </dd>
-                                </>
-                            )}
-                            <dt className="font-medium">Status</dt>
-                            <dd>{rrDocument.document_status}</dd>
-                            {rrDocument.has_discrepancy &&
-                                rrDocument.discrepancy_details && (
-                                    <>
-                                        <dt className="font-medium">
-                                            Discrepancy details
-                                        </dt>
-                                        <dd>
-                                            {rrDocument.discrepancy_details}
-                                        </dd>
-                                    </>
-                                )}
-                        </dl>
-                        {wagons.length > 0 && (
-                            <div className="mt-4">
-                                <h4 className="mb-2 text-sm font-medium">
-                                    Wagon details (from RR)
-                                </h4>
-                                <div className="overflow-x-auto rounded-md border border-input">
-                                    <table className="w-full min-w-[600px] text-left text-sm">
-                                        <thead>
-                                            <tr className="border-b bg-muted/50">
-                                                <th className="p-2">
-                                                    Wagon No
-                                                </th>
-                                                <th className="p-2">Type</th>
-                                                <th className="p-2">CC (MT)</th>
-                                                <th className="p-2">
-                                                    Actual (MT)
-                                                </th>
-                                                <th className="p-2">
-                                                    Permissible (MT)
-                                                </th>
-                                                <th className="p-2">
-                                                    Over (MT)
-                                                </th>
-                                                <th className="p-2">
-                                                    Chargeable (MT)
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {wagons.map((w, idx) => (
-                                                <tr
-                                                    // eslint-disable-next-line @eslint-react/no-array-index-key -- wagon list may not have unique id
-                                                    key={`${w.wagon_number ?? ''}-${w.wagon_type ?? ''}-${idx}`}
-                                                    className="border-b last:border-0"
-                                                >
-                                                    <td className="p-2">
-                                                        {w.wagon_number ?? '-'}
-                                                    </td>
-                                                    <td className="p-2">
-                                                        {w.wagon_type ?? '-'}
-                                                    </td>
-                                                    <td className="p-2">
-                                                        {w.cc_mt ?? '-'}
-                                                    </td>
-                                                    <td className="p-2">
-                                                        {w.actual_mt ?? '-'}
-                                                    </td>
-                                                    <td className="p-2">
-                                                        {w.permissible_mt ??
-                                                            '-'}
-                                                    </td>
-                                                    <td className="p-2">
-                                                        {w.over_weight_mt ??
-                                                            '-'}
-                                                    </td>
-                                                    <td className="p-2">
-                                                        {w.chargeable_mt ?? '-'}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Edit</CardTitle>
-                        <CardDescription>Update RR fields</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <form
-                            onSubmit={handleUpdate}
-                            className="max-w-md space-y-4"
-                        >
-                            <div className="grid gap-2">
-                                <Label htmlFor="rr_number">RR number *</Label>
-                                <Input
-                                    id="rr_number"
-                                    value={form.data.rr_number}
-                                    onChange={(e) =>
-                                        form.setData(
-                                            'rr_number',
-                                            e.target.value,
-                                        )
-                                    }
-                                    className="text-sm"
-                                />
-                                <InputError
-                                    message={
-                                        form.errors.rr_number ??
-                                        errors?.rr_number
-                                    }
-                                />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="rr_received_date">
-                                    RR received date *
-                                </Label>
-                                <Input
-                                    id="rr_received_date"
-                                    type="date"
-                                    value={form.data.rr_received_date}
-                                    onChange={(e) =>
-                                        form.setData(
-                                            'rr_received_date',
-                                            e.target.value,
-                                        )
-                                    }
-                                    className="text-sm"
-                                />
-                                <InputError
-                                    message={
-                                        form.errors.rr_received_date ??
-                                        errors?.rr_received_date
-                                    }
-                                />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="rr_weight_mt">
-                                    Weight (MT)
-                                </Label>
-                                <Input
-                                    id="rr_weight_mt"
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    value={form.data.rr_weight_mt}
-                                    onChange={(e) =>
-                                        form.setData(
-                                            'rr_weight_mt',
-                                            e.target.value,
-                                        )
-                                    }
-                                    className="text-sm"
-                                />
-                                <InputError
-                                    message={
-                                        form.errors.rr_weight_mt ??
-                                        errors?.rr_weight_mt
-                                    }
-                                />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="fnr">FNR</Label>
-                                <Input
-                                    id="fnr"
-                                    value={form.data.fnr}
-                                    onChange={(e) =>
-                                        form.setData('fnr', e.target.value)
-                                    }
-                                    className="text-sm"
-                                />
-                                <InputError
-                                    message={form.errors.fnr ?? errors?.fnr}
-                                />
-                            </div>
-                            <div className="grid grid-cols-2 gap-2">
-                                <div className="grid gap-2">
-                                    <Label htmlFor="from_station_code">
-                                        From station code
-                                    </Label>
-                                    <Input
-                                        id="from_station_code"
-                                        value={form.data.from_station_code}
-                                        onChange={(e) =>
-                                            form.setData(
-                                                'from_station_code',
-                                                e.target.value,
-                                            )
-                                        }
-                                        className="text-sm"
-                                    />
-                                    <InputError
-                                        message={
-                                            form.errors.from_station_code ??
-                                            errors?.from_station_code
-                                        }
-                                    />
-                                </div>
-                                <div className="grid gap-2">
-                                    <Label htmlFor="to_station_code">
-                                        To station code
-                                    </Label>
-                                    <Input
-                                        id="to_station_code"
-                                        value={form.data.to_station_code}
-                                        onChange={(e) =>
-                                            form.setData(
-                                                'to_station_code',
-                                                e.target.value,
-                                            )
-                                        }
-                                        className="text-sm"
-                                    />
-                                    <InputError
-                                        message={
-                                            form.errors.to_station_code ??
-                                            errors?.to_station_code
-                                        }
-                                    />
-                                </div>
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="freight_total">
-                                    Freight total (₹)
-                                </Label>
-                                <Input
-                                    id="freight_total"
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    value={form.data.freight_total}
-                                    onChange={(e) =>
-                                        form.setData(
-                                            'freight_total',
-                                            e.target.value,
-                                        )
-                                    }
-                                    className="text-sm"
-                                />
-                                <InputError
-                                    message={
-                                        form.errors.freight_total ??
-                                        errors?.freight_total
-                                    }
-                                />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="document_status">Status</Label>
-                                <select
-                                    id="document_status"
-                                    value={form.data.document_status}
-                                    onChange={(e) =>
-                                        form.setData(
-                                            'document_status',
-                                            e.target.value,
-                                        )
-                                    }
-                                    className="rounded-md border border-input bg-background px-4 py-2.5 text-sm"
-                                >
-                                    <option value="received">Received</option>
-                                    <option value="verified">Verified</option>
-                                    <option value="discrepancy">
-                                        Discrepancy
-                                    </option>
-                                </select>
-                                <InputError
-                                    message={
-                                        form.errors.document_status ??
-                                        errors?.document_status
-                                    }
-                                />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="discrepancy_details">
-                                    Discrepancy details
-                                </Label>
-                                <textarea
-                                    id="discrepancy_details"
-                                    rows={3}
-                                    value={form.data.discrepancy_details}
-                                    onChange={(e) =>
-                                        form.setData(
-                                            'discrepancy_details',
-                                            e.target.value,
-                                        )
-                                    }
-                                    className="rounded-md border border-input bg-background px-4 py-2.5 text-sm"
-                                />
-                                <InputError
-                                    message={
-                                        form.errors.discrepancy_details ??
-                                        errors?.discrepancy_details
-                                    }
-                                />
-                            </div>
-                            <div className="flex gap-2">
-                                <Button
-                                    type="submit"
-                                    disabled={form.processing}
-                                >
-                                    Update
-                                </Button>
-                            </div>
-                        </form>
-                    </CardContent>
-                </Card>
+
+                <RRHeader {...headerData} />
+
+                <RRTabs
+                    overviewData={overviewData}
+                    wagons={wagons}
+                    charges={charges}
+                    penalties={penalties}
+                    rawData={rawData}
+                />
             </div>
         </AppLayout>
     );

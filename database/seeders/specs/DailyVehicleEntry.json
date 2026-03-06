@@ -86,6 +86,16 @@
             "type": "timestamp",
             "nullable": true,
             "default": null
+        },
+        "trip_id_no": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "transport_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {
@@ -102,6 +112,11 @@
             "model": "Updater"
         }
     },
-    "value_hints": [],
+    "value_hints": {
+        "transport_name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    },
     "scenarios": []
 }

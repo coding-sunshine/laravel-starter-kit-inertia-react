@@ -17,12 +17,15 @@ final class RakeDataTable extends AbstractDataTable
         public string $rake_number,
         public ?string $rake_type,
         public ?int $wagon_count,
-        public string $state,
+        public ?string $state,
         public ?string $placement_time,
         public ?string $dispatch_time,
         public ?int $siding_id,
         public ?string $siding_code,
         public ?string $siding_name,
+        public ?string $data_source,
+        public ?int $rr_document_id,
+        public ?string $pdf_download_url,
     ) {}
 
     public static function fromModel(Rake $model): self
@@ -38,6 +41,9 @@ final class RakeDataTable extends AbstractDataTable
             siding_id: $model->siding_id,
             siding_code: $model->siding?->code,
             siding_name: $model->siding?->name,
+            data_source: $model->data_source,
+            rr_document_id: $model->rrDocument?->id,
+            pdf_download_url: $model->pdf_download_url,
         );
     }
 
@@ -83,7 +89,7 @@ final class RakeDataTable extends AbstractDataTable
 
     public static function tableBaseQuery(): Builder
     {
-        $query = Rake::query()->with('siding:id,code,name');
+        $query = Rake::query()->with(['siding:id,code,name', 'rrDocument:id,rake_id', 'rrDocument.media']);
 
         $user = request()->user();
         if ($user && ! $user->isSuperAdmin()) {

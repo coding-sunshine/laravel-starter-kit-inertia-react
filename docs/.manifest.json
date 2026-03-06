@@ -1,6 +1,6 @@
 {
     "version": "1.0.0",
-    "lastGenerated": "2026-02-27",
+    "lastGenerated": "2026-03-05",
     "actions": {
         "CreateUser": {
             "documented": true,
@@ -842,6 +842,22 @@
                     "road-dispatch.arrivals.store",
                     "road-dispatch.arrivals.show",
                     "road-dispatch.arrivals.unload"
+                ]
+            }
+        },
+        "GenerateDispatchReport": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usedBy": [
+                    "GenerateDispatchReportController"
+                ],
+                "usesModels": [
+                    "DispatchReport",
+                    "VehicleDispatch"
+                ],
+                "relatedRoutes": [
+                    "dispatch-reports.generate"
                 ]
             }
         }
@@ -1761,8 +1777,62 @@
                 "usesFormRequests": [
                     "StoreWagonUnfitRequest"
                 ],
-                "relatedRoutes": [],
+                "relatedRoutes": [
+                    "txr.unfit-wagons.store"
+                ],
                 "rendersPages": []
+            }
+        },
+        "GenerateDispatchReportController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [
+                    "GenerateDispatchReport"
+                ],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "dispatch-reports.generate"
+                ],
+                "rendersPages": []
+            }
+        },
+        "VehicleDispatchController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [
+                    "UpdateVehicleDispatchRequest"
+                ],
+                "relatedRoutes": [
+                    "vehicle-dispatch.index",
+                    "vehicle-dispatch.update",
+                    "vehicle-dispatch.import",
+                    "vehicle-dispatch.save"
+                ],
+                "rendersPages": [
+                    "VehicleDispatch/Index"
+                ]
+            }
+        },
+        "VehicleWorkorderController": {
+            "documented": false,
+            "path": null,
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [
+                    "UpdateVehicleWorkorderRequest"
+                ],
+                "relatedRoutes": [
+                    "vehicle-workorders.index",
+                    "vehicle-workorders.edit",
+                    "vehicle-workorders.update"
+                ],
+                "rendersPages": [
+                    "VehicleWorkorders/Index",
+                    "VehicleWorkorders/Edit"
+                ]
             }
         }
     },
@@ -2035,6 +2105,14 @@
                     "road-dispatch.daily-vehicle-entries.destroy",
                     "road-dispatch.daily-vehicle-entries.complete",
                     "road-dispatch.daily-vehicle-entries.export",
+                    "vehicle-dispatch.index",
+                    "vehicle-dispatch.update",
+                    "vehicle-dispatch.import",
+                    "vehicle-dispatch.save",
+                    "dispatch-reports.generate",
+                    "vehicle-workorders.index",
+                    "vehicle-workorders.edit",
+                    "vehicle-workorders.update",
                     "railway-receipts.index",
                     "railway-receipts.create",
                     "railway-receipts.store",
@@ -2581,6 +2659,14 @@
                     "road-dispatch.daily-vehicle-entries.destroy",
                     "road-dispatch.daily-vehicle-entries.complete",
                     "road-dispatch.daily-vehicle-entries.export",
+                    "vehicle-dispatch.index",
+                    "vehicle-dispatch.update",
+                    "vehicle-dispatch.import",
+                    "vehicle-dispatch.save",
+                    "dispatch-reports.generate",
+                    "vehicle-workorders.index",
+                    "vehicle-workorders.edit",
+                    "vehicle-workorders.update",
                     "railway-receipts.index",
                     "railway-receipts.create",
                     "railway-receipts.store",
@@ -2913,6 +2999,14 @@
                     "road-dispatch.daily-vehicle-entries.destroy",
                     "road-dispatch.daily-vehicle-entries.complete",
                     "road-dispatch.daily-vehicle-entries.export",
+                    "vehicle-dispatch.index",
+                    "vehicle-dispatch.update",
+                    "vehicle-dispatch.import",
+                    "vehicle-dispatch.save",
+                    "dispatch-reports.generate",
+                    "vehicle-workorders.index",
+                    "vehicle-workorders.edit",
+                    "vehicle-workorders.update",
                     "railway-receipts.index",
                     "railway-receipts.create",
                     "railway-receipts.store",
@@ -3231,6 +3325,14 @@
                     "road-dispatch.daily-vehicle-entries.destroy",
                     "road-dispatch.daily-vehicle-entries.complete",
                     "road-dispatch.daily-vehicle-entries.export",
+                    "vehicle-dispatch.index",
+                    "vehicle-dispatch.update",
+                    "vehicle-dispatch.import",
+                    "vehicle-dispatch.save",
+                    "dispatch-reports.generate",
+                    "vehicle-workorders.index",
+                    "vehicle-workorders.edit",
+                    "vehicle-workorders.update",
                     "railway-receipts.index",
                     "railway-receipts.create",
                     "railway-receipts.store",
@@ -4161,6 +4263,97 @@
             "relationships": {
                 "renderedBy": [],
                 "relatedRoutes": []
+            }
+        },
+        "VehicleDispatch/DPRTab": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": []
+            }
+        },
+        "VehicleDispatch/ImportPreviewCard": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": []
+            }
+        },
+        "VehicleDispatch/Index": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "VehicleDispatchController"
+                ],
+                "relatedRoutes": [
+                    "vehicle-dispatch.index",
+                    "vehicle-dispatch.update",
+                    "vehicle-dispatch.import",
+                    "vehicle-dispatch.save"
+                ]
+            }
+        },
+        "VehicleDispatch/MainDataTab": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": []
+            }
+        },
+        "VehicleDispatch/VehicleDispatchTable": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": []
+            }
+        },
+        "VehicleDispatch/VehicleDispatchTabs": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": []
+            }
+        },
+        "VehicleWorkorders/Edit": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "VehicleWorkorderController"
+                ],
+                "relatedRoutes": [
+                    "vehicle-workorders.index",
+                    "vehicle-workorders.edit",
+                    "vehicle-workorders.update"
+                ]
+            }
+        },
+        "VehicleWorkorders/Index": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "VehicleWorkorderController"
+                ],
+                "relatedRoutes": [
+                    "vehicle-workorders.index",
+                    "vehicle-workorders.edit",
+                    "vehicle-workorders.update"
+                ]
             }
         }
     },

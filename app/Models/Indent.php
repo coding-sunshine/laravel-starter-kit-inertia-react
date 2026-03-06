@@ -22,8 +22,10 @@ final class Indent extends Model implements HasMedia
         'indent_number',
         'target_quantity_mt',
         'allocated_quantity_mt',
+        'available_stock_mt',
         'state',
         'indent_date',
+        'indent_time',
         'required_by_date',
         'remarks',
         'e_demand_reference_id',
@@ -31,19 +33,24 @@ final class Indent extends Model implements HasMedia
         'expected_loading_date',
         'demanded_stock',
         'total_units',
+        'railway_reference_no',
     ];
 
     protected $casts = [
         'indent_date' => 'datetime',
+        'indent_time' => 'datetime',
         'required_by_date' => 'datetime',
         'expected_loading_date' => 'datetime',
     ];
 
-    protected $appends = ['indent_confirmation_pdf_url'];
+    protected $appends = ['indent_confirmation_pdf_url', 'indent_pdf_url'];
 
     public function registerMediaCollections(): void
     {
         $this->addMediaCollection('indent_confirmation_pdf')
+            ->singleFile()
+            ->acceptsMimeTypes(['application/pdf']);
+        $this->addMediaCollection('indent_pdf')
             ->singleFile()
             ->acceptsMimeTypes(['application/pdf']);
     }
@@ -66,6 +73,16 @@ final class Indent extends Model implements HasMedia
     public function updatedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    public function getIndentPdfUrlAttribute(): ?string
+    {
+        $media = $this->getFirstMedia('indent_pdf');
+        if ($media instanceof \Spatie\MediaLibrary\MediaCollections\Models\Media) {
+            return $media->getUrl();
+        }
+
+        return $this->indent_confirmation_pdf_url;
     }
 
     protected function getIndentConfirmationPdfUrlAttribute(): ?string

@@ -1,0 +1,59 @@
+{
+    "model": "RrCharge",
+    "table": "rr_charges",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "rr_document_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "charge_code": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "charge_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "amount": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "meta": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "rrDocument": {
+            "type": "belongsTo",
+            "model": "RrDocument"
+        }
+    },
+    "value_hints": {
+        "charge_name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    },
+    "scenarios": []
+}

@@ -22,11 +22,14 @@ interface RakeRow {
     rake_number: string;
     rake_type: string | null;
     wagon_count: number | null;
-    state: string;
+    state: string | null;
     placement_time: string | null;
     dispatch_time: string | null;
     siding_code: string | null;
     siding_name: string | null;
+    data_source: string | null;
+    rr_document_id: number | null;
+    pdf_download_url: string | null;
 }
 
 interface Props {
@@ -72,8 +75,30 @@ export default function RakesIndex({ tableData }: Props) {
                             actions={[
                                 {
                                     label: 'View',
-                                    onClick: (row) =>
-                                        router.visit(`/rakes/${row.id}`),
+                                    onClick: (row) => {
+                                        const isFromRr =
+                                            row.data_source === 'historical_rr' &&
+                                            row.rr_document_id != null;
+                                        router.visit(
+                                            isFromRr
+                                                ? `/railway-receipts/${row.rr_document_id}`
+                                                : `/rakes/${row.id}`,
+                                        );
+                                    },
+                                },
+                                {
+                                    label: 'Download PDF',
+                                    visible: (row) =>
+                                        row.pdf_download_url != null,
+                                    onClick: (row) => {
+                                        if (row.pdf_download_url) {
+                                            window.open(
+                                                row.pdf_download_url,
+                                                '_blank',
+                                                'noopener,noreferrer',
+                                            );
+                                        }
+                                    },
                                 },
                             ]}
                             renderCell={(columnId, value, row) => {

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -20,6 +21,7 @@ final class Rake extends Model
         'siding_id',
         'indent_id',
         'rake_number',
+        'data_source',
         'rake_type',
         'wagon_count',
         'loaded_weight_mt',
@@ -102,6 +104,11 @@ final class Rake extends Model
         return $this->hasMany(Penalty::class);
     }
 
+    public function appliedPenalties(): HasMany
+    {
+        return $this->hasMany(AppliedPenalty::class);
+    }
+
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
@@ -110,5 +117,22 @@ final class Rake extends Model
     public function updatedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    protected function rrDocumentId(): Attribute
+    {
+        return Attribute::get(fn () => $this->rrDocument?->id);
+    }
+
+    protected function pdfDownloadUrl(): Attribute
+    {
+        return Attribute::get(function () {
+            $doc = $this->rrDocument;
+            if (! $doc || ! $doc->hasMedia('rr_pdf')) {
+                return null;
+            }
+
+            return route('railway-receipts.pdf', $doc);
+        });
     }
 }

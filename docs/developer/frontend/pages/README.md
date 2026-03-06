@@ -99,5 +99,13 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | road-dispatch/daily-vehicle-entries/shift-tabs | N/A | ❌ |
 | road-dispatch/daily-vehicle-entries/vehicle-entry-row | N/A | ❌ |
 | road-dispatch/daily-vehicle-entries/vehicle-entry-table | N/A | ❌ |
+| VehicleDispatch/DPRTab | N/A | ❌ |
+| VehicleDispatch/ImportPreviewCard | N/A | ❌ |
+| VehicleDispatch/Index | vehicle-dispatch.index, vehicle-dispatch.update | ❌ |
+| VehicleDispatch/MainDataTab | N/A | ❌ |
+| VehicleDispatch/VehicleDispatchTable | N/A | ❌ |
+| VehicleDispatch/VehicleDispatchTabs | N/A | ❌ |
+| VehicleWorkorders/Edit | vehicle-workorders.index, vehicle-workorders.edit | ❌ |
+| VehicleWorkorders/Index | vehicle-workorders.index, vehicle-workorders.edit | ❌ |
 
 
