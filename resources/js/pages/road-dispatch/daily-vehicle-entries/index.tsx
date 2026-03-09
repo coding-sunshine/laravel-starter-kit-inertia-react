@@ -62,8 +62,8 @@ interface Props {
 export default function DailyVehicleEntriesIndex({ entries, date, activeShift, shiftSummary, shiftStatus, shiftTimes, sidings }: Props) {
   const [selectedDate, setSelectedDate] = useState(date);
   const [activeShiftState, setActiveShiftState] = useState(activeShift);
+  const [selectedSidingId, setSelectedSidingId] = useState<number>(sidings[0]?.id || 1);
   const [exportShift, setExportShift] = useState<string>('all');
-  const [exportSiding, setExportSiding] = useState<number>(sidings[0]?.id || 1);
   const [isExporting, setIsExporting] = useState(false);
 
   const breadcrumbs: BreadcrumbItem[] = [
@@ -123,7 +123,7 @@ export default function DailyVehicleEntriesIndex({ entries, date, activeShift, s
     router.post(
       '/road-dispatch/daily-vehicle-entries',
       {
-        siding_id: 1, // Default siding - you might want to make this dynamic
+        siding_id: selectedSidingId,
         entry_date: selectedDate,
         shift: activeShiftState,
       },
@@ -148,7 +148,7 @@ export default function DailyVehicleEntriesIndex({ entries, date, activeShift, s
     
     try {
       // Create export URL with parameters
-      const exportUrl = `/road-dispatch/daily-vehicle-entries/export?date=${selectedDate}&siding=${exportSiding}&shift=${exportShift}`;
+      const exportUrl = `/road-dispatch/daily-vehicle-entries/export?date=${selectedDate}&siding=${selectedSidingId}&shift=${exportShift}`;
       
       // Use fetch to get the file with authentication cookies
       const response = await fetch(exportUrl, {
@@ -213,7 +213,7 @@ export default function DailyVehicleEntriesIndex({ entries, date, activeShift, s
           <div className="flex gap-3">
             {/* Export Controls */}
             <div className="flex items-center gap-2">
-              <Select value={exportSiding.toString()} onValueChange={(value) => setExportSiding(Number(value))}>
+              <Select value={selectedSidingId.toString()} onValueChange={(value) => setSelectedSidingId(Number(value))}>
                 <SelectTrigger className="w-40">
                   <SelectValue placeholder="Select siding" />
                 </SelectTrigger>

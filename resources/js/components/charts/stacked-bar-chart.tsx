@@ -30,6 +30,7 @@ interface StackedBarChartProps<T extends Record<string, unknown>> {
     yLabel?: string;
     height?: number;
     layout?: 'horizontal' | 'vertical';
+    allowDecimals?: boolean;
     formatY?: (value: number) => string;
     formatTooltip?: (value: number) => string;
     className?: string;
@@ -44,6 +45,7 @@ export function StackedBarChart<T extends Record<string, unknown>>({
     yLabel,
     height = 280,
     layout = 'horizontal',
+    allowDecimals = true,
     formatY,
     formatTooltip,
     className,
@@ -74,6 +76,7 @@ export function StackedBarChart<T extends Record<string, unknown>>({
                                 className="fill-muted-foreground"
                                 tickLine={false}
                                 axisLine={false}
+                                allowDecimals={allowDecimals}
                                 tickFormatter={formatY}
                             />
                             <YAxis
@@ -100,6 +103,7 @@ export function StackedBarChart<T extends Record<string, unknown>>({
                                 className="fill-muted-foreground"
                                 tickLine={false}
                                 axisLine={false}
+                                allowDecimals={allowDecimals}
                                 tickFormatter={formatY}
                                 label={
                                     yLabel

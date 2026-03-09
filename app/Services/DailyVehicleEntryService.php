@@ -6,7 +6,9 @@ namespace App\Services;
 
 use App\Models\DailyVehicleEntry;
 use App\Models\Siding;
+use App\Models\StockLedger;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 final readonly class DailyVehicleEntryService
 {
@@ -31,22 +33,44 @@ final readonly class DailyVehicleEntryService
 
     public function updateEntry(DailyVehicleEntry $entry, array $data): DailyVehicleEntry
     {
-        $entry->update([
-            ...$data,
-            'updated_by' => auth()->id(),
-        ]);
+        $oldStatus = $entry->status;
+        $newStatus = $data['status'] ?? $oldStatus;
 
-        return $entry->fresh();
+        return DB::transaction(function () use ($entry, $data, $oldStatus, $newStatus): DailyVehicleEntry {
+            $entry->update([
+                ...$data,
+                'updated_by' => auth()->id(),
+            ]);
+
+            if ($oldStatus === 'completed' && $newStatus === 'draft') {
+                $this->deleteStockLedgerEntry($entry);
+            }
+
+            if ($oldStatus !== 'completed' && $newStatus === 'completed') {
+                $this->createStockLedgerEntry($entry);
+            }
+
+            if ($oldStatus === 'completed' && $newStatus === 'completed') {
+                $this->deleteStockLedgerEntry($entry);
+                $this->createStockLedgerEntry($entry->fresh());
+            }
+
+            return $entry->fresh();
+        });
     }
 
     public function markCompleted(DailyVehicleEntry $entry): DailyVehicleEntry
     {
-        $entry->update([
-            'status' => 'completed',
-            'updated_by' => auth()->id(),
-        ]);
+        return DB::transaction(function () use ($entry): DailyVehicleEntry {
+            $entry->update([
+                'status' => 'completed',
+                'updated_by' => auth()->id(),
+            ]);
 
-        return $entry->fresh();
+            $this->createStockLedgerEntry($entry);
+
+            return $entry->fresh();
+        });
     }
 
     public function getShiftSummary(string $date): array
@@ -74,6 +98,49 @@ final readonly class DailyVehicleEntryService
 
         return $this->exportSingleShift($date, $siding, (int) $shift);
 
+    }
+
+    private function createStockLedgerEntry(DailyVehicleEntry $entry): void
+    {
+        $grossWt = (float) ($entry->gross_wt ?? 0);
+        $tareWt = (float) ($entry->tare_wt ?? 0);
+        $netWeight = round($grossWt - $tareWt, 2);
+
+        if ($netWeight <= 0) {
+            return;
+        }
+
+        $lastLedger = StockLedger::query()
+            ->where('siding_id', $entry->siding_id)
+            ->latest('id')
+            ->first();
+
+        $openingBalance = $lastLedger
+            ? (float) $lastLedger->closing_balance_mt
+            : 0.0;
+
+        StockLedger::create([
+            'siding_id' => $entry->siding_id,
+            'transaction_type' => 'receipt',
+            'vehicle_arrival_id' => null,
+            'rake_id' => null,
+            'quantity_mt' => $netWeight,
+            'opening_balance_mt' => $openingBalance,
+            'closing_balance_mt' => round($openingBalance + $netWeight, 2),
+            'reference_number' => $entry->e_challan_no ?? "DVE-{$entry->id}",
+            'remarks' => "Vehicle {$entry->vehicle_no} — Daily entry #{$entry->id}, Shift {$entry->shift}",
+            'created_by' => auth()->id(),
+        ]);
+    }
+
+    private function deleteStockLedgerEntry(DailyVehicleEntry $entry): void
+    {
+        StockLedger::query()
+            ->where('siding_id', $entry->siding_id)
+            ->where('transaction_type', 'receipt')
+            ->where('reference_number', $entry->e_challan_no ?? "DVE-{$entry->id}")
+            ->where('remarks', 'LIKE', "%Daily entry #{$entry->id}%")
+            ->delete();
     }
 
     private function exportAllShifts(string $date, Siding $siding): string

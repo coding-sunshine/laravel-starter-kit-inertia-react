@@ -52,6 +52,7 @@ export default function VehicleEntryRow({ entry, serialNumber, date, shift }: Ve
     wb_no: entry.wb_no || '',
     d_challan_no: entry.d_challan_no || '',
     challan_mode: entry.challan_mode || '',
+    status: entry.status || 'draft',
   });
 
   const formDataRef = useRef(formData);
@@ -328,9 +329,20 @@ export default function VehicleEntryRow({ entry, serialNumber, date, shift }: Ve
       </TableCell>
 
       <TableCell>
-        <Badge variant={entry.status === 'completed' ? 'default' : 'secondary'}>
-          {entry.status}
-        </Badge>
+        {entry.status === 'completed' ? (
+          <Badge variant="default">completed</Badge>
+        ) : (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleMarkCompleted}
+            disabled={isSaving}
+            className="h-7 gap-1 text-xs text-green-700 border-green-300 hover:bg-green-50 hover:text-green-800"
+          >
+            {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+            Complete
+          </Button>
+        )}
       </TableCell>
       </TableRow>
 
@@ -428,22 +440,36 @@ export default function VehicleEntryRow({ entry, serialNumber, date, shift }: Ve
               </div>
             </div>
 
-            <div className="flex justify-between items-center">
-              <div className="text-sm text-gray-600">
-                <span className="font-medium">Status:</span> 
-                <Badge variant={entry.status === 'completed' ? 'default' : 'secondary'} className="ml-2">
-                  {entry.status}
-                </Badge>
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-medium text-gray-700">Status:</span>
+                <Select
+                  value={formData.status}
+                  onValueChange={(value) => updateField('status', value)}
+                >
+                  <SelectTrigger className="w-40">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="draft">Draft</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                  </SelectContent>
+                </Select>
+                {formData.status !== entry.status && (
+                  <span className="text-xs text-amber-600 font-medium">
+                    Changed from {entry.status} → {formData.status}
+                  </span>
+                )}
               </div>
-              
-              <div className="flex gap-2">
+
+              <div className="flex justify-end gap-2">
                 <Button
                   variant="outline"
                   onClick={() => setShowDetailModal(false)}
                 >
                   Cancel
                 </Button>
-                
+
                 <Button
                   onClick={save}
                   disabled={isSaving}
@@ -452,7 +478,7 @@ export default function VehicleEntryRow({ entry, serialNumber, date, shift }: Ve
                   {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Edit className="h-4 w-4 mr-2" />}
                   {isSaving ? 'Saving...' : 'Update'}
                 </Button>
-                
+
                 {shouldShowDeleteButton() && (
                   <Button
                     variant="destructive"

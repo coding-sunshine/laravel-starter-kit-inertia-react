@@ -6,7 +6,6 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Alert;
-use App\Models\CoalStock;
 use App\Models\Indent;
 use App\Models\Loader;
 use App\Models\Penalty;
@@ -14,6 +13,7 @@ use App\Models\PowerPlantReceipt;
 use App\Models\Rake;
 use App\Models\RakeWeighment;
 use App\Models\Siding;
+use App\Models\SidingVehicleDispatch;
 use App\Models\StockLedger;
 use App\Models\VehicleUnload;
 use Carbon\Carbon;
@@ -55,7 +55,7 @@ final class ExecutiveDashboardController extends Controller
             'sidingWiseMonthly' => $this->buildSidingWiseMonthly($filteredSidingIds, $from, $to),
             'sidingRadar' => $this->buildSidingRadar($filteredSidingIds, $from, $to),
             'sidingPerformance' => $this->buildSidingPerformance($filteredSidingIds, $from, $to),
-            'sidingStocks' => $this->buildSidingStocks($filteredSidingIds),
+            'sidingStocks' => $this->buildSidingStocks($filteredSidingIds, $from, $to),
             'dateWiseDispatch' => $this->buildDateWiseDispatch($filteredSidingIds, $from, $to),
             'rakePerformance' => $this->buildRakePerformance($filteredSidingIds, $from, $to),
             'loaderOverloadTrends' => $this->buildLoaderOverloadTrends($filteredSidingIds, $from, $to),
@@ -146,43 +146,58 @@ final class ExecutiveDashboardController extends Controller
 
     /**
      * @param  array<int>  $sidingIds
-     * @return array<int, array<string, mixed>>
+     * @return array<int, array{siding_id: int, opening_balance_mt: float, closing_balance_mt: float, total_rakes: int}>
      */
-    private function buildSidingStocks(array $sidingIds): array
+    private function buildSidingStocks(array $sidingIds, CarbonInterface $from, CarbonInterface $to): array
     {
         if ($sidingIds === []) {
             return [];
         }
 
-        $latestLedgerIds = StockLedger::query()
+        $firstLedgerIds = StockLedger::query()
             ->whereIn('siding_id', $sidingIds)
+            ->whereBetween('created_at', [$from, $to])
+            ->selectRaw('min(id) as id')
+            ->groupBy('siding_id')
+            ->pluck('id')
+            ->all();
+
+        $lastLedgerIds = StockLedger::query()
+            ->whereIn('siding_id', $sidingIds)
+            ->whereBetween('created_at', [$from, $to])
             ->selectRaw('max(id) as id')
             ->groupBy('siding_id')
             ->pluck('id')
             ->all();
 
-        $byLedger = StockLedger::query()
-            ->whereIn('id', $latestLedgerIds)
+        $firstLedgers = StockLedger::query()
+            ->whereIn('id', $firstLedgerIds)
             ->get()
             ->keyBy('siding_id');
 
-        $byCoalStock = CoalStock::query()
-            ->whereIn('siding_id', $sidingIds)
-            ->latest('as_of_date')
+        $lastLedgers = StockLedger::query()
+            ->whereIn('id', $lastLedgerIds)
             ->get()
-            ->unique('siding_id')
             ->keyBy('siding_id');
+
+        $rakeCountsBySiding = Rake::query()
+            ->whereIn('siding_id', $sidingIds)
+            ->whereNotNull('dispatch_time')
+            ->whereBetween('dispatch_time', [$from, $to])
+            ->selectRaw('siding_id, count(*) as cnt')
+            ->groupBy('siding_id')
+            ->pluck('cnt', 'siding_id');
 
         $result = [];
         foreach ($sidingIds as $sid) {
-            $ledger = $byLedger->get($sid);
-            $coal = $byCoalStock->get($sid);
-            $balance = $ledger
-                ? (float) $ledger->closing_balance_mt
-                : ($coal ? (float) $coal->closing_balance_mt : 0.0);
+            $first = $firstLedgers->get($sid);
+            $last = $lastLedgers->get($sid);
+
             $result[$sid] = [
                 'siding_id' => $sid,
-                'closing_balance_mt' => $balance,
+                'opening_balance_mt' => $first ? (float) $first->opening_balance_mt : 0.0,
+                'closing_balance_mt' => $last ? (float) $last->closing_balance_mt : 0.0,
+                'total_rakes' => (int) ($rakeCountsBySiding[$sid] ?? 0),
             ];
         }
 
@@ -1014,10 +1029,10 @@ final class ExecutiveDashboardController extends Controller
             ->get()
             ->keyBy('siding_id');
 
-        $vehiclesBySiding = VehicleUnload::query()
+        $vehiclesBySiding = SidingVehicleDispatch::query()
             ->whereIn('siding_id', $sidingIds)
-            ->whereBetween('created_at', [$from, $to])
-            ->selectRaw('siding_id, count(*) as cnt')
+            ->whereBetween('issued_on', [$from, $to])
+            ->selectRaw('siding_id, count(DISTINCT truck_regd_no) as cnt')
             ->groupBy('siding_id')
             ->pluck('cnt', 'siding_id')
             ->all();

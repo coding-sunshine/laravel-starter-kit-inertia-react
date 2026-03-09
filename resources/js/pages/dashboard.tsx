@@ -18,6 +18,16 @@ import {
     Zap,
 } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
+import {
+    Bar,
+    BarChart as RechartsBarChart,
+    CartesianGrid,
+    Legend,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis,
+    YAxis,
+} from 'recharts';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: dashboard().url },
@@ -40,7 +50,9 @@ interface SidingOption {
 
 interface SidingStock {
     siding_id: number;
+    opening_balance_mt: number;
     closing_balance_mt: number;
+    total_rakes: number;
 }
 
 interface SidingPerformanceItem {
@@ -237,6 +249,258 @@ function SidingComparisonVertical({ data }: { data: SidingComparisonItem[] }) {
     );
 }
 
+function SidingStockSection({ sidings, stocks }: { sidings: SidingOption[]; stocks: Record<number, SidingStock> }) {
+    const totalRakes = useMemo(() => sidings.reduce((sum, s) => sum + (stocks[s.id]?.total_rakes ?? 0), 0), [sidings, stocks]);
+
+    const barData = useMemo(
+        () =>
+            sidings.map((s) => {
+                const st = stocks[s.id];
+                return {
+                    name: s.name,
+                    opening: Math.round(st?.opening_balance_mt ?? 0),
+                    closing: Math.round(st?.closing_balance_mt ?? 0),
+                };
+            }),
+        [sidings, stocks],
+    );
+
+    const yDomain = useMemo(() => {
+        const allValues = barData.flatMap((d) => [d.opening, d.closing]);
+        const minVal = Math.min(...allValues);
+        const maxVal = Math.max(...allValues);
+        const padding = Math.max(50, Math.round((maxVal - minVal) * 0.15));
+        const floor = Math.max(0, Math.floor((minVal - padding) / 50) * 50);
+        const ceil = Math.ceil((maxVal + padding) / 50) * 50;
+        return [floor, ceil] as [number, number];
+    }, [barData]);
+
+    return (
+        <div className="rounded-xl border bg-card p-5">
+            <SectionHeader icon={BarChart3} title="Siding stock" subtitle="Opening & closing balance with total rakes" />
+
+            {/* Total rakes summary */}
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="rounded-lg border bg-muted/20 p-3.5">
+                    <p className="text-xs font-medium text-muted-foreground">Total rakes dispatched</p>
+                    <p className="mt-1 text-2xl font-bold tabular-nums">{totalRakes}</p>
+                </div>
+                {sidings.map((s, i) => {
+                    const st = stocks[s.id];
+                    return (
+                        <div key={s.id} className="rounded-lg border bg-muted/20 p-3.5">
+                            <p className="text-xs font-medium text-muted-foreground">{s.name}</p>
+                            <p className="mt-1 text-xl font-bold tabular-nums">{st?.total_rakes ?? 0} <span className="text-xs font-normal text-muted-foreground">rakes</span></p>
+                            <div className="mt-1.5 flex items-center gap-3 text-xs text-muted-foreground">
+                                <span className="flex items-center gap-1">
+                                    <span className="inline-block size-2 rounded-full" style={{ backgroundColor: `var(--chart-${(i % 5) + 1})` }} />
+                                    Open: {(st?.opening_balance_mt ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} MT
+                                </span>
+                                <span className="flex items-center gap-1">
+                                    <span className="inline-block size-2 rounded-full bg-foreground/50" />
+                                    Close: {(st?.closing_balance_mt ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} MT
+                                </span>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+
+            {/* Opening vs Closing balance bar chart */}
+            <div className="mt-5">
+                <p className="mb-2 text-sm font-semibold">Opening vs closing balance (MT)</p>
+                <div className="w-full">
+                    <ResponsiveContainer width="100%" height={280}>
+                        <RechartsBarChart data={barData} margin={{ top: 4, right: 4, bottom: 0, left: -12 }}>
+                            <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
+                            <XAxis
+                                dataKey="name"
+                                tick={{ fontSize: 12 }}
+                                className="fill-muted-foreground"
+                                tickLine={false}
+                                axisLine={false}
+                            />
+                            <YAxis
+                                domain={yDomain}
+                                tick={{ fontSize: 12 }}
+                                className="fill-muted-foreground"
+                                tickLine={false}
+                                axisLine={false}
+                                allowDecimals={false}
+                                label={{
+                                    value: 'MT',
+                                    angle: -90,
+                                    position: 'insideLeft',
+                                    className: 'fill-muted-foreground',
+                                    style: { fontSize: 11 },
+                                }}
+                            />
+                            <Tooltip
+                                contentStyle={{
+                                    backgroundColor: 'var(--card)',
+                                    borderColor: 'var(--border)',
+                                    borderRadius: 8,
+                                    fontSize: 12,
+                                }}
+                                formatter={(value: number, name: string) => [
+                                    `${value.toLocaleString()} MT`,
+                                    name === 'opening' ? 'Opening balance' : 'Closing balance',
+                                ]}
+                            />
+                            <Legend
+                                formatter={(value: string) => (value === 'opening' ? 'Opening balance' : 'Closing balance')}
+                                wrapperStyle={{ fontSize: 12 }}
+                            />
+                            <Bar dataKey="opening" fill="var(--chart-1)" radius={[4, 4, 0, 0]} barSize={28} />
+                            <Bar dataKey="closing" fill="var(--chart-3)" radius={[4, 4, 0, 0]} barSize={28} />
+                        </RechartsBarChart>
+                    </ResponsiveContainer>
+                </div>
+            </div>
+
+            {/* Per-siding stock bars */}
+            <div className="mt-5">
+                <p className="mb-3 text-sm font-semibold">Stock balance per siding</p>
+                <div className="space-y-3">
+                    {sidings.map((s, i) => {
+                        const st = stocks[s.id];
+                        const opening = st?.opening_balance_mt ?? 0;
+                        const closing = st?.closing_balance_mt ?? 0;
+                        const maxBal = Math.max(opening, closing, 1);
+                        const diff = closing - opening;
+                        const diffColor = diff >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
+                        const diffSign = diff >= 0 ? '+' : '';
+                        return (
+                            <div key={s.id} className="group rounded-lg border bg-muted/20 p-3.5">
+                                <div className="flex items-center justify-between">
+                                    <span className="font-semibold">{s.name}</span>
+                                    <span className={`text-sm font-bold tabular-nums ${diffColor}`}>
+                                        {diffSign}{diff.toLocaleString(undefined, { maximumFractionDigits: 0 })} MT
+                                    </span>
+                                </div>
+                                <div className="mt-2 space-y-1.5">
+                                    <div className="flex items-center gap-2 text-xs">
+                                        <span className="w-14 text-muted-foreground">Opening</span>
+                                        <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-muted">
+                                            <div
+                                                className="h-full rounded-full transition-all"
+                                                style={{
+                                                    width: `${Math.min(100, (opening / maxBal) * 100)}%`,
+                                                    backgroundColor: `var(--chart-${(i % 5) + 1})`,
+                                                }}
+                                            />
+                                        </div>
+                                        <span className="w-16 text-right font-medium tabular-nums">{opening.toLocaleString(undefined, { maximumFractionDigits: 0 })} MT</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-xs">
+                                        <span className="w-14 text-muted-foreground">Closing</span>
+                                        <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-muted">
+                                            <div
+                                                className="h-full rounded-full transition-all"
+                                                style={{
+                                                    width: `${Math.min(100, (closing / maxBal) * 100)}%`,
+                                                    backgroundColor: `var(--chart-${(i % 5) + 1})`,
+                                                    opacity: 0.6,
+                                                }}
+                                            />
+                                        </div>
+                                        <span className="w-16 text-right font-medium tabular-nums">{closing.toLocaleString(undefined, { maximumFractionDigits: 0 })} MT</span>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function SidingPerformanceSection({ data }: { data: SidingPerformanceItem[] }) {
+    const chartData = useMemo(
+        () => data.map((s) => ({ ...s, name: s.name, rakes: s.rakes, penalties: s.penalties, penalty_amount: s.penalty_amount, penalty_rate: s.penalty_rate })),
+        [data],
+    );
+
+    return (
+        <div className="rounded-xl border bg-card p-5">
+            <SectionHeader icon={BarChart3} title="Siding performance" subtitle="Rakes, penalties & penalty rate" />
+
+            {/* Charts grid */}
+            <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                {/* Rakes vs Penalties grouped bar */}
+                <div>
+                    <p className="mb-2 text-xs font-medium text-muted-foreground">Rakes dispatched vs penalties</p>
+                    <StackedBarChart
+                        data={chartData as Record<string, unknown>[]}
+                        xKey="name"
+                        stackKeys={['rakes', 'penalties']}
+                        stackLabels={{ rakes: 'Rakes dispatched', penalties: 'Penalties' }}
+                        stackColors={{ rakes: 'var(--chart-1)', penalties: '#ef4444' }}
+                        yLabel="Count"
+                        height={260}
+                        allowDecimals={false}
+                        formatTooltip={(v) => `${v}`}
+                    />
+                </div>
+
+                {/* Penalty amount per siding */}
+                <div>
+                    <p className="mb-2 text-xs font-medium text-muted-foreground">Penalty amount by siding</p>
+                    <BarChart
+                        data={chartData as Record<string, unknown>[]}
+                        xKey="name"
+                        yKey="penalty_amount"
+                        yLabel="₹"
+                        height={260}
+                        color="#ef4444"
+                        formatTooltip={(v) => `₹${v.toLocaleString()}`}
+                    />
+                </div>
+            </div>
+
+            {/* Penalty rate visual bars */}
+            <div className="mt-5">
+                <p className="mb-3 text-xs font-medium text-muted-foreground">Penalty rate by siding</p>
+                <div className="space-y-3">
+                    {data.map((s) => {
+                        const rateColor =
+                            s.penalty_rate > 50
+                                ? 'bg-red-500'
+                                : s.penalty_rate > 25
+                                  ? 'bg-amber-500'
+                                  : 'bg-green-500';
+                        const rateTextColor =
+                            s.penalty_rate > 50
+                                ? 'text-red-600 dark:text-red-400'
+                                : s.penalty_rate > 25
+                                  ? 'text-amber-600 dark:text-amber-400'
+                                  : 'text-green-600 dark:text-green-400';
+                        return (
+                            <div key={s.name} className="group">
+                                <div className="mb-1 flex items-center justify-between text-sm">
+                                    <span className="font-medium">{s.name}</span>
+                                    <span className={`font-bold tabular-nums ${rateTextColor}`}>{s.penalty_rate}%</span>
+                                </div>
+                                <div className="h-3 w-full overflow-hidden rounded-full bg-muted">
+                                    <div
+                                        className={`h-full rounded-full transition-all duration-500 ${rateColor}`}
+                                        style={{ width: `${Math.min(s.penalty_rate, 100)}%` }}
+                                    />
+                                </div>
+                                <div className="mt-0.5 flex justify-between text-xs text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
+                                    <span>{s.rakes} rakes, {s.penalties} penalties</span>
+                                    <span>{formatCurrency(s.penalty_amount)}</span>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        </div>
+    );
+}
+
 const DISPATCH_COLORS = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)', '#8b5cf6', '#ec4899', '#14b8a6'];
 const PENALTY_COLORS = ['#ef4444', '#f97316', '#eab308', '#f43f5e', '#d946ef', '#a855f7', '#e11d48', '#c2410c'];
 
@@ -327,6 +591,7 @@ function DateWiseDispatchSection({ data }: { data: DateWiseDispatchData }) {
                     stackColors={dispatchColors}
                     yLabel="Rakes"
                     height={300}
+                    allowDecimals={false}
                     formatTooltip={(v) => `${v} rakes`}
                 />
             </div>
@@ -605,8 +870,22 @@ function DashboardFiltersBar({ sidings, filters }: { sidings: SidingOption[]; fi
     const [showSidingDropdown, setShowSidingDropdown] = useState(false);
 
     const allSidingIds = useMemo(() => sidings.map((s) => s.id), [sidings]);
+
+    const [pendingSidingIds, setPendingSidingIds] = useState<number[]>(filters.siding_ids);
+    const isAllPendingSelected = pendingSidingIds.length === allSidingIds.length || pendingSidingIds.length === 0;
+
     const isAllSidingsSelected = filters.siding_ids.length === allSidingIds.length ||
         filters.siding_ids.length === 0;
+
+    const hasPendingSidingChanges = useMemo(() => {
+        const appliedSet = new Set(isAllSidingsSelected ? allSidingIds : filters.siding_ids);
+        const pendingSet = new Set(isAllPendingSelected ? allSidingIds : pendingSidingIds);
+        if (appliedSet.size !== pendingSet.size) return true;
+        for (const id of appliedSet) {
+            if (!pendingSet.has(id)) return true;
+        }
+        return false;
+    }, [filters.siding_ids, pendingSidingIds, allSidingIds, isAllSidingsSelected, isAllPendingSelected]);
 
     const applyFilters = useCallback((overrides: Record<string, unknown> = {}) => {
         const params: Record<string, unknown> = {
@@ -630,21 +909,30 @@ function DashboardFiltersBar({ sidings, filters }: { sidings: SidingOption[]; fi
         });
     }, [filters, customFrom, customTo, allSidingIds]);
 
-    const toggleSiding = useCallback((sidingId: number) => {
-        const current = filters.siding_ids.length === allSidingIds.length || filters.siding_ids.length === 0
-            ? [...allSidingIds]
-            : [...filters.siding_ids];
-        const idx = current.indexOf(sidingId);
-        if (idx >= 0) {
-            current.splice(idx, 1);
-        } else {
-            current.push(sidingId);
-        }
-        if (current.length === 0) {
-            return;
-        }
-        applyFilters({ siding_ids: current });
-    }, [filters.siding_ids, allSidingIds, applyFilters]);
+    const togglePendingSiding = useCallback((sidingId: number) => {
+        setPendingSidingIds((prev) => {
+            const current = prev.length === allSidingIds.length || prev.length === 0
+                ? [...allSidingIds]
+                : [...prev];
+            const idx = current.indexOf(sidingId);
+            if (idx >= 0) {
+                current.splice(idx, 1);
+            } else {
+                current.push(sidingId);
+            }
+            return current.length === 0 ? prev : current;
+        });
+    }, [allSidingIds]);
+
+    const applySidingFilter = useCallback(() => {
+        applyFilters({ siding_ids: isAllPendingSelected ? allSidingIds : pendingSidingIds });
+        setShowSidingDropdown(false);
+    }, [pendingSidingIds, isAllPendingSelected, allSidingIds, applyFilters]);
+
+    const resetSidingFilter = useCallback(() => {
+        setPendingSidingIds(allSidingIds);
+        applyFilters({ siding_ids: allSidingIds });
+    }, [allSidingIds, applyFilters]);
 
     const selectedSidingNames = useMemo(() => {
         if (isAllSidingsSelected) return 'All sidings';
@@ -712,7 +1000,10 @@ function DashboardFiltersBar({ sidings, filters }: { sidings: SidingOption[]; fi
                 <div className="relative ml-auto">
                     <button
                         type="button"
-                        onClick={() => setShowSidingDropdown(!showSidingDropdown)}
+                        onClick={() => {
+                            setPendingSidingIds(isAllSidingsSelected ? allSidingIds : filters.siding_ids);
+                            setShowSidingDropdown(!showSidingDropdown);
+                        }}
                         className="flex items-center gap-2 rounded-lg border bg-background px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
                     >
                         <span className="max-w-48 truncate">{selectedSidingNames}</span>
@@ -721,7 +1012,7 @@ function DashboardFiltersBar({ sidings, filters }: { sidings: SidingOption[]; fi
                                 type="button"
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    applyFilters({ siding_ids: allSidingIds });
+                                    resetSidingFilter();
                                 }}
                                 className="rounded-full p-0.5 hover:bg-muted-foreground/20"
                             >
@@ -735,30 +1026,27 @@ function DashboardFiltersBar({ sidings, filters }: { sidings: SidingOption[]; fi
                             <div className="absolute right-0 top-full z-50 mt-1 w-56 rounded-xl border bg-card p-2 shadow-lg">
                                 <button
                                     type="button"
-                                    onClick={() => {
-                                        applyFilters({ siding_ids: allSidingIds });
-                                        setShowSidingDropdown(false);
-                                    }}
+                                    onClick={() => setPendingSidingIds(allSidingIds)}
                                     className={
                                         'flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs transition-colors hover:bg-muted ' +
-                                        (isAllSidingsSelected ? 'font-semibold text-primary' : 'text-muted-foreground')
+                                        (isAllPendingSelected ? 'font-semibold text-primary' : 'text-muted-foreground')
                                     }
                                 >
                                     <div className={
                                         'flex size-4 items-center justify-center rounded border ' +
-                                        (isAllSidingsSelected ? 'border-primary bg-primary' : 'border-muted-foreground/30')
+                                        (isAllPendingSelected ? 'border-primary bg-primary' : 'border-muted-foreground/30')
                                     }>
-                                        {isAllSidingsSelected && <span className="text-[10px] text-primary-foreground">✓</span>}
+                                        {isAllPendingSelected && <span className="text-[10px] text-primary-foreground">✓</span>}
                                     </div>
                                     All sidings
                                 </button>
                                 {sidings.map((s) => {
-                                    const isSelected = isAllSidingsSelected || filters.siding_ids.includes(s.id);
+                                    const isSelected = isAllPendingSelected || pendingSidingIds.includes(s.id);
                                     return (
                                         <button
                                             key={s.id}
                                             type="button"
-                                            onClick={() => toggleSiding(s.id)}
+                                            onClick={() => togglePendingSiding(s.id)}
                                             className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs transition-colors hover:bg-muted"
                                         >
                                             <div className={
@@ -772,6 +1060,16 @@ function DashboardFiltersBar({ sidings, filters }: { sidings: SidingOption[]; fi
                                         </button>
                                     );
                                 })}
+                                <div className="mt-1 border-t pt-1">
+                                    <Button
+                                        size="sm"
+                                        className="w-full text-xs"
+                                        disabled={!hasPendingSidingChanges}
+                                        onClick={applySidingFilter}
+                                    >
+                                        Apply
+                                    </Button>
+                                </div>
                             </div>
                         </>
                     )}
@@ -800,7 +1098,15 @@ export default function Dashboard() {
     const loaderOverloadTrends = props.loaderOverloadTrends ?? { loaders: [], monthly: [] };
     const powerPlantDispatch = props.powerPlantDispatch ?? [];
 
-    const sidingStackKeys = useMemo(() => sidings.map((s) => s.name), [sidings]);
+    const filteredSidings = useMemo(() => {
+        if (filters.siding_ids.length === 0 || filters.siding_ids.length === sidings.length) {
+            return sidings;
+        }
+        const idSet = new Set(filters.siding_ids);
+        return sidings.filter((s) => idSet.has(s.id));
+    }, [sidings, filters.siding_ids]);
+
+    const sidingStackKeys = useMemo(() => filteredSidings.map((s) => s.name), [filteredSidings]);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -820,41 +1126,13 @@ export default function Dashboard() {
 
                 {sidings.length > 0 && (
                     <div className="space-y-4">
-                        <div className="grid gap-4 lg:grid-cols-2">
-                            {sidingRadar.sidings.length > 0 && (
-                                <SidingComparisonVertical data={sidingRadar.sidings} />
-                            )}
-                            {Object.keys(sidingStocks).length > 0 && (
-                                <div className="rounded-xl border bg-card p-5">
-                                    <SectionHeader icon={BarChart3} title="Siding stock" subtitle="Closing balance (MT)" />
-                                    <div className="mt-4 space-y-3">
-                                        {sidings.map((s, i) => {
-                                            const balance = sidingStocks[s.id]?.closing_balance_mt ?? 0;
-                                            return (
-                                                <div key={s.id} className="rounded-lg border bg-muted/20 p-4">
-                                                    <div className="flex items-center justify-between">
-                                                        <span className="font-semibold">{s.name}</span>
-                                                        <span className="text-lg font-bold tabular-nums">
-                                                            {balance.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                                                            <span className="ml-0.5 text-xs font-normal text-muted-foreground">MT</span>
-                                                        </span>
-                                                    </div>
-                                                    <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-muted">
-                                                        <div
-                                                            className="h-full rounded-full transition-all"
-                                                            style={{
-                                                                width: `${Math.min(100, (balance / 1000) * 10)}%`,
-                                                                backgroundColor: `var(--chart-${(i % 5) + 1})`,
-                                                            }}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+                        {Object.keys(sidingStocks).length > 0 && (
+                            <SidingStockSection sidings={filteredSidings} stocks={sidingStocks} />
+                        )}
+
+                        {sidingRadar.sidings.length > 0 && (
+                            <SidingComparisonVertical data={sidingRadar.sidings} />
+                        )}
 
                         {sidingWiseMonthly.length > 0 && sidingStackKeys.length > 0 && (
                             <div className="rounded-xl border bg-card p-5">
@@ -866,6 +1144,7 @@ export default function Dashboard() {
                                         stackKeys={sidingStackKeys}
                                         yLabel="Rakes"
                                         height={300}
+                                        allowDecimals={false}
                                         formatTooltip={(v) => `${v} rakes`}
                                     />
                                 </div>
@@ -873,46 +1152,7 @@ export default function Dashboard() {
                         )}
 
                         {sidingPerformance.length > 0 && (
-                            <div className="rounded-xl border bg-card p-5">
-                                <SectionHeader icon={BarChart3} title="Siding performance" subtitle="Rakes, penalties, penalty rate" />
-                                <div className="mt-4 overflow-x-auto">
-                                    <table className="w-full text-sm">
-                                        <thead>
-                                            <tr className="border-b text-left text-muted-foreground">
-                                                <th className="pb-2 pr-4 font-medium">Siding</th>
-                                                <th className="pb-2 pr-4 text-right font-medium">Rakes</th>
-                                                <th className="pb-2 pr-4 text-right font-medium">Penalties</th>
-                                                <th className="pb-2 pr-4 text-right font-medium">Amount</th>
-                                                <th className="pb-2 text-right font-medium">Rate</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {sidingPerformance.map((s) => (
-                                                <tr key={s.name} className="border-b border-border/50 transition-colors hover:bg-muted/30">
-                                                    <td className="py-2.5 pr-4 font-semibold">{s.name}</td>
-                                                    <td className="py-2.5 pr-4 text-right tabular-nums">{s.rakes}</td>
-                                                    <td className="py-2.5 pr-4 text-right tabular-nums">{s.penalties}</td>
-                                                    <td className="py-2.5 pr-4 text-right tabular-nums text-red-600 dark:text-red-400">
-                                                        {formatCurrency(s.penalty_amount)}
-                                                    </td>
-                                                    <td className="py-2.5 text-right">
-                                                        <span className={
-                                                            'inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ' +
-                                                            (s.penalty_rate > 50
-                                                                ? 'bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400'
-                                                                : s.penalty_rate > 25
-                                                                  ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400'
-                                                                  : 'bg-green-100 text-green-700 dark:bg-green-950/50 dark:text-green-400')
-                                                        }>
-                                                            {s.penalty_rate}%
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
+                            <SidingPerformanceSection data={sidingPerformance} />
                         )}
                     </div>
                 )}

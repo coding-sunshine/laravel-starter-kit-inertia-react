@@ -112,17 +112,12 @@ final class DailyVehicleEntryController extends Controller
             'wb_no' => 'nullable|string|max:255',
             'd_challan_no' => 'nullable|string|max:255',
             'challan_mode' => 'nullable|in:offline,online',
+            'status' => 'nullable|in:draft,completed',
         ]);
-        try {
-            // code...
-            $entry = \App\Models\DailyVehicleEntry::findOrFail($id);
-            $updatedEntry = $this->service->updateEntry($entry, $data);
-        } catch (Throwable $th) {
-            // throw $th;
-            dd($th);
-        }
 
-        // Redirect back to the index page
+        $entry = \App\Models\DailyVehicleEntry::findOrFail($id);
+        $this->service->updateEntry($entry, $data);
+
         return redirect()->route('road-dispatch.daily-vehicle-entries.index', [
             'date' => $entry->entry_date,
             'shift' => $entry->shift,
