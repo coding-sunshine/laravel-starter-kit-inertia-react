@@ -25,8 +25,6 @@ import {
     CartesianGrid,
     Cell,
     Legend,
-    Line,
-    LineChart as RechartsLineChart,
     ResponsiveContainer,
     Tooltip,
     XAxis,
@@ -68,7 +66,6 @@ const DASHBOARD_SECTIONS = [
     { id: 'executive-overview', label: 'Executive overview' },
     { id: 'operations', label: 'Operations control' },
     { id: 'penalty-control', label: 'Penalty control' },
-    { id: 'siding-performance', label: 'Siding performance' },
     { id: 'siding-stock', label: 'Siding stock' },
     { id: 'rake-performance', label: 'Rake-wise performance' },
     { id: 'loader-overload', label: 'Loader-wise overloading trends' },
@@ -860,7 +857,7 @@ function PowerPlantDispatchSection({ data }: { data: PowerPlantDispatchItem[] })
     if (data.length === 0) {
         return (
             <div className="rounded-xl border bg-card p-5">
-                <SectionHeader icon={Factory} title="Power plant wise dispatch" subtitle="Summary by destination (from weighment data)" />
+                <SectionHeader icon={Factory} title="Power plant wise dispatch" subtitle="How many rakes sent to each power plant" />
                 <div className="mt-6 flex flex-col items-center justify-center py-10 text-center text-muted-foreground">
                     <Factory className="mb-3 h-10 w-10 opacity-30" />
                     <p className="text-sm font-medium">No dispatch data available</p>
@@ -872,7 +869,7 @@ function PowerPlantDispatchSection({ data }: { data: PowerPlantDispatchItem[] })
 
     return (
         <div className="rounded-xl border bg-card p-5">
-            <SectionHeader icon={Factory} title="Power plant wise dispatch" subtitle="Summary by destination (from weighment data)" />
+            <SectionHeader icon={Factory} title="Power plant wise dispatch" subtitle="How many rakes sent to each power plant" />
             <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <div className="rounded-lg border bg-muted/20 p-3 text-center">
                     <div className="text-xs text-muted-foreground">Destinations</div>
@@ -894,32 +891,37 @@ function PowerPlantDispatchSection({ data }: { data: PowerPlantDispatchItem[] })
 
             <div className="mt-5 grid gap-4 lg:grid-cols-2">
                 <div>
-                    <h4 className="mb-2 text-sm font-semibold text-muted-foreground">Rakes dispatched per destination (siding-wise)</h4>
-                    <ResponsiveContainer width="100%" height={Math.max(260, data.length * 40)}>
-                        <RechartsBarChart data={stackedChartData} layout="vertical" margin={{ left: 10, right: 20, top: 5, bottom: 5 }}>
+                    <h4 className="mb-2 text-sm font-semibold text-muted-foreground">Rakes sent to each power plant by siding</h4>
+                    <ResponsiveContainer width="100%" height={Math.max(260, data.length * 48)}>
+                        <RechartsBarChart data={stackedChartData} margin={{ left: 10, right: 20, top: 5, bottom: 5 }}>
                             <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                            <XAxis type="number" allowDecimals={false} />
-                            <YAxis dataKey="name" type="category" width={120} tick={{ fontSize: 11 }} />
+                            <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                            <YAxis allowDecimals={false} />
                             <Tooltip />
                             <Legend />
                             {allSidingNames.map((sn, i) => (
-                                <Bar key={sn} dataKey={sn} stackId="rakes" fill={SIDING_COLORS[i % SIDING_COLORS.length]} />
+                                <Bar
+                                    key={sn}
+                                    dataKey={sn}
+                                    fill={SIDING_COLORS[i % SIDING_COLORS.length]}
+                                    name={sn}
+                                />
                             ))}
                         </RechartsBarChart>
                     </ResponsiveContainer>
                 </div>
 
                 <div>
-                    <h4 className="mb-2 text-sm font-semibold text-muted-foreground">Weight dispatched (MT)</h4>
+                    <h4 className="mb-2 text-sm font-semibold text-muted-foreground">Rakes dispatched per power plant</h4>
                     <BarChart
                         data={data as Record<string, unknown>[]}
                         xKey="name"
-                        yKey="weight_mt"
-                        yLabel="Weight"
+                        yKey="rakes"
+                        yLabel="Rakes"
                         height={Math.max(260, data.length * 40)}
                         color={DASHBOARD_PALETTE.steelBlue}
-                        formatY={(v) => formatWeight(v)}
-                        formatTooltip={(v) => `${v.toLocaleString()} MT`}
+                        formatY={(v) => v}
+                        formatTooltip={(v) => `${v.toLocaleString()} rakes`}
                     />
                 </div>
             </div>
@@ -979,6 +981,10 @@ function DashboardFiltersBar({
     useEffect(() => {
         setRakeNumberInput(filters.rake_number ?? '');
     }, [filters.rake_number]);
+    useEffect(() => {
+        setCustomFrom(filters.from);
+        setCustomTo(filters.to);
+    }, [filters.from, filters.to]);
 
     const allSidingIds = useMemo(() => sidings.map((s) => s.id), [sidings]);
 
@@ -1007,6 +1013,10 @@ function DashboardFiltersBar({
         if (params.period === 'custom') {
             params.from = overrides.from ?? customFrom;
             params.to = overrides.to ?? customTo;
+        } else {
+            // Never send date range when period is not custom, so backend uses its default (e.g. current month).
+            delete params.from;
+            delete params.to;
         }
 
         const sidingIds = (overrides.siding_ids as number[] | undefined) ?? filters.siding_ids;
@@ -1023,7 +1033,9 @@ function DashboardFiltersBar({
         const shift = (overrides.shift !== undefined ? overrides.shift : filters.shift) ?? '';
         if (shift !== '') params.shift = shift;
 
-        router.get(dashboard().url, params as Record<string, string>, {
+        // Use pathname only so query is exactly our params (no merge with current URL).
+        const dashboardPath = dashboard().url.split('?')[0] || dashboard().url;
+        router.get(dashboardPath, params as Record<string, string>, {
             preserveState: true,
             preserveScroll: true,
         });
@@ -1290,6 +1302,24 @@ export default function Dashboard() {
         loader_id: props.filters?.loader_id ?? null,
         shift: props.filters?.shift ?? null,
     };
+    const periodLabel = useMemo(() => {
+        switch (filters.period) {
+            case 'today':
+                return 'today';
+            case 'week':
+                return 'this week';
+            case 'month':
+                return 'this month';
+            case 'quarter':
+                return 'this quarter';
+            case 'year':
+                return 'this year';
+            case 'custom':
+                return 'selected period';
+            default:
+                return 'this month';
+        }
+    }, [filters.period, filters.from, filters.to]);
     const filterOptions = props.filterOptions ?? { powerPlants: [], loaders: [], shifts: [] };
     const kpis = props.kpis;
     const penaltyTrendDaily = props.penaltyTrendDaily ?? [];
@@ -1348,15 +1378,15 @@ export default function Dashboard() {
                 {sidings.length > 0 && kpis && (
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
                         <div className="rounded-xl border bg-card p-4 text-center">
-                            <div className="text-xs font-medium text-muted-foreground">Rakes dispatched today</div>
+                            <div className="text-xs font-medium text-muted-foreground">Rakes dispatched {periodLabel}</div>
                             <div className="mt-1 text-2xl font-bold tabular-nums">{kpis.rakesDispatchedToday}</div>
                         </div>
                         <div className="rounded-xl border bg-card p-4 text-center">
-                            <div className="text-xs font-medium text-muted-foreground">Coal dispatched today</div>
+                            <div className="text-xs font-medium text-muted-foreground">Coal dispatched {periodLabel}</div>
                             <div className="mt-1 text-2xl font-bold tabular-nums">{formatWeight(kpis.coalDispatchedToday)}</div>
                         </div>
                         <div className="rounded-xl border bg-card p-4 text-center">
-                            <div className="text-xs font-medium text-muted-foreground">Penalty this month</div>
+                            <div className="text-xs font-medium text-muted-foreground">Penalty {periodLabel}</div>
                             <div className="mt-1 text-2xl font-bold tabular-nums">{formatCurrency(kpis.totalPenaltyThisMonth)}</div>
                         </div>
                         <div className="rounded-xl border bg-card p-4 text-center">
@@ -1364,13 +1394,13 @@ export default function Dashboard() {
                             <div className="mt-1 text-2xl font-bold tabular-nums">{formatCurrency(kpis.predictedPenaltyRisk)}</div>
                         </div>
                         <div className="rounded-xl border bg-card p-4 text-center">
-                            <div className="text-xs font-medium text-muted-foreground">Avg loading time</div>
+                            <div className="text-xs font-medium text-muted-foreground">Avg loading time ({periodLabel})</div>
                             <div className="mt-1 text-2xl font-bold tabular-nums">
                                 {kpis.avgLoadingTimeMinutes != null ? `${Math.floor(kpis.avgLoadingTimeMinutes / 60)}h ${kpis.avgLoadingTimeMinutes % 60}m` : '—'}
                             </div>
                         </div>
                         <div className="rounded-xl border bg-card p-4 text-center">
-                            <div className="text-xs font-medium text-muted-foreground">Trucks received today</div>
+                            <div className="text-xs font-medium text-muted-foreground">Trucks received {periodLabel}</div>
                             <div className="mt-1 text-2xl font-bold tabular-nums">{kpis.trucksReceivedToday}</div>
                         </div>
                     </div>
@@ -1394,19 +1424,19 @@ export default function Dashboard() {
                                     </div>
                                 )}
                                 <div className="rounded-xl border bg-card p-5">
-                                    <SectionHeader icon={Calendar} title="Penalty trend (last 30 days)" subtitle="Date vs penalty amount" />
+                                    <SectionHeader icon={Calendar} title="Penalty trend" subtitle="Date / month vs penalty amount" />
                                     {penaltyTrendDaily.length > 0 ? (
                                         <ResponsiveContainer width="100%" height={280}>
-                                            <RechartsLineChart data={penaltyTrendDaily} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
+                                            <RechartsBarChart data={penaltyTrendDaily} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
                                                 <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                                                 <XAxis dataKey="label" tick={{ fontSize: 11 }} />
                                                 <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => formatCurrency(v)} />
                                                 <Tooltip formatter={(v: number) => [formatCurrency(v), 'Penalty']} />
-                                                <Line type="monotone" dataKey="total" stroke={DASHBOARD_PALETTE.alertRed} strokeWidth={2} dot={{ r: 2 }} name="Penalty" />
-                                            </RechartsLineChart>
+                                                <Bar dataKey="total" fill={DASHBOARD_PALETTE.alertRed} name="Penalty" radius={[4, 4, 0, 0]} />
+                                            </RechartsBarChart>
                                         </ResponsiveContainer>
                                     ) : (
-                                        <div className="mt-4 py-8 text-center text-sm text-muted-foreground">No penalty data for last 30 days.</div>
+                                        <div className="mt-4 py-8 text-center text-sm text-muted-foreground">No penalty data for selected period.</div>
                                     )}
                                 </div>
                                 <div className="rounded-xl border bg-card p-5">

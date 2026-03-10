@@ -164,9 +164,7 @@ final readonly class ImportRakeDataFromExcelAction
                     'loading_end_time' => $loadingDate,
                     'loaded_weight_mt' => $netWeight > 0 ? round($netWeight, 2) : null,
                     'state' => 'delivered',
-                    'free_time_minutes' => 180,
-                    'demurrage_hours' => $detentionHours > 0 ? round($detentionHours, 2) : 0,
-                    'demurrage_penalty_amount' => $detentionCharges > 0 ? round($detentionCharges, 2) : 0,
+                    'loading_free_minutes' => (int) config('rrmcs.default_free_time_minutes', 180),
                     'rr_expected_date' => $loadingDate,
                     'rr_actual_date' => $loadingDate,
                     'created_by' => $userId,
@@ -283,7 +281,7 @@ final readonly class ImportRakeDataFromExcelAction
                     'rake_type' => 'BOBRN',
                     'wagon_count' => 0,
                     'state' => 'delivered',
-                    'free_time_minutes' => 180,
+                    'loading_free_minutes' => (int) config('rrmcs.default_free_time_minutes', 180),
                     'created_by' => $userId,
                     'updated_by' => $userId,
                 ]);
@@ -306,9 +304,7 @@ final readonly class ImportRakeDataFromExcelAction
                 $wagon = Wagon::query()->updateOrCreate(['wagon_number' => $wagonNumber], [
                     'rake_id' => $rake->id,
                     'wagon_sequence' => $wagon?->wagon_sequence ?? 0,
-                    'weighment_qty_mt' => $imwbWeight !== null ? round($imwbWeight, 2) : null,
-                    'loader_recorded_qty_mt' => $loaderSensorWeight !== null ? round($loaderSensorWeight, 2) : null,
-                    'loader_id' => $loaderId,
+                    'loaded_weight_mt' => $imwbWeight !== null ? round($imwbWeight, 2) : null,
                 ]);
                 if ($wasNew) {
                     $stats['wagons']++;
@@ -368,7 +364,7 @@ final readonly class ImportRakeDataFromExcelAction
                     'loading_end_time' => $loadingCompleteTime,
                     'loaded_weight_mt' => $netWt > 0 ? round($netWt, 2) : null,
                     'state' => 'delivered',
-                    'free_time_minutes' => 180,
+                    'loading_free_minutes' => (int) config('rrmcs.default_free_time_minutes', 180),
                     'created_by' => $userId,
                     'updated_by' => $userId,
                 ]);
