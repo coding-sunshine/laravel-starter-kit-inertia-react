@@ -106,27 +106,50 @@ final class ExecutiveDashboardController extends Controller
     }
 
     /**
+     * Resolve date range from request. For GET/dashboard, from/to come from query string when period=custom.
+     *
      * @return array{0: CarbonInterface, 1: CarbonInterface}
      */
     private function resolveDateRange(Request $request): array
     {
-        $period = $request->input('period', 'month');
-        $to = now()->endOfDay();
+        $period = (string) $request->input('period', 'month');
+        $tz = config('app.timezone', 'UTC');
+        $to = now($tz)->endOfDay();
 
         $from = match ($period) {
-            'today' => now()->startOfDay(),
-            'week' => now()->startOfWeek(),
-            'quarter' => now()->startOfQuarter(),
-            'year' => now()->startOfYear(),
-            'custom' => $request->date('from') ? Carbon::parse($request->date('from'))->startOfDay() : now()->subMonth()->startOfDay(),
-            default => now()->subMonth()->startOfDay(),
+            'today' => now($tz)->startOfDay(),
+            'week' => now($tz)->startOfWeek(),
+            'month' => now($tz)->startOfMonth(),
+            'quarter' => now($tz)->startOfQuarter(),
+            'year' => now($tz)->startOfYear(),
+            'custom' => $this->parseRequestDate($request, 'from', $tz) ?? now($tz)->startOfMonth(),
+            default => now($tz)->startOfMonth(),
         };
 
-        if ($period === 'custom' && $request->date('to')) {
-            $to = Carbon::parse($request->date('to'))->endOfDay();
+        if ($period === 'custom') {
+            $parsedTo = $this->parseRequestDate($request, 'to', $tz);
+            if ($parsedTo !== null) {
+                $to = $parsedTo->copy()->endOfDay();
+            }
         }
 
         return [$from, $to];
+    }
+
+    /**
+     * Parse a date from request (query or input) in the given timezone.
+     */
+    private function parseRequestDate(Request $request, string $key, string $tz): ?Carbon
+    {
+        $value = $request->query($key) ?? $request->input($key);
+        if ($value === null || $value === '') {
+            return null;
+        }
+        if ($value instanceof CarbonInterface) {
+            return Carbon::parse($value->format('Y-m-d'), $tz)->startOfDay();
+        }
+
+        return Carbon::parse($value, $tz)->startOfDay();
     }
 
     /**
@@ -144,6 +167,27 @@ final class ExecutiveDashboardController extends Controller
         }
 
         return "DATE({$column}) BETWEEN ? AND ?";
+    }
+
+    /**
+     * SQL fragment for rake "business date" in range: use loading_date when set, else created_at (app timezone).
+     * Use with bindings: [$fromDate, $toDate]. Table prefix e.g. "rakes" for rakes.loading_date / rakes.created_at.
+     */
+    private function rakeBusinessDateBetweenSql(string $tablePrefix = 'rakes'): string
+    {
+        $driver = DB::getDriverName();
+        $loadingDate = "{$tablePrefix}.loading_date";
+        $createdAt = "{$tablePrefix}.created_at";
+
+        if ($driver === 'pgsql') {
+            $tz = config('app.timezone', 'UTC');
+            $tzEscaped = str_replace("'", "''", $tz);
+            $createdAtDate = "(({$createdAt} AT TIME ZONE 'UTC' AT TIME ZONE '{$tzEscaped}')::date)";
+
+            return "(COALESCE({$loadingDate}, {$createdAtDate}) BETWEEN ? AND ?)";
+        }
+
+        return "COALESCE(DATE({$loadingDate}), DATE({$createdAt})) BETWEEN ? AND ?";
     }
 
     /**
@@ -218,7 +262,7 @@ final class ExecutiveDashboardController extends Controller
     /**
      * Top KPI tiles for Executive Overview (PDF).
      *
-     * KPIs for the selected date range ($from/$to). Rakes and penalties use created_at.
+     * KPIs for the selected date range ($from/$to). Rake-based metrics use loading_date (business date).
      *
      * @param  array<int>  $sidingIds
      * @param  array{period: string, power_plant: string|null, rake_number: string|null, loader_id: int|null, shift: string|null}  $filterContext
@@ -242,10 +286,11 @@ final class ExecutiveDashboardController extends Controller
 
         $fromDate = $from->toDateString();
         $toDate = $to->toDateString();
+        // Rake-based KPIs use loading_date (business date) to match Siding performance and Power plant dispatch.
         $rakeIdsInRange = Rake::query()
             ->whereIn('siding_id', $sidingIds)
-            ->whereNotNull('created_at')
-            ->whereRaw($this->dateOnlyBetweenSql('created_at'), [$fromDate, $toDate]);
+            ->whereNotNull('loading_date')
+            ->whereRaw($this->dateOnlyBetweenSql('loading_date'), [$fromDate, $toDate]);
         if (! empty($filterContext['rake_number'])) {
             $rakeIdsInRange->where('rake_number', 'like', '%'.$filterContext['rake_number'].'%');
         }
@@ -271,8 +316,8 @@ final class ExecutiveDashboardController extends Controller
         $totalPenaltyThisMonth = (float) AppliedPenalty::query()
             ->join('rakes', 'applied_penalties.rake_id', '=', 'rakes.id')
             ->whereIn('rakes.siding_id', $sidingIds)
-            ->whereNotNull('rakes.created_at')
-            ->whereRaw($this->dateOnlyBetweenSql('rakes.created_at'), [$fromDate, $toDate])
+            ->whereNotNull('rakes.loading_date')
+            ->whereRaw($this->dateOnlyBetweenSql('rakes.loading_date'), [$fromDate, $toDate])
             ->sum('applied_penalties.amount');
 
         $predictedPenaltyRisk = (float) PenaltyPrediction::query()
@@ -284,7 +329,8 @@ final class ExecutiveDashboardController extends Controller
             ->whereIn('siding_id', $sidingIds)
             ->whereNotNull('loading_start_time')
             ->whereNotNull('loading_end_time')
-            ->whereRaw($this->dateOnlyBetweenSql('created_at'), [$fromDate, $toDate])
+            ->whereNotNull('loading_date')
+            ->whereRaw($this->dateOnlyBetweenSql('loading_date'), [$fromDate, $toDate])
             ->get()
             ->map(fn (Rake $r): int => (int) $r->loading_start_time->diffInMinutes($r->loading_end_time));
 
@@ -1218,12 +1264,12 @@ final class ExecutiveDashboardController extends Controller
 
         $fromDate = $from->toDateString();
         $toDate = $to->toDateString();
-        // Filter by rakes.created_at for all dashboard data.
+        // Filter by loading_date (business date) so date selection is correct. Only rakes with loading_date set are counted.
         $rakeQuery = Rake::query()
             ->join('sidings', 'rakes.siding_id', '=', 'sidings.id')
             ->whereIn('rakes.siding_id', $sidingIds)
-            ->whereNotNull('rakes.created_at')
-            ->whereRaw($this->dateOnlyBetweenSql('rakes.created_at'), [$fromDate, $toDate]);
+            ->whereNotNull('rakes.loading_date')
+            ->whereRaw($this->dateOnlyBetweenSql('rakes.loading_date'), [$fromDate, $toDate]);
         if ($rakeIds !== null) {
             $rakeQuery->whereIn('rakes.id', $rakeIds);
         }
@@ -1233,12 +1279,12 @@ final class ExecutiveDashboardController extends Controller
             ->pluck('total_rakes', 'name')
             ->all();
 
-        // Penalties for rakes in the same period (filter by rakes.created_at).
+        // Penalties for rakes in the same period (filter by rakes.loading_date).
         $penaltyQuery = AppliedPenalty::query()
             ->join('rakes', 'applied_penalties.rake_id', '=', 'rakes.id')
             ->join('sidings', 'rakes.siding_id', '=', 'sidings.id')
-            ->whereNotNull('rakes.created_at')
-            ->whereRaw($this->dateOnlyBetweenSql('rakes.created_at'), [$fromDate, $toDate]);
+            ->whereNotNull('rakes.loading_date')
+            ->whereRaw($this->dateOnlyBetweenSql('rakes.loading_date'), [$fromDate, $toDate]);
         if ($rakeIds !== null) {
             $penaltyQuery->whereIn('rakes.id', $rakeIds);
         } else {
@@ -1250,15 +1296,23 @@ final class ExecutiveDashboardController extends Controller
             ->get()
             ->keyBy('name');
 
+        // Include all selected sidings so "All sidings" shows every siding (0 when no data in range).
+        $sidingNamesById = Siding::query()
+            ->whereIn('id', $sidingIds)
+            ->pluck('name', 'id')
+            ->all();
+
         $result = [];
-        foreach ($rakesBySiding as $name => $rakeCount) {
+        foreach ($sidingIds as $sid) {
+            $name = $sidingNamesById[$sid] ?? "Siding {$sid}";
+            $rakeCount = (int) ($rakesBySiding[$name] ?? 0);
             $penaltyData = $penaltiesBySiding->get($name);
             $penaltyCount = $penaltyData ? (int) $penaltyData->penalty_count : 0;
             $penalisedRakes = $penaltyData ? (int) $penaltyData->penalised_rakes : 0;
             $penaltyAmount = $penaltyData ? (float) $penaltyData->penalty_total : 0.0;
             $result[] = [
                 'name' => (string) $name,
-                'rakes' => (int) $rakeCount,
+                'rakes' => $rakeCount,
                 'penalties' => $penaltyCount,
                 'penalty_amount' => round($penaltyAmount, 2),
                 'penalty_rate' => $rakeCount > 0 ? round(($penalisedRakes / $rakeCount) * 100, 1) : 0,
@@ -1545,15 +1599,15 @@ final class ExecutiveDashboardController extends Controller
 
         $fromDate = $from->toDateString();
         $toDate = $to->toDateString();
-        // Rakes in the selected date range (created_at), grouped by destination and siding.
+        // Rakes in the selected date range by loading_date (business date).
         $rows = Rake::query()
             ->whereIn('siding_id', $sidingIds)
             ->where(function ($q): void {
                 $q->whereNotNull('destination')
                     ->orWhereNotNull('destination_code');
             })
-            ->whereNotNull('created_at')
-            ->whereRaw($this->dateOnlyBetweenSql('created_at'), [$fromDate, $toDate])
+            ->whereNotNull('loading_date')
+            ->whereRaw($this->dateOnlyBetweenSql('loading_date'), [$fromDate, $toDate])
             ->selectRaw(
                 "COALESCE(destination, destination_code, 'Unknown') as power_plant_name, ".
                 'siding_id, count(*) as rakes, coalesce(sum(loaded_weight_mt), 0) as weight_mt'
