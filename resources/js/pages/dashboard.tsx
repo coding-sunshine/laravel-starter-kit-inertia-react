@@ -1320,6 +1320,26 @@ export default function Dashboard() {
                 return 'this month';
         }
     }, [filters.period, filters.from, filters.to]);
+
+    // When period is not custom, URL must not contain from/to or backend can receive stale range from shared links or history.
+    const dashboardPath = useMemo(() => dashboard().url.split('?')[0] || dashboard().url, []);
+    useEffect(() => {
+        if (sidings.length === 0 || filters.period === 'custom') return;
+        const search = typeof window !== 'undefined' ? window.location.search : '';
+        if (!search || (!search.includes('from=') && !search.includes('to='))) return;
+        const params: Record<string, string | number | number[] | null> = {
+            period: filters.period,
+        };
+        if (filters.siding_ids.length > 0 && filters.siding_ids.length < sidings.length) {
+            params.siding_ids = filters.siding_ids;
+        }
+        if (filters.power_plant) params.power_plant = filters.power_plant;
+        if (filters.rake_number) params.rake_number = filters.rake_number;
+        if (filters.loader_id) params.loader_id = filters.loader_id;
+        if (filters.shift) params.shift = filters.shift;
+        router.get(dashboardPath, params as Record<string, string>, { replace: true, preserveState: false });
+    }, [dashboardPath, filters.period, filters.siding_ids, filters.power_plant, filters.rake_number, filters.loader_id, filters.shift, sidings.length]);
+
     const filterOptions = props.filterOptions ?? { powerPlants: [], loaders: [], shifts: [] };
     const kpis = props.kpis;
     const penaltyTrendDaily = props.penaltyTrendDaily ?? [];

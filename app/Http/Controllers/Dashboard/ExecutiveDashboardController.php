@@ -34,6 +34,12 @@ final class ExecutiveDashboardController extends Controller
     {
         $user = $request->user();
         $period = $request->input('period', 'month');
+
+        // When period is not custom, ignore any from/to in the request so shared links or history don't show stale range.
+        if ($period !== 'custom') {
+            $request->merge(['from' => null, 'to' => null]);
+        }
+
         $allSidingIds = $user->isSuperAdmin()
             ? Siding::query()->pluck('id')->all()
             : $user->accessibleSidings()->get()->pluck('id')->all();
@@ -45,7 +51,7 @@ final class ExecutiveDashboardController extends Controller
             ->map(fn (Siding $s): array => ['id' => $s->id, 'name' => $s->name, 'code' => $s->code]);
 
         [$from, $to] = $this->resolveDateRange($request);
-
+        // dd($request->all(),$request->input('period'),$period,$from, $to);
         $filteredSidingIds = $request->has('siding_ids')
             ? array_values(array_intersect($allSidingIds, array_map('intval', (array) $request->input('siding_ids', []))))
             : $allSidingIds;
@@ -65,6 +71,7 @@ final class ExecutiveDashboardController extends Controller
 
         $filterOptions = $this->buildFilterOptions($filteredSidingIds);
 
+        // dd($this->buildSidingPerformance($filteredSidingIds, $from, $to, $filterContext));
         return Inertia::render('dashboard', [
             'sidings' => $allSidings,
             'filters' => [
@@ -120,6 +127,23 @@ final class ExecutiveDashboardController extends Controller
         }
 
         return [$from, $to];
+    }
+
+    /**
+     * SQL fragment for date-only range (whole days) in app timezone. Use with bindings: [$from->toDateString(), $to->toDateString()].
+     */
+    private function dateOnlyBetweenSql(string $column): string
+    {
+        $driver = DB::getDriverName();
+
+        if ($driver === 'pgsql') {
+            $tz = config('app.timezone', 'UTC');
+            $tzEscaped = str_replace("'", "''", $tz);
+
+            return "(({$column} AT TIME ZONE 'UTC' AT TIME ZONE '{$tzEscaped}')::date) BETWEEN ? AND ?";
+        }
+
+        return "DATE({$column}) BETWEEN ? AND ?";
     }
 
     /**
@@ -216,10 +240,12 @@ final class ExecutiveDashboardController extends Controller
             ];
         }
 
+        $fromDate = $from->toDateString();
+        $toDate = $to->toDateString();
         $rakeIdsInRange = Rake::query()
             ->whereIn('siding_id', $sidingIds)
             ->whereNotNull('created_at')
-            ->whereBetween('created_at', [$from, $to]);
+            ->whereRaw($this->dateOnlyBetweenSql('created_at'), [$fromDate, $toDate]);
         if (! empty($filterContext['rake_number'])) {
             $rakeIdsInRange->where('rake_number', 'like', '%'.$filterContext['rake_number'].'%');
         }
@@ -246,19 +272,19 @@ final class ExecutiveDashboardController extends Controller
             ->join('rakes', 'applied_penalties.rake_id', '=', 'rakes.id')
             ->whereIn('rakes.siding_id', $sidingIds)
             ->whereNotNull('rakes.created_at')
-            ->whereBetween('rakes.created_at', [$from, $to])
+            ->whereRaw($this->dateOnlyBetweenSql('rakes.created_at'), [$fromDate, $toDate])
             ->sum('applied_penalties.amount');
 
         $predictedPenaltyRisk = (float) PenaltyPrediction::query()
             ->whereIn('siding_id', $sidingIds)
-            ->whereBetween('prediction_date', [$from, $to])
+            ->whereRaw($this->dateOnlyBetweenSql('prediction_date'), [$fromDate, $toDate])
             ->sum('predicted_amount_max');
 
         $loadingMinutes = Rake::query()
             ->whereIn('siding_id', $sidingIds)
             ->whereNotNull('loading_start_time')
             ->whereNotNull('loading_end_time')
-            ->whereBetween('created_at', [$from, $to])
+            ->whereRaw($this->dateOnlyBetweenSql('created_at'), [$fromDate, $toDate])
             ->get()
             ->map(fn (Rake $r): int => (int) $r->loading_start_time->diffInMinutes($r->loading_end_time));
 
@@ -266,7 +292,7 @@ final class ExecutiveDashboardController extends Controller
 
         $trucksQuery = VehicleUnload::query()
             ->whereIn('siding_id', $sidingIds)
-            ->whereRaw('COALESCE(unload_end_time, created_at) BETWEEN ? AND ?', [$from, $to]);
+            ->whereRaw($this->dateOnlyBetweenSql('COALESCE(unload_end_time, created_at)'), [$fromDate, $toDate]);
         if (! empty($filterContext['shift'])) {
             $trucksQuery->where('shift', $filterContext['shift']);
         }
@@ -397,8 +423,10 @@ final class ExecutiveDashboardController extends Controller
             $dateSql = 'DATE(applied_penalties.created_at)';
         }
 
+        $startDate = $start->toDateString();
+        $endDate = $end->toDateString();
         $penaltyQuery = AppliedPenalty::query()
-            ->whereBetween('created_at', [$start, $end]);
+            ->whereRaw($this->dateOnlyBetweenSql('created_at'), [$startDate, $endDate]);
         if ($rakeIds !== null) {
             $penaltyQuery->whereIn('rake_id', $rakeIds);
         } else {
@@ -462,8 +490,10 @@ final class ExecutiveDashboardController extends Controller
             $monthSql = "DATE_FORMAT(applied_penalties.created_at, '%Y-%m-01')";
         }
 
+        $startDate = $start->toDateString();
+        $endDate = $end->toDateString();
         $penaltyQuery = AppliedPenalty::query()
-            ->whereBetween('created_at', [$start, $end]);
+            ->whereRaw($this->dateOnlyBetweenSql('created_at'), [$startDate, $endDate]);
         if ($rakeIds !== null) {
             $penaltyQuery->whereIn('rake_id', $rakeIds);
         } else {
@@ -502,9 +532,11 @@ final class ExecutiveDashboardController extends Controller
             return [];
         }
 
+        $fromDate = $from->toDateString();
+        $toDate = $to->toDateString();
         $firstLedgerIds = StockLedger::query()
             ->whereIn('siding_id', $sidingIds)
-            ->whereBetween('created_at', [$from, $to])
+            ->whereRaw($this->dateOnlyBetweenSql('created_at'), [$fromDate, $toDate])
             ->selectRaw('min(id) as id')
             ->groupBy('siding_id')
             ->pluck('id')
@@ -512,7 +544,7 @@ final class ExecutiveDashboardController extends Controller
 
         $lastLedgerIds = StockLedger::query()
             ->whereIn('siding_id', $sidingIds)
-            ->whereBetween('created_at', [$from, $to])
+            ->whereRaw($this->dateOnlyBetweenSql('created_at'), [$fromDate, $toDate])
             ->selectRaw('max(id) as id')
             ->groupBy('siding_id')
             ->pluck('id')
@@ -531,7 +563,7 @@ final class ExecutiveDashboardController extends Controller
         $rakeCountsBySiding = Rake::query()
             ->whereIn('siding_id', $sidingIds)
             ->whereNotNull('created_at')
-            ->whereBetween('created_at', [$from, $to])
+            ->whereRaw($this->dateOnlyBetweenSql('created_at'), [$fromDate, $toDate])
             ->selectRaw('siding_id, count(*) as cnt')
             ->groupBy('siding_id')
             ->pluck('cnt', 'siding_id');
@@ -783,16 +815,18 @@ final class ExecutiveDashboardController extends Controller
             return ['predicted' => 0.0, 'actual' => 0.0];
         }
 
+        $fromDate = $from->toDateString();
+        $toDate = $to->toDateString();
         $predicted = (float) PenaltyPrediction::query()
             ->whereIn('siding_id', $sidingIds)
-            ->whereBetween('prediction_date', [$from, $to])
+            ->whereRaw($this->dateOnlyBetweenSql('prediction_date'), [$fromDate, $toDate])
             ->sum('predicted_amount_max');
 
         $rakeIds = null;
         if (! empty($filterContext['rake_number']) || ! empty($filterContext['power_plant'])) {
             $rakeIds = $this->getFilteredRakeIds($sidingIds, $filterContext);
         }
-        $actualQuery = AppliedPenalty::query()->whereBetween('created_at', [$from, $to]);
+        $actualQuery = AppliedPenalty::query()->whereRaw($this->dateOnlyBetweenSql('created_at'), [$fromDate, $toDate]);
         if ($rakeIds !== null) {
             $actualQuery->whereIn('rake_id', $rakeIds);
         } else {
@@ -871,9 +905,11 @@ final class ExecutiveDashboardController extends Controller
                 return [];
             }
         }
+        $fromDate = $from->toDateString();
+        $toDate = $to->toDateString();
         $query = AppliedPenalty::query()
             ->join('penalty_types', 'applied_penalties.penalty_type_id', '=', 'penalty_types.id')
-            ->whereBetween('applied_penalties.created_at', [$from, $to]);
+            ->whereRaw($this->dateOnlyBetweenSql('applied_penalties.created_at'), [$fromDate, $toDate]);
         if ($rakeIds !== null) {
             $query->whereIn('applied_penalties.rake_id', $rakeIds);
         } else {
@@ -912,10 +948,12 @@ final class ExecutiveDashboardController extends Controller
                 return [];
             }
         }
+        $fromDate = $from->toDateString();
+        $toDate = $to->toDateString();
         $query = AppliedPenalty::query()
             ->join('rakes', 'applied_penalties.rake_id', '=', 'rakes.id')
             ->join('sidings', 'rakes.siding_id', '=', 'sidings.id')
-            ->whereBetween('applied_penalties.created_at', [$from, $to]);
+            ->whereRaw($this->dateOnlyBetweenSql('applied_penalties.created_at'), [$fromDate, $toDate]);
         if ($rakeIds !== null) {
             $query->whereIn('rakes.id', $rakeIds);
         } else {
@@ -1178,12 +1216,14 @@ final class ExecutiveDashboardController extends Controller
             }
         }
 
+        $fromDate = $from->toDateString();
+        $toDate = $to->toDateString();
         // Filter by rakes.created_at for all dashboard data.
         $rakeQuery = Rake::query()
             ->join('sidings', 'rakes.siding_id', '=', 'sidings.id')
             ->whereIn('rakes.siding_id', $sidingIds)
             ->whereNotNull('rakes.created_at')
-            ->whereBetween('rakes.created_at', [$from, $to]);
+            ->whereRaw($this->dateOnlyBetweenSql('rakes.created_at'), [$fromDate, $toDate]);
         if ($rakeIds !== null) {
             $rakeQuery->whereIn('rakes.id', $rakeIds);
         }
@@ -1198,7 +1238,7 @@ final class ExecutiveDashboardController extends Controller
             ->join('rakes', 'applied_penalties.rake_id', '=', 'rakes.id')
             ->join('sidings', 'rakes.siding_id', '=', 'sidings.id')
             ->whereNotNull('rakes.created_at')
-            ->whereBetween('rakes.created_at', [$from, $to]);
+            ->whereRaw($this->dateOnlyBetweenSql('rakes.created_at'), [$fromDate, $toDate]);
         if ($rakeIds !== null) {
             $penaltyQuery->whereIn('rakes.id', $rakeIds);
         } else {
@@ -1297,13 +1337,15 @@ final class ExecutiveDashboardController extends Controller
             return ['sidingNames' => $sidingMap, 'dates' => array_values($days)];
         }
 
+        $fromDate = $from->toDateString();
+        $toDate = $to->toDateString();
         $driver = DB::getDriverName();
         $dateSql = $driver === 'pgsql' ? 'rakes.created_at::date' : 'DATE(rakes.created_at)';
 
         $dispatched = Rake::query()
             ->whereIn('siding_id', $sidingIds)
             ->whereNotNull('created_at')
-            ->whereBetween('created_at', [$from, $to])
+            ->whereRaw($this->dateOnlyBetweenSql('created_at'), [$fromDate, $toDate])
             ->selectRaw("{$dateSql} as d, siding_id, count(*) as cnt")
             ->groupBy('d', 'siding_id')
             ->get();
@@ -1321,7 +1363,7 @@ final class ExecutiveDashboardController extends Controller
         $penalties = AppliedPenalty::query()
             ->join('rakes', 'applied_penalties.rake_id', '=', 'rakes.id')
             ->whereIn('rakes.siding_id', $sidingIds)
-            ->whereBetween('applied_penalties.created_at', [$from, $to])
+            ->whereRaw($this->dateOnlyBetweenSql('applied_penalties.created_at'), [$fromDate, $toDate])
             ->selectRaw("{$penDateSql} as d, rakes.siding_id, sum(applied_penalties.amount) as total")
             ->groupBy('d', 'rakes.siding_id')
             ->get();
@@ -1350,11 +1392,13 @@ final class ExecutiveDashboardController extends Controller
             return [];
         }
 
+        $fromDate = $from->toDateString();
+        $toDate = $to->toDateString();
         $rakeQuery = Rake::query()
             ->with('siding:id,name,code')
             ->whereIn('siding_id', $sidingIds)
             ->whereNotNull('created_at')
-            ->whereBetween('created_at', [$from, $to]);
+            ->whereRaw($this->dateOnlyBetweenSql('created_at'), [$fromDate, $toDate]);
         if (! empty($filterContext['rake_number'])) {
             $rakeQuery->where('rake_number', 'like', '%'.$filterContext['rake_number'].'%');
         }
@@ -1437,6 +1481,8 @@ final class ExecutiveDashboardController extends Controller
             ? 'EXTRACT(YEAR FROM wl.loading_time)::int as y, EXTRACT(MONTH FROM wl.loading_time)::int as m'
             : 'YEAR(wl.loading_time) as y, MONTH(wl.loading_time) as m';
 
+        $fromDate = $from->toDateString();
+        $toDate = $to->toDateString();
         $rows = DB::table('wagon_loading as wl')
             ->join('rake_wagon_weighments as rww', function ($join) {
                 $join->on('wl.wagon_id', '=', 'rww.wagon_id')
@@ -1444,7 +1490,7 @@ final class ExecutiveDashboardController extends Controller
             })
             ->whereIn('wl.loader_id', $loaderIds)
             ->whereNotNull('wl.loading_time')
-            ->whereBetween('wl.loading_time', [$from, $to])
+            ->whereRaw($this->dateOnlyBetweenSql('wl.loading_time'), [$fromDate, $toDate])
             ->selectRaw("{$yearMonthSql}, wl.loader_id, count(*) as wagons_loaded, sum(CASE WHEN rww.over_load_mt > 0 THEN 1 ELSE 0 END) as overloaded_wagons")
             ->groupBy('y', 'm', 'wl.loader_id')
             ->get();
@@ -1497,6 +1543,8 @@ final class ExecutiveDashboardController extends Controller
             ->pluck('name', 'id')
             ->all();
 
+        $fromDate = $from->toDateString();
+        $toDate = $to->toDateString();
         // Rakes in the selected date range (created_at), grouped by destination and siding.
         $rows = Rake::query()
             ->whereIn('siding_id', $sidingIds)
@@ -1505,7 +1553,7 @@ final class ExecutiveDashboardController extends Controller
                     ->orWhereNotNull('destination_code');
             })
             ->whereNotNull('created_at')
-            ->whereBetween('created_at', [$from, $to])
+            ->whereRaw($this->dateOnlyBetweenSql('created_at'), [$fromDate, $toDate])
             ->selectRaw(
                 "COALESCE(destination, destination_code, 'Unknown') as power_plant_name, ".
                 'siding_id, count(*) as rakes, coalesce(sum(loaded_weight_mt), 0) as weight_mt'
@@ -1557,10 +1605,12 @@ final class ExecutiveDashboardController extends Controller
             ? 'EXTRACT(YEAR FROM created_at)::int as y, EXTRACT(MONTH FROM created_at)::int as m'
             : 'YEAR(created_at) as y, MONTH(created_at) as m';
 
+        $fromDate = $from->toDateString();
+        $toDate = $to->toDateString();
         $rakeRows = Rake::query()
             ->whereIn('siding_id', $sidingIds)
             ->whereNotNull('created_at')
-            ->whereBetween('created_at', [$from, $to])
+            ->whereRaw($this->dateOnlyBetweenSql('created_at'), [$fromDate, $toDate])
             ->selectRaw("{$yearMonthSql}, siding_id, count(*) as cnt")
             ->groupBy('y', 'm', 'siding_id')
             ->get();
@@ -1612,10 +1662,12 @@ final class ExecutiveDashboardController extends Controller
             ->pluck('name', 'id')
             ->all();
 
+        $fromDate = $from->toDateString();
+        $toDate = $to->toDateString();
         $dispatchedBySiding = Rake::query()
             ->whereIn('siding_id', $sidingIds)
             ->whereNotNull('created_at')
-            ->whereBetween('created_at', [$from, $to])
+            ->whereRaw($this->dateOnlyBetweenSql('created_at'), [$fromDate, $toDate])
             ->selectRaw('siding_id, count(*) as cnt')
             ->groupBy('siding_id')
             ->pluck('cnt', 'siding_id')
@@ -1623,7 +1675,7 @@ final class ExecutiveDashboardController extends Controller
 
         $rakesBySiding = Rake::query()
             ->whereIn('siding_id', $sidingIds)
-            ->whereBetween('created_at', [$from, $to])
+            ->whereRaw($this->dateOnlyBetweenSql('created_at'), [$fromDate, $toDate])
             ->selectRaw('siding_id, count(*) as cnt')
             ->groupBy('siding_id')
             ->pluck('cnt', 'siding_id')
@@ -1632,7 +1684,7 @@ final class ExecutiveDashboardController extends Controller
         $penaltyBySiding = AppliedPenalty::query()
             ->join('rakes', 'applied_penalties.rake_id', '=', 'rakes.id')
             ->whereIn('rakes.siding_id', $sidingIds)
-            ->whereBetween('applied_penalties.created_at', [$from, $to])
+            ->whereRaw($this->dateOnlyBetweenSql('applied_penalties.created_at'), [$fromDate, $toDate])
             ->selectRaw('rakes.siding_id, count(DISTINCT applied_penalties.rake_id) as penalised_rakes, sum(applied_penalties.amount) as total')
             ->groupBy('rakes.siding_id')
             ->get()
@@ -1640,7 +1692,7 @@ final class ExecutiveDashboardController extends Controller
 
         $vehiclesBySiding = SidingVehicleDispatch::query()
             ->whereIn('siding_id', $sidingIds)
-            ->whereBetween('issued_on', [$from, $to])
+            ->whereRaw($this->dateOnlyBetweenSql('issued_on'), [$fromDate, $toDate])
             ->selectRaw('siding_id, count(DISTINCT truck_regd_no) as cnt')
             ->groupBy('siding_id')
             ->pluck('cnt', 'siding_id')
@@ -1690,6 +1742,8 @@ final class ExecutiveDashboardController extends Controller
         }
 
         $loaderIds = $loaders->pluck('id')->all();
+        $fromDate = $from->toDateString();
+        $toDate = $to->toDateString();
 
         $stats = DB::table('wagon_loading as wl')
             ->join('rake_wagon_weighments as rww', function ($join) {
@@ -1698,7 +1752,7 @@ final class ExecutiveDashboardController extends Controller
             })
             ->whereIn('wl.loader_id', $loaderIds)
             ->whereNotNull('wl.loading_time')
-            ->whereBetween('wl.loading_time', [$from, $to])
+            ->whereRaw($this->dateOnlyBetweenSql('wl.loading_time'), [$fromDate, $toDate])
             ->selectRaw('wl.loader_id, count(*) as total, sum(CASE WHEN rww.over_load_mt > 0 THEN 1 ELSE 0 END) as overloaded')
             ->groupBy('wl.loader_id')
             ->get()
