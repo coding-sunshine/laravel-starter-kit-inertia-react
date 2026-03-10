@@ -2,6 +2,7 @@ import { BarChart } from '@/components/charts/bar-chart';
 import { ComposedChart } from '@/components/charts/composed-chart';
 import { StackedBarChart } from '@/components/charts/stacked-bar-chart';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import { index as rakesIndex } from '@/routes/rakes';
@@ -17,21 +18,42 @@ import {
     X,
     Zap,
 } from 'lucide-react';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     Bar,
     BarChart as RechartsBarChart,
     CartesianGrid,
+    Cell,
     Legend,
+    Line,
+    LineChart as RechartsLineChart,
     ResponsiveContainer,
     Tooltip,
     XAxis,
     YAxis,
 } from 'recharts';
+import { PieChart } from '@/components/charts/pie-chart';
+import { SemiCircleGauge } from '@/components/charts/semi-circle-gauge';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: dashboard().url },
 ];
+
+/** COLOR DESIGN from rake management dashboards.pdf: simple professional palette for visual impact. */
+const DASHBOARD_PALETTE = {
+    coalBlack: '#1e293b',
+    darkGrey: '#64748b',
+    steelBlue: '#4682b4',
+    steelBlueLight: '#6b9bc4',
+    safetyYellow: '#e6b800',
+    safetyYellowLight: '#f0c933',
+    alertRed: '#c41e3a',
+    alertRedLight: '#dc3545',
+    successGreen: '#2d6a4f',
+    successGreenLight: '#40916c',
+} as const;
+
+const ALL_FILTER_VALUE = '__all__';
 
 const PERIODS = [
     { key: 'today', label: 'Today' },
@@ -41,6 +63,19 @@ const PERIODS = [
     { key: 'year', label: 'Year' },
     { key: 'custom', label: 'Custom' },
 ] as const;
+
+const DASHBOARD_SECTIONS = [
+    { id: 'executive-overview', label: 'Executive overview' },
+    { id: 'operations', label: 'Operations control' },
+    { id: 'penalty-control', label: 'Penalty control' },
+    { id: 'siding-performance', label: 'Siding performance' },
+    { id: 'siding-stock', label: 'Siding stock' },
+    { id: 'rake-performance', label: 'Rake-wise performance' },
+    { id: 'loader-overload', label: 'Loader-wise overloading trends' },
+    { id: 'power-plant', label: 'Power plant wise dispatch' },
+] as const;
+
+const DEFAULT_DASHBOARD_SECTION = 'executive-overview';
 
 interface SidingOption {
     id: number;
@@ -109,12 +144,17 @@ interface LoaderOverloadTrends {
     monthly: Record<string, unknown>[];
 }
 
+interface PowerPlantSidingBreakdown {
+    rakes: number;
+    weight_mt: number;
+}
+
 interface PowerPlantDispatchItem {
     [key: string]: unknown;
     name: string;
     rakes: number;
     weight_mt: number;
-    avg_variance_pct: number;
+    sidings: Record<string, PowerPlantSidingBreakdown>;
 }
 
 interface DashboardFilters {
@@ -122,11 +162,90 @@ interface DashboardFilters {
     from: string;
     to: string;
     siding_ids: number[];
+    power_plant: string | null;
+    rake_number: string | null;
+    loader_id: number | null;
+    shift: string | null;
 }
+
+interface FilterOptions {
+    powerPlants: Array<{ value: string; label: string }>;
+    loaders: Array<{ id: number; name: string; siding_name: string }>;
+    shifts: Array<{ value: string; label: string }>;
+}
+
+interface DashboardKpis {
+    rakesDispatchedToday: number;
+    coalDispatchedToday: number;
+    totalPenaltyThisMonth: number;
+    predictedPenaltyRisk: number;
+    avgLoadingTimeMinutes: number | null;
+    trucksReceivedToday: number;
+}
+
+interface PenaltyTrendPoint {
+    date: string;
+    label: string;
+    total: number;
+}
+
+interface PenaltyByTypePoint {
+    name: string;
+    value: number;
+}
+
+interface PenaltyBySidingPoint {
+    name: string;
+    total: number;
+}
+
+interface DashboardAlert {
+    id: number;
+    type: string;
+    title: string;
+    severity: string;
+    rake_id: number | null;
+    siding_id: number | null;
+    created_at: string;
+}
+
+interface LiveRakeStatusRow {
+    rake_number: string;
+    siding_name: string;
+    state: string;
+    time_elapsed: string;
+    risk: string;
+}
+
+interface TruckReceiptHour {
+    hour: string;
+    label: string;
+    count: number;
+}
+
+interface StockGaugeSidingItem {
+    siding_id: number;
+    siding_name: string;
+    stock_available_mt: number;
+    rake_required_mt: number;
+    status: string;
+}
+
+type StockGaugeData = StockGaugeSidingItem[];
 
 type DashboardProps = SharedData & {
     sidings?: SidingOption[];
     filters?: DashboardFilters;
+    filterOptions?: FilterOptions;
+    kpis?: DashboardKpis;
+    penaltyTrendDaily?: PenaltyTrendPoint[];
+    penaltyByType?: PenaltyByTypePoint[];
+    penaltyBySiding?: PenaltyBySidingPoint[];
+    alerts?: DashboardAlert[];
+    liveRakeStatus?: LiveRakeStatusRow[];
+    truckReceiptTrend?: TruckReceiptHour[];
+    stockGauge?: StockGaugeData;
+    predictedVsActualPenalty?: { predicted: number; actual: number };
     sidingStocks?: Record<number, SidingStock>;
     sidingPerformance?: SidingPerformanceItem[];
     sidingWiseMonthly?: SidingWiseMonthlyPoint[];
@@ -170,8 +289,8 @@ function SectionHeader({ icon: Icon, title, subtitle, action }: {
     );
 }
 
-const SIDING_BAR_COLORS = ['bg-blue-500', 'bg-emerald-500', 'bg-amber-500', 'bg-violet-500', 'bg-rose-500'];
-const SIDING_DOT_COLORS = ['bg-blue-500', 'bg-emerald-500', 'bg-amber-500', 'bg-violet-500', 'bg-rose-500'];
+const SIDING_BAR_COLORS = [DASHBOARD_PALETTE.steelBlue, DASHBOARD_PALETTE.successGreen, DASHBOARD_PALETTE.safetyYellow];
+const SIDING_DOT_COLORS = [DASHBOARD_PALETTE.steelBlue, DASHBOARD_PALETTE.successGreen, DASHBOARD_PALETTE.safetyYellow];
 
 interface MetricDef {
     key: keyof SidingComparisonItem;
@@ -195,7 +314,7 @@ function SidingComparisonVertical({ data }: { data: SidingComparisonItem[] }) {
             <div className="mt-3 flex flex-wrap items-center gap-4">
                 {data.map((s, i) => (
                     <div key={s.name} className="flex items-center gap-1.5 text-xs">
-                        <span className={`inline-block size-2.5 rounded-full ${SIDING_DOT_COLORS[i % SIDING_DOT_COLORS.length]}`} />
+                        <span className="inline-block size-2.5 rounded-full" style={{ backgroundColor: SIDING_DOT_COLORS[i % SIDING_DOT_COLORS.length] }} />
                         <span className="font-medium">{s.name}</span>
                     </div>
                 ))}
@@ -231,8 +350,8 @@ function SidingComparisonVertical({ data }: { data: SidingComparisonItem[] }) {
                                             <div className="flex w-full flex-col items-center" style={{ height: 140 }}>
                                                 <div className="mt-auto w-full max-w-10">
                                                     <div
-                                                        className={`w-full rounded-t-md transition-all duration-500 ${SIDING_BAR_COLORS[i % SIDING_BAR_COLORS.length]} ${isHovered ? 'opacity-100' : 'opacity-80'}`}
-                                                        style={{ height: `${pct}%`, minHeight: 8 }}
+                                                        className={`w-full rounded-t-md transition-all duration-500 ${isHovered ? 'opacity-100' : 'opacity-80'}`}
+                                                        style={{ backgroundColor: SIDING_BAR_COLORS[i % SIDING_BAR_COLORS.length], height: `${pct}%`, minHeight: 8 }}
                                                     />
                                                 </div>
                                             </div>
@@ -250,171 +369,27 @@ function SidingComparisonVertical({ data }: { data: SidingComparisonItem[] }) {
 }
 
 function SidingStockSection({ sidings, stocks }: { sidings: SidingOption[]; stocks: Record<number, SidingStock> }) {
-    const totalRakes = useMemo(() => sidings.reduce((sum, s) => sum + (stocks[s.id]?.total_rakes ?? 0), 0), [sidings, stocks]);
-
-    const barData = useMemo(
-        () =>
-            sidings.map((s) => {
-                const st = stocks[s.id];
-                return {
-                    name: s.name,
-                    opening: Math.round(st?.opening_balance_mt ?? 0),
-                    closing: Math.round(st?.closing_balance_mt ?? 0),
-                };
-            }),
-        [sidings, stocks],
-    );
-
-    const yDomain = useMemo(() => {
-        const allValues = barData.flatMap((d) => [d.opening, d.closing]);
-        const minVal = Math.min(...allValues);
-        const maxVal = Math.max(...allValues);
-        const padding = Math.max(50, Math.round((maxVal - minVal) * 0.15));
-        const floor = Math.max(0, Math.floor((minVal - padding) / 50) * 50);
-        const ceil = Math.ceil((maxVal + padding) / 50) * 50;
-        return [floor, ceil] as [number, number];
-    }, [barData]);
-
     return (
         <div className="rounded-xl border bg-card p-5">
-            <SectionHeader icon={BarChart3} title="Siding stock" subtitle="Opening & closing balance with total rakes" />
-
-            {/* Total rakes summary */}
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="rounded-lg border bg-muted/20 p-3.5">
-                    <p className="text-xs font-medium text-muted-foreground">Total rakes dispatched</p>
-                    <p className="mt-1 text-2xl font-bold tabular-nums">{totalRakes}</p>
-                </div>
-                {sidings.map((s, i) => {
+            <SectionHeader icon={BarChart3} title="Siding stock" subtitle="Current balance per siding" />
+            <div className="mt-4 grid gap-4 sm:grid-cols-3">
+                {sidings.map((s) => {
                     const st = stocks[s.id];
+                    const currentBalance = st?.closing_balance_mt ?? 0;
                     return (
-                        <div key={s.id} className="rounded-lg border bg-muted/20 p-3.5">
-                            <p className="text-xs font-medium text-muted-foreground">{s.name}</p>
-                            <p className="mt-1 text-xl font-bold tabular-nums">{st?.total_rakes ?? 0} <span className="text-xs font-normal text-muted-foreground">rakes</span></p>
-                            <div className="mt-1.5 flex items-center gap-3 text-xs text-muted-foreground">
-                                <span className="flex items-center gap-1">
-                                    <span className="inline-block size-2 rounded-full" style={{ backgroundColor: `var(--chart-${(i % 5) + 1})` }} />
-                                    Open: {(st?.opening_balance_mt ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} MT
-                                </span>
-                                <span className="flex items-center gap-1">
-                                    <span className="inline-block size-2 rounded-full bg-foreground/50" />
-                                    Close: {(st?.closing_balance_mt ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} MT
-                                </span>
-                            </div>
+                        <div key={s.id} className="rounded-lg border bg-muted/20 p-4 text-center">
+                            <p className="text-sm font-medium text-muted-foreground">{s.name}</p>
+                            <p className="mt-2 text-2xl font-bold tabular-nums">{currentBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })} MT</p>
+                            <p className="mt-0.5 text-xs text-muted-foreground">Current balance</p>
                         </div>
                     );
                 })}
             </div>
-
-            {/* Opening vs Closing balance bar chart */}
-            <div className="mt-5">
-                <p className="mb-2 text-sm font-semibold">Opening vs closing balance (MT)</p>
-                <div className="w-full">
-                    <ResponsiveContainer width="100%" height={280}>
-                        <RechartsBarChart data={barData} margin={{ top: 4, right: 4, bottom: 0, left: -12 }}>
-                            <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
-                            <XAxis
-                                dataKey="name"
-                                tick={{ fontSize: 12 }}
-                                className="fill-muted-foreground"
-                                tickLine={false}
-                                axisLine={false}
-                            />
-                            <YAxis
-                                domain={yDomain}
-                                tick={{ fontSize: 12 }}
-                                className="fill-muted-foreground"
-                                tickLine={false}
-                                axisLine={false}
-                                allowDecimals={false}
-                                label={{
-                                    value: 'MT',
-                                    angle: -90,
-                                    position: 'insideLeft',
-                                    className: 'fill-muted-foreground',
-                                    style: { fontSize: 11 },
-                                }}
-                            />
-                            <Tooltip
-                                contentStyle={{
-                                    backgroundColor: 'var(--card)',
-                                    borderColor: 'var(--border)',
-                                    borderRadius: 8,
-                                    fontSize: 12,
-                                }}
-                                formatter={(value: number, name: string) => [
-                                    `${value.toLocaleString()} MT`,
-                                    name === 'opening' ? 'Opening balance' : 'Closing balance',
-                                ]}
-                            />
-                            <Legend
-                                formatter={(value: string) => (value === 'opening' ? 'Opening balance' : 'Closing balance')}
-                                wrapperStyle={{ fontSize: 12 }}
-                            />
-                            <Bar dataKey="opening" fill="var(--chart-1)" radius={[4, 4, 0, 0]} barSize={28} />
-                            <Bar dataKey="closing" fill="var(--chart-3)" radius={[4, 4, 0, 0]} barSize={28} />
-                        </RechartsBarChart>
-                    </ResponsiveContainer>
-                </div>
-            </div>
-
-            {/* Per-siding stock bars */}
-            <div className="mt-5">
-                <p className="mb-3 text-sm font-semibold">Stock balance per siding</p>
-                <div className="space-y-3">
-                    {sidings.map((s, i) => {
-                        const st = stocks[s.id];
-                        const opening = st?.opening_balance_mt ?? 0;
-                        const closing = st?.closing_balance_mt ?? 0;
-                        const maxBal = Math.max(opening, closing, 1);
-                        const diff = closing - opening;
-                        const diffColor = diff >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
-                        const diffSign = diff >= 0 ? '+' : '';
-                        return (
-                            <div key={s.id} className="group rounded-lg border bg-muted/20 p-3.5">
-                                <div className="flex items-center justify-between">
-                                    <span className="font-semibold">{s.name}</span>
-                                    <span className={`text-sm font-bold tabular-nums ${diffColor}`}>
-                                        {diffSign}{diff.toLocaleString(undefined, { maximumFractionDigits: 0 })} MT
-                                    </span>
-                                </div>
-                                <div className="mt-2 space-y-1.5">
-                                    <div className="flex items-center gap-2 text-xs">
-                                        <span className="w-14 text-muted-foreground">Opening</span>
-                                        <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-muted">
-                                            <div
-                                                className="h-full rounded-full transition-all"
-                                                style={{
-                                                    width: `${Math.min(100, (opening / maxBal) * 100)}%`,
-                                                    backgroundColor: `var(--chart-${(i % 5) + 1})`,
-                                                }}
-                                            />
-                                        </div>
-                                        <span className="w-16 text-right font-medium tabular-nums">{opening.toLocaleString(undefined, { maximumFractionDigits: 0 })} MT</span>
-                                    </div>
-                                    <div className="flex items-center gap-2 text-xs">
-                                        <span className="w-14 text-muted-foreground">Closing</span>
-                                        <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-muted">
-                                            <div
-                                                className="h-full rounded-full transition-all"
-                                                style={{
-                                                    width: `${Math.min(100, (closing / maxBal) * 100)}%`,
-                                                    backgroundColor: `var(--chart-${(i % 5) + 1})`,
-                                                    opacity: 0.6,
-                                                }}
-                                            />
-                                        </div>
-                                        <span className="w-16 text-right font-medium tabular-nums">{closing.toLocaleString(undefined, { maximumFractionDigits: 0 })} MT</span>
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            </div>
         </div>
     );
 }
+
+const SIDING_PERF_COLORS = [DASHBOARD_PALETTE.steelBlue, DASHBOARD_PALETTE.successGreen, DASHBOARD_PALETTE.safetyYellow, DASHBOARD_PALETTE.steelBlueLight, DASHBOARD_PALETTE.successGreenLight];
 
 function SidingPerformanceSection({ data }: { data: SidingPerformanceItem[] }) {
     const chartData = useMemo(
@@ -426,83 +401,77 @@ function SidingPerformanceSection({ data }: { data: SidingPerformanceItem[] }) {
         <div className="rounded-xl border bg-card p-5">
             <SectionHeader icon={BarChart3} title="Siding performance" subtitle="Rakes, penalties & penalty rate" />
 
-            {/* Charts grid */}
+            {/* Charts: horizontal bars, sidings on Y-axis, each siding a different color */}
             <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                {/* Rakes vs Penalties grouped bar */}
                 <div>
                     <p className="mb-2 text-xs font-medium text-muted-foreground">Rakes dispatched vs penalties</p>
-                    <StackedBarChart
-                        data={chartData as Record<string, unknown>[]}
-                        xKey="name"
-                        stackKeys={['rakes', 'penalties']}
-                        stackLabels={{ rakes: 'Rakes dispatched', penalties: 'Penalties' }}
-                        stackColors={{ rakes: 'var(--chart-1)', penalties: '#ef4444' }}
-                        yLabel="Count"
-                        height={260}
-                        allowDecimals={false}
-                        formatTooltip={(v) => `${v}`}
-                    />
+                    <ResponsiveContainer width="100%" height={260}>
+                        <RechartsBarChart data={chartData} layout="vertical" margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
+                            <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} />
+                            <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 12 }} />
+                            <Tooltip formatter={(v: number) => [v, '']} />
+                            <Legend />
+                            <Bar dataKey="rakes" stackId="a" name="Rakes dispatched" radius={[0, 0, 0, 0]}>
+                                {chartData.map((_, i) => (
+                                    <Cell key={`rakes-${i}`} fill={SIDING_PERF_COLORS[i % SIDING_PERF_COLORS.length]} />
+                                ))}
+                            </Bar>
+                            <Bar dataKey="penalties" stackId="a" name="Penalties" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                        </RechartsBarChart>
+                    </ResponsiveContainer>
                 </div>
-
-                {/* Penalty amount per siding */}
                 <div>
                     <p className="mb-2 text-xs font-medium text-muted-foreground">Penalty amount by siding</p>
-                    <BarChart
-                        data={chartData as Record<string, unknown>[]}
-                        xKey="name"
-                        yKey="penalty_amount"
-                        yLabel="₹"
-                        height={260}
-                        color="#ef4444"
-                        formatTooltip={(v) => `₹${v.toLocaleString()}`}
-                    />
+                    <ResponsiveContainer width="100%" height={260}>
+                        <RechartsBarChart data={chartData} layout="vertical" margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
+                            <XAxis type="number" tickFormatter={(v) => formatCurrency(v)} tick={{ fontSize: 12 }} />
+                            <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 12 }} />
+                            <Tooltip formatter={(v: number) => [formatCurrency(v), 'Penalty']} />
+                            <Bar dataKey="penalty_amount" radius={[4, 4, 0, 0]}>
+                                {chartData.map((_, i) => (
+                                    <Cell key={i} fill={SIDING_PERF_COLORS[i % SIDING_PERF_COLORS.length]} />
+                                ))}
+                            </Bar>
+                        </RechartsBarChart>
+                    </ResponsiveContainer>
                 </div>
             </div>
 
-            {/* Penalty rate visual bars */}
+            {/* Penalty rate visual bars (same siding colors) */}
             <div className="mt-5">
                 <p className="mb-3 text-xs font-medium text-muted-foreground">Penalty rate by siding</p>
                 <div className="space-y-3">
-                    {data.map((s) => {
-                        const rateColor =
-                            s.penalty_rate > 50
-                                ? 'bg-red-500'
-                                : s.penalty_rate > 25
-                                  ? 'bg-amber-500'
-                                  : 'bg-green-500';
-                        const rateTextColor =
-                            s.penalty_rate > 50
-                                ? 'text-red-600 dark:text-red-400'
-                                : s.penalty_rate > 25
-                                  ? 'text-amber-600 dark:text-amber-400'
-                                  : 'text-green-600 dark:text-green-400';
-                        return (
-                            <div key={s.name} className="group">
-                                <div className="mb-1 flex items-center justify-between text-sm">
-                                    <span className="font-medium">{s.name}</span>
-                                    <span className={`font-bold tabular-nums ${rateTextColor}`}>{s.penalty_rate}%</span>
-                                </div>
-                                <div className="h-3 w-full overflow-hidden rounded-full bg-muted">
-                                    <div
-                                        className={`h-full rounded-full transition-all duration-500 ${rateColor}`}
-                                        style={{ width: `${Math.min(s.penalty_rate, 100)}%` }}
-                                    />
-                                </div>
-                                <div className="mt-0.5 flex justify-between text-xs text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
-                                    <span>{s.rakes} rakes, {s.penalties} penalties</span>
-                                    <span>{formatCurrency(s.penalty_amount)}</span>
-                                </div>
+                    {data.map((s, i) => (
+                        <div key={s.name} className="group">
+                            <div className="mb-1 flex items-center justify-between text-sm">
+                                <span className="font-medium">{s.name}</span>
+                                <span className="font-bold tabular-nums text-muted-foreground">{s.penalty_rate}%</span>
                             </div>
-                        );
-                    })}
+                            <div className="h-3 w-full overflow-hidden rounded-full bg-muted">
+                                <div
+                                    className="h-full rounded-full transition-all duration-500"
+                                    style={{
+                                        width: `${Math.min(s.penalty_rate, 100)}%`,
+                                        backgroundColor: SIDING_PERF_COLORS[i % SIDING_PERF_COLORS.length],
+                                    }}
+                                />
+                            </div>
+                            <div className="mt-0.5 flex justify-between text-xs text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
+                                <span>{s.rakes} rakes, {s.penalties} penalties</span>
+                                <span>{formatCurrency(s.penalty_amount)}</span>
+                            </div>
+                        </div>
+                    ))}
                 </div>
             </div>
         </div>
     );
 }
 
-const DISPATCH_COLORS = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)', '#8b5cf6', '#ec4899', '#14b8a6'];
-const PENALTY_COLORS = ['#ef4444', '#f97316', '#eab308', '#f43f5e', '#d946ef', '#a855f7', '#e11d48', '#c2410c'];
+const DISPATCH_COLORS = [DASHBOARD_PALETTE.steelBlue, DASHBOARD_PALETTE.successGreen, DASHBOARD_PALETTE.safetyYellow, DASHBOARD_PALETTE.steelBlueLight, DASHBOARD_PALETTE.successGreenLight];
+const PENALTY_COLORS = [DASHBOARD_PALETTE.alertRed, DASHBOARD_PALETTE.safetyYellow, DASHBOARD_PALETTE.alertRedLight, DASHBOARD_PALETTE.darkGrey];
 
 function DateWiseDispatchSection({ data }: { data: DateWiseDispatchData }) {
     const { sidingNames, dates } = data;
@@ -707,7 +676,7 @@ function RakePerformanceSection({ rakes }: { rakes: RakePerformanceItem[] }) {
                             yKey="value"
                             yLabel="MT"
                             height={220}
-                            color="var(--chart-2)"
+                            color={DASHBOARD_PALETTE.steelBlue}
                             formatTooltip={(v) => `${v.toLocaleString()} MT`}
                         />
                     ) : (
@@ -840,8 +809,8 @@ function LoaderOverloadSection({ loaders, monthly }: { loaders: LoaderInfo[]; mo
                         barLabel="Total wagons"
                         lineLabel="Overloaded"
                         height={240}
-                        barColor="var(--chart-1)"
-                        lineColor="var(--chart-4)"
+                        barColor={DASHBOARD_PALETTE.steelBlue}
+                        lineColor={DASHBOARD_PALETTE.successGreen}
                         formatTooltip={(v, name) =>
                             name === 'total' ? `${v} wagons` : `${v} overloaded`
                         }
@@ -855,7 +824,7 @@ function LoaderOverloadSection({ loaders, monthly }: { loaders: LoaderInfo[]; mo
                         yKey="value"
                         yLabel="Overloaded"
                         height={240}
-                        color="var(--chart-4)"
+                        color={DASHBOARD_PALETTE.safetyYellow}
                         formatTooltip={(v) => `${v} wagons`}
                     />
                 </div>
@@ -864,10 +833,152 @@ function LoaderOverloadSection({ loaders, monthly }: { loaders: LoaderInfo[]; mo
     );
 }
 
-function DashboardFiltersBar({ sidings, filters }: { sidings: SidingOption[]; filters: DashboardFilters }) {
+const SIDING_COLORS = [DASHBOARD_PALETTE.steelBlue, DASHBOARD_PALETTE.successGreen, DASHBOARD_PALETTE.safetyYellow, DASHBOARD_PALETTE.steelBlueLight, DASHBOARD_PALETTE.successGreenLight];
+
+function PowerPlantDispatchSection({ data }: { data: PowerPlantDispatchItem[] }) {
+    const totalRakes = useMemo(() => data.reduce((sum, pp) => sum + pp.rakes, 0), [data]);
+    const totalWeight = useMemo(() => data.reduce((sum, pp) => sum + pp.weight_mt, 0), [data]);
+    const allSidingNames = useMemo(() => {
+        const names = new Set<string>();
+        data.forEach((pp) => Object.keys(pp.sidings).forEach((s) => names.add(s)));
+        return Array.from(names);
+    }, [data]);
+    const maxWeight = useMemo(() => Math.max(...data.map((pp) => pp.weight_mt), 1), [data]);
+
+    const stackedChartData = useMemo(
+        () =>
+            data.map((pp) => {
+                const row: Record<string, unknown> = { name: pp.name };
+                allSidingNames.forEach((sn) => {
+                    row[sn] = pp.sidings[sn]?.rakes ?? 0;
+                });
+                return row;
+            }),
+        [data, allSidingNames],
+    );
+
+    if (data.length === 0) {
+        return (
+            <div className="rounded-xl border bg-card p-5">
+                <SectionHeader icon={Factory} title="Power plant wise dispatch" subtitle="Summary by destination (from weighment data)" />
+                <div className="mt-6 flex flex-col items-center justify-center py-10 text-center text-muted-foreground">
+                    <Factory className="mb-3 h-10 w-10 opacity-30" />
+                    <p className="text-sm font-medium">No dispatch data available</p>
+                    <p className="mt-1 text-xs">Weighment data with destination stations will appear here once rakes are dispatched.</p>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="rounded-xl border bg-card p-5">
+            <SectionHeader icon={Factory} title="Power plant wise dispatch" subtitle="Summary by destination (from weighment data)" />
+            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div className="rounded-lg border bg-muted/20 p-3 text-center">
+                    <div className="text-xs text-muted-foreground">Destinations</div>
+                    <div className="mt-1 text-xl font-bold tabular-nums">{data.length}</div>
+                </div>
+                <div className="rounded-lg border bg-muted/20 p-3 text-center">
+                    <div className="text-xs text-muted-foreground">Total rakes</div>
+                    <div className="mt-1 text-xl font-bold tabular-nums">{totalRakes}</div>
+                </div>
+                <div className="rounded-lg border bg-muted/20 p-3 text-center">
+                    <div className="text-xs text-muted-foreground">Total weight</div>
+                    <div className="mt-1 text-xl font-bold tabular-nums">{formatWeight(totalWeight)}</div>
+                </div>
+                <div className="rounded-lg border bg-muted/20 p-3 text-center">
+                    <div className="text-xs text-muted-foreground">Avg per destination</div>
+                    <div className="mt-1 text-xl font-bold tabular-nums">{data.length > 0 ? formatWeight(totalWeight / data.length) : '—'}</div>
+                </div>
+            </div>
+
+            <div className="mt-5 grid gap-4 lg:grid-cols-2">
+                <div>
+                    <h4 className="mb-2 text-sm font-semibold text-muted-foreground">Rakes dispatched per destination (siding-wise)</h4>
+                    <ResponsiveContainer width="100%" height={Math.max(260, data.length * 40)}>
+                        <RechartsBarChart data={stackedChartData} layout="vertical" margin={{ left: 10, right: 20, top: 5, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                            <XAxis type="number" allowDecimals={false} />
+                            <YAxis dataKey="name" type="category" width={120} tick={{ fontSize: 11 }} />
+                            <Tooltip />
+                            <Legend />
+                            {allSidingNames.map((sn, i) => (
+                                <Bar key={sn} dataKey={sn} stackId="rakes" fill={SIDING_COLORS[i % SIDING_COLORS.length]} />
+                            ))}
+                        </RechartsBarChart>
+                    </ResponsiveContainer>
+                </div>
+
+                <div>
+                    <h4 className="mb-2 text-sm font-semibold text-muted-foreground">Weight dispatched (MT)</h4>
+                    <BarChart
+                        data={data as Record<string, unknown>[]}
+                        xKey="name"
+                        yKey="weight_mt"
+                        yLabel="Weight"
+                        height={Math.max(260, data.length * 40)}
+                        color={DASHBOARD_PALETTE.steelBlue}
+                        formatY={(v) => formatWeight(v)}
+                        formatTooltip={(v) => `${v.toLocaleString()} MT`}
+                    />
+                </div>
+            </div>
+
+            <div className="mt-5 space-y-2">
+                <h4 className="text-sm font-semibold text-muted-foreground">Destination breakdown</h4>
+                {data.map((pp, i) => (
+                    <div key={pp.name} className="group rounded-lg border bg-muted/20 p-3 transition-colors hover:bg-muted/40">
+                        <div className="flex items-center justify-between">
+                            <span className="text-sm font-semibold">{pp.name}</span>
+                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                <span className="tabular-nums">{pp.rakes} rakes</span>
+                                <span className="tabular-nums">{formatWeight(pp.weight_mt)}</span>
+                            </div>
+                        </div>
+                        <div className="mt-1.5 flex flex-wrap gap-2">
+                            {Object.entries(pp.sidings).map(([sidingName, info], si) => (
+                                <span
+                                    key={sidingName}
+                                    className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs"
+                                    style={{ backgroundColor: `color-mix(in srgb, ${SIDING_COLORS[si % SIDING_COLORS.length]} 15%, transparent)` }}
+                                >
+                                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: SIDING_COLORS[si % SIDING_COLORS.length] }} />
+                                    {sidingName}: {info.rakes} rakes, {formatWeight(info.weight_mt)}
+                                </span>
+                            ))}
+                        </div>
+                        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                            <div
+                                className="h-full rounded-full transition-all"
+                                style={{
+                                    width: `${Math.min(100, (pp.weight_mt / maxWeight) * 100)}%`,
+                                    backgroundColor: SIDING_COLORS[i % SIDING_COLORS.length],
+                                }}
+                            />
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+function DashboardFiltersBar({
+    sidings,
+    filters,
+    filterOptions,
+}: {
+    sidings: SidingOption[];
+    filters: DashboardFilters;
+    filterOptions: FilterOptions;
+}) {
     const [customFrom, setCustomFrom] = useState(filters.from);
     const [customTo, setCustomTo] = useState(filters.to);
     const [showSidingDropdown, setShowSidingDropdown] = useState(false);
+    const [rakeNumberInput, setRakeNumberInput] = useState(filters.rake_number ?? '');
+    useEffect(() => {
+        setRakeNumberInput(filters.rake_number ?? '');
+    }, [filters.rake_number]);
 
     const allSidingIds = useMemo(() => sidings.map((s) => s.id), [sidings]);
 
@@ -889,7 +1000,7 @@ function DashboardFiltersBar({ sidings, filters }: { sidings: SidingOption[]; fi
 
     const applyFilters = useCallback((overrides: Record<string, unknown> = {}) => {
         const params: Record<string, unknown> = {
-            period: filters.period,
+            period: overrides.period ?? filters.period,
             ...overrides,
         };
 
@@ -902,6 +1013,15 @@ function DashboardFiltersBar({ sidings, filters }: { sidings: SidingOption[]; fi
         if (sidingIds.length > 0 && sidingIds.length < allSidingIds.length) {
             params.siding_ids = sidingIds;
         }
+
+        const powerPlant = (overrides.power_plant !== undefined ? overrides.power_plant : filters.power_plant) ?? '';
+        if (powerPlant !== '') params.power_plant = powerPlant;
+        const rakeNumber = (overrides.rake_number !== undefined ? overrides.rake_number : filters.rake_number) ?? '';
+        if (rakeNumber !== '') params.rake_number = rakeNumber;
+        const loaderId = (overrides.loader_id !== undefined ? overrides.loader_id : filters.loader_id) ?? '';
+        if (loaderId !== '') params.loader_id = loaderId;
+        const shift = (overrides.shift !== undefined ? overrides.shift : filters.shift) ?? '';
+        if (shift !== '') params.shift = shift;
 
         router.get(dashboard().url, params as Record<string, string>, {
             preserveState: true,
@@ -997,6 +1117,69 @@ function DashboardFiltersBar({ sidings, filters }: { sidings: SidingOption[]; fi
                     </div>
                 )}
 
+                <Select
+                    value={filters.power_plant ?? ALL_FILTER_VALUE}
+                    onValueChange={(v) => applyFilters({ power_plant: v === ALL_FILTER_VALUE ? null : v })}
+                >
+                    <SelectTrigger className="h-8 w-[180px] text-xs">
+                        <SelectValue placeholder="Power plant" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value={ALL_FILTER_VALUE} className="text-xs">All power plants</SelectItem>
+                        {filterOptions.powerPlants.map((pp) => (
+                            <SelectItem key={pp.value} value={pp.value} className="text-xs">
+                                {pp.label}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+
+                <div className="flex items-center gap-1.5">
+                    <input
+                        type="text"
+                        placeholder="Rake number"
+                        value={rakeNumberInput}
+                        onChange={(e) => setRakeNumberInput(e.target.value)}
+                        onBlur={() => applyFilters({ rake_number: rakeNumberInput.trim() || null })}
+                        onKeyDown={(e) => e.key === 'Enter' && applyFilters({ rake_number: rakeNumberInput.trim() || null })}
+                        className="w-28 rounded-lg border bg-background px-2.5 py-1.5 text-xs"
+                    />
+                </div>
+
+                <Select
+                    value={filters.loader_id != null ? String(filters.loader_id) : ALL_FILTER_VALUE}
+                    onValueChange={(v) => applyFilters({ loader_id: v === ALL_FILTER_VALUE ? null : Number(v) })}
+                >
+                    <SelectTrigger className="h-8 w-[180px] text-xs">
+                        <SelectValue placeholder="Loader" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value={ALL_FILTER_VALUE} className="text-xs">All loaders</SelectItem>
+                        {filterOptions.loaders.map((l) => (
+                            <SelectItem key={l.id} value={String(l.id)} className="text-xs">
+                                {l.name} ({l.siding_name})
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+
+                <Select
+                    value={filters.shift ?? ALL_FILTER_VALUE}
+                    onValueChange={(v) => applyFilters({ shift: v === ALL_FILTER_VALUE ? null : v })}
+                >
+                    <SelectTrigger className="h-8 w-[100px] text-xs">
+                        <SelectValue placeholder="Shift" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value={ALL_FILTER_VALUE} className="text-xs">All shifts</SelectItem>
+                        {filterOptions.shifts.map((s) => (
+                            <SelectItem key={s.value} value={s.value} className="text-xs">
+                                {s.label}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+
                 <div className="relative ml-auto">
                     <button
                         type="button"
@@ -1087,8 +1270,36 @@ function DashboardFiltersBar({ sidings, filters }: { sidings: SidingOption[]; fi
 
 export default function Dashboard() {
     const props = usePage<DashboardProps>().props;
+    const [activeSection, setActiveSection] = useState<string>(DEFAULT_DASHBOARD_SECTION);
     const sidings = props.sidings ?? [];
-    const filters = props.filters ?? { period: 'month', from: '', to: '', siding_ids: [] };
+    const defaultFilters: DashboardFilters = {
+        period: 'month',
+        from: '',
+        to: '',
+        siding_ids: [],
+        power_plant: null,
+        rake_number: null,
+        loader_id: null,
+        shift: null,
+    };
+    const filters: DashboardFilters = {
+        ...defaultFilters,
+        ...(props.filters ?? {}),
+        power_plant: props.filters?.power_plant ?? null,
+        rake_number: props.filters?.rake_number ?? null,
+        loader_id: props.filters?.loader_id ?? null,
+        shift: props.filters?.shift ?? null,
+    };
+    const filterOptions = props.filterOptions ?? { powerPlants: [], loaders: [], shifts: [] };
+    const kpis = props.kpis;
+    const penaltyTrendDaily = props.penaltyTrendDaily ?? [];
+    const penaltyByType = props.penaltyByType ?? [];
+    const penaltyBySiding = props.penaltyBySiding ?? [];
+    const alerts = props.alerts ?? [];
+    const liveRakeStatus = props.liveRakeStatus ?? [];
+    const truckReceiptTrend = props.truckReceiptTrend ?? [];
+    const stockGauge = props.stockGauge;
+    const predictedVsActualPenalty = props.predictedVsActualPenalty ?? { predicted: 0, actual: 0 };
     const sidingStocks = props.sidingStocks ?? {};
     const sidingPerformance = props.sidingPerformance ?? [];
     const sidingWiseMonthly = props.sidingWiseMonthly ?? [];
@@ -1112,139 +1323,364 @@ export default function Dashboard() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dashboard" />
             <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-1">
-                <h2 className="text-xl font-semibold tracking-tight">
-                    Management Dashboard
-                </h2>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <h2 className="text-xl font-semibold tracking-tight">
+                        Management Dashboard
+                    </h2>
+                    <Select value={activeSection} onValueChange={setActiveSection}>
+                        <SelectTrigger className="w-full sm:w-64">
+                            <SelectValue placeholder="Select section" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {DASHBOARD_SECTIONS.map((s) => (
+                                <SelectItem key={s.id} value={s.id}>
+                                    {s.label}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
 
                 {sidings.length > 0 && (
-                    <DashboardFiltersBar sidings={sidings} filters={filters} />
+                    <DashboardFiltersBar sidings={sidings} filters={filters} filterOptions={filterOptions} />
                 )}
 
-                {/* ═══════════════════════════════════════════
-                    1. SIDING-WISE DASHBOARD (Pakur / Dumka / Kurwa)
-                    ═══════════════════════════════════════════ */}
-
-                {sidings.length > 0 && (
-                    <div className="space-y-4">
-                        {Object.keys(sidingStocks).length > 0 && (
-                            <SidingStockSection sidings={filteredSidings} stocks={sidingStocks} />
-                        )}
-
-                        {sidingRadar.sidings.length > 0 && (
-                            <SidingComparisonVertical data={sidingRadar.sidings} />
-                        )}
-
-                        {sidingWiseMonthly.length > 0 && sidingStackKeys.length > 0 && (
-                            <div className="rounded-xl border bg-card p-5">
-                                <SectionHeader icon={BarChart3} title="Siding-wise monthly dispatch" subtitle="Rakes dispatched per siding" />
-                                <div className="mt-4">
-                                    <StackedBarChart
-                                        data={sidingWiseMonthly}
-                                        xKey="month"
-                                        stackKeys={sidingStackKeys}
-                                        yLabel="Rakes"
-                                        height={300}
-                                        allowDecimals={false}
-                                        formatTooltip={(v) => `${v} rakes`}
-                                    />
-                                </div>
+                {sidings.length > 0 && kpis && (
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+                        <div className="rounded-xl border bg-card p-4 text-center">
+                            <div className="text-xs font-medium text-muted-foreground">Rakes dispatched today</div>
+                            <div className="mt-1 text-2xl font-bold tabular-nums">{kpis.rakesDispatchedToday}</div>
+                        </div>
+                        <div className="rounded-xl border bg-card p-4 text-center">
+                            <div className="text-xs font-medium text-muted-foreground">Coal dispatched today</div>
+                            <div className="mt-1 text-2xl font-bold tabular-nums">{formatWeight(kpis.coalDispatchedToday)}</div>
+                        </div>
+                        <div className="rounded-xl border bg-card p-4 text-center">
+                            <div className="text-xs font-medium text-muted-foreground">Penalty this month</div>
+                            <div className="mt-1 text-2xl font-bold tabular-nums">{formatCurrency(kpis.totalPenaltyThisMonth)}</div>
+                        </div>
+                        <div className="rounded-xl border bg-card p-4 text-center">
+                            <div className="text-xs font-medium text-muted-foreground">Predicted penalty risk</div>
+                            <div className="mt-1 text-2xl font-bold tabular-nums">{formatCurrency(kpis.predictedPenaltyRisk)}</div>
+                        </div>
+                        <div className="rounded-xl border bg-card p-4 text-center">
+                            <div className="text-xs font-medium text-muted-foreground">Avg loading time</div>
+                            <div className="mt-1 text-2xl font-bold tabular-nums">
+                                {kpis.avgLoadingTimeMinutes != null ? `${Math.floor(kpis.avgLoadingTimeMinutes / 60)}h ${kpis.avgLoadingTimeMinutes % 60}m` : '—'}
                             </div>
-                        )}
-
-                        {sidingPerformance.length > 0 && (
-                            <SidingPerformanceSection data={sidingPerformance} />
-                        )}
-                    </div>
-                )}
-
-                {/* ═══════════════════════════════════════════
-                    2. DATE-WISE RAIL DISPATCH & PENALTIES
-                    ═══════════════════════════════════════════ */}
-
-                {dateWiseDispatch.dates.length > 0 && (
-                    <DateWiseDispatchSection data={dateWiseDispatch} />
-                )}
-
-                {/* ═══════════════════════════════════════════
-                    3. RAKE-WISE PERFORMANCE
-                    ═══════════════════════════════════════════ */}
-
-                {rakePerformance.length > 0 && (
-                    <RakePerformanceSection rakes={rakePerformance} />
-                )}
-
-                {/* ═══════════════════════════════════════════
-                    4. LOADER-WISE OVERLOADING TRENDS
-                    ═══════════════════════════════════════════ */}
-
-                {loaderOverloadTrends.loaders.length > 0 && (
-                    <LoaderOverloadSection
-                        loaders={loaderOverloadTrends.loaders}
-                        monthly={loaderOverloadTrends.monthly}
-                    />
-                )}
-
-                {/* ═══════════════════════════════════════════
-                    5. POWER PLANT WISE DISPATCH
-                    ═══════════════════════════════════════════ */}
-
-                {powerPlantDispatch.length > 0 && (
-                    <div className="rounded-xl border bg-card p-5">
-                        <SectionHeader
-                            icon={Factory}
-                            title="Power plant wise dispatch"
-                            subtitle="Summary by destination power plant"
-                        />
-                        <div className="mt-4 grid gap-4 lg:grid-cols-3">
-                            <div className="lg:col-span-2">
-                                <BarChart
-                                    data={powerPlantDispatch}
-                                    xKey="name"
-                                    yKey="weight_mt"
-                                    yLabel="Weight dispatched"
-                                    height={280}
-                                    color="var(--chart-2)"
-                                    formatY={(v) => formatWeight(v)}
-                                    formatTooltip={(v) => `${v.toLocaleString()} MT`}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                {powerPlantDispatch.map((pp, i) => (
-                                    <div key={pp.name} className="rounded-lg border bg-muted/20 p-3">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-sm font-semibold">{pp.name}</span>
-                                            <span className={
-                                                'rounded-full px-2 py-0.5 text-xs font-semibold ' +
-                                                (Math.abs(pp.avg_variance_pct) > 2
-                                                    ? 'bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400'
-                                                    : 'bg-green-100 text-green-700 dark:bg-green-950/50 dark:text-green-400')
-                                            }>
-                                                {pp.avg_variance_pct > 0 ? '+' : ''}{pp.avg_variance_pct}% variance
-                                            </span>
-                                        </div>
-                                        <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
-                                            <span className="tabular-nums">{pp.rakes} rakes</span>
-                                            <span className="tabular-nums">{formatWeight(pp.weight_mt)}</span>
-                                        </div>
-                                        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                                            <div
-                                                className="h-full rounded-full"
-                                                style={{
-                                                    width: `${Math.min(100, (pp.weight_mt / Math.max(...powerPlantDispatch.map((p) => p.weight_mt))) * 100)}%`,
-                                                    backgroundColor: `var(--chart-${(i % 5) + 1})`,
-                                                }}
-                                            />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                        </div>
+                        <div className="rounded-xl border bg-card p-4 text-center">
+                            <div className="text-xs font-medium text-muted-foreground">Trucks received today</div>
+                            <div className="mt-1 text-2xl font-bold tabular-nums">{kpis.trucksReceivedToday}</div>
                         </div>
                     </div>
                 )}
 
-                {sidings.length === 0 && (
+                {sidings.length === 0 ? (
                     <div className="rounded-xl border bg-card p-8 text-center text-sm text-muted-foreground">
                         <p>No sidings assigned to your account. Contact your administrator to get access.</p>
+                    </div>
+                ) : (
+                    <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
+                        <div className="min-w-0 space-y-6">
+                        {activeSection === 'executive-overview' && (
+                            <div className="space-y-6">
+                                {sidingPerformance.length > 0 ? (
+                                    <SidingPerformanceSection data={sidingPerformance} />
+                                ) : (
+                                    <div className="rounded-xl border bg-card p-5">
+                                        <SectionHeader icon={BarChart3} title="Siding performance" subtitle="Rakes, coal & penalty by siding" />
+                                        <div className="mt-4 py-8 text-center text-sm text-muted-foreground">No performance data for selected filters.</div>
+                                    </div>
+                                )}
+                                <div className="rounded-xl border bg-card p-5">
+                                    <SectionHeader icon={Calendar} title="Penalty trend (last 30 days)" subtitle="Date vs penalty amount" />
+                                    {penaltyTrendDaily.length > 0 ? (
+                                        <ResponsiveContainer width="100%" height={280}>
+                                            <RechartsLineChart data={penaltyTrendDaily} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
+                                                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                                                <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                                                <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => formatCurrency(v)} />
+                                                <Tooltip formatter={(v: number) => [formatCurrency(v), 'Penalty']} />
+                                                <Line type="monotone" dataKey="total" stroke={DASHBOARD_PALETTE.alertRed} strokeWidth={2} dot={{ r: 2 }} name="Penalty" />
+                                            </RechartsLineChart>
+                                        </ResponsiveContainer>
+                                    ) : (
+                                        <div className="mt-4 py-8 text-center text-sm text-muted-foreground">No penalty data for last 30 days.</div>
+                                    )}
+                                </div>
+                                <div className="rounded-xl border bg-card p-5">
+                                    <SectionHeader icon={Factory} title="Power plant dispatch distribution" subtitle="Coal supply by destination" />
+                                    {powerPlantDispatch.length > 0 ? (
+                                        <PieChart
+                                            data={powerPlantDispatch.map((pp) => ({
+                                                name: pp.name,
+                                                value: Math.round((pp.weight_mt / Math.max(1, powerPlantDispatch.reduce((s, p) => s + p.weight_mt, 0))) * 100),
+                                            }))}
+                                            nameKey="name"
+                                            valueKey="value"
+                                            height={280}
+                                            innerRadius={60}
+                                            formatTooltip={(v) => `${v}%`}
+                                        />
+                                    ) : (
+                                        <div className="mt-4 py-8 text-center text-sm text-muted-foreground">No power plant dispatch data.</div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {activeSection === 'operations' && (
+                            <div className="space-y-6">
+                                <div className="rounded-xl border bg-card p-5">
+                                    <SectionHeader icon={Train} title="Live rake status" subtitle="Active rakes (not yet dispatched)" />
+                                    {liveRakeStatus.length > 0 ? (
+                                        <div className="mt-4 overflow-x-auto">
+                                            <table className="w-full text-sm">
+                                                <thead>
+                                                    <tr className="border-b text-left text-muted-foreground">
+                                                        <th className="pb-2 font-medium">Rake</th>
+                                                        <th className="pb-2 font-medium">Siding</th>
+                                                        <th className="pb-2 font-medium">Status</th>
+                                                        <th className="pb-2 font-medium">Time elapsed</th>
+                                                        <th className="pb-2 font-medium">Risk</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {liveRakeStatus.map((row, i) => (
+                                                        <tr key={i} className="border-b last:border-0">
+                                                            <td className="py-2 font-medium">{row.rake_number}</td>
+                                                            <td className="py-2">{row.siding_name}</td>
+                                                            <td className="py-2">{row.state}</td>
+                                                            <td className="py-2 tabular-nums">{row.time_elapsed}</td>
+                                                            <td className="py-2">
+                                                                <span className={
+                                                                    row.risk === 'penalty_risk' ? 'text-red-600 dark:text-red-400' :
+                                                                    row.risk === 'attention' ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground'
+                                                                }>
+                                                                    {row.risk === 'penalty_risk' ? 'Penalty risk' : row.risk === 'attention' ? 'Attention' : 'Normal'}
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    ) : (
+                                        <div className="mt-4 py-8 text-center text-sm text-muted-foreground">No active rakes.</div>
+                                    )}
+                                </div>
+                                <div className="rounded-xl border bg-card p-5">
+                                    <SectionHeader icon={BarChart3} title="Truck receipt trend" subtitle="Trips per hour (today)" />
+                                    {truckReceiptTrend.length > 0 ? (
+                                        <ResponsiveContainer width="100%" height={260}>
+                                            <RechartsBarChart data={truckReceiptTrend} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
+                                                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                                                <XAxis dataKey="label" tick={{ fontSize: 10 }} />
+                                                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                                                <Tooltip formatter={(v: number) => [v, 'Trips']} />
+                                                <Bar dataKey="count" fill={DASHBOARD_PALETTE.steelBlue} name="Trips" radius={[4, 4, 0, 0]} />
+                                            </RechartsBarChart>
+                                        </ResponsiveContainer>
+                                    ) : (
+                                        <div className="mt-4 py-8 text-center text-sm text-muted-foreground">No truck receipt data for today.</div>
+                                    )}
+                                </div>
+                                <div className="rounded-xl border bg-card p-5">
+                                    <SectionHeader
+                                        icon={Zap}
+                                        title="Stock vs requirement"
+                                        subtitle="Minimum 3,800 MT per rake — side-wise"
+                                    />
+                                    {stockGauge && stockGauge.length > 0 ? (
+                                        <div className="mt-4 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                                            {stockGauge.map((item) => (
+                                                <SemiCircleGauge
+                                                    key={item.siding_id}
+                                                    title={item.siding_name}
+                                                    value={item.stock_available_mt}
+                                                    required={item.rake_required_mt}
+                                                    status={item.status}
+                                                    formatValue={formatWeight}
+                                                    colors={{
+                                                        redTrack: '#fecaca',
+                                                        redFill: DASHBOARD_PALETTE.alertRed,
+                                                        greenTrack: '#bbf7d0',
+                                                        greenFill: DASHBOARD_PALETTE.successGreen,
+                                                        blueTrack: '#bfdbfe',
+                                                        blueFill: DASHBOARD_PALETTE.steelBlue,
+                                                    }}
+                                                />
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="mt-4 py-8 text-center text-sm text-muted-foreground">No stock data.</div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {activeSection === 'penalty-control' && (
+                            <div className="space-y-6">
+                                <div className="rounded-xl border bg-card p-5">
+                                    <SectionHeader icon={BarChart3} title="Penalty by siding" subtitle="Which siding causes most penalties" />
+                                    {penaltyBySiding.length > 0 ? (
+                                        <div className="mt-4">
+                                            <BarChart
+                                                data={penaltyBySiding as Record<string, unknown>[]}
+                                                xKey="name"
+                                                yKey="total"
+                                                yLabel="Penalty"
+                                                height={260}
+                                                color={DASHBOARD_PALETTE.alertRed}
+                                                formatY={(v) => formatCurrency(v)}
+                                                formatTooltip={(v) => formatCurrency(v)}
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div className="mt-4 py-8 text-center text-sm text-muted-foreground">No penalty data for selected period.</div>
+                                    )}
+                                </div>
+                                <div className="rounded-xl border bg-card p-5">
+                                    <SectionHeader icon={AlertTriangle} title="Penalty type distribution" subtitle="Overloading, demurrage, wharfage, etc." />
+                                    {penaltyByType.length > 0 ? (
+                                        <PieChart
+                                            data={penaltyByType}
+                                            nameKey="name"
+                                            valueKey="value"
+                                            height={280}
+                                            innerRadius={0}
+                                            colors={[DASHBOARD_PALETTE.alertRed, DASHBOARD_PALETTE.safetyYellow, DASHBOARD_PALETTE.steelBlue, DASHBOARD_PALETTE.darkGrey]}
+                                            formatTooltip={(v) => formatCurrency(v)}
+                                        />
+                                    ) : (
+                                        <div className="mt-4 py-8 text-center text-sm text-muted-foreground">No penalty type data.</div>
+                                    )}
+                                </div>
+                                <div className="rounded-xl border bg-card p-5">
+                                    <SectionHeader icon={BarChart3} title="Predicted vs actual penalty" subtitle="System accuracy" />
+                                    <div className="mt-4 flex justify-center gap-8">
+                                        <div className="rounded-lg border bg-muted/30 px-6 py-4 text-center">
+                                            <div className="text-xs text-muted-foreground">Predicted</div>
+                                            <div className="text-xl font-bold tabular-nums">{formatCurrency(predictedVsActualPenalty.predicted)}</div>
+                                        </div>
+                                        <div className="rounded-lg border bg-muted/30 px-6 py-4 text-center">
+                                            <div className="text-xs text-muted-foreground">Actual</div>
+                                            <div className="text-xl font-bold tabular-nums">{formatCurrency(predictedVsActualPenalty.actual)}</div>
+                                        </div>
+                                    </div>
+                                    <ResponsiveContainer width="100%" height={200} className="mt-4">
+                                        <RechartsBarChart
+                                            data={[
+                                                { name: 'Predicted', value: predictedVsActualPenalty.predicted },
+                                                { name: 'Actual', value: predictedVsActualPenalty.actual },
+                                            ]}
+                                            margin={{ top: 5, right: 5, left: -10, bottom: 0 }}
+                                        >
+                                            <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                                            <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                                            <YAxis tickFormatter={(v) => formatCurrency(v)} />
+                                            <Tooltip formatter={(v: number) => formatCurrency(v)} />
+                                            <Bar dataKey="value" fill={DASHBOARD_PALETTE.alertRed} radius={[4, 4, 0, 0]} />
+                                        </RechartsBarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeSection === 'siding-performance' && (
+                            sidingPerformance.length > 0 ? (
+                                <SidingPerformanceSection data={sidingPerformance} />
+                            ) : (
+                                    <div className="rounded-xl border bg-card p-5">
+                                        <SectionHeader icon={BarChart3} title="Siding performance" subtitle="Rakes, penalties & penalty rate" />
+                                        <div className="mt-6 flex flex-col items-center justify-center py-10 text-center text-muted-foreground">
+                                            <BarChart3 className="mb-3 h-10 w-10 opacity-30" />
+                                            <p className="text-sm font-medium">No data available</p>
+                                            <p className="mt-1 text-xs">Apply filters or wait for dispatch data.</p>
+                                        </div>
+                                    </div>
+                                )
+                        )}
+
+                        {activeSection === 'siding-stock' && (
+                            Object.keys(sidingStocks).length > 0
+                                ? <SidingStockSection sidings={filteredSidings} stocks={sidingStocks} />
+                                : (
+                                    <div className="rounded-xl border bg-card p-5">
+                                        <SectionHeader icon={BarChart3} title="Siding stock" subtitle="Opening & closing balance with total rakes" />
+                                        <div className="mt-6 flex flex-col items-center justify-center py-10 text-center text-muted-foreground">
+                                            <BarChart3 className="mb-3 h-10 w-10 opacity-30" />
+                                            <p className="text-sm font-medium">No stock data available</p>
+                                            <p className="mt-1 text-xs">Apply filters or wait for stock ledger data.</p>
+                                        </div>
+                                    </div>
+                                )
+                        )}
+
+                        {activeSection === 'rake-performance' && (
+                            rakePerformance.length > 0
+                                ? <RakePerformanceSection rakes={rakePerformance} />
+                                : (
+                                    <div className="rounded-xl border bg-card p-5">
+                                        <SectionHeader icon={Train} title="Rake-wise performance" subtitle="Top dispatched rakes" />
+                                        <div className="mt-6 flex flex-col items-center justify-center py-10 text-center text-muted-foreground">
+                                            <Train className="mb-3 h-10 w-10 opacity-30" />
+                                            <p className="text-sm font-medium">No rake performance data available</p>
+                                            <p className="mt-1 text-xs">Apply filters or wait for dispatch data.</p>
+                                        </div>
+                                    </div>
+                                )
+                        )}
+
+                        {activeSection === 'loader-overload' && (
+                            loaderOverloadTrends.loaders.length > 0
+                                ? (
+                                    <LoaderOverloadSection
+                                        loaders={loaderOverloadTrends.loaders}
+                                        monthly={loaderOverloadTrends.monthly}
+                                    />
+                                )
+                                : (
+                                    <div className="rounded-xl border bg-card p-5">
+                                        <SectionHeader icon={AlertTriangle} title="Loader-wise overloading trends" subtitle="Overload cases by loader" />
+                                        <div className="mt-6 flex flex-col items-center justify-center py-10 text-center text-muted-foreground">
+                                            <AlertTriangle className="mb-3 h-10 w-10 opacity-30" />
+                                            <p className="text-sm font-medium">No loader data available</p>
+                                            <p className="mt-1 text-xs">Apply filters or wait for weighment data.</p>
+                                        </div>
+                                    </div>
+                                )
+                        )}
+
+                        {activeSection === 'power-plant' && (
+                            <PowerPlantDispatchSection data={powerPlantDispatch} />
+                        )}
+                        </div>
+                        {sidings.length > 0 && (
+                            <div className="space-y-3 lg:min-w-0">
+                                <h3 className="text-sm font-semibold text-muted-foreground">Live alerts</h3>
+                                <div className="max-h-[calc(100vh-12rem)] space-y-2 overflow-y-auto rounded-xl border bg-card p-3">
+                                    {alerts.length === 0 ? (
+                                        <p className="py-4 text-center text-xs text-muted-foreground">No active alerts.</p>
+                                    ) : (
+                                        alerts.map((a) => (
+                                            <div
+                                                key={a.id}
+                                                className={`rounded-lg border p-2.5 text-xs ${
+                                                    a.severity === 'critical' ? 'border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/30' :
+                                                    a.severity === 'warning' ? 'border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/30' :
+                                                    'border-border bg-muted/30'
+                                                }`}
+                                            >
+                                                <span className="font-medium">⚠ {a.title}</span>
+                                                <div className="mt-0.5 text-muted-foreground">{new Date(a.created_at).toLocaleString()}</div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
