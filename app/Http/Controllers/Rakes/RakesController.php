@@ -7,10 +7,12 @@ namespace App\Http\Controllers\Rakes;
 use App\DataTables\RakeDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\Rake;
+use App\Models\SectionTimer;
 use App\Models\Siding;
 use App\Models\Wagon;
 use App\Models\WagonType;
 use DateTimeImmutable;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -65,8 +67,16 @@ final class RakesController extends Controller
                 'default_pcc_weight_mt',
             ]);
 
+        $loadingSection = SectionTimer::query()
+            ->where('section_name', 'loading')
+            ->first();
+
+        $rakeArray = $rake->toArray();
+        $rakeArray['loading_warning_minutes'] = $loadingSection?->warning_minutes;
+        $rakeArray['loading_section_free_minutes'] = $loadingSection?->free_minutes ?? 180;
+
         return Inertia::render('rakes/show', [
-            'rake' => $rake,
+            'rake' => $rakeArray,
             'wagonTypes' => $wagonTypes,
             'demurrageRemainingMinutes' => $demurrageRemainingMinutes,
             'demurrage_rate_per_mt_hour' => config('rrmcs.demurrage_rate_per_mt_hour', 50),
@@ -168,6 +178,66 @@ final class RakesController extends Controller
 
         return to_route('rakes.show', $rake)
             ->with('success', 'Rake updated successfully.');
+    }
+
+    public function startLoadingTimer(Request $request, Rake $rake): RedirectResponse|JsonResponse
+    {
+        $freeMinutes = SectionTimer::query()
+            ->where('section_name', 'loading')
+            ->value('free_minutes') ?? 180;
+
+        $rake->update([
+            'loading_start_time' => now(),
+            'loading_end_time' => null,
+            'loading_free_minutes' => $freeMinutes,
+        ]);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'loading_start_time' => $rake->loading_start_time?->toIso8601String(),
+                'loading_free_minutes' => $rake->loading_free_minutes,
+            ]);
+        }
+
+        return to_route('rakes.show', $rake)
+            ->with('success', 'Loading timer started for 3 hours.');
+    }
+
+    public function resetLoadingTimer(Request $request, Rake $rake): RedirectResponse|JsonResponse
+    {
+        $rake->update([
+            'loading_start_time' => null,
+            'loading_end_time' => null,
+            'loading_free_minutes' => null,
+        ]);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'loading_start_time' => null,
+                'loading_end_time' => null,
+            ]);
+        }
+
+        return to_route('rakes.show', $rake)
+            ->with('success', 'Loading timer reset.');
+    }
+
+    public function stopLoadingTimer(Request $request, Rake $rake): RedirectResponse|JsonResponse
+    {
+        $rake->update([
+            'loading_end_time' => now(),
+        ]);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'loading_start_time' => $rake->loading_start_time?->toIso8601String(),
+                'loading_end_time' => $rake->loading_end_time?->toIso8601String(),
+                'loading_free_minutes' => $rake->loading_free_minutes,
+            ]);
+        }
+
+        return to_route('rakes.show', $rake)
+            ->with('success', 'Loading timer stopped.');
     }
 
     /**

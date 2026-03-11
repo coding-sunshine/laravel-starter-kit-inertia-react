@@ -4,13 +4,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import InputError from '@/components/input-error';
-import { Shield, CheckCircle, Clock, AlertTriangle, XCircle } from 'lucide-react';
+import { Shield, CheckCircle, Clock, XCircle, CalendarClock } from 'lucide-react';
 import { useForm, usePage } from '@inertiajs/react';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 interface GuardInspectionRecord {
     id: number;
-    inspection_time: string;
+    inspection_time?: string;
+    inspection_start_time?: string;
     movement_permission_time: string;
     is_approved: boolean;
     remarks: string | null;
@@ -64,6 +69,81 @@ export function GuardInspectionWorkflow({ rake, disabled }: GuardInspectionWorkf
         return isApproved ? "default" : "destructive";
     };
 
+    const inspectionDisplayTime = inspection?.inspection_start_time ?? inspection?.inspection_time ?? '';
+
+    function DateTimePopover({
+        value,
+        onChange,
+        disabled,
+        placeholder,
+    }: {
+        value: string;
+        onChange: (date: string, time: string) => void;
+        disabled: boolean;
+        placeholder: string;
+    }) {
+        const datePart = value ? value.slice(0, 10) : '';
+        const timePart = value ? value.slice(11, 16) : '';
+        const displayDate = datePart ? new Date(value) : null;
+
+        return (
+            <Popover>
+                <PopoverTrigger asChild>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        disabled={disabled}
+                        className={cn(
+                            'w-full justify-start text-left font-normal min-h-9',
+                            !displayDate && 'text-muted-foreground'
+                        )}
+                    >
+                        <CalendarClock className="mr-2 h-4 w-4" />
+                        {displayDate ? (
+                            <>
+                                {format(displayDate, 'dd MMM yyyy')} · {timePart || '00:00'}
+                            </>
+                        ) : (
+                            placeholder
+                        )}
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                    <div className="p-3 border-b">
+                        <Calendar
+                            mode="single"
+                            selected={datePart ? new Date(datePart) : undefined}
+                            onSelect={(d) => onChange(d ? d.toISOString().slice(0, 10) : '', timePart)}
+                            initialFocus
+                            disabled={disabled}
+                        />
+                    </div>
+                    <div className="p-3 flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <Input
+                            type="time"
+                            value={timePart}
+                            onChange={(e) =>
+                                onChange(datePart || new Date().toISOString().slice(0, 10), e.target.value)
+                            }
+                            disabled={disabled}
+                            className="w-full"
+                        />
+                    </div>
+                </PopoverContent>
+            </Popover>
+        );
+    }
+
+    const setInspectionTime = (date: string, time: string) => {
+        const d = date || (time ? new Date().toISOString().slice(0, 10) : '');
+        setData('inspection_time', d ? `${d}T${time || '00:00'}` : '');
+    };
+    const setMovementPermissionTime = (date: string, time: string) => {
+        const d = date || (time ? new Date().toISOString().slice(0, 10) : '');
+        setData('movement_permission_time', d ? `${d}T${time || '00:00'}` : '');
+    };
+
     return (
         <Card>
             <CardHeader>
@@ -89,27 +169,33 @@ export function GuardInspectionWorkflow({ rake, disabled }: GuardInspectionWorkf
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
                                 <Label htmlFor="inspection_time">Inspection Time</Label>
-                                <Input
-                                    id="inspection_time"
-                                    name="inspection_time"
-                                    type="datetime-local"
+                                <DateTimePopover
                                     value={data.inspection_time}
-                                    onChange={(e) => setData('inspection_time', e.target.value)}
-                                    required
+                                    onChange={setInspectionTime}
                                     disabled={disabled}
+                                    placeholder="Select date & time"
+                                />
+                                <input
+                                    type="hidden"
+                                    name="inspection_time"
+                                    value={data.inspection_time}
+                                    required
                                 />
                                 <InputError message={errors?.inspection_time} />
                             </div>
                             <div>
                                 <Label htmlFor="movement_permission_time">Movement Permission Time</Label>
-                                <Input
-                                    id="movement_permission_time"
-                                    name="movement_permission_time"
-                                    type="datetime-local"
+                                <DateTimePopover
                                     value={data.movement_permission_time}
-                                    onChange={(e) => setData('movement_permission_time', e.target.value)}
-                                    required
+                                    onChange={setMovementPermissionTime}
                                     disabled={disabled}
+                                    placeholder="Select date & time"
+                                />
+                                <input
+                                    type="hidden"
+                                    name="movement_permission_time"
+                                    value={data.movement_permission_time}
+                                    required
                                 />
                                 <InputError message={errors?.movement_permission_time} />
                             </div>
@@ -159,7 +245,9 @@ export function GuardInspectionWorkflow({ rake, disabled }: GuardInspectionWorkf
                             <div>
                                 <Label>Inspection Time</Label>
                                 <p className="text-sm">
-                                    {new Date(inspection.inspection_time).toLocaleString()}
+                                    {inspectionDisplayTime
+                                        ? new Date(inspectionDisplayTime).toLocaleString()
+                                        : '-'}
                                 </p>
                             </div>
                             <div>
@@ -216,21 +304,23 @@ export function GuardInspectionWorkflow({ rake, disabled }: GuardInspectionWorkf
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {rake.guardInspections.map((inspection) => (
-                                    <TableRow key={inspection.id}>
+                                {rake.guardInspections.map((insp) => (
+                                    <TableRow key={insp.id}>
                                         <TableCell>
-                                            {new Date(inspection.inspection_time).toLocaleString()}
+                                            {(insp.inspection_start_time ?? insp.inspection_time)
+                                                ? new Date(insp.inspection_start_time ?? insp.inspection_time!).toLocaleString()
+                                                : '-'}
                                         </TableCell>
                                         <TableCell>
-                                            {new Date(inspection.movement_permission_time).toLocaleString()}
+                                            {new Date(insp.movement_permission_time).toLocaleString()}
                                         </TableCell>
                                         <TableCell>
-                                            <Badge variant={inspection.is_approved ? "default" : "destructive"}>
-                                                {inspection.is_approved ? 'Approved' : 'Rejected'}
+                                            <Badge variant={insp.is_approved ? "default" : "destructive"}>
+                                                {insp.is_approved ? 'Approved' : 'Rejected'}
                                             </Badge>
                                         </TableCell>
                                         <TableCell>
-                                            {inspection.remarks || '-'}
+                                            {insp.remarks || '-'}
                                         </TableCell>
                                     </TableRow>
                                 ))}

@@ -192,17 +192,25 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::put('rakes/{rake}', [RakesController::class, 'update'])->name('rakes.update');
     Route::delete('rakes/{rake}', [RakesController::class, 'destroy'])->name('rakes.destroy');
     Route::post('rakes/{rake}/generate-wagons', [RakesController::class, 'generateWagons'])->name('rakes.generate-wagons');
+    Route::post('rakes/{rake}/loading/start', [RakesController::class, 'startLoadingTimer'])->name('rakes.loading.start');
+    Route::post('rakes/{rake}/loading/reset', [RakesController::class, 'resetLoadingTimer'])->name('rakes.loading.reset');
+    Route::post('rakes/{rake}/loading/stop', [RakesController::class, 'stopLoadingTimer'])->name('rakes.loading.stop');
     Route::put('rakes/{rake}/wagons/{wagon}', [RakeWagonController::class, 'update'])->name('rakes.wagons.update');
+    Route::put('rakes/{rake}/wagons-bulk', [RakeWagonController::class, 'bulkUpdate'])->name('rakes.wagons.bulk-update');
     Route::put('rakes/{rake}/txr', [RakeTxrController::class, 'update'])->name('rakes.txr.update');
     Route::post('rakes/{rake}/txr/start', [RakeTxrController::class, 'start'])->name('rakes.txr.start');
     Route::post('rakes/{rake}/txr/end', [RakeTxrController::class, 'end'])->name('rakes.txr.end');
     Route::post('rakes/{rake}/txr/unfit-logs', [RakeTxrController::class, 'storeUnfitLogs'])->name('rakes.txr.unfit-logs');
+    Route::post('rakes/{rake}/txr/upload-note', [RakeTxrController::class, 'uploadNote'])->name('rakes.txr.upload-note');
     // Unfit wagon routes (alternative: by txr id)
     Route::post('txr/{txr}/unfit-wagons', [WagonUnfitController::class, 'store'])->name('txr.unfit-wagons.store');
     Route::get('rakes/{rake}/load', [RakeLoadController::class, 'show'])->name('rakes.load.show');
     Route::post('rakes/{rake}/load/confirm-placement', [RakeLoadController::class, 'confirmPlacement'])->name('rakes.load.confirm-placement');
     Route::post('rakes/{rake}/load/wagon', [RakeLoadController::class, 'loadWagon'])->name('rakes.load.wagon');
     Route::post('rakes/{rake}/load/wagons', [RakeLoadController::class, 'storeWagonLoadings'])->name('rakes.load.wagons');
+    Route::post('rakes/{rake}/load/wagon-rows', [RakeLoadController::class, 'storeWagonRow'])->name('rakes.load.wagon-rows.store');
+    Route::patch('rakes/{rake}/load/wagon-rows/{loading}', [RakeLoadController::class, 'updateWagonRow'])->name('rakes.load.wagon-rows.update');
+    Route::delete('rakes/{rake}/load/wagon-rows/{loading}', [RakeLoadController::class, 'destroyWagonRow'])->name('rakes.load.wagon-rows.destroy');
     Route::post('rakes/{rake}/load/guard-inspection', [RakeLoadController::class, 'recordGuardInspection'])->name('rakes.load.guard-inspection');
     Route::post('rakes/{rake}/load/weighment', [RakeLoadController::class, 'recordWeighment'])->name('rakes.load.weighment');
     Route::post('rakes/{rake}/load/confirm-dispatch', [RakeLoadController::class, 'confirmDispatch'])->name('rakes.load.confirm-dispatch');

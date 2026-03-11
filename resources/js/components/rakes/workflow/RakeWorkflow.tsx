@@ -11,6 +11,9 @@ import { useState, useEffect } from 'react';
 interface RakeData {
     id: number;
     state: string;
+    loading_start_time?: string | null;
+    loading_end_time?: string | null;
+    loading_free_minutes?: number | null;
     wagons: Array<{
         id: number;
         wagon_number: string;
@@ -195,7 +198,24 @@ export function RakeWorkflow({ rake, demurrage_rate_per_mt_hour }: RakeWorkflowP
                         </div>
                     </AccordionTrigger>
                     <AccordionContent>
-                        <WagonLoadingWorkflow rake={rakeData} disabled={disableWagonLoading} />
+                        <WagonLoadingWorkflow
+                            rake={rakeData}
+                            disabled={disableWagonLoading}
+                            onWagonLoadingsSaved={(loadings) =>
+                                setRakeData((prev) => ({
+                                    ...prev,
+                                    wagonLoadings: loadings,
+                                }))
+                            }
+                            onWagonUpdated={(wagonId, updates) =>
+                                setRakeData((prev) => ({
+                                    ...prev,
+                                    wagons: prev.wagons.map((w) =>
+                                        w.id === wagonId ? { ...w, wagon_number: updates.wagon_number } : w
+                                    ),
+                                }))
+                            }
+                        />
                     </AccordionContent>
                 </AccordionItem>
 

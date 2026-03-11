@@ -21,6 +21,7 @@ final class GuardInspection extends Model
         'is_approved',
         'remarks',
         'created_by',
+        'updated_by',
     ];
 
     public function rake(): BelongsTo

@@ -17,6 +17,7 @@ use App\Models\RakeWagonLoading;
 use App\Models\RakeWagonWeighment;
 use App\Models\Weighment;
 use App\Services\RakeLoadStateResolver;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -26,7 +27,7 @@ use Inertia\Response;
 final class RakeLoadController extends Controller
 {
     public function __construct(
-        private RakeLoadStateResolver $stateResolver
+        private RakeLoadStateResolver $stateResolver,
     ) {}
 
     public function show(Request $request, Rake $rake): Response
@@ -142,7 +143,7 @@ final class RakeLoadController extends Controller
             ->with('success', 'Wagon loaded successfully.');
     }
 
-    public function storeWagonLoadings(Request $request, Rake $rake): RedirectResponse
+    public function storeWagonLoadings(Request $request, Rake $rake): RedirectResponse|JsonResponse
     {
         // $this->authorize('update', $rake);
 
@@ -191,21 +192,166 @@ final class RakeLoadController extends Controller
             }
         });
 
+        $rake->load([
+            'wagonLoadings.wagon:id,wagon_number,wagon_sequence,wagon_type,tare_weight_mt,pcc_weight_mt,is_unfit',
+            'wagonLoadings.loader:id,loader_name,code',
+        ]);
+
+        if ($request->wantsJson()) {
+            $wagonLoadings = $rake->wagonLoadings->map(static function ($loading) {
+                return [
+                    'id' => $loading->id,
+                    'wagon_id' => $loading->wagon_id,
+                    'loader_id' => $loading->loader_id,
+                    'loaded_quantity_mt' => (string) $loading->loaded_quantity_mt,
+                    'loading_time' => $loading->loading_time?->toIso8601String(),
+                    'remarks' => $loading->remarks,
+                    'wagon' => $loading->wagon ? [
+                        'id' => $loading->wagon->id,
+                        'wagon_number' => $loading->wagon->wagon_number,
+                        'wagon_sequence' => $loading->wagon->wagon_sequence,
+                        'tare_weight_mt' => $loading->wagon->tare_weight_mt,
+                        'pcc_weight_mt' => $loading->wagon->pcc_weight_mt,
+                    ] : null,
+                    'loader' => $loading->loader ? [
+                        'id' => $loading->loader->id,
+                        'loader_name' => $loading->loader->loader_name,
+                        'code' => $loading->loader->code,
+                    ] : null,
+                ];
+            });
+
+            return response()->json([
+                'wagonLoadings' => $wagonLoadings,
+            ]);
+        }
+
         return to_route('rakes.show', $rake)
             ->with('success', 'Wagon loadings saved.');
+    }
+
+    public function storeWagonRow(Request $request, Rake $rake): JsonResponse
+    {
+        $validated = $request->validate([
+            'wagon_id' => ['required', 'integer'],
+        ]);
+
+        $wagon = $rake->wagons()
+            ->where('id', $validated['wagon_id'])
+            ->where('is_unfit', false)
+            ->firstOrFail();
+
+        $exists = $rake->wagonLoadings()
+            ->where('wagon_id', $wagon->id)
+            ->exists();
+
+        if ($exists) {
+            return response()->json([
+                'message' => 'This wagon is already loaded for this rake.',
+            ], 422);
+        }
+
+        $loading = RakeWagonLoading::create([
+            'rake_id' => $rake->id,
+            'wagon_id' => $wagon->id,
+            'loader_id' => null,
+            'loaded_quantity_mt' => null,
+            'loading_time' => null,
+            'remarks' => null,
+        ]);
+
+        $loading->load([
+            'wagon:id,wagon_number,wagon_sequence,wagon_type,tare_weight_mt,pcc_weight_mt,is_unfit',
+        ]);
+
+        return response()->json([
+            'loading' => [
+                'id' => $loading->id,
+                'wagon_id' => $loading->wagon_id,
+                'loader_id' => $loading->loader_id,
+                'loaded_quantity_mt' => $loading->loaded_quantity_mt !== null ? (string) $loading->loaded_quantity_mt : '',
+                'loading_time' => $loading->loading_time?->toIso8601String(),
+                'remarks' => $loading->remarks,
+                'wagon' => $loading->wagon ? [
+                    'id' => $loading->wagon->id,
+                    'wagon_number' => $loading->wagon->wagon_number,
+                    'wagon_sequence' => $loading->wagon->wagon_sequence,
+                    'wagon_type' => $loading->wagon->wagon_type,
+                    'tare_weight_mt' => $loading->wagon->tare_weight_mt,
+                    'pcc_weight_mt' => $loading->wagon->pcc_weight_mt,
+                ] : null,
+                'loader' => null,
+            ],
+        ]);
+    }
+
+    public function updateWagonRow(Request $request, Rake $rake, RakeWagonLoading $loading): JsonResponse
+    {
+        if ($loading->rake_id !== $rake->id) {
+            abort(404);
+        }
+
+        $validated = $request->validate([
+            'loader_id' => ['nullable', 'integer', 'exists:loaders,id'],
+            'loaded_quantity_mt' => ['nullable', 'numeric', 'min:0'],
+        ]);
+
+        $update = [];
+        if (array_key_exists('loader_id', $validated)) {
+            $update['loader_id'] = $validated['loader_id'];
+        }
+        if (array_key_exists('loaded_quantity_mt', $validated) && $validated['loaded_quantity_mt'] !== null) {
+            $update['loaded_quantity_mt'] = $validated['loaded_quantity_mt'];
+            $update['loading_time'] = $loading->loading_time ?? now();
+        }
+        if ($update !== []) {
+            $loading->update($update);
+        }
+
+        $loading->load([
+            'wagon:id,wagon_number,wagon_sequence,wagon_type,tare_weight_mt,pcc_weight_mt,is_unfit',
+            'loader:id,loader_name,code',
+        ]);
+
+        return response()->json([
+            'loading' => [
+                'id' => $loading->id,
+                'wagon_id' => $loading->wagon_id,
+                'loader_id' => $loading->loader_id,
+                'loaded_quantity_mt' => $loading->loaded_quantity_mt !== null ? (string) $loading->loaded_quantity_mt : '',
+                'loading_time' => $loading->loading_time?->toIso8601String(),
+                'remarks' => $loading->remarks,
+                'wagon' => $loading->wagon ? [
+                    'id' => $loading->wagon->id,
+                    'wagon_number' => $loading->wagon->wagon_number,
+                    'wagon_sequence' => $loading->wagon->wagon_sequence,
+                    'wagon_type' => $loading->wagon->wagon_type,
+                    'tare_weight_mt' => $loading->wagon->tare_weight_mt,
+                    'pcc_weight_mt' => $loading->wagon->pcc_weight_mt,
+                ] : null,
+                'loader' => $loading->loader ? [
+                    'id' => $loading->loader->id,
+                    'loader_name' => $loading->loader->loader_name,
+                    'code' => $loading->loader->code,
+                ] : null,
+            ],
+        ]);
+    }
+
+    public function destroyWagonRow(Request $request, Rake $rake, RakeWagonLoading $loading): JsonResponse
+    {
+        if ($loading->rake_id !== $rake->id) {
+            abort(404);
+        }
+
+        $loading->delete();
+
+        return response()->json(['deleted' => true]);
     }
 
     public function recordGuardInspection(Request $request, Rake $rake): RedirectResponse
     {
         // $this->authorize('update', $rake);
-
-        $rakeLoad = $rake->rakeLoad;
-        if (! $rakeLoad) {
-            return redirect()
-                ->route('rakes.load.show', $rake)
-                ->setStatusCode(303)
-                ->with('error', 'Loading process not started.');
-        }
 
         $validated = $request->validate([
             'inspection_time' => ['required', 'date'],
@@ -216,25 +362,22 @@ final class RakeLoadController extends Controller
             'remarks.required_if' => 'Remarks are required when inspection is rejected.',
         ]);
 
-        // Get current attempt number
-        $attemptNo = $this->currentAttemptNo($rakeLoad);
+        $guardInspection = GuardInspection::updateOrCreate(
+            ['rake_id' => $rake->id],
+            [
+                'inspection_start_time' => $validated['inspection_time'],
+                'inspection_end_time' => null,
+                'movement_permission_time' => $validated['movement_permission_time'],
+                'is_approved' => $validated['is_approved'],
+                'remarks' => $validated['remarks'] ?? null,
+                'created_by' => $request->user()?->id,
+            ]
+        );
 
-        $guardInspection = GuardInspection::create([
-            'rake_id' => $rake->id,
-            'rake_load_id' => $rakeLoad->id,
-            'attempt_no' => $attemptNo,
-            'inspection_time' => $validated['inspection_time'],
-            'movement_permission_time' => $validated['movement_permission_time'],
-            'is_approved' => $validated['is_approved'],
-            'remarks' => $validated['remarks'] ?? null,
-        ]);
-
-        $state = $this->stateResolver->resolve($rake);
-        RakeLoadUpdated::dispatch($rake, $rakeLoad, $state, 'guard_inspection_recorded');
         RakeGuardInspectionUpdated::dispatch($rake, $guardInspection, 'created');
 
         return redirect()
-            ->route('rakes.load.show', $rake)
+            ->route('rakes.show', $rake)
             ->setStatusCode(303)
             ->with('success', 'Guard inspection recorded.');
     }
