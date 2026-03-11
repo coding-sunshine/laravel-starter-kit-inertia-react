@@ -23,6 +23,7 @@ interface RakeData {
         inspection_end_time?: string | null;
         status: string;
         remarks: string | null;
+        handwritten_note_url?: string | null;
         wagon_unfit_logs?: Array<{
             id?: number;
             wagon_id: number;
@@ -168,6 +169,12 @@ export function RakeWorkflow({ rake, demurrage_rate_per_mt_hour }: RakeWorkflowP
                                     txr: prev.txr
                                         ? { ...prev.txr, wagonUnfitLogs: logs }
                                         : null,
+                                }))
+                            }
+                            onTxrNoteUploaded={(url) =>
+                                setRakeData((prev) => ({
+                                    ...prev,
+                                    txr: prev.txr ? { ...prev.txr, handwritten_note_url: url } : null,
                                 }))
                             }
                         />

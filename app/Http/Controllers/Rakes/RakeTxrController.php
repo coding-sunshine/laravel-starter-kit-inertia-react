@@ -122,4 +122,32 @@ final class RakeTxrController extends Controller
 
         return to_route('rakes.show', $rake)->with('success', 'TXR updated.');
     }
+
+    public function uploadNote(Request $request, Rake $rake): RedirectResponse|JsonResponse
+    {
+        if (! $rake->txr) {
+            if ($request->wantsJson()) {
+                return response()->json(['message' => 'Start TXR first before uploading the note.'], 400);
+            }
+
+            return to_route('rakes.show', $rake)->with('error', 'Start TXR first before uploading the note.');
+        }
+
+        $validated = $request->validate([
+            'file' => ['required', 'file', 'mimes:pdf,jpeg,jpg,png', 'max:10240'],
+        ]);
+
+        $rake->txr->clearMediaCollection('txr_note');
+        $rake->txr->addMediaFromRequest('file')->toMediaCollection('txr_note');
+
+        if ($request->wantsJson()) {
+            $txr = $rake->txr->fresh();
+
+            return response()->json([
+                'handwritten_note_url' => $txr?->handwritten_note_url,
+            ]);
+        }
+
+        return to_route('rakes.show', $rake)->with('success', 'TXR note uploaded.');
+    }
 }
