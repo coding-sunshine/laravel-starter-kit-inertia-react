@@ -35,6 +35,7 @@ final class RakesController extends Controller
             'siding:id,name,code',
             'siding.loaders:id,siding_id,loader_name,code',
             'wagons',
+            'rakeWeighments' => fn ($q) => $q->whereNotNull('pdf_file_path'),
             'txr.wagonUnfitLogs.wagon:id,wagon_number,wagon_sequence,wagon_type',
             'wagonLoadings.wagon:id,wagon_number,wagon_sequence,wagon_type,pcc_weight_mt',
             'wagonLoadings.loader:id,loader_name,code',
@@ -74,6 +75,28 @@ final class RakesController extends Controller
         $rakeArray = $rake->toArray();
         $rakeArray['loading_warning_minutes'] = $loadingSection?->warning_minutes;
         $rakeArray['loading_section_free_minutes'] = $loadingSection?->free_minutes ?? 180;
+
+        // Build weighments for WeighmentWorkflow: only PDF-origin records (rake_wagon_weighments
+        // from load flow are not shown here; full wagon data is on /weighments/{id})
+        $rakeArray['weighments'] = collect($rake->rakeWeighments ?? [])
+            ->filter(fn ($rw) => ! empty($rw->pdf_file_path))
+            ->map(function ($rw) {
+                return [
+                    'id' => $rw->id,
+                    'weighment_time' => $rw->gross_weighment_datetime?->toIso8601String(),
+                    'total_weight_mt' => $rw->total_net_weight_mt,
+                    'status' => $rw->status,
+                    'train_speed_kmph' => $rw->maximum_train_speed_kmph,
+                    'attempt_no' => $rw->attempt_no,
+                ];
+            })
+            ->values()
+            ->all();
+
+        // Normalize relation keys for frontend (camelCase expected)
+        if (array_key_exists('guard_inspections', $rakeArray)) {
+            $rakeArray['guardInspections'] = $rakeArray['guard_inspections'];
+        }
 
         return Inertia::render('rakes/show', [
             'rake' => $rakeArray,

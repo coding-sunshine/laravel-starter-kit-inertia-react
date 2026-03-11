@@ -3,7 +3,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import InputError from '@/components/input-error';
@@ -14,11 +13,11 @@ import { cn } from '@/lib/utils';
 
 interface GuardInspectionRecord {
     id: number;
-    inspection_time?: string;
     inspection_start_time?: string;
-    movement_permission_time: string;
+    inspection_end_time?: string;
     is_approved: boolean;
-    remarks: string | null;
+    movement_permission_time?: string;
+    remarks?: string | null;
 }
 
 interface GuardInspectionWorkflowProps {
@@ -33,8 +32,8 @@ interface GuardInspectionWorkflowProps {
 export function GuardInspectionWorkflow({ rake, disabled }: GuardInspectionWorkflowProps) {
     const { errors } = usePage<{ errors?: Record<string, string> }>().props;
     const { data, setData, post, processing, reset } = useForm({
-        inspection_time: new Date().toISOString().slice(0, 16),
-        movement_permission_time: new Date().toISOString().slice(0, 16),
+        inspection_start_time: new Date().toISOString().slice(0, 16),
+        inspection_end_time: new Date().toISOString().slice(0, 16),
         is_approved: false,
         remarks: '',
     });
@@ -68,8 +67,6 @@ export function GuardInspectionWorkflow({ rake, disabled }: GuardInspectionWorkf
         if (!hasInspection) return "secondary";
         return isApproved ? "default" : "destructive";
     };
-
-    const inspectionDisplayTime = inspection?.inspection_start_time ?? inspection?.inspection_time ?? '';
 
     function DateTimePopover({
         value,
@@ -135,13 +132,13 @@ export function GuardInspectionWorkflow({ rake, disabled }: GuardInspectionWorkf
         );
     }
 
-    const setInspectionTime = (date: string, time: string) => {
+    const setInspectionStartTime = (date: string, time: string) => {
         const d = date || (time ? new Date().toISOString().slice(0, 10) : '');
-        setData('inspection_time', d ? `${d}T${time || '00:00'}` : '');
+        setData('inspection_start_time', d ? `${d}T${time || '00:00'}` : '');
     };
-    const setMovementPermissionTime = (date: string, time: string) => {
+    const setInspectionEndTime = (date: string, time: string) => {
         const d = date || (time ? new Date().toISOString().slice(0, 10) : '');
-        setData('movement_permission_time', d ? `${d}T${time || '00:00'}` : '');
+        setData('inspection_end_time', d ? `${d}T${time || '00:00'}` : '');
     };
 
     return (
@@ -160,7 +157,7 @@ export function GuardInspectionWorkflow({ rake, disabled }: GuardInspectionWorkf
                     </div>
                 </CardTitle>
                 <CardDescription>
-                    Guard inspection and movement permission
+                    Inspection start, end and status
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -168,36 +165,36 @@ export function GuardInspectionWorkflow({ rake, disabled }: GuardInspectionWorkf
                     <div>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
-                                <Label htmlFor="inspection_time">Inspection Time</Label>
+                                <Label htmlFor="inspection_start_time">Inspection start time</Label>
                                 <DateTimePopover
-                                    value={data.inspection_time}
-                                    onChange={setInspectionTime}
+                                    value={data.inspection_start_time}
+                                    onChange={setInspectionStartTime}
                                     disabled={disabled}
                                     placeholder="Select date & time"
                                 />
                                 <input
                                     type="hidden"
-                                    name="inspection_time"
-                                    value={data.inspection_time}
+                                    name="inspection_start_time"
+                                    value={data.inspection_start_time}
                                     required
                                 />
-                                <InputError message={errors?.inspection_time} />
+                                <InputError message={errors?.inspection_start_time} />
                             </div>
                             <div>
-                                <Label htmlFor="movement_permission_time">Movement Permission Time</Label>
+                                <Label htmlFor="inspection_end_time">Inspection end time</Label>
                                 <DateTimePopover
-                                    value={data.movement_permission_time}
-                                    onChange={setMovementPermissionTime}
+                                    value={data.inspection_end_time}
+                                    onChange={setInspectionEndTime}
                                     disabled={disabled}
                                     placeholder="Select date & time"
                                 />
                                 <input
                                     type="hidden"
-                                    name="movement_permission_time"
-                                    value={data.movement_permission_time}
+                                    name="inspection_end_time"
+                                    value={data.inspection_end_time}
                                     required
                                 />
-                                <InputError message={errors?.movement_permission_time} />
+                                <InputError message={errors?.inspection_end_time} />
                             </div>
                             <div className="flex items-center space-x-2">
                                 <input
@@ -208,22 +205,25 @@ export function GuardInspectionWorkflow({ rake, disabled }: GuardInspectionWorkf
                                     className="rounded"
                                     disabled={disabled}
                                 />
-                                <Label htmlFor="is_approved">Approved for movement</Label>
+                                <Label htmlFor="is_approved">Approved</Label>
                             </div>
-                            <div>
-                                <Label htmlFor="remarks">Remarks</Label>
-                                <textarea
-                                    id="remarks"
-                                    name="remarks"
-                                    value={data.remarks}
-                                    onChange={(e) => setData('remarks', e.target.value)}
-                                    rows={3}
-                                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                                    placeholder="Any inspection remarks..."
-                                    disabled={disabled}
-                                />
-                                <InputError message={errors?.remarks} />
-                            </div>
+                            {!data.is_approved && (
+                                <div>
+                                    <Label htmlFor="remarks">Remarks (required when inspection failed)</Label>
+                                    <textarea
+                                        id="remarks"
+                                        name="remarks"
+                                        value={data.remarks}
+                                        onChange={(e) => setData('remarks', e.target.value)}
+                                        rows={3}
+                                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                        placeholder="Reason for rejection..."
+                                        disabled={disabled}
+                                        required={!data.is_approved}
+                                    />
+                                    <InputError message={errors?.remarks} />
+                                </div>
+                            )}
                             <div className="flex justify-end space-x-2">
                                 <Button
                                     type="button"
@@ -243,89 +243,34 @@ export function GuardInspectionWorkflow({ rake, disabled }: GuardInspectionWorkf
                     <div className="space-y-4">
                         <div className="grid gap-4 md:grid-cols-2">
                             <div>
-                                <Label>Inspection Time</Label>
+                                <Label>Inspection start time</Label>
                                 <p className="text-sm">
-                                    {inspectionDisplayTime
-                                        ? new Date(inspectionDisplayTime).toLocaleString()
+                                    {inspection.inspection_start_time
+                                        ? new Date(inspection.inspection_start_time).toLocaleString()
                                         : '-'}
                                 </p>
                             </div>
                             <div>
-                                <Label>Movement Permission Time</Label>
+                                <Label>Inspection end time</Label>
                                 <p className="text-sm">
-                                    {new Date(inspection.movement_permission_time).toLocaleString()}
+                                    {inspection.inspection_end_time
+                                        ? new Date(inspection.inspection_end_time).toLocaleString()
+                                        : '-'}
                                 </p>
                             </div>
                         </div>
-                        
                         <div className="flex items-center gap-2">
-                            <Label>Decision:</Label>
-                            <Badge variant={isApproved ? "default" : "destructive"}>
-                                {isApproved ? 'Approved for Movement' : 'Rejected'}
+                            <Label>Status</Label>
+                            <Badge variant={isApproved ? 'default' : 'destructive'}>
+                                {isApproved ? 'Approved' : 'Rejected'}
                             </Badge>
                         </div>
-
-                        {inspection.remarks && (
+                        {!isApproved && inspection.remarks && (
                             <div>
                                 <Label>Remarks</Label>
                                 <p className="text-sm text-muted-foreground">{inspection.remarks}</p>
                             </div>
                         )}
-
-                        <div className={`flex items-center gap-2 text-sm ${
-                            isApproved ? 'text-green-600' : 'text-red-600'
-                        }`}>
-                            {isApproved ? (
-                                <>
-                                    <CheckCircle className="h-4 w-4" />
-                                    Guard approved for movement
-                                </>
-                            ) : (
-                                <>
-                                    <XCircle className="h-4 w-4" />
-                                    Guard rejected - workflow blocked
-                                </>
-                            )}
-                        </div>
-                    </div>
-                )}
-
-                {/* Table Format Display */}
-                {rake.guardInspections && rake.guardInspections.length > 0 && (
-                    <div className="space-y-4">
-                        <Label className="text-base font-medium">Guard Inspection Records</Label>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Inspection Time</TableHead>
-                                    <TableHead>Movement Permission Time</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead>Remarks</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {rake.guardInspections.map((insp) => (
-                                    <TableRow key={insp.id}>
-                                        <TableCell>
-                                            {(insp.inspection_start_time ?? insp.inspection_time)
-                                                ? new Date(insp.inspection_start_time ?? insp.inspection_time!).toLocaleString()
-                                                : '-'}
-                                        </TableCell>
-                                        <TableCell>
-                                            {new Date(insp.movement_permission_time).toLocaleString()}
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge variant={insp.is_approved ? "default" : "destructive"}>
-                                                {insp.is_approved ? 'Approved' : 'Rejected'}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                            {insp.remarks || '-'}
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
                     </div>
                 )}
 

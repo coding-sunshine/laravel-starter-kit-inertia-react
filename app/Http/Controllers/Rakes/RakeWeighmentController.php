@@ -6,38 +6,68 @@ namespace App\Http\Controllers\Rakes;
 
 use App\Http\Controllers\Controller;
 use App\Models\Rake;
+use App\Services\RakeWeighmentPdfImporter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use InvalidArgumentException;
+use Throwable;
 
 final class RakeWeighmentController extends Controller
 {
-    public function store(Request $request, Rake $rake): RedirectResponse
+    public function store(Request $request, Rake $rake, RakeWeighmentPdfImporter $importer): RedirectResponse
     {
         // $this->authorize('update', $rake);
 
         $validated = $request->validate([
-            'weighment_time' => ['required', 'date'],
-            'total_weight_mt' => ['required', 'numeric', 'min:0'],
-            'average_wagon_weight_mt' => ['nullable', 'numeric', 'min:0'],
-            'weighment_status' => ['nullable', 'string', 'max:50'],
-            'remarks' => ['nullable', 'string', 'max:1000'],
-            'pdf' => ['nullable', 'file', 'mimes:pdf', 'max:10240'],
+            'weighment_pdf' => ['required', 'file', 'mimes:pdf', 'max:20480'],
         ]);
 
-        $weighment = $rake->weighments()->create([
-            'weighment_time' => $validated['weighment_time'],
-            'total_weight_mt' => $validated['total_weight_mt'],
-            'average_wagon_weight_mt' => $validated['average_wagon_weight_mt'] ?? null,
-            'weighment_status' => $validated['weighment_status'] ?? 'recorded',
-            'remarks' => $validated['remarks'] ?? null,
-            'created_by' => $request->user()->id,
-        ]);
+        try {
+            $importer->importForRake($rake, $validated['weighment_pdf'], (int) $request->user()->id);
+        } catch (InvalidArgumentException $e) {
+            Log::warning('RakeWeighmentController: import validation failed', [
+                'rake_id' => $rake->id,
+                'message' => $e->getMessage(),
+            ]);
 
-        if ($request->hasFile('pdf')) {
-            $weighment->addMediaFromRequest('pdf')->toMediaCollection('weighment_slip_pdf');
+            return back()
+                ->withErrors(['weighment_pdf' => $e->getMessage()])
+                ->withInput();
+        } catch (Throwable $e) {
+            Log::error('RakeWeighmentController: import failed', [
+                'rake_id' => $rake->id,
+                'exception' => get_class($e),
+                'message' => $e->getMessage(),
+            ]);
+
+            return back()
+                ->withErrors(['weighment_pdf' => 'Weighment import failed due to an unexpected error. Please check logs.'])
+                ->withInput();
+        }
+
+        // After successful upload, stay on the rake page so the user sees
+        // the updated weighment data in the Rake workflow itself.
+        return to_route('rakes.show', $rake)
+            ->with('success', 'Weighment recorded.');
+    }
+
+    public function destroy(Rake $rake): RedirectResponse
+    {
+        // $this->authorize('update', $rake);
+
+        $weighments = $rake->rakeWeighments()->get();
+
+        foreach ($weighments as $weighment) {
+            if ($weighment->pdf_file_path) {
+                Storage::disk('public')->delete($weighment->pdf_file_path);
+            }
+
+            $weighment->delete();
         }
 
         return to_route('rakes.show', $rake)
-            ->with('success', 'Weighment recorded.');
+            ->with('success', 'Rake weighment data deleted.');
     }
 }

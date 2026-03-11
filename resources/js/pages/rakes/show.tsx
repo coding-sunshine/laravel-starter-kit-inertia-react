@@ -77,10 +77,21 @@ interface GuardInspectionRecord {
 interface WeighmentRecord {
     id: number;
     weighment_time: string;
-    total_weight_mt: string;
+    total_weight_mt: string | number | null;
     status: string | null;
-    train_speed_kmph: number;
+    train_speed_kmph: number | string | null;
     attempt_no: number;
+    wagonWeights?: Array<{
+        wagon_id: number;
+        gross_weight_mt: string | number | null;
+        net_weight_mt: string | number | null;
+        wagon: {
+            id: number;
+            wagon_number: string;
+            wagon_sequence: number;
+            pcc_weight_mt: string | number | null;
+        } | null;
+    }>;
 }
 
 interface RrDocumentRecord {

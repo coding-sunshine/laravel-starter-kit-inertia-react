@@ -354,8 +354,8 @@ final class RakeLoadController extends Controller
         // $this->authorize('update', $rake);
 
         $validated = $request->validate([
-            'inspection_time' => ['required', 'date'],
-            'movement_permission_time' => ['required', 'date'],
+            'inspection_start_time' => ['required', 'date'],
+            'inspection_end_time' => ['required', 'date'],
             'is_approved' => ['required', 'boolean'],
             'remarks' => ['required_if:is_approved,false', 'nullable', 'string', 'max:1000'],
         ], [
@@ -365,10 +365,10 @@ final class RakeLoadController extends Controller
         $guardInspection = GuardInspection::updateOrCreate(
             ['rake_id' => $rake->id],
             [
-                'inspection_start_time' => $validated['inspection_time'],
-                'inspection_end_time' => null,
-                'movement_permission_time' => $validated['movement_permission_time'],
+                'inspection_start_time' => $validated['inspection_start_time'],
+                'inspection_end_time' => $validated['inspection_end_time'],
                 'is_approved' => $validated['is_approved'],
+                'movement_permission_time' => null,
                 'remarks' => $validated['remarks'] ?? null,
                 'created_by' => $request->user()?->id,
             ]

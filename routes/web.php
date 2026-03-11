@@ -215,6 +215,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::post('rakes/{rake}/load/weighment', [RakeLoadController::class, 'recordWeighment'])->name('rakes.load.weighment');
     Route::post('rakes/{rake}/load/confirm-dispatch', [RakeLoadController::class, 'confirmDispatch'])->name('rakes.load.confirm-dispatch');
     Route::post('rakes/{rake}/weighments', [RakeWeighmentController::class, 'store'])->name('rakes.weighments.store');
+    Route::delete('rakes/{rake}/weighments', [RakeWeighmentController::class, 'destroy'])->name('rakes.weighments.destroy');
     Route::get('rakes/{rake}/comparison', [RakesController::class, 'comparison'])->name('rakes.comparison');
     Route::post('rakes/{rake}/guard-inspection', [RakeGuardInspectionController::class, 'store'])->name('rakes.guard-inspection.store');
     Route::get('indents', [IndentsController::class, 'index'])->name('indents.index');
