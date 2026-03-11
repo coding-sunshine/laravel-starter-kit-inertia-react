@@ -27,7 +27,7 @@ return new class extends Migration
                 ->index();
 
             // Identification
-            $table->string('rake_number', 20)->unique();
+            $table->string('rake_number', 20)->nullable();
             $table->string('rake_type', 50)->nullable();
 
             // Composition
@@ -74,6 +74,8 @@ return new class extends Migration
 
             // Optional minimal index
             $table->index(['siding_id', 'state']);
+            $table->index('rake_number');
+            $table->index('rake_type');
         });
     }
 

@@ -1,20 +1,26 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import InputError from '@/components/input-error';
-import { Train, Clock, Save } from 'lucide-react';
+import { Train, Clock, Save, CalendarClock } from 'lucide-react';
 import { useForm, usePage } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 interface TxrData {
     id?: number;
-    txr_start_time?: string;
-    txr_end_time?: string;
+    inspection_time?: string;
+    inspection_end_time?: string | null;
     duration_minutes?: number;
     remarks?: string | null;
+    status?: string;
+    wagonUnfitLogs?: unknown[];
+    wagon_unfit_logs?: unknown[];
 }
 
 interface RakeData {
@@ -38,18 +44,97 @@ export function TxrTable({ rake, disabled }: TxrTableProps) {
     const { errors } = usePage<{ errors?: Record<string, string> }>().props;
     const [duration, setDuration] = useState<number>(0);
     
-    const { data, setData, post, put, processing, reset } = useForm({
-        txr_start_time: rake.txr?.txr_start_time ? new Date(rake.txr.txr_start_time).toISOString().slice(0, 16) : '',
-        txr_end_time: rake.txr?.txr_end_time ? new Date(rake.txr.txr_end_time).toISOString().slice(0, 16) : '',
+    const { data, setData, put, processing, reset } = useForm({
+        inspection_time: rake.txr?.inspection_time ? new Date(rake.txr.inspection_time).toISOString().slice(0, 16) : '',
+        inspection_end_time: rake.txr?.inspection_end_time ? new Date(rake.txr.inspection_end_time).toISOString().slice(0, 16) : '',
+        status: rake.txr?.status ?? 'in_progress',
         remarks: rake.txr?.remarks || '',
     });
 
+    const inspectionTimeDate = data.inspection_time ? data.inspection_time.slice(0, 10) : '';
+    const inspectionTimeTime = data.inspection_time ? data.inspection_time.slice(11, 16) : '';
+    const inspectionEndTimeDate = data.inspection_end_time ? data.inspection_end_time.slice(0, 10) : '';
+    const inspectionEndTimeTime = data.inspection_end_time ? data.inspection_end_time.slice(11, 16) : '';
+
+    const setInspectionTime = (date: string, time: string) => {
+        const d = date || (time ? new Date().toISOString().slice(0, 10) : '');
+        setData('inspection_time', d ? `${d}T${time || '00:00'}` : '');
+    };
+    const setInspectionEndTime = (date: string, time: string) => {
+        const d = date || (time ? new Date().toISOString().slice(0, 10) : '');
+        setData('inspection_end_time', d ? `${d}T${time || '00:00'}` : '');
+    };
+
+    function DateTimePopover({
+        value,
+        onChange,
+        disabled,
+        placeholder,
+    }: {
+        value: string;
+        onChange: (date: string, time: string) => void;
+        disabled: boolean;
+        placeholder: string;
+    }) {
+        const datePart = value ? value.slice(0, 10) : '';
+        const timePart = value ? value.slice(11, 16) : '';
+        const displayDate = datePart ? new Date(value) : null;
+
+        return (
+            <Popover>
+                <PopoverTrigger asChild>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        disabled={disabled}
+                        className={cn(
+                            'w-full justify-start text-left font-normal min-h-9',
+                            !displayDate && 'text-muted-foreground'
+                        )}
+                    >
+                        <CalendarClock className="mr-2 h-4 w-4" />
+                        {displayDate ? (
+                            <>
+                                {format(displayDate, 'dd MMM yyyy')} · {timePart || '00:00'}
+                            </>
+                        ) : (
+                            placeholder
+                        )}
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                    <div className="p-3 border-b">
+                        <Calendar
+                            mode="single"
+                            selected={datePart ? new Date(datePart) : undefined}
+                            onSelect={(d) => onChange(d ? d.toISOString().slice(0, 10) : '', timePart)}
+                            initialFocus
+                            disabled={disabled}
+                        />
+                    </div>
+                    <div className="p-3 flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                        <Input
+                            type="time"
+                            value={timePart}
+                            onChange={(e) =>
+                                onChange(datePart || new Date().toISOString().slice(0, 10), e.target.value)
+                            }
+                            disabled={disabled}
+                            className="w-full"
+                        />
+                    </div>
+                </PopoverContent>
+            </Popover>
+        );
+    }
+
     // Real-time duration calculation
     useEffect(() => {
-        if (data.txr_start_time && data.txr_end_time) {
-            const start = new Date(data.txr_start_time);
-            const end = new Date(data.txr_end_time);
-            
+        if (data.inspection_time && data.inspection_end_time) {
+            const start = new Date(data.inspection_time);
+            const end = new Date(data.inspection_end_time);
+
             if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && end >= start) {
                 const diffMinutes = Math.floor((end.getTime() - start.getTime()) / (1000 * 60));
                 setDuration(diffMinutes);
@@ -59,26 +144,15 @@ export function TxrTable({ rake, disabled }: TxrTableProps) {
         } else {
             setDuration(0);
         }
-    }, [data.txr_start_time, data.txr_end_time]);
+    }, [data.inspection_time, data.inspection_end_time]);
 
     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        
-        if (rake.txr) {
-            put(`/rakes/${rake.id}/txr`, {
-                preserveScroll: true,
-                onSuccess: () => {
-                    // Success handling
-                },
-            });
-        } else {
-            post(`/rakes/${rake.id}/txr`, {
-                preserveScroll: true,
-                onSuccess: () => {
-                    // Success handling
-                },
-            });
-        }
+        if (!rake.txr) return;
+        put(`/rakes/${rake.id}/txr`, {
+            preserveScroll: true,
+            onSuccess: () => {},
+        });
     };
 
     const formatDateTime = (dateTimeString: string | null | undefined) => {
@@ -124,24 +198,33 @@ export function TxrTable({ rake, disabled }: TxrTableProps) {
                                     {formatDateTime(rake.placement_time)}
                                 </TableCell>
                                 <TableCell>
-                                    <Input
-                                        type="datetime-local"
-                                        value={data.txr_start_time}
-                                        onChange={(e) => setData('txr_start_time', e.target.value)}
-                                        disabled={disabled}
-                                        required
-                                    />
-                                    <InputError message={errors?.txr_start_time} />
+                                    <div>
+                                        <DateTimePopover
+                                            value={data.inspection_time}
+                                            onChange={setInspectionTime}
+                                            disabled={disabled}
+                                            placeholder="Select date & time"
+                                        />
+                                        <input
+                                            type="hidden"
+                                            name="inspection_time"
+                                            value={data.inspection_time}
+                                            required={!!rake.txr}
+                                        />
+                                    </div>
+                                    <InputError message={errors?.inspection_time} />
                                 </TableCell>
                                 <TableCell>
-                                    <Input
-                                        type="datetime-local"
-                                        value={data.txr_end_time}
-                                        onChange={(e) => setData('txr_end_time', e.target.value)}
-                                        disabled={disabled}
-                                        required
-                                    />
-                                    <InputError message={errors?.txr_end_time} />
+                                    <div>
+                                        <DateTimePopover
+                                            value={data.inspection_end_time}
+                                            onChange={setInspectionEndTime}
+                                            disabled={disabled}
+                                            placeholder="Select date & time"
+                                        />
+                                        <input type="hidden" name="inspection_end_time" value={data.inspection_end_time} />
+                                    </div>
+                                    <InputError message={errors?.inspection_end_time} />
                                 </TableCell>
                                 <TableCell>
                                     <div className="flex items-center gap-2">
@@ -150,7 +233,10 @@ export function TxrTable({ rake, disabled }: TxrTableProps) {
                                     </div>
                                 </TableCell>
                                 <TableCell>
-                                    <Badge variant="secondary">0</Badge>
+                                    <Badge variant="secondary">
+                                        {rake.txr?.wagonUnfitLogs?.length ??
+                                            (rake.txr?.wagon_unfit_logs?.length ?? 0)}
+                                    </Badge>
                                 </TableCell>
                                 <TableCell>
                                     <textarea
@@ -176,13 +262,13 @@ export function TxrTable({ rake, disabled }: TxrTableProps) {
                         >
                             Reset
                         </Button>
-                        <Button 
-                            type="submit" 
-                            disabled={disabled || processing}
+                        <Button
+                            type="submit"
+                            disabled={disabled || processing || !rake.txr}
                             className="flex items-center gap-2"
                         >
                             <Save className="h-4 w-4" />
-                            {rake.txr ? 'Update TXR' : 'Save TXR'}
+                            {rake.txr ? 'Update TXR' : 'Start TXR first to save header'}
                         </Button>
                     </div>
                 </form>

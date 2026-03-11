@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Rakes;
 use App\Http\Controllers\Controller;
 use App\Models\Rake;
 use App\Models\Wagon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -15,7 +16,7 @@ final class RakeWagonController extends Controller
     /**
      * Update the specified wagon
      */
-    public function update(Request $request, Rake $rake, Wagon $wagon): RedirectResponse
+    public function update(Request $request, Rake $rake, Wagon $wagon): RedirectResponse|JsonResponse
     {
         // $this->authorize('update', $rake);
 
@@ -25,6 +26,7 @@ final class RakeWagonController extends Controller
         }
 
         $validated = $request->validate([
+            'wagon_number' => ['nullable', 'string', 'max:20'],
             'wagon_type' => ['nullable', 'string', 'max:50'],
             'tare_weight_mt' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
             'pcc_weight_mt' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
@@ -32,11 +34,16 @@ final class RakeWagonController extends Controller
         ]);
 
         $wagon->update([
+            'wagon_number' => $validated['wagon_number'] ?? $wagon->wagon_number,
             'wagon_type' => $validated['wagon_type'] ?? $wagon->wagon_type,
             'tare_weight_mt' => $validated['tare_weight_mt'] ?? $wagon->tare_weight_mt,
             'pcc_weight_mt' => $validated['pcc_weight_mt'] ?? $wagon->pcc_weight_mt,
             'is_unfit' => $validated['is_unfit'] ?? $wagon->is_unfit,
         ]);
+
+        if ($request->wantsJson()) {
+            return response()->json(['wagon' => $wagon->fresh()]);
+        }
 
         return redirect()->route('rakes.show', $rake)
             ->with('success', 'Wagon updated.');

@@ -32,9 +32,10 @@ interface Indent {
 interface Props {
     indent: Indent;
     sidings: Siding[];
+    next_priority_number: number;
 }
 
-export default function CreateRakeFromIndent({ indent, sidings }: Props) {
+export default function CreateRakeFromIndent({ indent, sidings, next_priority_number }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: '/dashboard' },
         { title: 'Indents', href: '/indents' },
@@ -43,6 +44,11 @@ export default function CreateRakeFromIndent({ indent, sidings }: Props) {
     ];
 
     const { data, setData, post, processing, errors, reset } = useForm({
+        rake_number: indent.indent_number ? `RK-${indent.indent_number}` : '',
+        rake_priority_number: String(next_priority_number),
+        loading_date: indent.expected_loading_date
+            ? new Date(indent.expected_loading_date).toISOString().slice(0, 10)
+            : '',
         rake_type: indent.demanded_stock || '',
         wagon_count: indent.total_units || '',
         free_time_minutes: '180',
@@ -101,25 +107,45 @@ export default function CreateRakeFromIndent({ indent, sidings }: Props) {
                                     <Label htmlFor="rake_number">Rake Number</Label>
                                     <Input
                                         id="rake_number"
-                                        value={indent.indent_number ? `RK-${indent.indent_number}` : 'RK-'}
-                                        disabled
-                                        className="bg-muted"
+                                        value={data.rake_number}
+                                        onChange={(e) => setData('rake_number', e.target.value)}
+                                        placeholder="e.g. RK-12345"
                                     />
+                                    {errors.rake_number && (
+                                        <p className="text-sm text-destructive mt-1">{errors.rake_number}</p>
+                                    )}
+                                </div>
+                                <div>
+                                    <Label htmlFor="rake_priority_number">Rake Priority Number</Label>
+                                    <Input
+                                        id="rake_priority_number"
+                                        type="number"
+                                        min="0"
+                                        value={data.rake_priority_number}
+                                        onChange={(e) => setData('rake_priority_number', e.target.value)}
+                                        placeholder="Default: next after last rake"
+                                    />
+                                    {errors.rake_priority_number && (
+                                        <p className="text-sm text-destructive mt-1">{errors.rake_priority_number}</p>
+                                    )}
+                                </div>
+                                <div>
+                                    <Label htmlFor="loading_date">Loading Date</Label>
+                                    <Input
+                                        id="loading_date"
+                                        type="date"
+                                        value={data.loading_date}
+                                        onChange={(e) => setData('loading_date', e.target.value)}
+                                    />
+                                    {errors.loading_date && (
+                                        <p className="text-sm text-destructive mt-1">{errors.loading_date}</p>
+                                    )}
                                 </div>
                                 <div>
                                     <Label htmlFor="siding">Siding</Label>
                                     <Input
                                         id="siding"
                                         value={indent.siding ? `${indent.siding.name} (${indent.siding.code})` : '—'}
-                                        disabled
-                                        className="bg-muted"
-                                    />
-                                </div>
-                                <div>
-                                    <Label htmlFor="expected_loading_date">Expected Loading Date</Label>
-                                    <Input
-                                        id="expected_loading_date"
-                                        value={indent.expected_loading_date ? new Date(indent.expected_loading_date).toLocaleDateString() : '—'}
                                         disabled
                                         className="bg-muted"
                                     />

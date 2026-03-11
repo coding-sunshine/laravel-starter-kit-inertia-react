@@ -26,6 +26,14 @@ final class Rake extends Model
         'wagon_count',
         'loaded_weight_mt',
         'predicted_weight_mt',
+
+        // NEW HISTORICAL COLUMNS
+        'loading_date',
+        'priority_number',
+        'destination_code',
+        'under_load_mt',
+        'over_load_mt',
+
         'state',
         'rr_expected_date',
         'rr_actual_date',
@@ -41,6 +49,13 @@ final class Rake extends Model
         'created_by',
         'updated_by',
         'deleted_by',
+        'rr_number',
+        'overload_wagon_count',
+        'detention_hours',
+        'shunting_hours',
+        'total_amount_rs',
+        'destination',
+        'pakur_imwb_period',
     ];
 
     protected $casts = [
@@ -48,8 +63,17 @@ final class Rake extends Model
         'dispatch_time' => 'datetime',
         'rr_expected_date' => 'datetime',
         'rr_actual_date' => 'datetime',
+
+        'loading_date' => 'date',          // NEW
+
         'loaded_weight_mt' => 'decimal:2',
         'predicted_weight_mt' => 'decimal:2',
+
+        'under_load_mt' => 'decimal:2',    // NEW
+        'over_load_mt' => 'decimal:2',     // NEW
+
+        'priority_number' => 'integer',    // NEW
+
         'loading_start_time' => 'datetime',
         'loading_end_time' => 'datetime',
         'loading_free_minutes' => 'integer',
@@ -57,6 +81,7 @@ final class Rake extends Model
         'guard_end_time' => 'datetime',
         'weighment_start_time' => 'datetime',
         'weighment_end_time' => 'datetime',
+
     ];
 
     public function siding(): BelongsTo

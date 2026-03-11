@@ -1,0 +1,64 @@
+{
+    "model": "WagonType",
+    "table": "wagon_types",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "code": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "full_form": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "typical_use": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "loading_method": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "carrying_capacity_min_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "carrying_capacity_max_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "gross_tare_weight_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "default_pcc_weight_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": [],
+    "value_hints": [],
+    "scenarios": []
+}
