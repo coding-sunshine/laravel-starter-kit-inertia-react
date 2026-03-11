@@ -318,7 +318,7 @@ final class ExecutiveDashboardController extends Controller
             ->whereIn('rakes.siding_id', $sidingIds)
             ->whereNotNull('rakes.loading_date')
             ->whereRaw($this->dateOnlyBetweenSql('rakes.loading_date'), [$fromDate, $toDate])
-            ->sum('applied_penalties.amount');
+            ->sum(DB::raw('(applied_penalties.amount + (applied_penalties.amount * 0.05))'));
 
         $predictedPenaltyRisk = (float) PenaltyPrediction::query()
             ->whereIn('siding_id', $sidingIds)
@@ -421,6 +421,7 @@ final class ExecutiveDashboardController extends Controller
      */
     private function buildPenaltyTrendDaily(array $sidingIds, CarbonInterface $from, CarbonInterface $to, array $filterContext = []): array
     {
+        
         $start = Carbon::parse($from)->startOfDay();
         $end = Carbon::parse($to)->endOfDay();
         $diffDays = $start->diffInDays($end) + 1;
@@ -432,6 +433,7 @@ final class ExecutiveDashboardController extends Controller
                 return [];
             }
         }
+       
 
         $tz = config('app.timezone', 'UTC');
         $driver = DB::getDriverName();
@@ -457,7 +459,7 @@ final class ExecutiveDashboardController extends Controller
             ];
             $cursor->addDay();
         }
-
+       
         if ($sidingIds === [] || $days === []) {
             return $days;
         }
@@ -480,9 +482,9 @@ final class ExecutiveDashboardController extends Controller
         }
 
         $rows = $penaltyQuery
-            ->selectRaw("{$dateSql} as d, sum(applied_penalties.amount) as total")
-            ->groupBy(DB::raw($dateSql))
-            ->get();
+        ->selectRaw("{$dateSql} as d, sum(applied_penalties.amount * 1.05) as total")
+        ->groupBy(DB::raw($dateSql))
+        ->get();
 
         $byDate = [];
         foreach ($rows as $row) {
@@ -500,7 +502,7 @@ final class ExecutiveDashboardController extends Controller
                 $days[$i]['total'] = $byDate[$day['date']];
             }
         }
-
+        
         return $days;
     }
 
@@ -538,18 +540,22 @@ final class ExecutiveDashboardController extends Controller
 
         $startDate = $start->toDateString();
         $endDate = $end->toDateString();
-        $penaltyQuery = AppliedPenalty::query()
-            ->whereRaw($this->dateOnlyBetweenSql('created_at'), [$startDate, $endDate]);
+        $penaltyQuery = AppliedPenalty::whereDate('created_at', '>=', $startDate)
+    ->whereDate('created_at', '<=', $endDate);
+            // ->whereRaw($this->dateOnlyBetweenSql('created_at'), [$startDate, $endDate]);
         if ($rakeIds !== null) {
             $penaltyQuery->whereIn('rake_id', $rakeIds);
         } else {
             $penaltyQuery->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
         }
 
+      
+
         $rows = $penaltyQuery
-            ->selectRaw("{$monthSql} as m, sum(applied_penalties.amount) as total")
-            ->groupBy(DB::raw($monthSql))
-            ->get();
+        ->selectRaw("{$monthSql} as m, sum(applied_penalties.amount + applied_penalties.amount * 0.05) as total")
+        ->groupBy(DB::raw($monthSql))
+        ->get();
+        
 
         $byMonth = [];
         foreach ($rows as $row) {
@@ -564,7 +570,7 @@ final class ExecutiveDashboardController extends Controller
                 $months[$i]['total'] = $byMonth[$month['date']];
             }
         }
-
+        
         return $months;
     }
 
