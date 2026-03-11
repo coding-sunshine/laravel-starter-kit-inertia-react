@@ -32,9 +32,19 @@ interface VehicleEntryTableProps {
   entries: DailyVehicleEntry[];
   date: string;
   shift: number;
+  onEntryUpdated?: (entry: DailyVehicleEntry) => void;
+  onEntryDeleted?: (id: number) => void;
+  addRowButton?: React.ReactNode;
 }
 
-export default function VehicleEntryTable({ entries, date, shift }: VehicleEntryTableProps) {
+export default function VehicleEntryTable({
+  entries,
+  date,
+  shift,
+  onEntryUpdated,
+  onEntryDeleted,
+  addRowButton,
+}: VehicleEntryTableProps) {
   const totalEntries = entries.length;
   
   // Check if the selected date is today
@@ -103,32 +113,39 @@ export default function VehicleEntryTable({ entries, date, shift }: VehicleEntry
                 </div>
               ))}
             </div>
-            
-            {/* Overall Totals */}
-            <div className="mt-6 pt-4 border-t border-gray-300">
-              <div className="flex justify-end gap-8">
-                <div className="text-right">
-                  <div className="text-sm text-gray-600">Overall Total Gross Weight</div>
-                  <div className="text-xl font-bold text-gray-900">
-                    {totalGrossWeight.toFixed(2)}
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm text-gray-600">Overall Total Net Weight</div>
-                  <div className="text-xl font-bold text-blue-600">
-                    {totalNetWeight.toFixed(2)}
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       )}
+
+      {/* Overall Totals row with Add Row button on the left */}
+      <div className="border-b border-gray-200 px-4 py-3 bg-gray-50 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-2">
+          {addRowButton}
+        </div>
+        <div className="flex gap-8 items-center">
+          <span className="text-sm text-gray-500">
+            Showing {totalEntries} {totalEntries === 1 ? 'entry' : 'entries'}
+          </span>
+          <div className="text-right">
+            <div className="text-sm text-gray-600">Overall Total Gross Weight</div>
+            <div className="text-xl font-bold text-gray-900">
+              {totalGrossWeight.toFixed(2)}
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-sm text-gray-600">Overall Total Net Weight</div>
+            <div className="text-xl font-bold text-blue-600">
+              {totalNetWeight.toFixed(2)}
+            </div>
+          </div>
+        </div>
+      </div>
       
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead className="w-16">SL NO</TableHead>
+            <TableHead className="w-28">Siding</TableHead>
             <TableHead>E Challan No</TableHead>
             <TableHead>Vehicle No</TableHead>
             <TableHead>Trip ID No</TableHead>
@@ -146,7 +163,7 @@ export default function VehicleEntryTable({ entries, date, shift }: VehicleEntry
         <TableBody>
           {entries.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={13} className="text-center py-8 text-gray-500">
+              <TableCell colSpan={14} className="text-center py-8 text-gray-500">
                 No entries found for this shift. Click "Add Row" to create a new entry.
               </TableCell>
             </TableRow>
@@ -155,9 +172,11 @@ export default function VehicleEntryTable({ entries, date, shift }: VehicleEntry
               <VehicleEntryRow
                 key={entry.id}
                 entry={entry}
-                serialNumber={totalEntries - index} // Descending: newest gets highest number
+                serialNumber={totalEntries - index}
                 date={date}
                 shift={shift}
+                onEntryUpdated={onEntryUpdated}
+                onEntryDeleted={onEntryDeleted}
               />
             ))
           )}

@@ -1,5 +1,4 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { router } from '@inertiajs/react';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -10,6 +9,10 @@ import { Check, Loader2, MoreHorizontal, Trash2, Edit, X } from 'lucide-react';
 interface DailyVehicleEntry {
   id: number;
   siding_id: number;
+  siding?: {
+    id: number;
+    name: string;
+  };
   entry_date: string;
   shift: number;
   e_challan_no: string | null;
@@ -29,16 +32,38 @@ interface DailyVehicleEntry {
   updated_at: string;
 }
 
+function getCsrfHeaders(): Record<string, string> {
+  const cookieMatch = document.cookie.match(/\bXSRF-TOKEN=([^;]+)/);
+  if (cookieMatch) {
+    return { 'X-XSRF-TOKEN': decodeURIComponent(cookieMatch[1].trim()) };
+  }
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  if (meta?.getAttribute('content')) {
+    return { 'X-CSRF-TOKEN': meta.getAttribute('content')! };
+  }
+  return {};
+}
+
 interface VehicleEntryRowProps {
   entry: DailyVehicleEntry;
   serialNumber: number;
   date: string;
   shift: number;
+  onEntryUpdated?: (entry: DailyVehicleEntry) => void;
+  onEntryDeleted?: (id: number) => void;
 }
 
-export default function VehicleEntryRow({ entry, serialNumber, date, shift }: VehicleEntryRowProps) {
+export default function VehicleEntryRow({
+  entry,
+  serialNumber,
+  date,
+  shift,
+  onEntryUpdated,
+  onEntryDeleted,
+}: VehicleEntryRowProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showContextMenu, setShowContextMenu] = useState(false);
 
@@ -67,25 +92,49 @@ export default function VehicleEntryRow({ entry, serialNumber, date, shift }: Ve
   // Single stable ref for the debounce timer
   const debounceTimerRef = useRef<NodeJS.Timeout>();
 
-  const save = useCallback(() => {
-    const dataToSave = formDataRef.current; // always fresh, no stale closure
-
+  const save = useCallback(async () => {
+    const dataToSave = formDataRef.current;
     setIsSaving(true);
     setShowSuccess(false);
-
-    router.patch(`/road-dispatch/daily-vehicle-entries/${entry.id}`, dataToSave, {
-      preserveScroll: true,
-      preserveState: true, // prevents Inertia from re-rendering and resetting local state
-      onSuccess: () => {
-        setIsSaving(false);
-        setShowSuccess(true);
-        setTimeout(() => setShowSuccess(false), 2000);
-      },
-      onError: () => {
-        setIsSaving(false);
-      },
-    });
-  }, [entry.id]);
+    setSaveError(null);
+    try {
+      const res = await fetch(`/road-dispatch/daily-vehicle-entries/${entry.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          ...getCsrfHeaders(),
+        },
+        body: JSON.stringify(dataToSave),
+        credentials: 'include',
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (res.status === 404) {
+          onEntryDeleted?.(entry.id);
+          return;
+        }
+        const msg =
+          (data as { message?: string }).message ??
+          (typeof (data as { errors?: Record<string, string[]> }).errors === 'object'
+            ? Object.values((data as { errors: Record<string, string[]> }).errors).flat().join(', ')
+            : null) ??
+          res.statusText ??
+          'Save failed';
+        setSaveError(res.status === 419 ? 'Session expired. Please refresh the page.' : msg);
+        return;
+      }
+      const updated = (data as { entry?: DailyVehicleEntry }).entry;
+      if (updated) onEntryUpdated?.(updated);
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 2000);
+    } catch {
+      setSaveError('Network error. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [entry.id, entry, onEntryUpdated, onEntryDeleted]);
 
   const debouncedSave = useCallback(() => {
     clearTimeout(debounceTimerRef.current);
@@ -125,37 +174,75 @@ export default function VehicleEntryRow({ entry, serialNumber, date, shift }: Ve
     );
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     setShowDetailModal(false);
-    if (confirm('Are you sure you want to delete this entry? This action cannot be undone.')) {
-      router.delete(`/road-dispatch/daily-vehicle-entries/${entry.id}`, {
-        preserveScroll: true,
-        preserveState: true,
-        onSuccess: () => {
-          // Entry will be removed from the list automatically
+    if (!confirm('Are you sure you want to delete this entry? This action cannot be undone.')) {
+      return;
+    }
+    setSaveError(null);
+    try {
+      const res = await fetch(`/road-dispatch/daily-vehicle-entries/${entry.id}`, {
+        method: 'DELETE',
+        headers: {
+          Accept: 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          ...getCsrfHeaders(),
         },
-        onError: () => {
-          alert('Error deleting entry. Please try again.');
-        },
+        credentials: 'include',
       });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (res.status === 404) {
+          onEntryDeleted?.(entry.id);
+          return;
+        }
+        const msg = (data as { message?: string }).message ?? 'Cannot delete this entry.';
+        setSaveError(msg);
+        alert(msg);
+        return;
+      }
+      const payload = data as { deleted?: boolean; id?: number };
+      if (payload.deleted && payload.id != null) {
+        onEntryDeleted?.(payload.id);
+      }
+    } catch {
+      setSaveError('Network error. Please try again.');
+      alert('Error deleting entry. Please try again.');
     }
   };
 
-  const handleMarkCompleted = () => {
+  const handleMarkCompleted = async () => {
     setIsSaving(true);
-
-    router.post(`/road-dispatch/daily-vehicle-entries/${entry.id}/complete`, {}, {
-      preserveScroll: true,
-      preserveState: true,
-      onSuccess: () => {
-        setIsSaving(false);
-        setShowSuccess(true);
-        setTimeout(() => setShowSuccess(false), 2000);
-      },
-      onError: () => {
-        setIsSaving(false);
-      },
-    });
+    setSaveError(null);
+    try {
+      const res = await fetch(`/road-dispatch/daily-vehicle-entries/${entry.id}/complete`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          ...getCsrfHeaders(),
+        },
+        body: JSON.stringify({}),
+        credentials: 'include',
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const msg =
+          (data as { message?: string }).message ??
+          (res.status === 419 ? 'Session expired. Please refresh the page.' : 'Failed to mark completed.');
+        setSaveError(msg);
+        return;
+      }
+      const updated = (data as { entry?: DailyVehicleEntry }).entry;
+      if (updated) onEntryUpdated?.(updated);
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 2000);
+    } catch {
+      setSaveError('Network error. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const formatDateTime = (dateTime: string) => {
@@ -176,8 +263,8 @@ export default function VehicleEntryRow({ entry, serialNumber, date, shift }: Ve
 
   return (
     <>
-      <TableRow 
-        className="group hover:bg-gray-50 relative"
+      <TableRow
+        className={`group hover:bg-gray-50 relative ${entry.status === 'draft' ? 'border-l-4 border-l-red-500 bg-red-50/30 dark:bg-red-950/20' : ''}`}
         onMouseEnter={() => setShowContextMenu(true)}
         onMouseLeave={() => setShowContextMenu(false)}
       >
@@ -197,6 +284,10 @@ export default function VehicleEntryRow({ entry, serialNumber, date, shift }: Ve
             </div>
             {serialNumber}
           </div>
+        </TableCell>
+
+        <TableCell className="text-muted-foreground text-sm whitespace-nowrap" title="Siding (read-only)">
+          {entry.siding?.name ?? '—'}
         </TableCell>
 
       <TableCell>
@@ -332,16 +423,19 @@ export default function VehicleEntryRow({ entry, serialNumber, date, shift }: Ve
         {entry.status === 'completed' ? (
           <Badge variant="default">completed</Badge>
         ) : (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleMarkCompleted}
-            disabled={isSaving}
-            className="h-7 gap-1 text-xs text-green-700 border-green-300 hover:bg-green-50 hover:text-green-800"
-          >
-            {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
-            Complete
-          </Button>
+          <div className="flex flex-col gap-0.5">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleMarkCompleted}
+              disabled={isSaving}
+              className="h-7 gap-1 text-xs text-green-700 border-green-300 hover:bg-green-50 hover:text-green-800"
+            >
+              {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+              Complete
+            </Button>
+            <span className="text-xs text-muted-foreground">Stock not recorded</span>
+          </div>
         )}
       </TableCell>
       </TableRow>
@@ -462,6 +556,9 @@ export default function VehicleEntryRow({ entry, serialNumber, date, shift }: Ve
                 )}
               </div>
 
+              {saveError && (
+                <p className="text-sm text-destructive mb-2">{saveError}</p>
+              )}
               <div className="flex justify-end gap-2">
                 <Button
                   variant="outline"

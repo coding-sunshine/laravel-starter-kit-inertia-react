@@ -12,14 +12,22 @@ use Illuminate\Support\Facades\DB;
 
 final readonly class DailyVehicleEntryService
 {
-    public function getEntriesByDateAndShift(string $date, int $shift): Collection
+    /**
+     * @param  int|null  $sidingId  When set (e.g. from SidingContext), only entries for this siding are returned so the list matches the user's context.
+     */
+    public function getEntriesByDateAndShift(string $date, int $shift, ?int $sidingId = null): Collection
     {
-        return DailyVehicleEntry::query()
+        $query = DailyVehicleEntry::query()
             ->with(['siding', 'creator', 'updater'])
             ->where('entry_date', $date)
             ->where('shift', $shift)
-            ->orderBy('created_at', 'desc') // Newest first
-            ->get();
+            ->orderBy('created_at', 'desc'); // Newest first
+
+        if ($sidingId !== null) {
+            $query->where('siding_id', $sidingId);
+        }
+
+        return $query->get();
     }
 
     public function createEntry(array $data): DailyVehicleEntry

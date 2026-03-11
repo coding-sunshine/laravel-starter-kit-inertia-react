@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Models\DailyVehicleEntry;
 use App\Services\DailyVehicleEntryService;
 use App\Services\ShiftValidationService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -42,7 +44,8 @@ final class DailyVehicleEntryController extends Controller
             }
         }
 
-        $entries = $this->service->getEntriesByDateAndShift($date, $activeShift);
+        // Return all entries for date+shift; frontend filters by the page siding dropdown
+        $entries = $this->service->getEntriesByDateAndShift($date, $activeShift, null);
         $shiftSummary = $this->service->getShiftSummary($date);
         $shiftStatus = $this->shiftValidation->getShiftCompletionStatus($date);
         $shiftTimes = [
@@ -51,21 +54,23 @@ final class DailyVehicleEntryController extends Controller
             3 => $this->shiftValidation->getShiftTimeRange(3),
         ];
 
-        // Get available sidings for export dropdown
+        // Get available sidings for export dropdown and siding filter
         $sidings = \App\Models\Siding::orderBy('name')->get(['id', 'name']);
+        $sidingId = $request->has('siding_id') ? (int) $request->get('siding_id') : null;
 
         return Inertia::render('road-dispatch/daily-vehicle-entries/index', [
-            'entries' => $entries,
+            'entries' => $entries->values()->all(),
             'date' => $date,
             'activeShift' => $activeShift,
             'shiftSummary' => $shiftSummary,
             'shiftStatus' => $shiftStatus,
             'shiftTimes' => $shiftTimes,
             'sidings' => $sidings,
+            'sidingId' => $sidingId,
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request): RedirectResponse|JsonResponse
     {
         $data = $request->validate([
             'siding_id' => 'required|exists:sidings,id',
@@ -91,16 +96,31 @@ final class DailyVehicleEntryController extends Controller
             }
         }
 
+        // Cannot add a new row until all entries in this shift (and siding) are completed (stock ledger is created on Complete)
+        if (DailyVehicleEntry::query()
+            ->where('entry_date', $data['entry_date'])
+            ->where('shift', $data['shift'])
+            ->where('siding_id', $data['siding_id'])
+            ->where('status', 'draft')
+            ->exists()) {
+            throw ValidationException::withMessages([
+                'shift' => 'Complete all entries in this shift before adding a new row. Coal stock is recorded when you mark an entry complete.',
+            ]);
+        }
+
         $entry = $this->service->createEntry($data);
 
-        // Redirect back to the index page with the new data
+        if ($request->wantsJson()) {
+            return response()->json(['entry' => $entry->load('siding')], 201);
+        }
+
         return redirect()->route('road-dispatch.daily-vehicle-entries.index', [
             'date' => $data['entry_date'],
             'shift' => $data['shift'],
         ]);
     }
 
-    public function update(Request $request, $id): RedirectResponse
+    public function update(Request $request, $id): RedirectResponse|JsonResponse
     {
         $data = $request->validate([
             'e_challan_no' => 'nullable|string|max:255',
@@ -115,33 +135,43 @@ final class DailyVehicleEntryController extends Controller
             'status' => 'nullable|in:draft,completed',
         ]);
 
-        $entry = \App\Models\DailyVehicleEntry::findOrFail($id);
+        $entry = DailyVehicleEntry::findOrFail($id);
         $this->service->updateEntry($entry, $data);
 
+        if ($request->wantsJson()) {
+            return response()->json(['entry' => $entry->fresh()->load('siding')]);
+        }
+
         return redirect()->route('road-dispatch.daily-vehicle-entries.index', [
             'date' => $entry->entry_date,
             'shift' => $entry->shift,
         ]);
     }
 
-    public function markCompleted($id): RedirectResponse
+    public function markCompleted(Request $request, $id): RedirectResponse|JsonResponse
     {
-        $entry = \App\Models\DailyVehicleEntry::findOrFail($id);
+        $entry = DailyVehicleEntry::findOrFail($id);
         $updatedEntry = $this->service->markCompleted($entry);
 
-        // Redirect back to the index page
+        if ($request->wantsJson()) {
+            return response()->json(['entry' => $updatedEntry->load('siding')]);
+        }
+
         return redirect()->route('road-dispatch.daily-vehicle-entries.index', [
             'date' => $entry->entry_date,
             'shift' => $entry->shift,
         ]);
     }
 
-    public function destroy($id): RedirectResponse
+    public function destroy(Request $request, $id): RedirectResponse|JsonResponse
     {
-        $entry = \App\Models\DailyVehicleEntry::findOrFail($id);
+        $entry = DailyVehicleEntry::findOrFail($id);
 
-        // Only allow deletion of draft entries with no meaningful data
         if ($entry->status !== 'draft') {
+            if ($request->wantsJson()) {
+                return response()->json(['message' => 'Cannot delete completed entries.'], 422);
+            }
+
             return back()->with('error', 'Cannot delete completed entries.');
         }
 
@@ -156,12 +186,20 @@ final class DailyVehicleEntryController extends Controller
                    ! empty($entry->challan_mode);
 
         if ($hasData) {
+            if ($request->wantsJson()) {
+                return response()->json(['message' => 'Cannot delete entries with data.'], 422);
+            }
+
             return back()->with('error', 'Cannot delete entries with data.');
         }
 
+        $entryId = $entry->id;
         $entry->delete();
 
-        // Redirect back to the index page
+        if ($request->wantsJson()) {
+            return response()->json(['deleted' => true, 'id' => $entryId]);
+        }
+
         return redirect()->route('road-dispatch.daily-vehicle-entries.index', [
             'date' => $entry->entry_date,
             'shift' => $entry->shift,
