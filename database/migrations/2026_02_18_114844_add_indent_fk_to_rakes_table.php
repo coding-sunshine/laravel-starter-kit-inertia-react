@@ -11,6 +11,16 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('rakes', function (Blueprint $table): void {
+            if (! Schema::hasColumn('rakes', 'indent_id')) {
+                $table->foreignId('indent_id')
+                    ->nullable()
+                    ->index()
+                    ->constrained('indents')
+                    ->cascadeOnDelete();
+
+                return;
+            }
+
             $table->foreign('indent_id')
                 ->references('id')
                 ->on('indents')
