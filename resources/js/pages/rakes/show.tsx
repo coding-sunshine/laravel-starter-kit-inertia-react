@@ -130,6 +130,15 @@ interface RakeData {
 
 interface Props {
     rake: RakeData;
+    wagonTypes: Array<{
+        id: number;
+        code: string;
+        full_form: string | null;
+        carrying_capacity_min_mt: string | number;
+        carrying_capacity_max_mt: string | number;
+        gross_tare_weight_mt: string | number;
+        default_pcc_weight_mt: string | number | null;
+    }>;
     demurrageRemainingMinutes: number | null;
     demurrage_rate_per_mt_hour: number;
 }
@@ -663,11 +672,13 @@ function TxrEditForm({ rake }: { rake: RakeData }) {
 
 export default function RakesShow({
     rake,
+    wagonTypes,
     demurrageRemainingMinutes,
     demurrage_rate_per_mt_hour,
 }: Props) {
     const [selectedWagon, setSelectedWagon] = useState<Wagon | null>(null);
     const [wagonDialogOpen, setWagonDialogOpen] = useState(false);
+    const [wagons, setWagons] = useState(rake.wagons);
     const { data, setData, put, processing, errors, reset } = useForm({
         wagon_type: '',
         is_unfit: false,
@@ -678,14 +689,15 @@ export default function RakesShow({
         weighment_qty_mt: '',
     });
 
-    // Calculate unfit wagon information
-    const unfitWagonInfo = getUnfitWagonInfo(rake.wagons);
-
     useEffect(() => {
         if (rake.wagons.length === 0 && (rake.wagon_count ?? 0) > 0) {
             router.visit(`/rakes/${rake.id}/edit`);
         }
     }, [rake.id, rake.wagons.length, rake.wagon_count]);
+
+    useEffect(() => {
+        setWagons(rake.wagons);
+    }, [rake.wagons]);
 
     useEffect(() => {
         if (selectedWagon) {
@@ -723,7 +735,20 @@ export default function RakesShow({
                         }
                     />
                     <div className="flex gap-2">
-                        <WagonOverviewDialog wagons={rake.wagons} />
+                        <WagonOverviewDialog
+                            wagons={wagons}
+                            wagonTypes={wagonTypes}
+                            rakeId={rake.id}
+                            onWagonSaved={(updatedWagon) =>
+                                setWagons((prev) =>
+                                    prev.map((w) =>
+                                        w.id === updatedWagon.id
+                                            ? { ...w, ...updatedWagon }
+                                            : w
+                                    )
+                                )
+                            }
+                        />
                         <Link
                             href="/rakes"
                             className="text-sm font-medium text-muted-foreground underline underline-offset-4"
@@ -762,136 +787,7 @@ export default function RakesShow({
                     )}
                 </div>
 
-                {rake.txr ? (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <Train className="size-5" />
-                                    TXR (Train Examination Report)
-                                </div>
-                                <div className="flex gap-2">
-                                    {rake.txr.status === 'in_progress' && (
-                                        <Dialog>
-                                            <DialogTrigger asChild>
-                                                <Button size="sm" variant="destructive">
-                                                    End TXR
-                                                </Button>
-                                            </DialogTrigger>
-                                            <DialogContent className="max-w-md">
-                                                <DialogHeader>
-                                                    <DialogTitle>End TXR</DialogTitle>
-                                                </DialogHeader>
-                                                <TxrEndForm rake={rake} />
-                                            </DialogContent>
-                                        </Dialog>
-                                    )}
-                                    {rake.txr.status === 'completed' && (
-                                        <Dialog>
-                                            <DialogTrigger asChild>
-                                                <Button size="sm" variant="outline">
-                                                    <Edit className="mr-2 h-4 w-4" />
-                                                    Edit TXR
-                                                </Button>
-                                            </DialogTrigger>
-                                            <DialogContent className="max-w-md">
-                                                <DialogHeader>
-                                                    <DialogTitle>Edit TXR</DialogTitle>
-                                                </DialogHeader>
-                                                <TxrEditForm rake={rake} />
-                                            </DialogContent>
-                                        </Dialog>
-                                    )}
-                                </div>
-                            </CardTitle>
-                            <CardDescription>
-                                Inspection time and unfit wagons
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-2 text-sm">
-                            <p>
-                                <span className="text-muted-foreground">
-                                    Status:
-                                </span>{' '}
-                                <span className={`capitalize font-medium ${
-                                    rake.txr.status === 'in_progress' ? 'text-blue-600' :
-                                    rake.txr.status === 'completed' ? 'text-green-600' :
-                                    'text-gray-600'
-                                }`}>
-                                    {rake.txr.status.replace('_', ' ')}
-                                </span>
-                            </p>
-                            <p>
-                                <span className="text-muted-foreground">
-                                    Inspection:
-                                </span>{' '}
-                                {new Date(
-                                    rake.txr.inspection_time,
-                                ).toLocaleString()}
-                            </p>
-                            {rake.txr.inspection_end_time && (
-                                <p>
-                                    <span className="text-muted-foreground">
-                                        Inspection End:
-                                    </span>{' '}
-                                    {new Date(
-                                        rake.txr.inspection_end_time,
-                                    ).toLocaleString()}
-                                </p>
-                            )}
-                            <p>
-                                <span className="text-muted-foreground">
-                                    Unfit wagons:
-                                </span>{' '}
-                                {unfitWagonInfo.count}
-                                {unfitWagonInfo.numbers
-                                    ? ` (${unfitWagonInfo.numbers})`
-                                    : ''}
-                            </p>
-                            {rake.txr.remarks && (
-                                <p>
-                                    <span className="text-muted-foreground">
-                                        Remarks:
-                                    </span>{' '}
-                                    {rake.txr.remarks}
-                                </p>
-                            )}
-                        </CardContent>
-                    </Card>
-                ) : (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <Train className="size-5" />
-                                TXR (Train Examination Report)
-                            </CardTitle>
-                            <CardDescription>
-                                Start train examination for this rake
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="p-8 text-center">
-                            <Button 
-                                onClick={() => {
-                                    router.post(`/rakes/${rake.id}/txr/start`, {}, {
-                                        preserveScroll: true,
-                                        onSuccess: () => {
-                                            router.reload();
-                                        },
-                                        onError: (errors) => {
-                                            console.error('Error starting TXR:', errors);
-                                        },
-                                    });
-                                }}
-                                disabled={false}
-                            >
-                                <Train className="mr-2 h-4 w-4" />
-                                Start TXR
-                            </Button>
-                        </CardContent>
-                    </Card>
-                )}
-
-                {/* New Accordion Workflow */}
+                {/* Workflow steps (TXR, Loading, Guard, Weighment, etc.) */}
                 <RakeWorkflow rake={rake} demurrage_rate_per_mt_hour={demurrage_rate_per_mt_hour} />
 
                 {!rake.txr && rake.wagons.length === 0 && (

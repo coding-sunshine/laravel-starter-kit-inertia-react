@@ -10,6 +10,7 @@ use App\Models\Rake;
 use App\Models\Siding;
 use App\Models\Wagon;
 use App\Services\IndentPdfImporter;
+use Closure;
 use DateTimeImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -257,9 +258,12 @@ final class IndentsController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'code']);
 
+        $nextPriorityNumber = (int) Rake::query()->max('priority_number') + 1;
+
         return Inertia::render('rakes/create-from-indent', [
             'indent' => $indent->load('siding:id,name,code'),
             'sidings' => $sidings,
+            'next_priority_number' => $nextPriorityNumber,
         ]);
     }
 
@@ -277,6 +281,27 @@ final class IndentsController extends Controller
         }
 
         $validated = $request->validate([
+            'rake_number' => [
+                'nullable',
+                'string',
+                'max:100',
+                function (string $attribute, mixed $value, Closure $fail) {
+                    $trimmed = $value !== null && mb_trim((string) $value) !== '' ? mb_trim((string) $value) : null;
+                    if ($trimmed === null) {
+                        return;
+                    }
+                    $existsInMonth = Rake::query()
+                        ->where('rake_number', $trimmed)
+                        ->whereYear('created_at', now()->year)
+                        ->whereMonth('created_at', now()->month)
+                        ->exists();
+                    if ($existsInMonth) {
+                        $fail('This rake number is already in use this month.');
+                    }
+                },
+            ],
+            'rake_priority_number' => ['nullable', 'integer', 'min:0'],
+            'loading_date' => ['nullable', 'date'],
             'rake_type' => ['nullable', 'string', 'max:50'],
             'wagon_count' => ['nullable', 'integer', 'min:0'],
             'free_time_minutes' => ['nullable', 'integer', 'min:0'],
@@ -290,12 +315,23 @@ final class IndentsController extends Controller
         $rake->indent_id = $indent->id;
         $rake->siding_id = $indent->siding_id; // Use indent's siding
 
-        // Generate unique rake number
-        $rakeNumber = $indent->indent_number ? 'RK-'.$indent->indent_number : 'RK-'.uniqid();
-        while (Rake::where('rake_number', $rakeNumber)->exists()) {
+        // Rake number: unique within current month (use submitted value if provided and unique this month, else auto-generate)
+        $rakeNumber = isset($validated['rake_number']) && mb_trim((string) $validated['rake_number']) !== ''
+            ? mb_trim((string) $validated['rake_number'])
+            : null;
+        if ($rakeNumber === null) {
+            $rakeNumber = $indent->indent_number ? 'RK-'.$indent->indent_number : 'RK-'.uniqid();
+        }
+        while (Rake::query()
+            ->where('rake_number', $rakeNumber)
+            ->whereYear('created_at', now()->year)
+            ->whereMonth('created_at', now()->month)
+            ->exists()) {
             $rakeNumber = 'RK-'.uniqid();
         }
         $rake->rake_number = $rakeNumber;
+        $rake->priority_number = isset($validated['rake_priority_number']) ? (int) $validated['rake_priority_number'] : ((int) Rake::query()->max('priority_number') + 1);
+        $rake->loading_date = isset($validated['loading_date']) ? $validated['loading_date'] : null;
         $rake->rake_type = $validated['rake_type'] ?? null;
         $rake->wagon_count = $validated['wagon_count'] ?? 0;
         $rake->loaded_weight_mt = 0;

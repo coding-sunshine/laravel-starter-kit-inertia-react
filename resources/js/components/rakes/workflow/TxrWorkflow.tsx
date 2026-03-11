@@ -50,13 +50,14 @@ interface TxrWorkflowProps {
         rake_number: string;
         state: string;
         wagons: Wagon[];
-        txr: TxrRecord | null;
+        txr: (TxrRecord & { wagonUnfitLogs?: WagonUnfitLog[] }) | null;
         wagonUnfitLogs?: WagonUnfitLog[];
     };
     disabled: boolean;
+    onUnfitLogsSaved?: (logs: WagonUnfitLog[]) => void;
 }
 
-export function TxrWorkflow({ rake, disabled }: TxrWorkflowProps) {
+export function TxrWorkflow({ rake, disabled, onUnfitLogsSaved }: TxrWorkflowProps) {
     const handleStartTxr = () => {
         router.post(`/rakes/${rake.id}/txr/start`, {}, { preserveScroll: true });
     };
@@ -109,7 +110,11 @@ export function TxrWorkflow({ rake, disabled }: TxrWorkflowProps) {
                         <TxrTable rake={rake} disabled={disabled} />
 
                         {/* Unfit Wagon Details Table */}
-                        <UnfitWagonTable rake={rake} disabled={disabled} />
+                        <UnfitWagonTable
+                            rake={rake}
+                            disabled={disabled}
+                            onUnfitLogsSaved={onUnfitLogsSaved}
+                        />
 
                         {rake.txr.status === 'in_progress' && (
                             <form onSubmit={handleEndTxr}>

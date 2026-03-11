@@ -57,7 +57,6 @@ use App\Http\Controllers\Settings\AchievementsController;
 use App\Http\Controllers\SidingsController;
 use App\Http\Controllers\SidingSwitchController;
 use App\Http\Controllers\TermsAcceptController;
-use App\Http\Controllers\TxrController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserEmailResetNotificationController;
 use App\Http\Controllers\UserEmailVerificationController;
@@ -198,9 +197,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::post('rakes/{rake}/txr/start', [RakeTxrController::class, 'start'])->name('rakes.txr.start');
     Route::post('rakes/{rake}/txr/end', [RakeTxrController::class, 'end'])->name('rakes.txr.end');
     Route::post('rakes/{rake}/txr/unfit-logs', [RakeTxrController::class, 'storeUnfitLogs'])->name('rakes.txr.unfit-logs');
-    // New TXR header routes
-    Route::post('rakes/{rake}/txr', [TxrController::class, 'store'])->name('rakes.txr.store');
-    // Unfit wagon routes
+    // Unfit wagon routes (alternative: by txr id)
     Route::post('txr/{txr}/unfit-wagons', [WagonUnfitController::class, 'store'])->name('txr.unfit-wagons.store');
     Route::get('rakes/{rake}/load', [RakeLoadController::class, 'show'])->name('rakes.load.show');
     Route::post('rakes/{rake}/load/confirm-placement', [RakeLoadController::class, 'confirmPlacement'])->name('rakes.load.confirm-placement');

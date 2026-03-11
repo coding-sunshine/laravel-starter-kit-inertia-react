@@ -6,6 +6,7 @@ import { WeighmentWorkflow } from './WeighmentWorkflow';
 import { ComparisonWorkflow } from './ComparisonWorkflow';
 import { RrDocumentWorkflow } from './RrDocumentWorkflow';
 import { PenaltiesWorkflow } from './PenaltiesWorkflow';
+import { useState, useEffect } from 'react';
 
 interface RakeData {
     id: number;
@@ -27,6 +28,15 @@ interface RakeData {
             wagon_id: number;
             wagon?: { wagon_number: string; wagon_sequence: number; wagon_type?: string | null };
             reason?: string | null;
+            marking_method?: string | null;
+            marked_at?: string | null;
+        }>;
+        wagonUnfitLogs?: Array<{
+            id?: number;
+            wagon_id: number;
+            wagon?: { wagon_number: string; wagon_sequence: number; wagon_type?: string | null };
+            reason?: string | null;
+            reason_unfit?: string | null;
             marking_method?: string | null;
             marked_at?: string | null;
         }>;
@@ -105,14 +115,19 @@ interface RakeWorkflowProps {
 }
 
 export function RakeWorkflow({ rake, demurrage_rate_per_mt_hour }: RakeWorkflowProps) {
+    const [rakeData, setRakeData] = useState(rake);
+    useEffect(() => {
+        setRakeData(rake);
+    }, [rake]);
+
     // Workflow step completion checks
-    const isTxrCompleted = rake.txr?.status === 'completed';
-    const wagonLoadings = rake.wagonLoadings ?? [];
-    const fitWagonCount = rake.wagons.filter(w => !w.is_unfit).length;
+    const isTxrCompleted = rakeData.txr?.status === 'completed';
+    const wagonLoadings = rakeData.wagonLoadings ?? [];
+    const fitWagonCount = rakeData.wagons.filter(w => !w.is_unfit).length;
     const isWagonLoadingCompleted = wagonLoadings.length > 0 && wagonLoadings.length === fitWagonCount;
-    const isGuardApproved = rake.guardInspections?.[0]?.is_approved;
-    const isWeighmentCompleted = rake.weighments?.[0]?.status === 'success';
-    const hasRrDocument = !!rake.rrDocuments?.length;
+    const isGuardApproved = rakeData.guardInspections?.[0]?.is_approved;
+    const isWeighmentCompleted = rakeData.weighments?.[0]?.status === 'success';
+    const hasRrDocument = !!rakeData.rrDocuments?.length;
 
     // Disable logic based on workflow
     // const disableWagonLoading = !isTxrCompleted;
@@ -144,7 +159,18 @@ export function RakeWorkflow({ rake, demurrage_rate_per_mt_hour }: RakeWorkflowP
                         </div>
                     </AccordionTrigger>
                     <AccordionContent>
-                        <TxrWorkflow rake={rake} disabled={false} />
+                        <TxrWorkflow
+                            rake={rakeData}
+                            disabled={false}
+                            onUnfitLogsSaved={(logs) =>
+                                setRakeData((prev) => ({
+                                    ...prev,
+                                    txr: prev.txr
+                                        ? { ...prev.txr, wagonUnfitLogs: logs }
+                                        : null,
+                                }))
+                            }
+                        />
                     </AccordionContent>
                 </AccordionItem>
 
@@ -162,7 +188,7 @@ export function RakeWorkflow({ rake, demurrage_rate_per_mt_hour }: RakeWorkflowP
                         </div>
                     </AccordionTrigger>
                     <AccordionContent>
-                        <WagonLoadingWorkflow rake={rake} disabled={disableWagonLoading} />
+                        <WagonLoadingWorkflow rake={rakeData} disabled={disableWagonLoading} />
                     </AccordionContent>
                 </AccordionItem>
 
@@ -182,7 +208,7 @@ export function RakeWorkflow({ rake, demurrage_rate_per_mt_hour }: RakeWorkflowP
                         </div>
                     </AccordionTrigger>
                     <AccordionContent>
-                        <GuardInspectionWorkflow rake={rake} disabled={disableGuardInspection} />
+                        <GuardInspectionWorkflow rake={rakeData} disabled={disableGuardInspection} />
                     </AccordionContent>
                 </AccordionItem>
 
@@ -200,7 +226,7 @@ export function RakeWorkflow({ rake, demurrage_rate_per_mt_hour }: RakeWorkflowP
                         </div>
                     </AccordionTrigger>
                     <AccordionContent>
-                        <WeighmentWorkflow rake={rake} disabled={disableWeighment} />
+                        <WeighmentWorkflow rake={rakeData} disabled={disableWeighment} />
                     </AccordionContent>
                 </AccordionItem>
 
@@ -215,7 +241,7 @@ export function RakeWorkflow({ rake, demurrage_rate_per_mt_hour }: RakeWorkflowP
                         </div>
                     </AccordionTrigger>
                     <AccordionContent>
-                        <ComparisonWorkflow rake={rake} disabled={disableComparison} />
+                        <ComparisonWorkflow rake={rakeData} disabled={disableComparison} />
                     </AccordionContent>
                 </AccordionItem>
 
@@ -233,7 +259,7 @@ export function RakeWorkflow({ rake, demurrage_rate_per_mt_hour }: RakeWorkflowP
                         </div>
                     </AccordionTrigger>
                     <AccordionContent>
-                        <RrDocumentWorkflow rake={rake} disabled={disableRrDocument} />
+                        <RrDocumentWorkflow rake={rakeData} disabled={disableRrDocument} />
                     </AccordionContent>
                 </AccordionItem>
 
@@ -248,10 +274,10 @@ export function RakeWorkflow({ rake, demurrage_rate_per_mt_hour }: RakeWorkflowP
                         </div>
                     </AccordionTrigger>
                     <AccordionContent>
-                        <PenaltiesWorkflow 
-                            rake={rake} 
+                        <PenaltiesWorkflow
+                            rake={rakeData}
                             demurrage_rate_per_mt_hour={demurrage_rate_per_mt_hour}
-                            disabled={disablePenalties} 
+                            disabled={disablePenalties}
                         />
                     </AccordionContent>
                 </AccordionItem>

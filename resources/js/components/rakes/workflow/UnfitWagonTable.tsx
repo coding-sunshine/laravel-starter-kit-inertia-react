@@ -1,13 +1,23 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { SearchableSelect, type SearchableSelectOption } from '@/components/ui/searchable-select';
 import InputError from '@/components/input-error';
-import { Plus, Trash2, AlertTriangle } from 'lucide-react';
-import { useForm, usePage } from '@inertiajs/react';
-import { useState, useMemo } from 'react';
+import { Plus, Trash2, AlertTriangle, Loader2 } from 'lucide-react';
+import { useState, useMemo, useCallback } from 'react';
+
+function getCsrfHeaders(): Record<string, string> {
+    const cookieMatch = document.cookie.match(/\bXSRF-TOKEN=([^;]+)/);
+    if (cookieMatch) {
+        return { 'X-XSRF-TOKEN': decodeURIComponent(cookieMatch[1].trim()) };
+    }
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    if (meta?.getAttribute('content')) {
+        return { 'X-CSRF-TOKEN': meta.getAttribute('content')! };
+    }
+    return {};
+}
 
 interface Wagon {
     id: number;
@@ -37,10 +47,11 @@ interface UnfitWagonTableProps {
         id: number;
         rake_number: string;
         wagons: Wagon[];
-        txr: TxrData | null;
+        txr: (TxrData & { wagonUnfitLogs?: WagonUnfitLog[] }) | null;
         wagonUnfitLogs?: WagonUnfitLog[];
     };
     disabled: boolean;
+    onUnfitLogsSaved?: (logs: WagonUnfitLog[]) => void;
 }
 
 interface UnfitWagonRow {
@@ -72,52 +83,33 @@ function newUnfitWagonRow(): UnfitWagonRow {
     };
 }
 
-export function UnfitWagonTable({ rake, disabled }: UnfitWagonTableProps) {
-    const { errors } = usePage<{ errors?: Record<string, string> }>().props;
-    
+export function UnfitWagonTable({ rake, disabled, onUnfitLogsSaved }: UnfitWagonTableProps) {
+    const logsSource =
+        rake.wagonUnfitLogs ??
+        rake.txr?.wagonUnfitLogs ??
+        (rake.txr as { wagon_unfit_logs?: WagonUnfitLog[] } | undefined)?.wagon_unfit_logs ??
+        [];
     const initialUnfitRows: UnfitWagonRow[] = useMemo(() => {
-        const logs = rake.wagonUnfitLogs ?? [];
+        const logs = logsSource;
         if (logs.length === 0) return [newUnfitWagonRow()];
-        
+
         return logs.map((log) => ({
             key: `unfit-${log.wagon_id}-${log.id ?? Date.now()}`,
             wagon_id: String(log.wagon_id),
             wagon_number: log.wagon?.wagon_number ?? '',
             wagon_type: log.wagon?.wagon_type ?? '',
-            reason_unfit: log.reason_unfit ?? '',
+            reason_unfit: (log as { reason_unfit?: string; reason?: string }).reason_unfit ?? (log as { reason?: string }).reason ?? '',
             marked_by: log.marked_by ?? '',
             marking_method: log.marking_method ?? '',
             marked_at: log.marked_at
                 ? new Date(log.marked_at).toISOString().slice(0, 16)
                 : new Date().toISOString().slice(0, 16),
         }));
-    }, [rake.wagonUnfitLogs]);
+    }, [logsSource]);
 
     const [unfitRows, setUnfitRows] = useState<UnfitWagonRow[]>(initialUnfitRows);
-
-    const { data, setData, post, processing, reset } = useForm({
-        unfit_wagons: unfitRows.map(row => ({
-            wagon_id: row.wagon_id,
-            reason_unfit: row.reason_unfit,
-            marked_by: row.marked_by,
-            marking_method: row.marking_method,
-            marked_at: row.marked_at,
-        })),
-    });
-
-    // Update form data when rows change
-    const updateFormData = () => {
-        setData('unfit_wagons', unfitRows
-            .filter(row => row.wagon_id)
-            .map(row => ({
-                wagon_id: row.wagon_id,
-                reason_unfit: row.reason_unfit,
-                marked_by: row.marked_by,
-                marking_method: row.marking_method,
-                marked_at: row.marked_at,
-            }))
-        );
-    };
+    const [saving, setSaving] = useState(false);
+    const [formError, setFormError] = useState<string | null>(null);
 
     const wagonOptions: SearchableSelectOption[] = useMemo(
         () =>
@@ -129,20 +121,54 @@ export function UnfitWagonTable({ rake, disabled }: UnfitWagonTableProps) {
         [rake.wagons]
     );
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        
-        if (!rake.txr) {
-            return;
-        }
+    const handleSubmit = useCallback(
+        async (e: React.FormEvent) => {
+            e.preventDefault();
+            setFormError(null);
+            if (!rake.txr) return;
 
-        post(`/txr/${rake.txr.id}/unfit-wagons`, {
-            preserveScroll: true,
-            onSuccess: () => {
-                // Page will reload automatically to show updated data
-            },
-        });
-    };
+            const payload = {
+                unfit_logs: unfitRows
+                    .filter((r) => r.wagon_id)
+                    .map((row) => ({
+                        wagon_id: row.wagon_id,
+                        reason_unfit: row.reason_unfit,
+                        marking_method: row.marking_method,
+                        marked_at: row.marked_at || null,
+                    })),
+            };
+
+            setSaving(true);
+            try {
+                const res = await fetch(`/rakes/${rake.id}/txr/unfit-logs`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Accept: 'application/json',
+                        ...getCsrfHeaders(),
+                    },
+                    body: JSON.stringify(payload),
+                    credentials: 'include',
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    const err = data as { message?: string; errors?: Record<string, string[]> };
+                    const msg =
+                        err.message ??
+                        (err.errors ? Object.values(err.errors).flat().join(', ') : null) ??
+                        res.statusText ??
+                        'Save failed';
+                    setFormError(msg);
+                    return;
+                }
+                const logs = (data as { wagonUnfitLogs?: WagonUnfitLog[] }).wagonUnfitLogs ?? [];
+                onUnfitLogsSaved?.(logs);
+            } finally {
+                setSaving(false);
+            }
+        },
+        [rake.id, rake.txr, unfitRows, onUnfitLogsSaved]
+    );
 
     const addUnfitRow = () => {
         setUnfitRows((prev) => [...prev, newUnfitWagonRow()]);
@@ -150,7 +176,6 @@ export function UnfitWagonTable({ rake, disabled }: UnfitWagonTableProps) {
 
     const removeUnfitRow = (key: string) => {
         setUnfitRows((prev) => prev.filter((r) => r.key !== key));
-        setTimeout(updateFormData, 0);
     };
 
     const updateUnfitRow = (key: string, field: keyof UnfitWagonRow, value: string) => {
@@ -158,24 +183,22 @@ export function UnfitWagonTable({ rake, disabled }: UnfitWagonTableProps) {
             prev.map((r) => {
                 if (r.key !== key) return r;
                 const next = { ...r, [field]: value };
-                
-                // Auto-fill wagon details when wagon is selected
+
                 if (field === 'wagon_id') {
                     const wagon = rake.wagons.find((w) => String(w.id) === value);
                     next.wagon_number = wagon?.wagon_number ?? '';
                     next.wagon_type = wagon?.wagon_type ?? '';
                 }
-                
+
                 return next;
             })
         );
-        setTimeout(updateFormData, 0);
     };
 
-    // Update form data initially
-    useState(() => {
-        updateFormData();
-    });
+    const handleReset = () => {
+        setUnfitRows(initialUnfitRows);
+        setFormError(null);
+    };
 
     if (!rake.txr) {
         return (
@@ -204,6 +227,11 @@ export function UnfitWagonTable({ rake, disabled }: UnfitWagonTableProps) {
             </CardHeader>
             <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-4">
+                    {formError && (
+                        <div className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                            {formError}
+                        </div>
+                    )}
                     <div className="max-h-80 overflow-y-auto border rounded-lg">
                         <Table>
                             <TableHeader>
@@ -255,7 +283,7 @@ export function UnfitWagonTable({ rake, disabled }: UnfitWagonTableProps) {
                                                 placeholder="Reason for unfit"
                                                 disabled={disabled}
                                             />
-                                            <InputError message={errors?.[`unfit_wagons.${unfitRows.indexOf(row)}.reason_unfit`]} />
+                                            <InputError message={null} />
                                         </TableCell>
                                         <TableCell>
                                             <Input
@@ -266,7 +294,7 @@ export function UnfitWagonTable({ rake, disabled }: UnfitWagonTableProps) {
                                                 placeholder="Marked by"
                                                 disabled={disabled}
                                             />
-                                            <InputError message={errors?.[`unfit_wagons.${unfitRows.indexOf(row)}.marked_by`]} />
+                                            <InputError message={null} />
                                         </TableCell>
                                         <TableCell>
                                             <select
@@ -284,7 +312,7 @@ export function UnfitWagonTable({ rake, disabled }: UnfitWagonTableProps) {
                                                     </option>
                                                 ))}
                                             </select>
-                                            <InputError message={errors?.[`unfit_wagons.${unfitRows.indexOf(row)}.marking_method`]} />
+                                            <InputError message={null} />
                                         </TableCell>
                                         <TableCell>
                                             <Input
@@ -295,7 +323,7 @@ export function UnfitWagonTable({ rake, disabled }: UnfitWagonTableProps) {
                                                 }
                                                 disabled={disabled}
                                             />
-                                            <InputError message={errors?.[`unfit_wagons.${unfitRows.indexOf(row)}.marked_at`]} />
+                                            <InputError message={null} />
                                         </TableCell>
                                         <TableCell>
                                             <Button
@@ -318,13 +346,20 @@ export function UnfitWagonTable({ rake, disabled }: UnfitWagonTableProps) {
                         <Button
                             type="button"
                             variant="outline"
-                            onClick={() => reset()}
+                            onClick={handleReset}
                             disabled={disabled}
                         >
                             Reset
                         </Button>
-                        <Button type="submit" disabled={disabled || processing}>
-                            Save Unfit Wagons
+                        <Button type="submit" disabled={disabled || saving}>
+                            {saving ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Saving...
+                                </>
+                            ) : (
+                                'Save Unfit Wagons'
+                            )}
                         </Button>
                     </div>
                 </form>
