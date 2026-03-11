@@ -337,7 +337,9 @@ export function WagonLoadingWorkflow({
     };
 
     const hasTimer = !!timerStart;
-    const displayFreeMinutes = freeMinutes;
+    const displayFreeMinutes = timerStart
+        ? freeMinutes
+        : (rake.loading_section_free_minutes ?? rake.loading_free_minutes ?? 180);
     const timerLabel =
         displayFreeMinutes >= 60 && displayFreeMinutes % 60 === 0
             ? `Start ${displayFreeMinutes / 60}-hour Timer`

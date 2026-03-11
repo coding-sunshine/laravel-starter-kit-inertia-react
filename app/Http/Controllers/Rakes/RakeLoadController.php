@@ -7,15 +7,11 @@ namespace App\Http\Controllers\Rakes;
 use App\Events\RakeGuardInspectionUpdated;
 use App\Events\RakeLoadUpdated;
 use App\Events\RakeWagonLoadingUpdated;
-use App\Events\RakeWeighmentUpdated;
 use App\Http\Controllers\Controller;
 use App\Models\GuardInspection;
 use App\Models\PenaltyType;
 use App\Models\Rake;
-use App\Models\RakeLoad as RakeLoadModel;
 use App\Models\RakeWagonLoading;
-use App\Models\RakeWagonWeighment;
-use App\Models\Weighment;
 use App\Services\RakeLoadStateResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -43,7 +39,6 @@ final class RakeLoadController extends Controller
             'rakeLoad.wagonLoadings.wagon:id,wagon_number,wagon_sequence,tare_weight_mt,pcc_weight_mt,is_unfit',
             'rakeLoad.wagonLoadings.loader:id,loader_name,code',
             'rakeLoad.guardInspections',
-            'rakeLoad.weighments.wagonWeighments',
         ]);
 
         $state = $this->stateResolver->resolve($rake);
@@ -382,106 +377,6 @@ final class RakeLoadController extends Controller
             ->with('success', 'Guard inspection recorded.');
     }
 
-    public function recordWeighment(Request $request, Rake $rake): RedirectResponse
-    {
-        // $this->authorize('update', $rake);
-
-        $rakeLoad = $rake->rakeLoad;
-        if (! $rakeLoad) {
-            return redirect()
-                ->route('rakes.load.show', $rake)
-                ->setStatusCode(303)
-                ->with('error', 'Loading process not started.');
-        }
-
-        $validated = $request->validate([
-            'train_speed_kmph' => ['required', 'numeric', 'min:5', 'max:7'],
-            'wagon_weights' => ['required', 'array'],
-            'wagon_weights.*.wagon_id' => ['required', 'exists:wagons,id'],
-            'wagon_weights.*.gross_weight_mt' => ['required', 'numeric', 'min:0'],
-        ]);
-
-        $speed = (float) $validated['train_speed_kmph'];
-        $attemptNo = Weighment::where('rake_load_id', $rakeLoad->id)->max('attempt_no') ?? 0;
-        $attemptNo = (int) $attemptNo + 1;
-
-        if ($speed < 5 || $speed > 7) {
-            $weighment = Weighment::create([
-                'rake_id' => $rake->id,
-                'rake_load_id' => $rakeLoad->id,
-                'attempt_no' => $attemptNo,
-                'weighment_time' => now(),
-                'train_speed_kmph' => $speed,
-                'total_weight_mt' => 0,
-                'status' => 'failed_speed',
-            ]);
-
-            $state = $this->stateResolver->resolve($rake);
-            RakeLoadUpdated::dispatch($rake, $rakeLoad, $state, 'weighment_failed_speed');
-            RakeWeighmentUpdated::dispatch($rake, $weighment, 'created');
-
-            return redirect()
-                ->route('rakes.load.show', $rake)
-                ->setStatusCode(303)
-                ->with('error', 'Train speed must be between 5 and 7 km/h. Weighment failed.');
-        }
-
-        $overloadedWagons = [];
-        $totalWeight = 0;
-
-        $weighment = Weighment::create([
-            'rake_id' => $rake->id,
-            'rake_load_id' => $rakeLoad->id,
-            'attempt_no' => $attemptNo,
-            'weighment_time' => now(),
-            'train_speed_kmph' => $speed,
-            'total_weight_mt' => 0,
-            'status' => 'pending',
-        ]);
-
-        foreach ($validated['wagon_weights'] as $wagonWeight) {
-            $wagon = $rake->wagons()->find($wagonWeight['wagon_id']);
-            $pccWeight = $wagon?->pcc_weight_mt ? (float) $wagon->pcc_weight_mt : null;
-            $grossWeight = (float) $wagonWeight['gross_weight_mt'];
-            $isOverloaded = $pccWeight !== null && $grossWeight > $pccWeight;
-
-            RakeWagonWeighment::create([
-                'rake_weighment_id' => $weighment->id,
-                'wagon_id' => $wagonWeight['wagon_id'],
-                'gross_weight_mt' => $grossWeight,
-                'is_overloaded' => $isOverloaded,
-            ]);
-
-            if ($isOverloaded && $wagon) {
-                $overloadedWagons[] = $wagon->wagon_number;
-            }
-            $totalWeight += $grossWeight;
-        }
-
-        $status = ! empty($overloadedWagons) ? 'failed_overload' : 'passed';
-        $weighment->update([
-            'total_weight_mt' => $totalWeight,
-            'status' => $status,
-        ]);
-
-        $state = $this->stateResolver->resolve($rake);
-        $trigger = $status === 'passed' ? 'weighment_passed' : 'weighment_failed_overload';
-        RakeLoadUpdated::dispatch($rake, $rakeLoad, $state, $trigger);
-        RakeWeighmentUpdated::dispatch($rake, $weighment, 'updated');
-
-        if (! empty($overloadedWagons)) {
-            return redirect()
-                ->route('rakes.load.show', $rake)
-                ->setStatusCode(303)
-                ->with('error', 'Weighment failed. Overloaded wagons: '.implode(', ', $overloadedWagons).'. Please unload excess coal and retry.');
-        }
-
-        return redirect()
-            ->route('rakes.load.show', $rake)
-            ->setStatusCode(303)
-            ->with('success', 'Weighment passed. Proceed to Dispatch.');
-    }
-
     public function confirmDispatch(Request $request, Rake $rake): RedirectResponse
     {
         // $this->authorize('update', $rake);
@@ -499,7 +394,7 @@ final class RakeLoadController extends Controller
             return redirect()
                 ->route('rakes.load.show', $rake)
                 ->setStatusCode(303)
-                ->with('error', 'Weighment must pass before dispatch.');
+                ->with('error', 'Complete guard inspection before dispatch.');
         }
 
         if ($rakeLoad->status === 'completed') {
@@ -525,8 +420,7 @@ final class RakeLoadController extends Controller
                 $penaltyType = PenaltyType::where('code', 'demurrage')->first();
                 if ($penaltyType) {
                     $demurrageRate = (float) config('rrmcs.demurrage_rate_per_mt_hour', 50);
-                    $passedWeighment = $rakeLoad->weighments()->where('status', 'passed')->latest('weighment_time')->first();
-                    $attemptNo = $passedWeighment ? $passedWeighment->attempt_no : 1;
+                    $attemptNo = (int) ($rakeLoad->wagonLoadings()->max('attempt_no') ?? 1);
                     $totalWeight = (float) $rakeLoad->wagonLoadings()
                         ->where('attempt_no', $attemptNo)
                         ->sum('loaded_quantity_mt');
@@ -554,18 +448,5 @@ final class RakeLoadController extends Controller
             ->route('rakes.show', $rake)
             ->setStatusCode(303)
             ->with('success', 'Rake dispatched successfully.');
-    }
-
-    private function currentAttemptNo(RakeLoadModel $rakeLoad): int
-    {
-        $latestWeighment = $rakeLoad->weighments()->latest('weighment_time')->first();
-
-        if ($latestWeighment && $latestWeighment->status === 'failed_overload') {
-            return $latestWeighment->attempt_no + 1;
-        }
-
-        $maxWagonAttempt = $rakeLoad->wagonLoadings()->max('attempt_no');
-
-        return max(1, (int) $maxWagonAttempt);
     }
 }

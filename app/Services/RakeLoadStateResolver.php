@@ -15,13 +15,7 @@ final readonly class RakeLoadStateResolver
 
     public const STEP_GUARD_INSPECTION = 'guard_inspection';
 
-    public const STEP_WEIGHMENT = 'weighment';
-
     public const STEP_DISPATCH = 'dispatch';
-
-    public const FAILURE_SPEED = 'speed';
-
-    public const FAILURE_OVERLOAD = 'overload';
 
     /**
      * @return array{active_step: string, attempt_no: int, failure_reason: string|null}
@@ -43,20 +37,13 @@ final readonly class RakeLoadStateResolver
         $totalWagons = $rake->wagons()->where('is_unfit', false)->count();
         $loadingComplete = $totalWagons > 0 && $loadedCount >= $totalWagons;
 
-        // Get the latest approved inspection for the current attempt
         $latestApprovedInspection = $rakeLoad->guardInspections()
             ->where('is_approved', true)
             ->where('attempt_no', $attemptNo)
             ->latest('inspection_time')
             ->first();
-        
-        $latestWeighment = $rakeLoad->weighments()->latest('weighment_time')->first();
-        $weighmentPassed = $latestWeighment?->status === 'passed';
-        $weighmentFailedOverload = $latestWeighment?->status === 'failed_overload';
-        $weighmentFailedSpeed = $latestWeighment?->status === 'failed_speed';
 
-        // Simple logic: if loading is complete and we have no approved inspection for current attempt, we need one
-        $needsNewInspection = $loadingComplete && !$latestApprovedInspection;
+        $needsNewInspection = $loadingComplete && ! $latestApprovedInspection;
 
         if ($rakeLoad->status === 'completed') {
             return [
@@ -70,7 +57,7 @@ final readonly class RakeLoadStateResolver
             return [
                 'active_step' => self::STEP_WAGON_LOADING,
                 'attempt_no' => $attemptNo,
-                'failure_reason' => $weighmentFailedOverload ? self::FAILURE_OVERLOAD : null,
+                'failure_reason' => null,
             ];
         }
 
@@ -82,14 +69,7 @@ final readonly class RakeLoadStateResolver
             ];
         }
 
-        if (! $weighmentPassed) {
-            return [
-                'active_step' => self::STEP_WEIGHMENT,
-                'attempt_no' => $attemptNo,
-                'failure_reason' => $weighmentFailedSpeed ? self::FAILURE_SPEED : ($weighmentFailedOverload ? self::FAILURE_OVERLOAD : null),
-            ];
-        }
-
+        // After guard inspection, go straight to dispatch (no in-flow weighment step)
         return [
             'active_step' => self::STEP_DISPATCH,
             'attempt_no' => $attemptNo,
@@ -99,12 +79,6 @@ final readonly class RakeLoadStateResolver
 
     private function currentAttemptNo(RakeLoad $rakeLoad): int
     {
-        $latestWeighment = $rakeLoad->weighments()->latest('weighment_time')->first();
-
-        if ($latestWeighment && $latestWeighment->status === 'failed_overload') {
-            return $latestWeighment->attempt_no + 1;
-        }
-
         $maxWagonAttempt = $rakeLoad->wagonLoadings()->max('attempt_no');
 
         return max(1, (int) $maxWagonAttempt);

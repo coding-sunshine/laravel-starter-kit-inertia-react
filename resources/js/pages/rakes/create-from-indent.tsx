@@ -43,6 +43,10 @@ export default function CreateRakeFromIndent({ indent, sidings, next_priority_nu
         { title: 'Create Rake', href: `/indents/${indent.id}/create-rake` },
     ];
 
+    const totalUnits =
+        indent.total_units ??
+        (indent as Record<string, unknown>).total_units;
+
     const { data, setData, post, processing, errors, reset } = useForm({
         rake_number: indent.indent_number ? `RK-${indent.indent_number}` : '',
         rake_priority_number: String(next_priority_number),
@@ -50,8 +54,7 @@ export default function CreateRakeFromIndent({ indent, sidings, next_priority_nu
             ? new Date(indent.expected_loading_date).toISOString().slice(0, 10)
             : '',
         rake_type: indent.demanded_stock || '',
-        wagon_count: indent.total_units || '',
-        free_time_minutes: '180',
+        wagon_count: totalUnits != null ? String(totalUnits) : '',
         rr_expected_date: '',
         placement_time: '',
         remarks: '',
@@ -175,24 +178,10 @@ export default function CreateRakeFromIndent({ indent, sidings, next_priority_nu
                                             min="0"
                                             value={data.wagon_count}
                                             onChange={(e) => setData('wagon_count', e.target.value)}
-                                            placeholder={indent.total_units || 'Number of wagons'}
+                                            placeholder="Number of wagons"
                                         />
                                         {errors.wagon_count && (
                                             <p className="text-sm text-destructive mt-1">{errors.wagon_count}</p>
-                                        )}
-                                    </div>
-                                    <div>
-                                        <Label htmlFor="free_time_minutes">Free Time (Minutes)</Label>
-                                        <Input
-                                            id="free_time_minutes"
-                                            type="number"
-                                            min="0"
-                                            value={data.free_time_minutes}
-                                            onChange={(e) => setData('free_time_minutes', e.target.value)}
-                                            placeholder="Free time before demurrage"
-                                        />
-                                        {errors.free_time_minutes && (
-                                            <p className="text-sm text-destructive mt-1">{errors.free_time_minutes}</p>
                                         )}
                                     </div>
                                 </div>

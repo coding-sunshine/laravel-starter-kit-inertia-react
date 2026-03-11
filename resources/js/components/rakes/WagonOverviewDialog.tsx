@@ -209,35 +209,35 @@ export function WagonOverviewDialog({
             if (!hasAppliedFirstType.current) {
                 hasAppliedFirstType.current = true;
                 setRows((prev) => {
-                    const next = { ...prev };
-                    for (const id of Object.keys(next)) {
-                        next[Number(id)] = {
-                            ...next[Number(id)],
+                    const base =
+                        Object.keys(prev).length > 0
+                            ? prev
+                            : Object.fromEntries(
+                                  wagons.map((w) => [w.id, toRowState(w)])
+                              );
+                    const next: Record<number, WagonRowState> = {};
+                    for (const id of Object.keys(base)) {
+                        const numId = Number(id);
+                        next[numId] = {
+                            ...base[numId],
                             wagon_type: code,
                             tare_weight_mt: tareStr,
                             pcc_weight_mt: pccStr,
                         };
                     }
+                    setSavingAll(true);
+                    (async () => {
+                        try {
+                            await bulkSave(next);
+                        } finally {
+                            setSavingAll(false);
+                        }
+                    })();
                     return next;
                 });
-
-                setSavingAll(true);
-                (async () => {
-                    try {
-                        // Use current rows snapshot with new type/tare/PCC applied
-                        await bulkSave(
-                            Object.keys(rows).length > 0 ? rows : wagons.reduce((acc, w) => {
-                                acc[w.id] = toRowState(w);
-                                return acc;
-                            }, {} as Record<number, WagonRowState>)
-                        );
-                    } finally {
-                        setSavingAll(false);
-                    }
-                })();
             }
         },
-        [wagonTypes, setRow, wagons, rows, bulkSave]
+        [wagonTypes, setRow, wagons, bulkSave]
     );
 
     const handleUpdateAll = useCallback(async () => {
@@ -294,7 +294,7 @@ export function WagonOverviewDialog({
                                 const state = rows[wagon.id] ?? toRowState(wagon);
                                 const isSaving = savingAll;
                                 return (
-                                    <TableRow key={wagon.id}>
+                                <TableRow key={wagon.id}>
                                         <TableCell>
                                             <Input
                                                 className="h-8 w-28"
@@ -376,7 +376,7 @@ export function WagonOverviewDialog({
                                                   })()
                                                 : '—'}
                                         </TableCell>
-                                        <TableCell>
+                                    <TableCell>
                                             <Input
                                                 type="number"
                                                 step="0.01"
@@ -392,8 +392,8 @@ export function WagonOverviewDialog({
                                                 placeholder="PCC"
                                                 disabled={isSaving}
                                             />
-                                        </TableCell>
-                                    </TableRow>
+                                    </TableCell>
+                                </TableRow>
                                 );
                             })}
                         </TableBody>

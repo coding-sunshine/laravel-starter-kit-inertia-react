@@ -212,7 +212,6 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::patch('rakes/{rake}/load/wagon-rows/{loading}', [RakeLoadController::class, 'updateWagonRow'])->name('rakes.load.wagon-rows.update');
     Route::delete('rakes/{rake}/load/wagon-rows/{loading}', [RakeLoadController::class, 'destroyWagonRow'])->name('rakes.load.wagon-rows.destroy');
     Route::post('rakes/{rake}/load/guard-inspection', [RakeLoadController::class, 'recordGuardInspection'])->name('rakes.load.guard-inspection');
-    Route::post('rakes/{rake}/load/weighment', [RakeLoadController::class, 'recordWeighment'])->name('rakes.load.weighment');
     Route::post('rakes/{rake}/load/confirm-dispatch', [RakeLoadController::class, 'confirmDispatch'])->name('rakes.load.confirm-dispatch');
     Route::post('rakes/{rake}/weighments', [RakeWeighmentController::class, 'store'])->name('rakes.weighments.store');
     Route::delete('rakes/{rake}/weighments', [RakeWeighmentController::class, 'destroy'])->name('rakes.weighments.destroy');

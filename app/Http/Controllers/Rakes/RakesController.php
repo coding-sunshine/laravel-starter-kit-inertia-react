@@ -11,6 +11,7 @@ use App\Models\SectionTimer;
 use App\Models\Siding;
 use App\Models\Wagon;
 use App\Models\WagonType;
+use Closure;
 use DateTimeImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -170,6 +171,29 @@ final class RakesController extends Controller
         // $this->authorize('update', $rake);
 
         $validated = $request->validate([
+            'rake_number' => [
+                'nullable',
+                'string',
+                'max:100',
+                function (string $attribute, mixed $value, Closure $fail) use ($rake): void {
+                    $trimmed = $value !== null && mb_trim((string) $value) !== '' ? mb_trim((string) $value) : null;
+
+                    if ($trimmed === null || $trimmed === $rake->rake_number) {
+                        return;
+                    }
+
+                    $existsInMonth = Rake::query()
+                        ->where('rake_number', $trimmed)
+                        ->whereYear('created_at', now()->year)
+                        ->whereMonth('created_at', now()->month)
+                        ->whereKeyNot($rake->getKey())
+                        ->exists();
+
+                    if ($existsInMonth) {
+                        $fail('This rake number is already in use this month.');
+                    }
+                },
+            ],
             'rake_type' => ['nullable', 'string', 'max:50'],
             'wagon_count' => ['nullable', 'integer', 'min:0'],
             'free_time_minutes' => ['nullable', 'integer', 'min:0'],
@@ -179,6 +203,9 @@ final class RakesController extends Controller
         ]);
 
         $rake->update([
+            'rake_number' => array_key_exists('rake_number', $validated) && mb_trim((string) $validated['rake_number']) !== ''
+                ? mb_trim((string) $validated['rake_number'])
+                : $rake->rake_number,
             'rake_type' => $validated['rake_type'] ?? $rake->rake_type,
             'wagon_count' => $validated['wagon_count'] ?? $rake->wagon_count,
             'loading_free_minutes' => $validated['free_time_minutes'] ?? $rake->loading_free_minutes,
@@ -222,8 +249,15 @@ final class RakesController extends Controller
             ]);
         }
 
+        $hours = $freeMinutes >= 60 && $freeMinutes % 60 === 0
+            ? (int) ($freeMinutes / 60)
+            : null;
+        $message = $hours !== null
+            ? "Loading timer started for {$hours} hour(s)."
+            : "Loading timer started for {$freeMinutes} minutes.";
+
         return to_route('rakes.show', $rake)
-            ->with('success', 'Loading timer started for 3 hours.');
+            ->with('success', $message);
     }
 
     public function resetLoadingTimer(Request $request, Rake $rake): RedirectResponse|JsonResponse
