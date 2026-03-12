@@ -9,11 +9,11 @@ import {
 } from 'recharts';
 
 const CHART_COLORS = [
-    'var(--chart-1)',
-    'var(--chart-2)',
-    'var(--chart-3)',
-    'var(--chart-4)',
-    'var(--chart-5)',
+    'var(--chart-1)', // primary coal / throughput
+    'var(--chart-3)', // penalty / risk
+    'var(--chart-2)', // secondary flow
+    'var(--chart-4)', // warning / amber
+    'var(--chart-5)', // accent
 ];
 
 interface PieChartProps<T extends Record<string, unknown>> {
@@ -50,8 +50,8 @@ export function PieChart<T extends Record<string, unknown>>({
                         cx="50%"
                         cy="50%"
                         innerRadius={innerRadius}
-                        outerRadius="80%"
-                        paddingAngle={2}
+                        outerRadius="78%"
+                        paddingAngle={3}
                         strokeWidth={0}
                     >
                         {data.map((_entry, index) => (

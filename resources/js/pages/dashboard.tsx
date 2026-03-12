@@ -1,3 +1,4 @@
+import { AreaChart as DashboardAreaChart } from '@/components/charts/area-chart';
 import { BarChart } from '@/components/charts/bar-chart';
 import { ComposedChart } from '@/components/charts/composed-chart';
 import { StackedBarChart } from '@/components/charts/stacked-bar-chart';
@@ -10,21 +11,42 @@ import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     AlertTriangle,
+    ArrowDown,
+    ArrowLeft,
+    ArrowRight,
+    ArrowUp,
     BarChart3,
     Calendar,
+    Check,
+    CheckCircle,
+    ChevronDown,
+    ChevronUp,
     Factory,
     Filter,
+    Flame,
+    Clock,
+    MapPin,
     Train,
+    TriangleAlert,
+    TrendingUp,
+    Truck,
     X,
     Zap,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+    Area,
+    AreaChart as RechartsAreaChart,
     Bar,
     BarChart as RechartsBarChart,
     CartesianGrid,
     Cell,
     Legend,
+    LabelList,
+    Line,
+    Pie,
+    PieChart as RechartsPieChart,
+    ReferenceLine,
     ResponsiveContainer,
     Tooltip,
     XAxis,
@@ -277,8 +299,8 @@ function SectionHeader({ icon: Icon, title, subtitle, action }: {
                     <Icon className="size-4.5 text-primary" />
                 </div>
                 <div>
-                    <h3 className="font-semibold">{title}</h3>
-                    {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
+                    <h3 className="text-base font-semibold">{title}</h3>
+                    {subtitle && <p className="text-xs text-gray-400">{subtitle}</p>}
                 </div>
             </div>
             {action}
@@ -365,19 +387,39 @@ function SidingComparisonVertical({ data }: { data: SidingComparisonItem[] }) {
     );
 }
 
+const SIDING_ACCENT: Record<string, string> = { Dumka: '#3B82F6', Kurwa: '#10B981', Pakur: '#F59E0B' };
+
 function SidingStockSection({ sidings, stocks }: { sidings: SidingOption[]; stocks: Record<number, SidingStock> }) {
     return (
-        <div className="rounded-xl border bg-card p-5">
+        <div className="dashboard-card rounded-xl border-0 p-6">
             <SectionHeader icon={BarChart3} title="Siding stock" subtitle="Current balance per siding" />
-            <div className="mt-4 grid gap-4 sm:grid-cols-3">
+            <div className="mt-5 grid gap-6 sm:grid-cols-1 md:grid-cols-3">
                 {sidings.map((s) => {
                     const st = stocks[s.id];
                     const currentBalance = st?.closing_balance_mt ?? 0;
+                    const accent = SIDING_ACCENT[s.name] ?? '#6B7280';
+                    const status = currentBalance === 0 ? 'empty' : currentBalance < 1000 ? 'low' : 'sufficient';
                     return (
-                        <div key={s.id} className="rounded-lg border bg-muted/20 p-4 text-center">
-                            <p className="text-sm font-medium text-muted-foreground">{s.name}</p>
-                            <p className="mt-2 text-2xl font-bold tabular-nums">{currentBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })} MT</p>
-                            <p className="mt-0.5 text-xs text-muted-foreground">Current balance</p>
+                        <div
+                            key={s.id}
+                            className="dashboard-card flex flex-1 flex-col rounded-xl border-0 p-5 transition-shadow"
+                            style={{
+                                borderTop: `4px solid ${accent}`,
+                                background: `linear-gradient(to bottom, ${accent}08 0%, transparent 100%)`,
+                            }}
+                        >
+                            <h4 className="text-[1.25rem] font-bold text-gray-900">{s.name}</h4>
+                            <p className="mt-3 text-[3rem] font-extrabold tabular-nums leading-none text-gray-900">
+                                {currentBalance === 0 ? '--' : `${currentBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })} MT`}
+                            </p>
+                            <p className="mt-1 text-xs text-gray-400">Current balance</p>
+                            <div className="mt-3 flex items-center gap-2">
+                                <span className={`size-2 rounded-full ${status === 'sufficient' ? 'bg-green-500' : status === 'low' ? 'bg-amber-500' : 'bg-red-500'}`} />
+                                <span className={`text-xs font-medium ${status === 'sufficient' ? 'text-green-700' : status === 'low' ? 'text-amber-700' : 'text-red-700'}`}>
+                                    {status === 'sufficient' ? 'Sufficient' : status === 'low' ? 'Low stock' : 'Empty'}
+                                </span>
+                            </div>
+                            <p className="mt-auto pt-4 text-xs text-gray-400">Last updated: 5 mins ago</p>
                         </div>
                     );
                 })}
@@ -386,7 +428,14 @@ function SidingStockSection({ sidings, stocks }: { sidings: SidingOption[]; stoc
     );
 }
 
-const SIDING_PERF_COLORS = [DASHBOARD_PALETTE.steelBlue, DASHBOARD_PALETTE.successGreen, DASHBOARD_PALETTE.safetyYellow, DASHBOARD_PALETTE.steelBlueLight, DASHBOARD_PALETTE.successGreenLight];
+const SIDING_PERF_COLORS = [
+    // Vibrant palette inspired by rd2.jpeg for siding rows
+    '#3b82f6', // blue
+    '#f97316', // orange
+    '#22c55e', // green
+    '#eab308', // amber
+    '#a855f7', // purple
+];
 
 function SidingPerformanceSection({ data }: { data: SidingPerformanceItem[] }) {
     const chartData = useMemo(
@@ -394,70 +443,74 @@ function SidingPerformanceSection({ data }: { data: SidingPerformanceItem[] }) {
         [data],
     );
 
+    const maxPenaltyAmount = useMemo(
+        () => Math.max(...data.map((s) => s.penalty_amount ?? 0), 1),
+        [data],
+    );
+
     return (
-        <div className="rounded-xl border bg-card p-5">
+        <div className="dashboard-card rounded-xl border-0 p-6">
             <SectionHeader icon={BarChart3} title="Siding performance" subtitle="Rakes, penalties & penalty rate" />
 
-            {/* Charts: horizontal bars, sidings on Y-axis, each siding a different color */}
-            <div className="mt-4 grid gap-4 lg:grid-cols-2">
+            <div className="mt-5 grid gap-6 lg:grid-cols-2">
                 <div>
-                    <p className="mb-2 text-xs font-medium text-muted-foreground">Rakes dispatched vs penalties</p>
+                    <p className="mb-2 text-xs font-medium text-gray-400">Rakes dispatched vs penalties</p>
                     <ResponsiveContainer width="100%" height={260}>
-                        <RechartsBarChart data={chartData} layout="vertical" margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
-                            <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
-                            <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} />
-                            <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 12 }} />
-                            <Tooltip formatter={(v: number) => [v, '']} />
+                        <RechartsBarChart data={chartData} layout="horizontal" margin={{ top: 8, right: 16, bottom: 0, left: 16 }}>
+                            <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
+                            <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                            <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                            <Tooltip formatter={(value: number | string | undefined) => Number(value ?? 0).toLocaleString()} />
                             <Legend />
-                            <Bar dataKey="rakes" stackId="a" name="Rakes dispatched" radius={[0, 0, 0, 0]}>
-                                {chartData.map((_, i) => (
-                                    <Cell key={`rakes-${i}`} fill={SIDING_PERF_COLORS[i % SIDING_PERF_COLORS.length]} />
-                                ))}
+                            <Bar dataKey="rakes" name="Rakes dispatched" fill="#3B82F6" barSize={14} radius={[4, 4, 0, 0]} isAnimationActive />
+                            <Bar dataKey="penalties" name="Penalties" fill="#EF4444" barSize={14} radius={[4, 4, 0, 0]} isAnimationActive>
+                                <LabelList dataKey="penalties" position="right" />
                             </Bar>
-                            <Bar dataKey="penalties" stackId="a" name="Penalties" fill="#ef4444" radius={[4, 4, 0, 0]} />
                         </RechartsBarChart>
                     </ResponsiveContainer>
                 </div>
                 <div>
-                    <p className="mb-2 text-xs font-medium text-muted-foreground">Penalty amount by siding</p>
+                    <p className="mb-2 text-xs font-medium text-gray-400">Penalty amount by siding</p>
                     <ResponsiveContainer width="100%" height={260}>
-                        <RechartsBarChart data={chartData} layout="vertical" margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
-                            <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
-                            <XAxis type="number" tickFormatter={(v) => formatCurrency(v)} tick={{ fontSize: 12 }} />
-                            <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 12 }} />
-                            <Tooltip formatter={(v: number) => [formatCurrency(v), 'Penalty']} />
-                            <Bar dataKey="penalty_amount" radius={[4, 4, 0, 0]}>
-                                {chartData.map((_, i) => (
-                                    <Cell key={i} fill={SIDING_PERF_COLORS[i % SIDING_PERF_COLORS.length]} />
-                                ))}
+                        <RechartsBarChart data={chartData} margin={{ top: 8, right: 16, bottom: 0, left: 8 }}>
+                            <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
+                            <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                            <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => formatCurrency(v)} />
+                            <Tooltip formatter={(value: number | string | undefined) => formatCurrency(Number(value ?? 0))} />
+                            <Bar dataKey="penalty_amount" fill="#DC2626" radius={[4, 4, 0, 0]} barSize={14} isAnimationActive>
+                                <LabelList dataKey="penalty_amount" position="top" formatter={(v: unknown) => formatCurrency(Number(v ?? 0))} />
                             </Bar>
                         </RechartsBarChart>
                     </ResponsiveContainer>
+                    <div className="mt-3 flex flex-wrap gap-4 text-sm text-gray-500">
+                        {data.slice().sort((a, b) => b.penalty_amount - a.penalty_amount).map((s) => (
+                            <div key={s.name} className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 font-medium text-gray-800">
+                                <span>{s.name}:</span>
+                                <span className="font-semibold tabular-nums">{formatCurrency(s.penalty_amount)}</span>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </div>
 
-            {/* Penalty rate visual bars (same siding colors) */}
-            <div className="mt-5">
-                <p className="mb-3 text-xs font-medium text-muted-foreground">Penalty rate by siding</p>
+            <div className="mt-6">
+                <p className="mb-3 text-xs font-medium text-gray-400">Penalty rate by siding</p>
                 <div className="space-y-3">
-                    {data.map((s, i) => (
+                    {data.map((s) => (
                         <div key={s.name} className="group">
                             <div className="mb-1 flex items-center justify-between text-sm">
                                 <span className="font-medium">{s.name}</span>
-                                <span className="font-bold tabular-nums text-muted-foreground">{s.penalty_rate}%</span>
+                                <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-bold tabular-nums text-blue-700">{s.penalty_rate}%</span>
                             </div>
-                            <div className="h-3 w-full overflow-hidden rounded-full bg-muted">
+                            <div className="h-3 w-full overflow-hidden rounded-full bg-gray-100">
                                 <div
-                                    className="h-full rounded-full transition-all duration-500"
-                                    style={{
-                                        width: `${Math.min(s.penalty_rate, 100)}%`,
-                                        backgroundColor: SIDING_PERF_COLORS[i % SIDING_PERF_COLORS.length],
-                                    }}
+                                    className="h-full rounded-full bg-gradient-to-r from-[#3B82F6] to-[#60A5FA] transition-all duration-500"
+                                    style={{ width: `${Math.min(s.penalty_rate, 100)}%` }}
                                 />
                             </div>
-                            <div className="mt-0.5 flex justify-between text-xs text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
+                            <div className="mt-0.5 flex justify-between text-xs text-gray-400 opacity-0 transition-opacity group-hover:opacity-100">
                                 <span>{s.rakes} rakes, {s.penalties} penalties</span>
-                                <span>{formatCurrency(s.penalty_amount)}</span>
+                                <span className="tabular-nums">{formatCurrency(s.penalty_amount)}</span>
                             </div>
                         </div>
                     ))}
@@ -582,12 +635,7 @@ function DateWiseDispatchSection({ data }: { data: DateWiseDispatchData }) {
 
 function RakePerformanceSection({ rakes }: { rakes: RakePerformanceItem[] }) {
     const rakeOptions = useMemo(() => {
-        const seen = new Map<string, number>();
-        return rakes.map((r, i) => {
-            const count = (seen.get(r.rake_number) ?? 0) + 1;
-            seen.set(r.rake_number, count);
-            return { idx: i, label: `${r.rake_number} — ${r.siding} (${r.dispatch_date})` };
-        });
+        return rakes.map((r, i) => ({ idx: i, label: `${r.rake_number} — ${r.siding} (${r.dispatch_date})` }));
     }, [rakes]);
 
     const [selectedIdx, setSelectedIdx] = useState(0);
@@ -597,111 +645,131 @@ function RakePerformanceSection({ rakes }: { rakes: RakePerformanceItem[] }) {
     const loadingMins = r.loading_minutes != null ? r.loading_minutes % 60 : null;
 
     const weightChartData = useMemo(() => {
-        const items: { name: string; value: number }[] = [];
-        if (r.net_weight != null) items.push({ name: 'Net weight', value: r.net_weight });
-        if (r.over_load != null && r.over_load > 0) items.push({ name: 'Overload', value: r.over_load });
-        if (r.under_load != null && r.under_load > 0) items.push({ name: 'Underload', value: r.under_load });
+        const items: { name: string; value: number; fill?: string }[] = [];
+        if (r.net_weight != null) items.push({ name: 'Net weight', value: r.net_weight, fill: '#4B72BE' });
+        if (r.over_load != null && r.over_load > 0) items.push({ name: 'Overload', value: r.over_load, fill: '#DC2626' });
+        if (r.under_load != null && r.under_load > 0) items.push({ name: 'Underload', value: r.under_load, fill: '#F59E0B' });
         return items;
     }, [r]);
 
+    const canPrev = selectedIdx > 0;
+    const canNext = selectedIdx < rakes.length - 1 && rakes.length > 1;
+
     return (
-        <div className="rounded-xl border bg-card p-5">
+        <div className="dashboard-card rounded-xl border-0 p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <SectionHeader
                     icon={Train}
                     title="Rake-wise performance"
                     subtitle="Select a rake to view its details"
                     action={
-                        <Button variant="outline" size="sm" asChild>
-                            <Link href={rakesIndex().url} data-pan="dashboard-view-all-rakes">View all rakes</Link>
-                        </Button>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <div className="flex items-center gap-1">
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectedIdx((i) => Math.max(0, i - 1))}
+                                    disabled={!canPrev}
+                                    className="rounded-lg border border-gray-200 bg-white p-2 text-gray-600 disabled:opacity-40"
+                                    aria-label="Previous rake"
+                                >
+                                    <ArrowLeft className="size-4" />
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectedIdx((i) => Math.min(rakes.length - 1, i + 1))}
+                                    disabled={!canNext}
+                                    className="rounded-lg border border-gray-200 bg-white p-2 text-gray-600 disabled:opacity-40"
+                                    aria-label="Next rake"
+                                >
+                                    <ArrowRight className="size-4" />
+                                </button>
+                            </div>
+                            <Select value={String(selectedIdx)} onValueChange={(v) => setSelectedIdx(Number(v))}>
+                                <SelectTrigger className="min-w-[200px] rounded-lg border border-gray-200 bg-white text-sm">
+                                    <SelectValue placeholder="Select rake" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {rakeOptions.map((opt) => (
+                                        <SelectItem key={opt.idx} value={String(opt.idx)}>
+                                            {opt.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <Button variant="outline" size="sm" className="rounded-lg" asChild>
+                                <Link href={rakesIndex().url} data-pan="dashboard-view-all-rakes">View all rakes</Link>
+                            </Button>
+                        </div>
                     }
                 />
-                <select
-                    value={selectedIdx}
-                    onChange={(e) => setSelectedIdx(Number(e.target.value))}
-                    className="max-w-xs rounded-lg border bg-background px-3 py-1.5 text-sm font-medium"
-                >
-                    {rakeOptions.map((opt) => (
-                        <option key={opt.idx} value={opt.idx}>
-                            {opt.label}
-                        </option>
-                    ))}
-                </select>
             </div>
 
-            {/* Summary stats */}
-            <div className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
-                <div className="rounded-lg border bg-muted/20 p-3.5">
-                    <p className="text-xs font-medium text-muted-foreground">Siding</p>
-                    <p className="mt-1 text-lg font-bold">{r.siding}</p>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+                <div className="rounded-lg border border-gray-100 bg-gray-50/50 p-3">
+                    <p className="text-xs font-medium text-gray-400">Siding</p>
+                    <p className="mt-1 font-bold text-gray-900">{r.siding}</p>
                 </div>
-                <div className="rounded-lg border bg-muted/20 p-3.5">
-                    <p className="text-xs font-medium text-muted-foreground">Dispatch date</p>
-                    <p className="mt-1 text-lg font-bold tabular-nums">{r.dispatch_date}</p>
+                <div className="rounded-lg border border-gray-100 bg-gray-50/50 p-3">
+                    <p className="text-xs font-medium text-gray-400">Dispatch date</p>
+                    <p className="mt-1 font-bold tabular-nums text-gray-900">{r.dispatch_date}</p>
                 </div>
-                <div className="rounded-lg border bg-muted/20 p-3.5">
-                    <p className="text-xs font-medium text-muted-foreground">Wagons</p>
-                    <p className="mt-1 text-lg font-bold tabular-nums">{r.wagon_count ?? '—'}</p>
+                <div className="rounded-lg border border-gray-100 bg-gray-50/50 p-3">
+                    <p className="text-xs font-medium text-gray-400">Wagons</p>
+                    <p className="mt-1 font-bold tabular-nums text-gray-900">{r.wagon_count ?? '—'}</p>
                 </div>
-                <div className="rounded-lg border bg-muted/20 p-3.5">
-                    <p className="text-xs font-medium text-muted-foreground">Net weight</p>
-                    <p className="mt-1 text-lg font-bold tabular-nums">{r.net_weight != null ? formatWeight(r.net_weight) : '—'}</p>
+                <div className="rounded-lg border border-gray-100 bg-gray-50/50 p-3">
+                    <p className="text-xs font-medium text-gray-400">Net weight</p>
+                    <p className="mt-1 font-bold tabular-nums text-gray-900">{r.net_weight != null ? formatWeight(r.net_weight) : '—'}</p>
                 </div>
-                <div className="rounded-lg border bg-muted/20 p-3.5">
-                    <p className="text-xs font-medium text-muted-foreground">Loading time</p>
-                    <p className="mt-1 text-lg font-bold tabular-nums">
-                        {loadingHours != null ? `${loadingHours}h ${loadingMins}m` : '—'}
-                    </p>
+                <div className="rounded-lg border border-gray-100 bg-gray-50/50 p-3">
+                    <p className="text-xs font-medium text-gray-400">Loading time</p>
+                    <p className="mt-1 font-bold tabular-nums text-gray-900">{loadingHours != null ? `${loadingHours}h ${loadingMins}m` : '—'}</p>
                 </div>
-                <div className="rounded-lg border bg-muted/20 p-3.5">
-                    <p className="text-xs font-medium text-muted-foreground">Penalty</p>
-                    <p className={`mt-1 text-lg font-bold tabular-nums ${r.penalty_amount > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                <div className={`rounded-lg border p-3 ${r.penalty_amount > 0 ? 'border-red-100 bg-red-50' : 'border-green-100 bg-green-50'}`}>
+                    <p className="text-xs font-medium text-gray-400">Penalty</p>
+                    <p className={`mt-1 font-bold tabular-nums ${r.penalty_amount > 0 ? 'text-red-700' : 'text-green-700'}`}>
                         {r.penalty_amount > 0 ? formatCurrency(r.penalty_amount) : 'None'}
                     </p>
                 </div>
             </div>
 
-            {/* Charts */}
-            <div className="mt-4 grid gap-4 lg:grid-cols-2">
+            <div className="mt-5 grid gap-5 lg:grid-cols-2">
                 <div>
-                    <p className="mb-2 text-xs font-medium text-muted-foreground">Weight breakdown (MT)</p>
+                    <p className="mb-2 text-xs font-medium text-gray-400">Weight breakdown (MT)</p>
                     {weightChartData.length > 0 ? (
-                        <BarChart
-                            data={weightChartData}
-                            xKey="name"
-                            yKey="value"
-                            yLabel="MT"
-                            height={220}
-                            color={DASHBOARD_PALETTE.steelBlue}
-                            formatTooltip={(v) => `${v.toLocaleString()} MT`}
-                        />
+                        <ResponsiveContainer width="100%" height={220}>
+                            <RechartsBarChart data={weightChartData} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
+                                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                                <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${v} MT`} />
+                                <Tooltip formatter={(v: number | undefined) => `${Number(v ?? 0).toLocaleString()} MT`} />
+                                <Bar dataKey="value" radius={[4, 4, 0, 0]} barSize={32} isAnimationActive>
+                                    {weightChartData.map((entry, i) => (
+                                        <Cell key={i} fill={entry.fill ?? '#4B72BE'} />
+                                    ))}
+                                </Bar>
+                            </RechartsBarChart>
+                        </ResponsiveContainer>
                     ) : (
-                        <div className="flex h-[220px] items-center justify-center rounded-lg border bg-muted/20 text-sm text-muted-foreground">
+                        <div className="flex h-[220px] items-center justify-center rounded-lg border border-gray-100 bg-gray-50/50 text-sm text-gray-500">
                             No weighment data available
                         </div>
                     )}
                 </div>
                 <div>
-                    <p className="mb-2 text-xs font-medium text-muted-foreground">Overload status</p>
-                    <div className="flex h-[220px] flex-col items-center justify-center gap-3 rounded-lg border bg-muted/20">
+                    <p className="mb-2 text-xs font-medium text-gray-400">Overload status</p>
+                    <div className={`flex h-[220px] flex-col items-center justify-center gap-3 rounded-xl p-6 ${r.over_load != null && r.over_load > 0 ? 'bg-[#FEF2F2]' : 'bg-green-50'}`}>
                         {r.over_load != null && r.over_load > 0 ? (
                             <>
-                                <span className="inline-flex size-16 items-center justify-center rounded-full bg-red-100 dark:bg-red-950/50">
-                                    <AlertTriangle className="size-8 text-red-600 dark:text-red-400" />
-                                </span>
-                                <span className="text-2xl font-bold tabular-nums text-red-600 dark:text-red-400">
-                                    +{r.over_load.toLocaleString()} MT
-                                </span>
-                                <span className="text-xs text-muted-foreground">Overloaded</span>
+                                <TriangleAlert className="size-14 text-red-600" aria-hidden />
+                                <span className="text-2xl font-bold tabular-nums text-red-700">+{r.over_load.toLocaleString()} MT</span>
+                                <span className="text-sm font-medium text-red-700">Overloaded</span>
                             </>
                         ) : (
                             <>
-                                <span className="inline-flex size-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-950/50">
-                                    <Train className="size-8 text-green-600 dark:text-green-400" />
-                                </span>
-                                <span className="text-xl font-bold text-green-600 dark:text-green-400">Within limits</span>
-                                <span className="text-xs text-muted-foreground">No overloading detected</span>
+                                <Check className="size-14 text-green-600" aria-hidden />
+                                <span className="text-xl font-bold text-green-700">Within limits</span>
+                                <span className="text-xs text-gray-500">No overloading detected</span>
                             </>
                         )}
                     </div>
@@ -717,7 +785,7 @@ function LoaderOverloadSection({ loaders, monthly }: { loaders: LoaderInfo[]; mo
     const selectedLoader = loaders.find((l) => l.id === selectedLoaderId) ?? loaders[0];
 
     const stats = useMemo(() => {
-        if (!selectedLoader) return { totalWagons: 0, totalOverload: 0, rate: 0 };
+        if (!selectedLoader) return { totalWagons: 0, totalOverload: 0, rate: 0, trend: 0 };
         const totalOverload = monthly.reduce(
             (sum, m) => sum + ((m[`loader_${selectedLoader.id}_overload`] as number) ?? 0), 0,
         );
@@ -725,7 +793,11 @@ function LoaderOverloadSection({ loaders, monthly }: { loaders: LoaderInfo[]; mo
             (sum, m) => sum + ((m[`loader_${selectedLoader.id}_total`] as number) ?? 0), 0,
         );
         const rate = totalWagons > 0 ? (totalOverload / totalWagons) * 100 : 0;
-        return { totalWagons, totalOverload, rate };
+        const lastTwo = monthly.slice(-2);
+        const trend = lastTwo.length === 2
+            ? ((lastTwo[1][`loader_${selectedLoader.id}_overload`] as number) ?? 0) - ((lastTwo[0][`loader_${selectedLoader.id}_overload`] as number) ?? 0)
+            : 0;
+        return { totalWagons, totalOverload, rate, trend };
     }, [selectedLoader, monthly]);
 
     const trendData = useMemo(() => {
@@ -745,94 +817,123 @@ function LoaderOverloadSection({ loaders, monthly }: { loaders: LoaderInfo[]; mo
         }));
     }, [monthly, selectedLoader]);
 
+    const avgOverload = useMemo(() => {
+        if (barChartData.length === 0) return 0;
+        const sum = barChartData.reduce((s, d) => s + d.value, 0);
+        return sum / barChartData.length;
+    }, [barChartData]);
+
     if (!selectedLoader) return null;
 
+    const hasData = trendData.some((d) => d.total > 0 || d.overloaded > 0);
+
     return (
-        <div className="rounded-xl border bg-card p-5">
+        <div className="dashboard-card rounded-xl border-0 p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <SectionHeader
                     icon={AlertTriangle}
                     title="Loader-wise overloading trends"
                     subtitle="Select a loader to view its performance"
                 />
-                <select
-                    value={selectedLoaderId}
-                    onChange={(e) => setSelectedLoaderId(Number(e.target.value))}
-                    className="rounded-lg border bg-background px-3 py-1.5 text-sm font-medium"
-                >
-                    {loaders.map((l) => (
-                        <option key={l.id} value={l.id}>
-                            {l.name} — {l.siding}
-                        </option>
-                    ))}
-                </select>
+                <Select value={String(selectedLoaderId)} onValueChange={(v) => setSelectedLoaderId(Number(v))}>
+                    <SelectTrigger className="min-w-[200px] rounded-[8px] border border-gray-200 bg-white text-sm">
+                        <SelectValue placeholder="Select loader" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {loaders.map((l) => (
+                            <SelectItem key={l.id} value={String(l.id)}>
+                                {l.name} — {l.siding}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
             </div>
 
-            {/* Summary stats for selected loader */}
-            <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                <div className="rounded-lg border bg-muted/20 p-3.5">
-                    <p className="text-xs font-medium text-muted-foreground">Total wagons loaded</p>
-                    <p className="mt-1 text-2xl font-bold tabular-nums">{stats.totalWagons}</p>
+            {!hasData ? (
+                <div className="mt-8 flex flex-col items-center justify-center py-12 text-center text-gray-500">
+                    <AlertTriangle className="mb-3 h-12 w-12 opacity-40" />
+                    <p className="font-medium">No data for selected loader in this period</p>
                 </div>
-                <div className="rounded-lg border bg-muted/20 p-3.5">
-                    <p className="text-xs font-medium text-muted-foreground">Overloaded wagons</p>
-                    <p className="mt-1 text-2xl font-bold tabular-nums text-red-600 dark:text-red-400">{stats.totalOverload}</p>
-                </div>
-                <div className="rounded-lg border bg-muted/20 p-3.5">
-                    <p className="text-xs font-medium text-muted-foreground">Overload rate</p>
-                    <p className="mt-1 text-2xl font-bold tabular-nums">
-                        <span className={
-                            stats.rate > 15
-                                ? 'text-red-600 dark:text-red-400'
-                                : stats.rate > 5
-                                  ? 'text-amber-600 dark:text-amber-400'
-                                  : 'text-green-600 dark:text-green-400'
-                        }>
-                            {stats.rate.toFixed(1)}%
-                        </span>
+            ) : (
+                <>
+                    <div className="mt-5 grid gap-4 sm:grid-cols-3">
+                        <div className="rounded-xl border-0 bg-blue-50 p-4 shadow-sm" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+                            <p className="text-xs font-medium text-blue-600">Total wagons loaded</p>
+                            <p className="mt-1 text-2xl font-bold tabular-nums text-blue-900">{stats.totalWagons}</p>
+                        </div>
+                        <div className="rounded-xl border-0 bg-red-50 p-4 shadow-sm" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+                            <p className="text-xs font-medium text-red-600">Overloaded wagons</p>
+                            <p className="mt-1 text-2xl font-bold tabular-nums text-red-900">{stats.totalOverload}</p>
+                        </div>
+                        <div className={`rounded-xl border-0 p-4 shadow-sm ${stats.rate > 15 ? 'bg-red-50' : stats.rate > 5 ? 'bg-amber-50' : 'bg-green-50'}`} style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+                            <p className={`text-xs font-medium ${stats.rate > 15 ? 'text-red-600' : stats.rate > 5 ? 'text-amber-600' : 'text-green-600'}`}>Overload rate</p>
+                            <div className="mt-1 flex items-center gap-2">
+                                <span className={`text-2xl font-bold tabular-nums ${stats.rate > 15 ? 'text-red-900' : stats.rate > 5 ? 'text-amber-900' : 'text-green-900'}`}>{stats.rate.toFixed(1)}%</span>
+                                {stats.trend !== 0 && (
+                                    stats.trend > 0 ? <ArrowUp className="size-5 text-red-600" /> : <ArrowDown className="size-5 text-green-600" />
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="mt-6 grid gap-6 lg:grid-cols-2">
+                        <div>
+                            <p className="mb-2 text-xs font-medium text-gray-400">Total wagons vs overloaded (monthly)</p>
+                            <ResponsiveContainer width="100%" height={240}>
+                                <RechartsAreaChart data={trendData} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
+                                    <defs>
+                                        <linearGradient id="loader-total-gradient" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="0%" stopColor="#93C5FD" stopOpacity={0.4} />
+                                            <stop offset="100%" stopColor="#93C5FD" stopOpacity={0} />
+                                        </linearGradient>
+                                        <linearGradient id="loader-overload-gradient" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="0%" stopColor="#DC2626" stopOpacity={0.4} />
+                                            <stop offset="100%" stopColor="#DC2626" stopOpacity={0} />
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
+                                    <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                                    <YAxis tick={{ fontSize: 11 }} />
+                                    <Tooltip formatter={(v: number | undefined, name?: string) => [v ?? 0, name === 'total' ? 'Total wagons' : 'Overloaded']} />
+                                    <Legend />
+                                    <Area type="monotone" dataKey="total" name="Total wagons" stroke="#3B82F6" fill="url(#loader-total-gradient)" strokeWidth={2} dot={false} />
+                                    <Area type="monotone" dataKey="overloaded" name="Overloaded" stroke="#DC2626" fill="url(#loader-overload-gradient)" strokeWidth={2} dot={false} />
+                                </RechartsAreaChart>
+                            </ResponsiveContainer>
+                        </div>
+                        <div>
+                            <p className="mb-2 text-xs font-medium text-gray-400">Overloaded wagons per month</p>
+                            <ResponsiveContainer width="100%" height={240}>
+                                <RechartsBarChart data={barChartData} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
+                                    <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                                    <YAxis tick={{ fontSize: 11 }} />
+                                    <Tooltip formatter={(v: number | undefined) => [`${v ?? 0} wagons`, 'Overloaded']} />
+                                    <ReferenceLine y={avgOverload} stroke="#9ca3af" strokeDasharray="5 5" />
+                                    <Bar dataKey="value" fill="#DC2626" radius={[4, 4, 0, 0]} barSize={24} isAnimationActive />
+                                </RechartsBarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+
+                    <p className="mt-4 text-sm text-gray-600">
+                        {selectedLoader.name} has <span className="font-semibold">{stats.rate.toFixed(1)}%</span> overload rate
+                        {barChartData.length > 0 && avgOverload >= 0 ? `, ${stats.totalOverload > avgOverload * barChartData.length ? 'above' : 'below'} average (${avgOverload.toFixed(0)} overloaded/month).` : '.'}
                     </p>
-                </div>
-            </div>
-
-            {/* Two charts side by side */}
-            <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                <div>
-                    <p className="mb-2 text-xs font-medium text-muted-foreground">Total wagons vs overloaded (monthly)</p>
-                    <ComposedChart
-                        data={trendData}
-                        xKey="month"
-                        barKey="total"
-                        lineKey="overloaded"
-                        barLabel="Total wagons"
-                        lineLabel="Overloaded"
-                        height={240}
-                        barColor={DASHBOARD_PALETTE.steelBlue}
-                        lineColor={DASHBOARD_PALETTE.successGreen}
-                        formatTooltip={(v, name) =>
-                            name === 'total' ? `${v} wagons` : `${v} overloaded`
-                        }
-                    />
-                </div>
-                <div>
-                    <p className="mb-2 text-xs font-medium text-muted-foreground">Overloaded wagons per month</p>
-                    <BarChart
-                        data={barChartData}
-                        xKey="month"
-                        yKey="value"
-                        yLabel="Overloaded"
-                        height={240}
-                        color={DASHBOARD_PALETTE.safetyYellow}
-                        formatTooltip={(v) => `${v} wagons`}
-                    />
-                </div>
-            </div>
+                </>
+            )}
         </div>
     );
 }
 
 const SIDING_COLORS = [DASHBOARD_PALETTE.steelBlue, DASHBOARD_PALETTE.successGreen, DASHBOARD_PALETTE.safetyYellow, DASHBOARD_PALETTE.steelBlueLight, DASHBOARD_PALETTE.successGreenLight];
 
+const PLANT_COLORS: Record<string, string> = { PSPM: '#3B82F6', STPS: '#10B981', BTPC: '#F59E0B', KPPS: '#8B5CF6' };
+
 function PowerPlantDispatchSection({ data }: { data: PowerPlantDispatchItem[] }) {
+    const [stacked, setStacked] = useState(true);
+    const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
+
     const totalRakes = useMemo(() => data.reduce((sum, pp) => sum + pp.rakes, 0), [data]);
     const totalWeight = useMemo(() => data.reduce((sum, pp) => sum + pp.weight_mt, 0), [data]);
     const allSidingNames = useMemo(() => {
@@ -854,11 +955,13 @@ function PowerPlantDispatchSection({ data }: { data: PowerPlantDispatchItem[] })
         [data, allSidingNames],
     );
 
+    const sortedByRakes = useMemo(() => [...data].sort((a, b) => b.rakes - a.rakes), [data]);
+
     if (data.length === 0) {
         return (
-            <div className="rounded-xl border bg-card p-5">
+            <div className="dashboard-card rounded-xl border-0 p-6">
                 <SectionHeader icon={Factory} title="Power plant wise dispatch" subtitle="How many rakes sent to each power plant" />
-                <div className="mt-6 flex flex-col items-center justify-center py-10 text-center text-muted-foreground">
+                <div className="mt-6 flex flex-col items-center justify-center py-10 text-center text-gray-500">
                     <Factory className="mb-3 h-10 w-10 opacity-30" />
                     <p className="text-sm font-medium">No dispatch data available</p>
                     <p className="mt-1 text-xs">Weighment data with destination stations will appear here once rakes are dispatched.</p>
@@ -868,33 +971,54 @@ function PowerPlantDispatchSection({ data }: { data: PowerPlantDispatchItem[] })
     }
 
     return (
-        <div className="rounded-xl border bg-card p-5">
+        <div className="dashboard-card rounded-xl border-0 p-6">
             <SectionHeader icon={Factory} title="Power plant wise dispatch" subtitle="How many rakes sent to each power plant" />
-            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <div className="rounded-lg border bg-muted/20 p-3 text-center">
-                    <div className="text-xs text-muted-foreground">Destinations</div>
-                    <div className="mt-1 text-xl font-bold tabular-nums">{data.length}</div>
+            <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-4">
+                <div className="dashboard-card flex items-center gap-3 rounded-xl border-0 p-4" style={{ borderTop: '4px solid #3B82F6' }}>
+                    <MapPin className="size-5 text-blue-600" />
+                    <div>
+                        <div className="text-xs font-medium text-gray-400">Destinations</div>
+                        <div className="text-xl font-bold tabular-nums text-gray-900">{data.length}</div>
+                    </div>
                 </div>
-                <div className="rounded-lg border bg-muted/20 p-3 text-center">
-                    <div className="text-xs text-muted-foreground">Total rakes</div>
-                    <div className="mt-1 text-xl font-bold tabular-nums">{totalRakes}</div>
+                <div className="dashboard-card flex items-center gap-3 rounded-xl border-0 p-4" style={{ borderTop: '4px solid #3B82F6' }}>
+                    <Train className="size-5 text-blue-600" />
+                    <div>
+                        <div className="text-xs font-medium text-gray-400">Total rakes</div>
+                        <div className="text-xl font-bold tabular-nums text-gray-900">{totalRakes}</div>
+                    </div>
                 </div>
-                <div className="rounded-lg border bg-muted/20 p-3 text-center">
-                    <div className="text-xs text-muted-foreground">Total weight</div>
-                    <div className="mt-1 text-xl font-bold tabular-nums">{formatWeight(totalWeight)}</div>
+                <div className="dashboard-card flex items-center gap-3 rounded-xl border-0 p-4" style={{ borderTop: '4px solid #3B82F6' }}>
+                    <BarChart3 className="size-5 text-blue-600" />
+                    <div>
+                        <div className="text-xs font-medium text-gray-400">Total weight</div>
+                        <div className="text-xl font-bold tabular-nums text-gray-900">{formatWeight(totalWeight)}</div>
+                    </div>
                 </div>
-                <div className="rounded-lg border bg-muted/20 p-3 text-center">
-                    <div className="text-xs text-muted-foreground">Avg per destination</div>
-                    <div className="mt-1 text-xl font-bold tabular-nums">{data.length > 0 ? formatWeight(totalWeight / data.length) : '—'}</div>
+                <div className="dashboard-card flex items-center gap-3 rounded-xl border-0 p-4" style={{ borderTop: '4px solid #3B82F6' }}>
+                    <Zap className="size-5 text-blue-600" />
+                    <div>
+                        <div className="text-xs font-medium text-gray-400">Avg per destination</div>
+                        <div className="text-xl font-bold tabular-nums text-gray-900">{data.length > 0 ? formatWeight(totalWeight / data.length) : '—'}</div>
+                    </div>
                 </div>
             </div>
 
-            <div className="mt-5 grid gap-4 lg:grid-cols-2">
+            <div className="mt-6 grid gap-6 lg:grid-cols-2">
                 <div>
-                    <h4 className="mb-2 text-sm font-semibold text-muted-foreground">Rakes sent to each power plant by siding</h4>
+                    <div className="mb-2 flex items-center justify-between">
+                        <h4 className="text-xs font-medium text-gray-400">Rakes sent to each power plant by siding</h4>
+                        <button
+                            type="button"
+                            onClick={() => setStacked(!stacked)}
+                            className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-gray-600"
+                        >
+                            {stacked ? 'Grouped' : 'Stacked'}
+                        </button>
+                    </div>
                     <ResponsiveContainer width="100%" height={Math.max(260, data.length * 48)}>
-                        <RechartsBarChart data={stackedChartData} margin={{ left: 10, right: 20, top: 5, bottom: 5 }}>
-                            <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                        <RechartsBarChart data={stackedChartData} margin={{ left: 10, right: 20, top: 5, bottom: 5 }} barCategoryGap="20%">
+                            <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
                             <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                             <YAxis allowDecimals={false} />
                             <Tooltip />
@@ -903,63 +1027,98 @@ function PowerPlantDispatchSection({ data }: { data: PowerPlantDispatchItem[] })
                                 <Bar
                                     key={sn}
                                     dataKey={sn}
+                                    stackId={stacked ? 'stack' : undefined}
                                     fill={SIDING_COLORS[i % SIDING_COLORS.length]}
                                     name={sn}
-                                />
+                                    radius={[4, 4, 0, 0]}
+                                    barSize={32}
+                                >
+                                    <LabelList dataKey={sn} position="top" />
+                                </Bar>
                             ))}
                         </RechartsBarChart>
                     </ResponsiveContainer>
                 </div>
 
                 <div>
-                    <h4 className="mb-2 text-sm font-semibold text-muted-foreground">Rakes dispatched per power plant</h4>
-                    <BarChart
-                        data={data as Record<string, unknown>[]}
-                        xKey="name"
-                        yKey="rakes"
-                        yLabel="Rakes"
-                        height={Math.max(260, data.length * 40)}
-                        color={DASHBOARD_PALETTE.steelBlue}
-                        formatY={(v) => v}
-                        formatTooltip={(v) => `${v.toLocaleString()} rakes`}
-                    />
+                    <h4 className="mb-2 text-xs font-medium text-gray-400">Rakes dispatched per power plant</h4>
+                    <ResponsiveContainer width="100%" height={Math.max(260, data.length * 40)}>
+                        <RechartsBarChart data={sortedByRakes} margin={{ top: 8, right: 16, bottom: 0, left: 8 }}>
+                            <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
+                            <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                            <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                            <Tooltip formatter={(v: number | undefined) => `${v ?? 0} rakes`} />
+                            <Bar dataKey="rakes" radius={[4, 4, 0, 0]} barSize={32} isAnimationActive>
+                                {sortedByRakes.map((pp, i) => (
+                                    <Cell key={pp.name} fill={PLANT_COLORS[pp.name] ?? SIDING_COLORS[i % SIDING_COLORS.length]} />
+                                ))}
+                                <LabelList dataKey="rakes" position="top" />
+                            </Bar>
+                        </RechartsBarChart>
+                    </ResponsiveContainer>
                 </div>
             </div>
 
-            <div className="mt-5 space-y-2">
-                <h4 className="text-sm font-semibold text-muted-foreground">Destination breakdown</h4>
-                {data.map((pp, i) => (
-                    <div key={pp.name} className="group rounded-lg border bg-muted/20 p-3 transition-colors hover:bg-muted/40">
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm font-semibold">{pp.name}</span>
-                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                                <span className="tabular-nums">{pp.rakes} rakes</span>
-                                <span className="tabular-nums">{formatWeight(pp.weight_mt)}</span>
+            <div className="mt-6 space-y-3">
+                <h4 className="text-sm font-semibold text-gray-500">Destination breakdown</h4>
+                {data.map((pp, i) => {
+                    const color = PLANT_COLORS[pp.name] ?? SIDING_COLORS[i % SIDING_COLORS.length];
+                    const isExpanded = expandedIdx === i;
+                    const sidingEntries = Object.entries(pp.sidings);
+                    const maxSidingRakes = Math.max(...sidingEntries.map(([, info]) => info.rakes), 1);
+                    return (
+                        <div
+                            key={pp.name}
+                            className="dashboard-card group rounded-xl border-0 p-4 transition-all hover:shadow-md"
+                            style={{ borderLeft: `4px solid ${color}` }}
+                        >
+                            <button
+                                type="button"
+                                onClick={() => setExpandedIdx(isExpanded ? null : i)}
+                                className="flex w-full items-center justify-between text-left"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <span className="flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white" style={{ backgroundColor: color }}>
+                                        {pp.name.slice(0, 2).toUpperCase()}
+                                    </span>
+                                    <span className="text-sm font-semibold text-gray-900">{pp.name}</span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <span className="text-xs tabular-nums text-gray-500">{pp.rakes} rakes</span>
+                                    <span className="text-xs tabular-nums text-gray-500">{formatWeight(pp.weight_mt)}</span>
+                                    {isExpanded ? <ChevronUp className="size-4 text-gray-400" /> : <ChevronDown className="size-4 text-gray-400" />}
+                                </div>
+                            </button>
+                            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-gray-100" style={{ transition: 'width 0.8s ease' }}>
+                                <div
+                                    className="h-full rounded-full transition-[width] duration-700 ease-out"
+                                    style={{
+                                        width: `${Math.min(100, (pp.weight_mt / maxWeight) * 100)}%`,
+                                        background: `linear-gradient(90deg, ${color}, ${color}99)`,
+                                    }}
+                                />
                             </div>
+                            {isExpanded && sidingEntries.length > 0 && (
+                                <div className="mt-4 border-t border-gray-100 pt-4">
+                                    <div className="flex gap-4 overflow-x-auto pb-2">
+                                        {sidingEntries.map(([sidingName, info], si) => (
+                                            <div key={sidingName} className="flex min-w-[100px] flex-col">
+                                                <span className="text-xs font-medium text-gray-600">{sidingName}</span>
+                                                <div className="mt-1 h-8 w-full overflow-hidden rounded bg-gray-100">
+                                                    <div
+                                                        className="h-full rounded bg-blue-500 transition-[width] duration-700 ease-out"
+                                                        style={{ width: `${(info.rakes / maxSidingRakes) * 100}%`, backgroundColor: SIDING_COLORS[si % SIDING_COLORS.length] }}
+                                                    />
+                                                </div>
+                                                <span className="mt-0.5 text-xs tabular-nums text-gray-500">{info.rakes} rakes, {formatWeight(info.weight_mt)}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
-                        <div className="mt-1.5 flex flex-wrap gap-2">
-                            {Object.entries(pp.sidings).map(([sidingName, info], si) => (
-                                <span
-                                    key={sidingName}
-                                    className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs"
-                                    style={{ backgroundColor: `color-mix(in srgb, ${SIDING_COLORS[si % SIDING_COLORS.length]} 15%, transparent)` }}
-                                >
-                                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: SIDING_COLORS[si % SIDING_COLORS.length] }} />
-                                    {sidingName}: {info.rakes} rakes, {formatWeight(info.weight_mt)}
-                                </span>
-                            ))}
-                        </div>
-                        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                            <div
-                                className="h-full rounded-full transition-all"
-                                style={{
-                                    width: `${Math.min(100, (pp.weight_mt / maxWeight) * 100)}%`,
-                                    backgroundColor: SIDING_COLORS[i % SIDING_COLORS.length],
-                                }}
-                            />
-                        </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
         </div>
     );
@@ -1075,24 +1234,24 @@ function DashboardFiltersBar({
     }, [sidings, filters.siding_ids, isAllSidingsSelected]);
 
     return (
-        <div className="rounded-xl border bg-card p-4">
+        <div className="dashboard-card rounded-xl border-0 p-5">
             <div className="flex flex-wrap items-center gap-3">
-                <div className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
+                <div className="flex items-center gap-1.5 text-sm font-medium text-gray-500">
                     <Filter className="size-4" />
                     <span>Filters</span>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-1">
+                <div className="flex flex-wrap items-center gap-1.5">
                     {PERIODS.map((p) => (
                         <button
                             key={p.key}
                             type="button"
                             onClick={() => applyFilters({ period: p.key })}
                             className={
-                                'rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ' +
+                                'rounded-full px-4 py-2 text-xs font-medium transition-colors ' +
                                 (filters.period === p.key
-                                    ? 'bg-primary text-primary-foreground'
-                                    : 'bg-muted/50 text-muted-foreground hover:bg-muted')
+                                    ? 'bg-[#111827] text-white'
+                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200')
                             }
                         >
                             {p.label}
@@ -1133,7 +1292,7 @@ function DashboardFiltersBar({
                     value={filters.power_plant ?? ALL_FILTER_VALUE}
                     onValueChange={(v) => applyFilters({ power_plant: v === ALL_FILTER_VALUE ? null : v })}
                 >
-                    <SelectTrigger className="h-8 w-[180px] text-xs">
+                    <SelectTrigger className="h-8 w-[180px] rounded-[8px] text-xs">
                         <SelectValue placeholder="Power plant" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1162,7 +1321,7 @@ function DashboardFiltersBar({
                     value={filters.loader_id != null ? String(filters.loader_id) : ALL_FILTER_VALUE}
                     onValueChange={(v) => applyFilters({ loader_id: v === ALL_FILTER_VALUE ? null : Number(v) })}
                 >
-                    <SelectTrigger className="h-8 w-[180px] text-xs">
+                    <SelectTrigger className="h-8 w-[180px] rounded-[8px] text-xs">
                         <SelectValue placeholder="Loader" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1179,7 +1338,7 @@ function DashboardFiltersBar({
                     value={filters.shift ?? ALL_FILTER_VALUE}
                     onValueChange={(v) => applyFilters({ shift: v === ALL_FILTER_VALUE ? null : v })}
                 >
-                    <SelectTrigger className="h-8 w-[100px] text-xs">
+                    <SelectTrigger className="h-8 w-[100px] rounded-[8px] text-xs">
                         <SelectValue placeholder="Shift" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1369,16 +1528,25 @@ export default function Dashboard() {
 
     const sidingStackKeys = useMemo(() => filteredSidings.map((s) => s.name), [filteredSidings]);
 
+    const kpiCards = sidings.length > 0 && kpis ? [
+        { label: `Rakes dispatched ${periodLabel}`, value: String(kpis.rakesDispatchedToday), borderColor: '#3B82F6', Icon: Train },
+        { label: `Coal dispatched ${periodLabel}`, value: formatWeight(kpis.coalDispatchedToday), borderColor: '#10B981', Icon: Flame },
+        { label: `Penalty ${periodLabel}`, value: formatCurrency(kpis.totalPenaltyThisMonth), borderColor: '#EF4444', Icon: AlertTriangle },
+        { label: 'Predicted penalty risk', value: formatCurrency(kpis.predictedPenaltyRisk), borderColor: '#F59E0B', Icon: TrendingUp },
+        { label: `Avg loading time (${periodLabel})`, value: kpis.avgLoadingTimeMinutes != null ? `${Math.floor(kpis.avgLoadingTimeMinutes / 60)}h ${kpis.avgLoadingTimeMinutes % 60}m` : '—', borderColor: '#8B5CF6', Icon: Clock },
+        { label: `Trucks received ${periodLabel}`, value: String(kpis.trucksReceivedToday), borderColor: '#14B8A6', Icon: Truck },
+    ] : [];
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dashboard" />
-            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-1">
+            <div className="dashboard-page flex h-full flex-1 flex-col gap-6 overflow-x-auto bg-[#FAFAFA] p-1">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <h2 className="text-xl font-semibold tracking-tight">
                         Management Dashboard
                     </h2>
                     <Select value={activeSection} onValueChange={setActiveSection}>
-                        <SelectTrigger className="w-full sm:w-64">
+                        <SelectTrigger className="min-w-[200px] rounded-[10px] border border-gray-200 bg-white shadow-sm w-full sm:w-auto">
                             <SelectValue placeholder="Select section" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1395,39 +1563,26 @@ export default function Dashboard() {
                     <DashboardFiltersBar sidings={sidings} filters={filters} filterOptions={filterOptions} />
                 )}
 
-                {sidings.length > 0 && kpis && (
-                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-                        <div className="rounded-xl border bg-card p-4 text-center">
-                            <div className="text-xs font-medium text-muted-foreground">Rakes dispatched {periodLabel}</div>
-                            <div className="mt-1 text-2xl font-bold tabular-nums">{kpis.rakesDispatchedToday}</div>
-                        </div>
-                        <div className="rounded-xl border bg-card p-4 text-center">
-                            <div className="text-xs font-medium text-muted-foreground">Coal dispatched {periodLabel}</div>
-                            <div className="mt-1 text-2xl font-bold tabular-nums">{formatWeight(kpis.coalDispatchedToday)}</div>
-                        </div>
-                        <div className="rounded-xl border bg-card p-4 text-center">
-                            <div className="text-xs font-medium text-muted-foreground">Penalty {periodLabel}</div>
-                            <div className="mt-1 text-2xl font-bold tabular-nums">{formatCurrency(kpis.totalPenaltyThisMonth)}</div>
-                        </div>
-                        <div className="rounded-xl border bg-card p-4 text-center">
-                            <div className="text-xs font-medium text-muted-foreground">Predicted penalty risk</div>
-                            <div className="mt-1 text-2xl font-bold tabular-nums">{formatCurrency(kpis.predictedPenaltyRisk)}</div>
-                        </div>
-                        <div className="rounded-xl border bg-card p-4 text-center">
-                            <div className="text-xs font-medium text-muted-foreground">Avg loading time ({periodLabel})</div>
-                            <div className="mt-1 text-2xl font-bold tabular-nums">
-                                {kpis.avgLoadingTimeMinutes != null ? `${Math.floor(kpis.avgLoadingTimeMinutes / 60)}h ${kpis.avgLoadingTimeMinutes % 60}m` : '—'}
+                {kpiCards.length > 0 && (
+                    <div className="flex gap-4 overflow-x-auto pb-2 lg:grid lg:grid-cols-2 lg:overflow-visible xl:grid-cols-6">
+                        {kpiCards.map(({ label, value, borderColor, Icon }) => (
+                            <div
+                                key={label}
+                                className="dashboard-card flex min-w-[140px] flex-1 flex-col justify-between rounded-xl border-0 p-5 sm:min-w-0"
+                                style={{ borderTop: `4px solid ${borderColor}` }}
+                            >
+                                <div className="text-xs font-medium text-gray-400">{label}</div>
+                                <div className="mt-2 flex items-end justify-between gap-2">
+                                    <span className="text-[2.5rem] font-bold tabular-nums leading-tight">{value}</span>
+                                    <Icon className="size-8 shrink-0 text-gray-300" aria-hidden />
+                                </div>
                             </div>
-                        </div>
-                        <div className="rounded-xl border bg-card p-4 text-center">
-                            <div className="text-xs font-medium text-muted-foreground">Trucks received {periodLabel}</div>
-                            <div className="mt-1 text-2xl font-bold tabular-nums">{kpis.trucksReceivedToday}</div>
-                        </div>
+                        ))}
                     </div>
                 )}
 
                 {sidings.length === 0 ? (
-                    <div className="rounded-xl border bg-card p-8 text-center text-sm text-muted-foreground">
+                    <div className="dashboard-card rounded-xl border-0 p-8 text-center text-sm text-gray-500">
                         <p>No sidings assigned to your account. Contact your administrator to get access.</p>
                     </div>
                 ) : (
@@ -1438,43 +1593,73 @@ export default function Dashboard() {
                                 {sidingPerformance.length > 0 ? (
                                     <SidingPerformanceSection data={sidingPerformance} />
                                 ) : (
-                                    <div className="rounded-xl border bg-card p-5">
+                                    <div className="dashboard-card rounded-xl border-0 p-6">
                                         <SectionHeader icon={BarChart3} title="Siding performance" subtitle="Rakes, coal & penalty by siding" />
-                                        <div className="mt-4 py-8 text-center text-sm text-muted-foreground">No performance data for selected filters.</div>
+                                        <div className="mt-4 py-8 text-center text-sm text-gray-500">No performance data for selected filters.</div>
                                     </div>
                                 )}
-                                <div className="rounded-xl border bg-card p-5">
+                                <div className="dashboard-card rounded-xl border-0 p-6">
                                     <SectionHeader icon={Calendar} title="Penalty trend" subtitle="Date / month vs penalty amount" />
                                     {penaltyTrendDaily.length > 0 ? (
                                         <ResponsiveContainer width="100%" height={280}>
-                                            <RechartsBarChart data={penaltyTrendDaily} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
-                                                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                                            <RechartsAreaChart data={penaltyTrendDaily} margin={{ top: 8, right: 16, left: 8, bottom: 0 }}>
+                                                <defs>
+                                                    <linearGradient id="penalty-trend-gradient" x1="0" y1="0" x2="0" y2="1">
+                                                        <stop offset="0%" stopColor="#DC2626" stopOpacity={0.4} />
+                                                        <stop offset="100%" stopColor="#DC2626" stopOpacity={0} />
+                                                    </linearGradient>
+                                                </defs>
+                                                <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
                                                 <XAxis dataKey="label" tick={{ fontSize: 11 }} />
                                                 <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => formatCurrency(v)} />
-                                                <Tooltip formatter={(v: number) => [formatCurrency(v), 'Penalty']} />
-                                                <Bar dataKey="total" fill={DASHBOARD_PALETTE.alertRed} name="Penalty" radius={[4, 4, 0, 0]} />
-                                            </RechartsBarChart>
+                                                <Tooltip formatter={(v: number | string | undefined) => formatCurrency(Number(v ?? 0))} />
+                                                <Area type="monotone" dataKey="total" name="Penalty" stroke="#DC2626" strokeWidth={2} fill="url(#penalty-trend-gradient)" dot={false} activeDot={{ r: 4 }} isAnimationActive />
+                                            </RechartsAreaChart>
                                         </ResponsiveContainer>
                                     ) : (
-                                        <div className="mt-4 py-8 text-center text-sm text-muted-foreground">No penalty data for selected period.</div>
+                                        <div className="mt-4 py-8 text-center text-sm text-gray-500">No penalty data for selected period.</div>
                                     )}
                                 </div>
-                                <div className="rounded-xl border bg-card p-5">
+                                <div className="dashboard-card rounded-xl border-0 p-6">
                                     <SectionHeader icon={Factory} title="Power plant dispatch distribution" subtitle="Coal supply by destination" />
-                                    {powerPlantDispatch.length > 0 ? (
-                                        <PieChart
-                                            data={powerPlantDispatch.map((pp) => ({
-                                                name: pp.name,
-                                                value: Math.round((pp.weight_mt / Math.max(1, powerPlantDispatch.reduce((s, p) => s + p.weight_mt, 0))) * 100),
-                                            }))}
-                                            nameKey="name"
-                                            valueKey="value"
-                                            height={280}
-                                            innerRadius={60}
-                                            formatTooltip={(v) => `${v}%`}
-                                        />
-                                    ) : (
-                                        <div className="mt-4 py-8 text-center text-sm text-muted-foreground">No power plant dispatch data.</div>
+                                    {powerPlantDispatch.length > 0 ? (() => {
+                                        const totalWeight = powerPlantDispatch.reduce((s, p) => s + p.weight_mt, 0);
+                                        const donutData = powerPlantDispatch.map((pp) => ({
+                                            name: pp.name,
+                                            value: Math.round((pp.weight_mt / Math.max(1, totalWeight)) * 100),
+                                            weightMt: pp.weight_mt,
+                                        }));
+                                        return (
+                                            <div className="relative">
+                                                <ResponsiveContainer width="100%" height={280}>
+                                                    <RechartsPieChart>
+                                                        <Pie
+                                                            data={donutData}
+                                                            dataKey="value"
+                                                            nameKey="name"
+                                                            cx="50%"
+                                                            cy="50%"
+                                                            innerRadius="65%"
+                                                            outerRadius="90%"
+                                                            paddingAngle={2}
+                                                            strokeWidth={0}
+                                                        >
+                                                            {donutData.map((_, i) => (
+                                                                <Cell key={i} fill={['#22c55e', '#3b82f6', '#f97316', '#eab308', '#a855f7'][i % 5]} />
+                                                            ))}
+                                                        </Pie>
+                                                        <Tooltip formatter={(v: number | undefined, _: unknown, props: { payload?: { weightMt: number } }) => [`${v ?? 0}%`, formatWeight(props.payload?.weightMt ?? 0)]} />
+                                                        <Legend layout="horizontal" align="center" verticalAlign="bottom" wrapperStyle={{ paddingTop: 16 }} formatter={(value, entry) => `${value} ${Number((entry as { payload?: { value: number } }).payload?.value ?? 0)}%`} />
+                                                    </RechartsPieChart>
+                                                </ResponsiveContainer>
+                                                <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center text-center">
+                                                    <span className="text-xs font-medium text-gray-400">Total</span>
+                                                    <span className="text-lg font-bold tabular-nums text-gray-800">{formatWeight(totalWeight)}</span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })() : (
+                                        <div className="mt-4 py-8 text-center text-sm text-gray-500">No power plant dispatch data.</div>
                                     )}
                                 </div>
                             </div>
@@ -1482,68 +1667,86 @@ export default function Dashboard() {
 
                         {activeSection === 'operations' && (
                             <div className="space-y-6">
-                                <div className="rounded-xl border bg-card p-5">
+                                <div className="dashboard-card rounded-xl border-0 p-5">
                                     <SectionHeader icon={Train} title="Live rake status" subtitle="Active rakes (not yet dispatched)" />
+                                    <p className="mt-1 text-xs text-gray-400">Last updated: Just now</p>
                                     {liveRakeStatus.length > 0 ? (
-                                        <div className="mt-4 overflow-x-auto">
+                                        <div className="dashboard-table-scroll mt-4 max-h-[400px] overflow-y-auto overflow-x-auto">
                                             <table className="w-full text-sm">
-                                                <thead>
-                                                    <tr className="border-b text-left text-muted-foreground">
-                                                        <th className="pb-2 font-medium">Rake</th>
-                                                        <th className="pb-2 font-medium">Siding</th>
-                                                        <th className="pb-2 font-medium">Status</th>
-                                                        <th className="pb-2 font-medium">Time elapsed</th>
-                                                        <th className="pb-2 font-medium">Risk</th>
+                                                <thead className="sticky top-0 z-10 bg-white shadow-sm">
+                                                    <tr className="border-b text-left text-gray-500">
+                                                        <th className="group cursor-pointer pb-3 pl-4 pr-2 pt-2 font-medium"><span className="inline-flex items-center gap-1">Rake <ArrowUp className="size-3.5 opacity-0 group-hover:opacity-50" /></span></th>
+                                                        <th className="group cursor-pointer pb-3 px-2 pt-2 font-medium"><span className="inline-flex items-center gap-1">Siding <ArrowUp className="size-3.5 opacity-0 group-hover:opacity-50" /></span></th>
+                                                        <th className="group cursor-pointer pb-3 px-2 pt-2 font-medium"><span className="inline-flex items-center gap-1">Status <ArrowUp className="size-3.5 opacity-0 group-hover:opacity-50" /></span></th>
+                                                        <th className="group cursor-pointer pb-3 px-2 pt-2 font-medium"><span className="inline-flex items-center gap-1">Time elapsed <ArrowUp className="size-3.5 opacity-0 group-hover:opacity-50" /></span></th>
+                                                        <th className="group cursor-pointer pb-3 pr-4 pl-2 pt-2 font-medium"><span className="inline-flex items-center gap-1">Risk <ArrowUp className="size-3.5 opacity-0 group-hover:opacity-50" /></span></th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {liveRakeStatus.map((row, i) => (
-                                                        <tr key={i} className="border-b last:border-0">
-                                                            <td className="py-2 font-medium">{row.rake_number}</td>
-                                                            <td className="py-2">{row.siding_name}</td>
-                                                            <td className="py-2">{row.state}</td>
-                                                            <td className="py-2 tabular-nums">{row.time_elapsed}</td>
-                                                            <td className="py-2">
-                                                                <span className={
-                                                                    row.risk === 'penalty_risk' ? 'text-red-600 dark:text-red-400' :
-                                                                    row.risk === 'attention' ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground'
-                                                                }>
-                                                                    {row.risk === 'penalty_risk' ? 'Penalty risk' : row.risk === 'attention' ? 'Attention' : 'Normal'}
-                                                                </span>
-                                                            </td>
-                                                        </tr>
-                                                    ))}
+                                                    {liveRakeStatus.map((row, i) => {
+                                                        const statusVariant = row.state === 'completed' ? 'completed' : row.state === 'loading' || row.state === 'in-progress' ? 'in-progress' : 'pending';
+                                                        const riskVariant = row.risk === 'penalty_risk' ? 'high' : row.risk === 'attention' ? 'medium' : 'normal';
+                                                        const borderColor = riskVariant === 'high' ? '#DC2626' : riskVariant === 'medium' ? '#F59E0B' : '#E5E7EB';
+                                                        return (
+                                                            <tr
+                                                                key={i}
+                                                                className="border-b text-[0.875rem] last:border-0"
+                                                                style={{ backgroundColor: i % 2 === 1 ? '#F9FAFB' : undefined, borderLeft: `3px solid ${borderColor}` }}
+                                                            >
+                                                                <td className="py-3 pl-4 font-medium">{row.rake_number}</td>
+                                                                <td className="py-3 px-2">{row.siding_name}</td>
+                                                                <td className="py-3 px-2">
+                                                                    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                                                                        statusVariant === 'completed' ? 'bg-[#DCFCE7] text-[#16A34A]' :
+                                                                        statusVariant === 'in-progress' ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-600'
+                                                                    }`}>
+                                                                        {statusVariant === 'completed' ? 'Completed' : statusVariant === 'in-progress' ? 'In progress' : row.state || 'Pending'}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="py-3 tabular-nums px-2">{row.time_elapsed}</td>
+                                                                <td className="py-3 pr-4 pl-2">
+                                                                    {riskVariant === 'high' ? (
+                                                                        <span className="inline-flex rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700">High</span>
+                                                                    ) : riskVariant === 'medium' ? (
+                                                                        <span className="inline-flex rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">Medium</span>
+                                                                    ) : (
+                                                                        <span className="text-gray-500">Normal</span>
+                                                                    )}
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
                                                 </tbody>
                                             </table>
                                         </div>
                                     ) : (
-                                        <div className="mt-4 py-8 text-center text-sm text-muted-foreground">No active rakes.</div>
+                                        <div className="mt-4 py-8 text-center text-sm text-gray-500">No active rakes.</div>
                                     )}
                                 </div>
-                                <div className="rounded-xl border bg-card p-5">
+                                <div className="dashboard-card rounded-xl border-0 p-5">
                                     <SectionHeader icon={BarChart3} title="Truck receipt trend" subtitle="Trips per hour (today)" />
                                     {truckReceiptTrend.length > 0 ? (
                                         <ResponsiveContainer width="100%" height={260}>
-                                            <RechartsBarChart data={truckReceiptTrend} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
-                                                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                                                <XAxis dataKey="label" tick={{ fontSize: 10 }} />
-                                                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                                                <Tooltip formatter={(v: number) => [v, 'Trips']} />
-                                                <Bar dataKey="count" fill={DASHBOARD_PALETTE.steelBlue} name="Trips" radius={[4, 4, 0, 0]} />
+                                            <RechartsBarChart data={truckReceiptTrend} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
+                                                <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
+                                                <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                                                <YAxis tick={{ fontSize: 11 }} />
+                                                <Tooltip formatter={(v: number | undefined) => `Trips: ${v ?? 0}`} />
+                                                <Bar dataKey="count" fill="#3B82F6" radius={[4, 4, 0, 0]} barSize={24} isAnimationActive />
                                             </RechartsBarChart>
                                         </ResponsiveContainer>
                                     ) : (
-                                        <div className="mt-4 py-8 text-center text-sm text-muted-foreground">No truck receipt data for today.</div>
+                                        <div className="mt-4 py-8 text-center text-sm text-gray-500">No truck receipt data for today.</div>
                                     )}
                                 </div>
-                                <div className="rounded-xl border bg-card p-5">
+                                <div className="dashboard-card rounded-xl border-0 p-5">
                                     <SectionHeader
                                         icon={Zap}
                                         title="Stock vs requirement"
                                         subtitle="Minimum 3,800 MT per rake — side-wise"
                                     />
                                     {stockGauge && stockGauge.length > 0 ? (
-                                        <div className="mt-4 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                                        <div className="mt-5 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
                                             {stockGauge.map((item) => (
                                                 <SemiCircleGauge
                                                     key={item.siding_id}
@@ -1572,51 +1775,92 @@ export default function Dashboard() {
 
                         {activeSection === 'penalty-control' && (
                             <div className="space-y-6">
-                                <div className="rounded-xl border bg-card p-5">
+                                <div className="dashboard-card rounded-xl border-0 p-6">
                                     <SectionHeader icon={BarChart3} title="Penalty by siding" subtitle="Which siding causes most penalties" />
                                     {penaltyBySiding.length > 0 ? (
                                         <div className="mt-4">
-                                            <BarChart
-                                                data={penaltyBySiding as Record<string, unknown>[]}
-                                                xKey="name"
-                                                yKey="total"
-                                                yLabel="Penalty"
-                                                height={260}
-                                                color={DASHBOARD_PALETTE.alertRed}
-                                                formatY={(v) => formatCurrency(v)}
-                                                formatTooltip={(v) => formatCurrency(v)}
-                                            />
+                                            <ResponsiveContainer width="100%" height={260}>
+                                                <RechartsBarChart
+                                                    data={[...penaltyBySiding].sort((a, b) => b.total - a.total)}
+                                                    layout="horizontal"
+                                                    margin={{ top: 8, right: 80, bottom: 0, left: 16 }}
+                                                >
+                                                    <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
+                                                    <XAxis type="number" tickFormatter={(v) => formatCurrency(v)} />
+                                                    <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 12 }} />
+                                                    <Tooltip formatter={(v: number | string | undefined) => formatCurrency(Number(v ?? 0))} />
+                                                    <Bar dataKey="total" fill="#DC2626" radius={[0, 4, 4, 0]} barSize={28} isAnimationActive>
+                                                        <LabelList dataKey="total" position="right" formatter={(v: unknown) => formatCurrency(Number(v ?? 0))} />
+                                                    </Bar>
+                                                </RechartsBarChart>
+                                            </ResponsiveContainer>
                                         </div>
                                     ) : (
-                                        <div className="mt-4 py-8 text-center text-sm text-muted-foreground">No penalty data for selected period.</div>
+                                        <div className="mt-4 py-8 text-center text-sm text-gray-500">No penalty data for selected period.</div>
                                     )}
                                 </div>
-                                <div className="rounded-xl border bg-card p-5">
+                                <div className="dashboard-card rounded-xl border-0 p-6">
                                     <SectionHeader icon={AlertTriangle} title="Penalty type distribution" subtitle="Overloading, demurrage, wharfage, etc." />
-                                    {penaltyByType.length > 0 ? (
-                                        <PieChart
-                                            data={penaltyByType}
-                                            nameKey="name"
-                                            valueKey="value"
-                                            height={280}
-                                            innerRadius={0}
-                                            colors={[DASHBOARD_PALETTE.alertRed, DASHBOARD_PALETTE.safetyYellow, DASHBOARD_PALETTE.steelBlue, DASHBOARD_PALETTE.darkGrey]}
-                                            formatTooltip={(v) => formatCurrency(v)}
-                                        />
-                                    ) : (
-                                        <div className="mt-4 py-8 text-center text-sm text-muted-foreground">No penalty type data.</div>
+                                    {penaltyByType.length > 0 ? (() => {
+                                        const typeColors: Record<string, string> = { Demurrage: '#DC2626', Overloading: '#F59E0B', Wharfage: '#8B5CF6' };
+                                        const totalType = penaltyByType.reduce((s, p) => s + p.value, 0);
+                                        const donutData = penaltyByType.map((p) => ({ ...p, pct: totalType > 0 ? ((p.value / totalType) * 100).toFixed(1) : '0' }));
+                                        return (
+                                            <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-center">
+                                                <div className="relative h-[260px] flex-1">
+                                                    <ResponsiveContainer width="100%" height="100%">
+                                                        <RechartsPieChart>
+                                                            <Pie
+                                                                data={donutData}
+                                                                dataKey="value"
+                                                                nameKey="name"
+                                                                cx="50%"
+                                                                cy="50%"
+                                                                innerRadius={60}
+                                                                outerRadius={90}
+                                                                paddingAngle={2}
+                                                                strokeWidth={0}
+                                                                activeShape={{ scale: 1.05 }}
+                                                            >
+                                                                {donutData.map((entry, i) => (
+                                                                    <Cell key={i} fill={typeColors[entry.name] ?? ['#64748b', '#94a3b8'][i % 2]} />
+                                                                ))}
+                                                            </Pie>
+                                                            <Tooltip formatter={(v: number | undefined, _: unknown, props: { payload?: { name: string; pct: string } }) => [formatCurrency(Number(v ?? 0)), `${props.payload?.pct ?? 0}%`]} />
+                                                        </RechartsPieChart>
+                                                    </ResponsiveContainer>
+                                                    <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center">
+                                                        <span className="text-xs text-gray-400">Total</span>
+                                                        <span className="text-lg font-bold tabular-nums text-gray-800">{formatCurrency(totalType)}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="flex flex-col gap-2 lg:min-w-[180px]">
+                                                    {donutData.map((entry, i) => (
+                                                        <div key={entry.name} className="flex items-center justify-between gap-2 text-sm">
+                                                            <span className="flex items-center gap-2">
+                                                                <span className="size-2.5 rounded-full" style={{ backgroundColor: typeColors[entry.name] ?? '#64748b' }} />
+                                                                {entry.name}
+                                                            </span>
+                                                            <span className="tabular-nums font-medium">{formatCurrency(entry.value)} ({entry.pct}%)</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        );
+                                    })() : (
+                                        <div className="mt-4 py-8 text-center text-sm text-gray-500">No penalty type data.</div>
                                     )}
                                 </div>
-                                <div className="rounded-xl border bg-card p-5">
+                                <div className="dashboard-card rounded-xl border-0 p-6">
                                     <SectionHeader icon={BarChart3} title="Predicted vs actual penalty" subtitle="System accuracy" />
-                                    <div className="mt-4 flex justify-center gap-8">
-                                        <div className="rounded-lg border bg-muted/30 px-6 py-4 text-center">
-                                            <div className="text-xs text-muted-foreground">Predicted</div>
-                                            <div className="text-xl font-bold tabular-nums">{formatCurrency(predictedVsActualPenalty.predicted)}</div>
+                                    <div className="mt-4 flex justify-center gap-6">
+                                        <div className="rounded-xl border-0 bg-blue-50 p-6 text-center shadow-sm" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+                                            <div className="text-xs font-medium text-blue-600">Predicted</div>
+                                            <div className="mt-1 text-xl font-bold tabular-nums text-blue-900">{formatCurrency(predictedVsActualPenalty.predicted)}</div>
                                         </div>
-                                        <div className="rounded-lg border bg-muted/30 px-6 py-4 text-center">
-                                            <div className="text-xs text-muted-foreground">Actual</div>
-                                            <div className="text-xl font-bold tabular-nums">{formatCurrency(predictedVsActualPenalty.actual)}</div>
+                                        <div className="rounded-xl border-0 bg-red-50 p-6 text-center shadow-sm" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+                                            <div className="text-xs font-medium text-red-600">Actual</div>
+                                            <div className="mt-1 text-2xl font-bold tabular-nums text-red-900">{formatCurrency(predictedVsActualPenalty.actual)}</div>
                                         </div>
                                     </div>
                                     <ResponsiveContainer width="100%" height={200} className="mt-4">
@@ -1627,13 +1871,30 @@ export default function Dashboard() {
                                             ]}
                                             margin={{ top: 5, right: 5, left: -10, bottom: 0 }}
                                         >
-                                            <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                                            <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
                                             <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                                             <YAxis tickFormatter={(v) => formatCurrency(v)} />
-                                            <Tooltip formatter={(v: number) => formatCurrency(v)} />
-                                            <Bar dataKey="value" fill={DASHBOARD_PALETTE.alertRed} radius={[4, 4, 0, 0]} />
+                                            <ReferenceLine y={predictedVsActualPenalty.predicted} stroke="#3B82F6" strokeDasharray="5 5" />
+                                            <Tooltip formatter={(v: number | string | undefined) => formatCurrency(Number(v ?? 0))} />
+                                            <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                                                <Cell fill="#3B82F6" />
+                                                <Cell fill="#DC2626" />
+                                            </Bar>
                                         </RechartsBarChart>
                                     </ResponsiveContainer>
+                                    {(() => {
+                                        const pred = predictedVsActualPenalty.predicted || 1;
+                                        const pctDiff = ((predictedVsActualPenalty.actual - pred) / pred) * 100;
+                                        const over = predictedVsActualPenalty.actual > pred;
+                                        return (
+                                            <div className={`mt-4 flex items-center gap-2 rounded-xl border-0 p-4 ${over ? 'bg-amber-50' : 'bg-green-50'}`} style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+                                                {over ? <AlertTriangle className="size-5 shrink-0 text-amber-600" /> : <Check className="size-5 shrink-0 text-green-600" />}
+                                                <p className={`text-sm font-medium ${over ? 'text-amber-800' : 'text-green-800'}`}>
+                                                    Penalty is {pctDiff >= 0 ? `${pctDiff.toFixed(1)}% above` : `${Math.abs(pctDiff).toFixed(1)}% below`} predicted.
+                                                </p>
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
                             </div>
                         )}
@@ -1642,9 +1903,9 @@ export default function Dashboard() {
                             sidingPerformance.length > 0 ? (
                                 <SidingPerformanceSection data={sidingPerformance} />
                             ) : (
-                                    <div className="rounded-xl border bg-card p-5">
+                                    <div className="dashboard-card rounded-xl border-0 p-6">
                                         <SectionHeader icon={BarChart3} title="Siding performance" subtitle="Rakes, penalties & penalty rate" />
-                                        <div className="mt-6 flex flex-col items-center justify-center py-10 text-center text-muted-foreground">
+                                        <div className="mt-6 flex flex-col items-center justify-center py-10 text-center text-gray-500">
                                             <BarChart3 className="mb-3 h-10 w-10 opacity-30" />
                                             <p className="text-sm font-medium">No data available</p>
                                             <p className="mt-1 text-xs">Apply filters or wait for dispatch data.</p>
@@ -1657,9 +1918,9 @@ export default function Dashboard() {
                             Object.keys(sidingStocks).length > 0
                                 ? <SidingStockSection sidings={filteredSidings} stocks={sidingStocks} />
                                 : (
-                                    <div className="rounded-xl border bg-card p-5">
+                                    <div className="dashboard-card rounded-xl border-0 p-6">
                                         <SectionHeader icon={BarChart3} title="Siding stock" subtitle="Opening & closing balance with total rakes" />
-                                        <div className="mt-6 flex flex-col items-center justify-center py-10 text-center text-muted-foreground">
+                                        <div className="mt-6 flex flex-col items-center justify-center py-10 text-center text-gray-500">
                                             <BarChart3 className="mb-3 h-10 w-10 opacity-30" />
                                             <p className="text-sm font-medium">No stock data available</p>
                                             <p className="mt-1 text-xs">Apply filters or wait for stock ledger data.</p>
@@ -1672,9 +1933,9 @@ export default function Dashboard() {
                             rakePerformance.length > 0
                                 ? <RakePerformanceSection rakes={rakePerformance} />
                                 : (
-                                    <div className="rounded-xl border bg-card p-5">
+                                    <div className="dashboard-card rounded-xl border-0 p-6">
                                         <SectionHeader icon={Train} title="Rake-wise performance" subtitle="Top dispatched rakes" />
-                                        <div className="mt-6 flex flex-col items-center justify-center py-10 text-center text-muted-foreground">
+                                        <div className="mt-6 flex flex-col items-center justify-center py-10 text-center text-gray-500">
                                             <Train className="mb-3 h-10 w-10 opacity-30" />
                                             <p className="text-sm font-medium">No rake performance data available</p>
                                             <p className="mt-1 text-xs">Apply filters or wait for dispatch data.</p>
@@ -1692,9 +1953,9 @@ export default function Dashboard() {
                                     />
                                 )
                                 : (
-                                    <div className="rounded-xl border bg-card p-5">
+                                    <div className="dashboard-card rounded-xl border-0 p-6">
                                         <SectionHeader icon={AlertTriangle} title="Loader-wise overloading trends" subtitle="Overload cases by loader" />
-                                        <div className="mt-6 flex flex-col items-center justify-center py-10 text-center text-muted-foreground">
+                                        <div className="mt-6 flex flex-col items-center justify-center py-10 text-center text-gray-500">
                                             <AlertTriangle className="mb-3 h-10 w-10 opacity-30" />
                                             <p className="text-sm font-medium">No loader data available</p>
                                             <p className="mt-1 text-xs">Apply filters or wait for weighment data.</p>
@@ -1709,22 +1970,25 @@ export default function Dashboard() {
                         </div>
                         {sidings.length > 0 && (
                             <div className="space-y-3 lg:min-w-0">
-                                <h3 className="text-sm font-semibold text-muted-foreground">Live alerts</h3>
-                                <div className="max-h-[calc(100vh-12rem)] space-y-2 overflow-y-auto rounded-xl border bg-card p-3">
+                                <h3 className="text-sm font-semibold text-gray-500">Live alerts</h3>
+                                <div className={`dashboard-card max-h-[calc(100vh-12rem)] space-y-2 overflow-y-auto rounded-xl border-0 p-5 ${alerts.some((a) => a.severity === 'warning' || a.severity === 'critical') ? 'border-l-4 border-[#F59E0B]' : ''}`}>
                                     {alerts.length === 0 ? (
-                                        <p className="py-4 text-center text-xs text-muted-foreground">No active alerts.</p>
+                                        <div className="flex flex-col items-center justify-center gap-2 rounded-lg bg-[#FEF3C7] py-8 text-center">
+                                            <CheckCircle className="size-10 text-amber-600" aria-hidden />
+                                            <p className="text-sm font-medium text-amber-800">All systems normal</p>
+                                        </div>
                                     ) : (
                                         alerts.map((a) => (
                                             <div
                                                 key={a.id}
-                                                className={`rounded-lg border p-2.5 text-xs ${
-                                                    a.severity === 'critical' ? 'border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/30' :
-                                                    a.severity === 'warning' ? 'border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/30' :
-                                                    'border-border bg-muted/30'
+                                                className={`animate-in fade-in rounded-lg border p-2.5 text-xs ${
+                                                    a.severity === 'critical' ? 'border-red-200 bg-red-50' :
+                                                    a.severity === 'warning' ? 'border-amber-200 bg-amber-50' :
+                                                    'border-gray-200 bg-gray-50'
                                                 }`}
                                             >
                                                 <span className="font-medium">⚠ {a.title}</span>
-                                                <div className="mt-0.5 text-muted-foreground">{new Date(a.created_at).toLocaleString()}</div>
+                                                <div className="mt-0.5 text-gray-500">{new Date(a.created_at).toLocaleString()}</div>
                                             </div>
                                         ))
                                     )}

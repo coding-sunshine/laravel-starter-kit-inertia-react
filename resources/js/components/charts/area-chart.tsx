@@ -24,6 +24,8 @@ interface AreaChartProps<T extends Record<string, unknown>> {
     formatY?: (value: number) => string;
     formatTooltip?: (value: number) => string;
     className?: string;
+    /** Enable dot + area animation for smoother dashboard feel. */
+    animated?: boolean;
 }
 
 export function AreaChart<T extends Record<string, unknown>>({
@@ -40,6 +42,7 @@ export function AreaChart<T extends Record<string, unknown>>({
     formatY,
     formatTooltip,
     className,
+    animated = true,
 }: AreaChartProps<T>) {
     const gradientId = `area-gradient-${yKey}`;
 
@@ -122,8 +125,11 @@ export function AreaChart<T extends Record<string, unknown>>({
                         stroke={color}
                         strokeWidth={2}
                         fill={`url(#${gradientId})`}
-                        dot={{ r: 3, fill: color, strokeWidth: 0 }}
-                        activeDot={{ r: 5, fill: color, strokeWidth: 2, stroke: 'var(--card)' }}
+                        dot={animated ? { r: 3, fill: color, strokeWidth: 0 } : false}
+                        activeDot={animated ? { r: 5, fill: color, strokeWidth: 2, stroke: 'var(--card)' } : undefined}
+                        isAnimationActive={animated}
+                        animationDuration={550}
+                        animationEasing="ease-out"
                     />
                     {secondaryYKey && (
                         <Line

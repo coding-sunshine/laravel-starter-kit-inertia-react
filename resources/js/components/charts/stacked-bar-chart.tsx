@@ -34,6 +34,8 @@ interface StackedBarChartProps<T extends Record<string, unknown>> {
     formatY?: (value: number) => string;
     formatTooltip?: (value: number) => string;
     className?: string;
+    /** Enable stacked bar entrance animation for dashboard views. */
+    animated?: boolean;
 }
 
 export function StackedBarChart<T extends Record<string, unknown>>({
@@ -49,6 +51,7 @@ export function StackedBarChart<T extends Record<string, unknown>>({
     formatY,
     formatTooltip,
     className,
+    animated = true,
 }: StackedBarChartProps<T>) {
     const isVertical = layout === 'vertical';
 
@@ -148,9 +151,12 @@ export function StackedBarChart<T extends Record<string, unknown>>({
                             }
                             radius={
                                 i === stackKeys.length - 1
-                                    ? [4, 4, 0, 0]
+                                    ? [6, 6, 0, 0]
                                     : [0, 0, 0, 0]
                             }
+                            isAnimationActive={animated}
+                            animationDuration={550}
+                            animationEasing="ease-out"
                         />
                     ))}
                 </RechartsBarChart>
