@@ -96,19 +96,8 @@ final class DailyVehicleEntryController extends Controller
             }
         }
 
-        // Cannot add a new row until all entries in this shift (and siding) are completed (stock ledger is created on Complete)
-        if (DailyVehicleEntry::query()
-            ->where('entry_date', $data['entry_date'])
-            ->where('shift', $data['shift'])
-            ->where('siding_id', $data['siding_id'])
-            ->where('status', 'draft')
-            ->exists()) {
-            throw ValidationException::withMessages([
-                'shift' => 'Complete all entries in this shift before adding a new row. Coal stock is recorded when you mark an entry complete.',
-            ]);
-        }
-
         $entry = $this->service->createEntry($data);
+        $entry = $this->service->updateEntry($entry, []);
 
         if ($request->wantsJson()) {
             return response()->json(['entry' => $entry->load('siding')], 201);

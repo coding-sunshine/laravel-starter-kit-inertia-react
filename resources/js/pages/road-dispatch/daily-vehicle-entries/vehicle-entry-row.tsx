@@ -264,81 +264,80 @@ export default function VehicleEntryRow({
   return (
     <>
       <TableRow
-        className={`group hover:bg-gray-50 relative ${entry.status === 'draft' ? 'border-l-4 border-l-red-500 bg-red-50/30 dark:bg-red-950/20' : ''}`}
+        className={`group relative ${entry.status === 'draft' ? 'bg-red-50/30 dark:bg-red-950/20' : ''}`}
         onMouseEnter={() => setShowContextMenu(true)}
         onMouseLeave={() => setShowContextMenu(false)}
       >
-        <TableCell className="font-medium">
+        <TableCell className="px-2 py-1 font-medium border-t border-r border-gray-300">
           <div className="flex items-center gap-2">
-            {/* Context menu button - shows on hover */}
             <div className={`opacity-0 group-hover:opacity-100 transition-opacity duration-200 ${showContextMenu ? 'opacity-100' : ''}`}>
               <Button
                 size="sm"
                 variant="ghost"
                 onClick={() => setShowDetailModal(true)}
-                className="h-8 w-8 p-0"
+                className="h-7 w-7 p-0 min-w-0"
                 title="More options"
               >
-                <MoreHorizontal className="h-4 w-4" />
+                <MoreHorizontal className="h-3 w-3" />
               </Button>
             </div>
             {serialNumber}
           </div>
         </TableCell>
 
-        <TableCell className="text-muted-foreground text-sm whitespace-nowrap" title="Siding (read-only)">
+        <TableCell className="px-2 py-1 text-muted-foreground text-xs whitespace-nowrap border-t border-r border-gray-300" title="Siding (read-only)">
           {entry.siding?.name ?? '—'}
         </TableCell>
 
-      <TableCell>
+      <TableCell className="px-2 py-1 border-t border-r border-gray-300">
         <Input
           value={formData.e_challan_no}
           onChange={(e) => {
             updateField('e_challan_no', e.target.value);
             debouncedSave();
           }}
-          placeholder="E Challan No"
-          className="w-32"
+          placeholder="E-CH"
+          className="w-24 h-8 px-2 text-xs"
         />
       </TableCell>
 
-      <TableCell>
+      <TableCell className="px-2 py-1 border-t border-r border-gray-300">
         <Input
           value={formData.vehicle_no}
           onChange={(e) => {
             updateField('vehicle_no', e.target.value);
             debouncedSave();
           }}
-          placeholder="Vehicle No"
-          className="w-32"
+          placeholder="VEH"
+          className="w-24 h-8 px-2 text-xs"
         />
       </TableCell>
 
-      <TableCell>
+      <TableCell className="px-2 py-1 border-t border-r border-gray-300">
         <Input
           value={formData.trip_id_no}
           onChange={(e) => {
             updateField('trip_id_no', e.target.value);
             debouncedSave();
           }}
-          placeholder="Trip ID No"
-          className="w-32"
+          placeholder="TRIP"
+          className="w-20 h-8 px-2 text-xs"
         />
       </TableCell>
 
-      <TableCell>
+      <TableCell className="px-2 py-1 border-t border-r border-gray-300">
         <Input
           value={formData.transport_name}
           onChange={(e) => {
             updateField('transport_name', e.target.value);
             debouncedSave();
           }}
-          placeholder="Transport Name"
-          className="w-40"
+          placeholder="TRANS"
+          className="w-32 h-8 px-2 text-xs"
         />
       </TableCell>
 
-      <TableCell>
+      <TableCell className="px-2 py-1 border-t border-r border-gray-300">
         <Input
           type="number"
           step="0.01"
@@ -347,12 +346,12 @@ export default function VehicleEntryRow({
             updateField('gross_wt', e.target.value);
             debouncedSave();
           }}
-          placeholder="Gross WT (G2)"
-          className="w-24"
+          placeholder="G2"
+          className="w-20 h-8 px-2 text-right text-xs"
         />
       </TableCell>
 
-      <TableCell>
+      <TableCell className="px-2 py-1 border-t border-r border-gray-300">
         <Input
           type="number"
           step="0.01"
@@ -361,56 +360,54 @@ export default function VehicleEntryRow({
             updateField('tare_wt', e.target.value);
             debouncedSave();
           }}
-          placeholder="Tare WT (T1)"
-          className="w-24"
+          placeholder="T1"
+          className="w-20 h-8 px-2 text-right text-xs"
         />
       </TableCell>
 
-      <TableCell className="font-medium text-blue-600">
+      <TableCell className="px-2 py-1 font-medium text-blue-600 text-right text-xs border-t border-r border-gray-300">
         {calculateNetWeight()}
       </TableCell>
 
-      <TableCell className="text-sm text-gray-600">
+      <TableCell className="px-2 py-1 text-xs text-gray-600 border-t border-r border-gray-300">
         {formatDateTime(entry.reached_at)}
       </TableCell>
 
-      <TableCell>
+      <TableCell className="px-2 py-1 border-t border-r border-gray-300">
         <Input
           value={formData.wb_no}
           onChange={(e) => {
             updateField('wb_no', e.target.value);
             debouncedSave();
           }}
-          placeholder="WB No"
-          className="w-24"
+          placeholder="WB"
+          className="w-20 h-8 px-2 text-xs"
         />
       </TableCell>
 
-      <TableCell>
+      <TableCell className="px-2 py-1 border-t border-r border-gray-300">
         <Input
           value={formData.d_challan_no}
           onChange={(e) => {
             updateField('d_challan_no', e.target.value);
             debouncedSave();
           }}
-          placeholder="D Challan No"
-          className="w-32"
+          placeholder="D-CH"
+          className="w-24 h-8 px-2 text-xs"
         />
       </TableCell>
 
-      <TableCell>
+      <TableCell className="px-2 py-1 border-t border-r border-gray-300">
         <Select
           value={formData.challan_mode}
           onValueChange={(value) => {
             updateField('challan_mode', value as 'offline' | 'online');
-            // Save immediately on select change (no debounce needed)
             clearTimeout(debounceTimerRef.current);
-            // Small tick to let state + ref update before saving
             setTimeout(save, 50);
           }}
         >
-          <SelectTrigger className="w-28">
-            <SelectValue placeholder="Mode" />
+          <SelectTrigger className="w-20 h-8 text-xs px-2">
+            <SelectValue placeholder="MODE" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="offline">Offline</SelectItem>
@@ -419,23 +416,13 @@ export default function VehicleEntryRow({
         </Select>
       </TableCell>
 
-      <TableCell>
+      <TableCell className="px-2 py-1 border-t border-gray-300">
         {entry.status === 'completed' ? (
-          <Badge variant="default">completed</Badge>
+          <Badge variant="default" className="text-xs px-2 py-0.5">Stock updated</Badge>
+        ) : hasMeaningfulValues() ? (
+          <Badge variant="secondary" className="text-xs px-2 py-0.5">In progress</Badge>
         ) : (
-          <div className="flex flex-col gap-0.5">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleMarkCompleted}
-              disabled={isSaving}
-              className="h-7 gap-1 text-xs text-green-700 border-green-300 hover:bg-green-50 hover:text-green-800"
-            >
-              {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
-              Complete
-            </Button>
-            <span className="text-xs text-muted-foreground">Stock not recorded</span>
-          </div>
+          <span className="text-xs text-muted-foreground">Empty</span>
         )}
       </TableCell>
       </TableRow>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -95,6 +95,7 @@ export default function DailyVehicleEntriesIndex({
   const [isExporting, setIsExporting] = useState(false);
   const [isAddingRow, setIsAddingRow] = useState(false);
   const [addRowError, setAddRowError] = useState<string | null>(null);
+  const addingRowRef = useRef(false);
 
   const entriesForSiding =
     selectedSidingId == null
@@ -156,7 +157,9 @@ export default function DailyVehicleEntriesIndex({
     });
   };
 
-  const handleAddRow = async () => {
+  const handleAddRow = async (count: number = 1) => {
+    if (addingRowRef.current) return;
+    addingRowRef.current = true;
     if (shiftStatus && selectedDate === new Date().toISOString().split('T')[0]) {
       if (!shiftStatus[activeShiftState]?.is_available) {
         const messages = {
@@ -165,45 +168,55 @@ export default function DailyVehicleEntriesIndex({
           3: '3rd shift will be available after 2nd shift completion (after 22:00)',
         };
         alert(messages[activeShiftState as keyof typeof messages] || 'This shift is not available at the current time.');
+        addingRowRef.current = false;
         return;
       }
     }
 
     setAddRowError(null);
     setIsAddingRow(true);
+    const newEntries: DailyVehicleEntry[] = [];
+    const payload = {
+      siding_id: selectedSidingId ?? sidings[0]?.id ?? 1,
+      entry_date: selectedDate,
+      shift: activeShiftState,
+    };
     try {
-      const res = await fetch('/road-dispatch/daily-vehicle-entries', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-          'X-Requested-With': 'XMLHttpRequest',
-          ...getCsrfHeaders(),
-        },
-        body: JSON.stringify({
-          siding_id: selectedSidingId ?? sidings[0]?.id ?? 1,
-          entry_date: selectedDate,
-          shift: activeShiftState,
-        }),
-        credentials: 'include',
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        const msg = (data as { message?: string }).message ?? (data as { errors?: Record<string, string[]> }).errors ? Object.values((data as { errors: Record<string, string[]> }).errors).flat().join(', ') : res.statusText;
-        setAddRowError(msg ?? 'Failed to add row');
-        if (res.status === 419) {
-          setAddRowError('Session expired. Please refresh the page.');
+      for (let i = 0; i < count; i++) {
+        const res = await fetch('/road-dispatch/daily-vehicle-entries', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            ...getCsrfHeaders(),
+          },
+          body: JSON.stringify(payload),
+          credentials: 'include',
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          const msg = (data as { message?: string }).message ?? (data as { errors?: Record<string, string[]> }).errors ? Object.values((data as { errors: Record<string, string[]> }).errors).flat().join(', ') : res.statusText;
+          setAddRowError(msg ?? 'Failed to add row');
+          if (res.status === 419) {
+            setAddRowError('Session expired. Please refresh the page.');
+          }
+          addingRowRef.current = false;
+          return;
         }
-        return;
+        const newEntry = (data as { entry?: DailyVehicleEntry }).entry;
+        if (newEntry) {
+          newEntries.push(newEntry);
+        }
       }
-      const newEntry = (data as { entry?: DailyVehicleEntry }).entry;
-      if (newEntry) {
-        setEntries((prev) => [newEntry, ...prev]);
+      if (newEntries.length > 0) {
+        setEntries((prev) => [...prev, ...newEntries]);
       }
     } catch {
       setAddRowError('Network error. Please try again.');
     } finally {
       setIsAddingRow(false);
+      addingRowRef.current = false;
     }
   };
 
@@ -389,15 +402,7 @@ export default function DailyVehicleEntriesIndex({
           shiftStatus={shiftStatus}
         />
 
-        {hasDraftEntry && (
-          <Alert className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/20">
-            <AlertTitle>Draft entry — coal stock not yet recorded</AlertTitle>
-            <AlertDescription>
-              Complete the entry to update coal stock and to add another row. Use the &quot;Complete&quot; button in the
-              Status column for the draft row.
-            </AlertDescription>
-          </Alert>
-        )}
+        {/* Draft rows are completed automatically when required fields are filled, so no extra warning is needed */}
 
         {/* Vehicle Entry Table (filtered by selected siding) */}
         <VehicleEntryTable
@@ -407,15 +412,17 @@ export default function DailyVehicleEntriesIndex({
           shift={activeShiftState}
           onEntryUpdated={handleEntryUpdated}
           onEntryDeleted={handleEntryDeleted}
+          onAddRow={handleAddRow}
+          isAddingRow={isAddingRow}
           addRowButton={
             <>
               <Button
-                onClick={handleAddRow}
-                disabled={isAddingRow || hasDraftEntry}
+                onClick={() => handleAddRow(5)}
+                disabled={isAddingRow}
                 className="flex items-center gap-2"
               >
                 <Plus className="h-4 w-4" />
-                {isAddingRow ? 'Adding...' : 'Add Row'}
+                {isAddingRow ? 'Adding...' : 'Add 5 Rows'}
               </Button>
               {addRowError && (
                 <span className="text-sm text-destructive">{addRowError}</span>

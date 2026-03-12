@@ -21,7 +21,7 @@ final readonly class DailyVehicleEntryService
             ->with(['siding', 'creator', 'updater'])
             ->where('entry_date', $date)
             ->where('shift', $shift)
-            ->orderBy('created_at', 'desc'); // Newest first
+            ->orderBy('created_at', 'asc');
 
         if ($sidingId !== null) {
             $query->where('siding_id', $sidingId);
@@ -42,11 +42,12 @@ final readonly class DailyVehicleEntryService
     public function updateEntry(DailyVehicleEntry $entry, array $data): DailyVehicleEntry
     {
         $oldStatus = $entry->status;
-        $newStatus = $data['status'] ?? $oldStatus;
+        $newStatus = $this->determineStatus($entry, $data);
 
         return DB::transaction(function () use ($entry, $data, $oldStatus, $newStatus): DailyVehicleEntry {
             $entry->update([
                 ...$data,
+                'status' => $newStatus,
                 'updated_by' => auth()->id(),
             ]);
 
@@ -69,16 +70,7 @@ final readonly class DailyVehicleEntryService
 
     public function markCompleted(DailyVehicleEntry $entry): DailyVehicleEntry
     {
-        return DB::transaction(function () use ($entry): DailyVehicleEntry {
-            $entry->update([
-                'status' => 'completed',
-                'updated_by' => auth()->id(),
-            ]);
-
-            $this->createStockLedgerEntry($entry);
-
-            return $entry->fresh();
-        });
+        return $this->updateEntry($entry, []);
     }
 
     public function getShiftSummary(string $date): array
@@ -139,6 +131,24 @@ final readonly class DailyVehicleEntryService
             'remarks' => "Vehicle {$entry->vehicle_no} — Daily entry #{$entry->id}, Shift {$entry->shift}",
             'created_by' => auth()->id(),
         ]);
+    }
+
+    private function shouldAutoComplete(array $data, DailyVehicleEntry $entry): bool
+    {
+        $grossWt = (float) ($data['gross_wt'] ?? $entry->gross_wt ?? 0);
+        $tareWt = (float) ($data['tare_wt'] ?? $entry->tare_wt ?? 0);
+        $netWeight = round($grossWt - $tareWt, 2);
+
+        return $grossWt > 0 && $tareWt > 0 && $netWeight > 0;
+    }
+
+    private function determineStatus(DailyVehicleEntry $entry, array $data): string
+    {
+        if ($this->shouldAutoComplete($data, $entry)) {
+            return 'completed';
+        }
+
+        return 'draft';
     }
 
     private function deleteStockLedgerEntry(DailyVehicleEntry $entry): void

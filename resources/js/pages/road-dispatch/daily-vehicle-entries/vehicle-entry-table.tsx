@@ -35,6 +35,8 @@ interface VehicleEntryTableProps {
   onEntryUpdated?: (entry: DailyVehicleEntry) => void;
   onEntryDeleted?: (id: number) => void;
   addRowButton?: React.ReactNode;
+  onAddRow?: (count: number) => void;
+  isAddingRow?: boolean;
 }
 
 export default function VehicleEntryTable({
@@ -44,6 +46,8 @@ export default function VehicleEntryTable({
   onEntryUpdated,
   onEntryDeleted,
   addRowButton,
+  onAddRow,
+  isAddingRow = false,
 }: VehicleEntryTableProps) {
   const totalEntries = entries.length;
   
@@ -83,105 +87,98 @@ export default function VehicleEntryTable({
     return sum + (gross - tare);
   }, 0);
   
-  return (
-    <div className="bg-white rounded-lg shadow">
-      {/* Side-wise Summary Section */}
-      {entries.length > 0 && (
-        <div className="border-b border-gray-200 p-4 bg-gray-50">
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Side-wise Summary</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {Object.entries(sideWiseTotals).map(([sidingName, totals]) => (
-                <div key={sidingName} className="bg-white p-4 rounded-lg border border-gray-200">
-                  <h4 className="font-medium text-gray-900 mb-3">{sidingName}</h4>
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Entries:</span>
-                      <span className="text-sm font-medium">
-                        {isToday ? `${totals.count} text(today)` : `${totals.count} text(${date})`}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Total Gross Weight:</span>
-                      <span className="text-sm font-medium">{totals.totalGross.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Total Net Weight:</span>
-                      <span className="text-sm font-medium text-blue-600">{totals.totalNet.toFixed(2)}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+  const totalRows = Math.max(totalEntries, 100);
 
-      {/* Overall Totals row with Add Row button on the left */}
-      <div className="border-b border-gray-200 px-4 py-3 bg-gray-50 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          {addRowButton}
-        </div>
-        <div className="flex gap-8 items-center">
-          <span className="text-sm text-gray-500">
-            Showing {totalEntries} {totalEntries === 1 ? 'entry' : 'entries'}
-          </span>
-          <div className="text-right">
-            <div className="text-sm text-gray-600">Overall Total Gross Weight</div>
-            <div className="text-xl font-bold text-gray-900">
-              {totalGrossWeight.toFixed(2)}
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="text-sm text-gray-600">Overall Total Net Weight</div>
-            <div className="text-xl font-bold text-blue-600">
-              {totalNetWeight.toFixed(2)}
-            </div>
-          </div>
-        </div>
+  return (
+    <div className="overflow-x-auto">
+      {/* Top strip: totals only */}
+      <div className="border border-gray-300 border-b-0 px-2 py-1 flex flex-wrap items-center justify-end gap-4 text-[11px] bg-white">
+        <span>
+          Rows: <span className="font-semibold">{totalEntries}</span>
+        </span>
+        <span>
+          Total Gross:{' '}
+          <span className="font-semibold">{totalGrossWeight.toFixed(2)}</span>
+        </span>
+        <span>
+          Total Net:{' '}
+          <span className="font-semibold">{totalNetWeight.toFixed(2)}</span>
+        </span>
       </div>
-      
-      <Table>
+
+      <Table className="text-xs border border-gray-300 border-collapse">
         <TableHeader>
           <TableRow>
-            <TableHead className="w-16">SL NO</TableHead>
-            <TableHead className="w-28">Siding</TableHead>
-            <TableHead>E Challan No</TableHead>
-            <TableHead>Vehicle No</TableHead>
-            <TableHead>Trip ID No</TableHead>
-            <TableHead>Transport Name</TableHead>
-            <TableHead>Gross WT (G2)</TableHead>
-            <TableHead>Tare WT (T1)</TableHead>
-            <TableHead>Net Weight</TableHead>
-            <TableHead>Reached At</TableHead>
-            <TableHead>WB No</TableHead>
-            <TableHead>D Challan No</TableHead>
-            <TableHead>Challan Mode</TableHead>
-            <TableHead>Status</TableHead>
+            <TableHead className="w-12 h-8 px-2 py-1 text-center border-r border-gray-300">SL NO</TableHead>
+            <TableHead className="w-28 h-8 px-2 py-1 text-center border-r border-gray-300">Siding</TableHead>
+            <TableHead className="h-8 px-2 py-1 text-center border-r border-gray-300">E Challan No</TableHead>
+            <TableHead className="h-8 px-2 py-1 text-center border-r border-gray-300">Vehicle No</TableHead>
+            <TableHead className="h-8 px-2 py-1 text-center border-r border-gray-300">Trip ID No</TableHead>
+            <TableHead className="h-8 px-2 py-1 text-center border-r border-gray-300">Transport Name</TableHead>
+            <TableHead className="h-8 px-2 py-1 text-center border-r border-gray-300">Gross WT (G2)</TableHead>
+            <TableHead className="h-8 px-2 py-1 text-center border-r border-gray-300">Tare WT (T1)</TableHead>
+            <TableHead className="h-8 px-2 py-1 text-center border-r border-gray-300">Net Weight</TableHead>
+            <TableHead className="h-8 px-2 py-1 text-center border-r border-gray-300">Reached At</TableHead>
+            <TableHead className="h-8 px-2 py-1 text-center border-r border-gray-300">WB No</TableHead>
+            <TableHead className="h-8 px-2 py-1 text-center border-r border-gray-300">D Challan No</TableHead>
+            <TableHead className="h-8 px-2 py-1 text-center border-r border-gray-300">Challan Mode</TableHead>
+            <TableHead className="h-8 px-2 py-1 text-center">Status</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {entries.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={14} className="text-center py-8 text-gray-500">
-                No entries found for this shift. Click "Add Row" to create a new entry.
-              </TableCell>
-            </TableRow>
-          ) : (
-            entries.map((entry, index) => (
-              <VehicleEntryRow
-                key={entry.id}
-                entry={entry}
-                serialNumber={totalEntries - index}
-                date={date}
-                shift={shift}
-                onEntryUpdated={onEntryUpdated}
-                onEntryDeleted={onEntryDeleted}
-              />
-            ))
-          )}
+          {Array.from({ length: totalRows }).map((_, index) => {
+            if (index < totalEntries) {
+              const entry = entries[index];
+
+              return (
+                <VehicleEntryRow
+                  key={entry.id}
+                  entry={entry}
+                  serialNumber={index + 1}
+                  date={date}
+                  shift={shift}
+                  onEntryUpdated={onEntryUpdated}
+                  onEntryDeleted={onEntryDeleted}
+                />
+              );
+            }
+
+            const emptyCellClass = 'min-h-[3rem] px-2 py-2 border-t border-r border-gray-300';
+            const emptyCellClassLast = 'min-h-[3rem] px-2 py-2 border-t border-gray-300';
+            return (
+              <TableRow
+                key={`empty-${index}`}
+                className={isAddingRow ? 'opacity-60' : 'cursor-pointer hover:bg-gray-50'}
+                onClick={() => {
+                  if (onAddRow && !isAddingRow) {
+                    onAddRow(1);
+                  }
+                }}
+              >
+                <TableCell className={`${emptyCellClass} text-center`} />
+                <TableCell className={emptyCellClass} />
+                <TableCell className={emptyCellClass} />
+                <TableCell className={emptyCellClass} />
+                <TableCell className={emptyCellClass} />
+                <TableCell className={emptyCellClass} />
+                <TableCell className={emptyCellClass} />
+                <TableCell className={emptyCellClass} />
+                <TableCell className={emptyCellClass} />
+                <TableCell className={emptyCellClass} />
+                <TableCell className={emptyCellClass} />
+                <TableCell className={emptyCellClass} />
+                <TableCell className={emptyCellClass} />
+                <TableCell className={emptyCellClassLast} />
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
+
+      {/* Add Row button at bottom */}
+      <div className="border border-gray-300 border-t-0 px-2 py-2 flex items-center justify-center bg-white">
+        {addRowButton}
+      </div>
     </div>
   );
 }
