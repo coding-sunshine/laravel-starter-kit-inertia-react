@@ -3,6 +3,13 @@ import { BarChart } from '@/components/charts/bar-chart';
 import { ComposedChart } from '@/components/charts/composed-chart';
 import { StackedBarChart } from '@/components/charts/stacked-bar-chart';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
@@ -16,6 +23,7 @@ import {
     ArrowRight,
     ArrowUp,
     BarChart3,
+    Bell,
     Calendar,
     Check,
     CheckCircle,
@@ -53,7 +61,7 @@ import {
     YAxis,
 } from 'recharts';
 import { PieChart } from '@/components/charts/pie-chart';
-import { SemiCircleGauge } from '@/components/charts/semi-circle-gauge';
+import SpeedometerGauge from '@/Components/Charts/SpeedometerGauge';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: dashboard().url },
@@ -185,12 +193,14 @@ interface DashboardFilters {
     rake_number: string | null;
     loader_id: number | null;
     shift: string | null;
+    penalty_type: number | null;
 }
 
 interface FilterOptions {
     powerPlants: Array<{ value: string; label: string }>;
     loaders: Array<{ id: number; name: string; siding_name: string }>;
     shifts: Array<{ value: string; label: string }>;
+    penaltyTypes: Array<{ value: string; label: string }>;
 }
 
 interface DashboardKpis {
@@ -264,7 +274,7 @@ type DashboardProps = SharedData & {
     liveRakeStatus?: LiveRakeStatusRow[];
     truckReceiptTrend?: TruckReceiptHour[];
     stockGauge?: StockGaugeData;
-    predictedVsActualPenalty?: { predicted: number; actual: number };
+    predictedVsActualPenalty?: { predicted: number; actual: number; bySiding?: Array<{ name: string; predicted: number; actual: number }> };
     sidingStocks?: Record<number, SidingStock>;
     sidingPerformance?: SidingPerformanceItem[];
     sidingWiseMonthly?: SidingWiseMonthlyPoint[];
@@ -1128,10 +1138,14 @@ function DashboardFiltersBar({
     sidings,
     filters,
     filterOptions,
+    inline = false,
+    onClose,
 }: {
     sidings: SidingOption[];
     filters: DashboardFilters;
     filterOptions: FilterOptions;
+    inline?: boolean;
+    onClose?: () => void;
 }) {
     const [customFrom, setCustomFrom] = useState(filters.from);
     const [customTo, setCustomTo] = useState(filters.to);
@@ -1191,6 +1205,8 @@ function DashboardFiltersBar({
         if (loaderId !== '') params.loader_id = loaderId;
         const shift = (overrides.shift !== undefined ? overrides.shift : filters.shift) ?? '';
         if (shift !== '') params.shift = shift;
+        const penaltyType = (overrides.penalty_type !== undefined ? overrides.penalty_type : filters.penalty_type) ?? null;
+        if (penaltyType != null) params.penalty_type = penaltyType;
 
         // Use pathname only so query is exactly our params (no merge with current URL).
         const dashboardPath = dashboard().url.split('?')[0] || dashboard().url;
@@ -1233,22 +1249,37 @@ function DashboardFiltersBar({
             .join(', ');
     }, [sidings, filters.siding_ids, isAllSidingsSelected]);
 
-    return (
-        <div className="dashboard-card rounded-xl border-0 p-5">
-            <div className="flex flex-wrap items-center gap-3">
-                <div className="flex items-center gap-1.5 text-sm font-medium text-gray-500">
-                    <Filter className="size-4" />
-                    <span>Filters</span>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-1.5">
+    const content = (
+        <div className={inline ? 'flex flex-wrap items-center gap-2' : 'flex flex-wrap items-center gap-x-3 gap-y-2'}>
+            {!inline && (
+                <span className="flex shrink-0 items-center gap-1.5 text-[11px] font-medium text-gray-500">
+                    <Filter className="size-3.5" />
+                    Filters
+                </span>
+            )}
+            {/* Period: dropdown when inline, pills when not */}
+            {inline ? (
+                <Select value={filters.period} onValueChange={(v) => applyFilters({ period: v })}>
+                    <SelectTrigger className="h-7 w-[100px] rounded-md border text-[11px]">
+                        <SelectValue placeholder="Period" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {PERIODS.map((p) => (
+                            <SelectItem key={p.key} value={p.key} className="text-xs">
+                                {p.label}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            ) : (
+                <div className="flex flex-wrap items-center gap-1">
                     {PERIODS.map((p) => (
                         <button
                             key={p.key}
                             type="button"
                             onClick={() => applyFilters({ period: p.key })}
                             className={
-                                'rounded-full px-4 py-2 text-xs font-medium transition-colors ' +
+                                'rounded-full px-3 py-1.5 text-[11px] font-medium transition-colors ' +
                                 (filters.period === p.key
                                     ? 'bg-[#111827] text-white'
                                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200')
@@ -1258,180 +1289,211 @@ function DashboardFiltersBar({
                         </button>
                     ))}
                 </div>
-
-                {filters.period === 'custom' && (
-                    <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-1.5">
-                            <Calendar className="size-3.5 text-muted-foreground" />
-                            <input
-                                type="date"
-                                value={customFrom}
-                                onChange={(e) => setCustomFrom(e.target.value)}
-                                className="rounded-lg border bg-background px-2.5 py-1.5 text-xs"
-                            />
-                        </div>
-                        <span className="text-xs text-muted-foreground">to</span>
-                        <input
-                            type="date"
-                            value={customTo}
-                            onChange={(e) => setCustomTo(e.target.value)}
-                            className="rounded-lg border bg-background px-2.5 py-1.5 text-xs"
-                        />
+            )}
+            {filters.period === 'custom' && (
+                <>
+                    <Calendar className="size-3.5 shrink-0 text-muted-foreground" />
+                    <input
+                        type="date"
+                        value={customFrom}
+                        onChange={(e) => setCustomFrom(e.target.value)}
+                        className="h-7 w-28 rounded border bg-background px-2 text-[11px]"
+                    />
+                    <span className="text-[11px] text-muted-foreground">→</span>
+                    <input
+                        type="date"
+                        value={customTo}
+                        onChange={(e) => setCustomTo(e.target.value)}
+                        className="h-7 w-28 rounded border bg-background px-2 text-[11px]"
+                    />
+                    {!inline && (
                         <Button
                             variant="outline"
                             size="sm"
-                            className="h-7 text-xs"
+                            className="h-7 shrink-0 px-2 text-[11px]"
                             onClick={() => applyFilters({ period: 'custom', from: customFrom, to: customTo })}
                         >
                             Apply
                         </Button>
-                    </div>
-                )}
-
-                <Select
-                    value={filters.power_plant ?? ALL_FILTER_VALUE}
-                    onValueChange={(v) => applyFilters({ power_plant: v === ALL_FILTER_VALUE ? null : v })}
-                >
-                    <SelectTrigger className="h-8 w-[180px] rounded-[8px] text-xs">
-                        <SelectValue placeholder="Power plant" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value={ALL_FILTER_VALUE} className="text-xs">All power plants</SelectItem>
-                        {filterOptions.powerPlants.map((pp) => (
-                            <SelectItem key={pp.value} value={pp.value} className="text-xs">
-                                {pp.label}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-
-                <div className="flex items-center gap-1.5">
+                    )}
+                </>
+            )}
+            <div className={inline ? 'flex flex-wrap items-center gap-2' : 'ml-auto flex flex-wrap items-center gap-2'}>
+                    <Select
+                        value={filters.power_plant ?? ALL_FILTER_VALUE}
+                        onValueChange={(v) => applyFilters({ power_plant: v === ALL_FILTER_VALUE ? null : v })}
+                    >
+                        <SelectTrigger className="h-7 w-[120px] rounded-md border text-[11px]">
+                            <SelectValue placeholder="Plant" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value={ALL_FILTER_VALUE} className="text-xs">All plants</SelectItem>
+                            {filterOptions.powerPlants.map((pp) => (
+                                <SelectItem key={pp.value} value={pp.value} className="text-xs">
+                                    {pp.label}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                     <input
                         type="text"
-                        placeholder="Rake number"
+                        placeholder="Rake #"
                         value={rakeNumberInput}
                         onChange={(e) => setRakeNumberInput(e.target.value)}
                         onBlur={() => applyFilters({ rake_number: rakeNumberInput.trim() || null })}
                         onKeyDown={(e) => e.key === 'Enter' && applyFilters({ rake_number: rakeNumberInput.trim() || null })}
-                        className="w-28 rounded-lg border bg-background px-2.5 py-1.5 text-xs"
+                        className="h-7 w-20 rounded-md border bg-background px-2 text-[11px]"
                     />
-                </div>
-
-                <Select
-                    value={filters.loader_id != null ? String(filters.loader_id) : ALL_FILTER_VALUE}
-                    onValueChange={(v) => applyFilters({ loader_id: v === ALL_FILTER_VALUE ? null : Number(v) })}
-                >
-                    <SelectTrigger className="h-8 w-[180px] rounded-[8px] text-xs">
-                        <SelectValue placeholder="Loader" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value={ALL_FILTER_VALUE} className="text-xs">All loaders</SelectItem>
-                        {filterOptions.loaders.map((l) => (
-                            <SelectItem key={l.id} value={String(l.id)} className="text-xs">
-                                {l.name} ({l.siding_name})
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-
-                <Select
-                    value={filters.shift ?? ALL_FILTER_VALUE}
-                    onValueChange={(v) => applyFilters({ shift: v === ALL_FILTER_VALUE ? null : v })}
-                >
-                    <SelectTrigger className="h-8 w-[100px] rounded-[8px] text-xs">
-                        <SelectValue placeholder="Shift" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value={ALL_FILTER_VALUE} className="text-xs">All shifts</SelectItem>
-                        {filterOptions.shifts.map((s) => (
-                            <SelectItem key={s.value} value={s.value} className="text-xs">
-                                {s.label}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-
-                <div className="relative ml-auto">
-                    <button
-                        type="button"
-                        onClick={() => {
-                            setPendingSidingIds(isAllSidingsSelected ? allSidingIds : filters.siding_ids);
-                            setShowSidingDropdown(!showSidingDropdown);
-                        }}
-                        className="flex items-center gap-2 rounded-lg border bg-background px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
+                    <Select
+                        value={filters.loader_id != null ? String(filters.loader_id) : ALL_FILTER_VALUE}
+                        onValueChange={(v) => applyFilters({ loader_id: v === ALL_FILTER_VALUE ? null : Number(v) })}
                     >
-                        <span className="max-w-48 truncate">{selectedSidingNames}</span>
-                        {!isAllSidingsSelected && (
-                            <button
-                                type="button"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    resetSidingFilter();
-                                }}
-                                className="rounded-full p-0.5 hover:bg-muted-foreground/20"
-                            >
-                                <X className="size-3" />
-                            </button>
-                        )}
-                    </button>
-                    {showSidingDropdown && (
-                        <>
-                            <div className="fixed inset-0 z-40" onClick={() => setShowSidingDropdown(false)} />
-                            <div className="absolute right-0 top-full z-50 mt-1 w-56 rounded-xl border bg-card p-2 shadow-lg">
+                        <SelectTrigger className="h-7 w-[120px] rounded-md border text-[11px]">
+                            <SelectValue placeholder="Loader" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value={ALL_FILTER_VALUE} className="text-xs">All loaders</SelectItem>
+                            {filterOptions.loaders.map((l) => (
+                                <SelectItem key={l.id} value={String(l.id)} className="text-xs">
+                                    {l.name} ({l.siding_name})
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <Select
+                        value={filters.shift ?? ALL_FILTER_VALUE}
+                        onValueChange={(v) => applyFilters({ shift: v === ALL_FILTER_VALUE ? null : v })}
+                    >
+                        <SelectTrigger className="h-7 w-[72px] rounded-md border text-[11px]">
+                            <SelectValue placeholder="Shift" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value={ALL_FILTER_VALUE} className="text-xs">All</SelectItem>
+                            {filterOptions.shifts.map((s) => (
+                                <SelectItem key={s.value} value={s.value} className="text-xs">
+                                    {s.label}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <Select
+                        value={filters.penalty_type != null ? String(filters.penalty_type) : ALL_FILTER_VALUE}
+                        onValueChange={(v) => applyFilters({ penalty_type: v === ALL_FILTER_VALUE ? null : Number(v) })}
+                    >
+                        <SelectTrigger className="h-7 w-[130px] rounded-md border text-[11px]">
+                            <SelectValue placeholder="Penalty type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value={ALL_FILTER_VALUE} className="text-xs">All types</SelectItem>
+                            {(filterOptions.penaltyTypes ?? []).map((pt) => (
+                                <SelectItem key={pt.value} value={pt.value} className="text-xs">
+                                    {pt.label}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <div className="relative">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setPendingSidingIds(isAllSidingsSelected ? allSidingIds : filters.siding_ids);
+                                setShowSidingDropdown(!showSidingDropdown);
+                            }}
+                            className="flex h-7 min-w-0 items-center gap-1.5 rounded-md border bg-background px-2.5 text-[11px] font-medium transition-colors hover:bg-muted"
+                        >
+                            <span className="max-w-24 truncate">{selectedSidingNames}</span>
+                            <ChevronDown className="size-3 shrink-0 opacity-50" />
+                            {!isAllSidingsSelected && (
                                 <button
                                     type="button"
-                                    onClick={() => setPendingSidingIds(allSidingIds)}
-                                    className={
-                                        'flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs transition-colors hover:bg-muted ' +
-                                        (isAllPendingSelected ? 'font-semibold text-primary' : 'text-muted-foreground')
-                                    }
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        resetSidingFilter();
+                                    }}
+                                    className="rounded p-0.5 hover:bg-muted-foreground/20"
                                 >
-                                    <div className={
-                                        'flex size-4 items-center justify-center rounded border ' +
-                                        (isAllPendingSelected ? 'border-primary bg-primary' : 'border-muted-foreground/30')
-                                    }>
-                                        {isAllPendingSelected && <span className="text-[10px] text-primary-foreground">✓</span>}
-                                    </div>
-                                    All sidings
+                                    <X className="size-3" />
                                 </button>
-                                {sidings.map((s) => {
-                                    const isSelected = isAllPendingSelected || pendingSidingIds.includes(s.id);
-                                    return (
-                                        <button
-                                            key={s.id}
-                                            type="button"
-                                            onClick={() => togglePendingSiding(s.id)}
-                                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs transition-colors hover:bg-muted"
-                                        >
-                                            <div className={
-                                                'flex size-4 items-center justify-center rounded border ' +
-                                                (isSelected ? 'border-primary bg-primary' : 'border-muted-foreground/30')
-                                            }>
-                                                {isSelected && <span className="text-[10px] text-primary-foreground">✓</span>}
-                                            </div>
-                                            <span>{s.name}</span>
-                                            <span className="ml-auto text-muted-foreground">{s.code}</span>
-                                        </button>
-                                    );
-                                })}
-                                <div className="mt-1 border-t pt-1">
-                                    <Button
-                                        size="sm"
-                                        className="w-full text-xs"
-                                        disabled={!hasPendingSidingChanges}
-                                        onClick={applySidingFilter}
+                            )}
+                        </button>
+                        {showSidingDropdown && (
+                            <>
+                                <div className="fixed inset-0 z-40" onClick={() => setShowSidingDropdown(false)} />
+                                <div className="absolute right-0 top-full z-50 mt-1 w-52 rounded-lg border bg-card p-2 shadow-lg">
+                                    <button
+                                        type="button"
+                                        onClick={() => setPendingSidingIds(allSidingIds)}
+                                        className={
+                                            'flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[11px] transition-colors hover:bg-muted ' +
+                                            (isAllPendingSelected ? 'font-semibold text-primary' : 'text-muted-foreground')
+                                        }
                                     >
-                                        Apply
-                                    </Button>
+                                        <div className={
+                                            'flex size-3.5 items-center justify-center rounded border ' +
+                                            (isAllPendingSelected ? 'border-primary bg-primary' : 'border-muted-foreground/30')
+                                        }>
+                                            {isAllPendingSelected && <span className="text-[8px] text-primary-foreground">✓</span>}
+                                        </div>
+                                        All sidings
+                                    </button>
+                                    {sidings.map((s) => {
+                                        const isSelected = isAllPendingSelected || pendingSidingIds.includes(s.id);
+                                        return (
+                                            <button
+                                                key={s.id}
+                                                type="button"
+                                                onClick={() => togglePendingSiding(s.id)}
+                                                className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[11px] transition-colors hover:bg-muted"
+                                            >
+                                                <div className={
+                                                    'flex size-3.5 items-center justify-center rounded border ' +
+                                                    (isSelected ? 'border-primary bg-primary' : 'border-muted-foreground/30')
+                                                }>
+                                                    {isSelected && <span className="text-[8px] text-primary-foreground">✓</span>}
+                                                </div>
+                                                <span className="truncate">{s.name}</span>
+                                                <span className="ml-auto shrink-0 text-muted-foreground">{s.code}</span>
+                                            </button>
+                                        );
+                                    })}
+                                    <div className="mt-1.5 border-t pt-1.5">
+                                        <Button
+                                            size="sm"
+                                            className="h-7 w-full text-[11px]"
+                                            disabled={!hasPendingSidingChanges}
+                                            onClick={applySidingFilter}
+                                        >
+                                            Apply
+                                        </Button>
+                                    </div>
                                 </div>
-                            </div>
-                        </>
-                    )}
+                            </>
+                        )}
+                    </div>
+            {inline && (
+                <Button
+                    size="sm"
+                    className="h-7 shrink-0 rounded-md text-[11px]"
+                    onClick={() => {
+                        applyFilters();
+                        onClose?.();
+                    }}
+                >
+                    Apply
+                </Button>
+            )}
                 </div>
             </div>
+    );
 
+    if (inline) {
+        return content;
+    }
+    return (
+        <div className="dashboard-card rounded-xl border-0 p-3">
+            {content}
             {filters.period !== 'custom' && (
-                <p className="mt-2 text-xs text-muted-foreground">
+                <p className="mt-1.5 text-[11px] text-muted-foreground">
                     Showing data from {filters.from} to {filters.to}
                 </p>
             )}
@@ -1442,6 +1504,8 @@ function DashboardFiltersBar({
 export default function Dashboard() {
     const props = usePage<DashboardProps>().props;
     const [activeSection, setActiveSection] = useState<string>(DEFAULT_DASHBOARD_SECTION);
+    const [alertsOpen, setAlertsOpen] = useState(false);
+    const [filtersExpanded, setFiltersExpanded] = useState(false);
     const sidings = props.sidings ?? [];
     const defaultFilters: DashboardFilters = {
         period: 'month',
@@ -1452,6 +1516,7 @@ export default function Dashboard() {
         rake_number: null,
         loader_id: null,
         shift: null,
+        penalty_type: null,
     };
     const filters: DashboardFilters = {
         ...defaultFilters,
@@ -1460,6 +1525,7 @@ export default function Dashboard() {
         rake_number: props.filters?.rake_number ?? null,
         loader_id: props.filters?.loader_id ?? null,
         shift: props.filters?.shift ?? null,
+        penalty_type: props.filters?.penalty_type ?? null,
     };
     const periodLabel = useMemo(() => {
         switch (filters.period) {
@@ -1496,10 +1562,11 @@ export default function Dashboard() {
         if (filters.rake_number) params.rake_number = filters.rake_number;
         if (filters.loader_id) params.loader_id = filters.loader_id;
         if (filters.shift) params.shift = filters.shift;
+        if (filters.penalty_type != null) params.penalty_type = filters.penalty_type;
         router.get(dashboardPath, params as Record<string, string>, { replace: true, preserveState: false });
-    }, [dashboardPath, filters.period, filters.siding_ids, filters.power_plant, filters.rake_number, filters.loader_id, filters.shift, sidings.length]);
+    }, [dashboardPath, filters.period, filters.siding_ids, filters.power_plant, filters.rake_number, filters.loader_id, filters.shift, filters.penalty_type, sidings.length]);
 
-    const filterOptions = props.filterOptions ?? { powerPlants: [], loaders: [], shifts: [] };
+    const filterOptions = props.filterOptions ?? { powerPlants: [], loaders: [], shifts: [], penaltyTypes: [] };
     const kpis = props.kpis;
     const penaltyTrendDaily = props.penaltyTrendDaily ?? [];
     const penaltyByType = props.penaltyByType ?? [];
@@ -1508,7 +1575,7 @@ export default function Dashboard() {
     const liveRakeStatus = props.liveRakeStatus ?? [];
     const truckReceiptTrend = props.truckReceiptTrend ?? [];
     const stockGauge = props.stockGauge;
-    const predictedVsActualPenalty = props.predictedVsActualPenalty ?? { predicted: 0, actual: 0 };
+    const predictedVsActualPenalty = props.predictedVsActualPenalty ?? { predicted: 0, actual: 0, bySiding: [] };
     const sidingStocks = props.sidingStocks ?? {};
     const sidingPerformance = props.sidingPerformance ?? [];
     const sidingWiseMonthly = props.sidingWiseMonthly ?? [];
@@ -1540,41 +1607,60 @@ export default function Dashboard() {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dashboard" />
-            <div className="dashboard-page flex h-full flex-1 flex-col gap-6 overflow-x-auto bg-[#FAFAFA] p-1">
+            <div className="dashboard-page flex h-full flex-1 flex-col gap-5 overflow-x-auto bg-[#FAFAFA] p-3">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <h2 className="text-xl font-semibold tracking-tight">
                         Management Dashboard
                     </h2>
-                    <Select value={activeSection} onValueChange={setActiveSection}>
-                        <SelectTrigger className="min-w-[200px] rounded-[10px] border border-gray-200 bg-white shadow-sm w-full sm:w-auto">
-                            <SelectValue placeholder="Select section" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {DASHBOARD_SECTIONS.map((s) => (
-                                <SelectItem key={s.id} value={s.id}>
-                                    {s.label}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                        {filtersExpanded && sidings.length > 0 && (
+                            <DashboardFiltersBar
+                                sidings={sidings}
+                                filters={filters}
+                                filterOptions={filterOptions}
+                                inline
+                                onClose={() => setFiltersExpanded(false)}
+                            />
+                        )}
+                        <Select value={activeSection} onValueChange={setActiveSection}>
+                            <SelectTrigger className="min-w-[200px] rounded-[10px] border border-gray-200 bg-white shadow-sm w-full sm:w-auto">
+                                <SelectValue placeholder="Select section" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {DASHBOARD_SECTIONS.map((s) => (
+                                    <SelectItem key={s.id} value={s.id}>
+                                        {s.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <Button
+                            type="button"
+                            variant={filtersExpanded ? 'secondary' : 'outline'}
+                            size="sm"
+                            className="shrink-0 rounded-[10px]"
+                            onClick={() => setFiltersExpanded((v) => !v)}
+                        >
+                            <Filter className="size-4 shrink-0" />
+                            <span className="ml-1.5">Filters</span>
+                        </Button>
+                    </div>
                 </div>
 
-                {sidings.length > 0 && (
-                    <DashboardFiltersBar sidings={sidings} filters={filters} filterOptions={filterOptions} />
-                )}
-
                 {kpiCards.length > 0 && (
-                    <div className="flex gap-4 overflow-x-auto pb-2 lg:grid lg:grid-cols-2 lg:overflow-visible xl:grid-cols-6">
+                    <div className="flex gap-4 overflow-x-auto pb-1 lg:grid lg:grid-cols-3 lg:overflow-visible xl:grid-cols-6">
                         {kpiCards.map(({ label, value, borderColor, Icon }) => (
                             <div
                                 key={label}
-                                className="dashboard-card flex min-w-[140px] flex-1 flex-col justify-between rounded-xl border-0 p-5 sm:min-w-0"
+                                className="dashboard-card flex min-w-[160px] flex-1 flex-col justify-between rounded-xl border-0 p-4 sm:min-w-0"
                                 style={{ borderTop: `4px solid ${borderColor}` }}
                             >
-                                <div className="text-xs font-medium text-gray-400">{label}</div>
-                                <div className="mt-2 flex items-end justify-between gap-2">
-                                    <span className="text-[2.5rem] font-bold tabular-nums leading-tight">{value}</span>
-                                    <Icon className="size-8 shrink-0 text-gray-300" aria-hidden />
+                                <div className="text-[0.7rem] font-semibold text-gray-500 leading-snug">{label}</div>
+                                <div className="mt-2 flex items-center justify-between gap-3">
+                                    <span className="truncate text-[1.85rem] font-extrabold tabular-nums leading-tight">
+                                        {value}
+                                    </span>
+                                    <Icon className="size-6 shrink-0 text-gray-300" aria-hidden />
                                 </div>
                             </div>
                         ))}
@@ -1586,8 +1672,8 @@ export default function Dashboard() {
                         <p>No sidings assigned to your account. Contact your administrator to get access.</p>
                     </div>
                 ) : (
-                    <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
-                        <div className="min-w-0 space-y-6">
+                    <>
+                    <div className="min-w-0 space-y-6">
                         {activeSection === 'executive-overview' && (
                             <div className="space-y-6">
                                 {sidingPerformance.length > 0 ? (
@@ -1668,10 +1754,22 @@ export default function Dashboard() {
                         {activeSection === 'operations' && (
                             <div className="space-y-6">
                                 <div className="dashboard-card rounded-xl border-0 p-5">
-                                    <SectionHeader icon={Train} title="Live rake status" subtitle="Active rakes (not yet dispatched)" />
-                                    <p className="mt-1 text-xs text-gray-400">Last updated: Just now</p>
+                                    <div className="flex flex-wrap items-center justify-between gap-3">
+                                        <SectionHeader icon={Train} title="Live rake status" subtitle="Active rakes (not yet dispatched)" />
+                                        <Button variant="outline" size="sm" className="rounded-lg" asChild>
+                                            <Link href={rakesIndex().url} data-pan="dashboard-live-rakes-view-all">View all</Link>
+                                        </Button>
+                                    </div>
+                                    <p className="mt-1 text-xs text-gray-400">
+                                        Last updated: Just now
+                                        {liveRakeStatus.length > 0 && (
+                                            <span className="ml-2 font-medium text-gray-500">
+                                                • {liveRakeStatus.length} active rake{liveRakeStatus.length === 1 ? '' : 's'}
+                                            </span>
+                                        )}
+                                    </p>
                                     {liveRakeStatus.length > 0 ? (
-                                        <div className="dashboard-table-scroll mt-4 max-h-[400px] overflow-y-auto overflow-x-auto">
+                                        <div className="dashboard-table-scroll mt-4 max-h-[520px] overflow-y-auto overflow-x-auto">
                                             <table className="w-full text-sm">
                                                 <thead className="sticky top-0 z-10 bg-white shadow-sm">
                                                     <tr className="border-b text-left text-gray-500">
@@ -1693,7 +1791,15 @@ export default function Dashboard() {
                                                                 className="border-b text-[0.875rem] last:border-0"
                                                                 style={{ backgroundColor: i % 2 === 1 ? '#F9FAFB' : undefined, borderLeft: `3px solid ${borderColor}` }}
                                                             >
-                                                                <td className="py-3 pl-4 font-medium">{row.rake_number}</td>
+                                                                <td className="py-3 pl-4 font-medium">
+                                                                    <span className="inline-flex items-center gap-2">
+                                                                        <span
+                                                                            className="inline-block size-2.5 rounded-full"
+                                                                            style={{ backgroundColor: borderColor }}
+                                                                        />
+                                                                        <span>{row.rake_number}</span>
+                                                                    </span>
+                                                                </td>
                                                                 <td className="py-3 px-2">{row.siding_name}</td>
                                                                 <td className="py-3 px-2">
                                                                     <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
@@ -1723,6 +1829,11 @@ export default function Dashboard() {
                                         <div className="mt-4 py-8 text-center text-sm text-gray-500">No active rakes.</div>
                                     )}
                                 </div>
+                            </div>
+                        )}
+
+                        {activeSection === 'operations' && (
+                            <div className="space-y-6">
                                 <div className="dashboard-card rounded-xl border-0 p-5">
                                     <SectionHeader icon={BarChart3} title="Truck receipt trend" subtitle="Trips per hour (today)" />
                                     {truckReceiptTrend.length > 0 ? (
@@ -1739,149 +1850,181 @@ export default function Dashboard() {
                                         <div className="mt-4 py-8 text-center text-sm text-gray-500">No truck receipt data for today.</div>
                                     )}
                                 </div>
-                                <div className="dashboard-card rounded-xl border-0 p-5">
-                                    <SectionHeader
-                                        icon={Zap}
-                                        title="Stock vs requirement"
-                                        subtitle="Minimum 3,800 MT per rake — side-wise"
-                                    />
-                                    {stockGauge && stockGauge.length > 0 ? (
-                                        <div className="mt-5 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                                            {stockGauge.map((item) => (
-                                                <SemiCircleGauge
-                                                    key={item.siding_id}
-                                                    title={item.siding_name}
-                                                    value={item.stock_available_mt}
-                                                    required={item.rake_required_mt}
-                                                    status={item.status}
-                                                    formatValue={formatWeight}
-                                                    colors={{
-                                                        redTrack: '#fecaca',
-                                                        redFill: DASHBOARD_PALETTE.alertRed,
-                                                        greenTrack: '#bbf7d0',
-                                                        greenFill: DASHBOARD_PALETTE.successGreen,
-                                                        blueTrack: '#bfdbfe',
-                                                        blueFill: DASHBOARD_PALETTE.steelBlue,
-                                                    }}
-                                                />
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <div className="mt-4 py-8 text-center text-sm text-muted-foreground">No stock data.</div>
-                                    )}
-                                </div>
+                                <SpeedometerGauge
+                                    sidings={
+                                        stockGauge?.map((item) => ({
+                                            name: item.siding_name,
+                                            current: item.stock_available_mt,
+                                            required: item.rake_required_mt,
+                                        })) ?? []
+                                    }
+                                    title="Stock vs requirement"
+                                    subtitle="Minimum 3,800 MT per rake — side-wise"
+                                />
                             </div>
                         )}
 
                         {activeSection === 'penalty-control' && (
                             <div className="space-y-6">
+                                {/* Penalty type distribution + Penalty amount by type: two equal columns first */}
+                                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                                    <div className="dashboard-card min-w-0 rounded-xl border-0 p-6">
+                                        <SectionHeader icon={AlertTriangle} title="Penalty type distribution" subtitle="Overloading, demurrage, wharfage, etc." />
+                                        {penaltyByType.length > 0 ? (() => {
+                                            const typeColors: Record<string, string> = { Demurrage: '#DC2626', Overloading: '#F59E0B', Wharfage: '#8B5CF6' };
+                                            const totalType = penaltyByType.reduce((s, p) => s + p.value, 0);
+                                            const donutData = penaltyByType.map((p) => ({ ...p, pct: totalType > 0 ? ((p.value / totalType) * 100).toFixed(1) : '0' }));
+                                            const DonutTooltipContent = ({ active, payload }: { active?: boolean; payload?: Array<{ name: string; value: number; payload?: { pct: string } }> }) => {
+                                                if (!active || !payload?.length) return null;
+                                                const p = payload[0];
+                                                return (
+                                                    <div className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm shadow-lg">
+                                                        <span className="font-medium text-gray-800">{p.name}</span>
+                                                        <span className="ml-2 tabular-nums text-gray-600">{formatCurrency(p.value)} ({p.payload?.pct ?? '0'}%)</span>
+                                                    </div>
+                                                );
+                                            };
+                                            return (
+                                                <div className="mt-4 flex flex-col gap-4">
+                                                    <div className="relative flex justify-center">
+                                                        <ResponsiveContainer width="100%" height={260}>
+                                                            <RechartsPieChart>
+                                                                <Pie
+                                                                    data={donutData}
+                                                                    dataKey="value"
+                                                                    nameKey="name"
+                                                                    cx="50%"
+                                                                    cy="50%"
+                                                                    innerRadius={60}
+                                                                    outerRadius={90}
+                                                                    paddingAngle={2}
+                                                                    strokeWidth={0}
+                                                                    activeShape={{ scale: 1.05 }}
+                                                                >
+                                                                    {donutData.map((entry, i) => (
+                                                                        <Cell key={i} fill={typeColors[entry.name] ?? ['#64748b', '#94a3b8'][i % 2]} />
+                                                                    ))}
+                                                                </Pie>
+                                                                <Tooltip
+                                                                    content={<DonutTooltipContent />}
+                                                                    wrapperStyle={{ outline: 'none', transform: 'translate(90px, -50%)' }}
+                                                                />
+                                                            </RechartsPieChart>
+                                                        </ResponsiveContainer>
+                                                        <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center pointer-events-none">
+                                                            <span className="text-xs text-gray-400">Total</span>
+                                                            <span className="text-lg font-bold tabular-nums text-gray-800">{formatCurrency(totalType)}</span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex flex-wrap justify-center gap-x-6 gap-y-2">
+                                                        {donutData.map((entry, i) => (
+                                                            <div key={entry.name} className="flex items-center gap-2 text-sm">
+                                                                <span className="size-2.5 rounded-full shrink-0" style={{ backgroundColor: typeColors[entry.name] ?? '#64748b' }} />
+                                                                <span className="text-gray-700">{entry.name}</span>
+                                                                <span className="tabular-nums font-medium text-gray-800">{formatCurrency(entry.value)} ({entry.pct}%)</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })() : (
+                                            <div className="mt-4 py-8 text-center text-sm text-gray-500">No penalty type data.</div>
+                                        )}
+                                    </div>
+                                    <div className="dashboard-card min-w-0 rounded-xl border-0 p-6">
+                                        <SectionHeader icon={BarChart3} title="Penalty amount by type" subtitle="Amount by penalty type" />
+                                        {penaltyByType.length > 0 ? (() => {
+                                            const typeColors: Record<string, string> = { Demurrage: '#DC2626', Overloading: '#F59E0B', Wharfage: '#8B5CF6' };
+                                            return (
+                                                <div className="mt-4">
+                                                    <ResponsiveContainer width="100%" height={280}>
+                                                        <RechartsBarChart
+                                                            data={penaltyByType}
+                                                            margin={{ top: 8, right: 16, bottom: 24, left: 16 }}
+                                                        >
+                                                            <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
+                                                            <XAxis dataKey="name" type="category" tick={{ fontSize: 11 }} />
+                                                            <YAxis type="number" tickFormatter={(v: number) => formatCurrency(v)} width={64} tick={{ fontSize: 10 }} />
+                                                            <Tooltip formatter={(v: number | string | undefined) => formatCurrency(Number(v ?? 0))} />
+                                                            <Bar dataKey="value" radius={[4, 4, 0, 0]} barSize={36} isAnimationActive>
+                                                                <LabelList dataKey="value" position="top" formatter={(v: unknown) => formatCurrency(Number(v ?? 0))} />
+                                                                {penaltyByType.map((entry, i) => (
+                                                                    <Cell key={i} fill={typeColors[entry.name] ?? ['#64748b', '#94a3b8'][i % 2]} />
+                                                                ))}
+                                                            </Bar>
+                                                        </RechartsBarChart>
+                                                    </ResponsiveContainer>
+                                                </div>
+                                            );
+                                        })() : (
+                                            <div className="mt-4 py-8 text-center text-sm text-gray-500">No penalty type data.</div>
+                                        )}
+                                    </div>
+                                </div>
                                 <div className="dashboard-card rounded-xl border-0 p-6">
                                     <SectionHeader icon={BarChart3} title="Penalty by siding" subtitle="Which siding causes most penalties" />
                                     {penaltyBySiding.length > 0 ? (
                                         <div className="mt-4">
-                                            <ResponsiveContainer width="100%" height={260}>
+                                            {(() => {
+                                                const sorted = [...penaltyBySiding].sort((a, b) => b.total - a.total);
+                                                const barColors = ['#DC2626', '#EA580C', '#CA8A04', '#65A30D', '#059669', '#0D9488', '#2563EB', '#7C3AED', '#C026D3', '#DB2777'];
+                                                return (
+                                                    <ResponsiveContainer width="100%" height={320}>
+                                                        <RechartsBarChart
+                                                            data={sorted}
+                                                            margin={{ top: 8, right: 24, bottom: 24, left: 16 }}
+                                                        >
+                                                            <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
+                                                            <XAxis dataKey="name" type="category" tick={{ fontSize: 11 }} interval={0} height={48} />
+                                                            <YAxis type="number" tickFormatter={(v: number) => formatCurrency(v)} width={72} tick={{ fontSize: 11 }} />
+                                                            <Tooltip formatter={(v: number | string | undefined) => formatCurrency(Number(v ?? 0))} />
+                                                            <Bar dataKey="total" radius={[4, 4, 0, 0]} barSize={28} isAnimationActive>
+                                                                <LabelList dataKey="total" position="top" formatter={(v: unknown) => formatCurrency(Number(v ?? 0))} />
+                                                                {sorted.map((_, i) => (
+                                                                    <Cell key={i} fill={barColors[i % barColors.length]} />
+                                                                ))}
+                                                            </Bar>
+                                                        </RechartsBarChart>
+                                                    </ResponsiveContainer>
+                                                );
+                                            })()}
+                                        </div>
+                                    ) : (
+                                        <div className="mt-4 py-8 text-center text-sm text-gray-500">No sidings available for selected filters.</div>
+                                    )}
+                                </div>
+                                <div className="dashboard-card rounded-xl border-0 p-6">
+                                    <SectionHeader icon={BarChart3} title="Predicted vs actual penalty" subtitle="All sidings comparison" />
+                                    <div className="mt-3 flex flex-wrap items-center justify-center gap-4 rounded-lg border border-gray-200 bg-gray-50/80 px-4 py-2 text-sm">
+                                        <span className="flex items-center gap-2">
+                                            <span className="font-medium text-gray-600">Total Predicted:</span>
+                                            <span className="tabular-nums font-bold text-blue-700">{formatCurrency(predictedVsActualPenalty.predicted)}</span>
+                                        </span>
+                                        <span className="flex items-center gap-2">
+                                            <span className="font-medium text-gray-600">Total Actual:</span>
+                                            <span className="tabular-nums font-bold text-red-700">{formatCurrency(predictedVsActualPenalty.actual)}</span>
+                                        </span>
+                                    </div>
+                                    {(predictedVsActualPenalty.bySiding?.length ?? 0) > 0 ? (
+                                        <div className="mt-4">
+                                            <ResponsiveContainer width="100%" height={320}>
                                                 <RechartsBarChart
-                                                    data={[...penaltyBySiding].sort((a, b) => b.total - a.total)}
-                                                    layout="horizontal"
-                                                    margin={{ top: 8, right: 80, bottom: 0, left: 16 }}
+                                                    data={predictedVsActualPenalty.bySiding}
+                                                    margin={{ top: 8, right: 16, bottom: 80, left: 16 }}
                                                 >
                                                     <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
-                                                    <XAxis type="number" tickFormatter={(v) => formatCurrency(v)} />
-                                                    <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 12 }} />
+                                                    <XAxis dataKey="name" type="category" tick={{ fontSize: 11 }} interval={0} height={70} />
+                                                    <YAxis type="number" tickFormatter={(v: number) => formatCurrency(v)} width={72} tick={{ fontSize: 11 }} label={{ value: 'Penalty amount (₹)', angle: -90, position: 'insideLeft', style: { fontSize: 11 } }} />
                                                     <Tooltip formatter={(v: number | string | undefined) => formatCurrency(Number(v ?? 0))} />
-                                                    <Bar dataKey="total" fill="#DC2626" radius={[0, 4, 4, 0]} barSize={28} isAnimationActive>
-                                                        <LabelList dataKey="total" position="right" formatter={(v: unknown) => formatCurrency(Number(v ?? 0))} />
-                                                    </Bar>
+                                                    <Legend verticalAlign="bottom" height={28} />
+                                                    <Bar dataKey="predicted" name="Predicted" fill="#3B82F6" radius={[4, 4, 0, 0]} barSize={28} isAnimationActive />
+                                                    <Bar dataKey="actual" name="Actual" fill="#DC2626" radius={[4, 4, 0, 0]} barSize={28} isAnimationActive />
                                                 </RechartsBarChart>
                                             </ResponsiveContainer>
                                         </div>
                                     ) : (
-                                        <div className="mt-4 py-8 text-center text-sm text-gray-500">No penalty data for selected period.</div>
+                                        <div className="mt-4 py-8 text-center text-sm text-gray-500">No predicted or actual penalty data for the selected period.</div>
                                     )}
-                                </div>
-                                <div className="dashboard-card rounded-xl border-0 p-6">
-                                    <SectionHeader icon={AlertTriangle} title="Penalty type distribution" subtitle="Overloading, demurrage, wharfage, etc." />
-                                    {penaltyByType.length > 0 ? (() => {
-                                        const typeColors: Record<string, string> = { Demurrage: '#DC2626', Overloading: '#F59E0B', Wharfage: '#8B5CF6' };
-                                        const totalType = penaltyByType.reduce((s, p) => s + p.value, 0);
-                                        const donutData = penaltyByType.map((p) => ({ ...p, pct: totalType > 0 ? ((p.value / totalType) * 100).toFixed(1) : '0' }));
-                                        return (
-                                            <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-center">
-                                                <div className="relative h-[260px] flex-1">
-                                                    <ResponsiveContainer width="100%" height="100%">
-                                                        <RechartsPieChart>
-                                                            <Pie
-                                                                data={donutData}
-                                                                dataKey="value"
-                                                                nameKey="name"
-                                                                cx="50%"
-                                                                cy="50%"
-                                                                innerRadius={60}
-                                                                outerRadius={90}
-                                                                paddingAngle={2}
-                                                                strokeWidth={0}
-                                                                activeShape={{ scale: 1.05 }}
-                                                            >
-                                                                {donutData.map((entry, i) => (
-                                                                    <Cell key={i} fill={typeColors[entry.name] ?? ['#64748b', '#94a3b8'][i % 2]} />
-                                                                ))}
-                                                            </Pie>
-                                                            <Tooltip formatter={(v: number | undefined, _: unknown, props: { payload?: { name: string; pct: string } }) => [formatCurrency(Number(v ?? 0)), `${props.payload?.pct ?? 0}%`]} />
-                                                        </RechartsPieChart>
-                                                    </ResponsiveContainer>
-                                                    <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center">
-                                                        <span className="text-xs text-gray-400">Total</span>
-                                                        <span className="text-lg font-bold tabular-nums text-gray-800">{formatCurrency(totalType)}</span>
-                                                    </div>
-                                                </div>
-                                                <div className="flex flex-col gap-2 lg:min-w-[180px]">
-                                                    {donutData.map((entry, i) => (
-                                                        <div key={entry.name} className="flex items-center justify-between gap-2 text-sm">
-                                                            <span className="flex items-center gap-2">
-                                                                <span className="size-2.5 rounded-full" style={{ backgroundColor: typeColors[entry.name] ?? '#64748b' }} />
-                                                                {entry.name}
-                                                            </span>
-                                                            <span className="tabular-nums font-medium">{formatCurrency(entry.value)} ({entry.pct}%)</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        );
-                                    })() : (
-                                        <div className="mt-4 py-8 text-center text-sm text-gray-500">No penalty type data.</div>
-                                    )}
-                                </div>
-                                <div className="dashboard-card rounded-xl border-0 p-6">
-                                    <SectionHeader icon={BarChart3} title="Predicted vs actual penalty" subtitle="System accuracy" />
-                                    <div className="mt-4 flex justify-center gap-6">
-                                        <div className="rounded-xl border-0 bg-blue-50 p-6 text-center shadow-sm" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
-                                            <div className="text-xs font-medium text-blue-600">Predicted</div>
-                                            <div className="mt-1 text-xl font-bold tabular-nums text-blue-900">{formatCurrency(predictedVsActualPenalty.predicted)}</div>
-                                        </div>
-                                        <div className="rounded-xl border-0 bg-red-50 p-6 text-center shadow-sm" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
-                                            <div className="text-xs font-medium text-red-600">Actual</div>
-                                            <div className="mt-1 text-2xl font-bold tabular-nums text-red-900">{formatCurrency(predictedVsActualPenalty.actual)}</div>
-                                        </div>
-                                    </div>
-                                    <ResponsiveContainer width="100%" height={200} className="mt-4">
-                                        <RechartsBarChart
-                                            data={[
-                                                { name: 'Predicted', value: predictedVsActualPenalty.predicted },
-                                                { name: 'Actual', value: predictedVsActualPenalty.actual },
-                                            ]}
-                                            margin={{ top: 5, right: 5, left: -10, bottom: 0 }}
-                                        >
-                                            <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
-                                            <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                                            <YAxis tickFormatter={(v) => formatCurrency(v)} />
-                                            <ReferenceLine y={predictedVsActualPenalty.predicted} stroke="#3B82F6" strokeDasharray="5 5" />
-                                            <Tooltip formatter={(v: number | string | undefined) => formatCurrency(Number(v ?? 0))} />
-                                            <Bar dataKey="value" radius={[6, 6, 0, 0]}>
-                                                <Cell fill="#3B82F6" />
-                                                <Cell fill="#DC2626" />
-                                            </Bar>
-                                        </RechartsBarChart>
-                                    </ResponsiveContainer>
                                     {(() => {
                                         const pred = predictedVsActualPenalty.predicted || 1;
                                         const pctDiff = ((predictedVsActualPenalty.actual - pred) / pred) * 100;
@@ -1968,35 +2111,55 @@ export default function Dashboard() {
                             <PowerPlantDispatchSection data={powerPlantDispatch} />
                         )}
                         </div>
-                        {sidings.length > 0 && (
-                            <div className="space-y-3 lg:min-w-0">
-                                <h3 className="text-sm font-semibold text-gray-500">Live alerts</h3>
-                                <div className={`dashboard-card max-h-[calc(100vh-12rem)] space-y-2 overflow-y-auto rounded-xl border-0 p-5 ${alerts.some((a) => a.severity === 'warning' || a.severity === 'critical') ? 'border-l-4 border-[#F59E0B]' : ''}`}>
-                                    {alerts.length === 0 ? (
-                                        <div className="flex flex-col items-center justify-center gap-2 rounded-lg bg-[#FEF3C7] py-8 text-center">
-                                            <CheckCircle className="size-10 text-amber-600" aria-hidden />
-                                            <p className="text-sm font-medium text-amber-800">All systems normal</p>
-                                        </div>
-                                    ) : (
-                                        alerts.map((a) => (
-                                            <div
-                                                key={a.id}
-                                                className={`animate-in fade-in rounded-lg border p-2.5 text-xs ${
-                                                    a.severity === 'critical' ? 'border-red-200 bg-red-50' :
-                                                    a.severity === 'warning' ? 'border-amber-200 bg-amber-50' :
-                                                    'border-gray-200 bg-gray-50'
-                                                }`}
-                                            >
-                                                <span className="font-medium">⚠ {a.title}</span>
-                                                <div className="mt-0.5 text-gray-500">{new Date(a.created_at).toLocaleString()}</div>
-                                            </div>
-                                        ))
-                                    )}
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                    </>
                 )}
+
+                {/* Floating alerts button: always visible */}
+                <button
+                    type="button"
+                    onClick={() => setAlertsOpen(true)}
+                    className="fixed bottom-24 right-6 z-40 flex size-14 items-center justify-center rounded-full bg-amber-500 shadow-lg ring-2 ring-amber-600/50 transition hover:bg-amber-600 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
+                    aria-label={`Alerts${alerts.length > 0 ? ` (${alerts.length})` : ''}`}
+                >
+                    <Bell className="size-6 text-white" />
+                    {alerts.length > 0 && (
+                        <span className="absolute -right-0.5 -top-0.5 flex size-5 min-w-5 items-center justify-center rounded-full bg-red-600 text-[10px] font-bold text-white shadow ring-2 ring-white">
+                            {alerts.length > 99 ? '99+' : alerts.length}
+                        </span>
+                    )}
+                </button>
+                <Dialog open={alertsOpen} onOpenChange={setAlertsOpen}>
+                    <DialogContent className="max-h-[85vh] overflow-hidden flex flex-col sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2">
+                                <Bell className="size-5" />
+                                Live alerts
+                            </DialogTitle>
+                        </DialogHeader>
+                        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+                            {alerts.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center gap-2 rounded-lg bg-[#FEF3C7] py-8 text-center">
+                                    <CheckCircle className="size-10 text-amber-600" aria-hidden />
+                                    <p className="text-sm font-medium text-amber-800">All systems normal</p>
+                                </div>
+                            ) : (
+                                alerts.map((a) => (
+                                    <div
+                                        key={a.id}
+                                        className={`rounded-lg border p-2.5 text-xs ${
+                                            a.severity === 'critical' ? 'border-red-200 bg-red-50' :
+                                            a.severity === 'warning' ? 'border-amber-200 bg-amber-50' :
+                                            'border-gray-200 bg-gray-50'
+                                        }`}
+                                    >
+                                        <span className="font-medium">⚠ {a.title}</span>
+                                        <div className="mt-0.5 text-gray-500">{new Date(a.created_at).toLocaleString()}</div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </DialogContent>
+                </Dialog>
             </div>
         </AppLayout>
     );
