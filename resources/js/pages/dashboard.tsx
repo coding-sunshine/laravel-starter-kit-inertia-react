@@ -158,6 +158,7 @@ interface RakePerformanceItem {
     loading_minutes: number | null;
     penalty_amount: number;
     penalty_count: number;
+    wagon_overloads?: Array<{ wagon_number: string; over_load_mt: number }>;
 }
 
 interface LoaderInfo {
@@ -264,6 +265,7 @@ type StockGaugeData = StockGaugeSidingItem[];
 
 type DashboardProps = SharedData & {
     sidings?: SidingOption[];
+    section?: string;
     filters?: DashboardFilters;
     filterOptions?: FilterOptions;
     kpis?: DashboardKpis;
@@ -310,7 +312,7 @@ function SectionHeader({ icon: Icon, title, subtitle, action }: {
                 </div>
                 <div>
                     <h3 className="text-base font-semibold">{title}</h3>
-                    {subtitle && <p className="text-xs text-gray-400">{subtitle}</p>}
+                    {subtitle && <p className="text-xs text-gray-600">{subtitle}</p>}
                 </div>
             </div>
             {action}
@@ -422,14 +424,14 @@ function SidingStockSection({ sidings, stocks }: { sidings: SidingOption[]; stoc
                             <p className="mt-3 text-[3rem] font-extrabold tabular-nums leading-none text-gray-900">
                                 {currentBalance === 0 ? '--' : `${currentBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })} MT`}
                             </p>
-                            <p className="mt-1 text-xs text-gray-400">Current balance</p>
+                            <p className="mt-1 text-xs text-gray-600">Current balance</p>
                             <div className="mt-3 flex items-center gap-2">
                                 <span className={`size-2 rounded-full ${status === 'sufficient' ? 'bg-green-500' : status === 'low' ? 'bg-amber-500' : 'bg-red-500'}`} />
                                 <span className={`text-xs font-medium ${status === 'sufficient' ? 'text-green-700' : status === 'low' ? 'text-amber-700' : 'text-red-700'}`}>
                                     {status === 'sufficient' ? 'Sufficient' : status === 'low' ? 'Low stock' : 'Empty'}
                                 </span>
                             </div>
-                            <p className="mt-auto pt-4 text-xs text-gray-400">Last updated: 5 mins ago</p>
+                            <p className="mt-auto pt-4 text-xs text-gray-600">Last updated: 5 mins ago</p>
                         </div>
                     );
                 })}
@@ -464,7 +466,7 @@ function SidingPerformanceSection({ data }: { data: SidingPerformanceItem[] }) {
 
             <div className="mt-5 grid gap-6 lg:grid-cols-2">
                 <div>
-                    <p className="mb-2 text-xs font-medium text-gray-400">Rakes dispatched vs penalties</p>
+                    <p className="mb-2 text-xs font-medium text-gray-600">Rakes dispatched vs penalties</p>
                     <ResponsiveContainer width="100%" height={260}>
                         <RechartsBarChart data={chartData} layout="horizontal" margin={{ top: 8, right: 16, bottom: 0, left: 16 }}>
                             <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
@@ -480,7 +482,7 @@ function SidingPerformanceSection({ data }: { data: SidingPerformanceItem[] }) {
                     </ResponsiveContainer>
                 </div>
                 <div>
-                    <p className="mb-2 text-xs font-medium text-gray-400">Penalty amount by siding</p>
+                    <p className="mb-2 text-xs font-medium text-gray-600">Penalty amount by siding</p>
                     <ResponsiveContainer width="100%" height={260}>
                         <RechartsBarChart data={chartData} margin={{ top: 8, right: 16, bottom: 0, left: 8 }}>
                             <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
@@ -492,7 +494,7 @@ function SidingPerformanceSection({ data }: { data: SidingPerformanceItem[] }) {
                             </Bar>
                         </RechartsBarChart>
                     </ResponsiveContainer>
-                    <div className="mt-3 flex flex-wrap gap-4 text-sm text-gray-500">
+                    <div className="mt-3 flex flex-wrap gap-4 text-sm text-gray-600">
                         {data.slice().sort((a, b) => b.penalty_amount - a.penalty_amount).map((s) => (
                             <div key={s.name} className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 font-medium text-gray-800">
                                 <span>{s.name}:</span>
@@ -500,30 +502,6 @@ function SidingPerformanceSection({ data }: { data: SidingPerformanceItem[] }) {
                             </div>
                         ))}
                     </div>
-                </div>
-            </div>
-
-            <div className="mt-6">
-                <p className="mb-3 text-xs font-medium text-gray-400">Penalty rate by siding</p>
-                <div className="space-y-3">
-                    {data.map((s) => (
-                        <div key={s.name} className="group">
-                            <div className="mb-1 flex items-center justify-between text-sm">
-                                <span className="font-medium">{s.name}</span>
-                                <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-bold tabular-nums text-blue-700">{s.penalty_rate}%</span>
-                            </div>
-                            <div className="h-3 w-full overflow-hidden rounded-full bg-gray-100">
-                                <div
-                                    className="h-full rounded-full bg-gradient-to-r from-[#3B82F6] to-[#60A5FA] transition-all duration-500"
-                                    style={{ width: `${Math.min(s.penalty_rate, 100)}%` }}
-                                />
-                            </div>
-                            <div className="mt-0.5 flex justify-between text-xs text-gray-400 opacity-0 transition-opacity group-hover:opacity-100">
-                                <span>{s.rakes} rakes, {s.penalties} penalties</span>
-                                <span className="tabular-nums">{formatCurrency(s.penalty_amount)}</span>
-                            </div>
-                        </div>
-                    ))}
                 </div>
             </div>
         </div>
@@ -716,27 +694,27 @@ function RakePerformanceSection({ rakes }: { rakes: RakePerformanceItem[] }) {
 
             <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
                 <div className="rounded-lg border border-gray-100 bg-gray-50/50 p-3">
-                    <p className="text-xs font-medium text-gray-400">Siding</p>
+                    <p className="text-xs font-medium text-gray-600">Siding</p>
                     <p className="mt-1 font-bold text-gray-900">{r.siding}</p>
                 </div>
                 <div className="rounded-lg border border-gray-100 bg-gray-50/50 p-3">
-                    <p className="text-xs font-medium text-gray-400">Dispatch date</p>
+                    <p className="text-xs font-medium text-gray-600">Dispatch date</p>
                     <p className="mt-1 font-bold tabular-nums text-gray-900">{r.dispatch_date}</p>
                 </div>
                 <div className="rounded-lg border border-gray-100 bg-gray-50/50 p-3">
-                    <p className="text-xs font-medium text-gray-400">Wagons</p>
+                    <p className="text-xs font-medium text-gray-600">Wagons</p>
                     <p className="mt-1 font-bold tabular-nums text-gray-900">{r.wagon_count ?? '—'}</p>
                 </div>
                 <div className="rounded-lg border border-gray-100 bg-gray-50/50 p-3">
-                    <p className="text-xs font-medium text-gray-400">Net weight</p>
+                    <p className="text-xs font-medium text-gray-600">Net weight</p>
                     <p className="mt-1 font-bold tabular-nums text-gray-900">{r.net_weight != null ? formatWeight(r.net_weight) : '—'}</p>
                 </div>
                 <div className="rounded-lg border border-gray-100 bg-gray-50/50 p-3">
-                    <p className="text-xs font-medium text-gray-400">Loading time</p>
+                    <p className="text-xs font-medium text-gray-600">Loading time</p>
                     <p className="mt-1 font-bold tabular-nums text-gray-900">{loadingHours != null ? `${loadingHours}h ${loadingMins}m` : '—'}</p>
                 </div>
                 <div className={`rounded-lg border p-3 ${r.penalty_amount > 0 ? 'border-red-100 bg-red-50' : 'border-green-100 bg-green-50'}`}>
-                    <p className="text-xs font-medium text-gray-400">Penalty</p>
+                    <p className="text-xs font-medium text-gray-600">Penalty</p>
                     <p className={`mt-1 font-bold tabular-nums ${r.penalty_amount > 0 ? 'text-red-700' : 'text-green-700'}`}>
                         {r.penalty_amount > 0 ? formatCurrency(r.penalty_amount) : 'None'}
                     </p>
@@ -745,7 +723,7 @@ function RakePerformanceSection({ rakes }: { rakes: RakePerformanceItem[] }) {
 
             <div className="mt-5 grid gap-5 lg:grid-cols-2">
                 <div>
-                    <p className="mb-2 text-xs font-medium text-gray-400">Weight breakdown (MT)</p>
+                    <p className="mb-2 text-xs font-medium text-gray-600">Weight breakdown (MT)</p>
                     {weightChartData.length > 0 ? (
                         <ResponsiveContainer width="100%" height={220}>
                             <RechartsBarChart data={weightChartData} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
@@ -761,28 +739,47 @@ function RakePerformanceSection({ rakes }: { rakes: RakePerformanceItem[] }) {
                             </RechartsBarChart>
                         </ResponsiveContainer>
                     ) : (
-                        <div className="flex h-[220px] items-center justify-center rounded-lg border border-gray-100 bg-gray-50/50 text-sm text-gray-500">
+                        <div className="flex h-[220px] items-center justify-center rounded-lg border border-gray-100 bg-gray-50/50 text-sm text-gray-600">
                             No weighment data available
                         </div>
                     )}
                 </div>
                 <div>
-                    <p className="mb-2 text-xs font-medium text-gray-400">Overload status</p>
-                    <div className={`flex h-[220px] flex-col items-center justify-center gap-3 rounded-xl p-6 ${r.over_load != null && r.over_load > 0 ? 'bg-[#FEF2F2]' : 'bg-green-50'}`}>
-                        {r.over_load != null && r.over_load > 0 ? (
-                            <>
-                                <TriangleAlert className="size-14 text-red-600" aria-hidden />
-                                <span className="text-2xl font-bold tabular-nums text-red-700">+{r.over_load.toLocaleString()} MT</span>
-                                <span className="text-sm font-medium text-red-700">Overloaded</span>
-                            </>
-                        ) : (
-                            <>
-                                <Check className="size-14 text-green-600" aria-hidden />
-                                <span className="text-xl font-bold text-green-700">Within limits</span>
-                                <span className="text-xs text-gray-500">No overloading detected</span>
-                            </>
-                        )}
-                    </div>
+                    <p className="mb-2 text-xs font-medium text-gray-600">Wagon-wise overload (MT)</p>
+                    {(r.wagon_overloads?.length ?? 0) > 0 ? (
+                        <ResponsiveContainer width="100%" height={220}>
+                            <RechartsBarChart
+                                data={r.wagon_overloads}
+                                margin={{ top: 8, right: 8, left: 8, bottom: 24 }}
+                            >
+                                <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
+                                <XAxis dataKey="wagon_number" tick={{ fontSize: 10 }} interval={0} height={40} />
+                                <YAxis tick={{ fontSize: 11 }} tickFormatter={(v: number) => `${v} MT`} label={{ value: 'Overload (MT)', angle: -90, position: 'insideLeft', style: { fontSize: 10 } }} />
+                                <Tooltip formatter={(v: number | string | undefined) => [`${Number(v ?? 0).toLocaleString()} MT`, 'Overload']} labelFormatter={(label) => `Wagon ${label}`} />
+                                <Bar dataKey="over_load_mt" radius={[4, 4, 0, 0]} barSize={20} isAnimationActive>
+                                    {r.wagon_overloads!.map((entry, i) => (
+                                        <Cell key={i} fill={entry.over_load_mt > 0 ? '#DC2626' : '#E5E7EB'} />
+                                    ))}
+                                </Bar>
+                            </RechartsBarChart>
+                        </ResponsiveContainer>
+                    ) : (
+                        <div className={`flex h-[220px] flex-col items-center justify-center gap-3 rounded-xl p-6 ${r.over_load != null && r.over_load > 0 ? 'bg-[#FEF2F2]' : 'bg-gray-50'}`}>
+                            {r.over_load != null && r.over_load > 0 ? (
+                                <>
+                                    <TriangleAlert className="size-10 text-red-600" aria-hidden />
+                                    <span className="text-lg font-bold tabular-nums text-red-700">+{r.over_load.toLocaleString()} MT total</span>
+                                    <span className="text-xs text-gray-600">No wagon-level weighment data</span>
+                                </>
+                            ) : (
+                                <>
+                                    <Check className="size-10 text-green-600" aria-hidden />
+                                    <span className="text-sm font-medium text-green-700">Within limits</span>
+                                    <span className="text-xs text-gray-600">No wagon-level weighment data</span>
+                                </>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
@@ -860,7 +857,7 @@ function LoaderOverloadSection({ loaders, monthly }: { loaders: LoaderInfo[]; mo
             </div>
 
             {!hasData ? (
-                <div className="mt-8 flex flex-col items-center justify-center py-12 text-center text-gray-500">
+                <div className="mt-8 flex flex-col items-center justify-center py-12 text-center text-gray-600">
                     <AlertTriangle className="mb-3 h-12 w-12 opacity-40" />
                     <p className="font-medium">No data for selected loader in this period</p>
                 </div>
@@ -888,7 +885,7 @@ function LoaderOverloadSection({ loaders, monthly }: { loaders: LoaderInfo[]; mo
 
                     <div className="mt-6 grid gap-6 lg:grid-cols-2">
                         <div>
-                            <p className="mb-2 text-xs font-medium text-gray-400">Total wagons vs overloaded (monthly)</p>
+                            <p className="mb-2 text-xs font-medium text-gray-600">Total wagons vs overloaded (monthly)</p>
                             <ResponsiveContainer width="100%" height={240}>
                                 <RechartsAreaChart data={trendData} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
                                     <defs>
@@ -912,7 +909,7 @@ function LoaderOverloadSection({ loaders, monthly }: { loaders: LoaderInfo[]; mo
                             </ResponsiveContainer>
                         </div>
                         <div>
-                            <p className="mb-2 text-xs font-medium text-gray-400">Overloaded wagons per month</p>
+                            <p className="mb-2 text-xs font-medium text-gray-600">Overloaded wagons per month</p>
                             <ResponsiveContainer width="100%" height={240}>
                                 <RechartsBarChart data={barChartData} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
@@ -971,7 +968,7 @@ function PowerPlantDispatchSection({ data }: { data: PowerPlantDispatchItem[] })
         return (
             <div className="dashboard-card rounded-xl border-0 p-6">
                 <SectionHeader icon={Factory} title="Power plant wise dispatch" subtitle="How many rakes sent to each power plant" />
-                <div className="mt-6 flex flex-col items-center justify-center py-10 text-center text-gray-500">
+                <div className="mt-6 flex flex-col items-center justify-center py-10 text-center text-gray-600">
                     <Factory className="mb-3 h-10 w-10 opacity-30" />
                     <p className="text-sm font-medium">No dispatch data available</p>
                     <p className="mt-1 text-xs">Weighment data with destination stations will appear here once rakes are dispatched.</p>
@@ -987,28 +984,28 @@ function PowerPlantDispatchSection({ data }: { data: PowerPlantDispatchItem[] })
                 <div className="dashboard-card flex items-center gap-3 rounded-xl border-0 p-4" style={{ borderTop: '4px solid #3B82F6' }}>
                     <MapPin className="size-5 text-blue-600" />
                     <div>
-                        <div className="text-xs font-medium text-gray-400">Destinations</div>
+                        <div className="text-xs font-medium text-gray-600">Destinations</div>
                         <div className="text-xl font-bold tabular-nums text-gray-900">{data.length}</div>
                     </div>
                 </div>
                 <div className="dashboard-card flex items-center gap-3 rounded-xl border-0 p-4" style={{ borderTop: '4px solid #3B82F6' }}>
                     <Train className="size-5 text-blue-600" />
                     <div>
-                        <div className="text-xs font-medium text-gray-400">Total rakes</div>
+                        <div className="text-xs font-medium text-gray-600">Total rakes</div>
                         <div className="text-xl font-bold tabular-nums text-gray-900">{totalRakes}</div>
                     </div>
                 </div>
                 <div className="dashboard-card flex items-center gap-3 rounded-xl border-0 p-4" style={{ borderTop: '4px solid #3B82F6' }}>
                     <BarChart3 className="size-5 text-blue-600" />
                     <div>
-                        <div className="text-xs font-medium text-gray-400">Total weight</div>
+                        <div className="text-xs font-medium text-gray-600">Total weight</div>
                         <div className="text-xl font-bold tabular-nums text-gray-900">{formatWeight(totalWeight)}</div>
                     </div>
                 </div>
                 <div className="dashboard-card flex items-center gap-3 rounded-xl border-0 p-4" style={{ borderTop: '4px solid #3B82F6' }}>
                     <Zap className="size-5 text-blue-600" />
                     <div>
-                        <div className="text-xs font-medium text-gray-400">Avg per destination</div>
+                        <div className="text-xs font-medium text-gray-600">Avg per destination</div>
                         <div className="text-xl font-bold tabular-nums text-gray-900">{data.length > 0 ? formatWeight(totalWeight / data.length) : '—'}</div>
                     </div>
                 </div>
@@ -1017,7 +1014,7 @@ function PowerPlantDispatchSection({ data }: { data: PowerPlantDispatchItem[] })
             <div className="mt-6 grid gap-6 lg:grid-cols-2">
                 <div>
                     <div className="mb-2 flex items-center justify-between">
-                        <h4 className="text-xs font-medium text-gray-400">Rakes sent to each power plant by siding</h4>
+                        <h4 className="text-xs font-medium text-gray-600">Rakes sent to each power plant by siding</h4>
                         <button
                             type="button"
                             onClick={() => setStacked(!stacked)}
@@ -1051,7 +1048,7 @@ function PowerPlantDispatchSection({ data }: { data: PowerPlantDispatchItem[] })
                 </div>
 
                 <div>
-                    <h4 className="mb-2 text-xs font-medium text-gray-400">Rakes dispatched per power plant</h4>
+                    <h4 className="mb-2 text-xs font-medium text-gray-600">Rakes dispatched per power plant</h4>
                     <ResponsiveContainer width="100%" height={Math.max(260, data.length * 40)}>
                         <RechartsBarChart data={sortedByRakes} margin={{ top: 8, right: 16, bottom: 0, left: 8 }}>
                             <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
@@ -1069,66 +1066,68 @@ function PowerPlantDispatchSection({ data }: { data: PowerPlantDispatchItem[] })
                 </div>
             </div>
 
-            <div className="mt-6 space-y-3">
-                <h4 className="text-sm font-semibold text-gray-500">Destination breakdown</h4>
-                {data.map((pp, i) => {
-                    const color = PLANT_COLORS[pp.name] ?? SIDING_COLORS[i % SIDING_COLORS.length];
-                    const isExpanded = expandedIdx === i;
-                    const sidingEntries = Object.entries(pp.sidings);
-                    const maxSidingRakes = Math.max(...sidingEntries.map(([, info]) => info.rakes), 1);
-                    return (
-                        <div
-                            key={pp.name}
-                            className="dashboard-card group rounded-xl border-0 p-4 transition-all hover:shadow-md"
-                            style={{ borderLeft: `4px solid ${color}` }}
-                        >
-                            <button
-                                type="button"
-                                onClick={() => setExpandedIdx(isExpanded ? null : i)}
-                                className="flex w-full items-center justify-between text-left"
+            <div className="mt-6">
+                <h4 className="mb-3 text-sm font-semibold text-gray-600">Destination breakdown</h4>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    {data.map((pp, i) => {
+                        const color = PLANT_COLORS[pp.name] ?? SIDING_COLORS[i % SIDING_COLORS.length];
+                        const isExpanded = expandedIdx === i;
+                        const sidingEntries = Object.entries(pp.sidings);
+                        const maxSidingRakes = Math.max(...sidingEntries.map(([, info]) => info.rakes), 1);
+                        return (
+                            <div
+                                key={pp.name}
+                                className="dashboard-card group min-w-0 rounded-xl border-0 p-4 transition-all hover:shadow-md"
+                                style={{ borderLeft: `4px solid ${color}` }}
                             >
-                                <div className="flex items-center gap-3">
-                                    <span className="flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white" style={{ backgroundColor: color }}>
-                                        {pp.name.slice(0, 2).toUpperCase()}
-                                    </span>
-                                    <span className="text-sm font-semibold text-gray-900">{pp.name}</span>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <span className="text-xs tabular-nums text-gray-500">{pp.rakes} rakes</span>
-                                    <span className="text-xs tabular-nums text-gray-500">{formatWeight(pp.weight_mt)}</span>
-                                    {isExpanded ? <ChevronUp className="size-4 text-gray-400" /> : <ChevronDown className="size-4 text-gray-400" />}
-                                </div>
-                            </button>
-                            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-gray-100" style={{ transition: 'width 0.8s ease' }}>
-                                <div
-                                    className="h-full rounded-full transition-[width] duration-700 ease-out"
-                                    style={{
-                                        width: `${Math.min(100, (pp.weight_mt / maxWeight) * 100)}%`,
-                                        background: `linear-gradient(90deg, ${color}, ${color}99)`,
-                                    }}
-                                />
-                            </div>
-                            {isExpanded && sidingEntries.length > 0 && (
-                                <div className="mt-4 border-t border-gray-100 pt-4">
-                                    <div className="flex gap-4 overflow-x-auto pb-2">
-                                        {sidingEntries.map(([sidingName, info], si) => (
-                                            <div key={sidingName} className="flex min-w-[100px] flex-col">
-                                                <span className="text-xs font-medium text-gray-600">{sidingName}</span>
-                                                <div className="mt-1 h-8 w-full overflow-hidden rounded bg-gray-100">
-                                                    <div
-                                                        className="h-full rounded bg-blue-500 transition-[width] duration-700 ease-out"
-                                                        style={{ width: `${(info.rakes / maxSidingRakes) * 100}%`, backgroundColor: SIDING_COLORS[si % SIDING_COLORS.length] }}
-                                                    />
-                                                </div>
-                                                <span className="mt-0.5 text-xs tabular-nums text-gray-500">{info.rakes} rakes, {formatWeight(info.weight_mt)}</span>
-                                            </div>
-                                        ))}
+                                <button
+                                    type="button"
+                                    onClick={() => setExpandedIdx(isExpanded ? null : i)}
+                                    className="flex w-full items-center justify-between gap-2 text-left"
+                                >
+                                    <div className="flex min-w-0 items-center gap-2">
+                                        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg text-[10px] font-bold text-white" style={{ backgroundColor: color }}>
+                                            {pp.name.slice(0, 2).toUpperCase()}
+                                        </span>
+                                        <span className="truncate text-sm font-semibold text-gray-900">{pp.name}</span>
                                     </div>
+                                    <div className="flex shrink-0 items-center gap-2">
+                                        <span className="text-xs tabular-nums text-gray-600">{pp.rakes} rakes</span>
+                                        <span className="text-xs tabular-nums text-gray-600">{formatWeight(pp.weight_mt)}</span>
+                                        {isExpanded ? <ChevronUp className="size-4 text-gray-600" /> : <ChevronDown className="size-4 text-gray-600" />}
+                                    </div>
+                                </button>
+                                <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-gray-100" style={{ transition: 'width 0.8s ease' }}>
+                                    <div
+                                        className="h-full rounded-full transition-[width] duration-700 ease-out"
+                                        style={{
+                                            width: `${Math.min(100, (pp.weight_mt / maxWeight) * 100)}%`,
+                                            background: `linear-gradient(90deg, ${color}, ${color}99)`,
+                                        }}
+                                    />
                                 </div>
-                            )}
-                        </div>
-                    );
-                })}
+                                {isExpanded && sidingEntries.length > 0 && (
+                                    <div className="mt-3 border-t border-gray-100 pt-3">
+                                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                            {sidingEntries.map(([sidingName, info], si) => (
+                                                <div key={sidingName} className="min-w-0">
+                                                    <span className="block truncate text-xs font-medium text-gray-600">{sidingName}</span>
+                                                    <div className="mt-0.5 h-6 w-full overflow-hidden rounded bg-gray-100">
+                                                        <div
+                                                            className="h-full rounded transition-[width] duration-500 ease-out"
+                                                            style={{ width: `${(info.rakes / maxSidingRakes) * 100}%`, backgroundColor: SIDING_COLORS[si % SIDING_COLORS.length] }}
+                                                        />
+                                                    </div>
+                                                    <span className="mt-0.5 block text-[11px] tabular-nums text-gray-600">{info.rakes} rakes · {formatWeight(info.weight_mt)}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
             </div>
         </div>
     );
@@ -1138,12 +1137,14 @@ function DashboardFiltersBar({
     sidings,
     filters,
     filterOptions,
+    currentSection,
     inline = false,
     onClose,
 }: {
     sidings: SidingOption[];
     filters: DashboardFilters;
     filterOptions: FilterOptions;
+    currentSection?: string;
     inline?: boolean;
     onClose?: () => void;
 }) {
@@ -1208,13 +1209,15 @@ function DashboardFiltersBar({
         const penaltyType = (overrides.penalty_type !== undefined ? overrides.penalty_type : filters.penalty_type) ?? null;
         if (penaltyType != null) params.penalty_type = penaltyType;
 
+        if (currentSection) params.section = currentSection;
+
         // Use pathname only so query is exactly our params (no merge with current URL).
         const dashboardPath = dashboard().url.split('?')[0] || dashboard().url;
         router.get(dashboardPath, params as Record<string, string>, {
             preserveState: true,
             preserveScroll: true,
         });
-    }, [filters, customFrom, customTo, allSidingIds]);
+    }, [filters, customFrom, customTo, allSidingIds, currentSection]);
 
     const togglePendingSiding = useCallback((sidingId: number) => {
         setPendingSidingIds((prev) => {
@@ -1252,7 +1255,7 @@ function DashboardFiltersBar({
     const content = (
         <div className={inline ? 'flex flex-wrap items-center gap-2' : 'flex flex-wrap items-center gap-x-3 gap-y-2'}>
             {!inline && (
-                <span className="flex shrink-0 items-center gap-1.5 text-[11px] font-medium text-gray-500">
+                <span className="flex shrink-0 items-center gap-1.5 text-[11px] font-medium text-gray-600">
                     <Filter className="size-3.5" />
                     Filters
                 </span>
@@ -1503,7 +1506,10 @@ function DashboardFiltersBar({
 
 export default function Dashboard() {
     const props = usePage<DashboardProps>().props;
-    const [activeSection, setActiveSection] = useState<string>(DEFAULT_DASHBOARD_SECTION);
+    const [activeSection, setActiveSection] = useState<string>(() => {
+        const s = props.section ?? DEFAULT_DASHBOARD_SECTION;
+        return DASHBOARD_SECTIONS.some((sec) => sec.id === s) ? s : DEFAULT_DASHBOARD_SECTION;
+    });
     const [alertsOpen, setAlertsOpen] = useState(false);
     const [filtersExpanded, setFiltersExpanded] = useState(false);
     const sidings = props.sidings ?? [];
@@ -1593,6 +1599,29 @@ export default function Dashboard() {
         return sidings.filter((s) => idSet.has(s.id));
     }, [sidings, filters.siding_ids]);
 
+    const hasActiveFilters = useMemo(() => {
+        if (filters.period !== 'month') return true;
+        if (filters.power_plant) return true;
+        if (filters.rake_number?.trim()) return true;
+        if (filters.loader_id != null) return true;
+        if (filters.shift) return true;
+        if (filters.penalty_type != null) return true;
+        if (sidings.length > 0 && filters.siding_ids.length > 0 && filters.siding_ids.length < sidings.length) return true;
+        return false;
+    }, [filters.period, filters.power_plant, filters.rake_number, filters.loader_id, filters.shift, filters.penalty_type, filters.siding_ids.length, sidings.length]);
+
+    const activeFilterCount = useMemo(() => {
+        let n = 0;
+        if (filters.period !== 'month') n += 1;
+        if (filters.power_plant) n += 1;
+        if (filters.rake_number?.trim()) n += 1;
+        if (filters.loader_id != null) n += 1;
+        if (filters.shift) n += 1;
+        if (filters.penalty_type != null) n += 1;
+        if (sidings.length > 0 && filters.siding_ids.length > 0 && filters.siding_ids.length < sidings.length) n += 1;
+        return n;
+    }, [filters.period, filters.power_plant, filters.rake_number, filters.loader_id, filters.shift, filters.penalty_type, filters.siding_ids.length, sidings.length]);
+
     const sidingStackKeys = useMemo(() => filteredSidings.map((s) => s.name), [filteredSidings]);
 
     const kpiCards = sidings.length > 0 && kpis ? [
@@ -1608,20 +1637,31 @@ export default function Dashboard() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dashboard" />
             <div className="dashboard-page flex h-full flex-1 flex-col gap-5 overflow-x-auto bg-[#FAFAFA] p-3">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="sticky top-0 z-10 -mx-3 flex flex-col gap-3 bg-[#FAFAFA] px-3 pb-2 pt-1">
                     <h2 className="text-xl font-semibold tracking-tight">
                         Management Dashboard
                     </h2>
                     <div className="flex flex-wrap items-center justify-end gap-2">
-                        {filtersExpanded && sidings.length > 0 && (
-                            <DashboardFiltersBar
-                                sidings={sidings}
-                                filters={filters}
-                                filterOptions={filterOptions}
-                                inline
-                                onClose={() => setFiltersExpanded(false)}
-                            />
+                        {hasActiveFilters && !filtersExpanded && (
+                            <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                                {activeFilterCount} filter{activeFilterCount !== 1 ? 's' : ''} applied
+                            </span>
                         )}
+                        <Button
+                            type="button"
+                            variant={filtersExpanded ? 'secondary' : hasActiveFilters ? 'default' : 'outline'}
+                            size="sm"
+                            className="shrink-0 rounded-[10px] relative"
+                            onClick={() => setFiltersExpanded((v) => !v)}
+                        >
+                            <Filter className="size-4 shrink-0" />
+                            <span className="ml-1.5">Filters</span>
+                            {hasActiveFilters && (
+                                <span className="ml-1.5 flex size-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+                                    {activeFilterCount > 9 ? '9+' : activeFilterCount}
+                                </span>
+                            )}
+                        </Button>
                         <Select value={activeSection} onValueChange={setActiveSection}>
                             <SelectTrigger className="min-w-[200px] rounded-[10px] border border-gray-200 bg-white shadow-sm w-full sm:w-auto">
                                 <SelectValue placeholder="Select section" />
@@ -1634,16 +1674,16 @@ export default function Dashboard() {
                                 ))}
                             </SelectContent>
                         </Select>
-                        <Button
-                            type="button"
-                            variant={filtersExpanded ? 'secondary' : 'outline'}
-                            size="sm"
-                            className="shrink-0 rounded-[10px]"
-                            onClick={() => setFiltersExpanded((v) => !v)}
-                        >
-                            <Filter className="size-4 shrink-0" />
-                            <span className="ml-1.5">Filters</span>
-                        </Button>
+                        {filtersExpanded && sidings.length > 0 && (
+                            <DashboardFiltersBar
+                                sidings={sidings}
+                                filters={filters}
+                                filterOptions={filterOptions}
+                                currentSection={activeSection}
+                                inline
+                                onClose={() => setFiltersExpanded(false)}
+                            />
+                        )}
                     </div>
                 </div>
 
@@ -1655,12 +1695,12 @@ export default function Dashboard() {
                                 className="dashboard-card flex min-w-[160px] flex-1 flex-col justify-between rounded-xl border-0 p-4 sm:min-w-0"
                                 style={{ borderTop: `4px solid ${borderColor}` }}
                             >
-                                <div className="text-[0.7rem] font-semibold text-gray-500 leading-snug">{label}</div>
+                                <div className="text-[0.7rem] font-semibold text-gray-600 leading-snug">{label}</div>
                                 <div className="mt-2 flex items-center justify-between gap-3">
                                     <span className="truncate text-[1.85rem] font-extrabold tabular-nums leading-tight">
                                         {value}
                                     </span>
-                                    <Icon className="size-6 shrink-0 text-gray-300" aria-hidden />
+                                    <Icon className="size-6 shrink-0" style={{ color: borderColor }} aria-hidden />
                                 </div>
                             </div>
                         ))}
@@ -1668,7 +1708,7 @@ export default function Dashboard() {
                 )}
 
                 {sidings.length === 0 ? (
-                    <div className="dashboard-card rounded-xl border-0 p-8 text-center text-sm text-gray-500">
+                    <div className="dashboard-card rounded-xl border-0 p-8 text-center text-sm text-gray-600">
                         <p>No sidings assigned to your account. Contact your administrator to get access.</p>
                     </div>
                 ) : (
@@ -1681,7 +1721,7 @@ export default function Dashboard() {
                                 ) : (
                                     <div className="dashboard-card rounded-xl border-0 p-6">
                                         <SectionHeader icon={BarChart3} title="Siding performance" subtitle="Rakes, coal & penalty by siding" />
-                                        <div className="mt-4 py-8 text-center text-sm text-gray-500">No performance data for selected filters.</div>
+                                        <div className="mt-4 py-8 text-center text-sm text-gray-600">No performance data for selected filters.</div>
                                     </div>
                                 )}
                                 <div className="dashboard-card rounded-xl border-0 p-6">
@@ -1703,7 +1743,7 @@ export default function Dashboard() {
                                             </RechartsAreaChart>
                                         </ResponsiveContainer>
                                     ) : (
-                                        <div className="mt-4 py-8 text-center text-sm text-gray-500">No penalty data for selected period.</div>
+                                        <div className="mt-4 py-8 text-center text-sm text-gray-600">No penalty data for selected period.</div>
                                     )}
                                 </div>
                                 <div className="dashboard-card rounded-xl border-0 p-6">
@@ -1739,13 +1779,13 @@ export default function Dashboard() {
                                                     </RechartsPieChart>
                                                 </ResponsiveContainer>
                                                 <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center text-center">
-                                                    <span className="text-xs font-medium text-gray-400">Total</span>
+                                                    <span className="text-xs font-medium text-gray-600">Total</span>
                                                     <span className="text-lg font-bold tabular-nums text-gray-800">{formatWeight(totalWeight)}</span>
                                                 </div>
                                             </div>
                                         );
                                     })() : (
-                                        <div className="mt-4 py-8 text-center text-sm text-gray-500">No power plant dispatch data.</div>
+                                        <div className="mt-4 py-8 text-center text-sm text-gray-600">No power plant dispatch data.</div>
                                     )}
                                 </div>
                             </div>
@@ -1760,10 +1800,10 @@ export default function Dashboard() {
                                             <Link href={rakesIndex().url} data-pan="dashboard-live-rakes-view-all">View all</Link>
                                         </Button>
                                     </div>
-                                    <p className="mt-1 text-xs text-gray-400">
+                                    <p className="mt-1 text-xs text-gray-600">
                                         Last updated: Just now
                                         {liveRakeStatus.length > 0 && (
-                                            <span className="ml-2 font-medium text-gray-500">
+                                            <span className="ml-2 font-medium text-gray-600">
                                                 • {liveRakeStatus.length} active rake{liveRakeStatus.length === 1 ? '' : 's'}
                                             </span>
                                         )}
@@ -1772,7 +1812,7 @@ export default function Dashboard() {
                                         <div className="dashboard-table-scroll mt-4 max-h-[520px] overflow-y-auto overflow-x-auto">
                                             <table className="w-full text-sm">
                                                 <thead className="sticky top-0 z-10 bg-white shadow-sm">
-                                                    <tr className="border-b text-left text-gray-500">
+                                                    <tr className="border-b text-left text-gray-600">
                                                         <th className="group cursor-pointer pb-3 pl-4 pr-2 pt-2 font-medium"><span className="inline-flex items-center gap-1">Rake <ArrowUp className="size-3.5 opacity-0 group-hover:opacity-50" /></span></th>
                                                         <th className="group cursor-pointer pb-3 px-2 pt-2 font-medium"><span className="inline-flex items-center gap-1">Siding <ArrowUp className="size-3.5 opacity-0 group-hover:opacity-50" /></span></th>
                                                         <th className="group cursor-pointer pb-3 px-2 pt-2 font-medium"><span className="inline-flex items-center gap-1">Status <ArrowUp className="size-3.5 opacity-0 group-hover:opacity-50" /></span></th>
@@ -1816,7 +1856,7 @@ export default function Dashboard() {
                                                                     ) : riskVariant === 'medium' ? (
                                                                         <span className="inline-flex rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">Medium</span>
                                                                     ) : (
-                                                                        <span className="text-gray-500">Normal</span>
+                                                                        <span className="text-gray-600">Normal</span>
                                                                     )}
                                                                 </td>
                                                             </tr>
@@ -1826,7 +1866,7 @@ export default function Dashboard() {
                                             </table>
                                         </div>
                                     ) : (
-                                        <div className="mt-4 py-8 text-center text-sm text-gray-500">No active rakes.</div>
+                                        <div className="mt-4 py-8 text-center text-sm text-gray-600">No active rakes.</div>
                                     )}
                                 </div>
                             </div>
@@ -1847,7 +1887,7 @@ export default function Dashboard() {
                                             </RechartsBarChart>
                                         </ResponsiveContainer>
                                     ) : (
-                                        <div className="mt-4 py-8 text-center text-sm text-gray-500">No truck receipt data for today.</div>
+                                        <div className="mt-4 py-8 text-center text-sm text-gray-600">No truck receipt data for today.</div>
                                     )}
                                 </div>
                                 <SpeedometerGauge
@@ -1912,7 +1952,7 @@ export default function Dashboard() {
                                                             </RechartsPieChart>
                                                         </ResponsiveContainer>
                                                         <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center pointer-events-none">
-                                                            <span className="text-xs text-gray-400">Total</span>
+                                                            <span className="text-xs text-gray-600">Total</span>
                                                             <span className="text-lg font-bold tabular-nums text-gray-800">{formatCurrency(totalType)}</span>
                                                         </div>
                                                     </div>
@@ -1928,7 +1968,7 @@ export default function Dashboard() {
                                                 </div>
                                             );
                                         })() : (
-                                            <div className="mt-4 py-8 text-center text-sm text-gray-500">No penalty type data.</div>
+                                            <div className="mt-4 py-8 text-center text-sm text-gray-600">No penalty type data.</div>
                                         )}
                                     </div>
                                     <div className="dashboard-card min-w-0 rounded-xl border-0 p-6">
@@ -1957,7 +1997,7 @@ export default function Dashboard() {
                                                 </div>
                                             );
                                         })() : (
-                                            <div className="mt-4 py-8 text-center text-sm text-gray-500">No penalty type data.</div>
+                                            <div className="mt-4 py-8 text-center text-sm text-gray-600">No penalty type data.</div>
                                         )}
                                     </div>
                                 </div>
@@ -1990,7 +2030,7 @@ export default function Dashboard() {
                                             })()}
                                         </div>
                                     ) : (
-                                        <div className="mt-4 py-8 text-center text-sm text-gray-500">No sidings available for selected filters.</div>
+                                        <div className="mt-4 py-8 text-center text-sm text-gray-600">No sidings available for selected filters.</div>
                                     )}
                                 </div>
                                 <div className="dashboard-card rounded-xl border-0 p-6">
@@ -2023,7 +2063,7 @@ export default function Dashboard() {
                                             </ResponsiveContainer>
                                         </div>
                                     ) : (
-                                        <div className="mt-4 py-8 text-center text-sm text-gray-500">No predicted or actual penalty data for the selected period.</div>
+                                        <div className="mt-4 py-8 text-center text-sm text-gray-600">No predicted or actual penalty data for the selected period.</div>
                                     )}
                                     {(() => {
                                         const pred = predictedVsActualPenalty.predicted || 1;
@@ -2048,7 +2088,7 @@ export default function Dashboard() {
                             ) : (
                                     <div className="dashboard-card rounded-xl border-0 p-6">
                                         <SectionHeader icon={BarChart3} title="Siding performance" subtitle="Rakes, penalties & penalty rate" />
-                                        <div className="mt-6 flex flex-col items-center justify-center py-10 text-center text-gray-500">
+                                        <div className="mt-6 flex flex-col items-center justify-center py-10 text-center text-gray-600">
                                             <BarChart3 className="mb-3 h-10 w-10 opacity-30" />
                                             <p className="text-sm font-medium">No data available</p>
                                             <p className="mt-1 text-xs">Apply filters or wait for dispatch data.</p>
@@ -2063,7 +2103,7 @@ export default function Dashboard() {
                                 : (
                                     <div className="dashboard-card rounded-xl border-0 p-6">
                                         <SectionHeader icon={BarChart3} title="Siding stock" subtitle="Opening & closing balance with total rakes" />
-                                        <div className="mt-6 flex flex-col items-center justify-center py-10 text-center text-gray-500">
+                                        <div className="mt-6 flex flex-col items-center justify-center py-10 text-center text-gray-600">
                                             <BarChart3 className="mb-3 h-10 w-10 opacity-30" />
                                             <p className="text-sm font-medium">No stock data available</p>
                                             <p className="mt-1 text-xs">Apply filters or wait for stock ledger data.</p>
@@ -2078,7 +2118,7 @@ export default function Dashboard() {
                                 : (
                                     <div className="dashboard-card rounded-xl border-0 p-6">
                                         <SectionHeader icon={Train} title="Rake-wise performance" subtitle="Top dispatched rakes" />
-                                        <div className="mt-6 flex flex-col items-center justify-center py-10 text-center text-gray-500">
+                                        <div className="mt-6 flex flex-col items-center justify-center py-10 text-center text-gray-600">
                                             <Train className="mb-3 h-10 w-10 opacity-30" />
                                             <p className="text-sm font-medium">No rake performance data available</p>
                                             <p className="mt-1 text-xs">Apply filters or wait for dispatch data.</p>
@@ -2098,7 +2138,7 @@ export default function Dashboard() {
                                 : (
                                     <div className="dashboard-card rounded-xl border-0 p-6">
                                         <SectionHeader icon={AlertTriangle} title="Loader-wise overloading trends" subtitle="Overload cases by loader" />
-                                        <div className="mt-6 flex flex-col items-center justify-center py-10 text-center text-gray-500">
+                                        <div className="mt-6 flex flex-col items-center justify-center py-10 text-center text-gray-600">
                                             <AlertTriangle className="mb-3 h-10 w-10 opacity-30" />
                                             <p className="text-sm font-medium">No loader data available</p>
                                             <p className="mt-1 text-xs">Apply filters or wait for weighment data.</p>
@@ -2153,7 +2193,7 @@ export default function Dashboard() {
                                         }`}
                                     >
                                         <span className="font-medium">⚠ {a.title}</span>
-                                        <div className="mt-0.5 text-gray-500">{new Date(a.created_at).toLocaleString()}</div>
+                                        <div className="mt-0.5 text-gray-600">{new Date(a.created_at).toLocaleString()}</div>
                                     </div>
                                 ))
                             )}

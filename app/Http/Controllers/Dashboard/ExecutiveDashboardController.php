@@ -13,6 +13,7 @@ use App\Models\Penalty;
 use App\Models\PenaltyPrediction;
 use App\Models\PenaltyType;
 use App\Models\Rake;
+use App\Models\RakeWagonWeighment;
 use App\Models\RakeWeighment;
 use App\Models\Siding;
 use App\Models\SidingVehicleDispatch;
@@ -25,6 +26,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
+
+use function in_array;
 
 final class ExecutiveDashboardController extends Controller
 {
@@ -63,6 +66,10 @@ final class ExecutiveDashboardController extends Controller
         $shift = $request->filled('shift') ? (string) $request->input('shift') : null;
         $penaltyTypeId = $request->integer('penalty_type') ?: null;
 
+        $allowedSections = ['executive-overview', 'operations', 'penalty-control', 'siding-stock', 'siding-performance', 'rake-performance', 'loader-overload', 'power-plant'];
+        $section = $request->input('section', 'executive-overview');
+        $section = in_array($section, $allowedSections, true) ? $section : 'executive-overview';
+
         $filterContext = [
             'period' => $period,
             'power_plant' => $powerPlant,
@@ -77,6 +84,7 @@ final class ExecutiveDashboardController extends Controller
         // dd($this->buildSidingPerformance($filteredSidingIds, $from, $to, $filterContext));
         return Inertia::render('dashboard', [
             'sidings' => $allSidings,
+            'section' => $section,
             'filters' => [
                 'period' => $period,
                 'from' => $from->toDateString(),
@@ -1560,7 +1568,41 @@ final class ExecutiveDashboardController extends Controller
             ->get()
             ->keyBy('rake_id');
 
-        return $rakes->map(function (Rake $rake) use ($weighmentTotals, $penaltyTotals): array {
+        $latestWeighmentIds = RakeWeighment::query()
+            ->whereIn('rake_id', $rakeIds)
+            ->orderByDesc('id')
+            ->get()
+            ->unique('rake_id')
+            ->pluck('id')
+            ->all();
+
+        $wagonOverloadsByRakeId = [];
+        if ($latestWeighmentIds !== []) {
+            $weighmentToRake = RakeWeighment::query()
+                ->whereIn('id', $latestWeighmentIds)
+                ->pluck('rake_id', 'id')
+                ->all();
+            $wagonRows = RakeWagonWeighment::query()
+                ->whereIn('rake_weighment_id', $latestWeighmentIds)
+                ->with('wagon:id,wagon_number')
+                ->orderBy('wagon_sequence')
+                ->get();
+            foreach ($wagonRows as $row) {
+                $rakeId = $weighmentToRake[$row->rake_weighment_id] ?? null;
+                if ($rakeId === null) {
+                    continue;
+                }
+                if (! isset($wagonOverloadsByRakeId[$rakeId])) {
+                    $wagonOverloadsByRakeId[$rakeId] = [];
+                }
+                $wagonOverloadsByRakeId[$rakeId][] = [
+                    'wagon_number' => $row->wagon?->wagon_number ?? (string) $row->wagon_id,
+                    'over_load_mt' => round((float) ($row->over_load_mt ?? 0), 2),
+                ];
+            }
+        }
+
+        return $rakes->map(function (Rake $rake) use ($weighmentTotals, $penaltyTotals, $wagonOverloadsByRakeId): array {
             $w = $weighmentTotals->get($rake->id);
             $p = $penaltyTotals->get($rake->id);
 
@@ -1580,6 +1622,7 @@ final class ExecutiveDashboardController extends Controller
                 'loading_minutes' => $loadingMinutes,
                 'penalty_amount' => $p ? round((float) $p->total_penalty, 2) : 0,
                 'penalty_count' => $p ? (int) $p->penalty_count : 0,
+                'wagon_overloads' => $wagonOverloadsByRakeId[$rake->id] ?? [],
             ];
         })->values()->all();
     }
