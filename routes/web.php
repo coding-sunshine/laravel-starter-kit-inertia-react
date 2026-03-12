@@ -288,6 +288,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::post('railway-receipts/import', [RrUploadController::class, 'store'])->name('railway-receipts.import');
     Route::post('railway-receipts/upload', [RrDocumentController::class, 'upload'])->name('railway-receipts.upload');
     Route::get('railway-receipts/create', [RrDocumentController::class, 'create'])->name('railway-receipts.create');
+    Route::get('railway-receipts/rakes', [RrDocumentController::class, 'rakesForMonth'])->name('railway-receipts.rakes');
     Route::post('railway-receipts', [RrDocumentController::class, 'store'])->name('railway-receipts.store');
     Route::get('railway-receipts/{rrDocument}', [RrDocumentController::class, 'show'])->name('railway-receipts.show');
     Route::get('railway-receipts/{rrDocument}/pdf', [RrDocumentController::class, 'downloadPdf'])->name('railway-receipts.pdf');

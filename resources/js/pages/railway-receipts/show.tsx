@@ -65,6 +65,24 @@ interface RrDocument {
     rr_details: Record<string, unknown> | null;
     rake?: Rake;
     rr_charges?: RrCharge[];
+    // Snapshot relations from backend (snake_case when serialized)
+    wagon_snapshots?: Array<{
+        id: number;
+        wagon_sequence: number | null;
+        wagon_number: string | null;
+        wagon_type: string | null;
+        pcc_weight_mt: string | number | null;
+        loaded_weight_mt: string | number | null;
+        permissible_weight_mt: string | number | null;
+        overload_weight_mt: string | number | null;
+    }>;
+    penalty_snapshots?: Array<{
+        id: number;
+        penalty_code: string;
+        amount: string | number;
+        wagon_number?: string | null;
+        wagon_sequence?: number | null;
+    }>;
 }
 
 interface FromSiding {
@@ -128,10 +146,14 @@ function buildOverviewData(
     toPowerPlant?: ToPowerPlant | null,
 ): OverviewData {
     const rrDetails = doc.rr_details as Record<string, unknown> | null;
+    const snapshotWagons =
+        (doc as Record<string, unknown>).wagon_snapshots as Wagon[] | undefined;
     const rakeWagons = doc.rake?.wagons ?? [];
     const legacyWagons = (rrDetails?.wagons as unknown[] | null) ?? [];
     const totalWagons =
-        rakeWagons.length > 0
+        (snapshotWagons && snapshotWagons.length > 0)
+            ? snapshotWagons.length
+            : rakeWagons.length > 0
             ? rakeWagons.length
             : Array.isArray(legacyWagons)
               ? legacyWagons.length
@@ -165,6 +187,26 @@ function buildOverviewData(
 }
 
 function buildWagonsData(doc: RrDocument): WagonRow[] {
+    // 1) Prefer RR wagon snapshots (what the RR says)
+    const snapshotWagons =
+        (doc as Record<string, unknown>).wagon_snapshots as
+            | Wagon[]
+            | undefined;
+    if (snapshotWagons && snapshotWagons.length > 0) {
+        return snapshotWagons.map((w, index) => ({
+            sequence: w.wagon_sequence ?? index + 1,
+            wagonNumber: w.wagon_number ?? '-',
+            wagonType: w.wagon_type ?? '-',
+            pccWeight: String(w.pcc_weight_mt ?? '-'),
+            loadedWeight: String(w.loaded_weight_mt ?? '-'),
+            permissibleWeight: String(w.permissible_weight_mt ?? '-'),
+            overloadWeight: String(w.overload_weight_mt ?? '0'),
+            status:
+                Number(w.overload_weight_mt) > 0 ? 'Overload' : 'Loaded',
+        }));
+    }
+
+    // 2) Fallback: rake wagons (operational view)
     const rakeWagons = doc.rake?.wagons ?? [];
     if (rakeWagons.length > 0) {
         return rakeWagons.map((w) => ({
@@ -180,6 +222,7 @@ function buildWagonsData(doc: RrDocument): WagonRow[] {
         }));
     }
 
+    // 3) Legacy: wagons embedded in rr_details
     const rrDetails = doc.rr_details as Record<string, unknown> | null;
     const legacyWagons =
         (rrDetails?.wagons as Record<string, unknown>[] | null) ?? [];
@@ -231,6 +274,28 @@ function buildChargesData(doc: RrDocument): ChargeRow[] {
 }
 
 function buildPenaltiesData(doc: RrDocument): PenaltyRow[] {
+    // 1) Prefer RR penalty snapshots
+    const penaltySnapshots =
+        (doc as Record<string, unknown>).penalty_snapshots as
+            | {
+                  penalty_code: string;
+                  amount: string | number;
+                  wagon_number?: string | null;
+                  wagon_sequence?: number | null;
+              }[]
+            | undefined;
+    if (penaltySnapshots && penaltySnapshots.length > 0) {
+        return penaltySnapshots.map((p) => ({
+            penaltyCode: p.penalty_code,
+            penaltyName: p.penalty_code,
+            calculationType: '-',
+            amount: `₹${Number(p.amount ?? 0).toLocaleString('en-IN')}`,
+            wagonReference: p.wagon_number ?? undefined,
+            overloadWeight: undefined,
+        }));
+    }
+
+    // 2) Fallback: applied penalties from operational rake
     const appliedPenalties = doc.rake?.applied_penalties ?? [];
     if (appliedPenalties.length > 0) {
         const wagons = doc.rake?.wagons ?? [];
@@ -255,6 +320,7 @@ function buildPenaltiesData(doc: RrDocument): PenaltyRow[] {
         });
     }
 
+    // 3) Legacy: penalties embedded in rr_details
     const rrDetails = doc.rr_details as Record<string, unknown> | null;
     const penalties = rrDetails?.penalties as Record<string, unknown>[] | null;
     if (!penalties || !Array.isArray(penalties)) {

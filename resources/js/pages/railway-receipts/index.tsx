@@ -10,11 +10,27 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, router } from '@inertiajs/react';
-import { Upload } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { Head, router, usePage } from '@inertiajs/react';
+import { CalendarDays, Upload } from 'lucide-react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 
 interface Siding {
     id: number;
@@ -33,14 +49,43 @@ interface RrDocumentRow {
     siding_name: string | null;
 }
 
+interface RakeOption {
+    id: number;
+    rake_number: string;
+    rr_actual_date?: string | null;
+    siding?: {
+        name: string;
+        code: string;
+    } | null;
+}
+
 interface Props {
     tableData: DataTableResponse<RrDocumentRow>;
     sidings: Siding[];
 }
 
+function getCurrentMonthValue(): string {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+
+    return `${year}-${month}`;
+}
+
 export default function RailwayReceiptsIndex({ tableData }: Props) {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [uploading, setUploading] = useState(false);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [month, setMonth] = useState<string>(getCurrentMonthValue);
+    const [rakes, setRakes] = useState<RakeOption[]>([]);
+    const [rakesLoading, setRakesLoading] = useState(false);
+    const [rakesError, setRakesError] = useState<string | null>(null);
+    const [selectedRakeId, setSelectedRakeId] = useState<string>('');
+
+    const {
+        props: { errors },
+    } = usePage<{ errors: Record<string, string | undefined> }>();
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: '/dashboard' },
@@ -51,23 +96,113 @@ export default function RailwayReceiptsIndex({ tableData }: Props) {
         fileInputRef.current?.click();
     };
 
+    const resetDialogState = useCallback(() => {
+        setIsDialogOpen(false);
+        setSelectedFile(null);
+        setSelectedRakeId('');
+        setRakes([]);
+        setRakesError(null);
+        setMonth(getCurrentMonthValue());
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+    }, []);
+
+    const fetchRakesForMonth = useCallback(async (monthValue: string) => {
+        setRakesLoading(true);
+        setRakesError(null);
+        try {
+            const response = await fetch(
+                `/railway-receipts/rakes?month=${encodeURIComponent(monthValue)}`,
+                {
+                    headers: {
+                        Accept: 'application/json',
+                    },
+                },
+            );
+
+            if (!response.ok) {
+                throw new Error(`Failed to load rakes (${response.status})`);
+            }
+
+            const json = (await response.json()) as {
+                data?: RakeOption[];
+            };
+
+            setRakes(Array.isArray(json.data) ? json.data : []);
+        } catch (error) {
+            console.error(error);
+            setRakes([]);
+            setRakesError(
+                'Could not load rakes for the selected month. You can still upload without selecting a rake.',
+            );
+        } finally {
+            setRakesLoading(false);
+        }
+    }, []);
+
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) {
             return;
         }
+
+        setSelectedFile(file);
+        setIsDialogOpen(true);
+        void fetchRakesForMonth(month);
+    };
+
+    const submitUpload = useCallback(() => {
+        if (!selectedFile) {
+            return;
+        }
+
         setUploading(true);
+
         const formData = new FormData();
-        formData.append('pdf', file);
+        formData.append('pdf', selectedFile);
+
+        if (!selectedRakeId) {
+            // No rake selected — upload without rake
+        } else {
+            const rakeId = Number.parseInt(selectedRakeId, 10);
+            if (!Number.isNaN(rakeId)) {
+                formData.append('rake_id', String(rakeId));
+            }
+        }
 
         router.post('/railway-receipts/upload', formData, {
             forceFormData: true,
             onFinish: () => {
                 setUploading(false);
-                e.target.value = '';
+                resetDialogState();
             },
         });
-    };
+    }, [resetDialogState, selectedFile, selectedRakeId]);
+
+    const rakeLabel = useCallback((rake: RakeOption): string => {
+        const parts: string[] = [rake.rake_number];
+
+        if (rake.siding?.name) {
+            parts.push(`– ${rake.siding.name}`);
+        } else if (rake.siding?.code) {
+            parts.push(`– ${rake.siding.code}`);
+        }
+
+        if (rake.rr_actual_date) {
+            parts.push(`(${rake.rr_actual_date})`);
+        }
+
+        return parts.join(' ');
+    }, []);
+
+    const dialogTitle = useMemo(() => {
+        if (!selectedFile) {
+            return 'Attach RR PDF to a rake';
+        }
+
+        return `Attach “${selectedFile.name}” to a rake`;
+    }, [selectedFile]);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -93,6 +228,11 @@ export default function RailwayReceiptsIndex({ tableData }: Props) {
                         <Upload className="mr-2 size-4" />
                         {uploading ? 'Uploading…' : 'Upload RR PDF'}
                     </Button>
+                    {errors?.pdf && (
+                        <p className="text-sm text-destructive">
+                            {errors.pdf}
+                        </p>
+                    )}
                 </div>
                 <RrmcsGuidance
                     title="What this section is for"
@@ -136,6 +276,114 @@ export default function RailwayReceiptsIndex({ tableData }: Props) {
                     </CardContent>
                 </Card>
             </div>
+            <Dialog
+                open={isDialogOpen}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        resetDialogState();
+                    }
+                }}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{dialogTitle}</DialogTitle>
+                        <DialogDescription>
+                            Optionally select a rake to attach this Railway
+                            Receipt to. If you skip this step, the RR will be
+                            uploaded without a rake.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="rr-month">
+                                Rake month (filter)
+                            </Label>
+                            <div className="flex items-center gap-2">
+                                <div className="relative inline-flex items-center">
+                                    <CalendarDays className="pointer-events-none absolute left-2 size-4 text-muted-foreground" />
+                                    <input
+                                        id="rr-month"
+                                        type="month"
+                                        className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 flex h-9 w-[11rem] rounded-md border pl-8 pr-3 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
+                                        value={month}
+                                        onChange={(event) => {
+                                            const value =
+                                                event.target.value ||
+                                                getCurrentMonthValue();
+                                            setMonth(value);
+                                            void fetchRakesForMonth(value);
+                                        }}
+                                    />
+                                </div>
+                                {rakesLoading && (
+                                    <span className="text-xs text-muted-foreground">
+                                        Loading rakes…
+                                    </span>
+                                )}
+                            </div>
+                            {rakesError ? (
+                                <p className="text-xs text-destructive">
+                                    {rakesError}
+                                </p>
+                            ) : null}
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="rake-select">
+                                Attach to rake (optional)
+                            </Label>
+                            <Select
+                                value={selectedRakeId}
+                                onValueChange={setSelectedRakeId}
+                            >
+                                <SelectTrigger
+                                    id="rake-select"
+                                    className="min-w-[260px]"
+                                >
+                                    <SelectValue placeholder="No rake selected" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {rakes.length === 0 ? (
+                                        <SelectItem value="__none" disabled>
+                                            No rakes found for this month
+                                        </SelectItem>
+                                    ) : (
+                                        rakes.map((rake) => (
+                                            <SelectItem
+                                                key={rake.id}
+                                                value={String(rake.id)}
+                                            >
+                                                {rakeLabel(rake)}
+                                            </SelectItem>
+                                        ))
+                                    )}
+                                </SelectContent>
+                            </Select>
+                            <p className="text-xs text-muted-foreground">
+                                Leaving this blank will upload the RR without
+                                linking it to a rake.
+                            </p>
+                        </div>
+                    </div>
+                    <DialogFooter className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={resetDialogState}
+                            disabled={uploading}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="button"
+                            onClick={submitUpload}
+                            disabled={uploading || !selectedFile}
+                            data-pan="rr-upload-with-rake-button"
+                        >
+                            {uploading ? 'Uploading…' : 'Upload'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </AppLayout>
     );
 }

@@ -20,8 +20,9 @@ final class StoreRrUploadRequest extends FormRequest
     {
         return [
             'pdf' => ['required', 'file', 'mimes:pdf', 'max:10240'],
-            'siding_id' => ['required', 'integer', 'exists:sidings,id'],
-            'power_plant_id' => ['required', 'integer', 'exists:power_plants,id'],
+            'rake_id' => ['nullable', 'integer', 'exists:rakes,id'],
+            'siding_id' => ['required_without:rake_id', 'integer', 'exists:sidings,id'],
+            'power_plant_id' => ['required_without:rake_id', 'integer', 'exists:power_plants,id'],
         ];
     }
 

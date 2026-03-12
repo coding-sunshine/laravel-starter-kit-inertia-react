@@ -15,7 +15,10 @@ return new class extends Migration
     {
         Schema::create('rr_documents', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('rake_id')->constrained('rakes')->onDelete('cascade');
+            $table->foreignId('rake_id')
+                ->nullable()
+                ->constrained('rakes')
+                ->nullOnDelete();
             $table->string('rr_number', 50)->unique();
             $table->dateTime('rr_received_date');
             $table->decimal('rr_weight_mt', 12, 2)->nullable();

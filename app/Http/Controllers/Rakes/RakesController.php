@@ -103,6 +103,12 @@ final class RakesController extends Controller
             $rakeArray['wagonLoadings'] = $rakeArray['wagon_loadings'];
         }
 
+        if (array_key_exists('rr_document', $rakeArray) && $rakeArray['rr_document'] !== null) {
+            $rakeArray['rrDocuments'] = [$rakeArray['rr_document']];
+        } else {
+            $rakeArray['rrDocuments'] = [];
+        }
+
         return Inertia::render('rakes/show', [
             'rake' => $rakeArray,
             'wagonTypes' => $wagonTypes,

@@ -17,7 +17,7 @@ final class RrDocumentDataTable extends AbstractDataTable
 {
     public function __construct(
         public int $id,
-        public int $rake_id,
+        public ?int $rake_id,
         public string $rr_number,
         public string $rr_received_date,
         public ?string $rr_weight_mt,
@@ -78,7 +78,14 @@ final class RrDocumentDataTable extends AbstractDataTable
 
         return RrDocument::query()
             ->with('rake.siding:id,name,code')
-            ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
+            ->when(
+                $sidingIds !== [],
+                fn (Builder $query): Builder => $query->where(function (Builder $inner) use ($sidingIds): void {
+                    $inner
+                        ->whereHas('rake', fn (Builder $q): Builder => $q->whereIn('siding_id', $sidingIds))
+                        ->orWhereNull('rake_id');
+                }),
+            );
     }
 
     public static function tableDefaultSort(): string

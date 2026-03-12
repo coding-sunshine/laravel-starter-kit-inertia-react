@@ -6,6 +6,7 @@ namespace App\Http\Controllers\RR;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreRrUploadRequest;
+use App\Models\Rake;
 use App\Services\Railway\RrImportService;
 use App\Services\Railway\RrParserService;
 use Illuminate\Http\JsonResponse;
@@ -24,8 +25,24 @@ final class RrUploadController extends Controller
     public function store(StoreRrUploadRequest $request): RedirectResponse|JsonResponse
     {
         try {
+            $validated = $request->validated();
             $parsed = $this->parser->parse($request->file('pdf'));
-            $rrDocument = $this->rrImportService->import($parsed, $request);
+
+            $rake = null;
+            if (isset($validated['rake_id'])) {
+                $rake = Rake::query()->find((int) $validated['rake_id']);
+                if ($rake === null) {
+                    throw new InvalidArgumentException('Selected rake is invalid or no longer available.');
+                }
+            }
+
+            $rrDocument = $this->rrImportService->importSnapshotOnly($parsed, $request, $validated, $rake);
+
+            if ($rake !== null) {
+                return redirect()->route('rakes.show', $rake)
+                    ->with('success', 'Railway Receipt uploaded and parsed successfully.')
+                    ->with('rr_document_id', $rrDocument->id);
+            }
 
             return redirect()->route('railway-receipts.show', $rrDocument)
                 ->with('success', 'Railway Receipt uploaded and parsed successfully.');
