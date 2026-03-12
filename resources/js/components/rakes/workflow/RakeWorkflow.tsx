@@ -7,6 +7,12 @@ import { ComparisonWorkflow } from './ComparisonWorkflow';
 import { RrDocumentWorkflow } from './RrDocumentWorkflow';
 import { PenaltiesWorkflow } from './PenaltiesWorkflow';
 import { useState, useEffect } from 'react';
+import { Check } from 'lucide-react';
+import { useForm, usePage } from '@inertiajs/react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import InputError from '@/components/input-error';
+import { Button } from '@/components/ui/button';
 
 interface RakeData {
     id: number;
@@ -118,6 +124,117 @@ interface RakeWorkflowProps {
     demurrage_rate_per_mt_hour: number;
 }
 
+interface LoadingTimesFormProps {
+    rakeId: number;
+    loadingStart?: string | null;
+    loadingEnd?: string | null;
+}
+
+function LoadingTimesForm({ rakeId, loadingStart, loadingEnd }: LoadingTimesFormProps) {
+    const { flash } = usePage().props as { flash?: { success?: string; error?: string } };
+
+    const toLocalInput = (value?: string | null): string => {
+        if (!value) {
+            return '';
+        }
+
+        const date = new Date(value);
+
+        if (Number.isNaN(date.getTime())) {
+            return '';
+        }
+
+        const pad = (n: number) => n.toString().padStart(2, '0');
+
+        const year = date.getFullYear();
+        const month = pad(date.getMonth() + 1);
+        const day = pad(date.getDate());
+        const hours = pad(date.getHours());
+        const minutes = pad(date.getMinutes());
+
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    };
+
+    const {
+        data,
+        setData,
+        processing,
+        errors,
+        put,
+    } = useForm({
+        loading_start_time: toLocalInput(loadingStart),
+        loading_end_time: toLocalInput(loadingEnd),
+    });
+
+    const hasSavedTimes = !!(data.loading_start_time || data.loading_end_time);
+    const startDisplay = data.loading_start_time
+        ? data.loading_start_time.replace('T', ' ')
+        : null;
+    const endDisplay = data.loading_end_time
+        ? data.loading_end_time.replace('T', ' ')
+        : null;
+
+    return (
+        <div className="rounded-md border bg-card p-3 space-y-3">
+            <p className="text-xs font-medium text-muted-foreground">
+                Loading time
+            </p>
+            {hasSavedTimes && (
+                <p className="text-[0.7rem] text-muted-foreground">
+                    Last saved:{' '}
+                    {startDisplay}
+                    {endDisplay ? ` → ${endDisplay}` : ''}
+                </p>
+            )}
+            <div className="grid gap-3 md:grid-cols-2">
+                <div className="space-y-1">
+                    <Label htmlFor="loading_start_time">
+                        Loading start time
+                    </Label>
+                    <Input
+                        id="loading_start_time"
+                        type="datetime-local"
+                        value={data.loading_start_time}
+                        onChange={(e) =>
+                            setData('loading_start_time', e.target.value)
+                        }
+                    />
+                    <InputError message={errors.loading_start_time} />
+                </div>
+                <div className="space-y-1">
+                    <Label htmlFor="loading_end_time">
+                        Loading end time
+                    </Label>
+                    <Input
+                        id="loading_end_time"
+                        type="datetime-local"
+                        value={data.loading_end_time}
+                        onChange={(e) =>
+                            setData('loading_end_time', e.target.value)
+                        }
+                    />
+                    <InputError message={errors.loading_end_time} />
+                </div>
+            </div>
+            <div className="pt-1">
+                <Button
+                    type="button"
+                    size="sm"
+                    disabled={processing}
+                    onClick={() => put(`/rakes/${rakeId}/loading-times`)}
+                >
+                    Save loading times
+                </Button>
+                {flash?.success === 'Loading times updated.' && (
+                    <span className="ml-3 text-xs text-emerald-600">
+                        Saved.
+                    </span>
+                )}
+            </div>
+        </div>
+    );
+}
+
 export function RakeWorkflow({ rake, demurrage_rate_per_mt_hour }: RakeWorkflowProps) {
     const [rakeData, setRakeData] = useState(rake);
     useEffect(() => {
@@ -127,11 +244,68 @@ export function RakeWorkflow({ rake, demurrage_rate_per_mt_hour }: RakeWorkflowP
     // Workflow step completion checks
     const isTxrCompleted = rakeData.txr?.status === 'completed';
     const wagonLoadings = rakeData.wagonLoadings ?? [];
-    const fitWagonCount = rakeData.wagons.filter(w => !w.is_unfit).length;
-    const isWagonLoadingCompleted = wagonLoadings.length > 0 && wagonLoadings.length === fitWagonCount;
+    const fitWagons = rakeData.wagons.filter(w => !w.is_unfit);
+    const positivelyLoadedWagonIds = new Set(
+        wagonLoadings
+            .filter(l => Number(l.loaded_quantity_mt) > 0)
+            .map(l => l.wagon_id),
+    );
+    const isWagonLoadingCompleted =
+        fitWagons.length > 0 &&
+        fitWagons.every(w => positivelyLoadedWagonIds.has(w.id));
     const isGuardApproved = rakeData.guardInspections?.[0]?.is_approved;
     const isWeighmentCompleted = rakeData.weighments?.[0]?.status === 'success';
     const hasRrDocument = !!rakeData.rrDocuments?.length;
+
+    const progressSteps: Array<{
+        id: string;
+        label: string;
+        description: string;
+        status: 'completed' | 'pending';
+    }> = [
+        {
+            id: 'indent',
+            label: 'Indent creation',
+            description: 'Indent created from the incoming PDF.',
+            status: 'completed',
+        },
+        {
+            id: 'rake',
+            label: 'Rake creation',
+            description: 'Rake created and linked to the indent.',
+            status: 'completed',
+        },
+        {
+            id: 'txr',
+            label: 'TXR',
+            description: 'Train Examination Report recorded for this rake.',
+            status: isTxrCompleted ? 'completed' : 'pending',
+        },
+        {
+            id: 'loading',
+            label: 'Wagon loading',
+            description: 'All fit wagons have loading records.',
+            status: isWagonLoadingCompleted ? 'completed' : 'pending',
+        },
+        {
+            id: 'guard',
+            label: 'Guard inspection',
+            description: 'Guard inspection completed and approved.',
+            status: isGuardApproved ? 'completed' : 'pending',
+        },
+        {
+            id: 'weighment',
+            label: 'Rake weighment',
+            description: 'At least one successful rake weighment exists.',
+            status: isWeighmentCompleted ? 'completed' : 'pending',
+        },
+        {
+            id: 'rr',
+            label: 'Railway receipt (RR)',
+            description: 'RR document created and linked to this rake.',
+            status: hasRrDocument ? 'completed' : 'pending',
+        },
+    ];
 
     // Disable logic based on workflow
     // const disableWagonLoading = !isTxrCompleted;
@@ -151,6 +325,52 @@ export function RakeWorkflow({ rake, demurrage_rate_per_mt_hour }: RakeWorkflowP
 
     return (
         <div className="space-y-4">
+            {/* Inline high-level progress checklist */}
+            <div className="rounded-lg border bg-card p-4 space-y-3">
+                <p className="text-xs font-medium text-muted-foreground">
+                    Overall progress
+                </p>
+                <ol className="space-y-3">
+                    {progressSteps.map((step, index) => {
+                        const isCompleted = step.status === 'completed';
+
+                        return (
+                            <li key={step.id} className="flex items-start gap-3">
+                                <div
+                                    className={
+                                        'mt-0.5 flex h-6 w-6 items-center justify-center rounded-full border text-[0.65rem] ' +
+                                        (isCompleted
+                                            ? 'border-emerald-500 bg-emerald-500 text-white'
+                                            : 'border-muted-foreground/40 text-muted-foreground')
+                                    }
+                                >
+                                    {isCompleted ? (
+                                        <Check className="h-3 w-3" />
+                                    ) : (
+                                        index + 1
+                                    )}
+                                </div>
+                                <div>
+                                    <div
+                                        className={
+                                            'text-sm font-medium ' +
+                                            (isCompleted
+                                                ? 'text-emerald-700 dark:text-emerald-400'
+                                                : 'text-foreground')
+                                        }
+                                    >
+                                        {`Step ${index + 1}: ${step.label}`}
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">
+                                        {step.description}
+                                    </p>
+                                </div>
+                            </li>
+                        );
+                    })}
+                </ol>
+            </div>
+
             <Accordion type="multiple" /* defaultValue={['txr']} */ className="w-full">
                 {/* 1. TXR */}
                 <AccordionItem value="txr">
@@ -198,24 +418,27 @@ export function RakeWorkflow({ rake, demurrage_rate_per_mt_hour }: RakeWorkflowP
                         </div>
                     </AccordionTrigger>
                     <AccordionContent>
-                        <WagonLoadingWorkflow
-                            rake={rakeData}
-                            disabled={disableWagonLoading}
-                            onWagonLoadingsSaved={(loadings) =>
-                                setRakeData((prev) => ({
-                                    ...prev,
-                                    wagonLoadings: loadings,
-                                }))
-                            }
-                            onWagonUpdated={(wagonId, updates) =>
-                                setRakeData((prev) => ({
-                                    ...prev,
-                                    wagons: prev.wagons.map((w) =>
-                                        w.id === wagonId ? { ...w, wagon_number: updates.wagon_number } : w
-                                    ),
-                                }))
-                            }
-                        />
+                        <LoadingTimesForm rakeId={rakeData.id} loadingStart={rakeData.loading_start_time} loadingEnd={rakeData.loading_end_time} />
+                        <div className="mt-4">
+                            <WagonLoadingWorkflow
+                                rake={rakeData}
+                                disabled={disableWagonLoading}
+                                onWagonLoadingsSaved={(loadings) =>
+                                    setRakeData((prev) => ({
+                                        ...prev,
+                                        wagonLoadings: loadings,
+                                    }))
+                                }
+                                onWagonUpdated={(wagonId, updates) =>
+                                    setRakeData((prev) => ({
+                                        ...prev,
+                                        wagons: prev.wagons.map((w) =>
+                                            w.id === wagonId ? { ...w, wagon_number: updates.wagon_number } : w
+                                        ),
+                                    }))
+                                }
+                            />
+                        </div>
                     </AccordionContent>
                 </AccordionItem>
 

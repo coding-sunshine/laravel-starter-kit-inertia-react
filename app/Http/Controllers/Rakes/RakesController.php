@@ -99,6 +99,10 @@ final class RakesController extends Controller
             $rakeArray['guardInspections'] = $rakeArray['guard_inspections'];
         }
 
+        if (array_key_exists('wagon_loadings', $rakeArray)) {
+            $rakeArray['wagonLoadings'] = $rakeArray['wagon_loadings'];
+        }
+
         return Inertia::render('rakes/show', [
             'rake' => $rakeArray,
             'wagonTypes' => $wagonTypes,
@@ -295,6 +299,44 @@ final class RakesController extends Controller
 
         return to_route('rakes.show', $rake)
             ->with('success', 'Loading timer stopped.');
+    }
+
+    public function updateLoadingTimes(Request $request, Rake $rake): RedirectResponse|JsonResponse
+    {
+        $validated = $request->validate([
+            'loading_start_time' => ['nullable', 'date'],
+            'loading_end_time' => ['nullable', 'date', 'after_or_equal:loading_start_time'],
+        ]);
+
+        $freeMinutes = SectionTimer::query()
+            ->where('section_name', 'loading')
+            ->value('free_minutes') ?? 180;
+
+        $start = array_key_exists('loading_start_time', $validated) && $validated['loading_start_time'] !== null
+            ? new DateTimeImmutable($validated['loading_start_time'])
+            : null;
+
+        $end = array_key_exists('loading_end_time', $validated) && $validated['loading_end_time'] !== null
+            ? new DateTimeImmutable($validated['loading_end_time'])
+            : null;
+
+        $rake->update([
+            'loading_start_time' => $start,
+            'loading_end_time' => $end,
+            'loading_date' => $start ? $start->format('Y-m-d') : null,
+            'loading_free_minutes' => $freeMinutes,
+        ]);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'loading_start_time' => $rake->loading_start_time?->toIso8601String(),
+                'loading_end_time' => $rake->loading_end_time?->toIso8601String(),
+                'loading_date' => $rake->loading_date?->toDateString(),
+            ]);
+        }
+
+        return to_route('rakes.show', $rake)
+            ->with('success', 'Loading times updated.');
     }
 
     /**

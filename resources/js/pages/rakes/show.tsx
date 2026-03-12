@@ -786,16 +786,6 @@ export default function RakesShow({
                             </CardTitle>
                         </CardHeader>
                     </Card>
-                    {/* Loading timer when placement_time and loading_free_minutes exist on Rake */}
-                    {rake.placement_time && rake.loading_free_minutes != null && (
-                        <LoadingTimerCard
-                            load={{
-                                placement_time: rake.placement_time,
-                                free_time_minutes: rake.loading_free_minutes,
-                                status: rake.state === 'ready_for_dispatch' ? 'completed' : 'in_progress',
-                            }}
-                        />
-                    )}
                 </div>
 
                 {/* Workflow steps (TXR, Loading, Guard, Weighment, etc.) */}

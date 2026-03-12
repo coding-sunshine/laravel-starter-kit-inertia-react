@@ -120,26 +120,7 @@ export function WagonLoadingWorkflow({
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const [timerStart, setTimerStart] = useState<string | null>(rake.loading_start_time ?? null);
-    const [loadingEndTime, setLoadingEndTime] = useState<string | null>(rake.loading_end_time ?? null);
-    const [freeMinutes, setFreeMinutes] = useState<number>(
-        rake.loading_free_minutes ?? rake.loading_section_free_minutes ?? 180
-    );
-    const [remainingSeconds, setRemainingSeconds] = useState<number>(0);
-    const [overtimeSeconds, setOvertimeSeconds] = useState<number>(0);
-
-    const warningMinutes = rake.loading_warning_minutes ?? 0;
-    const remainingMinutes = Math.floor(remainingSeconds / 60);
-    const isInWarning = remainingSeconds > 0 && warningMinutes > 0 && remainingMinutes <= warningMinutes;
-    const isOvertime = remainingSeconds <= 0 && timerStart != null;
-
-    const isStopped =
-        (timerStart != null && loadingEndTime != null) ||
-        (rake.loading_start_time != null && rake.loading_end_time != null);
-    const startMs = timerStart ? new Date(timerStart).getTime() : rake.loading_start_time ? new Date(rake.loading_start_time).getTime() : 0;
-    const endMs = loadingEndTime ? new Date(loadingEndTime).getTime() : rake.loading_end_time ? new Date(rake.loading_end_time).getTime() : 0;
-    const totalMinutesStopped = startMs && endMs ? Math.round((endMs - startMs) / 60_000) : 0;
-    const extraMinutesStopped = Math.max(0, totalMinutesStopped - freeMinutes);
+    const isStopped = false;
 
     useEffect(() => {
         const nextRows: LoadingRow[] =
@@ -164,12 +145,23 @@ export function WagonLoadingWorkflow({
 
     const loaders = useMemo(() => rake.siding?.loaders ?? [], [rake.siding?.loaders]);
 
-    const loadedWagonIds = useMemo(
-        () => new Set(existingLoadings.map((l) => l.wagon_id)),
+    const positivelyLoadedWagonIds = useMemo(
+        () =>
+            new Set(
+                existingLoadings
+                    .filter((l) => Number(l.loaded_quantity_mt) > 0)
+                    .map((l) => l.wagon_id)
+            ),
         [existingLoadings]
     );
-    const unloadedWagons = fitWagons.filter((w) => !loadedWagonIds.has(w.id));
+    const unloadedWagons = fitWagons.filter((w) => !positivelyLoadedWagonIds.has(w.id));
     const isCompleted = fitWagons.length > 0 && unloadedWagons.length === 0;
+
+    const [editMode, setEditMode] = useState(!isCompleted);
+
+    useEffect(() => {
+        setEditMode(!isCompleted);
+    }, [isCompleted]);
 
     const handleSave = async () => {
         setError(null);
@@ -323,129 +315,15 @@ export function WagonLoadingWorkflow({
     };
 
     const getStatusIcon = () => {
-        if (isStopped) return <CheckCircle className="h-4 w-4 text-green-600" />;
         if (isCompleted) return <CheckCircle className="h-4 w-4 text-green-600" />;
         if (existingLoadings.length > 0) return <Loader className="h-4 w-4 text-blue-600" />;
         return <Clock className="h-4 w-4" />;
     };
 
     const getStatusText = () => {
-        if (isStopped) return 'Completed';
-        if (isCompleted) return 'In Progress';
+        if (isCompleted) return 'Completed';
         if (existingLoadings.length > 0) return 'In Progress';
         return 'Not Started';
-    };
-
-    const hasTimer = !!timerStart;
-    const displayFreeMinutes = timerStart
-        ? freeMinutes
-        : (rake.loading_section_free_minutes ?? rake.loading_free_minutes ?? 180);
-    const timerLabel =
-        displayFreeMinutes >= 60 && displayFreeMinutes % 60 === 0
-            ? `Start ${displayFreeMinutes / 60}-hour Timer`
-            : `Start ${displayFreeMinutes}m Timer`;
-
-    useEffect(() => {
-        if (!timerStart) {
-            setRemainingSeconds(0);
-            setOvertimeSeconds(0);
-            return;
-        }
-        const startTime = new Date(timerStart).getTime();
-        const freeSeconds = freeMinutes * 60;
-        const tick = () => {
-            const nowMs = Date.now();
-            const elapsed = Math.floor((nowMs - startTime) / 1000);
-            const remaining = Math.max(0, freeSeconds - elapsed);
-            setRemainingSeconds(remaining);
-            setOvertimeSeconds(remaining <= 0 ? elapsed - freeSeconds : 0);
-        };
-        tick();
-        const id = window.setInterval(tick, 1000);
-        return () => window.clearInterval(id);
-    }, [timerStart, freeMinutes]);
-
-    const startTimer = async () => {
-        setError(null);
-        try {
-            const response = await fetch(`/rakes/${rake.id}/loading/start`, {
-                method: 'POST',
-                headers: {
-                    Accept: 'application/json',
-                    ...getCsrfHeaders(),
-                },
-            });
-            const data = (await response.json().catch(() => null)) as
-                | { loading_start_time?: string | null; loading_free_minutes?: number | null }
-                | null;
-            if (!response.ok) {
-                setError('Failed to start loading timer.');
-                return;
-            }
-            setTimerStart(data?.loading_start_time ?? null);
-            setFreeMinutes(data?.loading_free_minutes ?? 180);
-        } catch {
-            setError('Failed to start loading timer.');
-        }
-    };
-
-    const resetTimer = async () => {
-        const resetLabel =
-            displayFreeMinutes >= 60 && displayFreeMinutes % 60 === 0
-                ? `${displayFreeMinutes / 60} hours`
-                : `${displayFreeMinutes} minutes`;
-        if (!window.confirm(`Reset loading timer for another ${resetLabel}?`)) {
-            return;
-        }
-        setError(null);
-        try {
-            const response = await fetch(`/rakes/${rake.id}/loading/reset`, {
-                method: 'POST',
-                headers: {
-                    Accept: 'application/json',
-                    ...getCsrfHeaders(),
-                },
-            });
-            const data = (await response.json().catch(() => null)) as
-                | { loading_start_time?: string | null; loading_end_time?: string | null }
-                | null;
-            if (!response.ok) {
-                setError('Failed to reset loading timer.');
-                return;
-            }
-            setTimerStart(data?.loading_start_time ?? null);
-            setLoadingEndTime(data?.loading_end_time ?? null);
-        } catch {
-            setError('Failed to reset loading timer.');
-        }
-    };
-
-    const stopTimer = async () => {
-        setError(null);
-        try {
-            const response = await fetch(`/rakes/${rake.id}/loading/stop`, {
-                method: 'POST',
-                headers: {
-                    Accept: 'application/json',
-                    ...getCsrfHeaders(),
-                },
-            });
-            const data = (await response.json().catch(() => null)) as
-                | { loading_start_time?: string | null; loading_end_time?: string | null; loading_free_minutes?: number | null }
-                | null;
-            if (!response.ok) {
-                setError('Failed to stop loading timer.');
-                return;
-            }
-            if (data?.loading_end_time != null) {
-                setLoadingEndTime(data.loading_end_time);
-                if (data.loading_free_minutes != null) {
-                    setFreeMinutes(data.loading_free_minutes);
-                }
-            }
-        } catch {
-            setError('Failed to stop loading timer.');
-        }
     };
 
     return (
@@ -460,77 +338,25 @@ export function WagonLoadingWorkflow({
                         <div className="flex items-center gap-2">
                             {getStatusIcon()}
                             <Badge variant={isCompleted ? 'default' : 'secondary'}>{getStatusText()}</Badge>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs">
-                            {isStopped ? (
-                                <div className="flex flex-col items-end gap-0.5">
-                                    <span>
-                                        Total time: <strong>{totalMinutesStopped}</strong> minutes
-                                    </span>
-                                    <span className={extraMinutesStopped > 0 ? 'text-red-600 font-medium' : ''}>
-                                        Extra (beyond free time): <strong>{extraMinutesStopped}</strong> minutes
-                                    </span>
-                                </div>
-                            ) : hasTimer ? (
-                                <>
-                                    <span
-                                        className={
-                                            isInWarning
-                                                ? 'font-medium text-red-600'
-                                                : isOvertime
-                                                  ? 'font-medium text-red-600'
-                                                  : undefined
-                                        }
-                                    >
-                                        {isOvertime ? (
-                                            <>
-                                                Free time over — Overtime:{' '}
-                                                {Math.floor(overtimeSeconds / 60)}m {overtimeSeconds % 60}s
-                                            </>
-                                        ) : (
-                                            <>
-                                                Timer: {Math.floor(remainingSeconds / 60)}m {remainingSeconds % 60}s
-                                                left
-                                            </>
-                                        )}
-                                    </span>
-                                    <Button
-                                        type="button"
-                                        size="xs"
-                                        variant="outline"
-                                        onClick={stopTimer}
-                                        disabled={disabled}
-                                    >
-                                        Stop
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        size="xs"
-                                        variant="outline"
-                                        onClick={resetTimer}
-                                        disabled={disabled}
-                                    >
-                                        Reset
-                                    </Button>
-                                </>
-                            ) : (
+                            {isCompleted && (
                                 <Button
                                     type="button"
                                     size="xs"
                                     variant="outline"
-                                    onClick={startTimer}
-                                    disabled={disabled}
+                                    onClick={() => setEditMode((prev) => !prev)}
+                                    disabled={saving}
                                 >
-                                    {timerLabel}
+                                    {editMode ? 'Cancel edit' : 'Edit'}
                                 </Button>
                             )}
                         </div>
+                        <div className="flex items-center gap-2 text-xs" />
                     </div>
                 </CardTitle>
                 <CardDescription>Load each wagon with specified quantity</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-                {!isCompleted && (
+                {editMode && (
                     <div>
                         <div className="flex items-center justify-between mb-2">
                             <Label className="text-base font-medium">Add Wagon Loadings</Label>
@@ -801,39 +627,6 @@ export function WagonLoadingWorkflow({
                                 Changes are saved automatically.
                             </div>
                         </form>
-                    </div>
-                )}
-
-                {isCompleted && (
-                    <div className="space-y-4">
-                        <div className="grid gap-4 md:grid-cols-2">
-                            <div>
-                                <Label>Total Wagons Loaded</Label>
-                                <p className="text-2xl font-bold">{existingLoadings.length}</p>
-                            </div>
-                            <div>
-                                <Label>Total Quantity</Label>
-                                <p className="text-2xl font-bold">
-                                    {existingLoadings
-                                        .reduce(
-                                            (sum, l) => sum + parseFloat(l.loaded_quantity_mt || '0'),
-                                            0
-                                        )
-                                        .toFixed(2)}{' '}
-                                    MT
-                                </p>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-green-600">
-                            <CheckCircle className="h-4 w-4" />
-                            All wagons loaded successfully
-                        </div>
-                    </div>
-                )}
-
-                {disabled && !isCompleted && (
-                    <div className="text-center py-4 text-sm text-muted-foreground">
-                        Complete TXR to enable wagon loading
                     </div>
                 )}
             </CardContent>

@@ -195,6 +195,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::post('rakes/{rake}/loading/start', [RakesController::class, 'startLoadingTimer'])->name('rakes.loading.start');
     Route::post('rakes/{rake}/loading/reset', [RakesController::class, 'resetLoadingTimer'])->name('rakes.loading.reset');
     Route::post('rakes/{rake}/loading/stop', [RakesController::class, 'stopLoadingTimer'])->name('rakes.loading.stop');
+    Route::put('rakes/{rake}/loading-times', [RakesController::class, 'updateLoadingTimes'])->name('rakes.loading-times.update');
     Route::put('rakes/{rake}/wagons/{wagon}', [RakeWagonController::class, 'update'])->name('rakes.wagons.update');
     Route::put('rakes/{rake}/wagons-bulk', [RakeWagonController::class, 'bulkUpdate'])->name('rakes.wagons.bulk-update');
     Route::put('rakes/{rake}/txr', [RakeTxrController::class, 'update'])->name('rakes.txr.update');
