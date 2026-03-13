@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Events\CoalStockUpdated;
 use App\Models\DailyVehicleEntry;
 use App\Models\Siding;
 use App\Models\StockLedger;
@@ -44,7 +45,11 @@ final readonly class DailyVehicleEntryService
         $oldStatus = $entry->status;
         $newStatus = $this->determineStatus($entry, $data);
 
-        return DB::transaction(function () use ($entry, $data, $oldStatus, $newStatus): DailyVehicleEntry {
+        $ledgerChanged = ($oldStatus === 'completed' && $newStatus === 'draft')
+            || ($oldStatus !== 'completed' && $newStatus === 'completed')
+            || ($oldStatus === 'completed' && $newStatus === 'completed');
+
+        $updated = DB::transaction(function () use ($entry, $data, $oldStatus, $newStatus): DailyVehicleEntry {
             $entry->update([
                 ...$data,
                 'status' => $newStatus,
@@ -66,6 +71,16 @@ final readonly class DailyVehicleEntryService
 
             return $entry->fresh();
         });
+
+        if ($ledgerChanged) {
+            $balance = (float) (StockLedger::query()
+                ->where('siding_id', $updated->siding_id)
+                ->latest('id')
+                ->value('closing_balance_mt') ?? 0);
+            event(new CoalStockUpdated($updated->siding_id, $balance));
+        }
+
+        return $updated;
     }
 
     public function markCompleted(DailyVehicleEntry $entry): DailyVehicleEntry
@@ -100,6 +115,11 @@ final readonly class DailyVehicleEntryService
 
     }
 
+    /**
+     * Create a stock_ledgers receipt row for this completed daily vehicle entry.
+     * Opening balance: when no ledger row exists for this siding, opening = 0 (first ever transaction).
+     * Otherwise opening = previous row's closing_balance_mt (running balance).
+     */
     private function createStockLedgerEntry(DailyVehicleEntry $entry): void
     {
         $grossWt = (float) ($entry->gross_wt ?? 0);
@@ -115,6 +135,7 @@ final readonly class DailyVehicleEntryService
             ->latest('id')
             ->first();
 
+        // No prior ledger for this siding => opening 0 (first transaction). Else use last row's closing.
         $openingBalance = $lastLedger
             ? (float) $lastLedger->closing_balance_mt
             : 0.0;
@@ -124,6 +145,7 @@ final readonly class DailyVehicleEntryService
             'transaction_type' => 'receipt',
             'vehicle_arrival_id' => null,
             'rake_id' => null,
+            'daily_vehicle_entry_id' => $entry->id,
             'quantity_mt' => $netWeight,
             'opening_balance_mt' => $openingBalance,
             'closing_balance_mt' => round($openingBalance + $netWeight, 2),
@@ -153,12 +175,18 @@ final readonly class DailyVehicleEntryService
 
     private function deleteStockLedgerEntry(DailyVehicleEntry $entry): void
     {
-        StockLedger::query()
-            ->where('siding_id', $entry->siding_id)
-            ->where('transaction_type', 'receipt')
-            ->where('reference_number', $entry->e_challan_no ?? "DVE-{$entry->id}")
-            ->where('remarks', 'LIKE', "%Daily entry #{$entry->id}%")
-            ->delete();
+        $query = StockLedger::query()->where('siding_id', $entry->siding_id)
+            ->where('transaction_type', 'receipt');
+
+        $query->where(function ($q) use ($entry): void {
+            $q->where('daily_vehicle_entry_id', $entry->id)
+                ->orWhere(function ($q2) use ($entry): void {
+                    $q2->where('reference_number', $entry->e_challan_no ?? "DVE-{$entry->id}")
+                        ->where('remarks', 'LIKE', "%Daily entry #{$entry->id}%");
+                });
+        });
+
+        $query->delete();
     }
 
     private function exportAllShifts(string $date, Siding $siding): string

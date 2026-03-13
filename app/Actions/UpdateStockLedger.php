@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
+use App\Events\CoalStockUpdated;
 use App\Models\Siding;
 use App\Models\StockLedger;
 use App\Models\VehicleArrival;
@@ -53,6 +54,8 @@ final readonly class UpdateStockLedger
             // Update CoalStock for this siding
             $this->updateCoalStockBalance($siding->id, $newBalance);
 
+            event(new CoalStockUpdated($siding->id, $newBalance));
+
             return $ledger;
         });
     }
@@ -84,6 +87,8 @@ final readonly class UpdateStockLedger
             ]);
 
             $this->updateCoalStockBalance($siding->id, $newBalance);
+
+            event(new CoalStockUpdated($siding->id, $newBalance));
 
             return $ledger;
         });
@@ -122,6 +127,8 @@ final readonly class UpdateStockLedger
             // Update CoalStock
             $this->updateCoalStockBalance($siding->id, $newBalance);
 
+            event(new CoalStockUpdated($siding->id, $newBalance));
+
             return $ledger;
         });
     }
@@ -153,6 +160,8 @@ final readonly class UpdateStockLedger
 
             // Update CoalStock
             $this->updateCoalStockBalance($siding->id, $newBalance);
+
+            event(new CoalStockUpdated($siding->id, $newBalance));
 
             return $ledger;
         });

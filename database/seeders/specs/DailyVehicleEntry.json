@@ -96,6 +96,11 @@
             "type": "string",
             "nullable": true,
             "default": null
+        },
+        "tare_wt_two": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {
@@ -110,6 +115,10 @@
         "updater": {
             "type": "belongsTo",
             "model": "Updater"
+        },
+        "stockLedger": {
+            "type": "hasOne",
+            "model": "StockLedger"
         }
     },
     "value_hints": {

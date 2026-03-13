@@ -71,6 +71,11 @@
             "type": "timestamp",
             "nullable": true,
             "default": null
+        },
+        "daily_vehicle_entry_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {
@@ -85,6 +90,10 @@
         "rake": {
             "type": "belongsTo",
             "model": "Rake"
+        },
+        "dailyVehicleEntry": {
+            "type": "belongsTo",
+            "model": "DailyVehicleEntry"
         },
         "creator": {
             "type": "belongsTo",

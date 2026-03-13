@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Models\DailyVehicleEntry;
+use App\Models\VehicleWorkorder;
 use App\Services\DailyVehicleEntryService;
 use App\Services\ShiftValidationService;
 use Illuminate\Http\JsonResponse;
@@ -118,6 +119,7 @@ final class DailyVehicleEntryController extends Controller
             'transport_name' => 'nullable|string|max:255',
             'gross_wt' => 'nullable|numeric|min:0',
             'tare_wt' => 'nullable|numeric|min:0',
+            'tare_wt_two' => 'nullable|numeric|min:0',
             'wb_no' => 'nullable|string|max:255',
             'd_challan_no' => 'nullable|string|max:255',
             'challan_mode' => 'nullable|in:offline,online',
@@ -193,6 +195,31 @@ final class DailyVehicleEntryController extends Controller
             'date' => $entry->entry_date,
             'shift' => $entry->shift,
         ])->with('success', 'Entry deleted successfully.');
+    }
+
+    public function lookupVehicle(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'vehicle_no' => 'required|string|max:255',
+        ]);
+
+        $vehicleNo = $validated['vehicle_no'];
+
+        $workorder = VehicleWorkorder::query()
+            ->where('vehicle_no', $vehicleNo)
+            ->latest('id')
+            ->first();
+
+        if ($workorder === null) {
+            return response()->json([
+                'message' => 'Vehicle workorder not found.',
+            ], 404);
+        }
+
+        return response()->json([
+            'tare_wt' => $workorder->tare_weight ?? null,
+            'transport_name' => $workorder->transport_name ?? null,
+        ]);
     }
 
     public function export(Request $request): Response|RedirectResponse

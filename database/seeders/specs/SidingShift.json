@@ -53,7 +53,16 @@
             "default": null
         }
     },
-    "relationships": [],
+    "relationships": {
+        "siding": {
+            "type": "belongsTo",
+            "model": "Siding"
+        },
+        "users": {
+            "type": "belongsTo",
+            "model": "User"
+        }
+    },
     "value_hints": {
         "shift_name": {
             "type": "name",

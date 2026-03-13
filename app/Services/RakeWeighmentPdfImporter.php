@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Actions\ApplyWeighmentPenaltiesAction;
 use App\Models\Rake;
 use App\Models\RakeWagonWeighment;
 use App\Models\RakeWeighment;
@@ -16,7 +17,8 @@ use Throwable;
 final readonly class RakeWeighmentPdfImporter
 {
     public function __construct(
-        private WeighmentPdfImporter $importer
+        private WeighmentPdfImporter $importer,
+        private ApplyWeighmentPenaltiesAction $applyWeighmentPenalties,
     ) {}
 
     /**
@@ -82,19 +84,12 @@ final readonly class RakeWeighmentPdfImporter
                     $seq = (int) ($row['sequence'] ?? 0);
                     $wagonNumber = mb_trim((string) ($row['wagon_number'] ?? ''));
                     $wagon = $wagonsBySequence[$seq] ?? $wagonsByNumber[$wagonNumber] ?? null;
-                    if (! $wagon) {
-                        Log::warning('RakeWeighmentPdfImporter: no matching wagon for row', [
-                            'sequence' => $seq,
-                            'wagon_number' => $wagonNumber,
-                        ]);
-
-                        continue;
-                    }
 
                     RakeWagonWeighment::query()->create([
                         'rake_weighment_id' => $weighment->id,
-                        'wagon_id' => $wagon->id,
-                        'wagon_sequence' => $seq ?: $wagon->wagon_sequence,
+                        'wagon_id' => $wagon?->id,
+                        'wagon_number' => $wagonNumber !== '' ? $wagonNumber : $wagon?->wagon_number,
+                        'wagon_sequence' => $seq ?: $wagon?->wagon_sequence,
                         'wagon_type' => $row['wagon_type'] ?? null,
                         'axles' => $row['axles'] ?? null,
                         'cc_capacity_mt' => $row['cc_capacity_mt'] ?? null,
@@ -114,6 +109,8 @@ final readonly class RakeWeighmentPdfImporter
                     'matched' => $matched,
                     'total_rows' => count($wagonRows),
                 ]);
+
+                $this->applyWeighmentPenalties->handle($rake, $weighment);
 
                 return $weighment->fresh(['rakeWagonWeighments.wagon']);
             });

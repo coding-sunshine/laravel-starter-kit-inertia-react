@@ -15,6 +15,7 @@ final class AppliedPenalty extends Model
         'penalty_type_id',
         'rake_id',
         'wagon_id',
+        'wagon_number',
         'quantity',
         'distance',
         'rate',

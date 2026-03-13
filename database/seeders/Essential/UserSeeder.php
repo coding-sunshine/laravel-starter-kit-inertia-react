@@ -17,6 +17,7 @@ final class UserSeeder extends Seeder
         'RolesAndPermissionsSeeder',
         'RakeManagementRolePermissionSeeder',
         'SidingSeeder',
+        'SidingShiftSeeder',
     ];
 
     /**
@@ -25,112 +26,128 @@ final class UserSeeder extends Seeder
      */
     public function run(): void
     {
-        // Create Super Admin
-        $superAdmin = \App\Models\User::query()->firstOrCreate(['email' => 'superadmin@rrmcs.local'], [
-            'name' => 'Super Administrator',
+        // === RRMMS-specific seed data (roles: super-admin, admin, user, viewer) ===
+        $this->seedRrmmsUsers();
+    }
+
+    private function seedRrmmsUsers(): void
+    {
+        $pakur = \App\Models\Siding::query()->where('code', 'PKUR')->first();
+        $dumka = \App\Models\Siding::query()->where('code', 'DUMK')->first();
+        $kurwa = \App\Models\Siding::query()->where('code', 'KURWA')->first();
+        $allSidings = \App\Models\Siding::query()->get();
+
+        if ($pakur === null || $dumka === null || $kurwa === null) {
+            return;
+        }
+
+        // Superadmin (global)
+        $superAdmin = \App\Models\User::query()->firstOrCreate(['email' => 'superadmin@rmms.local'], [
+            'name' => 'Super Admin',
             'password' => bcrypt('password'),
             'email_verified_at' => now(),
             'onboarding_completed' => true,
         ]);
-        $superAdmin->assignRole('super_admin');
+        $superAdmin->syncRoles(['super-admin']);
 
-        // Set default organization owner if org exists (created by SidingSeeder with owner_id null)
-        \App\Models\Organization::query()->where('slug', 'default')->whereNull('owner_id')->update(['owner_id' => $superAdmin->id]);
-
-        // Create Management User
-        $management = \App\Models\User::query()->firstOrCreate(['email' => 'manager@rrmcs.local'], [
-            'name' => 'Management Officer',
+        // Dispatch manage admin (truck admin) – access to all sidings for dispatch-related screens
+        $dispatchAdmin = \App\Models\User::query()->firstOrCreate(['email' => 'dispatch.admin@rmms.local'], [
+            'name' => 'Dispatch Manage Admin',
             'password' => bcrypt('password'),
             'email_verified_at' => now(),
             'onboarding_completed' => true,
         ]);
-        $management->assignRole('management');
+        $dispatchAdmin->syncRoles(['dispatch-manage-admin']);
+        if ($allSidings->isNotEmpty()) {
+            $dispatchAdmin->sidings()->syncWithoutDetaching(
+                $allSidings->pluck('id')->mapWithKeys(
+                    fn (int $id): array => [$id => ['is_primary' => false]]
+                )->all()
+            );
+        }
 
-        // Get the default organization and sidings
-        $org = \App\Models\Organization::query()->where('slug', 'default')->first();
-        $sidings = \App\Models\Siding::all();
+        // Admin siding in-charge users
+        $this->createAdminForSiding($pakur, 'pakur.sidingincharge@rmms.local', 'Pakur Siding Incharge');
+        $this->createAdminForSiding($kurwa, 'kurwa.sidingincharge@rmms.local', 'Kurwa Siding Incharge');
+        $this->createAdminForSiding($dumka, 'dumka.sidingincharge@rmms.local', 'Dumka Siding Incharge');
 
-        if ($org && $sidings->count() > 0) {
-            // Create In-Charge users for each siding
-            foreach ($sidings as $siding) {
-                $inCharge = \App\Models\User::query()->firstOrCreate(['email' => "incharge_{$siding->code}@rrmcs.local"], [
-                    'name' => "Siding In-Charge ({$siding->code})",
-                    'password' => bcrypt('password'),
-                    'email_verified_at' => now(),
-                    'onboarding_completed' => true,
-                ]);
-                $inCharge->assignRole('siding_in_charge');
+        // Shift users (3 per siding)
+        $this->createShiftUsersForSiding($pakur);
+        $this->createShiftUsersForSiding($kurwa);
+        $this->createShiftUsersForSiding($dumka);
 
-                // Map user to siding
-                $inCharge->sidings()->syncWithoutDetaching([
-                    $siding->id => ['is_primary' => true],
-                ]);
+        // Viewer
+        $viewer = \App\Models\User::query()->firstOrCreate(['email' => 'viewer@rmms.local'], [
+            'name' => 'Dashboard Viewer',
+            'password' => bcrypt('password'),
+            'email_verified_at' => now(),
+            'onboarding_completed' => true,
+        ]);
+        $viewer->syncRoles(['viewer']);
+    }
 
-                // Create Operator users for each siding
-                $operator = \App\Models\User::query()->firstOrCreate(['email' => "operator_{$siding->code}@rrmcs.local"], [
-                    'name' => "Siding Operator ({$siding->code})",
-                    'password' => bcrypt('password'),
-                    'email_verified_at' => now(),
-                    'onboarding_completed' => true,
-                ]);
-                $operator->assignRole('siding_operator');
+    private function createAdminForSiding(\App\Models\Siding $siding, string $email, string $name): void
+    {
+        $admin = \App\Models\User::query()->firstOrCreate(['email' => $email], [
+            'name' => $name,
+            'password' => bcrypt('password'),
+            'email_verified_at' => now(),
+            'onboarding_completed' => true,
+            'siding_id' => $siding->id,
+        ]);
 
-                // Map user to siding
-                $operator->sidings()->syncWithoutDetaching([
-                    $siding->id => ['is_primary' => true],
-                ]);
+        if ($admin->siding_id !== $siding->id) {
+            $admin->siding_id = $siding->id;
+            $admin->save();
+        }
+
+        $admin->syncRoles(['admin']);
+
+        $admin->sidings()->syncWithoutDetaching([
+            $siding->id => ['is_primary' => true],
+        ]);
+    }
+
+    private function createShiftUsersForSiding(\App\Models\Siding $siding): void
+    {
+        $baseSlug = str($siding->name)->before(' ')->lower()->toString();
+
+        $shifts = \App\Models\SidingShift::query()
+            ->where('siding_id', $siding->id)
+            ->orderBy('sort_order')
+            ->get();
+
+        foreach ($shifts as $index => $shift) {
+            $number = $index + 1;
+
+            $email = "{$baseSlug}.shift{$number}@rmms.local";
+            $name = sprintf('%s Shift %d User', str($baseSlug)->title(), $number);
+
+            $user = \App\Models\User::query()->firstOrCreate(['email' => $email], [
+                'name' => $name,
+                'password' => bcrypt('password'),
+                'email_verified_at' => now(),
+                'onboarding_completed' => true,
+                'siding_id' => $siding->id,
+            ]);
+
+            if ($user->siding_id !== $siding->id) {
+                $user->siding_id = $siding->id;
+                $user->save();
             }
 
-            // Create Finance user
-            $finance = \App\Models\User::query()->firstOrCreate(['email' => 'finance@rrmcs.local'], [
-                'name' => 'Finance Officer',
-                'password' => bcrypt('password'),
-                'email_verified_at' => now(),
-                'onboarding_completed' => true,
-            ]);
-            $finance->assignRole('finance');
+            $user->syncRoles(['user']);
 
-            // Map finance user to all sidings
-            $finance->sidings()->syncWithoutDetaching(
-                $sidings->pluck('id')->toArray()
-            );
-
-            // Create Mine Operator (view-only; may use app to see dispatch status)
-            $mineOperator = \App\Models\User::query()->firstOrCreate(['email' => 'mine_operator@rrmcs.local'], [
-                'name' => 'Mine Operator',
-                'password' => bcrypt('password'),
-                'email_verified_at' => now(),
-                'onboarding_completed' => true,
+            $user->sidings()->syncWithoutDetaching([
+                $siding->id => ['is_primary' => true],
             ]);
-            $mineOperator->assignRole('mine_operator');
-            $mineOperator->sidings()->syncWithoutDetaching(
-                $sidings->pluck('id')->toArray()
-            );
-        }
 
-        // Assign management and super admin to all sidings
-        foreach ($sidings as $siding) {
-            $superAdmin->sidings()->syncWithoutDetaching([
-                $siding->id => ['is_primary' => false],
-            ]);
-            $management->sidings()->syncWithoutDetaching([
-                $siding->id => ['is_primary' => false],
+            $user->sidingShifts()->syncWithoutDetaching([
+                $shift->id => [
+                    'assigned_at' => now(),
+                    'is_active' => true,
+                ],
             ]);
         }
-
-        // Ensure all RRMCS seeded users can access dashboard (skip onboarding)
-        $rrmcsEmails = [
-            'superadmin@rrmcs.local',
-            'manager@rrmcs.local',
-            'finance@rrmcs.local',
-            'mine_operator@rrmcs.local',
-        ];
-        foreach ($sidings as $siding) {
-            $rrmcsEmails[] = "incharge_{$siding->code}@rrmcs.local";
-            $rrmcsEmails[] = "operator_{$siding->code}@rrmcs.local";
-        }
-        \App\Models\User::query()
-            ->whereIn('email', array_unique($rrmcsEmails))
-            ->update(['onboarding_completed' => true]);
     }
 }

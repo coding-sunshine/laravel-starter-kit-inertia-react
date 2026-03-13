@@ -730,15 +730,16 @@ final readonly class WeighmentPdfImporter
 
         foreach ($wagonRows as $row) {
             $wagonNumber = (string) ($row['wagon_number'] ?? '');
-            if ($wagonNumber === '' || ! isset($wagonsByNumber[$wagonNumber])) {
+            if ($wagonNumber === '') {
                 continue;
             }
 
-            $wagon = $wagonsByNumber[$wagonNumber];
+            $wagon = $wagonsByNumber[$wagonNumber] ?? null;
 
             RakeWagonWeighment::query()->create([
                 'rake_weighment_id' => $weighment->id,
-                'wagon_id' => $wagon->id,
+                'wagon_id' => $wagon?->id,
+                'wagon_number' => $wagonNumber,
                 'wagon_sequence' => (int) ($row['sequence'] ?? 0),
                 'wagon_type' => $row['wagon_type'] ?? null,
                 'axles' => $row['axles'] ?? null,

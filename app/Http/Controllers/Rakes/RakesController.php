@@ -11,6 +11,7 @@ use App\Models\SectionTimer;
 use App\Models\Siding;
 use App\Models\Wagon;
 use App\Models\WagonType;
+use Carbon\Carbon;
 use Closure;
 use DateTimeImmutable;
 use Illuminate\Http\JsonResponse;
@@ -43,6 +44,8 @@ final class RakesController extends Controller
             'guardInspections',
             'rrDocument',
             'penalties',
+            'appliedPenalties.penaltyType',
+            'appliedPenalties.wagon',
         ]);
 
         $demurrageRemainingMinutes = null;
@@ -107,6 +110,10 @@ final class RakesController extends Controller
             $rakeArray['rrDocuments'] = [$rakeArray['rr_document']];
         } else {
             $rakeArray['rrDocuments'] = [];
+        }
+
+        if (array_key_exists('applied_penalties', $rakeArray)) {
+            $rakeArray['appliedPenalties'] = $rakeArray['applied_penalties'];
         }
 
         return Inertia::render('rakes/show', [
@@ -246,9 +253,12 @@ final class RakesController extends Controller
             ->where('section_name', 'loading')
             ->value('free_minutes') ?? 180;
 
+        $now = now();
+
         $rake->update([
-            'loading_start_time' => now(),
+            'loading_start_time' => $now,
             'loading_end_time' => null,
+            'loading_date' => $now->toDateString(),
             'loading_free_minutes' => $freeMinutes,
         ]);
 
@@ -275,6 +285,7 @@ final class RakesController extends Controller
         $rake->update([
             'loading_start_time' => null,
             'loading_end_time' => null,
+            'loading_date' => null,
             'loading_free_minutes' => null,
         ]);
 
@@ -326,10 +337,15 @@ final class RakesController extends Controller
             ? new DateTimeImmutable($validated['loading_end_time'])
             : null;
 
+        // Use app timezone for loading_date so dashboard date filter matches (avoids UTC date shifting by a day).
+        $loadingDate = $start
+            ? Carbon::parse($start->format('c'))->timezone(config('app.timezone'))->toDateString()
+            : null;
+
         $rake->update([
             'loading_start_time' => $start,
             'loading_end_time' => $end,
-            'loading_date' => $start ? $start->format('Y-m-d') : null,
+            'loading_date' => $loadingDate,
             'loading_free_minutes' => $freeMinutes,
         ]);
 

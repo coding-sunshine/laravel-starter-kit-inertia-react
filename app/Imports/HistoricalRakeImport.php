@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Imports;
 
-use App\Models\AppliedPenalty;
 use App\Models\PenaltyType;
 use App\Models\Rake;
+use App\Models\RrPenaltySnapshot;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Collection;
@@ -325,14 +325,16 @@ final class HistoricalRakeImport implements ToCollection
             return;
         }
 
-        $timestamp = $loadingDate instanceof Carbon ? $loadingDate : null;
-
-        AppliedPenalty::create([
-            'penalty_type_id' => $this->penaltyTypes[$code],
+        RrPenaltySnapshot::query()->create([
+            'rr_document_id' => null,
             'rake_id' => $rake->id,
+            'penalty_code' => $code,
             'amount' => $amount,
-            'created_at' => $timestamp,
-            'updated_at' => $timestamp,
+            'wagon_number' => null,
+            'wagon_sequence' => null,
+            'meta' => [
+                'source' => 'historical_excel',
+            ],
         ]);
 
         echo "Penalty {$code} added: {$amount}\n";

@@ -5,10 +5,9 @@ declare(strict_types=1);
 namespace Database\Seeders\Essential;
 
 use App\Models\PenaltyType;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
-class PenaltyTypesSeeder extends Seeder
+final class PenaltyTypesSeeder extends Seeder
 {
     /**
      * Run the database seeds.
@@ -22,7 +21,7 @@ class PenaltyTypesSeeder extends Seeder
                 'category' => 'overloading',
                 'calculation_type' => 'formula_based',
                 'description' => 'Penalty for excess weight in individual wagons',
-                'default_rate' => 0.00,
+                'default_rate' => 1500.00,
                 'is_active' => true,
             ],
             [
@@ -31,7 +30,7 @@ class PenaltyTypesSeeder extends Seeder
                 'category' => 'overloading',
                 'calculation_type' => 'formula_based',
                 'description' => 'Penalty for average overloading across wagons',
-                'default_rate' => 0.00,
+                'default_rate' => 1200.00,
                 'is_active' => true,
             ],
             [
@@ -40,7 +39,7 @@ class PenaltyTypesSeeder extends Seeder
                 'category' => 'overloading',
                 'calculation_type' => 'per_mt',
                 'description' => 'Charge for penal loading excess weight',
-                'default_rate' => 0.00,
+                'default_rate' => 100.00,
                 'is_active' => true,
             ],
             [
@@ -49,7 +48,7 @@ class PenaltyTypesSeeder extends Seeder
                 'category' => 'time_service',
                 'calculation_type' => 'per_hour',
                 'description' => 'Charge for delay beyond free time',
-                'default_rate' => 0.00,
+                'default_rate' => 50.00,
                 'is_active' => true,
             ],
             [
@@ -58,7 +57,7 @@ class PenaltyTypesSeeder extends Seeder
                 'category' => 'operational',
                 'calculation_type' => 'fixed',
                 'description' => 'Charge for weighment services',
-                'default_rate' => 0.00,
+                'default_rate' => 20.00,
                 'is_active' => true,
             ],
             [
@@ -67,7 +66,7 @@ class PenaltyTypesSeeder extends Seeder
                 'category' => 'operational',
                 'calculation_type' => 'fixed',
                 'description' => 'Charge for uneven loading of wagons',
-                'default_rate' => 0.00,
+                'default_rate' => 200.00,
                 'is_active' => true,
             ],
             [
@@ -76,7 +75,7 @@ class PenaltyTypesSeeder extends Seeder
                 'category' => 'operational',
                 'calculation_type' => 'per_mt',
                 'description' => 'Charge for spillage or loose loading',
-                'default_rate' => 0.00,
+                'default_rate' => 150.00,
                 'is_active' => true,
             ],
             [

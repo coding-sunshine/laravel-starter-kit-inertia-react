@@ -18,6 +18,7 @@ use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -253,6 +254,38 @@ final class User extends Authenticatable implements ExportsPersonalData, Filamen
     public function defaultOrganization(): ?Organization
     {
         return $this->organizations()->wherePivot('is_default', true)->first();
+    }
+
+    /**
+     * The user's primary siding, when explicitly assigned via siding_id.
+     *
+     * @return BelongsTo<Siding, $this>
+     */
+    public function siding(): BelongsTo
+    {
+        return $this->belongsTo(Siding::class);
+    }
+
+    /**
+     * Shifts (per siding) this user is assigned to.
+     *
+     * @return BelongsToMany<SidingShift, $this>
+     */
+    public function sidingShifts(): BelongsToMany
+    {
+        return $this->belongsToMany(SidingShift::class, 'siding_shift_user')
+            ->withPivot(['assigned_at', 'is_active'])
+            ->withTimestamps();
+    }
+
+    /**
+     * Active siding shifts for this user.
+     *
+     * @return BelongsToMany<SidingShift, $this>
+     */
+    public function activeSidingShifts(): BelongsToMany
+    {
+        return $this->sidingShifts()->wherePivot('is_active', true);
     }
 
     /**
