@@ -21,6 +21,8 @@ interface BarChartProps<T extends Record<string, unknown>> {
     formatTooltip?: (value: number) => string;
     barSize?: number;
     className?: string;
+    /** Enable subtle entrance animation for bars (dashboard default). */
+    animated?: boolean;
 }
 
 export function BarChart<T extends Record<string, unknown>>({
@@ -35,6 +37,7 @@ export function BarChart<T extends Record<string, unknown>>({
     formatTooltip,
     barSize,
     className,
+    animated = true,
 }: BarChartProps<T>) {
     const isVertical = layout === 'vertical';
 
@@ -121,8 +124,11 @@ export function BarChart<T extends Record<string, unknown>>({
                     <Bar
                         dataKey={yKey}
                         fill={color}
-                        radius={[4, 4, 0, 0]}
+                        radius={[6, 6, 0, 0]}
                         barSize={barSize}
+                        isAnimationActive={animated}
+                        animationDuration={500}
+                        animationEasing="ease-out"
                     />
                 </RechartsBarChart>
             </ResponsiveContainer>

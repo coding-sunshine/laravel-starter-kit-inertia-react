@@ -58,6 +58,16 @@ final class RrDocument extends Model implements HasMedia
         return $this->hasMany(RrCharge::class);
     }
 
+    public function wagonSnapshots(): HasMany
+    {
+        return $this->hasMany(RrWagonSnapshot::class);
+    }
+
+    public function penaltySnapshots(): HasMany
+    {
+        return $this->hasMany(RrPenaltySnapshot::class);
+    }
+
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

@@ -21,7 +21,7 @@ import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
-import { ChevronDown, ChevronRight, Clock, Package, ShieldCheck, Train, Weight } from 'lucide-react';
+import { ChevronDown, ChevronRight, Clock, Package, ShieldCheck, Train } from 'lucide-react';
 import { useRakeLoadBroadcasting } from '@/hooks/use-rake-load-broadcasting';
 
 interface Siding {
@@ -134,8 +134,7 @@ const STEPS = [
     { key: 'placement', label: 'Placement', short: '1' },
     { key: 'wagon_loading', label: 'Wagon Loading', short: '2' },
     { key: 'guard_inspection', label: 'Guard Inspection', short: '3' },
-    { key: 'weighment', label: 'In-Motion Weighment', short: '4' },
-    { key: 'dispatch', label: 'Dispatch', short: '5' },
+    { key: 'dispatch', label: 'Dispatch', short: '4' },
 ] as const;
 
 function formatRemaining(m: number): string {
@@ -233,34 +232,29 @@ function HorizontalStepper({
     loadState,
     load,
     attemptNo,
-    hasWeighmentPassed,
     isCompleted,
     onStepClick,
 }: {
     loadState: LoadState;
     load: RakeLoad | null;
     attemptNo: number;
-    hasWeighmentPassed: boolean;
     isCompleted: boolean;
     onStepClick?: (stepKey: string) => void;
 }) {
     const stepIndex = STEPS.findIndex((s) => s.key === loadState.active_step);
-    const failedStep = loadState.failure_reason === 'overload' ? 'weighment' : loadState.failure_reason === 'speed' ? 'weighment' : null;
 
     return (
         <div className="flex flex-wrap items-center gap-1 border-b pb-4">
             {STEPS.map((step, idx) => {
                 const isActive = loadState.active_step === step.key;
                 const isPast = stepIndex > idx;
-                const isFailed = failedStep === step.key;
                 const isLocked = !load && step.key !== 'placement';
-                const showAttempt = (step.key === 'wagon_loading' || step.key === 'weighment') && attemptNo > 1;
+                const showAttempt = step.key === 'wagon_loading' && attemptNo > 1;
                 const isClickable = isCompleted || (!isLocked && (isPast || isActive));
 
                 let borderClass = 'border-transparent';
                 if (isActive) borderClass = 'border-b-4 border-blue-500';
-                else if (isPast && !isFailed) borderClass = 'border-b-4 border-green-500';
-                else if (isFailed) borderClass = 'border-b-4 border-red-500';
+                else if (isPast) borderClass = 'border-b-4 border-green-500';
                 else if (isLocked) borderClass = 'border-transparent';
 
                 return (
@@ -361,12 +355,6 @@ function WagonLoadingStep({
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-                {loadState.failure_reason === 'overload' && (
-                    <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/50 dark:text-red-400">
-                        Weighment failed due to overload. Unload excess coal and record loading again for Attempt #{attemptNo}.
-                    </div>
-                )}
-
                 {previousAttempts.length > 0 && (
                     <Collapsible>
                         <CollapsibleTrigger asChild>
@@ -574,7 +562,7 @@ function GuardInspectionStep({ rake, load, loadState }: { rake: RakeData; load: 
                     Guard Inspection
                 </CardTitle>
                 <CardDescription>
-                    Guard inspects rake surroundings. Approve to proceed to weighment. Remarks required if rejected.
+                    Guard inspects rake surroundings. Approve to proceed to dispatch. Remarks required if rejected.
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -670,219 +658,6 @@ function GuardInspectionStep({ rake, load, loadState }: { rake: RakeData; load: 
                     <div className="flex gap-2">
                         <Button type="submit" disabled={processing}>
                             {data.is_approved ? 'Approve' : 'Reject'}
-                        </Button>
-                        <Button type="button" variant="outline" onClick={() => reset()}>
-                            Cancel
-                        </Button>
-                    </div>
-                </form>
-            </CardContent>
-        </Card>
-    );
-}
-
-function WeighmentStep({ rake, load, loadState }: { rake: RakeData; load: RakeLoad; loadState: LoadState }) {
-    const { errors } = usePage<{ errors?: Record<string, string> }>().props;
-    const { data, setData, post, processing, reset } = useForm({
-        train_speed_kmph: '',
-        wagon_weights: rake.wagons.map((w) => ({ wagon_id: w.id, gross_weight_mt: '' })),
-    });
-
-    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-
-        post(`/rakes/${rake.id}/load/weighment`, {
-            preserveScroll: true,
-            onSuccess: () => reset(),
-        });
-    };
-
-    const weighments = load.weighments ?? [];
-    const latestWeighment = weighments[weighments.length - 1];
-    const hasFailedSpeed = latestWeighment?.status === 'failed_speed';
-    const hasFailedOverload = latestWeighment?.status === 'failed_overload';
-
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                    <Weight className="size-5" />
-                    In-Motion Weighment
-                </CardTitle>
-                <CardDescription>
-                    Train speed must be 5–7 km/h. Gross weight must not exceed PCC. Attempt #{loadState.attempt_no}.
-                </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                {weighments.length > 0 && (
-                    <div className="space-y-2">
-                        <Label>Weighment History (including failed attempts)</Label>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Attempt</TableHead>
-                                    <TableHead>Time</TableHead>
-                                    <TableHead>Speed (km/h)</TableHead>
-                                    <TableHead>Total (MT)</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead>Overloaded Wagons</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {weighments.map((w) => {
-                                    const wagonWeighments = w.wagon_weighments ?? [];
-                                    const overloadedWagons = wagonWeighments
-                                        .filter((ww) => ww.is_overloaded)
-                                        .map((ww) => rake.wagons.find((wag) => wag.id === ww.wagon_id)?.wagon_number ?? `#${ww.wagon_id}`)
-                                        .join(', ');
-                                    return (
-                                        <TableRow
-                                            key={w.id}
-                                            className={
-                                                w.status === 'failed_speed' || w.status === 'failed_overload'
-                                                    ? 'bg-red-50 dark:bg-red-950/30'
-                                                    : ''
-                                            }
-                                        >
-                                            <TableCell className="font-medium">#{w.attempt_no}</TableCell>
-                                            <TableCell>{new Date(w.weighment_time).toLocaleString()}</TableCell>
-                                            <TableCell>{w.train_speed_kmph}</TableCell>
-                                            <TableCell>{w.total_weight_mt ?? '–'}</TableCell>
-                                            <TableCell>
-                                                <span
-                                                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                                                        w.status === 'passed'
-                                                            ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-400'
-                                                            : w.status === 'failed_speed'
-                                                              ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-400'
-                                                              : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-400'
-                                                    }`}
-                                                >
-                                                    {w.status === 'passed'
-                                                        ? 'Passed'
-                                                        : w.status === 'failed_speed'
-                                                          ? 'Failed (speed)'
-                                                          : 'Failed (overload)'}
-                                                </span>
-                                            </TableCell>
-                                            <TableCell className="text-sm">
-                                                {w.status === 'failed_overload' && overloadedWagons
-                                                    ? overloadedWagons
-                                                    : '–'}
-                                            </TableCell>
-                                        </TableRow>
-                                    );
-                                })}
-                            </TableBody>
-                        </Table>
-                    </div>
-                )}
-
-                {hasFailedSpeed && (
-                    <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/50 dark:text-red-400">
-                        Speed was outside 5–7 km/h. Please retry with valid speed.
-                    </div>
-                )}
-
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <div>
-                        <Label htmlFor="train_speed_kmph">Train Speed (km/h) — must be 5–7</Label>
-                        <Input
-                            id="train_speed_kmph"
-                            type="number"
-                            step="0.1"
-                            min="5"
-                            max="7"
-                            value={data.train_speed_kmph}
-                            onChange={(e) => setData('train_speed_kmph', e.target.value)}
-                            required
-                            className="w-32"
-                        />
-                        <InputError message={errors?.train_speed_kmph} />
-                    </div>
-
-                    <div>
-                        <Label>Wagon Gross Weights (MT)</Label>
-                        <div className="overflow-x-auto rounded border">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Wagon Number</TableHead>
-                                        <TableHead>PCC Weight</TableHead>
-                                        <TableHead>Gross Weight (input)</TableHead>
-                                        <TableHead>Overloaded?</TableHead>
-                                        <TableHead>Status</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {rake.wagons.map((wagon, idx) => {
-                                        const gross = data.wagon_weights[idx]?.gross_weight_mt;
-                                        const pcc = wagon.pcc_weight_mt ? parseFloat(wagon.pcc_weight_mt) : null;
-                                        const isOverloaded =
-                                            pcc !== null && gross && parseFloat(gross) > pcc;
-                                        const latestWagonWeighment = hasFailedOverload
-                                            ? latestWeighment?.wagon_weighments?.find((ww) => ww.wagon_id === wagon.id)
-                                            : null;
-                                        const wasOverloaded = latestWagonWeighment?.is_overloaded ?? false;
-
-                                        return (
-                                            <TableRow
-                                                key={wagon.id}
-                                                className={
-                                                    wagon.is_unfit
-                                                        ? 'border-l-4 border-red-500 bg-red-50 dark:bg-red-950/30'
-                                                        : isOverloaded || wasOverloaded
-                                                          ? 'bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400'
-                                                          : ''
-                                                }
-                                            >
-                                                <TableCell className="font-medium">{wagon.wagon_number}</TableCell>
-                                                <TableCell>{wagon.pcc_weight_mt ?? '–'}</TableCell>
-                                                <TableCell>
-                                                    <Input
-                                                        type="number"
-                                                        step="0.01"
-                                                        min="0"
-                                                        value={gross}
-                                                        onChange={(e) => {
-                                                            const next = [...data.wagon_weights];
-                                                            next[idx] = { wagon_id: wagon.id, gross_weight_mt: e.target.value };
-                                                            setData('wagon_weights', next);
-                                                        }}
-                                                        className="h-8 w-24"
-                                                        required
-                                                    />
-                                                </TableCell>
-                                                <TableCell>
-                                                    {isOverloaded ? (
-                                                        <span className="font-medium text-red-600">Yes</span>
-                                                    ) : (
-                                                        <span className="text-muted-foreground">No</span>
-                                                    )}
-                                                </TableCell>
-                                                <TableCell>
-                                                    {isOverloaded ? (
-                                                        <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">
-                                                            Overloaded
-                                                        </span>
-                                                    ) : (
-                                                        <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
-                                                            OK
-                                                        </span>
-                                                    )}
-                                                </TableCell>
-                                            </TableRow>
-                                        );
-                                    })}
-                                </TableBody>
-                            </Table>
-                        </div>
-                        <InputError message={errors?.wagon_weights} />
-                    </div>
-
-                    <div className="flex gap-2">
-                        <Button type="submit" disabled={processing}>
-                            Record Weighment
                         </Button>
                         <Button type="button" variant="outline" onClick={() => reset()}>
                             Cancel
@@ -991,8 +766,6 @@ function DispatchStep({
 
 export default function RakesLoad({ rake, loadState, demurrage_rate_per_mt_hour = 50 }: Props) {
     const load = rake.rake_load ?? rake.rakeLoad;
-    const weighments = load?.weighments ?? [];
-    const hasWeighmentPassed = weighments.length > 0 && weighments.some((w) => w.status === 'passed');
     const isCompleted = load?.status === 'completed';
     const [activeStep, setActiveStep] = useState(loadState.active_step);
     const [liveLoadState, setLiveLoadState] = useState(loadState);
@@ -1004,7 +777,7 @@ export default function RakesLoad({ rake, loadState, demurrage_rate_per_mt_hour 
             console.log('Live load update received:', data);
             setLiveLoadState(data.load_state);
             setLiveLoad(data.rake_load);
-            
+
             // Update active step if not completed
             if (!isCompleted) {
                 setActiveStep(data.load_state.active_step);
@@ -1012,17 +785,10 @@ export default function RakesLoad({ rake, loadState, demurrage_rate_per_mt_hour 
         },
         onWagonLoadingUpdated: (data) => {
             console.log('Live wagon loading update:', data);
-            // Trigger a page reload to get fresh data
             router.reload({ only: ['rake', 'loadState'] });
         },
         onGuardInspectionUpdated: (data) => {
             console.log('Live guard inspection update:', data);
-            // Trigger a page reload to get fresh data
-            router.reload({ only: ['rake', 'loadState'] });
-        },
-        onWeighmentUpdated: (data) => {
-            console.log('Live weighment update:', data);
-            // Trigger a page reload to get fresh data
             router.reload({ only: ['rake', 'loadState'] });
         },
     });
@@ -1081,7 +847,6 @@ export default function RakesLoad({ rake, loadState, demurrage_rate_per_mt_hour 
                         loadState={{ ...currentLoadState, active_step: currentStep }}
                         load={currentLoad}
                         attemptNo={currentLoadState.attempt_no}
-                        hasWeighmentPassed={hasWeighmentPassed}
                         isCompleted={isCompleted}
                         onStepClick={handleStepClick}
                     />
@@ -1105,9 +870,6 @@ export default function RakesLoad({ rake, loadState, demurrage_rate_per_mt_hour 
                         )}
                         {currentStep === 'guard_inspection' && currentLoad && (
                             <GuardInspectionStep rake={rake} load={currentLoad} loadState={currentLoadState} />
-                        )}
-                        {currentStep === 'weighment' && currentLoad && (
-                            <WeighmentStep rake={rake} load={currentLoad} loadState={currentLoadState} />
                         )}
                         {currentStep === 'dispatch' && currentLoad && (
                             <DispatchStep

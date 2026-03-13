@@ -1,5 +1,4 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { router } from '@inertiajs/react';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -10,6 +9,10 @@ import { Check, Loader2, MoreHorizontal, Trash2, Edit, X } from 'lucide-react';
 interface DailyVehicleEntry {
   id: number;
   siding_id: number;
+  siding?: {
+    id: number;
+    name: string;
+  };
   entry_date: string;
   shift: number;
   e_challan_no: string | null;
@@ -29,16 +32,38 @@ interface DailyVehicleEntry {
   updated_at: string;
 }
 
+function getCsrfHeaders(): Record<string, string> {
+  const cookieMatch = document.cookie.match(/\bXSRF-TOKEN=([^;]+)/);
+  if (cookieMatch) {
+    return { 'X-XSRF-TOKEN': decodeURIComponent(cookieMatch[1].trim()) };
+  }
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  if (meta?.getAttribute('content')) {
+    return { 'X-CSRF-TOKEN': meta.getAttribute('content')! };
+  }
+  return {};
+}
+
 interface VehicleEntryRowProps {
   entry: DailyVehicleEntry;
   serialNumber: number;
   date: string;
   shift: number;
+  onEntryUpdated?: (entry: DailyVehicleEntry) => void;
+  onEntryDeleted?: (id: number) => void;
 }
 
-export default function VehicleEntryRow({ entry, serialNumber, date, shift }: VehicleEntryRowProps) {
+export default function VehicleEntryRow({
+  entry,
+  serialNumber,
+  date,
+  shift,
+  onEntryUpdated,
+  onEntryDeleted,
+}: VehicleEntryRowProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showContextMenu, setShowContextMenu] = useState(false);
 
@@ -67,25 +92,49 @@ export default function VehicleEntryRow({ entry, serialNumber, date, shift }: Ve
   // Single stable ref for the debounce timer
   const debounceTimerRef = useRef<NodeJS.Timeout>();
 
-  const save = useCallback(() => {
-    const dataToSave = formDataRef.current; // always fresh, no stale closure
-
+  const save = useCallback(async () => {
+    const dataToSave = formDataRef.current;
     setIsSaving(true);
     setShowSuccess(false);
-
-    router.patch(`/road-dispatch/daily-vehicle-entries/${entry.id}`, dataToSave, {
-      preserveScroll: true,
-      preserveState: true, // prevents Inertia from re-rendering and resetting local state
-      onSuccess: () => {
-        setIsSaving(false);
-        setShowSuccess(true);
-        setTimeout(() => setShowSuccess(false), 2000);
-      },
-      onError: () => {
-        setIsSaving(false);
-      },
-    });
-  }, [entry.id]);
+    setSaveError(null);
+    try {
+      const res = await fetch(`/road-dispatch/daily-vehicle-entries/${entry.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          ...getCsrfHeaders(),
+        },
+        body: JSON.stringify(dataToSave),
+        credentials: 'include',
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (res.status === 404) {
+          onEntryDeleted?.(entry.id);
+          return;
+        }
+        const msg =
+          (data as { message?: string }).message ??
+          (typeof (data as { errors?: Record<string, string[]> }).errors === 'object'
+            ? Object.values((data as { errors: Record<string, string[]> }).errors).flat().join(', ')
+            : null) ??
+          res.statusText ??
+          'Save failed';
+        setSaveError(res.status === 419 ? 'Session expired. Please refresh the page.' : msg);
+        return;
+      }
+      const updated = (data as { entry?: DailyVehicleEntry }).entry;
+      if (updated) onEntryUpdated?.(updated);
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 2000);
+    } catch {
+      setSaveError('Network error. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [entry.id, entry, onEntryUpdated, onEntryDeleted]);
 
   const debouncedSave = useCallback(() => {
     clearTimeout(debounceTimerRef.current);
@@ -125,37 +174,75 @@ export default function VehicleEntryRow({ entry, serialNumber, date, shift }: Ve
     );
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     setShowDetailModal(false);
-    if (confirm('Are you sure you want to delete this entry? This action cannot be undone.')) {
-      router.delete(`/road-dispatch/daily-vehicle-entries/${entry.id}`, {
-        preserveScroll: true,
-        preserveState: true,
-        onSuccess: () => {
-          // Entry will be removed from the list automatically
+    if (!confirm('Are you sure you want to delete this entry? This action cannot be undone.')) {
+      return;
+    }
+    setSaveError(null);
+    try {
+      const res = await fetch(`/road-dispatch/daily-vehicle-entries/${entry.id}`, {
+        method: 'DELETE',
+        headers: {
+          Accept: 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          ...getCsrfHeaders(),
         },
-        onError: () => {
-          alert('Error deleting entry. Please try again.');
-        },
+        credentials: 'include',
       });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (res.status === 404) {
+          onEntryDeleted?.(entry.id);
+          return;
+        }
+        const msg = (data as { message?: string }).message ?? 'Cannot delete this entry.';
+        setSaveError(msg);
+        alert(msg);
+        return;
+      }
+      const payload = data as { deleted?: boolean; id?: number };
+      if (payload.deleted && payload.id != null) {
+        onEntryDeleted?.(payload.id);
+      }
+    } catch {
+      setSaveError('Network error. Please try again.');
+      alert('Error deleting entry. Please try again.');
     }
   };
 
-  const handleMarkCompleted = () => {
+  const handleMarkCompleted = async () => {
     setIsSaving(true);
-
-    router.post(`/road-dispatch/daily-vehicle-entries/${entry.id}/complete`, {}, {
-      preserveScroll: true,
-      preserveState: true,
-      onSuccess: () => {
-        setIsSaving(false);
-        setShowSuccess(true);
-        setTimeout(() => setShowSuccess(false), 2000);
-      },
-      onError: () => {
-        setIsSaving(false);
-      },
-    });
+    setSaveError(null);
+    try {
+      const res = await fetch(`/road-dispatch/daily-vehicle-entries/${entry.id}/complete`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          ...getCsrfHeaders(),
+        },
+        body: JSON.stringify({}),
+        credentials: 'include',
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const msg =
+          (data as { message?: string }).message ??
+          (res.status === 419 ? 'Session expired. Please refresh the page.' : 'Failed to mark completed.');
+        setSaveError(msg);
+        return;
+      }
+      const updated = (data as { entry?: DailyVehicleEntry }).entry;
+      if (updated) onEntryUpdated?.(updated);
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 2000);
+    } catch {
+      setSaveError('Network error. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const formatDateTime = (dateTime: string) => {
@@ -176,78 +263,81 @@ export default function VehicleEntryRow({ entry, serialNumber, date, shift }: Ve
 
   return (
     <>
-      <TableRow 
-        className="group hover:bg-gray-50 relative"
+      <TableRow
+        className={`group relative ${entry.status === 'draft' ? 'bg-red-50/30 dark:bg-red-950/20' : ''}`}
         onMouseEnter={() => setShowContextMenu(true)}
         onMouseLeave={() => setShowContextMenu(false)}
       >
-        <TableCell className="font-medium">
+        <TableCell className="px-2 py-1 font-medium border-t border-r border-gray-300">
           <div className="flex items-center gap-2">
-            {/* Context menu button - shows on hover */}
             <div className={`opacity-0 group-hover:opacity-100 transition-opacity duration-200 ${showContextMenu ? 'opacity-100' : ''}`}>
               <Button
                 size="sm"
                 variant="ghost"
                 onClick={() => setShowDetailModal(true)}
-                className="h-8 w-8 p-0"
+                className="h-7 w-7 p-0 min-w-0"
                 title="More options"
               >
-                <MoreHorizontal className="h-4 w-4" />
+                <MoreHorizontal className="h-3 w-3" />
               </Button>
             </div>
             {serialNumber}
           </div>
         </TableCell>
 
-      <TableCell>
+        <TableCell className="px-2 py-1 text-muted-foreground text-xs whitespace-nowrap border-t border-r border-gray-300" title="Siding (read-only)">
+          {entry.siding?.name ?? '—'}
+        </TableCell>
+
+      <TableCell className="px-2 py-1 border-t border-r border-gray-300">
         <Input
           value={formData.e_challan_no}
           onChange={(e) => {
             updateField('e_challan_no', e.target.value);
             debouncedSave();
           }}
-          placeholder="E Challan No"
-          className="w-32"
+          placeholder="E-CH"
+          className="w-24 h-8 px-2 text-xs"
         />
       </TableCell>
 
-      <TableCell>
+      <TableCell className="px-2 py-1 border-t border-r border-gray-300">
         <Input
           value={formData.vehicle_no}
           onChange={(e) => {
             updateField('vehicle_no', e.target.value);
             debouncedSave();
           }}
-          placeholder="Vehicle No"
-          className="w-32"
+          placeholder="VEH"
+          className="w-24 h-8 px-2 text-xs"
         />
       </TableCell>
 
-      <TableCell>
+      <TableCell className="px-2 py-1 border-t border-r border-gray-300">
         <Input
           value={formData.trip_id_no}
           onChange={(e) => {
             updateField('trip_id_no', e.target.value);
             debouncedSave();
           }}
-          placeholder="Trip ID No"
-          className="w-32"
+          placeholder="TRIP"
+          className="w-20 h-8 px-2 text-xs"
         />
       </TableCell>
 
-      <TableCell>
+      <TableCell className="px-2 py-1 border-t border-r border-gray-300">
         <Input
           value={formData.transport_name}
           onChange={(e) => {
             updateField('transport_name', e.target.value);
             debouncedSave();
           }}
-          placeholder="Transport Name"
-          className="w-40"
+          placeholder="TRANS"
+          className="w-32 h-8 px-2 text-xs"
         />
       </TableCell>
 
-      <TableCell>
+      <TableCell className="px-2 py-1 border-t border-r border-gray-300">
         <Input
           type="number"
           step="0.01"
@@ -256,12 +346,12 @@ export default function VehicleEntryRow({ entry, serialNumber, date, shift }: Ve
             updateField('gross_wt', e.target.value);
             debouncedSave();
           }}
-          placeholder="Gross WT (G2)"
-          className="w-24"
+          placeholder="G2"
+          className="w-20 h-8 px-2 text-right text-xs"
         />
       </TableCell>
 
-      <TableCell>
+      <TableCell className="px-2 py-1 border-t border-r border-gray-300">
         <Input
           type="number"
           step="0.01"
@@ -270,56 +360,54 @@ export default function VehicleEntryRow({ entry, serialNumber, date, shift }: Ve
             updateField('tare_wt', e.target.value);
             debouncedSave();
           }}
-          placeholder="Tare WT (T1)"
-          className="w-24"
+          placeholder="T1"
+          className="w-20 h-8 px-2 text-right text-xs"
         />
       </TableCell>
 
-      <TableCell className="font-medium text-blue-600">
+      <TableCell className="px-2 py-1 font-medium text-blue-600 text-right text-xs border-t border-r border-gray-300">
         {calculateNetWeight()}
       </TableCell>
 
-      <TableCell className="text-sm text-gray-600">
+      <TableCell className="px-2 py-1 text-xs text-gray-600 border-t border-r border-gray-300">
         {formatDateTime(entry.reached_at)}
       </TableCell>
 
-      <TableCell>
+      <TableCell className="px-2 py-1 border-t border-r border-gray-300">
         <Input
           value={formData.wb_no}
           onChange={(e) => {
             updateField('wb_no', e.target.value);
             debouncedSave();
           }}
-          placeholder="WB No"
-          className="w-24"
+          placeholder="WB"
+          className="w-20 h-8 px-2 text-xs"
         />
       </TableCell>
 
-      <TableCell>
+      <TableCell className="px-2 py-1 border-t border-r border-gray-300">
         <Input
           value={formData.d_challan_no}
           onChange={(e) => {
             updateField('d_challan_no', e.target.value);
             debouncedSave();
           }}
-          placeholder="D Challan No"
-          className="w-32"
+          placeholder="D-CH"
+          className="w-24 h-8 px-2 text-xs"
         />
       </TableCell>
 
-      <TableCell>
+      <TableCell className="px-2 py-1 border-t border-r border-gray-300">
         <Select
           value={formData.challan_mode}
           onValueChange={(value) => {
             updateField('challan_mode', value as 'offline' | 'online');
-            // Save immediately on select change (no debounce needed)
             clearTimeout(debounceTimerRef.current);
-            // Small tick to let state + ref update before saving
             setTimeout(save, 50);
           }}
         >
-          <SelectTrigger className="w-28">
-            <SelectValue placeholder="Mode" />
+          <SelectTrigger className="w-20 h-8 text-xs px-2">
+            <SelectValue placeholder="MODE" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="offline">Offline</SelectItem>
@@ -328,20 +416,13 @@ export default function VehicleEntryRow({ entry, serialNumber, date, shift }: Ve
         </Select>
       </TableCell>
 
-      <TableCell>
+      <TableCell className="px-2 py-1 border-t border-gray-300">
         {entry.status === 'completed' ? (
-          <Badge variant="default">completed</Badge>
+          <Badge variant="default" className="text-xs px-2 py-0.5">Stock updated</Badge>
+        ) : hasMeaningfulValues() ? (
+          <Badge variant="secondary" className="text-xs px-2 py-0.5">In progress</Badge>
         ) : (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleMarkCompleted}
-            disabled={isSaving}
-            className="h-7 gap-1 text-xs text-green-700 border-green-300 hover:bg-green-50 hover:text-green-800"
-          >
-            {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
-            Complete
-          </Button>
+          <span className="text-xs text-muted-foreground">Empty</span>
         )}
       </TableCell>
       </TableRow>
@@ -462,6 +543,9 @@ export default function VehicleEntryRow({ entry, serialNumber, date, shift }: Ve
                 )}
               </div>
 
+              {saveError && (
+                <p className="text-sm text-destructive mb-2">{saveError}</p>
+              )}
               <div className="flex justify-end gap-2">
                 <Button
                   variant="outline"

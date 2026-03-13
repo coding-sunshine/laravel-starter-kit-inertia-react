@@ -223,6 +223,10 @@
             "type": "hasMany",
             "model": "WagonLoading"
         },
+        "rakeLoad": {
+            "type": "hasOne",
+            "model": "RakeLoad"
+        },
         "guardInspections": {
             "type": "hasMany",
             "model": "GuardInspection"

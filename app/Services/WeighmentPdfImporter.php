@@ -43,6 +43,33 @@ final readonly class WeighmentPdfImporter
     }
 
     /**
+     * Parse a weighment PDF for use with an existing rake (no Rake/Wagon creation).
+     * Returns parsed header, totals, wagon rows and the stored file path.
+     *
+     * @return array{stored_path: string, header: array<string, mixed>, totals: array<string, float|null>, wagon_rows: array<int, array<string, mixed>>}
+     */
+    public function parsePdfForRake(UploadedFile $pdf): array
+    {
+        $storedPath = $pdf->store('weighment-pdfs', 'public');
+        $absolutePath = storage_path('app/public/'.$storedPath);
+        $text = Pdf::getText($absolutePath, null, ['-layout']);
+        $lines = preg_split("/\r\n|\r|\n/", $text) ?: [];
+        $header = $this->parseHeader($lines);
+        $totals = $this->parseTotalsFooter($text);
+        $wagonRows = $this->parseWagonRows($lines);
+        if ($wagonRows === []) {
+            throw new InvalidArgumentException('No wagon rows detected in weighment PDF.');
+        }
+
+        return [
+            'stored_path' => $storedPath,
+            'header' => $header,
+            'totals' => $totals,
+            'wagon_rows' => $wagonRows,
+        ];
+    }
+
+    /**
      * Import a historical rake weighment from already-extracted PDF text.
      *
      * Exposed primarily for testing so we can bypass the external PDF binary.

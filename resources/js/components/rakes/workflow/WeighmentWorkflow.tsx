@@ -3,39 +3,25 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import InputError from '@/components/input-error';
-import { Scale, CheckCircle, Clock, AlertTriangle, Upload, FileText } from 'lucide-react';
-import { useForm, usePage } from '@inertiajs/react';
-import { useState } from 'react';
-
-interface Wagon {
-    id: number;
-    wagon_number: string;
-    wagon_sequence: number;
-    pcc_weight_mt: string | null;
-}
+import { Scale, CheckCircle, Clock, AlertTriangle, Upload, FileText, Trash2, Eye } from 'lucide-react';
+import { Link, router, useForm, usePage } from '@inertiajs/react';
+import { useMemo, useState } from 'react';
 
 interface WeighmentRecord {
     id: number;
     weighment_time: string;
-    total_weight_mt: string;
+    total_weight_mt: string | number | null;
     status: string | null;
-    train_speed_kmph: number;
+    train_speed_kmph: number | string | null;
     attempt_no: number;
-    wagonWeights?: Array<{
-        wagon_id: number;
-        gross_weight_mt: string;
-        net_weight_mt: string;
-        wagon: Wagon;
-    }>;
 }
 
 interface WeighmentWorkflowProps {
     rake: {
         id: number;
         state: string;
-        wagons: Wagon[];
+        wagons: Array<{ id: number }>;
         weighments?: WeighmentRecord[];
     };
     disabled: boolean;
@@ -47,7 +33,6 @@ export function WeighmentWorkflow({ rake, disabled }: WeighmentWorkflowProps) {
     
     const { data, setData, post, processing, reset } = useForm({
         weighment_pdf: null as File | null,
-        train_speed_kmph: '',
     });
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -60,12 +45,7 @@ export function WeighmentWorkflow({ rake, disabled }: WeighmentWorkflowProps) {
 
     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        const formData = new FormData();
-        if (pdfFile) {
-            formData.append('weighment_pdf', pdfFile);
-        }
-        formData.append('train_speed_kmph', data.train_speed_kmph);
-        
+
         post(`/rakes/${rake.id}/weighments`, {
             forceFormData: true,
             preserveScroll: true,
@@ -76,7 +56,13 @@ export function WeighmentWorkflow({ rake, disabled }: WeighmentWorkflowProps) {
         });
     };
 
-    const latestWeighment = rake.weighments?.[0];
+    const latestWeighment = useMemo(() => {
+        if (!rake.weighments || rake.weighments.length === 0) {
+            return undefined;
+        }
+
+        return [...rake.weighments].sort((a, b) => a.attempt_no - b.attempt_no)[rake.weighments.length - 1];
+    }, [rake.weighments]);
     const hasWeighment = !!latestWeighment;
     const isCompleted = hasWeighment && latestWeighment.status === 'success';
 
@@ -145,27 +131,6 @@ export function WeighmentWorkflow({ rake, disabled }: WeighmentWorkflowProps) {
                                 <InputError message={errors?.weighment_pdf} />
                             </div>
                             
-                            <div>
-                                <Label htmlFor="train_speed_kmph">Train Speed (km/h)</Label>
-                                <Input
-                                    id="train_speed_kmph"
-                                    name="train_speed_kmph"
-                                    type="number"
-                                    step="0.1"
-                                    min="5"
-                                    max="7"
-                                    value={data.train_speed_kmph}
-                                    onChange={(e) => setData('train_speed_kmph', e.target.value)}
-                                    placeholder="5-7 km/h required"
-                                    required
-                                    disabled={disabled}
-                                />
-                                <p className="text-xs text-muted-foreground mt-1">
-                                    Speed must be between 5-7 km/h for accurate weighment
-                                </p>
-                                <InputError message={errors?.train_speed_kmph} />
-                            </div>
-
                             <div className="flex justify-end space-x-2">
                                 <Button
                                     type="button"
@@ -204,60 +169,52 @@ export function WeighmentWorkflow({ rake, disabled }: WeighmentWorkflowProps) {
                             </div>
                         </div>
 
-                        {latestWeighment.wagonWeights && latestWeighment.wagonWeights.length > 0 && (
-                            <div>
-                                <Label className="text-base font-medium">Wagon Weights</Label>
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Wagon</TableHead>
-                                            <TableHead>Gross Weight (MT)</TableHead>
-                                            <TableHead>Net Weight (MT)</TableHead>
-                                            <TableHead>PCC Weight (MT)</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {latestWeighment.wagonWeights.map((wagonWeight) => (
-                                            <TableRow key={wagonWeight.wagon_id}>
-                                                <TableCell>
-                                                    {wagonWeight.wagon.wagon_number} (Pos {wagonWeight.wagon.wagon_sequence})
-                                                </TableCell>
-                                                <TableCell>{wagonWeight.gross_weight_mt}</TableCell>
-                                                <TableCell>{wagonWeight.net_weight_mt}</TableCell>
-                                                <TableCell>{wagonWeight.wagon.pcc_weight_mt || 'N/A'}</TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div
+                                className={`flex items-center gap-2 text-sm ${
+                                    isCompleted ? 'text-green-600' : 'text-orange-600'
+                                }`}
+                            >
+                                {isCompleted ? (
+                                    <>
+                                        <CheckCircle className="h-4 w-4" />
+                                        Weighment completed successfully
+                                    </>
+                                ) : (
+                                    <>
+                                        <AlertTriangle className="h-4 w-4" />
+                                        Weighment failed - attempt #{latestWeighment.attempt_no}
+                                    </>
+                                )}
                             </div>
-                        )}
-
-                        <div className={`flex items-center gap-2 text-sm ${
-                            isCompleted ? 'text-green-600' : 'text-orange-600'
-                        }`}>
-                            {isCompleted ? (
-                                <>
-                                    <CheckCircle className="h-4 w-4" />
-                                    Weighment completed successfully
-                                </>
-                            ) : (
-                                <>
-                                    <AlertTriangle className="h-4 w-4" />
-                                    Weighment failed - attempt #{latestWeighment.attempt_no}
-                                </>
-                            )}
-                        </div>
-
-                        {!isCompleted && (
-                            <div className="text-center">
-                                <Button 
-                                    onClick={() => window.location.reload()}
-                                    variant="outline"
+                            <div className="flex items-center gap-2">
+                                <Link
+                                    href={`/weighments/${latestWeighment.id}`}
+                                    className="inline-flex items-center rounded-md border px-3 py-1.5 text-xs font-medium hover:bg-muted"
                                 >
-                                    Try Again
+                                    <Eye className="mr-1.5 h-3.5 w-3.5" />
+                                    View data
+                                </Link>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                        if (!window.confirm('Delete all weighment data for this rake?')) {
+                                            return;
+                                        }
+
+                                        router.delete(`/rakes/${rake.id}/weighments`, {
+                                            preserveScroll: true,
+                                        });
+                                    }}
+                                    disabled={disabled || processing}
+                                >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete Weighment
                                 </Button>
                             </div>
-                        )}
+                        </div>
                     </div>
                 )}
 

@@ -137,6 +137,14 @@
             "type": "hasMany",
             "model": "RrCharge"
         },
+        "wagonSnapshots": {
+            "type": "hasMany",
+            "model": "WagonSnapshot"
+        },
+        "penaltySnapshots": {
+            "type": "hasMany",
+            "model": "PenaltySnapshot"
+        },
         "createdBy": {
             "type": "belongsTo",
             "model": "CreatedBy"

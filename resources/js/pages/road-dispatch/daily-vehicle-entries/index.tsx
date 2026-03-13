@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar, Plus, Download } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import ShiftTabs from './shift-tabs';
 import VehicleEntryTable from './vehicle-entry-table';
 
@@ -49,6 +50,18 @@ interface ShiftTime {
   end: string;
 }
 
+function getCsrfHeaders(): Record<string, string> {
+  const cookieMatch = document.cookie.match(/\bXSRF-TOKEN=([^;]+)/);
+  if (cookieMatch) {
+    return { 'X-XSRF-TOKEN': decodeURIComponent(cookieMatch[1].trim()) };
+  }
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  if (meta?.getAttribute('content')) {
+    return { 'X-CSRF-TOKEN': meta.getAttribute('content')! };
+  }
+  return {};
+}
+
 interface Props {
   entries: DailyVehicleEntry[];
   date: string;
@@ -57,14 +70,53 @@ interface Props {
   shiftStatus?: Record<number, ShiftStatus>;
   shiftTimes: Record<number, ShiftTime>;
   sidings: Siding[];
+  sidingId?: number | null;
 }
 
-export default function DailyVehicleEntriesIndex({ entries, date, activeShift, shiftSummary, shiftStatus, shiftTimes, sidings }: Props) {
+export default function DailyVehicleEntriesIndex({
+  entries: entriesProp,
+  date,
+  activeShift,
+  shiftSummary,
+  shiftStatus,
+  shiftTimes,
+  sidings,
+  sidingId: sidingIdProp,
+}: Props) {
+  const [entries, setEntries] = useState(() =>
+    Array.isArray(entriesProp) ? entriesProp : []
+  );
   const [selectedDate, setSelectedDate] = useState(date);
   const [activeShiftState, setActiveShiftState] = useState(activeShift);
-  const [selectedSidingId, setSelectedSidingId] = useState<number>(sidings[0]?.id || 1);
+  const [selectedSidingId, setSelectedSidingId] = useState<number | null>(
+    sidingIdProp ?? null
+  );
   const [exportShift, setExportShift] = useState<string>('all');
   const [isExporting, setIsExporting] = useState(false);
+  const [isAddingRow, setIsAddingRow] = useState(false);
+  const [addRowError, setAddRowError] = useState<string | null>(null);
+  const addingRowRef = useRef(false);
+
+  const entriesForSiding =
+    selectedSidingId == null
+      ? entries
+      : entries.filter((e) => e.siding_id === selectedSidingId);
+  const hasDraftEntry =
+    selectedSidingId == null
+      ? entries.some((e) => e.status === 'draft')
+      : entriesForSiding.some((e) => e.status === 'draft');
+
+  useEffect(() => {
+    setEntries(Array.isArray(entriesProp) ? entriesProp : []);
+  }, [entriesProp]);
+
+  useEffect(() => {
+    if (sidingIdProp !== undefined && sidingIdProp !== null) {
+      setSelectedSidingId(sidingIdProp);
+    } else if (sidingIdProp === null || sidingIdProp === undefined) {
+      setSelectedSidingId(null);
+    }
+  }, [sidingIdProp]);
 
   const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -74,11 +126,12 @@ export default function DailyVehicleEntriesIndex({ entries, date, activeShift, s
 
   const handleDateChange = (newDate: string) => {
     setSelectedDate(newDate);
-    router.get(
-      '/road-dispatch/daily-vehicle-entries',
-      { date: newDate, shift: activeShiftState },
-      { preserveState: true, preserveScroll: true }
-    );
+    const params: Record<string, string | number> = { date: newDate, shift: activeShiftState };
+    if (selectedSidingId != null) params.siding_id = selectedSidingId;
+    router.get('/road-dispatch/daily-vehicle-entries', params, {
+      preserveState: true,
+      preserveScroll: true,
+    });
   };
 
   const handleShiftChange = (shift: number) => {
@@ -96,15 +149,17 @@ export default function DailyVehicleEntriesIndex({ entries, date, activeShift, s
     }
 
     setActiveShiftState(shift);
-    router.get(
-      '/road-dispatch/daily-vehicle-entries',
-      { date: selectedDate, shift },
-      { preserveState: true, preserveScroll: true }
-    );
+    const params: Record<string, string | number> = { date: selectedDate, shift };
+    if (selectedSidingId != null) params.siding_id = selectedSidingId;
+    router.get('/road-dispatch/daily-vehicle-entries', params, {
+      preserveState: true,
+      preserveScroll: true,
+    });
   };
 
-  const handleAddRow = () => {
-    // Check if current shift is available for today
+  const handleAddRow = async (count: number = 1) => {
+    if (addingRowRef.current) return;
+    addingRowRef.current = true;
     if (shiftStatus && selectedDate === new Date().toISOString().split('T')[0]) {
       if (!shiftStatus[activeShiftState]?.is_available) {
         const messages = {
@@ -113,34 +168,66 @@ export default function DailyVehicleEntriesIndex({ entries, date, activeShift, s
           3: '3rd shift will be available after 2nd shift completion (after 22:00)',
         };
         alert(messages[activeShiftState as keyof typeof messages] || 'This shift is not available at the current time.');
+        addingRowRef.current = false;
         return;
       }
     }
 
-    // Store current scroll position
-    const scrollY = window.scrollY;
-    
-    router.post(
-      '/road-dispatch/daily-vehicle-entries',
-      {
-        siding_id: selectedSidingId,
-        entry_date: selectedDate,
-        shift: activeShiftState,
-      },
-      {
-        preserveState: true,
-        preserveScroll: true,
-        onSuccess: () => {
-          // Restore scroll position after page loads
-          setTimeout(() => {
-            window.scrollTo(0, scrollY);
-          }, 100);
-        },
-        onError: (errors) => {
-          console.error('Error adding row:', errors);
-        },
+    setAddRowError(null);
+    setIsAddingRow(true);
+    const newEntries: DailyVehicleEntry[] = [];
+    const payload = {
+      siding_id: selectedSidingId ?? sidings[0]?.id ?? 1,
+      entry_date: selectedDate,
+      shift: activeShiftState,
+    };
+    try {
+      for (let i = 0; i < count; i++) {
+        const res = await fetch('/road-dispatch/daily-vehicle-entries', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            ...getCsrfHeaders(),
+          },
+          body: JSON.stringify(payload),
+          credentials: 'include',
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          const msg = (data as { message?: string }).message ?? (data as { errors?: Record<string, string[]> }).errors ? Object.values((data as { errors: Record<string, string[]> }).errors).flat().join(', ') : res.statusText;
+          setAddRowError(msg ?? 'Failed to add row');
+          if (res.status === 419) {
+            setAddRowError('Session expired. Please refresh the page.');
+          }
+          addingRowRef.current = false;
+          return;
+        }
+        const newEntry = (data as { entry?: DailyVehicleEntry }).entry;
+        if (newEntry) {
+          newEntries.push(newEntry);
+        }
       }
+      if (newEntries.length > 0) {
+        setEntries((prev) => [...prev, ...newEntries]);
+      }
+    } catch {
+      setAddRowError('Network error. Please try again.');
+    } finally {
+      setIsAddingRow(false);
+      addingRowRef.current = false;
+    }
+  };
+
+  const handleEntryUpdated = (entry: DailyVehicleEntry) => {
+    setEntries((prev) =>
+      prev.some((e) => e.id === entry.id) ? prev.map((e) => (e.id === entry.id ? entry : e)) : prev
     );
+  };
+
+  const handleEntryDeleted = (id: number) => {
+    setEntries((prev) => prev.filter((e) => e.id !== id));
   };
 
   const handleExport = async () => {
@@ -213,11 +300,32 @@ export default function DailyVehicleEntriesIndex({ entries, date, activeShift, s
           <div className="flex gap-3">
             {/* Export Controls */}
             <div className="flex items-center gap-2">
-              <Select value={selectedSidingId.toString()} onValueChange={(value) => setSelectedSidingId(Number(value))}>
+              <Select
+                value={selectedSidingId == null ? 'all' : selectedSidingId.toString()}
+                onValueChange={(value) => {
+                  if (value === 'all') {
+                    setSelectedSidingId(null);
+                    router.get(
+                      '/road-dispatch/daily-vehicle-entries',
+                      { date: selectedDate, shift: activeShiftState },
+                      { preserveState: true, preserveScroll: true }
+                    );
+                  } else {
+                    const id = Number(value);
+                    setSelectedSidingId(id);
+                    router.get(
+                      '/road-dispatch/daily-vehicle-entries',
+                      { date: selectedDate, shift: activeShiftState, siding_id: id },
+                      { preserveState: true, preserveScroll: true }
+                    );
+                  }
+                }}
+              >
                 <SelectTrigger className="w-40">
                   <SelectValue placeholder="Select siding" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="all">All sidings</SelectItem>
                   {sidings.map((siding) => (
                     <SelectItem key={siding.id} value={siding.id.toString()}>
                       {siding.name}
@@ -246,10 +354,6 @@ export default function DailyVehicleEntriesIndex({ entries, date, activeShift, s
                 {isExporting ? 'Exporting...' : 'Export'}
               </Button>
             </div>
-            <Button onClick={handleAddRow} className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              Add Row
-            </Button>
           </div>
         </div>
 
@@ -298,11 +402,33 @@ export default function DailyVehicleEntriesIndex({ entries, date, activeShift, s
           shiftStatus={shiftStatus}
         />
 
-        {/* Vehicle Entry Table */}
+        {/* Draft rows are completed automatically when required fields are filled, so no extra warning is needed */}
+
+        {/* Vehicle Entry Table (filtered by selected siding) */}
         <VehicleEntryTable
-          entries={entries}
+          key={`${selectedDate}-${activeShiftState}`}
+          entries={entriesForSiding}
           date={selectedDate}
           shift={activeShiftState}
+          onEntryUpdated={handleEntryUpdated}
+          onEntryDeleted={handleEntryDeleted}
+          onAddRow={handleAddRow}
+          isAddingRow={isAddingRow}
+          addRowButton={
+            <>
+              <Button
+                onClick={() => handleAddRow(5)}
+                disabled={isAddingRow}
+                className="flex items-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                {isAddingRow ? 'Adding...' : 'Add 5 Rows'}
+              </Button>
+              {addRowError && (
+                <span className="text-sm text-destructive">{addRowError}</span>
+              )}
+            </>
+          }
         />
       </div>
     </AppLayout>

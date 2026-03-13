@@ -10,6 +10,8 @@ use App\Models\PenaltyType;
 use App\Models\Rake;
 use App\Models\RrCharge;
 use App\Models\RrDocument;
+use App\Models\RrPenaltySnapshot;
+use App\Models\RrWagonSnapshot;
 use App\Models\Wagon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -23,7 +25,7 @@ final readonly class RrImportService
 
     public function import(array $parsed, StoreRrUploadRequest $request): RrDocument
     {
-        return $this->importWithValidated($parsed, $request, $request->validated());
+        return $this->importSnapshotOnly($parsed, $request, $request->validated(), null);
     }
 
     /**
@@ -36,40 +38,8 @@ final readonly class RrImportService
         $userId = $request->user()->id;
 
         try {
-            return DB::transaction(function () use ($parsed, $validated, $userId) {
-                $this->validateNoDuplicates($parsed);
-
-                $rrDate = $this->parseDate($parsed['rr_date'] ?? $parsed['rr_received_date'] ?? null);
-
-                Log::debug('RR import: creating rake and document');
-                $rake = $this->createRake($parsed, $validated, $rrDate, $userId);
-                $rrDocument = $this->createRrDocument($rake, $parsed, $validated, $userId);
-
-                $pdfFile = $validated['pdf'] ?? $request->file('pdf');
-                if ($pdfFile) {
-                    Log::debug('RR import: adding PDF media');
-                    $rrDocument->addMedia($pdfFile)->toMediaCollection('rr_pdf');
-                } else {
-                    $rrDocument->addMediaFromRequest('pdf')->toMediaCollection('rr_pdf');
-                }
-
-                $wagonsToInsert = $parsed['wagons'] ?? [];
-                Log::debug('RR import: wagons to insert', ['rake_id' => $rake->id, 'count' => count($wagonsToInsert)]);
-
-                $this->insertWagons($rake, $wagonsToInsert);
-
-                Log::debug('RR import: inserting charges');
-                $this->insertRrCharges($rrDocument, $parsed['charges'] ?? []);
-
-                Log::debug('RR import: applying penalties');
-                $this->applyPenaltiesFromCharges($rake, $parsed['charges'] ?? []);
-
-                Log::debug('RR import: updating rake summary');
-                $this->updateRakeSummary($rake, $parsed, $rrDate);
-
-                Log::debug('RR import: transaction committing');
-
-                return $rrDocument->fresh(['rrCharges', 'rake.wagons']);
+            return DB::transaction(function () use ($parsed, $validated) {
+                return $this->importSnapshotOnly($parsed, $request, $validated, null);
             });
         } catch (Throwable $e) {
             Log::error('RR import: transaction rolled back', [
@@ -83,6 +53,42 @@ final readonly class RrImportService
         }
     }
 
+    public function importSnapshotOnly(array $parsed, Request $request, array $validated, ?Rake $rake = null): RrDocument
+    {
+        $userId = $request->user()->id;
+
+        return DB::transaction(function () use ($parsed, $validated, $userId, $rake, $request) {
+            if ($rake !== null && RrDocument::query()->where('rake_id', $rake->id)->exists()) {
+                throw new InvalidArgumentException('Railway Receipt has already been uploaded for this rake.');
+            }
+
+            $this->validateNoDuplicates($parsed);
+
+            $rrDate = $this->parseDate($parsed['rr_date'] ?? $parsed['rr_received_date'] ?? null);
+
+            Log::debug('RR import (snapshot): creating document');
+            $rrDocument = $this->createSnapshotRrDocument($rake, $parsed, $validated, $userId, $rrDate);
+
+            $pdfFile = $validated['pdf'] ?? $request->file('pdf');
+            if ($pdfFile) {
+                Log::debug('RR import (snapshot): adding PDF media');
+                $rrDocument->addMedia($pdfFile)->toMediaCollection('rr_pdf');
+            } else {
+                $rrDocument->addMediaFromRequest('pdf')->toMediaCollection('rr_pdf');
+            }
+
+            $wagonsToInsert = $parsed['wagons'] ?? [];
+            Log::debug('RR import (snapshot): wagon snapshots to insert', ['rr_document_id' => $rrDocument->id, 'count' => count($wagonsToInsert)]);
+            $this->insertWagonSnapshots($rrDocument, $rake, $wagonsToInsert);
+
+            Log::debug('RR import (snapshot): inserting charges and penalty snapshots');
+            $this->insertRrCharges($rrDocument, $parsed['charges'] ?? []);
+            $this->insertPenaltySnapshots($rrDocument, $rake, $parsed['charges'] ?? []);
+
+            return $rrDocument->fresh(['rrCharges', 'wagonSnapshots', 'penaltySnapshots']);
+        });
+    }
+
     private function validateNoDuplicates(array $parsed): void
     {
         $rrNumber = $parsed['rr_number'] ?? null;
@@ -94,6 +100,97 @@ final readonly class RrImportService
             throw new InvalidArgumentException("Railway Receipt number '{$rrNumber}' already exists.");
         }
 
+    }
+
+    private function createSnapshotRrDocument(
+        ?Rake $rake,
+        array $parsed,
+        array $validated,
+        int $userId,
+        \Carbon\CarbonInterface $rrDate,
+    ): RrDocument {
+        return RrDocument::query()->create([
+            'rake_id' => $rake?->id,
+            'rr_number' => $parsed['rr_number'],
+            'fnr' => $parsed['fnr'] ?? null,
+            'rr_received_date' => $rrDate,
+            'rr_weight_mt' => (float) ($parsed['total_weight'] ?? $parsed['rr_weight_mt'] ?? 0),
+            'from_station_code' => $parsed['from_station_code'] ?? null,
+            'to_station_code' => $parsed['to_station_code'] ?? null,
+            'distance_km' => (float) ($parsed['distance_km'] ?? 0),
+            'freight_total' => (float) ($parsed['freight_total'] ?? 0),
+            'commodity_code' => $parsed['commodity_code'] ?? null,
+            'commodity_description' => $parsed['commodity_description'] ?? null,
+            'invoice_number' => $parsed['invoice_number'] ?? null,
+            'invoice_date' => $parsed['invoice_date'] ?? null,
+            'rate' => isset($parsed['rate']) ? (float) $parsed['rate'] : null,
+            'class' => $parsed['class'] ?? null,
+            'document_status' => 'parsed',
+            'data_source' => $rake ? 'manual_rake_rr' : 'historical_rr_snapshot',
+            'rr_details' => array_filter([
+                'power_plant_id' => $validated['power_plant_id'] ?? null,
+                'raw_text' => $parsed['raw_text'] ?? null,
+                'wagon_count_rr' => $parsed['wagon_count'] ?? null,
+                'total_weight_rr' => $parsed['total_weight'] ?? null,
+            ]),
+            'created_by' => $userId,
+        ]);
+    }
+
+    /**
+     * @param  array<int, array{sequence?: int, wagon_number: string, wagon_type?: string|null, pcc_weight?: float, loaded_weight?: float, permissible_weight?: float, overload_weight?: float}>  $wagons
+     */
+    private function insertWagonSnapshots(RrDocument $rrDocument, ?Rake $rake, array $wagons): void
+    {
+        $seenWagonNumbers = [];
+
+        foreach ($wagons as $index => $w) {
+            $wagonNumber = (string) ($w['wagon_number'] ?? '');
+            if ($wagonNumber === '' || isset($seenWagonNumbers[$wagonNumber])) {
+                continue;
+            }
+            $seenWagonNumbers[$wagonNumber] = true;
+
+            $sequence = $w['sequence'] ?? $w['wagon_sequence'] ?? ($index + 1);
+
+            RrWagonSnapshot::query()->create([
+                'rr_document_id' => $rrDocument->id,
+                'rake_id' => $rake?->id,
+                'wagon_sequence' => (int) $sequence,
+                'wagon_number' => $wagonNumber,
+                'wagon_type' => $w['wagon_type'] ?? null,
+                'pcc_weight_mt' => $this->clampWagonWeight($w['pcc_weight'] ?? $w['pcc_weight_mt'] ?? null),
+                'loaded_weight_mt' => $this->clampWagonWeight($w['loaded_weight'] ?? $w['loaded_weight_mt'] ?? null),
+                'permissible_weight_mt' => $this->clampWagonWeight($w['permissible_weight'] ?? $w['permissible_weight_mt'] ?? null),
+                'overload_weight_mt' => $this->clampWagonWeight($w['overload_weight'] ?? $w['overload_weight_mt'] ?? null),
+                'meta' => [],
+            ]);
+        }
+    }
+
+    /**
+     * @param  array<int, array{code?: string, charge_code?: string, name?: string|null, amount?: float}>  $charges
+     */
+    private function insertPenaltySnapshots(RrDocument $rrDocument, ?Rake $rake, array $charges): void
+    {
+        foreach ($charges as $c) {
+            $code = $c['code'] ?? $c['charge_code'] ?? '';
+            $amount = (float) ($c['amount'] ?? 0);
+
+            if ($code === '' || $amount <= 0) {
+                continue;
+            }
+
+            RrPenaltySnapshot::query()->create([
+                'rr_document_id' => $rrDocument->id,
+                'rake_id' => $rake?->id,
+                'penalty_code' => $code,
+                'amount' => $amount,
+                'meta' => [
+                    'name' => $c['name'] ?? null,
+                ],
+            ]);
+        }
     }
 
     private function parseDate(mixed $date): \Carbon\CarbonInterface

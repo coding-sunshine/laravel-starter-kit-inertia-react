@@ -68,7 +68,7 @@ final class IndentsController extends Controller
         $indents = Indent::query()
             ->with('siding:id,name,code')
             ->whereIn('siding_id', $sidingIds)
-            ->latest('indent_date')
+            ->latest('created_at')
             ->paginate(15)
             ->withQueryString();
 
@@ -304,7 +304,6 @@ final class IndentsController extends Controller
             'loading_date' => ['nullable', 'date'],
             'rake_type' => ['nullable', 'string', 'max:50'],
             'wagon_count' => ['nullable', 'integer', 'min:0'],
-            'free_time_minutes' => ['nullable', 'integer', 'min:0'],
             'rr_expected_date' => ['nullable', 'date'],
             'placement_time' => ['nullable', 'date'],
             'remarks' => ['nullable', 'string', 'max:1000'],
@@ -337,7 +336,7 @@ final class IndentsController extends Controller
         $rake->loaded_weight_mt = 0;
         $rake->predicted_weight_mt = null;
         $rake->state = 'pending';
-        $rake->loading_free_minutes = $validated['free_time_minutes'] ?? config('rrmcs.default_free_time_minutes', 180);
+        $rake->loading_free_minutes = (int) config('rrmcs.default_free_time_minutes', 180);
         $rake->rr_expected_date = $validated['rr_expected_date'] ?? null;
         $rake->placement_time = $validated['placement_time'] ? new DateTimeImmutable($validated['placement_time']) : null;
         $rake->created_by = $request->user()->id;

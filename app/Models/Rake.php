@@ -114,6 +114,11 @@ final class Rake extends Model
         return $this->hasMany(RakeWagonLoading::class);
     }
 
+    public function rakeLoad(): HasOne
+    {
+        return $this->hasOne(RakeLoad::class);
+    }
+
     public function guardInspections(): HasMany
     {
         return $this->hasMany(GuardInspection::class);

@@ -12,6 +12,7 @@ use App\Models\RrDocument;
 use App\Models\Siding;
 use App\Services\Railway\RrImportService;
 use App\Services\Railway\RrParserService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -48,6 +49,7 @@ final class RrDocumentController extends Controller
             'pdf' => ['required', 'file', 'mimes:pdf', 'max:10240'],
             'siding_id' => ['nullable', 'integer', 'exists:sidings,id'],
             'power_plant_id' => ['nullable', 'integer', 'exists:power_plants,id'],
+            'rake_id' => ['nullable', 'integer', 'exists:rakes,id'],
         ]);
 
         $user = $request->user();
@@ -56,12 +58,24 @@ final class RrDocumentController extends Controller
             : $user->accessibleSidings()->get()->pluck('id')->all();
         $sidingId = $request->input('siding_id') ?? $sidingIds[0] ?? null;
         $powerPlantId = $request->input('power_plant_id') ?? PowerPlant::query()->orderBy('id')->value('id');
+        $rakeId = $request->input('rake_id');
 
         if ($sidingId === null) {
             return back()->withErrors(['pdf' => 'No siding available. Create a siding first.']);
         }
         if ($powerPlantId === null) {
             return back()->withErrors(['pdf' => 'No power plant available. Create a power plant first.']);
+        }
+
+        $rake = null;
+        if ($rakeId !== null && $rakeId !== '') {
+            $rake = Rake::query()->find((int) $rakeId);
+            if ($rake === null) {
+                return back()->withErrors(['pdf' => 'Selected rake is invalid or no longer available.']);
+            }
+            if (! in_array($rake->siding_id, $sidingIds, true)) {
+                return back()->withErrors(['pdf' => 'You are not allowed to attach RR documents to the selected rake.']);
+            }
         }
 
         try {
@@ -71,7 +85,7 @@ final class RrDocumentController extends Controller
                 'siding_id' => $sidingId,
                 'power_plant_id' => $powerPlantId,
             ];
-            $rrDocument = $rrImportService->importWithValidated($parsed, $request, $validated);
+            $rrDocument = $rrImportService->importSnapshotOnly($parsed, $request, $validated, $rake);
 
             return to_route('railway-receipts.show', $rrDocument)
                 ->with('success', 'RR document uploaded and parsed successfully.');
@@ -106,6 +120,8 @@ final class RrDocumentController extends Controller
             'rake.appliedPenalties.penaltyType:id,code,name,calculation_type',
             'rake.appliedPenalties.wagon:id,wagon_number,overload_weight_mt',
             'rrCharges',
+            'wagonSnapshots',
+            'penaltySnapshots',
         ]);
 
         $fromSiding = $rrDocument->from_station_code
@@ -120,6 +136,53 @@ final class RrDocumentController extends Controller
             'rrDocument' => $rrDocument,
             'fromSiding' => $fromSiding,
             'toPowerPlant' => $toPowerPlant,
+        ]);
+    }
+
+    public function rakesForMonth(Request $request): JsonResponse
+    {
+        $month = (string) $request->query('month', '');
+
+        try {
+            $start = $month !== ''
+                ? \Illuminate\Support\Facades\Date::parse($month.'-01')->startOfMonth()
+                : now()->startOfMonth();
+        } catch (Throwable) {
+            $start = now()->startOfMonth();
+        }
+
+        $end = $start->copy()->endOfMonth();
+
+        $user = $request->user();
+        $sidingIds = $user->isSuperAdmin()
+            ? Siding::query()->pluck('id')->all()
+            : $user->accessibleSidings()->get()->pluck('id')->all();
+
+        $rakes = Rake::query()
+            ->whereIn('siding_id', $sidingIds)
+            ->whereBetween('created_at', [$start, $end])
+            ->with('siding:id,name,code')
+            ->orderByDesc('created_at')
+            ->orderBy('rake_number')
+            ->get(['id', 'rake_number', 'rr_actual_date', 'created_at', 'siding_id']);
+
+        $data = $rakes->map(static function (Rake $rake): array {
+            return [
+                'id' => $rake->id,
+                'rake_number' => $rake->rake_number,
+                'rr_actual_date' => $rake->rr_actual_date?->toDateString(),
+                'created_at' => $rake->created_at?->toDateString(),
+                'siding' => $rake->siding
+                    ? [
+                        'name' => $rake->siding->name,
+                        'code' => $rake->siding->code,
+                    ]
+                    : null,
+            ];
+        })->values();
+
+        return response()->json([
+            'data' => $data,
         ]);
     }
 

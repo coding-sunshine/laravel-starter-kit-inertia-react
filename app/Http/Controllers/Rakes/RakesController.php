@@ -7,10 +7,13 @@ namespace App\Http\Controllers\Rakes;
 use App\DataTables\RakeDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\Rake;
+use App\Models\SectionTimer;
 use App\Models\Siding;
 use App\Models\Wagon;
 use App\Models\WagonType;
+use Closure;
 use DateTimeImmutable;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -33,6 +36,7 @@ final class RakesController extends Controller
             'siding:id,name,code',
             'siding.loaders:id,siding_id,loader_name,code',
             'wagons',
+            'rakeWeighments' => fn ($q) => $q->whereNotNull('pdf_file_path'),
             'txr.wagonUnfitLogs.wagon:id,wagon_number,wagon_sequence,wagon_type',
             'wagonLoadings.wagon:id,wagon_number,wagon_sequence,wagon_type,pcc_weight_mt',
             'wagonLoadings.loader:id,loader_name,code',
@@ -65,8 +69,48 @@ final class RakesController extends Controller
                 'default_pcc_weight_mt',
             ]);
 
+        $loadingSection = SectionTimer::query()
+            ->where('section_name', 'loading')
+            ->first();
+
+        $rakeArray = $rake->toArray();
+        $rakeArray['loading_warning_minutes'] = $loadingSection?->warning_minutes;
+        $rakeArray['loading_section_free_minutes'] = $loadingSection?->free_minutes ?? 180;
+
+        // Build weighments for WeighmentWorkflow: only PDF-origin records (rake_wagon_weighments
+        // from load flow are not shown here; full wagon data is on /weighments/{id})
+        $rakeArray['weighments'] = collect($rake->rakeWeighments ?? [])
+            ->filter(fn ($rw) => ! empty($rw->pdf_file_path))
+            ->map(function ($rw) {
+                return [
+                    'id' => $rw->id,
+                    'weighment_time' => $rw->gross_weighment_datetime?->toIso8601String(),
+                    'total_weight_mt' => $rw->total_net_weight_mt,
+                    'status' => $rw->status,
+                    'train_speed_kmph' => $rw->maximum_train_speed_kmph,
+                    'attempt_no' => $rw->attempt_no,
+                ];
+            })
+            ->values()
+            ->all();
+
+        // Normalize relation keys for frontend (camelCase expected)
+        if (array_key_exists('guard_inspections', $rakeArray)) {
+            $rakeArray['guardInspections'] = $rakeArray['guard_inspections'];
+        }
+
+        if (array_key_exists('wagon_loadings', $rakeArray)) {
+            $rakeArray['wagonLoadings'] = $rakeArray['wagon_loadings'];
+        }
+
+        if (array_key_exists('rr_document', $rakeArray) && $rakeArray['rr_document'] !== null) {
+            $rakeArray['rrDocuments'] = [$rakeArray['rr_document']];
+        } else {
+            $rakeArray['rrDocuments'] = [];
+        }
+
         return Inertia::render('rakes/show', [
-            'rake' => $rake,
+            'rake' => $rakeArray,
             'wagonTypes' => $wagonTypes,
             'demurrageRemainingMinutes' => $demurrageRemainingMinutes,
             'demurrage_rate_per_mt_hour' => config('rrmcs.demurrage_rate_per_mt_hour', 50),
@@ -137,6 +181,29 @@ final class RakesController extends Controller
         // $this->authorize('update', $rake);
 
         $validated = $request->validate([
+            'rake_number' => [
+                'nullable',
+                'string',
+                'max:100',
+                function (string $attribute, mixed $value, Closure $fail) use ($rake): void {
+                    $trimmed = $value !== null && mb_trim((string) $value) !== '' ? mb_trim((string) $value) : null;
+
+                    if ($trimmed === null || $trimmed === $rake->rake_number) {
+                        return;
+                    }
+
+                    $existsInMonth = Rake::query()
+                        ->where('rake_number', $trimmed)
+                        ->whereYear('created_at', now()->year)
+                        ->whereMonth('created_at', now()->month)
+                        ->whereKeyNot($rake->getKey())
+                        ->exists();
+
+                    if ($existsInMonth) {
+                        $fail('This rake number is already in use this month.');
+                    }
+                },
+            ],
             'rake_type' => ['nullable', 'string', 'max:50'],
             'wagon_count' => ['nullable', 'integer', 'min:0'],
             'free_time_minutes' => ['nullable', 'integer', 'min:0'],
@@ -146,6 +213,9 @@ final class RakesController extends Controller
         ]);
 
         $rake->update([
+            'rake_number' => array_key_exists('rake_number', $validated) && mb_trim((string) $validated['rake_number']) !== ''
+                ? mb_trim((string) $validated['rake_number'])
+                : $rake->rake_number,
             'rake_type' => $validated['rake_type'] ?? $rake->rake_type,
             'wagon_count' => $validated['wagon_count'] ?? $rake->wagon_count,
             'loading_free_minutes' => $validated['free_time_minutes'] ?? $rake->loading_free_minutes,
@@ -168,6 +238,111 @@ final class RakesController extends Controller
 
         return to_route('rakes.show', $rake)
             ->with('success', 'Rake updated successfully.');
+    }
+
+    public function startLoadingTimer(Request $request, Rake $rake): RedirectResponse|JsonResponse
+    {
+        $freeMinutes = SectionTimer::query()
+            ->where('section_name', 'loading')
+            ->value('free_minutes') ?? 180;
+
+        $rake->update([
+            'loading_start_time' => now(),
+            'loading_end_time' => null,
+            'loading_free_minutes' => $freeMinutes,
+        ]);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'loading_start_time' => $rake->loading_start_time?->toIso8601String(),
+                'loading_free_minutes' => $rake->loading_free_minutes,
+            ]);
+        }
+
+        $hours = $freeMinutes >= 60 && $freeMinutes % 60 === 0
+            ? (int) ($freeMinutes / 60)
+            : null;
+        $message = $hours !== null
+            ? "Loading timer started for {$hours} hour(s)."
+            : "Loading timer started for {$freeMinutes} minutes.";
+
+        return to_route('rakes.show', $rake)
+            ->with('success', $message);
+    }
+
+    public function resetLoadingTimer(Request $request, Rake $rake): RedirectResponse|JsonResponse
+    {
+        $rake->update([
+            'loading_start_time' => null,
+            'loading_end_time' => null,
+            'loading_free_minutes' => null,
+        ]);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'loading_start_time' => null,
+                'loading_end_time' => null,
+            ]);
+        }
+
+        return to_route('rakes.show', $rake)
+            ->with('success', 'Loading timer reset.');
+    }
+
+    public function stopLoadingTimer(Request $request, Rake $rake): RedirectResponse|JsonResponse
+    {
+        $rake->update([
+            'loading_end_time' => now(),
+        ]);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'loading_start_time' => $rake->loading_start_time?->toIso8601String(),
+                'loading_end_time' => $rake->loading_end_time?->toIso8601String(),
+                'loading_free_minutes' => $rake->loading_free_minutes,
+            ]);
+        }
+
+        return to_route('rakes.show', $rake)
+            ->with('success', 'Loading timer stopped.');
+    }
+
+    public function updateLoadingTimes(Request $request, Rake $rake): RedirectResponse|JsonResponse
+    {
+        $validated = $request->validate([
+            'loading_start_time' => ['nullable', 'date'],
+            'loading_end_time' => ['nullable', 'date', 'after_or_equal:loading_start_time'],
+        ]);
+
+        $freeMinutes = SectionTimer::query()
+            ->where('section_name', 'loading')
+            ->value('free_minutes') ?? 180;
+
+        $start = array_key_exists('loading_start_time', $validated) && $validated['loading_start_time'] !== null
+            ? new DateTimeImmutable($validated['loading_start_time'])
+            : null;
+
+        $end = array_key_exists('loading_end_time', $validated) && $validated['loading_end_time'] !== null
+            ? new DateTimeImmutable($validated['loading_end_time'])
+            : null;
+
+        $rake->update([
+            'loading_start_time' => $start,
+            'loading_end_time' => $end,
+            'loading_date' => $start ? $start->format('Y-m-d') : null,
+            'loading_free_minutes' => $freeMinutes,
+        ]);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'loading_start_time' => $rake->loading_start_time?->toIso8601String(),
+                'loading_end_time' => $rake->loading_end_time?->toIso8601String(),
+                'loading_date' => $rake->loading_date?->toDateString(),
+            ]);
+        }
+
+        return to_route('rakes.show', $rake)
+            ->with('success', 'Loading times updated.');
     }
 
     /**

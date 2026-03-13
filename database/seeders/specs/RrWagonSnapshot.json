@@ -1,0 +1,83 @@
+{
+    "model": "RrWagonSnapshot",
+    "table": "rr_wagon_snapshots",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "rr_document_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "rake_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "wagon_sequence": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "wagon_number": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "wagon_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "pcc_weight_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "loaded_weight_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "permissible_weight_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "overload_weight_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "meta": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "rrDocument": {
+            "type": "belongsTo",
+            "model": "RrDocument"
+        },
+        "rake": {
+            "type": "belongsTo",
+            "model": "Rake"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

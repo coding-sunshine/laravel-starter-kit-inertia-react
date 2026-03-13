@@ -11,7 +11,9 @@ use App\Models\Indent;
 use App\Models\Loader;
 use App\Models\Penalty;
 use App\Models\PenaltyPrediction;
+use App\Models\PenaltyType;
 use App\Models\Rake;
+use App\Models\RakeWagonWeighment;
 use App\Models\RakeWeighment;
 use App\Models\Siding;
 use App\Models\SidingVehicleDispatch;
@@ -24,6 +26,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
+
+use function in_array;
 
 final class ExecutiveDashboardController extends Controller
 {
@@ -60,6 +64,11 @@ final class ExecutiveDashboardController extends Controller
         $rakeNumber = $request->filled('rake_number') ? (string) $request->input('rake_number') : null;
         $loaderId = $request->integer('loader_id') ?: null;
         $shift = $request->filled('shift') ? (string) $request->input('shift') : null;
+        $penaltyTypeId = $request->integer('penalty_type') ?: null;
+
+        $allowedSections = ['executive-overview', 'operations', 'penalty-control', 'siding-stock', 'siding-performance', 'rake-performance', 'loader-overload', 'power-plant'];
+        $section = $request->input('section', 'executive-overview');
+        $section = in_array($section, $allowedSections, true) ? $section : 'executive-overview';
 
         $filterContext = [
             'period' => $period,
@@ -67,6 +76,7 @@ final class ExecutiveDashboardController extends Controller
             'rake_number' => $rakeNumber,
             'loader_id' => $loaderId,
             'shift' => $shift,
+            'penalty_type_id' => $penaltyTypeId,
         ];
 
         $filterOptions = $this->buildFilterOptions($filteredSidingIds);
@@ -74,6 +84,7 @@ final class ExecutiveDashboardController extends Controller
         // dd($this->buildSidingPerformance($filteredSidingIds, $from, $to, $filterContext));
         return Inertia::render('dashboard', [
             'sidings' => $allSidings,
+            'section' => $section,
             'filters' => [
                 'period' => $period,
                 'from' => $from->toDateString(),
@@ -83,6 +94,7 @@ final class ExecutiveDashboardController extends Controller
                 'rake_number' => $rakeNumber,
                 'loader_id' => $loaderId,
                 'shift' => $shift,
+                'penalty_type' => $penaltyTypeId,
             ],
             'filterOptions' => $filterOptions,
             'kpis' => $this->buildKpis($filteredSidingIds, $from, $to, $filterContext),
@@ -233,10 +245,21 @@ final class ExecutiveDashboardController extends Controller
             ['value' => '3', 'label' => 'Shift 3'],
         ];
 
+        $penaltyTypes = PenaltyType::query()
+            ->orderBy('code')
+            ->get(['id', 'code', 'name'])
+            ->map(fn (PenaltyType $pt): array => [
+                'value' => (string) $pt->id,
+                'label' => $pt->code.' — '.$pt->name,
+            ])
+            ->values()
+            ->all();
+
         return [
             'powerPlants' => $powerPlants,
             'loaders' => $loaders,
             'shifts' => $shifts,
+            'penaltyTypes' => $penaltyTypes,
         ];
     }
 
@@ -421,7 +444,7 @@ final class ExecutiveDashboardController extends Controller
      */
     private function buildPenaltyTrendDaily(array $sidingIds, CarbonInterface $from, CarbonInterface $to, array $filterContext = []): array
     {
-        
+
         $start = Carbon::parse($from)->startOfDay();
         $end = Carbon::parse($to)->endOfDay();
         $diffDays = $start->diffInDays($end) + 1;
@@ -433,7 +456,6 @@ final class ExecutiveDashboardController extends Controller
                 return [];
             }
         }
-       
 
         $tz = config('app.timezone', 'UTC');
         $driver = DB::getDriverName();
@@ -459,7 +481,7 @@ final class ExecutiveDashboardController extends Controller
             ];
             $cursor->addDay();
         }
-       
+
         if ($sidingIds === [] || $days === []) {
             return $days;
         }
@@ -482,9 +504,9 @@ final class ExecutiveDashboardController extends Controller
         }
 
         $rows = $penaltyQuery
-        ->selectRaw("{$dateSql} as d, sum(applied_penalties.amount * 1.05) as total")
-        ->groupBy(DB::raw($dateSql))
-        ->get();
+            ->selectRaw("{$dateSql} as d, sum(applied_penalties.amount * 1.05) as total")
+            ->groupBy(DB::raw($dateSql))
+            ->get();
 
         $byDate = [];
         foreach ($rows as $row) {
@@ -502,7 +524,7 @@ final class ExecutiveDashboardController extends Controller
                 $days[$i]['total'] = $byDate[$day['date']];
             }
         }
-        
+
         return $days;
     }
 
@@ -541,21 +563,18 @@ final class ExecutiveDashboardController extends Controller
         $startDate = $start->toDateString();
         $endDate = $end->toDateString();
         $penaltyQuery = AppliedPenalty::whereDate('created_at', '>=', $startDate)
-    ->whereDate('created_at', '<=', $endDate);
-            // ->whereRaw($this->dateOnlyBetweenSql('created_at'), [$startDate, $endDate]);
+            ->whereDate('created_at', '<=', $endDate);
+        // ->whereRaw($this->dateOnlyBetweenSql('created_at'), [$startDate, $endDate]);
         if ($rakeIds !== null) {
             $penaltyQuery->whereIn('rake_id', $rakeIds);
         } else {
             $penaltyQuery->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
         }
 
-      
-
         $rows = $penaltyQuery
-        ->selectRaw("{$monthSql} as m, sum(applied_penalties.amount + applied_penalties.amount * 0.05) as total")
-        ->groupBy(DB::raw($monthSql))
-        ->get();
-        
+            ->selectRaw("{$monthSql} as m, sum(applied_penalties.amount + applied_penalties.amount * 0.05) as total")
+            ->groupBy(DB::raw($monthSql))
+            ->get();
 
         $byMonth = [];
         foreach ($rows as $row) {
@@ -570,7 +589,7 @@ final class ExecutiveDashboardController extends Controller
                 $months[$i]['total'] = $byMonth[$month['date']];
             }
         }
-        
+
         return $months;
     }
 
@@ -726,7 +745,12 @@ final class ExecutiveDashboardController extends Controller
         if (! empty($filterContext['power_plant'])) {
             $rakeQuery->whereIn('id', RakeWeighment::query()->where('to_station', $filterContext['power_plant'])->select('rake_id'));
         }
-        $rakes = $rakeQuery->orderByDesc('placement_time')->limit(50)->get(['id', 'rake_number', 'siding_id', 'state', 'placement_time', 'loading_start_time', 'loading_free_minutes']);
+        // Show only the most recent few rakes on the dashboard card.
+        // Full list is available on the rakes index page.
+        $rakes = $rakeQuery
+            ->orderByDesc('placement_time')
+            ->limit(5)
+            ->get(['id', 'rake_number', 'siding_id', 'state', 'placement_time', 'loading_start_time', 'loading_free_minutes']);
 
         $list = [];
         foreach ($rakes as $rake) {
@@ -855,40 +879,76 @@ final class ExecutiveDashboardController extends Controller
     }
 
     /**
-     * Predicted vs actual penalty for period (dual bar chart).
+     * Predicted vs actual penalty for period, with per-siding breakdown for grouped bar chart.
      *
      * @param  array<int>  $sidingIds
-     * @param  array{power_plant: string|null, rake_number: string|null, loader_id: int|null, shift: string|null}  $filterContext
-     * @return array{predicted: float, actual: float}
+     * @param  array{power_plant: string|null, rake_number: string|null, loader_id: int|null, shift: string|null, penalty_type_id: int|null}  $filterContext
+     * @return array{predicted: float, actual: float, bySiding: array<int, array{name: string, predicted: float, actual: float}>}
      */
     private function buildPredictedVsActualPenalty(array $sidingIds, CarbonInterface $from, CarbonInterface $to, array $filterContext = []): array
     {
         if ($sidingIds === []) {
-            return ['predicted' => 0.0, 'actual' => 0.0];
+            return ['predicted' => 0.0, 'actual' => 0.0, 'bySiding' => []];
         }
 
         $fromDate = $from->toDateString();
         $toDate = $to->toDateString();
-        $predicted = (float) PenaltyPrediction::query()
+
+        $predictedBySiding = PenaltyPrediction::query()
             ->whereIn('siding_id', $sidingIds)
             ->whereRaw($this->dateOnlyBetweenSql('prediction_date'), [$fromDate, $toDate])
-            ->sum('predicted_amount_max');
+            ->selectRaw('siding_id, sum(predicted_amount_max) as total')
+            ->groupBy('siding_id')
+            ->get()
+            ->keyBy('siding_id');
 
         $rakeIds = null;
         if (! empty($filterContext['rake_number']) || ! empty($filterContext['power_plant'])) {
             $rakeIds = $this->getFilteredRakeIds($sidingIds, $filterContext);
         }
-        $actualQuery = AppliedPenalty::query()->whereRaw($this->dateOnlyBetweenSql('created_at'), [$fromDate, $toDate]);
-        if ($rakeIds !== null) {
-            $actualQuery->whereIn('rake_id', $rakeIds);
-        } else {
-            $actualQuery->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
+        $actualQuery = AppliedPenalty::query()
+            ->join('rakes', 'applied_penalties.rake_id', '=', 'rakes.id')
+            ->whereRaw($this->dateOnlyBetweenSql('applied_penalties.created_at'), [$fromDate, $toDate]);
+        if (! empty($filterContext['penalty_type_id'])) {
+            $actualQuery->where('applied_penalties.penalty_type_id', $filterContext['penalty_type_id']);
         }
-        $actual = (float) $actualQuery->sum('amount');
+        if ($rakeIds !== null) {
+            $actualQuery->whereIn('rakes.id', $rakeIds);
+        } else {
+            $actualQuery->whereIn('rakes.siding_id', $sidingIds);
+        }
+        $actualBySiding = $actualQuery
+            ->selectRaw('rakes.siding_id, sum(applied_penalties.amount) as total')
+            ->groupBy('rakes.siding_id')
+            ->get()
+            ->keyBy('siding_id');
+
+        $allSidings = Siding::query()
+            ->whereIn('id', $sidingIds)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        $bySiding = [];
+        $predictedTotal = 0.0;
+        $actualTotal = 0.0;
+        foreach ($allSidings as $siding) {
+            $pred = $predictedBySiding->get($siding->id);
+            $act = $actualBySiding->get($siding->id);
+            $predVal = $pred ? round((float) $pred->total, 2) : 0.0;
+            $actVal = $act ? round((float) $act->total, 2) : 0.0;
+            $bySiding[] = [
+                'name' => (string) $siding->name,
+                'predicted' => $predVal,
+                'actual' => $actVal,
+            ];
+            $predictedTotal += $predVal;
+            $actualTotal += $actVal;
+        }
 
         return [
-            'predicted' => round($predicted, 2),
-            'actual' => round($actual, 2),
+            'predicted' => round($predictedTotal, 2),
+            'actual' => round($actualTotal, 2),
+            'bySiding' => $bySiding,
         ];
     }
 
@@ -962,6 +1022,9 @@ final class ExecutiveDashboardController extends Controller
         $query = AppliedPenalty::query()
             ->join('penalty_types', 'applied_penalties.penalty_type_id', '=', 'penalty_types.id')
             ->whereRaw($this->dateOnlyBetweenSql('applied_penalties.created_at'), [$fromDate, $toDate]);
+        if (! empty($filterContext['penalty_type_id'])) {
+            $query->where('applied_penalties.penalty_type_id', $filterContext['penalty_type_id']);
+        }
         if ($rakeIds !== null) {
             $query->whereIn('applied_penalties.rake_id', $rakeIds);
         } else {
@@ -982,7 +1045,7 @@ final class ExecutiveDashboardController extends Controller
     }
 
     /**
-     * Penalties grouped by siding (for bar chart).
+     * Penalties grouped by siding (for bar chart). Includes all sidings with total 0 when no data.
      *
      * @param  array<int>  $sidingIds
      * @return array<int, array{name: string, total: float}>
@@ -993,36 +1056,58 @@ final class ExecutiveDashboardController extends Controller
             return [];
         }
 
+        $allSidings = Siding::query()
+            ->whereIn('id', $sidingIds)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
         $rakeIds = null;
         if (! empty($filterContext['rake_number']) || ! empty($filterContext['power_plant'])) {
             $rakeIds = $this->getFilteredRakeIds($sidingIds, $filterContext);
-            if ($rakeIds === []) {
-                return [];
-            }
         }
+
         $fromDate = $from->toDateString();
         $toDate = $to->toDateString();
         $query = AppliedPenalty::query()
             ->join('rakes', 'applied_penalties.rake_id', '=', 'rakes.id')
             ->join('sidings', 'rakes.siding_id', '=', 'sidings.id')
             ->whereRaw($this->dateOnlyBetweenSql('applied_penalties.created_at'), [$fromDate, $toDate]);
+        if (! empty($filterContext['penalty_type_id'])) {
+            $query->where('applied_penalties.penalty_type_id', $filterContext['penalty_type_id']);
+        }
         if ($rakeIds !== null) {
-            $query->whereIn('rakes.id', $rakeIds);
+            if ($rakeIds === []) {
+                $totalsByName = collect();
+            } else {
+                $query->whereIn('rakes.id', $rakeIds);
+                $totalsByName = $query
+                    ->selectRaw('sidings.name, sum(applied_penalties.amount) as total')
+                    ->groupBy('sidings.name')
+                    ->get()
+                    ->keyBy('name');
+            }
         } else {
             $query->whereIn('rakes.siding_id', $sidingIds);
+            $totalsByName = $query
+                ->selectRaw('sidings.name, sum(applied_penalties.amount) as total')
+                ->groupBy('sidings.name')
+                ->get()
+                ->keyBy('name');
         }
 
-        return $query
-            ->selectRaw('sidings.name, sum(applied_penalties.amount) as total')
-            ->groupBy('sidings.name')
-            ->orderByDesc('total')
-            ->get()
-            ->map(fn ($r): array => [
-                'name' => (string) $r->name,
-                'total' => (float) $r->total,
-            ])
-            ->values()
-            ->all();
+        $result = [];
+        foreach ($allSidings as $siding) {
+            $name = (string) $siding->name;
+            $row = $totalsByName->get($name);
+            $result[] = [
+                'name' => $name,
+                'total' => $row ? round((float) $row->total, 2) : 0.0,
+            ];
+        }
+
+        usort($result, fn ($a, $b) => $b['total'] <=> $a['total']);
+
+        return $result;
     }
 
     /**
@@ -1483,7 +1568,41 @@ final class ExecutiveDashboardController extends Controller
             ->get()
             ->keyBy('rake_id');
 
-        return $rakes->map(function (Rake $rake) use ($weighmentTotals, $penaltyTotals): array {
+        $latestWeighmentIds = RakeWeighment::query()
+            ->whereIn('rake_id', $rakeIds)
+            ->orderByDesc('id')
+            ->get()
+            ->unique('rake_id')
+            ->pluck('id')
+            ->all();
+
+        $wagonOverloadsByRakeId = [];
+        if ($latestWeighmentIds !== []) {
+            $weighmentToRake = RakeWeighment::query()
+                ->whereIn('id', $latestWeighmentIds)
+                ->pluck('rake_id', 'id')
+                ->all();
+            $wagonRows = RakeWagonWeighment::query()
+                ->whereIn('rake_weighment_id', $latestWeighmentIds)
+                ->with('wagon:id,wagon_number')
+                ->orderBy('wagon_sequence')
+                ->get();
+            foreach ($wagonRows as $row) {
+                $rakeId = $weighmentToRake[$row->rake_weighment_id] ?? null;
+                if ($rakeId === null) {
+                    continue;
+                }
+                if (! isset($wagonOverloadsByRakeId[$rakeId])) {
+                    $wagonOverloadsByRakeId[$rakeId] = [];
+                }
+                $wagonOverloadsByRakeId[$rakeId][] = [
+                    'wagon_number' => $row->wagon?->wagon_number ?? (string) $row->wagon_id,
+                    'over_load_mt' => round((float) ($row->over_load_mt ?? 0), 2),
+                ];
+            }
+        }
+
+        return $rakes->map(function (Rake $rake) use ($weighmentTotals, $penaltyTotals, $wagonOverloadsByRakeId): array {
             $w = $weighmentTotals->get($rake->id);
             $p = $penaltyTotals->get($rake->id);
 
@@ -1503,6 +1622,7 @@ final class ExecutiveDashboardController extends Controller
                 'loading_minutes' => $loadingMinutes,
                 'penalty_amount' => $p ? round((float) $p->total_penalty, 2) : 0,
                 'penalty_count' => $p ? (int) $p->penalty_count : 0,
+                'wagon_overloads' => $wagonOverloadsByRakeId[$rake->id] ?? [],
             ];
         })->values()->all();
     }
