@@ -24,6 +24,12 @@ return [
     |--------------------------------------------------------------------------
     */
     'presets' => [
+        'fusion' => [
+            'label' => 'Fusion CRM',
+        ],
+        'fusion-dark' => [
+            'label' => 'Fusion CRM Dark',
+        ],
         'default' => [
             'label' => 'Default',
         ],
@@ -40,7 +46,7 @@ return [
     | Subset of presets orgs can choose (org branding)
     |--------------------------------------------------------------------------
     */
-    'org_allowed_presets' => ['default', 'vega', 'nova'],
+    'org_allowed_presets' => ['fusion', 'fusion-dark', 'default', 'vega', 'nova'],
 
     'base_colors' => [
         'neutral' => 'Neutral',

@@ -71,6 +71,96 @@
     --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/* Fusion brand theme — applied when THEME_PRESET=fusion */
+[data-preset="fusion"],
+:root {
+    /* Brand orange — primary for buttons, links, active states, focus rings */
+    --primary: oklch(70% 0.18 48);           /* #f28036 */
+    --primary-foreground: oklch(98% 0 0);
+
+    /* Warm neutral backgrounds — not clinical white */
+    --background: oklch(96% 0.005 70);       /* #f3f1ee */
+    --card: oklch(98% 0.003 70);             /* #f9f8f7 */
+    --card-foreground: oklch(45% 0.05 240);  /* #475F7B */
+    --popover: oklch(98% 0.003 70);
+    --popover-foreground: oklch(45% 0.05 240);
+
+    /* Blue-gray text — professional */
+    --foreground: oklch(45% 0.05 240);       /* #475F7B */
+    --muted-foreground: oklch(55% 0.04 240); /* #727E8C */
+    --muted: oklch(94% 0.005 70);
+
+    /* Border */
+    --border: oklch(88% 0.02 240);           /* #DFE3E7 */
+    --input: oklch(88% 0.02 240);
+    --ring: oklch(70% 0.18 48);              /* orange focus ring */
+
+    /* Sidebar — warm card bg */
+    --sidebar: oklch(98% 0.003 70);
+    --sidebar-foreground: oklch(45% 0.05 240);
+    --sidebar-primary: oklch(70% 0.18 48);
+    --sidebar-primary-foreground: oklch(98% 0 0);
+    --sidebar-accent: oklch(94% 0.005 70);
+    --sidebar-accent-foreground: oklch(45% 0.05 240);
+    --sidebar-border: oklch(88% 0.02 240);
+    --sidebar-ring: oklch(70% 0.18 48);
+
+    /* Status dot colors */
+    --color-status-new: oklch(65% 0.15 240);
+    --color-status-qualified: oklch(65% 0.18 160);
+    --color-status-proposal: oklch(70% 0.18 48);
+    --color-status-converted: oklch(60% 0.20 145);
+    --color-status-archived: oklch(70% 0.02 240);
+    --color-status-reserved: oklch(65% 0.18 30);
+    --color-status-sold: oklch(55% 0.20 145);
+    --color-status-cancelled: oklch(55% 0.18 15);
+
+    /* Shared values */
+    --secondary: oklch(94% 0.005 70);
+    --secondary-foreground: oklch(45% 0.05 240);
+    --accent: oklch(94% 0.005 70);
+    --accent-foreground: oklch(45% 0.05 240);
+    --destructive: oklch(0.577 0.245 27.325);
+    --destructive-foreground: oklch(0.577 0.245 27.325);
+    --chart-1: oklch(70% 0.18 48);
+    --chart-2: oklch(0.6 0.118 184.704);
+    --chart-3: oklch(0.398 0.07 227.392);
+    --chart-4: oklch(0.828 0.189 84.429);
+    --chart-5: oklch(0.769 0.188 70.08);
+    --radius: 0.5rem;
+}
+
+/* Fusion dark theme */
+[data-theme="fusion-dark"],
+[data-preset="fusion"].dark,
+[data-preset="fusion"] .dark {
+    --background: oklch(15% 0.01 240);
+    --card: oklch(18% 0.01 240);
+    --card-foreground: oklch(90% 0.02 240);
+    --popover: oklch(18% 0.01 240);
+    --popover-foreground: oklch(90% 0.02 240);
+    --foreground: oklch(90% 0.02 240);
+    --muted-foreground: oklch(65% 0.03 240);
+    --muted: oklch(22% 0.01 240);
+    --primary: oklch(72% 0.18 48);           /* orange stays vibrant in dark */
+    --primary-foreground: oklch(98% 0 0);
+    --border: oklch(28% 0.02 240);
+    --input: oklch(28% 0.02 240);
+    --ring: oklch(72% 0.18 48);
+    --secondary: oklch(22% 0.01 240);
+    --secondary-foreground: oklch(90% 0.02 240);
+    --accent: oklch(22% 0.01 240);
+    --accent-foreground: oklch(90% 0.02 240);
+    --sidebar: oklch(18% 0.01 240);
+    --sidebar-foreground: oklch(90% 0.02 240);
+    --sidebar-primary: oklch(72% 0.18 48);
+    --sidebar-primary-foreground: oklch(98% 0 0);
+    --sidebar-accent: oklch(22% 0.01 240);
+    --sidebar-accent-foreground: oklch(90% 0.02 240);
+    --sidebar-border: oklch(28% 0.02 240);
+    --sidebar-ring: oklch(72% 0.18 48);
+}
+
 :root {
     --background: oklch(1 0 0);
     --foreground: oklch(0.145 0 0);

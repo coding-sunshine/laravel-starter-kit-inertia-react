@@ -566,8 +566,8 @@
             }
         },
         "BatchUpdateUsersAction": {
-            "documented": false,
-            "path": null,
+            "documented": true,
+            "path": "docs/developer/backend/actions/BatchUpdateUsersAction.md",
             "relationships": {
                 "usedBy": [
                     "UsersTableController"
@@ -584,7 +584,8 @@
                     "users.restore",
                     "users.force-delete"
                 ]
-            }
+            },
+            "lastUpdated": "2026-03-15"
         }
     },
     "controllers": {
@@ -1540,6 +1541,12 @@
                     "filament.system.resources.vouchers.index",
                     "filament.system.resources.vouchers.create",
                     "filament.system.resources.vouchers.edit",
+                    "debugbar.openhandler",
+                    "debugbar.cache.delete",
+                    "debugbar.queries.explain",
+                    "debugbar.clockwork",
+                    "debugbar.assets",
+                    "debugbar.telescope",
                     "api.chat",
                     "chat.memories",
                     "conversations.index",
@@ -2133,6 +2140,12 @@
                     "filament.system.resources.vouchers.index",
                     "filament.system.resources.vouchers.create",
                     "filament.system.resources.vouchers.edit",
+                    "debugbar.openhandler",
+                    "debugbar.cache.delete",
+                    "debugbar.queries.explain",
+                    "debugbar.clockwork",
+                    "debugbar.assets",
+                    "debugbar.telescope",
                     "api.chat",
                     "chat.memories",
                     "conversations.index",
@@ -2651,6 +2664,12 @@
                     "filament.system.resources.vouchers.index",
                     "filament.system.resources.vouchers.create",
                     "filament.system.resources.vouchers.edit",
+                    "debugbar.openhandler",
+                    "debugbar.cache.delete",
+                    "debugbar.queries.explain",
+                    "debugbar.clockwork",
+                    "debugbar.assets",
+                    "debugbar.telescope",
                     "api.chat",
                     "chat.memories",
                     "conversations.index",
@@ -3110,6 +3129,12 @@
                     "filament.system.resources.vouchers.index",
                     "filament.system.resources.vouchers.create",
                     "filament.system.resources.vouchers.edit",
+                    "debugbar.openhandler",
+                    "debugbar.cache.delete",
+                    "debugbar.queries.explain",
+                    "debugbar.clockwork",
+                    "debugbar.assets",
+                    "debugbar.telescope",
                     "api.chat",
                     "chat.memories",
                     "conversations.index",
@@ -3555,6 +3580,12 @@
                     "filament.system.resources.vouchers.index",
                     "filament.system.resources.vouchers.create",
                     "filament.system.resources.vouchers.edit",
+                    "debugbar.openhandler",
+                    "debugbar.cache.delete",
+                    "debugbar.queries.explain",
+                    "debugbar.clockwork",
+                    "debugbar.assets",
+                    "debugbar.telescope",
                     "api.chat",
                     "chat.memories",
                     "conversations.index",
@@ -4173,6 +4204,12 @@
                     "filament.system.resources.vouchers.index",
                     "filament.system.resources.vouchers.create",
                     "filament.system.resources.vouchers.edit",
+                    "debugbar.openhandler",
+                    "debugbar.cache.delete",
+                    "debugbar.queries.explain",
+                    "debugbar.clockwork",
+                    "debugbar.assets",
+                    "debugbar.telescope",
                     "api.chat",
                     "chat.memories",
                     "conversations.index",
