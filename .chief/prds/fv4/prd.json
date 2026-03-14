@@ -1,0 +1,350 @@
+{
+  "project": "PRD: Fusion CRM v4 \u2014 Full Rebuild",
+  "description": "Rebuild Fusion CRM from the legacy MySQL/PHP v3 system into a modern, AI-native real estate CRM using the Laravel Starter Kit (Inertia + React) as the only base. The new app runs on Laravel 12, PostgreSQL (with pgvector), Inertia v2 + React 19, Filament v5, and Reverb. It replaces the lead-centric data model with a unified Contact entity, adds AI agents, RAG, and Thesys C1 generative UI, and migrates all legacy data from MySQL.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Bootstrap the application",
+      "description": "As an AI agent, I need to bootstrap the Fusion CRM v4 app from the Laravel Starter Kit so that all subsequent steps build on a correctly configured foundation.",
+      "acceptanceCriteria": [
+        "Read rebuild-plan/00-ui-design-system.md in full before implementing",
+        "Brand tokens applied to resources/css/app.css (primary #f28036, warm #f3f1ee, fusion-dark vars per \u00a72)",
+        "fusion and fusion-dark theme presets created in config/theme.php",
+        ".env contains THEME_PRESET=fusion, THEME_FONT=geist-sans, APP_ENV=local, APP_DEBUG=true, QUEUE_CONNECTION=sync, MAIL_MAILER=log",
+        "mysql_legacy database connection configured in config/database.php (for import steps)",
+        "PostgreSQL migrations run successfully (php artisan migrate --force)",
+        "Base seeders run (php artisan db:seed)",
+        "php artisan env:validate and php artisan app:health pass without errors",
+        "All Inertia pages and DataTables follow design principles, typography, spacing, interactive states, animation, form conventions, DataTable conventions, icon rules, and anti-patterns from 00-ui-design-system.md \u00a7\u00a75\u201315, 19, 21"
+      ],
+      "priority": 1,
+      "passes": true
+    },
+    {
+      "id": "US-002",
+      "title": "Projects and lots with import",
+      "description": "As an AI agent, I need to implement the projects and lots data model and migrate all legacy project/lot data so that property data is available before contacts are added.",
+      "acceptanceCriteria": [
+        "SPEED MODE ACTIVE: Do NOT run composer test, composer test:quick, pest, or php artisan test \u2014 tests hang for 5+ minutes. Skip all test runs, log 'tests skipped (speed mode)' and advance immediately.",
+        "Read rebuild-plan/00-import-command-templates.md before writing any fusion:import-* command",
+        "Projects and lots models, migrations, factories, seeders created per 00-database-design.md",
+        "Filament resources for projects and lots created and functional",
+        "DataTable views for projects and lots created per 00-component-map.md",
+        "Flyer PDF generator implemented (spatie/laravel-pdf v2) per 00-websites-puck-builder.md",
+        "fusion:import-projects-lots command follows the base command template (handle, mapRow, upsertRow, dry-run, chunking, idempotency)",
+        "fusion:verify-import-projects-lots passes with expected row counts from rebuild-plan/11-verification-per-step.md",
+        "Migrations run: php artisan migrate --force"
+      ],
+      "priority": 2,
+      "passes": true
+    },
+    {
+      "id": "US-003",
+      "title": "Contacts, contact details, and CRM roles",
+      "description": "As an AI agent, I need to implement the unified Contact entity (replacing \"lead\") and seed all CRM roles and permissions so that every person record uses a single contact_id.",
+      "acceptanceCriteria": [
+        "SPEED MODE ACTIVE: Do NOT run composer test, composer test:quick, pest, or php artisan test \u2014 tests hang for 5+ minutes. Skip all test runs, log 'tests skipped (speed mode)' and advance immediately.",
+        "contacts table created with all columns per 00-database-design.md (including legacy_lead_id nullable indexed, contact_origin, type, stage)",
+        "contact_emails and contact_phones (or contact_methods) tables created",
+        "Contact model with full relationships, Scout Searchable trait, and toSearchableArray() implemented",
+        "CRM roles seeded per rebuild-plan/00-roles-permissions.md (all roles from superadmin \u2192 referral_partner, org-scoped)",
+        "All permissions from the permission catalogue seeded and assigned per the role\u2192permission matrix",
+        "Filament resource and DataTable for contacts created and functional",
+        "fusion:import-contacts builds the lead_id \u2192 contact_id map (stored for subsequent import steps)",
+        "fusion:verify-import-contacts passes with expected row counts",
+        "Migrations run: php artisan migrate --force"
+      ],
+      "priority": 3,
+      "passes": true
+    },
+    {
+      "id": "US-004",
+      "title": "Users linked to contacts",
+      "description": "As an AI agent, I need to add users.contact_id and link every existing user to their corresponding Contact record so that the User\u2194Contact relationship is established for all imported users.",
+      "acceptanceCriteria": [
+        "SPEED MODE ACTIVE: Do NOT run composer test, composer test:quick, pest, or php artisan test \u2014 tests hang for 5+ minutes. Skip all test runs, log 'tests skipped (speed mode)' and advance immediately.",
+        "users.contact_id column added (nullable FK to contacts.id)",
+        "Migration runs without errors",
+        "fusion:import-users (or link pass) maps users.legacy_lead_id \u2192 contacts.id using the contact map from Task 3",
+        "All users with a matching contact have contact_id populated",
+        "Users without a matching contact have contact_id = null (no crash)",
+        "Migrations run: php artisan migrate --force"
+      ],
+      "priority": 4,
+      "passes": false
+    },
+    {
+      "id": "US-005",
+      "title": "Reservations, enquiries, searches, sales, commissions",
+      "description": "As an AI agent, I need to implement property transaction tables (reservations, enquiries, searches, sales, commissions) and migrate all legacy transaction data using contact_id foreign keys.",
+      "acceptanceCriteria": [
+        "SPEED MODE ACTIVE: Do NOT run composer test, composer test:quick, pest, or php artisan test \u2014 tests hang for 5+ minutes. Skip all test runs, log 'tests skipped (speed mode)' and advance immediately.",
+        "All tables created per 00-database-design.md with contact_id FKs (not lead_id)",
+        "Filament resources and DataTable views created for each entity",
+        "eWAY deposit flow stubbed (eWAY credentials deferred \u2014 BillingGatewayContract interface + stub driver returns success without charging)",
+        "fusion:import-reservations-sales uses the lead_id \u2192 contact_id map from Task 3 for all FK mapping",
+        "fusion:verify-import-reservations-sales passes with expected row counts from rebuild-plan/11-verification-per-step.md",
+        "Migrations run: php artisan migrate --force"
+      ],
+      "priority": 5,
+      "passes": false
+    },
+    {
+      "id": "US-006",
+      "title": "Tasks, relationships, partners, marketing, campaign sites",
+      "description": "As an AI agent, I need to implement CRM tasks, contact relationships, partner records, mail lists, brochure jobs, website contacts, questionnaires, and campaign sites so that all operational and marketing data is migrated.",
+      "acceptanceCriteria": [
+        "SPEED MODE ACTIVE: Do NOT run composer test, composer test:quick, pest, or php artisan test \u2014 tests hang for 5+ minutes. Skip all test runs, log 'tests skipped (speed mode)' and advance immediately.",
+        "Read rebuild-plan/00-websites-puck-builder.md before implementing campaign websites",
+        "All tables (tasks, relationships, partners, mail_list_members, brochure_jobs, website_contacts, questionnaires, finance_assessments, campaign_sites) created per schema",
+        "Puck visual page builder (@measured/puck) integrated for campaign sites with CRM live data components (ProjectHero, LotGrid, EnquiryForm) per 00-websites-puck-builder.md",
+        "Filament resources and DataTable views created for applicable entities",
+        "All fusion:import-* commands for this step follow the import template and use lead_id \u2192 contact_id mapping",
+        "All fusion:verify-import-* commands for this step pass",
+        "Migrations run: php artisan migrate --force"
+      ],
+      "priority": 6,
+      "passes": false
+    },
+    {
+      "id": "US-007",
+      "title": "AI-native features \u2014 agents, RAG, Thesys C1",
+      "description": "As an AI agent, I need to wire Laravel AI agents, RAG with pgvector, Thesys C1 generative UI, lead scoring, buyer-lot matching, and prompt commands so that all AI surfaces are functional.",
+      "acceptanceCriteria": [
+        "SPEED MODE ACTIVE: Do NOT run composer test, composer test:quick, pest, or php artisan test \u2014 tests hang for 5+ minutes. Skip all test runs, log 'tests skipped (speed mode)' and advance immediately.",
+        "Read rebuild-plan/00-thesys-conversational-ai.md in full before implementing",
+        "Thesys C1 generative UI (@thesys/client React SDK) integrated \u2014 all AI agent responses rendered via C1, not plain text",
+        "Custom CRM components registered with C1: ContactCard, PropertyCard, PipelineFunnel, EmailCompose, CommissionTable, TaskChecklist",
+        "Contact assistant and property assistant AI agents implemented using Laravel AI SDK",
+        "RAG with pgvector configured \u2014 embeddings stored and retrieved for contact/property context",
+        "Prism used for ad-hoc generation (email drafts, summaries)",
+        "AiCreditService wired per 00-ai-credits-system.md (per-plan limits, per-user limits, BYOK, usage tracking)",
+        "Lead scoring and buyer-lot matching implemented",
+        "Legacy AI bot config imported (fusion:import-ai-bot-config if applicable)",
+        "fusion:verify-import-* for this step passes (if applicable)",
+        "Migrations run: php artisan migrate --force"
+      ],
+      "priority": 7,
+      "passes": false
+    },
+    {
+      "id": "US-008",
+      "title": "Reporting and dashboards",
+      "description": "As an AI agent, I need to implement role-specific KPI dashboards and reports (reservation, task, sales, commissions) with AI-generated insights so that all users have visibility into their data.",
+      "acceptanceCriteria": [
+        "SPEED MODE ACTIVE: Do NOT run composer test, composer test:quick, pest, or php artisan test \u2014 tests hang for 5+ minutes. Skip all test runs, log 'tests skipped (speed mode)' and advance immediately.",
+        "Role-specific dashboards implemented per the step file (superadmin, admin, subscriber, agent views)",
+        "Reservation report, task report, sales report, commissions report implemented",
+        "AI-generated dashboard insight panel wired (uses AI agent / Prism, respects AI credit limits)",
+        "All reports render correctly in Inertia + React per 00-component-map.md",
+        "Migrations run (if any): php artisan migrate --force"
+      ],
+      "priority": 8,
+      "passes": false
+    },
+    {
+      "id": "US-009",
+      "title": "Phase 1 parity",
+      "description": "As an AI agent, I need to implement Phase 1 feature parity items (lead attribution, sales pipeline Kanban, follow-up logic, reservation form v2, quick-edit, bulk updates, member listings, multi-channel publish, conversion funnel) so that the v4 app matches v3 operational capability.",
+      "acceptanceCriteria": [
+        "SPEED MODE ACTIVE: Do NOT run composer test, composer test:quick, pest, or php artisan test \u2014 tests hang for 5+ minutes. Skip all test runs, log 'tests skipped (speed mode)' and advance immediately.",
+        "Lead attribution tracking implemented",
+        "Sales pipeline view (Kanban + list toggle) implemented",
+        "Follow-up logic (reminders, due dates, status transitions) implemented",
+        "Reservation form v2 implemented with updated field set",
+        "Quick-edit inline actions on DataTable rows implemented",
+        "Bulk update actions (status, assignment, etc.) on contacts and reservations",
+        "Member listings page implemented",
+        "Multi-channel publish (mail list push, portal sync) implemented",
+        "Conversion funnel view implemented",
+        "Migrations run (if any): php artisan migrate --force"
+      ],
+      "priority": 9,
+      "passes": false
+    },
+    {
+      "id": "US-010",
+      "title": "Phase 2 \u2014 AI lead generation",
+      "description": "As an AI agent, I need to implement AI-powered lead generation features (multi-channel capture, nurture sequences, cold outreach, landing page AI, lead score/routing, social, coaching) so that the CRM can autonomously acquire and qualify leads.",
+      "acceptanceCriteria": [
+        "SPEED MODE ACTIVE: Do NOT run composer test, composer test:quick, pest, or php artisan test \u2014 tests hang for 5+ minutes. Skip all test runs, log 'tests skipped (speed mode)' and advance immediately.",
+        "Multi-channel lead capture implemented (web forms, landing pages, social integrations per step file)",
+        "AI nurture sequences wired (uses AI SDK / Prism, respects credit limits)",
+        "Cold outreach tooling implemented per step file",
+        "Landing page AI generation implemented",
+        "Lead score/routing rules implemented",
+        "Coaching / AI suggestions panel implemented (if in step file)",
+        "All fusion:verify-import-* commands for this step pass (if applicable)",
+        "Migrations run (if any): php artisan migrate --force"
+      ],
+      "priority": 10,
+      "passes": false
+    },
+    {
+      "id": "US-011",
+      "title": "Phase 2 \u2014 AI core and voice",
+      "description": "As an AI agent, I need to implement the AI core layer (Bot v2, smart summaries, Concierge, auto-content, predictive suggestions, funnel engine) and voice integration (Vapi) so that AI is deeply embedded in all CRM workflows.",
+      "acceptanceCriteria": [
+        "SPEED MODE ACTIVE: Do NOT run composer test, composer test:quick, pest, or php artisan test \u2014 tests hang for 5+ minutes. Skip all test runs, log 'tests skipped (speed mode)' and advance immediately.",
+        "Bot v2 implemented with improved intent handling per step file",
+        "Smart contact/property summaries implemented",
+        "AI Concierge assistant wired",
+        "Auto-content generation (email copy, property descriptions) implemented",
+        "Predictive suggestions panel implemented",
+        "Funnel engine AI implemented",
+        "Vapi voice integration implemented if VAPI_API_KEY is set; otherwise skipped and logged as deferred",
+        "Migrations run (if any): php artisan migrate --force"
+      ],
+      "priority": 11,
+      "passes": false
+    },
+    {
+      "id": "US-012",
+      "title": "Phase 2 \u2014 Property, builder portals, push portal",
+      "description": "As an AI agent, I need to implement property matching, inventory API, agent/builder portals, push portal, white-label, and property versioning so that the full property data ecosystem is in place.",
+      "acceptanceCriteria": [
+        "SPEED MODE ACTIVE: Do NOT run composer test, composer test:quick, pest, or php artisan test \u2014 tests hang for 5+ minutes. Skip all test runs, log 'tests skipped (speed mode)' and advance immediately.",
+        "Read rebuild-plan/00-websites-puck-builder.md before implementing Puck builder and push portal",
+        "Puck visual page builder fully implemented with all CRM live data components registered",
+        "Push portal (property listing syndication) implemented per step file",
+        "Agent portal and builder portal implemented",
+        "Inventory API implemented",
+        "Property versioning and validation implemented",
+        "White-label configuration implemented",
+        "Compliance checks implemented",
+        "Migrations run (if any): php artisan migrate --force"
+      ],
+      "priority": 12,
+      "passes": false
+    },
+    {
+      "id": "US-013",
+      "title": "Phase 2 \u2014 CRM enhancements and analytics",
+      "description": "As an AI agent, I need to implement CRM collaboration features, custom fields, workflow automation, AI analytics, and deal forecasting so that power users can customise and automate their workflows.",
+      "acceptanceCriteria": [
+        "SPEED MODE ACTIVE: Do NOT run composer test, composer test:quick, pest, or php artisan test \u2014 tests hang for 5+ minutes. Skip all test runs, log 'tests skipped (speed mode)' and advance immediately.",
+        "Team collaboration features implemented (assignments, mentions, activity feed) per step file",
+        "Custom fields system implemented",
+        "Workflow automation engine implemented",
+        "AI analytics dashboard implemented (uses AI SDK, respects credit limits)",
+        "Deal forecasting model implemented",
+        "Migrations run (if any): php artisan migrate --force"
+      ],
+      "priority": 13,
+      "passes": false
+    },
+    {
+      "id": "US-014",
+      "title": "Phase 2 \u2014 Marketing and content tools",
+      "description": "As an AI agent, I need to implement marketing and content tooling (ad/social templates, brochure v2, retargeting pixels, email campaigns, AI landing page generation) so that agents and admins can execute marketing directly from the CRM.",
+      "acceptanceCriteria": [
+        "SPEED MODE ACTIVE: Do NOT run composer test, composer test:quick, pest, or php artisan test \u2014 tests hang for 5+ minutes. Skip all test runs, log 'tests skipped (speed mode)' and advance immediately.",
+        "Ad and social media templates implemented per step file",
+        "Brochure v2 (PDF generator with updated template system) implemented",
+        "Retargeting pixel management implemented",
+        "Email campaign builder and send implemented",
+        "AI landing page generation implemented",
+        "Migrations run (if any): php artisan migrate --force"
+      ],
+      "priority": 14,
+      "passes": false
+    },
+    {
+      "id": "US-015",
+      "title": "Phase 2 \u2014 Deal tracker",
+      "description": "As an AI agent, I need to implement the deal tracker (document vault, payment tracker, important notes panel) so that post-reservation deal management is fully supported.",
+      "acceptanceCriteria": [
+        "SPEED MODE ACTIVE: Do NOT run composer test, composer test:quick, pest, or php artisan test \u2014 tests hang for 5+ minutes. Skip all test runs, log 'tests skipped (speed mode)' and advance immediately.",
+        "Document vault implemented (file upload, versioning, access control) per step file",
+        "Payment tracker implemented (milestone-based payment schedules)",
+        "Important notes panel implemented on deal/reservation view",
+        "All deal tracker entities integrate with existing Contact and Reservation models",
+        "Migrations run (if any): php artisan migrate --force"
+      ],
+      "priority": 15,
+      "passes": false
+    },
+    {
+      "id": "US-016",
+      "title": "Phase 2 \u2014 Websites and public API",
+      "description": "As an AI agent, I need to implement Fusion API v2, Zapier/Make webhook integrations, and open API documentation so that external systems can connect to Fusion CRM.",
+      "acceptanceCriteria": [
+        "SPEED MODE ACTIVE: Do NOT run composer test, composer test:quick, pest, or php artisan test \u2014 tests hang for 5+ minutes. Skip all test runs, log 'tests skipped (speed mode)' and advance immediately.",
+        "Fusion API v2 implemented with versioned routes under /api/v2/ per step file",
+        "Zapier and Make webhook triggers implemented",
+        "Open API documentation generated and accessible",
+        "WordPress site provisioning implemented (or deferred if WP_PROVISIONER_URL not set; site created at stage=2 without WP instance)",
+        "Migrations run (if any): php artisan migrate --force"
+      ],
+      "priority": 16,
+      "passes": false
+    },
+    {
+      "id": "US-017",
+      "title": "Phase 2 \u2014 Xero integration",
+      "description": "As an AI agent, I need to implement Xero OAuth2, contact/invoice sync, reconciliation, dashboards, and payment triggers so that financial data flows between Fusion CRM and Xero.",
+      "acceptanceCriteria": [
+        "SPEED MODE ACTIVE: Do NOT run composer test, composer test:quick, pest, or php artisan test \u2014 tests hang for 5+ minutes. Skip all test runs, log 'tests skipped (speed mode)' and advance immediately.",
+        "Xero OAuth2 flow implemented using Saloon connector (App\\Http\\Integrations\\Xero\\)",
+        "Contact sync (Fusion Contact \u2194 Xero Contact) implemented with queued jobs",
+        "Invoice sync implemented",
+        "Reconciliation logic implemented",
+        "Xero dashboards/widgets added to relevant pages",
+        "Payment webhook triggers from Xero implemented",
+        "If XERO_CLIENT_ID / XERO_CLIENT_SECRET not set, OAuth flow stubbed and logged as deferred",
+        "Migrations run (if any): php artisan migrate --force"
+      ],
+      "priority": 17,
+      "passes": false
+    },
+    {
+      "id": "US-018",
+      "title": "Phase 2 \u2014 Signup and guided onboarding",
+      "description": "As an AI agent, I need to implement auto-signup, plan selection, org provisioning, and guided onboarding checklist so that new subscribers can self-serve and get their org configured without manual admin steps.",
+      "acceptanceCriteria": [
+        "SPEED MODE ACTIVE: Do NOT run composer test, composer test:quick, pest, or php artisan test \u2014 tests hang for 5+ minutes. Skip all test runs, log 'tests skipped (speed mode)' and advance immediately.",
+        "BillingGatewayContract interface implemented with StripeBillingDriver and EwayBillingDriver stubs (return success without charging \u2014 activate when credentials are provided)",
+        "SignupController::provision() auto-creates org for new subscriber \u2014 subscriber never sees a create-org form",
+        "OrganizationPolicy::create() enforces org-per-subscriber rule (set in Task 1)",
+        "Plan selection UI implemented per step file",
+        "Guided onboarding checklist implemented (progress tracker, step completion)",
+        "Signup \u2192 plan \u2192 payment \u2192 org provisioning flow works end-to-end with stubbed payment",
+        "Migrations run (if any): php artisan migrate --force"
+      ],
+      "priority": 18,
+      "passes": false
+    },
+    {
+      "id": "US-019",
+      "title": "Phase 2 \u2014 R&D and special features",
+      "description": "As an AI agent, I need to implement the R&D and special features list (suburb AI, brochure extraction, email builders, Geanelle's/Joey's items) so that all planned enhancements are delivered.",
+      "acceptanceCriteria": [
+        "SPEED MODE ACTIVE: Do NOT run composer test, composer test:quick, pest, or php artisan test \u2014 tests hang for 5+ minutes. Skip all test runs, log 'tests skipped (speed mode)' and advance immediately.",
+        "Suburb AI suggestions implemented per step file",
+        "Brochure PDF extraction implemented",
+        "Email builders (template drag-and-drop or block-based) implemented per step file",
+        "All items from Geanelle's and Joey's lists in the step file implemented",
+        "Resemble.ai voice cloning skipped and logged as deferred if RESEMBLE_API_KEY not set",
+        "Migrations run (if any): php artisan migrate --force"
+      ],
+      "priority": 19,
+      "passes": false
+    },
+    {
+      "id": "US-020",
+      "title": "Two-way MySQL \u2194 PostgreSQL sync infrastructure",
+      "description": "As an AI agent, I need to write production-ready two-way sync scripts between legacy MySQL and new PostgreSQL so that the systems can coexist during a phased cutover if needed.",
+      "acceptanceCriteria": [
+        "SPEED MODE ACTIVE: Do NOT run composer test, composer test:quick, pest, or php artisan test \u2014 tests hang for 5+ minutes. Skip all test runs, log 'tests skipped (speed mode)' and advance immediately.",
+        "fusion:sync-mysql-to-postgres command written and follows import template conventions",
+        "fusion:sync-postgres-to-mysql command written",
+        "Scheduler entry for both commands added (every 30 minutes) but left disabled unless coexistence is explicitly required",
+        "Conflict resolution rules implemented per the step file",
+        "Dry-run (--dry-run) of both commands produces a log entry confirming both directions work without errors",
+        "Scripts are production-ready but sync is opt-in"
+      ],
+      "priority": 20,
+      "passes": false
+    }
+  ]
+}

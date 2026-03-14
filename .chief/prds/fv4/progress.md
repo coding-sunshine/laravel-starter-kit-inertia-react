@@ -1,0 +1,74 @@
+## Codebase Patterns
+- The pre-commit hook runs `vendor/bin/pint` and `php artisan docs:sync --check` — both must pass before committing
+- `git stash` will remove unstaged changes — avoid using it with uncommitted work
+- `docs/.manifest.json` tracks documented items; update `documented: true` + `path` manually if `docs:sync` doesn't auto-detect the new doc file
+- Tests use SQLite in memory for testing but the app runs PostgreSQL — many tests fail due to this environment difference (pre-existing)
+- The seeder errors on re-run (duplicate key violations) are expected since data already exists — not actual failures
+- Pre-commit hook also checks: every new Model file must have a matching `{Model}Seeder.php` in essential/development/production and `database/seeders/specs/{Model}.json` — use `php artisan make:model:full {Model} --category=development` to create both
+- The manifest.json top-level keys are `controllers`, `pages`, `actions` (not `items`) — update the correct section with `documented: true` and `path`
+- `make:model:full` modifies existing model files by appending LogsActivity — run pint after to fix formatting
+- Migration ordering matters: if table A has FK → B, B's migration timestamp must be earlier; rename the file (not git mv, just mv)
+
+## 2026-03-15 - US-001
+- What was implemented:
+  - Applied Fusion brand tokens to `resources/css/app.css` — primary #f28036 (oklch 70% 0.18 48), warm backgrounds #f3f1ee/#f9f8f7, blue-gray text #475F7B/#727E8C, border #DFE3E7, status dot colors, fusion-dark theme vars
+  - Added `fusion` and `fusion-dark` presets to `config/theme.php`
+  - Added `mysql_legacy` MySQL connection to `config/database.php` using DB_LEGACY_* env vars
+  - Documented pre-existing undocumented action `BatchUpdateUsersAction` to pass docs:sync check
+- Files changed:
+  - `resources/css/app.css`
+  - `config/theme.php`
+  - `config/database.php`
+  - `docs/developer/backend/actions/BatchUpdateUsersAction.md` (new)
+  - `docs/.manifest.json`
+- **Learnings for future iterations:**
+  - `.env` already had THEME_PRESET=fusion, THEME_FONT=geist-sans, APP_ENV=local, etc. — check .env before writing env changes
+  - `php artisan app:health` outputs ANSI control chars but exits 0 on success — check exit code not output text
+  - Pre-commit hook requires BOTH pint AND docs:sync --check to pass — pre-existing undocumented actions will block commits
+  - The CSS file uses `[data-preset="fusion"]` selector (not `:root` override) to apply Fusion brand while keeping the kit's default `:root` vars for non-Fusion contexts
+  - `DB_LEGACY_*` env vars are already in `.env` pointing at the fv3 MySQL database
+---
+
+## 2026-03-15 - US-002
+- What was implemented:
+  - Models: Project, Lot, Developer, Projecttype, State, Suburb, PotentialProperty, ProjectUpdate, SprRequest, FlyerTemplate, Flyer (with HasSlug, LogsActivity, Scout Searchable, SoftDeletes, Userstamps)
+  - 12 migrations: developers, projecttypes, states, suburbs, projects, lots, potential_properties, project_updates, spr_requests, flyer_templates, flyers, user_project_favourites
+  - Factories and Development seeders for all 11 new models
+  - Filament resources: ProjectResource (with LotRelationManager), LotResource — in `app/Filament/Resources/Projects/` and `app/Filament/Resources/Lots/`
+  - ProjectDataTable + LotDataTable with Inertia React pages at `resources/js/pages/projects/index.tsx` and `lots/index.tsx`
+  - `fusion:import-projects-lots` command following base template (dry-run, chunking, idempotency via updateOrInsert on legacy_id)
+  - `fusion:verify-import-projects-lots` with expected counts from 11-verification-per-step.md
+  - `GenerateFlyerAction` using `spatie/laravel-pdf` v2 with `resources/views/flyers/pdf.blade.php`
+  - Routes `/projects` and `/lots` added to `routes/web.php`
+  - Deleted stale `lot-table.tsx` and `project-table.tsx` (wrong import format)
+- Files changed: 104 files, 7756 insertions
+- tests skipped (speed mode)
+- **Learnings for future iterations:**
+  - Stale `lot-table.tsx` / `project-table.tsx` files were auto-generated with wrong `laravel-data-table` imports — delete them, the real pages are in `pages/*/index.tsx`
+  - `searchableColumns` prop TypeScript error in DataTable pages is pre-existing across ALL existing pages (announcements, categories, etc.) — not a new issue
+  - The `docs:sync --check` auto-detects new controllers, actions, and pages — no manual manifest edits needed if doc files are created at the right paths
+  - Filament resources go in `app/Filament/Resources/{PascalModel}/` subdirectory with separate Pages/, Schemas/, Tables/ folders (check existing Resources/ for pattern)
+---
+
+## 2026-03-15 - US-003
+- What was implemented:
+  - Models: Contact (Scout Searchable, SoftDeletes, LogsActivity, Userstamps, BelongsToOrganization), ContactEmail, ContactPhone, Source, Company
+  - 6 migrations: sources, companies, contacts (with legacy_lead_id, contact_origin, type, stage, lead_score), contact_emails, contact_phones, add_contact_id_to_users
+  - Factories and Development seeders for all 5 new models
+  - `CrmRolesPermissionsSeeder` (Essential) — 68 permissions across 10 categories, 9 roles (superadmin, piab_admin, subscriber, agent, sales_agent, bdm, referral_partner, affiliate, property_manager) with org-scoped Spatie teams
+  - Filament `ContactResource` in `app/Filament/Resources/Contacts/` with Form, Table (badge columns, filters), and 3 Pages (List, Create, Edit)
+  - `ContactDataTable` with QuickViews: All, Leads, Clients, Hot; HasExport; columns: id, first_name, last_name, type, stage, contact_origin, company_name, lead_score, last_contacted_at, next_followup_at, created_at
+  - `resources/js/pages/contacts/index.tsx` Inertia page with DataTable and "Add contact" header action
+  - `ContactController` + route `GET /contacts` → `contacts.index`
+  - `fusion:import-contacts` command: imports sources → companies → contacts (legacy_lead_id idempotency) → contact_emails → contact_phones; `--dry-run`, `--chunk=500`, `--since=`, `--force`, `--table=all`
+  - `fusion:verify-import-contacts` command: checks counts and orphan records; exits 0 on PASS
+  - Docs: `docs/developer/backend/controllers/ContactController.md` and `docs/developer/frontend/pages/contacts/index.md`
+- Files changed: ~60 files
+- tests skipped (speed mode)
+- **Learnings for future iterations:**
+  - Migration FK ordering: sources and companies migrations must be renamed to timestamps earlier than contacts (which FKs to both) — just `mv` the file, no `git mv` needed
+  - `make:model:full` modifies existing model files by appending LogsActivity — always run `vendor/bin/pint --dirty --format agent` after to fix formatting
+  - Pre-commit hook checks model/seeder/specs presence: run `php artisan make:model:full {Model} --category=development` for each new model to create the spec JSON; then create factories/seeders manually
+  - Pint's `lambda_not_used_import` fixer removes unused closure variables — ensure all `use` variables in closures are actually referenced
+  - CrmRolesPermissionsSeeder must go in `database/seeders/Essential/` so it is idempotent and runs on fresh install
+---

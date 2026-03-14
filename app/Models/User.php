@@ -19,6 +19,7 @@ use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -283,6 +284,16 @@ final class User extends Authenticatable implements ExportsPersonalData, Filamen
             ->withCount('users')
             ->first()
             ?->users_count === 1;
+    }
+
+    /**
+     * The contact record linked to this user.
+     *
+     * @return BelongsTo<Contact, $this>
+     */
+    public function contact(): BelongsTo
+    {
+        return $this->belongsTo(Contact::class);
     }
 
     /**
