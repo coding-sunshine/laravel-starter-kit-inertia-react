@@ -59,7 +59,6 @@ final class RolesAndPermissionsSeeder extends Seeder
             );
         } else {
             $userRole->syncPermissions([
-                'sections.dashboard.view',
                 'sections.railway_siding_record_data.view',
                 'sections.railway_siding_record_data.create',
                 'sections.railway_siding_record_data.update',
@@ -67,20 +66,19 @@ final class RolesAndPermissionsSeeder extends Seeder
         }
 
         $dispatchManageAdmin->syncPermissions([
-            'sections.dashboard.view',
             'sections.mines_dispatch_data.view',
             'sections.mines_dispatch_data.upload',
             'sections.transport.view',
             'sections.transport.update',
             'sections.railway_siding_record_data.view',
-            'sections.reports.view',
-            'sections.reports.generate',
+            'sections.railway_siding_empty_weighment.view',
+            'sections.railway_siding_empty_weighment.create',
+            'sections.railway_siding_empty_weighment.update',
         ]);
 
         $viewerRole->syncPermissions(['sections.dashboard.view']);
 
         $emptyWeighmentShiftRole->syncPermissions([
-            'sections.dashboard.view',
             'sections.railway_siding_empty_weighment.view',
             'sections.railway_siding_empty_weighment.create',
             'sections.railway_siding_empty_weighment.update',
@@ -94,19 +92,10 @@ final class RolesAndPermissionsSeeder extends Seeder
             'delete users',
         ];
         $adminSectionPerms = [
-            'sections.dashboard.view',
             'sections.rakes.view',
             'sections.indents.view',
-            'sections.railway_siding_record_data.view',
-            'sections.railway_siding_empty_weighment.view',
-            'sections.production_coal.view',
-            'sections.production_ob.view',
-            'sections.mines_dispatch_data.view',
-            'sections.transport.view',
             'sections.railway_receipts.view',
-            'sections.penalties.view',
             'sections.weighments.view',
-            'sections.reports.view',
         ];
         if (config('permission.permission_categories_enabled', false)) {
             $resolver = resolve(PermissionCategoryResolver::class);

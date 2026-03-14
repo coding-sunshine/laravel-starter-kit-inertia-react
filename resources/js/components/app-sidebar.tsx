@@ -16,7 +16,7 @@ import { dashboard } from '@/routes';
 import { index as changelogIndex } from '@/routes/changelog';
 import { create as contactCreate } from '@/routes/contact';
 import { index as helpIndex } from '@/routes/help';
-import { type NavItem, type SharedData } from '@/types';
+import { type NavGroup, type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import {
     AlertTriangle,
@@ -35,7 +35,6 @@ import {
     Train,
     Truck,
     Settings,
-    Database,
     Factory,
     MapPin,
     Package,
@@ -49,7 +48,7 @@ import AppLogo from './app-logo';
  * Section-based permissions (sections.{slug}.{action}).
  * Must match config/section_permissions.php nav_permission and backend checks.
  */
-const mainNavItems: NavItem[] = [
+const platformNavItems: NavItem[] = [
     {
         title: 'Dashboard',
         href: dashboard().url,
@@ -58,54 +57,76 @@ const mainNavItems: NavItem[] = [
         dataPan: 'nav-dashboard',
     },
     {
-        title: 'Power Plants',
-        href: '/master-data/power-plants',
-        icon: Factory,
-        permission: 'sections.power_plants.view',
-        dataPan: 'nav-power-plants',
-    },
-    {
-        title: 'Sidings',
-        href: '/master-data/sidings',
-        icon: MapPin,
-        permission: 'sections.sidings.view',
-        dataPan: 'nav-sidings',
-    },
-    {
-        title: 'Loaders',
-        href: '/master-data/loaders',
-        icon: Package,
-        permission: 'sections.loaders.view',
-        dataPan: 'nav-loaders',
-    },
-    {
-        title: 'Penalty Types',
-        href: '/master-data/penalty-types',
-        icon: AlertTriangle,
-        permission: 'sections.penalty_types.view',
-        dataPan: 'nav-penalty-types',
-    },
-    {
-        title: 'Section Timers',
-        href: '/master-data/section-timers',
-        icon: Timer,
-        permission: 'sections.section_timers.view',
-        dataPan: 'nav-section-timers',
-    },
-    {
-        title: 'Distance Matrix',
-        href: '/master-data/distance-matrix',
-        icon: Route,
-        permission: 'sections.distance_matrix.view',
-        dataPan: 'nav-distance-matrix',
-    },
-    {
-        title: 'Billing',
-        href: '/billing',
-        icon: CreditCard,
-        tenancyRequired: true,
-        permission: 'sections.billing.view',
-        dataPan: 'nav-billing',
+        title: 'Settings',
+        href: '#',
+        icon: Settings,
+        collapsible: true,
+        subItems: [
+            {
+                title: 'Power Plants',
+                href: '/master-data/power-plants',
+                icon: Factory,
+                permission: 'sections.power_plants.view',
+                dataPan: 'nav-power-plants',
+            },
+            {
+                title: 'Sidings',
+                href: '/master-data/sidings',
+                icon: MapPin,
+                permission: 'sections.sidings.view',
+                dataPan: 'nav-sidings',
+            },
+            {
+                title: 'Loaders',
+                href: '/master-data/loaders',
+                icon: Package,
+                permission: 'sections.loaders.view',
+                dataPan: 'nav-loaders',
+            },
+            {
+                title: 'Penalty Types',
+                href: '/master-data/penalty-types',
+                icon: AlertTriangle,
+                permission: 'sections.penalty_types.view',
+                dataPan: 'nav-penalty-types',
+            },
+            {
+                title: 'Section Timers',
+                href: '/master-data/section-timers',
+                icon: Timer,
+                permission: 'sections.section_timers.view',
+                dataPan: 'nav-section-timers',
+            },
+            {
+                title: 'Distance Matrix',
+                href: '/master-data/distance-matrix',
+                icon: Route,
+                permission: 'sections.distance_matrix.view',
+                dataPan: 'nav-distance-matrix',
+            },
+            {
+                title: 'Billing',
+                href: '/billing',
+                icon: CreditCard,
+                tenancyRequired: true,
+                permission: 'sections.billing.view',
+                dataPan: 'nav-billing',
+            },
+            {
+                title: 'Production - Coal',
+                href: '/production/coal',
+                icon: Factory,
+                permission: 'sections.production_coal.view',
+                dataPan: 'nav-production-coal',
+            },
+            {
+                title: 'Production - OB',
+                href: '/production/ob',
+                icon: Mountain,
+                permission: 'sections.production_ob.view',
+                dataPan: 'nav-production-ob',
+            },
+        ],
     },
     {
         title: 'Rakes',
@@ -136,20 +157,6 @@ const mainNavItems: NavItem[] = [
         dataPan: 'nav-railway-siding-empty-weighment',
     },
     {
-        title: 'Production - Coal',
-        href: '/production/coal',
-        icon: Factory,
-        permission: 'sections.production_coal.view',
-        dataPan: 'nav-production-coal',
-    },
-    {
-        title: 'Production - OB',
-        href: '/production/ob',
-        icon: Mountain,
-        permission: 'sections.production_ob.view',
-        dataPan: 'nav-production-ob',
-    },
-    {
         title: 'Mines Dispatch Data',
         href: '/vehicle-dispatch',
         icon: Truck,
@@ -170,27 +177,27 @@ const mainNavItems: NavItem[] = [
         permission: 'sections.railway_receipts.view',
         dataPan: 'nav-railway-receipts',
     },
-    {
-        title: 'Penalties',
-        href: '/penalties',
-        icon: AlertTriangle,
-        permission: 'sections.penalties.view',
-        dataPan: 'nav-penalties',
-    },
-    {
-        title: 'Alerts',
-        href: '/alerts',
-        icon: AlertTriangle,
-        permission: 'sections.alerts.view',
-        dataPan: 'nav-alerts',
-    },
-    {
-        title: 'Reconciliation',
-        href: '/reconciliation',
-        icon: Scale,
-        permission: 'sections.reconciliation.view',
-        dataPan: 'nav-reconciliation',
-    },
+    // {
+    //     title: 'Penalties',
+    //     href: '/penalties',
+    //     icon: AlertTriangle,
+    //     permission: 'sections.penalties.view',
+    //     dataPan: 'nav-penalties',
+    // },
+    // {
+    //     title: 'Alerts',
+    //     href: '/alerts',
+    //     icon: AlertTriangle,
+    //     permission: 'sections.alerts.view',
+    //     dataPan: 'nav-alerts',
+    // },
+    // {
+    //     title: 'Reconciliation',
+    //     href: '/reconciliation',
+    //     icon: Scale,
+    //     permission: 'sections.reconciliation.view',
+    //     dataPan: 'nav-reconciliation',
+    // },
     {
         title: 'Weighments',
         href: '/weighments',
@@ -198,37 +205,37 @@ const mainNavItems: NavItem[] = [
         permission: 'sections.weighments.view',
         dataPan: 'nav-weighments',
     },
-    {
-        title: 'Reports',
-        href: '/reports',
-        icon: BarChart3,
-        permission: 'sections.reports.view',
-        dataPan: 'nav-reports',
-    },
-    {
-        title: 'Changelog',
-        href: changelogIndex().url,
-        icon: Megaphone,
-        permission: 'sections.changelog.view',
-        feature: 'changelog',
-        dataPan: 'nav-changelog',
-    },
-    {
-        title: 'Help',
-        href: helpIndex().url,
-        icon: LifeBuoy,
-        permission: 'sections.help.view',
-        feature: 'help',
-        dataPan: 'nav-help',
-    },
-    {
-        title: 'Contact',
-        href: contactCreate().url,
-        icon: Mail,
-        permission: 'sections.contact.create',
-        feature: 'contact',
-        dataPan: 'nav-contact',
-    },
+    // {
+    //     title: 'Reports',
+    //     href: '/reports',
+    //     icon: BarChart3,
+    //     permission: 'sections.reports.view',
+    //     dataPan: 'nav-reports',
+    // },
+    // {
+    //     title: 'Changelog',
+    //     href: changelogIndex().url,
+    //     icon: Megaphone,
+    //     permission: 'sections.changelog.view',
+    //     feature: 'changelog',
+    //     dataPan: 'nav-changelog',
+    // },
+    // {
+    //     title: 'Help',
+    //     href: helpIndex().url,
+    //     icon: LifeBuoy,
+    //     permission: 'sections.help.view',
+    //     feature: 'help',
+    //     dataPan: 'nav-help',
+    // },
+    // {
+    //     title: 'Contact',
+    //     href: contactCreate().url,
+    //     icon: Mail,
+    //     permission: 'sections.contact.create',
+    //     feature: 'contact',
+    //     dataPan: 'nav-contact',
+    // },
 ];
 
 const footerNavItems: NavItem[] = [
@@ -278,9 +285,9 @@ function canShowNavItem(
 
 export function AppSidebar() {
     const { auth, features } = usePage<SharedData>().props;
-    const visibleMainNavItems = useMemo(
+    const canShow = useMemo(
         () =>
-            mainNavItems.filter((item) =>
+            (item: NavItem) =>
                 canShowNavItem(
                     item,
                     auth.permissions ?? [],
@@ -288,9 +295,32 @@ export function AppSidebar() {
                     features ?? {},
                     auth.tenancy_enabled ?? true,
                 ),
-            ),
         [auth.permissions, auth.can_bypass, auth.tenancy_enabled, features],
     );
+
+    const navGroups = useMemo((): NavGroup[] => {
+        const [dashboardItem, settingsItem, ...restPlatform] = platformNavItems;
+        const visibleSettingsSubItems =
+            settingsItem?.collapsible && settingsItem.subItems
+                ? settingsItem.subItems.filter(canShow)
+                : [];
+        const showSettings = visibleSettingsSubItems.length > 0;
+
+        const platformItems: NavItem[] = [];
+        if (dashboardItem && canShow(dashboardItem)) {
+            platformItems.push(dashboardItem);
+        }
+        if (showSettings && settingsItem) {
+            platformItems.push({
+                ...settingsItem,
+                subItems: visibleSettingsSubItems,
+            });
+        }
+        restPlatform.filter(canShow).forEach((item) => platformItems.push(item));
+
+        if (platformItems.length === 0) return [];
+        return [{ title: 'Platform', items: platformItems }];
+    }, [canShow]);
 
     const visibleFooterNavItems = useMemo(() => {
         const f = features ?? {};
@@ -323,7 +353,7 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={visibleMainNavItems} />
+                <NavMain groups={navGroups} />
             </SidebarContent>
 
             <SidebarFooter>

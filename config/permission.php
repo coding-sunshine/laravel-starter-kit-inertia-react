@@ -220,7 +220,6 @@ return [
         'verification.*',
         'home',
         'favicon',
-        'dashboard',
         'up',
         'settings',
         'user-profile.edit',

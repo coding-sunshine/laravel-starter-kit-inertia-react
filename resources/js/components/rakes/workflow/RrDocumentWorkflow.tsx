@@ -2,8 +2,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { FileText, CheckCircle, Clock, Download, Eye } from 'lucide-react';
-import { Link, usePage } from '@inertiajs/react';
+import InputError from '@/components/input-error';
+import { FileText, CheckCircle, Clock, Download, Eye, Upload } from 'lucide-react';
+import { Link, router, usePage } from '@inertiajs/react';
+import { useRef, useState } from 'react';
 
 interface RrDocumentRecord {
     id: number;
@@ -24,11 +26,39 @@ interface RrDocumentWorkflowProps {
 
 export function RrDocumentWorkflow({ rake, disabled }: RrDocumentWorkflowProps) {
     const {
-        props: { flash },
-    } = usePage<{ flash?: { success?: string; rr_document_id?: number } }>();
+        props: { flash, errors },
+    } = usePage<{
+        flash?: { success?: string; rr_document_id?: number };
+        errors?: Record<string, string>;
+    }>();
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [uploading, setUploading] = useState(false);
 
     const rrDocument = rake.rrDocuments?.[0];
     const hasRrDocument = !!rrDocument;
+
+    const handleUploadClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const formData = new FormData();
+        formData.append('pdf', file);
+        formData.append('rake_id', String(rake.id));
+        setUploading(true);
+        router.post('/railway-receipts/import', formData, {
+            forceFormData: true,
+            preserveScroll: true,
+            onFinish: () => {
+                setUploading(false);
+                if (fileInputRef.current) {
+                    fileInputRef.current.value = '';
+                }
+            },
+        });
+    };
 
     const getStatusIcon = () => {
         if (!hasRrDocument) return <Clock className="h-4 w-4" />;
@@ -66,8 +96,31 @@ export function RrDocumentWorkflow({ rake, disabled }: RrDocumentWorkflowProps) 
             </CardHeader>
             <CardContent className="space-y-6">
                 {!hasRrDocument ? (
-                    <div className="text-sm text-muted-foreground">
-                        No RR document uploaded yet. Use the RR upload section above to attach a Railway Receipt PDF to this rake.
+                    <div className="space-y-3">
+                        <p className="text-sm text-muted-foreground">
+                            No RR document uploaded yet. Upload a Railway Receipt PDF to attach it to this rake.
+                        </p>
+                        {!disabled && (
+                            <>
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept=".pdf"
+                                    className="hidden"
+                                    onChange={handleFileChange}
+                                />
+                                <Button
+                                    type="button"
+                                    onClick={handleUploadClick}
+                                    disabled={uploading}
+                                    data-pan="rake-rr-upload-pdf-button"
+                                >
+                                    <Upload className="mr-2 h-4 w-4" />
+                                    {uploading ? 'Uploading…' : 'Upload RR PDF'}
+                                </Button>
+                                <InputError message={errors?.pdf} />
+                            </>
+                        )}
                     </div>
                 ) : (
                     <div className="space-y-4">

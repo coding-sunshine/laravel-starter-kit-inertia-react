@@ -12,8 +12,23 @@ use Throwable;
 
 final class VehicleWorkorderSeeder extends Seeder
 {
+    private const FILES = [
+        'pakur' => 'excel/pakur workload.ods',
+        'kurwa' => 'excel/kurwa workload.ods',
+        'dumka' => 'excel/dumka workload.ods',
+    ];
+
     public function run(): void
     {
+        $base = database_path();
+        foreach (self::FILES as $name => $path) {
+            if (! is_file($base.'/'.$path)) {
+                $this->command?->info("VehicleWorkorderSeeder skipped: database/{$path} not found.");
+
+                return;
+            }
+        }
+
         $this->importPakur();
         $this->importKurwa();
         $this->importDumka();

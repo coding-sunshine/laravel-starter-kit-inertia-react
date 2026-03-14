@@ -205,6 +205,7 @@ final class AppServiceProvider extends ServiceProvider
             'rr-tab-penalties',
             'rr-tab-raw',
             'rr-upload-pdf-button',
+            'rake-rr-upload-pdf-button',
             'indents-upload-pdf-button',
             'nav-production-coal',
             'nav-production-ob',

@@ -48,6 +48,10 @@ final class RakesController extends Controller
             'appliedPenalties.wagon',
         ]);
 
+        if ($rake->state !== 'completed' && self::rakeWorkflowCoreComplete($rake)) {
+            $rake->update(['state' => 'completed']);
+        }
+
         $demurrageRemainingMinutes = null;
         if (
             $rake->state === 'loading'
@@ -385,5 +389,26 @@ final class RakesController extends Controller
 
         return to_route('rakes.index')
             ->with('success', "Rake {$rakeNumber} deleted successfully.");
+    }
+
+    /**
+     * True when TXR, wagon loading, and weighment are all done (used to auto-set state to completed).
+     */
+    private static function rakeWorkflowCoreComplete(Rake $rake): bool
+    {
+        if ($rake->txr?->status !== 'completed') {
+            return false;
+        }
+        $fitWagons = $rake->wagons->filter(fn ($w) => ! $w->is_unfit);
+        $loadedWagonIds = $rake->wagonLoadings
+            ->filter(fn ($l) => (float) $l->loaded_quantity_mt > 0)
+            ->pluck('wagon_id')
+            ->flip();
+        if ($fitWagons->isEmpty() || ! $fitWagons->every(fn ($w) => $loadedWagonIds->has($w->id))) {
+            return false;
+        }
+        $weighmentSuccess = $rake->rakeWeighments->contains('status', 'success');
+
+        return $weighmentSuccess;
     }
 }

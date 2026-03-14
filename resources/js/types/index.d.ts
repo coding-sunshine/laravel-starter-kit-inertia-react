@@ -50,6 +50,10 @@ export interface NavItem {
     href: NonNullable<InertiaLinkProps['href']>;
     icon?: LucideIcon | null;
     isActive?: boolean;
+    /** When true, renders as a collapsible dropdown; subItems are shown as submenu. */
+    collapsible?: boolean;
+    /** Sub-items for collapsible dropdown (e.g. Settings). */
+    subItems?: NavItem[];
     /** Permission name(s) required to show this item (user must have any). Omit to show to all authenticated users. */
     permission?: string | string[];
     /** Feature flag key (e.g. 'blog'). Item is hidden when this feature is inactive. */

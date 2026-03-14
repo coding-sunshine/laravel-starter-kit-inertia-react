@@ -35,15 +35,9 @@ final class IndentsController extends Controller
         try {
             $indent = app(IndentPdfImporter::class)->import(
                 $validated['pdf'],
-                $user->id
+                $user->id,
+                $sidingIds
             );
-            if (! in_array($indent->siding_id, $sidingIds, true)) {
-                $indent->delete();
-
-                return back()->withErrors([
-                    'pdf' => 'The PDF was parsed but the detected siding is not accessible to you.',
-                ]);
-            }
 
             return to_route('indents.show', $indent)
                 ->with('success', 'Indent imported from PDF successfully.');
