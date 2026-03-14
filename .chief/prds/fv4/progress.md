@@ -273,3 +273,27 @@
   - AiSummary uses `$timestamps = false` with manual `created_at` — no `updated_at` column
   - For polymorphic models, use `$model->getMorphClass()` + `$model->getKey()` to store type/id correctly
 ---
+
+## 2026-03-15 - US-012
+- What was implemented:
+  - **6 migrations**: listing_versions (polymorphic snapshot versioning), push_schedules (polymorphic push syndication), match_scores (buyer-property AI scoring), builder_portals (white-label portal branding), wordpress_websites (WP provisioning stages 1-4), add puck_content/puck_enabled/thumbnail_path columns to flyers
+  - **5 new models**: ListingVersion, PushSchedule, MatchScore, BuilderPortal, WordpressWebsite; all with SoftDeletes, BelongsToOrganization, activity logging
+  - **4 new actions**: ValidateListingAction (Lot|Project validation), CreateListingVersionAction (snapshot versioning), SuggestPushTimeAction (Prism AI with fallback), ImportInventoryAction (CSV/JSON upsert with dry-run)
+  - **3 new events**: WordpressSiteProvisioned (user private channel), FlyerExported (org private channel), CampaignSitePublished (org private channel) — all ShouldBroadcast
+  - **2 new jobs**: ProvisionWordpressSiteJob (retries=3, backoff=120), ExportFlyerPdfJob (spatie/laravel-pdf)
+  - **7 new controllers**: AgentPortalController, BuilderPortalController, InventoryApiController, FlyerController (Puck editor + PDF export), PuckTemplateController, PublicSiteController (public campaign site + survey), ProvisionerApiController (Sanctum API for WP provisioner)
+  - **Enhanced Puck editor**: 14 CRM data components (ProjectHero, LotGrid, LotCard, AgentProfile, EnquiryForm, ProjectGallery, FloorPlanViewer, PriceList, KeyFeatures, TextBlock, ImageBlock, VideoEmbed, CallToAction, SurveyBlock) + 5 Flyer components (FlyerHero, FlyerLotSpecs, FlyerAgentFooter, FlyerTextBlock, FlyerQRCode)
+  - **8 new React pages**: agent-portal/index, builder-portal/index, builder-portal/show, inventory/index, puck-templates/index, puck-templates/edit, public/campaign-site, public/survey
+  - **Routes**: agent-portal, builder-portal CRUD, inventory import, flyers Puck editor + PDF export, puck-templates CRUD, public `/w/{uuid}` + `/survey/{uuid}`, provisioner API (Sanctum)
+  - **Pan analytics**: 12 new tracked items for agent-portal, builder-portal, inventory, puck-templates pages
+  - **Development seeders + spec JSON** for all 5 new models
+  - **Documentation**: 6 controller docs, 4 action docs, 8 page docs, manifest updated
+  - migrations run via `php artisan migrate --force`
+- tests skipped (speed mode)
+- **Learnings for future iterations:**
+  - TypeScript: `route()` Ziggy helper is not available in all page contexts — use hardcoded URL strings for public pages (public/survey, puck-templates/edit)
+  - `docs:sync --check` detects undocumented pages even without matching manifest entries — create doc files before committing
+  - Puck config should use `any` type to avoid PuckComponent type strictness; component renders are pure functional React components
+  - ShouldBroadcast events need `broadcastOn()` returning PrivateChannel and `broadcastWith()` for payload
+  - Provisioner API uses Sanctum `auth:sanctum` middleware + separate route group (not `tenant` middleware — external callback from WP provisioner server)
+---
