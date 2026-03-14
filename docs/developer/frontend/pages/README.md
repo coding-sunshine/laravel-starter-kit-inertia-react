@@ -77,9 +77,26 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | [organizations/table](./organizations/table.md) | organizations.list | ✅ |
 | [posts/table](./posts/table.md) | posts.table | ✅ |
 | lot-table | N/A | ✅ |
-| lots/index | lots.table | ✅ |
+| lots/index | lots.table, lots.push | ✅ |
 | project-table | N/A | ✅ |
-| projects/index | projects.table | ✅ |
-| contacts/index | contacts.index | ❌ |
+| projects/index | projects.table, projects.push | ✅ |
+| contacts/index | contacts.index, contacts.bulk-update | ✅ |
+| reservations/index | reservations.index, reservations.bulk-update | ✅ |
+| enquiries/index | enquiries.index | ✅ |
+| searches/index | searches.index | ✅ |
+| sales/index | sales.index | ✅ |
+| commissions/index | commissions.index | ✅ |
+| tasks/index | tasks.index | ✅ |
+| campaign-sites/index | campaign-sites.index, campaign-sites.edit-puck | ✅ |
+| campaign-sites/puck-editor | campaign-sites.index, campaign-sites.edit-puck | ✅ |
+| reports/index | reports.index, reports.show | ✅ |
+| reports/show | reports.index, reports.show | ✅ |
+| pipeline/index | pipeline.index | ✅ |
+| funnel/index | funnel.index | ✅ |
+| member-listings/index | member-listings.index | ✅ |
+| cold-outreach/index | cold-outreach.index, cold-outreach.generate | ❌ |
+| lead-generation/coaching | lead-generation.index, lead-generation.landing-page-copy | ❌ |
+| lead-generation/index | lead-generation.index, lead-generation.landing-page-copy | ❌ |
+| nurture-sequences/index | nurture-sequences.index, nurture-sequences.store | ❌ |
 
 

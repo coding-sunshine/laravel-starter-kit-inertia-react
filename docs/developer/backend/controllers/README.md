@@ -65,6 +65,21 @@ All Controllers:
 | [PostsTableController](./poststablecontroller.md) | N/A | ✅ |
 | [LotsTableController](./LotsTableController.md) | N/A | ✅ |
 | [ProjectsTableController](./ProjectsTableController.md) | N/A | ✅ |
-| ContactController | N/A | ❌ |
+| [ContactController](./ContactController.md) | N/A | ✅ |
+| [PropertyReservationController](./PropertyReservationController.md) | N/A | ✅ |
+| [PropertyEnquiryController](./PropertyEnquiryController.md) | N/A | ✅ |
+| [PropertySearchController](./PropertySearchController.md) | N/A | ✅ |
+| [SaleController](./SaleController.md) | N/A | ✅ |
+| [CommissionController](./CommissionController.md) | N/A | ✅ |
+| [TaskController](./developer/backend/controllers/TaskController.md) | N/A | ✅ |
+| [CampaignSiteController](docs/developer/backend/controllers/CampaignSiteController.md) | N/A | ✅ |
+| [ReportController](docs/developer/backend/controllers/ReportController.md) | N/A | ✅ |
+| [PipelineController](docs/developer/backend/controllers/PipelineController.md) | N/A | ✅ |
+| [FunnelController](docs/developer/backend/controllers/FunnelController.md) | N/A | ✅ |
+| [MemberListingsController](docs/developer/backend/controllers/MemberListingsController.md) | N/A | ✅ |
+| ColdOutreachController | N/A | ❌ |
+| LeadCaptureController | N/A | ❌ |
+| LeadGenerationController | N/A | ❌ |
+| NurtureSequenceController | N/A | ❌ |
 
 

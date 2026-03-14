@@ -1626,6 +1626,60 @@
             "data_files": [
                 "puck_templates.json"
             ]
+        },
+        {
+            "name": "LeadScoreSeeder",
+            "category": "development",
+            "description": "Seeds LeadScore data",
+            "dependencies": [],
+            "data_files": [
+                "lead_scores.json"
+            ]
+        },
+        {
+            "name": "EngagementEventSeeder",
+            "category": "development",
+            "description": "Seeds EngagementEvent data",
+            "dependencies": [],
+            "data_files": [
+                "engagement_events.json"
+            ]
+        },
+        {
+            "name": "NurtureSequenceSeeder",
+            "category": "development",
+            "description": "Seeds NurtureSequence data",
+            "dependencies": [],
+            "data_files": [
+                "nurture_sequences.json"
+            ]
+        },
+        {
+            "name": "SequenceStepSeeder",
+            "category": "development",
+            "description": "Seeds SequenceStep data",
+            "dependencies": [],
+            "data_files": [
+                "sequence_steps.json"
+            ]
+        },
+        {
+            "name": "SequenceEnrollmentSeeder",
+            "category": "development",
+            "description": "Seeds SequenceEnrollment data",
+            "dependencies": [],
+            "data_files": [
+                "sequence_enrollments.json"
+            ]
+        },
+        {
+            "name": "ColdOutreachTemplateSeeder",
+            "category": "development",
+            "description": "Seeds ColdOutreachTemplate data",
+            "dependencies": [],
+            "data_files": [
+                "cold_outreach_templates.json"
+            ]
         }
     ],
     "categories": {

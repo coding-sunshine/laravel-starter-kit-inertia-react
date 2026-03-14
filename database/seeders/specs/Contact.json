@@ -111,6 +111,11 @@
             "type": "timestamp",
             "nullable": true,
             "default": null
+        },
+        "assigned_to_user_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {

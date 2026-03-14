@@ -1,0 +1,74 @@
+{
+    "model": "ColdOutreachTemplate",
+    "table": "cold_outreach_templates",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "channel": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "subject": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "body": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "variants": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "ctas": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "ai_generated": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "tone": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": [],
+    "value_hints": {
+        "name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    },
+    "scenarios": []
+}

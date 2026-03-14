@@ -47,5 +47,17 @@ All Actions:
 | [FindOrCreateSocialUser](./FindOrCreateSocialUser.md) | N/A | ✅ |
 | [BatchUpdateUsersAction](docs/developer/backend/actions/BatchUpdateUsersAction.md) | N/A | ✅ |
 | [GenerateFlyerAction](docs/developer/backend/actions/GenerateFlyerAction.md) | N/A | ✅ |
+| [UpdateLastContactedAtAction](docs/developer/backend/actions/UpdateLastContactedAtAction.md) | N/A | ✅ |
+| [UpdateContactStageAction](docs/developer/backend/actions/UpdateContactStageAction.md) | N/A | ✅ |
+| [UpdateSaleStageAction](docs/developer/backend/actions/UpdateSaleStageAction.md) | N/A | ✅ |
+| [BulkUpdateContactsAction](docs/developer/backend/actions/BulkUpdateContactsAction.md) | N/A | ✅ |
+| [BulkUpdateReservationsAction](docs/developer/backend/actions/BulkUpdateReservationsAction.md) | N/A | ✅ |
+| [PushListingAction](docs/developer/backend/actions/PushListingAction.md) | N/A | ✅ |
+| CaptureLeadAction | N/A | ❌ |
+| EnrollInNurtureSequenceAction | N/A | ❌ |
+| GenerateColdOutreachAction | N/A | ❌ |
+| GenerateLandingPageCopyAction | N/A | ❌ |
+| GenerateLeadBriefAction | N/A | ❌ |
+| RouteLeadAction | N/A | ❌ |
 
 

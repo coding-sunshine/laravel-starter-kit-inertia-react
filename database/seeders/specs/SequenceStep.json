@@ -1,0 +1,64 @@
+{
+    "model": "SequenceStep",
+    "table": "sequence_steps",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "nurture_sequence_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "step_order": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "channel": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "subject": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "template_body": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "delay_days": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "metadata": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "sequence": {
+            "type": "belongsTo",
+            "model": "Sequence"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

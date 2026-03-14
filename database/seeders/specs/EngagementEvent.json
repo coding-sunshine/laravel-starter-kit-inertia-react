@@ -1,0 +1,59 @@
+{
+    "model": "EngagementEvent",
+    "table": "engagement_events",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "contact_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "event_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "source": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "payload": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "occurred_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "contact": {
+            "type": "belongsTo",
+            "model": "Contact"
+        }
+    },
+    "value_hints": {
+        "occurred_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        }
+    },
+    "scenarios": []
+}

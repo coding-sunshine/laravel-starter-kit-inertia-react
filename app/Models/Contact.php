@@ -32,6 +32,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
  * @property \Carbon\Carbon|null $next_followup_at
  * @property \Carbon\Carbon|null $last_contacted_at
  * @property int|null $lead_score
+ * @property int|null $assigned_to_user_id
  * @property int|null $legacy_lead_id
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
@@ -65,6 +66,7 @@ final class Contact extends Model
         'next_followup_at',
         'last_contacted_at',
         'lead_score',
+        'assigned_to_user_id',
         'legacy_lead_id',
     ];
 
@@ -101,6 +103,38 @@ final class Contact extends Model
     public function primaryPhone(): HasMany
     {
         return $this->hasMany(ContactPhone::class)->where('is_primary', true);
+    }
+
+    /**
+     * @return HasMany<PropertySearch, $this>
+     */
+    public function propertySearches(): HasMany
+    {
+        return $this->hasMany(PropertySearch::class, 'client_contact_id');
+    }
+
+    /**
+     * @return HasMany<Task, $this>
+     */
+    public function tasks(): HasMany
+    {
+        return $this->hasMany(Task::class, 'assigned_contact_id');
+    }
+
+    /**
+     * @return HasMany<SequenceEnrollment, $this>
+     */
+    public function sequenceEnrollments(): HasMany
+    {
+        return $this->hasMany(SequenceEnrollment::class);
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function assignedUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_to_user_id');
     }
 
     /**

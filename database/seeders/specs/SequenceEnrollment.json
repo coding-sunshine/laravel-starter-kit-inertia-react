@@ -1,0 +1,81 @@
+{
+    "model": "SequenceEnrollment",
+    "table": "sequence_enrollments",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "contact_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "nurture_sequence_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "current_step": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "started_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "next_run_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "completed_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "contact": {
+            "type": "belongsTo",
+            "model": "Contact"
+        },
+        "sequence": {
+            "type": "belongsTo",
+            "model": "Sequence"
+        }
+    },
+    "value_hints": {
+        "started_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        },
+        "next_run_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        },
+        "completed_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        }
+    },
+    "scenarios": []
+}

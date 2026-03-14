@@ -602,31 +602,229 @@
     "UpdateLastContactedAtAction": {
       "documented": true,
       "path": "docs/developer/backend/actions/UpdateLastContactedAtAction.md",
-      "lastUpdated": "2026-03-15"
+      "lastUpdated": "2026-03-15",
+      "relationships": {
+        "usedBy": [],
+        "usesModels": [
+          "Contact"
+        ],
+        "relatedRoutes": []
+      }
     },
     "UpdateContactStageAction": {
       "documented": true,
       "path": "docs/developer/backend/actions/UpdateContactStageAction.md",
-      "lastUpdated": "2026-03-15"
+      "lastUpdated": "2026-03-15",
+      "relationships": {
+        "usedBy": [
+          "ContactController"
+        ],
+        "usesModels": [
+          "Contact"
+        ],
+        "relatedRoutes": [
+          "contacts.index",
+          "contacts.bulk-update",
+          "contacts.quick-edit"
+        ]
+      }
     },
     "UpdateSaleStageAction": {
       "documented": true,
       "path": "docs/developer/backend/actions/UpdateSaleStageAction.md",
-      "lastUpdated": "2026-03-15"
+      "lastUpdated": "2026-03-15",
+      "relationships": {
+        "usedBy": [],
+        "usesModels": [
+          "Sale"
+        ],
+        "relatedRoutes": []
+      }
     },
     "BulkUpdateContactsAction": {
       "documented": true,
       "path": "docs/developer/backend/actions/BulkUpdateContactsAction.md",
-      "lastUpdated": "2026-03-15"
+      "lastUpdated": "2026-03-15",
+      "relationships": {
+        "usedBy": [
+          "ContactController"
+        ],
+        "usesModels": [
+          "User",
+          "Contact"
+        ],
+        "relatedRoutes": [
+          "contacts.index",
+          "contacts.bulk-update",
+          "contacts.quick-edit"
+        ]
+      }
     },
     "BulkUpdateReservationsAction": {
       "documented": true,
       "path": "docs/developer/backend/actions/BulkUpdateReservationsAction.md",
-      "lastUpdated": "2026-03-15"
+      "lastUpdated": "2026-03-15",
+      "relationships": {
+        "usedBy": [
+          "PropertyReservationController"
+        ],
+        "usesModels": [
+          "User",
+          "PropertyReservation"
+        ],
+        "relatedRoutes": [
+          "reservations.index",
+          "reservations.bulk-update",
+          "reservations.quick-edit"
+        ]
+      }
     },
     "PushListingAction": {
       "documented": true,
       "path": "docs/developer/backend/actions/PushListingAction.md",
+      "lastUpdated": "2026-03-15",
+      "relationships": {
+        "usedBy": [
+          "LotsTableController",
+          "ProjectsTableController"
+        ],
+        "usesModels": [
+          "User",
+          "PushHistory"
+        ],
+        "relatedRoutes": [
+          "projects.table",
+          "lots.table",
+          "lots.push",
+          "projects.push"
+        ]
+      }
+    },
+    "CaptureLeadAction": {
+      "documented": true,
+      "path": "docs/developer/backend/actions/CaptureLeadAction.md",
+      "relationships": {
+        "usedBy": [
+          "LeadCaptureController"
+        ],
+        "usesModels": [
+          "Contact",
+          "ContactAttribution",
+          "ContactEmail",
+          "ContactPhone",
+          "EngagementEvent",
+          "Source"
+        ],
+        "relatedRoutes": [
+          "lead-capture.store",
+          "lead-capture.bulk"
+        ]
+      },
+      "lastUpdated": "2026-03-15"
+    },
+    "EnrollInNurtureSequenceAction": {
+      "documented": true,
+      "path": "docs/developer/backend/actions/EnrollInNurtureSequenceAction.md",
+      "relationships": {
+        "usedBy": [
+          "LeadCaptureController",
+          "NurtureSequenceController"
+        ],
+        "usesModels": {
+          "0": "Contact",
+          "1": "NurtureSequence",
+          "4": "SequenceEnrollment"
+        },
+        "relatedRoutes": [
+          "nurture-sequences.index",
+          "nurture-sequences.store",
+          "nurture-sequences.enroll",
+          "lead-capture.store",
+          "lead-capture.bulk"
+        ]
+      },
+      "lastUpdated": "2026-03-15"
+    },
+    "GenerateColdOutreachAction": {
+      "documented": true,
+      "path": "docs/developer/backend/actions/GenerateColdOutreachAction.md",
+      "relationships": {
+        "usedBy": [
+          "ColdOutreachController"
+        ],
+        "usesModels": [
+          "ColdOutreachTemplate"
+        ],
+        "relatedRoutes": [
+          "cold-outreach.index",
+          "cold-outreach.generate"
+        ]
+      },
+      "lastUpdated": "2026-03-15"
+    },
+    "GenerateLandingPageCopyAction": {
+      "documented": true,
+      "path": "docs/developer/backend/actions/GenerateLandingPageCopyAction.md",
+      "relationships": {
+        "usedBy": [
+          "LeadGenerationController"
+        ],
+        "usesModels": {
+          "0": "Lot",
+          "2": "Project"
+        },
+        "relatedRoutes": [
+          "lead-generation.index",
+          "lead-generation.landing-page-copy",
+          "lead-generation.lead-brief",
+          "lead-generation.score-and-route",
+          "lead-generation.coaching"
+        ]
+      },
+      "lastUpdated": "2026-03-15"
+    },
+    "GenerateLeadBriefAction": {
+      "documented": true,
+      "path": "docs/developer/backend/actions/GenerateLeadBriefAction.md",
+      "relationships": {
+        "usedBy": [
+          "LeadGenerationController"
+        ],
+        "usesModels": [
+          "Contact"
+        ],
+        "relatedRoutes": [
+          "lead-generation.index",
+          "lead-generation.landing-page-copy",
+          "lead-generation.lead-brief",
+          "lead-generation.score-and-route",
+          "lead-generation.coaching"
+        ]
+      },
+      "lastUpdated": "2026-03-15"
+    },
+    "RouteLeadAction": {
+      "documented": true,
+      "path": "docs/developer/backend/actions/RouteLeadAction.md",
+      "relationships": {
+        "usedBy": [
+          "LeadCaptureController",
+          "LeadGenerationController"
+        ],
+        "usesModels": {
+          "0": "Contact",
+          "2": "User"
+        },
+        "relatedRoutes": [
+          "lead-generation.index",
+          "lead-generation.landing-page-copy",
+          "lead-generation.lead-brief",
+          "lead-generation.score-and-route",
+          "lead-generation.coaching",
+          "lead-capture.store",
+          "lead-capture.bulk"
+        ]
+      },
       "lastUpdated": "2026-03-15"
     }
   },
@@ -1389,10 +1587,13 @@
       "documented": true,
       "path": "./LotsTableController.md",
       "relationships": {
-        "usesActions": [],
+        "usesActions": [
+          "PushListingAction"
+        ],
         "usesFormRequests": [],
         "relatedRoutes": [
-          "lots.table"
+          "lots.table",
+          "lots.push"
         ],
         "rendersPages": [
           "lots/index"
@@ -1403,10 +1604,13 @@
       "documented": true,
       "path": "./ProjectsTableController.md",
       "relationships": {
-        "usesActions": [],
+        "usesActions": [
+          "PushListingAction"
+        ],
         "usesFormRequests": [],
         "relatedRoutes": [
-          "projects.table"
+          "projects.table",
+          "projects.push"
         ],
         "rendersPages": [
           "projects/index"
@@ -1417,10 +1621,15 @@
       "documented": true,
       "path": "./ContactController.md",
       "relationships": {
-        "usesActions": [],
+        "usesActions": [
+          "BulkUpdateContactsAction",
+          "UpdateContactStageAction"
+        ],
         "usesFormRequests": [],
         "relatedRoutes": [
-          "contacts.index"
+          "contacts.index",
+          "contacts.bulk-update",
+          "contacts.quick-edit"
         ],
         "rendersPages": [
           "contacts/index"
@@ -1431,10 +1640,14 @@
       "documented": true,
       "path": "./PropertyReservationController.md",
       "relationships": {
-        "usesActions": [],
+        "usesActions": [
+          "BulkUpdateReservationsAction"
+        ],
         "usesFormRequests": [],
         "relatedRoutes": [
-          "reservations.index"
+          "reservations.index",
+          "reservations.bulk-update",
+          "reservations.quick-edit"
         ],
         "rendersPages": [
           "reservations/index"
@@ -1532,21 +1745,142 @@
     "ReportController": {
       "documented": true,
       "path": "docs/developer/backend/controllers/ReportController.md",
-      "lastUpdated": "2026-03-15"
+      "lastUpdated": "2026-03-15",
+      "relationships": {
+        "usesActions": [],
+        "usesFormRequests": [],
+        "relatedRoutes": [
+          "reports.index",
+          "reports.show"
+        ],
+        "rendersPages": [
+          "reports/index",
+          "reports/show"
+        ]
+      }
     },
     "PipelineController": {
       "documented": true,
       "path": "docs/developer/backend/controllers/PipelineController.md",
-      "lastUpdated": "2026-03-15"
+      "lastUpdated": "2026-03-15",
+      "relationships": {
+        "usesActions": [],
+        "usesFormRequests": [],
+        "relatedRoutes": [
+          "pipeline.index"
+        ],
+        "rendersPages": [
+          "pipeline/index"
+        ]
+      }
     },
     "FunnelController": {
       "documented": true,
       "path": "docs/developer/backend/controllers/FunnelController.md",
-      "lastUpdated": "2026-03-15"
+      "lastUpdated": "2026-03-15",
+      "relationships": {
+        "usesActions": [],
+        "usesFormRequests": [],
+        "relatedRoutes": [
+          "funnel.index"
+        ],
+        "rendersPages": [
+          "funnel/index"
+        ]
+      }
     },
     "MemberListingsController": {
       "documented": true,
       "path": "docs/developer/backend/controllers/MemberListingsController.md",
+      "lastUpdated": "2026-03-15",
+      "relationships": {
+        "usesActions": [],
+        "usesFormRequests": [],
+        "relatedRoutes": [
+          "member-listings.index"
+        ],
+        "rendersPages": [
+          "member-listings/index"
+        ]
+      }
+    },
+    "ColdOutreachController": {
+      "documented": true,
+      "path": "docs/developer/backend/controllers/ColdOutreachController.md",
+      "relationships": {
+        "usesActions": [
+          "GenerateColdOutreachAction"
+        ],
+        "usesFormRequests": [],
+        "relatedRoutes": [
+          "cold-outreach.index",
+          "cold-outreach.generate"
+        ],
+        "rendersPages": [
+          "cold-outreach/index"
+        ]
+      },
+      "lastUpdated": "2026-03-15"
+    },
+    "LeadCaptureController": {
+      "documented": true,
+      "path": "docs/developer/backend/controllers/LeadCaptureController.md",
+      "relationships": {
+        "usesActions": [
+          "CaptureLeadAction",
+          "EnrollInNurtureSequenceAction",
+          "RouteLeadAction"
+        ],
+        "usesFormRequests": [],
+        "relatedRoutes": [
+          "lead-capture.store",
+          "lead-capture.bulk"
+        ],
+        "rendersPages": []
+      },
+      "lastUpdated": "2026-03-15"
+    },
+    "LeadGenerationController": {
+      "documented": true,
+      "path": "docs/developer/backend/controllers/LeadGenerationController.md",
+      "relationships": {
+        "usesActions": [
+          "GenerateLandingPageCopyAction",
+          "GenerateLeadBriefAction",
+          "RouteLeadAction"
+        ],
+        "usesFormRequests": [],
+        "relatedRoutes": [
+          "lead-generation.index",
+          "lead-generation.landing-page-copy",
+          "lead-generation.lead-brief",
+          "lead-generation.score-and-route",
+          "lead-generation.coaching"
+        ],
+        "rendersPages": [
+          "lead-generation/index",
+          "lead-generation/coaching"
+        ]
+      },
+      "lastUpdated": "2026-03-15"
+    },
+    "NurtureSequenceController": {
+      "documented": true,
+      "path": "docs/developer/backend/controllers/NurtureSequenceController.md",
+      "relationships": {
+        "usesActions": [
+          "EnrollInNurtureSequenceAction"
+        ],
+        "usesFormRequests": [],
+        "relatedRoutes": [
+          "nurture-sequences.index",
+          "nurture-sequences.store",
+          "nurture-sequences.enroll"
+        ],
+        "rendersPages": [
+          "nurture-sequences/index"
+        ]
+      },
       "lastUpdated": "2026-03-15"
     }
   },
@@ -1603,6 +1937,9 @@
           "filament.admin.resources.announcements.edit",
           "filament.admin.resources.audit-logs.index",
           "filament.admin.resources.billing.affiliates.index",
+          "filament.admin.resources.campaign-websites.index",
+          "filament.admin.resources.campaign-websites.create",
+          "filament.admin.resources.campaign-websites.edit",
           "filament.admin.resources.categories.index",
           "filament.admin.resources.changelog-entries.index",
           "filament.admin.resources.changelog-entries.create",
@@ -1646,10 +1983,25 @@
           "filament.admin.resources.projects.create",
           "filament.admin.resources.projects.view",
           "filament.admin.resources.projects.edit",
+          "filament.admin.resources.property-enquiries.index",
+          "filament.admin.resources.property-enquiries.create",
+          "filament.admin.resources.property-enquiries.edit",
+          "filament.admin.resources.property-reservations.index",
+          "filament.admin.resources.property-reservations.create",
+          "filament.admin.resources.property-reservations.edit",
+          "filament.admin.resources.property-searches.index",
+          "filament.admin.resources.property-searches.create",
+          "filament.admin.resources.property-searches.edit",
           "filament.admin.resources.roles.index",
           "filament.admin.resources.roles.create",
           "filament.admin.resources.roles.view",
           "filament.admin.resources.roles.edit",
+          "filament.admin.resources.sales.index",
+          "filament.admin.resources.sales.create",
+          "filament.admin.resources.sales.edit",
+          "filament.admin.resources.tasks.index",
+          "filament.admin.resources.tasks.create",
+          "filament.admin.resources.tasks.edit",
           "filament.admin.resources.terms-versions.index",
           "filament.admin.resources.terms-versions.create",
           "filament.admin.resources.terms-versions.edit",
@@ -1709,6 +2061,9 @@
           "filament.system.resources.announcements.edit",
           "filament.system.resources.audit-logs.index",
           "filament.system.resources.billing.affiliates.index",
+          "filament.system.resources.campaign-websites.index",
+          "filament.system.resources.campaign-websites.create",
+          "filament.system.resources.campaign-websites.edit",
           "filament.system.resources.categories.index",
           "filament.system.resources.changelog-entries.index",
           "filament.system.resources.changelog-entries.create",
@@ -1752,10 +2107,25 @@
           "filament.system.resources.projects.create",
           "filament.system.resources.projects.view",
           "filament.system.resources.projects.edit",
+          "filament.system.resources.property-enquiries.index",
+          "filament.system.resources.property-enquiries.create",
+          "filament.system.resources.property-enquiries.edit",
+          "filament.system.resources.property-reservations.index",
+          "filament.system.resources.property-reservations.create",
+          "filament.system.resources.property-reservations.edit",
+          "filament.system.resources.property-searches.index",
+          "filament.system.resources.property-searches.create",
+          "filament.system.resources.property-searches.edit",
           "filament.system.resources.roles.index",
           "filament.system.resources.roles.create",
           "filament.system.resources.roles.view",
           "filament.system.resources.roles.edit",
+          "filament.system.resources.sales.index",
+          "filament.system.resources.sales.create",
+          "filament.system.resources.sales.edit",
+          "filament.system.resources.tasks.index",
+          "filament.system.resources.tasks.create",
+          "filament.system.resources.tasks.edit",
           "filament.system.resources.terms-versions.index",
           "filament.system.resources.terms-versions.create",
           "filament.system.resources.terms-versions.edit",
@@ -1811,8 +2181,40 @@
           "dashboard",
           "announcements.table",
           "contacts.index",
+          "tasks.index",
+          "campaign-sites.index",
+          "campaign-sites.edit-puck",
+          "campaign-sites.puck-save",
           "projects.table",
           "lots.table",
+          "reservations.index",
+          "enquiries.index",
+          "searches.index",
+          "sales.index",
+          "commissions.index",
+          "pipeline.index",
+          "funnel.index",
+          "member-listings.index",
+          "contacts.bulk-update",
+          "contacts.quick-edit",
+          "reservations.bulk-update",
+          "reservations.quick-edit",
+          "lots.push",
+          "projects.push",
+          "lead-generation.index",
+          "lead-generation.landing-page-copy",
+          "lead-generation.lead-brief",
+          "lead-generation.score-and-route",
+          "lead-generation.coaching",
+          "nurture-sequences.index",
+          "nurture-sequences.store",
+          "nurture-sequences.enroll",
+          "cold-outreach.index",
+          "cold-outreach.generate",
+          "lead-capture.store",
+          "lead-capture.bulk",
+          "reports.index",
+          "reports.show",
           "categories.table",
           "posts.table",
           "users.table",
@@ -1870,6 +2272,7 @@
           "pages.show",
           "profile.export-pdf",
           "api.slug-availability",
+          "api.login-event",
           "internal.caddy.ask",
           "webhooks.stripe",
           "webhooks.paddle",
@@ -2227,6 +2630,9 @@
           "filament.admin.resources.announcements.edit",
           "filament.admin.resources.audit-logs.index",
           "filament.admin.resources.billing.affiliates.index",
+          "filament.admin.resources.campaign-websites.index",
+          "filament.admin.resources.campaign-websites.create",
+          "filament.admin.resources.campaign-websites.edit",
           "filament.admin.resources.categories.index",
           "filament.admin.resources.changelog-entries.index",
           "filament.admin.resources.changelog-entries.create",
@@ -2270,10 +2676,25 @@
           "filament.admin.resources.projects.create",
           "filament.admin.resources.projects.view",
           "filament.admin.resources.projects.edit",
+          "filament.admin.resources.property-enquiries.index",
+          "filament.admin.resources.property-enquiries.create",
+          "filament.admin.resources.property-enquiries.edit",
+          "filament.admin.resources.property-reservations.index",
+          "filament.admin.resources.property-reservations.create",
+          "filament.admin.resources.property-reservations.edit",
+          "filament.admin.resources.property-searches.index",
+          "filament.admin.resources.property-searches.create",
+          "filament.admin.resources.property-searches.edit",
           "filament.admin.resources.roles.index",
           "filament.admin.resources.roles.create",
           "filament.admin.resources.roles.view",
           "filament.admin.resources.roles.edit",
+          "filament.admin.resources.sales.index",
+          "filament.admin.resources.sales.create",
+          "filament.admin.resources.sales.edit",
+          "filament.admin.resources.tasks.index",
+          "filament.admin.resources.tasks.create",
+          "filament.admin.resources.tasks.edit",
           "filament.admin.resources.terms-versions.index",
           "filament.admin.resources.terms-versions.create",
           "filament.admin.resources.terms-versions.edit",
@@ -2333,6 +2754,9 @@
           "filament.system.resources.announcements.edit",
           "filament.system.resources.audit-logs.index",
           "filament.system.resources.billing.affiliates.index",
+          "filament.system.resources.campaign-websites.index",
+          "filament.system.resources.campaign-websites.create",
+          "filament.system.resources.campaign-websites.edit",
           "filament.system.resources.categories.index",
           "filament.system.resources.changelog-entries.index",
           "filament.system.resources.changelog-entries.create",
@@ -2376,10 +2800,25 @@
           "filament.system.resources.projects.create",
           "filament.system.resources.projects.view",
           "filament.system.resources.projects.edit",
+          "filament.system.resources.property-enquiries.index",
+          "filament.system.resources.property-enquiries.create",
+          "filament.system.resources.property-enquiries.edit",
+          "filament.system.resources.property-reservations.index",
+          "filament.system.resources.property-reservations.create",
+          "filament.system.resources.property-reservations.edit",
+          "filament.system.resources.property-searches.index",
+          "filament.system.resources.property-searches.create",
+          "filament.system.resources.property-searches.edit",
           "filament.system.resources.roles.index",
           "filament.system.resources.roles.create",
           "filament.system.resources.roles.view",
           "filament.system.resources.roles.edit",
+          "filament.system.resources.sales.index",
+          "filament.system.resources.sales.create",
+          "filament.system.resources.sales.edit",
+          "filament.system.resources.tasks.index",
+          "filament.system.resources.tasks.create",
+          "filament.system.resources.tasks.edit",
           "filament.system.resources.terms-versions.index",
           "filament.system.resources.terms-versions.create",
           "filament.system.resources.terms-versions.edit",
@@ -2435,8 +2874,40 @@
           "dashboard",
           "announcements.table",
           "contacts.index",
+          "tasks.index",
+          "campaign-sites.index",
+          "campaign-sites.edit-puck",
+          "campaign-sites.puck-save",
           "projects.table",
           "lots.table",
+          "reservations.index",
+          "enquiries.index",
+          "searches.index",
+          "sales.index",
+          "commissions.index",
+          "pipeline.index",
+          "funnel.index",
+          "member-listings.index",
+          "contacts.bulk-update",
+          "contacts.quick-edit",
+          "reservations.bulk-update",
+          "reservations.quick-edit",
+          "lots.push",
+          "projects.push",
+          "lead-generation.index",
+          "lead-generation.landing-page-copy",
+          "lead-generation.lead-brief",
+          "lead-generation.score-and-route",
+          "lead-generation.coaching",
+          "nurture-sequences.index",
+          "nurture-sequences.store",
+          "nurture-sequences.enroll",
+          "cold-outreach.index",
+          "cold-outreach.generate",
+          "lead-capture.store",
+          "lead-capture.bulk",
+          "reports.index",
+          "reports.show",
           "categories.table",
           "posts.table",
           "users.table",
@@ -2494,6 +2965,7 @@
           "pages.show",
           "profile.export-pdf",
           "api.slug-availability",
+          "api.login-event",
           "internal.caddy.ask",
           "webhooks.stripe",
           "webhooks.paddle",
@@ -2776,6 +3248,9 @@
           "filament.admin.resources.announcements.edit",
           "filament.admin.resources.audit-logs.index",
           "filament.admin.resources.billing.affiliates.index",
+          "filament.admin.resources.campaign-websites.index",
+          "filament.admin.resources.campaign-websites.create",
+          "filament.admin.resources.campaign-websites.edit",
           "filament.admin.resources.categories.index",
           "filament.admin.resources.changelog-entries.index",
           "filament.admin.resources.changelog-entries.create",
@@ -2819,10 +3294,25 @@
           "filament.admin.resources.projects.create",
           "filament.admin.resources.projects.view",
           "filament.admin.resources.projects.edit",
+          "filament.admin.resources.property-enquiries.index",
+          "filament.admin.resources.property-enquiries.create",
+          "filament.admin.resources.property-enquiries.edit",
+          "filament.admin.resources.property-reservations.index",
+          "filament.admin.resources.property-reservations.create",
+          "filament.admin.resources.property-reservations.edit",
+          "filament.admin.resources.property-searches.index",
+          "filament.admin.resources.property-searches.create",
+          "filament.admin.resources.property-searches.edit",
           "filament.admin.resources.roles.index",
           "filament.admin.resources.roles.create",
           "filament.admin.resources.roles.view",
           "filament.admin.resources.roles.edit",
+          "filament.admin.resources.sales.index",
+          "filament.admin.resources.sales.create",
+          "filament.admin.resources.sales.edit",
+          "filament.admin.resources.tasks.index",
+          "filament.admin.resources.tasks.create",
+          "filament.admin.resources.tasks.edit",
           "filament.admin.resources.terms-versions.index",
           "filament.admin.resources.terms-versions.create",
           "filament.admin.resources.terms-versions.edit",
@@ -2882,6 +3372,9 @@
           "filament.system.resources.announcements.edit",
           "filament.system.resources.audit-logs.index",
           "filament.system.resources.billing.affiliates.index",
+          "filament.system.resources.campaign-websites.index",
+          "filament.system.resources.campaign-websites.create",
+          "filament.system.resources.campaign-websites.edit",
           "filament.system.resources.categories.index",
           "filament.system.resources.changelog-entries.index",
           "filament.system.resources.changelog-entries.create",
@@ -2925,10 +3418,25 @@
           "filament.system.resources.projects.create",
           "filament.system.resources.projects.view",
           "filament.system.resources.projects.edit",
+          "filament.system.resources.property-enquiries.index",
+          "filament.system.resources.property-enquiries.create",
+          "filament.system.resources.property-enquiries.edit",
+          "filament.system.resources.property-reservations.index",
+          "filament.system.resources.property-reservations.create",
+          "filament.system.resources.property-reservations.edit",
+          "filament.system.resources.property-searches.index",
+          "filament.system.resources.property-searches.create",
+          "filament.system.resources.property-searches.edit",
           "filament.system.resources.roles.index",
           "filament.system.resources.roles.create",
           "filament.system.resources.roles.view",
           "filament.system.resources.roles.edit",
+          "filament.system.resources.sales.index",
+          "filament.system.resources.sales.create",
+          "filament.system.resources.sales.edit",
+          "filament.system.resources.tasks.index",
+          "filament.system.resources.tasks.create",
+          "filament.system.resources.tasks.edit",
           "filament.system.resources.terms-versions.index",
           "filament.system.resources.terms-versions.create",
           "filament.system.resources.terms-versions.edit",
@@ -2984,8 +3492,40 @@
           "dashboard",
           "announcements.table",
           "contacts.index",
+          "tasks.index",
+          "campaign-sites.index",
+          "campaign-sites.edit-puck",
+          "campaign-sites.puck-save",
           "projects.table",
           "lots.table",
+          "reservations.index",
+          "enquiries.index",
+          "searches.index",
+          "sales.index",
+          "commissions.index",
+          "pipeline.index",
+          "funnel.index",
+          "member-listings.index",
+          "contacts.bulk-update",
+          "contacts.quick-edit",
+          "reservations.bulk-update",
+          "reservations.quick-edit",
+          "lots.push",
+          "projects.push",
+          "lead-generation.index",
+          "lead-generation.landing-page-copy",
+          "lead-generation.lead-brief",
+          "lead-generation.score-and-route",
+          "lead-generation.coaching",
+          "nurture-sequences.index",
+          "nurture-sequences.store",
+          "nurture-sequences.enroll",
+          "cold-outreach.index",
+          "cold-outreach.generate",
+          "lead-capture.store",
+          "lead-capture.bulk",
+          "reports.index",
+          "reports.show",
           "categories.table",
           "posts.table",
           "users.table",
@@ -3043,6 +3583,7 @@
           "pages.show",
           "profile.export-pdf",
           "api.slug-availability",
+          "api.login-event",
           "internal.caddy.ask",
           "webhooks.stripe",
           "webhooks.paddle",
@@ -3266,6 +3807,9 @@
           "filament.admin.resources.announcements.edit",
           "filament.admin.resources.audit-logs.index",
           "filament.admin.resources.billing.affiliates.index",
+          "filament.admin.resources.campaign-websites.index",
+          "filament.admin.resources.campaign-websites.create",
+          "filament.admin.resources.campaign-websites.edit",
           "filament.admin.resources.categories.index",
           "filament.admin.resources.changelog-entries.index",
           "filament.admin.resources.changelog-entries.create",
@@ -3309,10 +3853,25 @@
           "filament.admin.resources.projects.create",
           "filament.admin.resources.projects.view",
           "filament.admin.resources.projects.edit",
+          "filament.admin.resources.property-enquiries.index",
+          "filament.admin.resources.property-enquiries.create",
+          "filament.admin.resources.property-enquiries.edit",
+          "filament.admin.resources.property-reservations.index",
+          "filament.admin.resources.property-reservations.create",
+          "filament.admin.resources.property-reservations.edit",
+          "filament.admin.resources.property-searches.index",
+          "filament.admin.resources.property-searches.create",
+          "filament.admin.resources.property-searches.edit",
           "filament.admin.resources.roles.index",
           "filament.admin.resources.roles.create",
           "filament.admin.resources.roles.view",
           "filament.admin.resources.roles.edit",
+          "filament.admin.resources.sales.index",
+          "filament.admin.resources.sales.create",
+          "filament.admin.resources.sales.edit",
+          "filament.admin.resources.tasks.index",
+          "filament.admin.resources.tasks.create",
+          "filament.admin.resources.tasks.edit",
           "filament.admin.resources.terms-versions.index",
           "filament.admin.resources.terms-versions.create",
           "filament.admin.resources.terms-versions.edit",
@@ -3372,6 +3931,9 @@
           "filament.system.resources.announcements.edit",
           "filament.system.resources.audit-logs.index",
           "filament.system.resources.billing.affiliates.index",
+          "filament.system.resources.campaign-websites.index",
+          "filament.system.resources.campaign-websites.create",
+          "filament.system.resources.campaign-websites.edit",
           "filament.system.resources.categories.index",
           "filament.system.resources.changelog-entries.index",
           "filament.system.resources.changelog-entries.create",
@@ -3415,10 +3977,25 @@
           "filament.system.resources.projects.create",
           "filament.system.resources.projects.view",
           "filament.system.resources.projects.edit",
+          "filament.system.resources.property-enquiries.index",
+          "filament.system.resources.property-enquiries.create",
+          "filament.system.resources.property-enquiries.edit",
+          "filament.system.resources.property-reservations.index",
+          "filament.system.resources.property-reservations.create",
+          "filament.system.resources.property-reservations.edit",
+          "filament.system.resources.property-searches.index",
+          "filament.system.resources.property-searches.create",
+          "filament.system.resources.property-searches.edit",
           "filament.system.resources.roles.index",
           "filament.system.resources.roles.create",
           "filament.system.resources.roles.view",
           "filament.system.resources.roles.edit",
+          "filament.system.resources.sales.index",
+          "filament.system.resources.sales.create",
+          "filament.system.resources.sales.edit",
+          "filament.system.resources.tasks.index",
+          "filament.system.resources.tasks.create",
+          "filament.system.resources.tasks.edit",
           "filament.system.resources.terms-versions.index",
           "filament.system.resources.terms-versions.create",
           "filament.system.resources.terms-versions.edit",
@@ -3474,8 +4051,40 @@
           "dashboard",
           "announcements.table",
           "contacts.index",
+          "tasks.index",
+          "campaign-sites.index",
+          "campaign-sites.edit-puck",
+          "campaign-sites.puck-save",
           "projects.table",
           "lots.table",
+          "reservations.index",
+          "enquiries.index",
+          "searches.index",
+          "sales.index",
+          "commissions.index",
+          "pipeline.index",
+          "funnel.index",
+          "member-listings.index",
+          "contacts.bulk-update",
+          "contacts.quick-edit",
+          "reservations.bulk-update",
+          "reservations.quick-edit",
+          "lots.push",
+          "projects.push",
+          "lead-generation.index",
+          "lead-generation.landing-page-copy",
+          "lead-generation.lead-brief",
+          "lead-generation.score-and-route",
+          "lead-generation.coaching",
+          "nurture-sequences.index",
+          "nurture-sequences.store",
+          "nurture-sequences.enroll",
+          "cold-outreach.index",
+          "cold-outreach.generate",
+          "lead-capture.store",
+          "lead-capture.bulk",
+          "reports.index",
+          "reports.show",
           "categories.table",
           "posts.table",
           "users.table",
@@ -3533,6 +4142,7 @@
           "pages.show",
           "profile.export-pdf",
           "api.slug-availability",
+          "api.login-event",
           "internal.caddy.ask",
           "webhooks.stripe",
           "webhooks.paddle",
@@ -3742,6 +4352,9 @@
           "filament.admin.resources.announcements.edit",
           "filament.admin.resources.audit-logs.index",
           "filament.admin.resources.billing.affiliates.index",
+          "filament.admin.resources.campaign-websites.index",
+          "filament.admin.resources.campaign-websites.create",
+          "filament.admin.resources.campaign-websites.edit",
           "filament.admin.resources.categories.index",
           "filament.admin.resources.changelog-entries.index",
           "filament.admin.resources.changelog-entries.create",
@@ -3785,10 +4398,25 @@
           "filament.admin.resources.projects.create",
           "filament.admin.resources.projects.view",
           "filament.admin.resources.projects.edit",
+          "filament.admin.resources.property-enquiries.index",
+          "filament.admin.resources.property-enquiries.create",
+          "filament.admin.resources.property-enquiries.edit",
+          "filament.admin.resources.property-reservations.index",
+          "filament.admin.resources.property-reservations.create",
+          "filament.admin.resources.property-reservations.edit",
+          "filament.admin.resources.property-searches.index",
+          "filament.admin.resources.property-searches.create",
+          "filament.admin.resources.property-searches.edit",
           "filament.admin.resources.roles.index",
           "filament.admin.resources.roles.create",
           "filament.admin.resources.roles.view",
           "filament.admin.resources.roles.edit",
+          "filament.admin.resources.sales.index",
+          "filament.admin.resources.sales.create",
+          "filament.admin.resources.sales.edit",
+          "filament.admin.resources.tasks.index",
+          "filament.admin.resources.tasks.create",
+          "filament.admin.resources.tasks.edit",
           "filament.admin.resources.terms-versions.index",
           "filament.admin.resources.terms-versions.create",
           "filament.admin.resources.terms-versions.edit",
@@ -3848,6 +4476,9 @@
           "filament.system.resources.announcements.edit",
           "filament.system.resources.audit-logs.index",
           "filament.system.resources.billing.affiliates.index",
+          "filament.system.resources.campaign-websites.index",
+          "filament.system.resources.campaign-websites.create",
+          "filament.system.resources.campaign-websites.edit",
           "filament.system.resources.categories.index",
           "filament.system.resources.changelog-entries.index",
           "filament.system.resources.changelog-entries.create",
@@ -3891,10 +4522,25 @@
           "filament.system.resources.projects.create",
           "filament.system.resources.projects.view",
           "filament.system.resources.projects.edit",
+          "filament.system.resources.property-enquiries.index",
+          "filament.system.resources.property-enquiries.create",
+          "filament.system.resources.property-enquiries.edit",
+          "filament.system.resources.property-reservations.index",
+          "filament.system.resources.property-reservations.create",
+          "filament.system.resources.property-reservations.edit",
+          "filament.system.resources.property-searches.index",
+          "filament.system.resources.property-searches.create",
+          "filament.system.resources.property-searches.edit",
           "filament.system.resources.roles.index",
           "filament.system.resources.roles.create",
           "filament.system.resources.roles.view",
           "filament.system.resources.roles.edit",
+          "filament.system.resources.sales.index",
+          "filament.system.resources.sales.create",
+          "filament.system.resources.sales.edit",
+          "filament.system.resources.tasks.index",
+          "filament.system.resources.tasks.create",
+          "filament.system.resources.tasks.edit",
           "filament.system.resources.terms-versions.index",
           "filament.system.resources.terms-versions.create",
           "filament.system.resources.terms-versions.edit",
@@ -3950,8 +4596,40 @@
           "dashboard",
           "announcements.table",
           "contacts.index",
+          "tasks.index",
+          "campaign-sites.index",
+          "campaign-sites.edit-puck",
+          "campaign-sites.puck-save",
           "projects.table",
           "lots.table",
+          "reservations.index",
+          "enquiries.index",
+          "searches.index",
+          "sales.index",
+          "commissions.index",
+          "pipeline.index",
+          "funnel.index",
+          "member-listings.index",
+          "contacts.bulk-update",
+          "contacts.quick-edit",
+          "reservations.bulk-update",
+          "reservations.quick-edit",
+          "lots.push",
+          "projects.push",
+          "lead-generation.index",
+          "lead-generation.landing-page-copy",
+          "lead-generation.lead-brief",
+          "lead-generation.score-and-route",
+          "lead-generation.coaching",
+          "nurture-sequences.index",
+          "nurture-sequences.store",
+          "nurture-sequences.enroll",
+          "cold-outreach.index",
+          "cold-outreach.generate",
+          "lead-capture.store",
+          "lead-capture.bulk",
+          "reports.index",
+          "reports.show",
           "categories.table",
           "posts.table",
           "users.table",
@@ -4009,6 +4687,7 @@
           "pages.show",
           "profile.export-pdf",
           "api.slug-availability",
+          "api.login-event",
           "internal.caddy.ask",
           "webhooks.stripe",
           "webhooks.paddle",
@@ -4391,6 +5070,9 @@
           "filament.admin.resources.announcements.edit",
           "filament.admin.resources.audit-logs.index",
           "filament.admin.resources.billing.affiliates.index",
+          "filament.admin.resources.campaign-websites.index",
+          "filament.admin.resources.campaign-websites.create",
+          "filament.admin.resources.campaign-websites.edit",
           "filament.admin.resources.categories.index",
           "filament.admin.resources.changelog-entries.index",
           "filament.admin.resources.changelog-entries.create",
@@ -4434,10 +5116,25 @@
           "filament.admin.resources.projects.create",
           "filament.admin.resources.projects.view",
           "filament.admin.resources.projects.edit",
+          "filament.admin.resources.property-enquiries.index",
+          "filament.admin.resources.property-enquiries.create",
+          "filament.admin.resources.property-enquiries.edit",
+          "filament.admin.resources.property-reservations.index",
+          "filament.admin.resources.property-reservations.create",
+          "filament.admin.resources.property-reservations.edit",
+          "filament.admin.resources.property-searches.index",
+          "filament.admin.resources.property-searches.create",
+          "filament.admin.resources.property-searches.edit",
           "filament.admin.resources.roles.index",
           "filament.admin.resources.roles.create",
           "filament.admin.resources.roles.view",
           "filament.admin.resources.roles.edit",
+          "filament.admin.resources.sales.index",
+          "filament.admin.resources.sales.create",
+          "filament.admin.resources.sales.edit",
+          "filament.admin.resources.tasks.index",
+          "filament.admin.resources.tasks.create",
+          "filament.admin.resources.tasks.edit",
           "filament.admin.resources.terms-versions.index",
           "filament.admin.resources.terms-versions.create",
           "filament.admin.resources.terms-versions.edit",
@@ -4497,6 +5194,9 @@
           "filament.system.resources.announcements.edit",
           "filament.system.resources.audit-logs.index",
           "filament.system.resources.billing.affiliates.index",
+          "filament.system.resources.campaign-websites.index",
+          "filament.system.resources.campaign-websites.create",
+          "filament.system.resources.campaign-websites.edit",
           "filament.system.resources.categories.index",
           "filament.system.resources.changelog-entries.index",
           "filament.system.resources.changelog-entries.create",
@@ -4540,10 +5240,25 @@
           "filament.system.resources.projects.create",
           "filament.system.resources.projects.view",
           "filament.system.resources.projects.edit",
+          "filament.system.resources.property-enquiries.index",
+          "filament.system.resources.property-enquiries.create",
+          "filament.system.resources.property-enquiries.edit",
+          "filament.system.resources.property-reservations.index",
+          "filament.system.resources.property-reservations.create",
+          "filament.system.resources.property-reservations.edit",
+          "filament.system.resources.property-searches.index",
+          "filament.system.resources.property-searches.create",
+          "filament.system.resources.property-searches.edit",
           "filament.system.resources.roles.index",
           "filament.system.resources.roles.create",
           "filament.system.resources.roles.view",
           "filament.system.resources.roles.edit",
+          "filament.system.resources.sales.index",
+          "filament.system.resources.sales.create",
+          "filament.system.resources.sales.edit",
+          "filament.system.resources.tasks.index",
+          "filament.system.resources.tasks.create",
+          "filament.system.resources.tasks.edit",
           "filament.system.resources.terms-versions.index",
           "filament.system.resources.terms-versions.create",
           "filament.system.resources.terms-versions.edit",
@@ -4599,8 +5314,40 @@
           "dashboard",
           "announcements.table",
           "contacts.index",
+          "tasks.index",
+          "campaign-sites.index",
+          "campaign-sites.edit-puck",
+          "campaign-sites.puck-save",
           "projects.table",
           "lots.table",
+          "reservations.index",
+          "enquiries.index",
+          "searches.index",
+          "sales.index",
+          "commissions.index",
+          "pipeline.index",
+          "funnel.index",
+          "member-listings.index",
+          "contacts.bulk-update",
+          "contacts.quick-edit",
+          "reservations.bulk-update",
+          "reservations.quick-edit",
+          "lots.push",
+          "projects.push",
+          "lead-generation.index",
+          "lead-generation.landing-page-copy",
+          "lead-generation.lead-brief",
+          "lead-generation.score-and-route",
+          "lead-generation.coaching",
+          "nurture-sequences.index",
+          "nurture-sequences.store",
+          "nurture-sequences.enroll",
+          "cold-outreach.index",
+          "cold-outreach.generate",
+          "lead-capture.store",
+          "lead-capture.bulk",
+          "reports.index",
+          "reports.show",
           "categories.table",
           "posts.table",
           "users.table",
@@ -4658,6 +5405,7 @@
           "pages.show",
           "profile.export-pdf",
           "api.slug-availability",
+          "api.login-event",
           "internal.caddy.ask",
           "webhooks.stripe",
           "webhooks.paddle",
@@ -5127,7 +5875,8 @@
           "LotsTableController"
         ],
         "relatedRoutes": [
-          "lots.table"
+          "lots.table",
+          "lots.push"
         ]
       }
     },
@@ -5149,7 +5898,8 @@
           "ProjectsTableController"
         ],
         "relatedRoutes": [
-          "projects.table"
+          "projects.table",
+          "projects.push"
         ]
       }
     },
@@ -5162,7 +5912,9 @@
           "ContactController"
         ],
         "relatedRoutes": [
-          "contacts.index"
+          "contacts.index",
+          "contacts.bulk-update",
+          "contacts.quick-edit"
         ]
       },
       "path": "./contacts/index.md"
@@ -5176,7 +5928,9 @@
           "PropertyReservationController"
         ],
         "relatedRoutes": [
-          "reservations.index"
+          "reservations.index",
+          "reservations.bulk-update",
+          "reservations.quick-edit"
         ]
       },
       "path": "./reservations/index.md"
@@ -5254,41 +6008,166 @@
       "documented": true,
       "path": "docs/developer/frontend/pages/campaign-sites/index.md",
       "relationships": {
-        "renderedBy": "CampaignSiteController",
-        "route": "campaign-sites.index"
+        "renderedBy": [
+          "CampaignSiteController"
+        ],
+        "relatedRoutes": [
+          "campaign-sites.index",
+          "campaign-sites.edit-puck",
+          "campaign-sites.puck-save"
+        ]
       }
     },
     "campaign-sites/puck-editor": {
       "documented": true,
       "path": "docs/developer/frontend/pages/campaign-sites/puck-editor.md",
       "relationships": {
-        "renderedBy": "CampaignSiteController",
-        "route": "campaign-sites.edit-puck"
+        "renderedBy": [
+          "CampaignSiteController"
+        ],
+        "relatedRoutes": [
+          "campaign-sites.index",
+          "campaign-sites.edit-puck",
+          "campaign-sites.puck-save"
+        ]
       }
     },
     "reports/index": {
       "documented": true,
       "path": "docs/developer/frontend/pages/reports/index.md",
-      "lastUpdated": "2026-03-15"
+      "lastUpdated": "2026-03-15",
+      "relationships": {
+        "renderedBy": [
+          "ReportController"
+        ],
+        "relatedRoutes": [
+          "reports.index",
+          "reports.show"
+        ]
+      }
     },
     "reports/show": {
       "documented": true,
       "path": "docs/developer/frontend/pages/reports/show.md",
-      "lastUpdated": "2026-03-15"
+      "lastUpdated": "2026-03-15",
+      "relationships": {
+        "renderedBy": [
+          "ReportController"
+        ],
+        "relatedRoutes": [
+          "reports.index",
+          "reports.show"
+        ]
+      }
     },
     "pipeline/index": {
       "documented": true,
       "path": "docs/developer/frontend/pages/pipeline/index.md",
-      "lastUpdated": "2026-03-15"
+      "lastUpdated": "2026-03-15",
+      "relationships": {
+        "renderedBy": [
+          "PipelineController"
+        ],
+        "relatedRoutes": [
+          "pipeline.index"
+        ]
+      }
     },
     "funnel/index": {
       "documented": true,
       "path": "docs/developer/frontend/pages/funnel/index.md",
-      "lastUpdated": "2026-03-15"
+      "lastUpdated": "2026-03-15",
+      "relationships": {
+        "renderedBy": [
+          "FunnelController"
+        ],
+        "relatedRoutes": [
+          "funnel.index"
+        ]
+      }
     },
     "member-listings/index": {
       "documented": true,
       "path": "docs/developer/frontend/pages/member-listings/index.md",
+      "lastUpdated": "2026-03-15",
+      "relationships": {
+        "renderedBy": [
+          "MemberListingsController"
+        ],
+        "relatedRoutes": [
+          "member-listings.index"
+        ]
+      }
+    },
+    "cold-outreach/index": {
+      "documented": true,
+      "userGuide": null,
+      "developerGuide": null,
+      "relationships": {
+        "renderedBy": [
+          "ColdOutreachController"
+        ],
+        "relatedRoutes": [
+          "cold-outreach.index",
+          "cold-outreach.generate"
+        ]
+      },
+      "path": "docs/developer/frontend/pages/cold-outreach/index.md",
+      "lastUpdated": "2026-03-15"
+    },
+    "lead-generation/coaching": {
+      "documented": true,
+      "userGuide": null,
+      "developerGuide": null,
+      "relationships": {
+        "renderedBy": [
+          "LeadGenerationController"
+        ],
+        "relatedRoutes": [
+          "lead-generation.index",
+          "lead-generation.landing-page-copy",
+          "lead-generation.lead-brief",
+          "lead-generation.score-and-route",
+          "lead-generation.coaching"
+        ]
+      },
+      "path": "docs/developer/frontend/pages/lead-generation/coaching.md",
+      "lastUpdated": "2026-03-15"
+    },
+    "lead-generation/index": {
+      "documented": true,
+      "userGuide": null,
+      "developerGuide": null,
+      "relationships": {
+        "renderedBy": [
+          "LeadGenerationController"
+        ],
+        "relatedRoutes": [
+          "lead-generation.index",
+          "lead-generation.landing-page-copy",
+          "lead-generation.lead-brief",
+          "lead-generation.score-and-route",
+          "lead-generation.coaching"
+        ]
+      },
+      "path": "docs/developer/frontend/pages/lead-generation/index.md",
+      "lastUpdated": "2026-03-15"
+    },
+    "nurture-sequences/index": {
+      "documented": true,
+      "userGuide": null,
+      "developerGuide": null,
+      "relationships": {
+        "renderedBy": [
+          "NurtureSequenceController"
+        ],
+        "relatedRoutes": [
+          "nurture-sequences.index",
+          "nurture-sequences.store",
+          "nurture-sequences.enroll"
+        ]
+      },
+      "path": "docs/developer/frontend/pages/nurture-sequences/index.md",
       "lastUpdated": "2026-03-15"
     }
   },
