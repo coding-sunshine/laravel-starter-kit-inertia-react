@@ -3,17 +3,17 @@
     "table": "developers",
     "fields": {
         "id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
         "organization_id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
         "user_id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
@@ -48,17 +48,17 @@
             "default": null
         },
         "legacy_id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
         "created_by": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
         "updated_by": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },

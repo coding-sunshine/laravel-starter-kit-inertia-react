@@ -3,12 +3,12 @@
     "table": "spr_requests",
     "fields": {
         "id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
         "user_id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
@@ -53,7 +53,7 @@
             "default": null
         },
         "completed_by": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
@@ -68,12 +68,12 @@
             "default": null
         },
         "created_by": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
         "legacy_id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },

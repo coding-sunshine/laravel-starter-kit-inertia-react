@@ -106,9 +106,18 @@
             "type": "bigint",
             "nullable": true,
             "default": null
+        },
+        "contact_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {
+        "contact": {
+            "type": "belongsTo",
+            "model": "Contact"
+        },
         "organizations": {
             "type": "belongsToMany",
             "model": "Organization"

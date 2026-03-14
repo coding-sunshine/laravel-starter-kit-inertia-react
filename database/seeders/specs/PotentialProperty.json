@@ -3,12 +3,12 @@
     "table": "potential_properties",
     "fields": {
         "id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
         "organization_id": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
@@ -58,12 +58,12 @@
             "default": null
         },
         "csv_row_data": {
-            "type": "text",
+            "type": "json",
             "nullable": true,
             "default": null
         },
         "created_by": {
-            "type": "integer",
+            "type": "bigint",
             "nullable": true,
             "default": null
         },
