@@ -1374,6 +1374,258 @@
             "data_files": [
                 "commissions.json"
             ]
+        },
+        {
+            "name": "TaskSeeder",
+            "category": "development",
+            "description": "Seeds Task data",
+            "dependencies": [],
+            "data_files": [
+                "tasks.json"
+            ]
+        },
+        {
+            "name": "RelationshipSeeder",
+            "category": "development",
+            "description": "Seeds Relationship data",
+            "dependencies": [],
+            "data_files": [
+                "relationships.json"
+            ]
+        },
+        {
+            "name": "PartnerSeeder",
+            "category": "development",
+            "description": "Seeds Partner data",
+            "dependencies": [],
+            "data_files": [
+                "partners.json"
+            ]
+        },
+        {
+            "name": "MailListSeeder",
+            "category": "development",
+            "description": "Seeds MailList data",
+            "dependencies": [],
+            "data_files": [
+                "mail_lists.json"
+            ]
+        },
+        {
+            "name": "BrochureMailJobSeeder",
+            "category": "development",
+            "description": "Seeds BrochureMailJob data",
+            "dependencies": [],
+            "data_files": [
+                "brochure_mail_jobs.json"
+            ]
+        },
+        {
+            "name": "WebsiteContactSeeder",
+            "category": "development",
+            "description": "Seeds WebsiteContact data",
+            "dependencies": [],
+            "data_files": [
+                "website_contacts.json"
+            ]
+        },
+        {
+            "name": "QuestionnaireSeeder",
+            "category": "development",
+            "description": "Seeds Questionnaire data",
+            "dependencies": [],
+            "data_files": [
+                "questionnaires.json"
+            ]
+        },
+        {
+            "name": "FinanceAssessmentSeeder",
+            "category": "development",
+            "description": "Seeds FinanceAssessment data",
+            "dependencies": [],
+            "data_files": [
+                "finance_assessments.json"
+            ]
+        },
+        {
+            "name": "CrmNoteSeeder",
+            "category": "development",
+            "description": "Seeds CrmNote data",
+            "dependencies": [],
+            "data_files": [
+                "crm_notes.json"
+            ]
+        },
+        {
+            "name": "CrmCommentSeeder",
+            "category": "development",
+            "description": "Seeds CrmComment data",
+            "dependencies": [],
+            "data_files": [
+                "crm_comments.json"
+            ]
+        },
+        {
+            "name": "CrmAddressSeeder",
+            "category": "development",
+            "description": "Seeds CrmAddress data",
+            "dependencies": [],
+            "data_files": [
+                "crm_addresses.json"
+            ]
+        },
+        {
+            "name": "CrmStatusSeeder",
+            "category": "development",
+            "description": "Seeds CrmStatus data",
+            "dependencies": [],
+            "data_files": [
+                "crm_statuses.json"
+            ]
+        },
+        {
+            "name": "OnlineformContactSeeder",
+            "category": "development",
+            "description": "Seeds OnlineformContact data",
+            "dependencies": [],
+            "data_files": [
+                "onlineform_contacts.json"
+            ]
+        },
+        {
+            "name": "CampaignWebsiteSeeder",
+            "category": "development",
+            "description": "Seeds CampaignWebsite data",
+            "dependencies": [],
+            "data_files": [
+                "campaign_websites.json"
+            ]
+        },
+        {
+            "name": "CampaignWebsiteTemplateSeeder",
+            "category": "development",
+            "description": "Seeds CampaignWebsiteTemplate data",
+            "dependencies": [],
+            "data_files": [
+                "campaign_website_templates.json"
+            ]
+        },
+        {
+            "name": "CrmResourceSeeder",
+            "category": "development",
+            "description": "Seeds CrmResource data",
+            "dependencies": [],
+            "data_files": [
+                "crm_resources.json"
+            ]
+        },
+        {
+            "name": "ResourceGroupSeeder",
+            "category": "development",
+            "description": "Seeds ResourceGroup data",
+            "dependencies": [],
+            "data_files": [
+                "resource_groups.json"
+            ]
+        },
+        {
+            "name": "ResourceCategorySeeder",
+            "category": "development",
+            "description": "Seeds ResourceCategory data",
+            "dependencies": [],
+            "data_files": [
+                "resource_categories.json"
+            ]
+        },
+        {
+            "name": "AdvertisementSeeder",
+            "category": "development",
+            "description": "Seeds Advertisement data",
+            "dependencies": [],
+            "data_files": [
+                "advertisements.json"
+            ]
+        },
+        {
+            "name": "SurveyQuestionSeeder",
+            "category": "development",
+            "description": "Seeds SurveyQuestion data",
+            "dependencies": [],
+            "data_files": [
+                "survey_questions.json"
+            ]
+        },
+        {
+            "name": "ColumnManagementSeeder",
+            "category": "development",
+            "description": "Seeds ColumnManagement data",
+            "dependencies": [],
+            "data_files": [
+                "column_managements.json"
+            ]
+        },
+        {
+            "name": "WidgetSettingSeeder",
+            "category": "development",
+            "description": "Seeds WidgetSetting data",
+            "dependencies": [],
+            "data_files": [
+                "widget_settings.json"
+            ]
+        },
+        {
+            "name": "AiBotCategorySeeder",
+            "category": "development",
+            "description": "Seeds AiBotCategory data",
+            "dependencies": [],
+            "data_files": [
+                "ai_bot_categories.json"
+            ]
+        },
+        {
+            "name": "AiBotSeeder",
+            "category": "development",
+            "description": "Seeds AiBot data",
+            "dependencies": [],
+            "data_files": [
+                "ai_bots.json"
+            ]
+        },
+        {
+            "name": "AiBotPromptSeeder",
+            "category": "development",
+            "description": "Seeds AiBotPrompt data",
+            "dependencies": [],
+            "data_files": [
+                "ai_bot_prompts.json"
+            ]
+        },
+        {
+            "name": "AiBotRunSeeder",
+            "category": "development",
+            "description": "Seeds AiBotRun data",
+            "dependencies": [],
+            "data_files": [
+                "ai_bot_runs.json"
+            ]
+        },
+        {
+            "name": "MailJobStatusSeeder",
+            "category": "development",
+            "description": "Seeds MailJobStatus data",
+            "dependencies": [],
+            "data_files": [
+                "mail_job_statuses.json"
+            ]
+        },
+        {
+            "name": "PuckTemplateSeeder",
+            "category": "development",
+            "description": "Seeds PuckTemplate data",
+            "dependencies": [],
+            "data_files": [
+                "puck_templates.json"
+            ]
         }
     ],
     "categories": {

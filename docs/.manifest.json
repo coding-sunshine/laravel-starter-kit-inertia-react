@@ -1466,6 +1466,38 @@
           "commissions/index"
         ]
       }
+    },
+    "TaskController": {
+      "documented": true,
+      "path": "./developer/backend/controllers/TaskController.md",
+      "lastUpdated": "2026-03-15",
+      "relationships": {
+        "usesActions": [],
+        "usesFormRequests": [],
+        "relatedRoutes": [
+          "tasks.index"
+        ],
+        "rendersPages": [
+          "tasks/index"
+        ]
+      }
+    },
+    "CampaignSiteController": {
+      "documented": true,
+      "path": "docs/developer/backend/controllers/CampaignSiteController.md",
+      "relationships": {
+        "usesActions": [],
+        "usesFormRequests": [],
+        "relatedRoutes": [
+          "campaign-sites.index",
+          "campaign-sites.edit-puck",
+          "campaign-sites.puck-save"
+        ],
+        "rendersPages": [
+          "campaign-sites/index",
+          "campaign-sites/puck-editor"
+        ]
+      }
     }
   },
   "pages": {
@@ -5154,6 +5186,35 @@
         ]
       },
       "path": "./commissions/index.md"
+    },
+    "tasks/index": {
+      "documented": true,
+      "path": "./developer/frontend/pages/tasks-index.md",
+      "lastUpdated": "2026-03-15",
+      "relationships": {
+        "renderedBy": [
+          "TaskController"
+        ],
+        "relatedRoutes": [
+          "tasks.index"
+        ]
+      }
+    },
+    "campaign-sites/index": {
+      "documented": true,
+      "path": "docs/developer/frontend/pages/campaign-sites/index.md",
+      "relationships": {
+        "renderedBy": "CampaignSiteController",
+        "route": "campaign-sites.index"
+      }
+    },
+    "campaign-sites/puck-editor": {
+      "documented": true,
+      "path": "docs/developer/frontend/pages/campaign-sites/puck-editor.md",
+      "relationships": {
+        "renderedBy": "CampaignSiteController",
+        "route": "campaign-sites.edit-puck"
+      }
     }
   },
   "routes": {

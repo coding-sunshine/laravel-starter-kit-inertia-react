@@ -1,0 +1,44 @@
+{
+    "model": "OnlineformContact",
+    "table": "onlineform_contacts",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "model_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "model_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "uuid": {
+            "type": "uuid",
+            "nullable": true,
+            "default": null
+        },
+        "legacy_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": [],
+    "value_hints": [],
+    "scenarios": []
+}

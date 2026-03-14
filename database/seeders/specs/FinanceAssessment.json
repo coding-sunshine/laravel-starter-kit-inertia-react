@@ -1,0 +1,118 @@
+{
+    "model": "FinanceAssessment",
+    "table": "finance_assessments",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "contact_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "email": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "phone": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "employment_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "annual_income": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "other_income": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "existing_loans": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "credit_card_limit": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "deposit_available": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "property_purpose": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "preferred_loan_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "notes": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "submitted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "legacy_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": [],
+    "value_hints": {
+        "name": {
+            "type": "name",
+            "example": "John Doe"
+        },
+        "email": {
+            "type": "email",
+            "example": "user@example.com"
+        }
+    },
+    "scenarios": []
+}

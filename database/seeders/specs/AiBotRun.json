@@ -1,0 +1,59 @@
+{
+    "model": "AiBotRun",
+    "table": "ai_bot_runs",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "bot_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "user_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "input_context": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "prompt_used": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "output": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "model_used": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "realtime_data_injected": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": [],
+    "value_hints": [],
+    "scenarios": []
+}

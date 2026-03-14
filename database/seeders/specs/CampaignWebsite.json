@@ -1,0 +1,150 @@
+{
+    "model": "CampaignWebsite",
+    "table": "campaign_websites",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "campaign_website_template_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "site_id": {
+            "type": "uuid",
+            "nullable": true,
+            "default": null
+        },
+        "title": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "short_link": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "is_multiple_property": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "is_custom_font": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "font_link": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "font_family": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "primary_color": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "secondary_color": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "header": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "banner": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "page_content": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "footer": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "puck_content": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "puck_enabled": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "legacy_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "template": {
+            "type": "belongsTo",
+            "model": "Template"
+        },
+        "projects": {
+            "type": "belongsToMany",
+            "model": "Project"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": {
+        "is_multiple_property": {
+            "type": "boolean",
+            "example": true
+        },
+        "is_custom_font": {
+            "type": "boolean",
+            "example": true
+        },
+        "puck_enabled": {
+            "type": "boolean",
+            "example": true
+        }
+    },
+    "scenarios": []
+}

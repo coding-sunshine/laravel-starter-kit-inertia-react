@@ -1,0 +1,74 @@
+{
+    "model": "CrmAddress",
+    "table": "crm_addresses",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "addressable_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "addressable_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "line1": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "line2": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "city": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "state": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "postcode": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "country": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "legacy_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": [],
+    "value_hints": [],
+    "scenarios": []
+}

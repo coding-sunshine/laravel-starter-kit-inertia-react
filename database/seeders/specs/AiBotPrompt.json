@@ -1,0 +1,44 @@
+{
+    "model": "AiBotPrompt",
+    "table": "ai_bot_prompts",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "bot_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "label": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "prompt_template": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "sort_order": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": [],
+    "value_hints": [],
+    "scenarios": []
+}

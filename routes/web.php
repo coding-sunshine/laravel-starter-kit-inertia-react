@@ -17,6 +17,7 @@ use App\Http\Controllers\Billing\PaddleWebhookController;
 use App\Http\Controllers\Billing\PricingController;
 use App\Http\Controllers\Billing\StripeWebhookController;
 use App\Http\Controllers\Blog\BlogController;
+use App\Http\Controllers\CampaignSiteController;
 use App\Http\Controllers\CategoriesTableController;
 use App\Http\Controllers\Changelog\ChangelogController;
 use App\Http\Controllers\CommissionController;
@@ -66,6 +67,7 @@ use App\Http\Controllers\Settings\OrgFeaturesController;
 use App\Http\Controllers\Settings\OrgRolesController;
 use App\Http\Controllers\Settings\OrgSlugController;
 use App\Http\Controllers\SocialAuthController;
+use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TermsAcceptController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserEmailResetNotificationController;
@@ -169,6 +171,10 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 
     Route::get('announcements', [AnnouncementsTableController::class, 'index'])->name('announcements.table');
     Route::get('contacts', [ContactController::class, 'index'])->name('contacts.index');
+    Route::get('tasks', [TaskController::class, 'index'])->name('tasks.index');
+    Route::get('campaign-sites', [CampaignSiteController::class, 'index'])->name('campaign-sites.index');
+    Route::get('campaign-sites/{campaign}/edit-puck', [CampaignSiteController::class, 'editPuck'])->name('campaign-sites.edit-puck');
+    Route::post('campaign-sites/{campaign}/puck-save', [CampaignSiteController::class, 'savePuck'])->name('campaign-sites.puck-save');
     Route::get('projects', [ProjectsTableController::class, 'index'])->name('projects.table');
     Route::get('lots', [LotsTableController::class, 'index'])->name('lots.table');
     Route::get('reservations', [PropertyReservationController::class, 'index'])->name('reservations.index');

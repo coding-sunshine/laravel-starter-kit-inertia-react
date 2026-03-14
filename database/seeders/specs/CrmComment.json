@@ -1,0 +1,64 @@
+{
+    "model": "CrmComment",
+    "table": "crm_comments",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "commentable_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "commentable_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "user_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "comment": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "is_approved": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "legacy_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "user": {
+            "type": "belongsTo",
+            "model": "User"
+        }
+    },
+    "value_hints": {
+        "is_approved": {
+            "type": "boolean",
+            "example": true
+        }
+    },
+    "scenarios": []
+}
