@@ -3664,4 +3664,50 @@ Supported providers: `google`, `github` (controlled by `AuthSettings::google_oau
 **Method Parameters**:
 - `request`: `Illuminate\Http\Request`
 
+---
+
+## New Routes (added 2026-03-15) — US-011 AI Core and Voice
+
+### AI Bot (BotV2)
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| GET | `ai/bot` | `ai.bot.index` | auth, verified |
+| POST | `ai/bot/chat` | `ai.bot.chat` | auth, verified |
+
+### AI Concierge
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| GET | `ai/concierge` | `ai.concierge.index` | auth, verified |
+| POST | `ai/concierge/match` | `ai.concierge.match` | auth, verified |
+
+### AI Predictive Suggestions
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| GET | `ai/suggestions/{contact}` | `ai.suggestions.show` | auth, verified |
+| POST | `ai/suggestions/{contact}/generate` | `ai.suggestions.generate` | auth, verified |
+
+### AI Summaries
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| GET | `ai/summaries/{type}/{id}` | `ai.summaries.show` | auth, verified |
+| POST | `ai/summaries/{type}/{id}` | `ai.summaries.generate` | auth, verified |
+
+### Funnel Templates
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| GET | `funnel/templates` | `funnel.templates.index` | auth, verified |
+| POST | `funnel/templates` | `funnel.templates.store` | auth, verified |
+| POST | `funnel/templates/{template}/enroll/{contact}` | `funnel.templates.enroll` | auth, verified |
+
+### Call Logs / Vapi
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| GET | `ai/calls` | `ai.calls.index` | auth, verified |
+| POST | `webhooks/vapi` | `webhooks.vapi` | none (no CSRF) |
 

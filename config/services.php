@@ -86,4 +86,8 @@ return [
         'model' => env('THESYS_MODEL', 'c1-nightly'),
     ],
 
+    'vapi' => [
+        'api_key' => env('VAPI_API_KEY'),
+    ],
+
 ];

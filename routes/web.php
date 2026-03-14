@@ -8,6 +8,7 @@ declare(strict_types=1);
  * after adding or changing routes.
  */
 
+use App\Http\Controllers\AiSummaryController;
 use App\Http\Controllers\AnnouncementsTableController;
 use App\Http\Controllers\Api\LoginEventController;
 use App\Http\Controllers\Api\SlugAvailabilityController;
@@ -18,11 +19,13 @@ use App\Http\Controllers\Billing\PaddleWebhookController;
 use App\Http\Controllers\Billing\PricingController;
 use App\Http\Controllers\Billing\StripeWebhookController;
 use App\Http\Controllers\Blog\BlogController;
+use App\Http\Controllers\BotV2Controller;
 use App\Http\Controllers\CampaignSiteController;
 use App\Http\Controllers\CategoriesTableController;
 use App\Http\Controllers\Changelog\ChangelogController;
 use App\Http\Controllers\ColdOutreachController;
 use App\Http\Controllers\CommissionController;
+use App\Http\Controllers\ConciergeController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\ContactSubmissionController;
 use App\Http\Controllers\CookieConsentController;
@@ -31,6 +34,7 @@ use App\Http\Controllers\Dev\ComponentShowcaseController;
 use App\Http\Controllers\Dev\PageGalleryController;
 use App\Http\Controllers\EnterpriseInquiryController;
 use App\Http\Controllers\FunnelController;
+use App\Http\Controllers\FunnelTemplateController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\HelpCenter\HelpCenterController;
 use App\Http\Controllers\HelpCenter\RateHelpArticleController;
@@ -58,6 +62,7 @@ use App\Http\Controllers\PageViewController;
 use App\Http\Controllers\PersonalDataExportController;
 use App\Http\Controllers\PipelineController;
 use App\Http\Controllers\PostsTableController;
+use App\Http\Controllers\PredictiveSuggestionsController;
 use App\Http\Controllers\ProjectsTableController;
 use App\Http\Controllers\PropertyEnquiryController;
 use App\Http\Controllers\PropertyReservationController;
@@ -87,6 +92,7 @@ use App\Http\Controllers\UserPreferencesController;
 use App\Http\Controllers\UserProfileController;
 use App\Http\Controllers\UsersTableController;
 use App\Http\Controllers\UserTwoFactorAuthenticationController;
+use App\Http\Controllers\VapiController;
 use App\Http\Middleware\InternalRequestMiddleware;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Http\RedirectResponse;
@@ -289,6 +295,20 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('profile/export-pdf', App\Http\Controllers\ProfileExportPdfController::class)
         ->middleware('feature:profile_pdf_export')
         ->name('profile.export-pdf');
+
+    // AI Core routes
+    Route::get('ai/bot', [BotV2Controller::class, 'index'])->name('ai.bot.index');
+    Route::post('ai/bot/chat', [BotV2Controller::class, 'chat'])->name('ai.bot.chat');
+    Route::get('ai/concierge', [ConciergeController::class, 'index'])->name('ai.concierge.index');
+    Route::post('ai/concierge/match', [ConciergeController::class, 'match'])->name('ai.concierge.match');
+    Route::get('ai/suggestions/{contact}', [PredictiveSuggestionsController::class, 'show'])->name('ai.suggestions.show');
+    Route::post('ai/suggestions/{contact}/generate', [PredictiveSuggestionsController::class, 'generate'])->name('ai.suggestions.generate');
+    Route::get('ai/summaries/{type}/{id}', [AiSummaryController::class, 'show'])->name('ai.summaries.show');
+    Route::post('ai/summaries/{type}/{id}', [AiSummaryController::class, 'generate'])->name('ai.summaries.generate');
+    Route::get('funnel/templates', [FunnelTemplateController::class, 'index'])->name('funnel.templates.index');
+    Route::post('funnel/templates', [FunnelTemplateController::class, 'store'])->name('funnel.templates.store');
+    Route::post('funnel/templates/{template}/enroll/{contact}', [FunnelTemplateController::class, 'enroll'])->name('funnel.templates.enroll');
+    Route::get('ai/calls', [VapiController::class, 'index'])->name('ai.calls.index');
 });
 
 Route::get('/api/slug-availability', SlugAvailabilityController::class)
@@ -306,6 +326,7 @@ Route::get('/internal/caddy/ask', CaddyAskController::class)
 
 Route::post('webhooks/stripe', StripeWebhookController::class)->name('webhooks.stripe')->withoutMiddleware([ValidateCsrfToken::class]);
 Route::post('webhooks/paddle', PaddleWebhookController::class)->name('webhooks.paddle')->withoutMiddleware([ValidateCsrfToken::class]);
+Route::post('webhooks/vapi', [VapiController::class, 'webhook'])->name('webhooks.vapi')->withoutMiddleware([ValidateCsrfToken::class]);
 
 Route::middleware(['auth', 'feature:onboarding'])->group(function (): void {
     Route::get('onboarding', [OnboardingController::class, 'show'])->name('onboarding');

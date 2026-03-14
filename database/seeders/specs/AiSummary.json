@@ -1,0 +1,52 @@
+{
+    "model": "AiSummary",
+    "table": "ai_summaries",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "summarizable_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "summarizable_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "content": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "model": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": [],
+    "value_hints": {
+        "summarizable_type": {
+            "type": "string",
+            "example": "App\\Models\\Contact"
+        },
+        "model": {
+            "type": "string",
+            "example": "gpt-4o-mini"
+        },
+        "created_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        }
+    },
+    "scenarios": []
+}

@@ -94,9 +94,13 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | pipeline/index | pipeline.index | ✅ |
 | funnel/index | funnel.index | ✅ |
 | member-listings/index | member-listings.index | ✅ |
-| cold-outreach/index | cold-outreach.index, cold-outreach.generate | ❌ |
-| lead-generation/coaching | lead-generation.index, lead-generation.landing-page-copy | ❌ |
-| lead-generation/index | lead-generation.index, lead-generation.landing-page-copy | ❌ |
-| nurture-sequences/index | nurture-sequences.index, nurture-sequences.store | ❌ |
+| cold-outreach/index | cold-outreach.index, cold-outreach.generate | ✅ |
+| lead-generation/coaching | lead-generation.index, lead-generation.landing-page-copy | ✅ |
+| lead-generation/index | lead-generation.index, lead-generation.landing-page-copy | ✅ |
+| nurture-sequences/index | nurture-sequences.index, nurture-sequences.store | ✅ |
+| bot/index | ai.bot.index, ai.bot.chat | ❌ |
+| call-logs/index | ai.calls.index, webhooks.vapi | ❌ |
+| concierge/index | ai.concierge.index, ai.concierge.match | ❌ |
+| funnel-templates/index | funnel.templates.index, funnel.templates.store | ❌ |
 
 

@@ -77,9 +77,15 @@ All Controllers:
 | [PipelineController](docs/developer/backend/controllers/PipelineController.md) | N/A | ✅ |
 | [FunnelController](docs/developer/backend/controllers/FunnelController.md) | N/A | ✅ |
 | [MemberListingsController](docs/developer/backend/controllers/MemberListingsController.md) | N/A | ✅ |
-| ColdOutreachController | N/A | ❌ |
-| LeadCaptureController | N/A | ❌ |
-| LeadGenerationController | N/A | ❌ |
-| NurtureSequenceController | N/A | ❌ |
+| [ColdOutreachController](docs/developer/backend/controllers/ColdOutreachController.md) | N/A | ✅ |
+| [LeadCaptureController](docs/developer/backend/controllers/LeadCaptureController.md) | N/A | ✅ |
+| [LeadGenerationController](docs/developer/backend/controllers/LeadGenerationController.md) | N/A | ✅ |
+| [NurtureSequenceController](docs/developer/backend/controllers/NurtureSequenceController.md) | N/A | ✅ |
+| AiSummaryController | N/A | ❌ |
+| BotV2Controller | N/A | ❌ |
+| ConciergeController | N/A | ❌ |
+| FunnelTemplateController | N/A | ❌ |
+| PredictiveSuggestionsController | N/A | ❌ |
+| VapiController | N/A | ❌ |
 
 

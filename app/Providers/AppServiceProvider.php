@@ -391,6 +391,10 @@ final class AppServiceProvider extends ServiceProvider
             'pipeline-index',
             'funnel-index',
             'member-listings-index',
+            'ai-bot-tab',
+            'ai-concierge-tab',
+            'funnel-templates-tab',
+            'call-logs-tab',
         ]);
     }
 

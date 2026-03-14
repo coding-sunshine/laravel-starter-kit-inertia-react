@@ -8,7 +8,9 @@ use App\Models\Concerns\BelongsToOrganization;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Laravel\Scout\Searchable;
 use Mattiverse\Userstamps\Traits\Userstamps;
@@ -157,6 +159,31 @@ final class Contact extends Model
             'created_by' => $this->created_by,
             'created_at' => $this->created_at?->timestamp,
         ];
+    }
+
+    /**
+     * @return BelongsToMany<StrategyTag, $this>
+     */
+    public function strategyTags(): BelongsToMany
+    {
+        return $this->belongsToMany(StrategyTag::class, 'contact_strategy_tag')
+            ->withTimestamps();
+    }
+
+    /**
+     * @return HasMany<CallLog, $this>
+     */
+    public function callLogs(): HasMany
+    {
+        return $this->hasMany(CallLog::class);
+    }
+
+    /**
+     * @return MorphMany<AiSummary, $this>
+     */
+    public function aiSummaries(): MorphMany
+    {
+        return $this->morphMany(AiSummary::class, 'summarizable');
     }
 
     public function getActivitylogOptions(): LogOptions

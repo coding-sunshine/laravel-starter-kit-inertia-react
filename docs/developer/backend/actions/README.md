@@ -53,11 +53,15 @@ All Actions:
 | [BulkUpdateContactsAction](docs/developer/backend/actions/BulkUpdateContactsAction.md) | N/A | ✅ |
 | [BulkUpdateReservationsAction](docs/developer/backend/actions/BulkUpdateReservationsAction.md) | N/A | ✅ |
 | [PushListingAction](docs/developer/backend/actions/PushListingAction.md) | N/A | ✅ |
-| CaptureLeadAction | N/A | ❌ |
-| EnrollInNurtureSequenceAction | N/A | ❌ |
-| GenerateColdOutreachAction | N/A | ❌ |
-| GenerateLandingPageCopyAction | N/A | ❌ |
-| GenerateLeadBriefAction | N/A | ❌ |
-| RouteLeadAction | N/A | ❌ |
+| [CaptureLeadAction](docs/developer/backend/actions/CaptureLeadAction.md) | N/A | ✅ |
+| [EnrollInNurtureSequenceAction](docs/developer/backend/actions/EnrollInNurtureSequenceAction.md) | N/A | ✅ |
+| [GenerateColdOutreachAction](docs/developer/backend/actions/GenerateColdOutreachAction.md) | N/A | ✅ |
+| [GenerateLandingPageCopyAction](docs/developer/backend/actions/GenerateLandingPageCopyAction.md) | N/A | ✅ |
+| [GenerateLeadBriefAction](docs/developer/backend/actions/GenerateLeadBriefAction.md) | N/A | ✅ |
+| [RouteLeadAction](docs/developer/backend/actions/RouteLeadAction.md) | N/A | ✅ |
+| AdvanceFunnelInstanceAction | N/A | ❌ |
+| GenerateAiSummaryAction | N/A | ❌ |
+| GeneratePredictiveSuggestionsAction | N/A | ❌ |
+| GeneratePropertyDescriptionAction | N/A | ❌ |
 
 

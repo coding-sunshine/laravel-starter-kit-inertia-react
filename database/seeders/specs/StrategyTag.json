@@ -1,0 +1,73 @@
+{
+    "model": "StrategyTag",
+    "table": "strategy_tags",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "color": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        },
+        "contacts": {
+            "type": "belongsToMany",
+            "model": "Contact"
+        }
+    },
+    "value_hints": {
+        "type": {
+            "type": "enum",
+            "example": "investment",
+            "options": [
+                "investment",
+                "lifestyle",
+                "first-home",
+                "upgrade",
+                "downsize"
+            ]
+        },
+        "color": {
+            "type": "string",
+            "example": "#6366f1"
+        },
+        "name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    },
+    "scenarios": []
+}

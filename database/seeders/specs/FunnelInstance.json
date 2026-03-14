@@ -1,0 +1,87 @@
+{
+    "model": "FunnelInstance",
+    "table": "funnel_instances",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "funnel_template_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "contact_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "current_step": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "data": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "started_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "completed_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "template": {
+            "type": "belongsTo",
+            "model": "Template"
+        },
+        "contact": {
+            "type": "belongsTo",
+            "model": "Contact"
+        }
+    },
+    "value_hints": {
+        "status": {
+            "type": "enum",
+            "example": "active",
+            "options": [
+                "active",
+                "completed",
+                "paused",
+                "exited"
+            ]
+        },
+        "started_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        },
+        "completed_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        }
+    },
+    "scenarios": []
+}
