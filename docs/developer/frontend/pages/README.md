@@ -98,9 +98,25 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | lead-generation/coaching | lead-generation.index, lead-generation.landing-page-copy | ✅ |
 | lead-generation/index | lead-generation.index, lead-generation.landing-page-copy | ✅ |
 | nurture-sequences/index | nurture-sequences.index, nurture-sequences.store | ✅ |
-| bot/index | ai.bot.index, ai.bot.chat | ❌ |
-| call-logs/index | ai.calls.index, webhooks.vapi | ❌ |
-| concierge/index | ai.concierge.index, ai.concierge.match | ❌ |
-| funnel-templates/index | funnel.templates.index, funnel.templates.store | ❌ |
+| [bot/index](../docs/developer/frontend/pages/bot/index.md) | ai.bot.index, ai.bot.chat | ✅ |
+| [call-logs/index](../docs/developer/frontend/pages/call-logs/index.md) | ai.calls.index, webhooks.vapi | ✅ |
+| [concierge/index](../docs/developer/frontend/pages/concierge/index.md) | ai.concierge.index, ai.concierge.match | ✅ |
+| [funnel-templates/index](../docs/developer/frontend/pages/funnel-templates/index.md) | funnel.templates.index, funnel.templates.store | ✅ |
+| agent-portal/index | agent-portal.index, agent-portal.schedule | ✅ |
+| builder-portal/index | builder-portal.index, builder-portal.store | ✅ |
+| inventory/index | inventory.index, inventory.import | ✅ |
+| puck-templates/index | puck-templates.index, puck-templates.store | ✅ |
+| builder-portal/show | builder-portal.index, builder-portal.store | ✅ |
+| public/campaign-site | public.campaign-site, public.survey | ✅ |
+| public/survey | public.campaign-site, public.survey | ✅ |
+| puck-templates/edit | puck-templates.index, puck-templates.store | ✅ |
+| custom-fields/index | custom-fields.index, custom-fields.store | ✅ |
+| automation-rules/index | automation-rules.index, automation-rules.store | ✅ |
+| analytics/index | analytics.index, analytics.nl-query | ✅ |
+| ad-templates/index | ad-templates.index, ad-templates.store | ❌ |
+| brochure-layouts/index | brochure-layouts.index, brochure-layouts.store | ❌ |
+| email-campaigns/index | email-campaigns.index, email-campaigns.store | ❌ |
+| landing-pages/index | landing-pages.index, landing-pages.generate | ❌ |
+| retargeting-pixels/index | retargeting-pixels.index, retargeting-pixels.store | ❌ |
 
 

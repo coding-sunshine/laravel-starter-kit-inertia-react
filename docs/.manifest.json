@@ -883,44 +883,196 @@
         },
         "ValidateListingAction": {
             "documented": true,
-            "path": "./ValidateListingAction.md"
+            "path": "./ValidateListingAction.md",
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [
+                    "Project",
+                    "Lot"
+                ],
+                "relatedRoutes": []
+            }
         },
         "CreateListingVersionAction": {
             "documented": true,
-            "path": "./CreateListingVersionAction.md"
+            "path": "./CreateListingVersionAction.md",
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [
+                    "Project",
+                    "ListingVersion",
+                    "Lot"
+                ],
+                "relatedRoutes": []
+            }
         },
         "SuggestPushTimeAction": {
             "documented": true,
-            "path": "./SuggestPushTimeAction.md"
+            "path": "./SuggestPushTimeAction.md",
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [
+                    "Project",
+                    "Lot"
+                ],
+                "relatedRoutes": []
+            }
         },
         "ImportInventoryAction": {
             "documented": true,
-            "path": "./ImportInventoryAction.md"
+            "path": "./ImportInventoryAction.md",
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [
+                    "Lot",
+                    "Project"
+                ],
+                "relatedRoutes": []
+            }
         },
         "AddMentionAction": {
             "documented": true,
             "path": "docs/developer/backend/actions/AddMentionAction.md",
-            "lastUpdated": "2026-03-15"
+            "lastUpdated": "2026-03-15",
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [
+                    "Mention",
+                    "User"
+                ],
+                "relatedRoutes": []
+            }
         },
         "EvaluateAutomationRulesAction": {
             "documented": true,
             "path": "docs/developer/backend/actions/EvaluateAutomationRulesAction.md",
-            "lastUpdated": "2026-03-15"
+            "lastUpdated": "2026-03-15",
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [
+                    "AutomationRule"
+                ],
+                "relatedRoutes": []
+            }
         },
         "ProcessAutomationRuleAction": {
             "documented": true,
             "path": "docs/developer/backend/actions/ProcessAutomationRuleAction.md",
-            "lastUpdated": "2026-03-15"
+            "lastUpdated": "2026-03-15",
+            "relationships": {
+                "usedBy": [],
+                "usesModels": {
+                    "0": "AutomationRule",
+                    "2": "User"
+                },
+                "relatedRoutes": []
+            }
         },
         "GenerateDealForecastAction": {
             "documented": true,
             "path": "docs/developer/backend/actions/GenerateDealForecastAction.md",
-            "lastUpdated": "2026-03-15"
+            "lastUpdated": "2026-03-15",
+            "relationships": {
+                "usedBy": [
+                    "DealForecastController"
+                ],
+                "usesModels": [
+                    "Sale"
+                ],
+                "relatedRoutes": [
+                    "sales.forecast"
+                ]
+            }
         },
         "NlAnalyticsQueryAction": {
             "documented": true,
             "path": "docs/developer/backend/actions/NlAnalyticsQueryAction.md",
-            "lastUpdated": "2026-03-15"
+            "lastUpdated": "2026-03-15",
+            "relationships": {
+                "usedBy": [
+                    "AnalyticsController"
+                ],
+                "usesModels": [],
+                "relatedRoutes": [
+                    "analytics.index",
+                    "analytics.nl-query"
+                ]
+            }
+        },
+        "GenerateAdCopyAction": {
+            "documented": true,
+            "path": "docs/developer/backend/actions/GenerateAdCopyAction.md",
+            "lastUpdated": "2026-03-15",
+            "relationships": {
+                "usedBy": [
+                    "AdTemplateController"
+                ],
+                "usesModels": [],
+                "relatedRoutes": [
+                    "ad-templates.index",
+                    "ad-templates.store",
+                    "ad-templates.generate-copy",
+                    "ad-templates.destroy"
+                ]
+            }
+        },
+        "GenerateBrochureV2Action": {
+            "documented": true,
+            "path": "docs/developer/backend/actions/GenerateBrochureV2Action.md",
+            "lastUpdated": "2026-03-15",
+            "relationships": {
+                "usedBy": [
+                    "BrochureLayoutController"
+                ],
+                "usesModels": [
+                    "Flyer",
+                    "BrochureLayout"
+                ],
+                "relatedRoutes": [
+                    "brochure-layouts.index",
+                    "brochure-layouts.store",
+                    "brochure-layouts.generate-pdf"
+                ]
+            }
+        },
+        "GenerateEmailCampaignAction": {
+            "documented": true,
+            "path": "docs/developer/backend/actions/GenerateEmailCampaignAction.md",
+            "lastUpdated": "2026-03-15",
+            "relationships": {
+                "usedBy": [
+                    "EmailCampaignController"
+                ],
+                "usesModels": [
+                    "EmailCampaign"
+                ],
+                "relatedRoutes": [
+                    "email-campaigns.index",
+                    "email-campaigns.store",
+                    "email-campaigns.personalise",
+                    "email-campaigns.send",
+                    "email-campaigns.destroy"
+                ]
+            }
+        },
+        "GenerateLandingPageAction": {
+            "documented": true,
+            "path": "docs/developer/backend/actions/GenerateLandingPageAction.md",
+            "lastUpdated": "2026-03-15",
+            "relationships": {
+                "usedBy": [
+                    "LandingPageController"
+                ],
+                "usesModels": [
+                    "LandingPageTemplate"
+                ],
+                "relatedRoutes": [
+                    "landing-pages.index",
+                    "landing-pages.generate",
+                    "landing-pages.update",
+                    "landing-pages.destroy"
+                ]
+            }
         }
     },
     "controllers": {
@@ -2071,27 +2223,103 @@
         },
         "AgentPortalController": {
             "documented": true,
-            "path": "./AgentPortalController.md"
+            "path": "./AgentPortalController.md",
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "agent-portal.index",
+                    "agent-portal.schedule"
+                ],
+                "rendersPages": [
+                    "agent-portal/index"
+                ]
+            }
         },
         "BuilderPortalController": {
             "documented": true,
-            "path": "./BuilderPortalController.md"
+            "path": "./BuilderPortalController.md",
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "builder-portal.index",
+                    "builder-portal.store",
+                    "builder-portal.show"
+                ],
+                "rendersPages": [
+                    "builder-portal/index",
+                    "builder-portal/show"
+                ]
+            }
         },
         "InventoryApiController": {
             "documented": true,
-            "path": "./InventoryApiController.md"
+            "path": "./InventoryApiController.md",
+            "relationships": {
+                "usesActions": [
+                    "ImportInventory"
+                ],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "inventory.index",
+                    "inventory.import",
+                    "inventory.template"
+                ],
+                "rendersPages": [
+                    "inventory/index"
+                ]
+            }
         },
         "FlyerController": {
             "documented": true,
-            "path": "./FlyerController.md"
+            "path": "./FlyerController.md",
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "flyers.edit-puck",
+                    "flyers.puck-save",
+                    "flyers.export-pdf"
+                ],
+                "rendersPages": [
+                    "flyers/puck-editor"
+                ]
+            }
         },
         "PuckTemplateController": {
             "documented": true,
-            "path": "./PuckTemplateController.md"
+            "path": "./PuckTemplateController.md",
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "puck-templates.index",
+                    "puck-templates.store",
+                    "puck-templates.edit"
+                ],
+                "rendersPages": [
+                    "puck-templates/index",
+                    "puck-templates/edit"
+                ]
+            }
         },
         "PublicSiteController": {
             "documented": true,
-            "path": "./PublicSiteController.md"
+            "path": "./PublicSiteController.md",
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "public.campaign-site",
+                    "public.survey",
+                    "public.survey.submit"
+                ],
+                "rendersPages": [
+                    "public/campaign-site",
+                    "public/survey"
+                ]
+            }
         },
         "ProvisionerApiController": {
             "documented": true,
@@ -2100,22 +2328,170 @@
         "CustomFieldController": {
             "documented": true,
             "path": "docs/developer/backend/controllers/CustomFieldController.md",
-            "lastUpdated": "2026-03-15"
+            "lastUpdated": "2026-03-15",
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "custom-fields.index",
+                    "custom-fields.store",
+                    "custom-fields.update",
+                    "custom-fields.destroy",
+                    "custom-fields.values"
+                ],
+                "rendersPages": [
+                    "custom-fields/index"
+                ]
+            }
         },
         "AutomationRuleController": {
             "documented": true,
             "path": "docs/developer/backend/controllers/AutomationRuleController.md",
-            "lastUpdated": "2026-03-15"
+            "lastUpdated": "2026-03-15",
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "automation-rules.index",
+                    "automation-rules.store",
+                    "automation-rules.update",
+                    "automation-rules.destroy"
+                ],
+                "rendersPages": [
+                    "automation-rules/index"
+                ]
+            }
         },
         "AnalyticsController": {
             "documented": true,
             "path": "docs/developer/backend/controllers/AnalyticsController.md",
-            "lastUpdated": "2026-03-15"
+            "lastUpdated": "2026-03-15",
+            "relationships": {
+                "usesActions": [
+                    "NlAnalyticsQueryAction"
+                ],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "analytics.index",
+                    "analytics.nl-query"
+                ],
+                "rendersPages": [
+                    "analytics/index"
+                ]
+            }
         },
         "DealForecastController": {
             "documented": true,
             "path": "docs/developer/backend/controllers/DealForecastController.md",
-            "lastUpdated": "2026-03-15"
+            "lastUpdated": "2026-03-15",
+            "relationships": {
+                "usesActions": [
+                    "GenerateDealForecastAction"
+                ],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "sales.forecast"
+                ],
+                "rendersPages": []
+            }
+        },
+        "AdTemplateController": {
+            "documented": true,
+            "path": "docs/developer/backend/controllers/AdTemplateController.md",
+            "lastUpdated": "2026-03-15",
+            "relationships": {
+                "usesActions": [
+                    "GenerateAdCopyAction"
+                ],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "ad-templates.index",
+                    "ad-templates.store",
+                    "ad-templates.generate-copy",
+                    "ad-templates.destroy"
+                ],
+                "rendersPages": [
+                    "ad-templates/index"
+                ]
+            }
+        },
+        "BrochureLayoutController": {
+            "documented": true,
+            "path": "docs/developer/backend/controllers/BrochureLayoutController.md",
+            "lastUpdated": "2026-03-15",
+            "relationships": {
+                "usesActions": [
+                    "GenerateBrochureV2Action"
+                ],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "brochure-layouts.index",
+                    "brochure-layouts.store",
+                    "brochure-layouts.generate-pdf"
+                ],
+                "rendersPages": [
+                    "brochure-layouts/index"
+                ]
+            }
+        },
+        "EmailCampaignController": {
+            "documented": true,
+            "path": "docs/developer/backend/controllers/EmailCampaignController.md",
+            "lastUpdated": "2026-03-15",
+            "relationships": {
+                "usesActions": [
+                    "GenerateEmailCampaignAction"
+                ],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "email-campaigns.index",
+                    "email-campaigns.store",
+                    "email-campaigns.personalise",
+                    "email-campaigns.send",
+                    "email-campaigns.destroy"
+                ],
+                "rendersPages": [
+                    "email-campaigns/index"
+                ]
+            }
+        },
+        "LandingPageController": {
+            "documented": true,
+            "path": "docs/developer/backend/controllers/LandingPageController.md",
+            "lastUpdated": "2026-03-15",
+            "relationships": {
+                "usesActions": [
+                    "GenerateLandingPageAction"
+                ],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "landing-pages.index",
+                    "landing-pages.generate",
+                    "landing-pages.update",
+                    "landing-pages.destroy"
+                ],
+                "rendersPages": [
+                    "landing-pages/index"
+                ]
+            }
+        },
+        "RetargetingPixelController": {
+            "documented": true,
+            "path": "docs/developer/backend/controllers/RetargetingPixelController.md",
+            "lastUpdated": "2026-03-15",
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "retargeting-pixels.index",
+                    "retargeting-pixels.store",
+                    "retargeting-pixels.update",
+                    "retargeting-pixels.destroy"
+                ],
+                "rendersPages": [
+                    "retargeting-pixels/index"
+                ]
+            }
         }
     },
     "pages": {
@@ -2517,12 +2893,65 @@
                     "funnel.templates.store",
                     "funnel.templates.enroll",
                     "ai.calls.index",
+                    "agent-portal.index",
+                    "agent-portal.schedule",
+                    "builder-portal.index",
+                    "builder-portal.store",
+                    "builder-portal.show",
+                    "inventory.index",
+                    "inventory.import",
+                    "inventory.template",
+                    "flyers.edit-puck",
+                    "flyers.puck-save",
+                    "flyers.export-pdf",
+                    "puck-templates.index",
+                    "puck-templates.store",
+                    "puck-templates.edit",
+                    "custom-fields.index",
+                    "custom-fields.store",
+                    "custom-fields.update",
+                    "custom-fields.destroy",
+                    "custom-fields.values",
+                    "automation-rules.index",
+                    "automation-rules.store",
+                    "automation-rules.update",
+                    "automation-rules.destroy",
+                    "analytics.index",
+                    "analytics.nl-query",
+                    "sales.forecast",
+                    "ad-templates.index",
+                    "ad-templates.store",
+                    "ad-templates.generate-copy",
+                    "ad-templates.destroy",
+                    "brochure-layouts.index",
+                    "brochure-layouts.store",
+                    "brochure-layouts.generate-pdf",
+                    "retargeting-pixels.index",
+                    "retargeting-pixels.store",
+                    "retargeting-pixels.update",
+                    "retargeting-pixels.destroy",
+                    "email-campaigns.index",
+                    "email-campaigns.store",
+                    "email-campaigns.personalise",
+                    "email-campaigns.send",
+                    "email-campaigns.destroy",
+                    "landing-pages.index",
+                    "landing-pages.generate",
+                    "landing-pages.update",
+                    "landing-pages.destroy",
                     "api.slug-availability",
                     "api.login-event",
                     "internal.caddy.ask",
                     "webhooks.stripe",
                     "webhooks.paddle",
                     "webhooks.vapi",
+                    "public.campaign-site",
+                    "public.survey",
+                    "public.survey.submit",
+                    "provisioner.pending",
+                    "provisioner.removing",
+                    "provisioner.callback",
+                    "provisioner.subscriber",
                     "onboarding",
                     "onboarding.store",
                     "personal-data-exports",
@@ -3223,12 +3652,65 @@
                     "funnel.templates.store",
                     "funnel.templates.enroll",
                     "ai.calls.index",
+                    "agent-portal.index",
+                    "agent-portal.schedule",
+                    "builder-portal.index",
+                    "builder-portal.store",
+                    "builder-portal.show",
+                    "inventory.index",
+                    "inventory.import",
+                    "inventory.template",
+                    "flyers.edit-puck",
+                    "flyers.puck-save",
+                    "flyers.export-pdf",
+                    "puck-templates.index",
+                    "puck-templates.store",
+                    "puck-templates.edit",
+                    "custom-fields.index",
+                    "custom-fields.store",
+                    "custom-fields.update",
+                    "custom-fields.destroy",
+                    "custom-fields.values",
+                    "automation-rules.index",
+                    "automation-rules.store",
+                    "automation-rules.update",
+                    "automation-rules.destroy",
+                    "analytics.index",
+                    "analytics.nl-query",
+                    "sales.forecast",
+                    "ad-templates.index",
+                    "ad-templates.store",
+                    "ad-templates.generate-copy",
+                    "ad-templates.destroy",
+                    "brochure-layouts.index",
+                    "brochure-layouts.store",
+                    "brochure-layouts.generate-pdf",
+                    "retargeting-pixels.index",
+                    "retargeting-pixels.store",
+                    "retargeting-pixels.update",
+                    "retargeting-pixels.destroy",
+                    "email-campaigns.index",
+                    "email-campaigns.store",
+                    "email-campaigns.personalise",
+                    "email-campaigns.send",
+                    "email-campaigns.destroy",
+                    "landing-pages.index",
+                    "landing-pages.generate",
+                    "landing-pages.update",
+                    "landing-pages.destroy",
                     "api.slug-availability",
                     "api.login-event",
                     "internal.caddy.ask",
                     "webhooks.stripe",
                     "webhooks.paddle",
                     "webhooks.vapi",
+                    "public.campaign-site",
+                    "public.survey",
+                    "public.survey.submit",
+                    "provisioner.pending",
+                    "provisioner.removing",
+                    "provisioner.callback",
+                    "provisioner.subscriber",
                     "onboarding",
                     "onboarding.store",
                     "personal-data-exports",
@@ -3854,12 +4336,65 @@
                     "funnel.templates.store",
                     "funnel.templates.enroll",
                     "ai.calls.index",
+                    "agent-portal.index",
+                    "agent-portal.schedule",
+                    "builder-portal.index",
+                    "builder-portal.store",
+                    "builder-portal.show",
+                    "inventory.index",
+                    "inventory.import",
+                    "inventory.template",
+                    "flyers.edit-puck",
+                    "flyers.puck-save",
+                    "flyers.export-pdf",
+                    "puck-templates.index",
+                    "puck-templates.store",
+                    "puck-templates.edit",
+                    "custom-fields.index",
+                    "custom-fields.store",
+                    "custom-fields.update",
+                    "custom-fields.destroy",
+                    "custom-fields.values",
+                    "automation-rules.index",
+                    "automation-rules.store",
+                    "automation-rules.update",
+                    "automation-rules.destroy",
+                    "analytics.index",
+                    "analytics.nl-query",
+                    "sales.forecast",
+                    "ad-templates.index",
+                    "ad-templates.store",
+                    "ad-templates.generate-copy",
+                    "ad-templates.destroy",
+                    "brochure-layouts.index",
+                    "brochure-layouts.store",
+                    "brochure-layouts.generate-pdf",
+                    "retargeting-pixels.index",
+                    "retargeting-pixels.store",
+                    "retargeting-pixels.update",
+                    "retargeting-pixels.destroy",
+                    "email-campaigns.index",
+                    "email-campaigns.store",
+                    "email-campaigns.personalise",
+                    "email-campaigns.send",
+                    "email-campaigns.destroy",
+                    "landing-pages.index",
+                    "landing-pages.generate",
+                    "landing-pages.update",
+                    "landing-pages.destroy",
                     "api.slug-availability",
                     "api.login-event",
                     "internal.caddy.ask",
                     "webhooks.stripe",
                     "webhooks.paddle",
                     "webhooks.vapi",
+                    "public.campaign-site",
+                    "public.survey",
+                    "public.survey.submit",
+                    "provisioner.pending",
+                    "provisioner.removing",
+                    "provisioner.callback",
+                    "provisioner.subscriber",
                     "onboarding",
                     "onboarding.store",
                     "personal-data-exports",
@@ -4426,12 +4961,65 @@
                     "funnel.templates.store",
                     "funnel.templates.enroll",
                     "ai.calls.index",
+                    "agent-portal.index",
+                    "agent-portal.schedule",
+                    "builder-portal.index",
+                    "builder-portal.store",
+                    "builder-portal.show",
+                    "inventory.index",
+                    "inventory.import",
+                    "inventory.template",
+                    "flyers.edit-puck",
+                    "flyers.puck-save",
+                    "flyers.export-pdf",
+                    "puck-templates.index",
+                    "puck-templates.store",
+                    "puck-templates.edit",
+                    "custom-fields.index",
+                    "custom-fields.store",
+                    "custom-fields.update",
+                    "custom-fields.destroy",
+                    "custom-fields.values",
+                    "automation-rules.index",
+                    "automation-rules.store",
+                    "automation-rules.update",
+                    "automation-rules.destroy",
+                    "analytics.index",
+                    "analytics.nl-query",
+                    "sales.forecast",
+                    "ad-templates.index",
+                    "ad-templates.store",
+                    "ad-templates.generate-copy",
+                    "ad-templates.destroy",
+                    "brochure-layouts.index",
+                    "brochure-layouts.store",
+                    "brochure-layouts.generate-pdf",
+                    "retargeting-pixels.index",
+                    "retargeting-pixels.store",
+                    "retargeting-pixels.update",
+                    "retargeting-pixels.destroy",
+                    "email-campaigns.index",
+                    "email-campaigns.store",
+                    "email-campaigns.personalise",
+                    "email-campaigns.send",
+                    "email-campaigns.destroy",
+                    "landing-pages.index",
+                    "landing-pages.generate",
+                    "landing-pages.update",
+                    "landing-pages.destroy",
                     "api.slug-availability",
                     "api.login-event",
                     "internal.caddy.ask",
                     "webhooks.stripe",
                     "webhooks.paddle",
                     "webhooks.vapi",
+                    "public.campaign-site",
+                    "public.survey",
+                    "public.survey.submit",
+                    "provisioner.pending",
+                    "provisioner.removing",
+                    "provisioner.callback",
+                    "provisioner.subscriber",
                     "onboarding",
                     "onboarding.store",
                     "personal-data-exports",
@@ -4984,12 +5572,65 @@
                     "funnel.templates.store",
                     "funnel.templates.enroll",
                     "ai.calls.index",
+                    "agent-portal.index",
+                    "agent-portal.schedule",
+                    "builder-portal.index",
+                    "builder-portal.store",
+                    "builder-portal.show",
+                    "inventory.index",
+                    "inventory.import",
+                    "inventory.template",
+                    "flyers.edit-puck",
+                    "flyers.puck-save",
+                    "flyers.export-pdf",
+                    "puck-templates.index",
+                    "puck-templates.store",
+                    "puck-templates.edit",
+                    "custom-fields.index",
+                    "custom-fields.store",
+                    "custom-fields.update",
+                    "custom-fields.destroy",
+                    "custom-fields.values",
+                    "automation-rules.index",
+                    "automation-rules.store",
+                    "automation-rules.update",
+                    "automation-rules.destroy",
+                    "analytics.index",
+                    "analytics.nl-query",
+                    "sales.forecast",
+                    "ad-templates.index",
+                    "ad-templates.store",
+                    "ad-templates.generate-copy",
+                    "ad-templates.destroy",
+                    "brochure-layouts.index",
+                    "brochure-layouts.store",
+                    "brochure-layouts.generate-pdf",
+                    "retargeting-pixels.index",
+                    "retargeting-pixels.store",
+                    "retargeting-pixels.update",
+                    "retargeting-pixels.destroy",
+                    "email-campaigns.index",
+                    "email-campaigns.store",
+                    "email-campaigns.personalise",
+                    "email-campaigns.send",
+                    "email-campaigns.destroy",
+                    "landing-pages.index",
+                    "landing-pages.generate",
+                    "landing-pages.update",
+                    "landing-pages.destroy",
                     "api.slug-availability",
                     "api.login-event",
                     "internal.caddy.ask",
                     "webhooks.stripe",
                     "webhooks.paddle",
                     "webhooks.vapi",
+                    "public.campaign-site",
+                    "public.survey",
+                    "public.survey.submit",
+                    "provisioner.pending",
+                    "provisioner.removing",
+                    "provisioner.callback",
+                    "provisioner.subscriber",
                     "onboarding",
                     "onboarding.store",
                     "personal-data-exports",
@@ -5715,12 +6356,65 @@
                     "funnel.templates.store",
                     "funnel.templates.enroll",
                     "ai.calls.index",
+                    "agent-portal.index",
+                    "agent-portal.schedule",
+                    "builder-portal.index",
+                    "builder-portal.store",
+                    "builder-portal.show",
+                    "inventory.index",
+                    "inventory.import",
+                    "inventory.template",
+                    "flyers.edit-puck",
+                    "flyers.puck-save",
+                    "flyers.export-pdf",
+                    "puck-templates.index",
+                    "puck-templates.store",
+                    "puck-templates.edit",
+                    "custom-fields.index",
+                    "custom-fields.store",
+                    "custom-fields.update",
+                    "custom-fields.destroy",
+                    "custom-fields.values",
+                    "automation-rules.index",
+                    "automation-rules.store",
+                    "automation-rules.update",
+                    "automation-rules.destroy",
+                    "analytics.index",
+                    "analytics.nl-query",
+                    "sales.forecast",
+                    "ad-templates.index",
+                    "ad-templates.store",
+                    "ad-templates.generate-copy",
+                    "ad-templates.destroy",
+                    "brochure-layouts.index",
+                    "brochure-layouts.store",
+                    "brochure-layouts.generate-pdf",
+                    "retargeting-pixels.index",
+                    "retargeting-pixels.store",
+                    "retargeting-pixels.update",
+                    "retargeting-pixels.destroy",
+                    "email-campaigns.index",
+                    "email-campaigns.store",
+                    "email-campaigns.personalise",
+                    "email-campaigns.send",
+                    "email-campaigns.destroy",
+                    "landing-pages.index",
+                    "landing-pages.generate",
+                    "landing-pages.update",
+                    "landing-pages.destroy",
                     "api.slug-availability",
                     "api.login-event",
                     "internal.caddy.ask",
                     "webhooks.stripe",
                     "webhooks.paddle",
                     "webhooks.vapi",
+                    "public.campaign-site",
+                    "public.survey",
+                    "public.survey.submit",
+                    "provisioner.pending",
+                    "provisioner.removing",
+                    "provisioner.callback",
+                    "provisioner.subscriber",
                     "onboarding",
                     "onboarding.store",
                     "personal-data-exports",
@@ -6541,50 +7235,241 @@
         },
         "agent-portal/index": {
             "documented": true,
-            "path": "./agent-portal/index.md"
+            "path": "./agent-portal/index.md",
+            "relationships": {
+                "renderedBy": [
+                    "AgentPortalController"
+                ],
+                "relatedRoutes": [
+                    "agent-portal.index",
+                    "agent-portal.schedule"
+                ]
+            }
         },
         "builder-portal/index": {
             "documented": true,
-            "path": "./builder-portal/index.md"
+            "path": "./builder-portal/index.md",
+            "relationships": {
+                "renderedBy": [
+                    "BuilderPortalController"
+                ],
+                "relatedRoutes": [
+                    "builder-portal.index",
+                    "builder-portal.store",
+                    "builder-portal.show"
+                ]
+            }
         },
         "inventory/index": {
             "documented": true,
-            "path": "./inventory/index.md"
+            "path": "./inventory/index.md",
+            "relationships": {
+                "renderedBy": [
+                    "InventoryApiController"
+                ],
+                "relatedRoutes": [
+                    "inventory.index",
+                    "inventory.import",
+                    "inventory.template"
+                ]
+            }
         },
         "puck-templates/index": {
             "documented": true,
-            "path": "./puck-templates/index.md"
+            "path": "./puck-templates/index.md",
+            "relationships": {
+                "renderedBy": [
+                    "PuckTemplateController"
+                ],
+                "relatedRoutes": [
+                    "puck-templates.index",
+                    "puck-templates.store",
+                    "puck-templates.edit"
+                ]
+            }
         },
         "builder-portal/show": {
             "documented": true,
-            "path": "./builder-portal/show.md"
+            "path": "./builder-portal/show.md",
+            "relationships": {
+                "renderedBy": [
+                    "BuilderPortalController"
+                ],
+                "relatedRoutes": [
+                    "builder-portal.index",
+                    "builder-portal.store",
+                    "builder-portal.show"
+                ]
+            }
         },
         "public/campaign-site": {
             "documented": true,
-            "path": "./public/campaign-site.md"
+            "path": "./public/campaign-site.md",
+            "relationships": {
+                "renderedBy": [
+                    "PublicSiteController"
+                ],
+                "relatedRoutes": [
+                    "public.campaign-site",
+                    "public.survey",
+                    "public.survey.submit"
+                ]
+            }
         },
         "public/survey": {
             "documented": true,
-            "path": "./public/survey.md"
+            "path": "./public/survey.md",
+            "relationships": {
+                "renderedBy": [
+                    "PublicSiteController"
+                ],
+                "relatedRoutes": [
+                    "public.campaign-site",
+                    "public.survey",
+                    "public.survey.submit"
+                ]
+            }
         },
         "puck-templates/edit": {
             "documented": true,
-            "path": "./puck-templates/edit.md"
+            "path": "./puck-templates/edit.md",
+            "relationships": {
+                "renderedBy": [
+                    "PuckTemplateController"
+                ],
+                "relatedRoutes": [
+                    "puck-templates.index",
+                    "puck-templates.store",
+                    "puck-templates.edit"
+                ]
+            }
         },
         "custom-fields/index": {
             "documented": true,
             "path": "docs/developer/frontend/pages/custom-fields/index.md",
-            "lastUpdated": "2026-03-15"
+            "lastUpdated": "2026-03-15",
+            "relationships": {
+                "renderedBy": [
+                    "CustomFieldController"
+                ],
+                "relatedRoutes": [
+                    "custom-fields.index",
+                    "custom-fields.store",
+                    "custom-fields.update",
+                    "custom-fields.destroy",
+                    "custom-fields.values"
+                ]
+            }
         },
         "automation-rules/index": {
             "documented": true,
             "path": "docs/developer/frontend/pages/automation-rules/index.md",
-            "lastUpdated": "2026-03-15"
+            "lastUpdated": "2026-03-15",
+            "relationships": {
+                "renderedBy": [
+                    "AutomationRuleController"
+                ],
+                "relatedRoutes": [
+                    "automation-rules.index",
+                    "automation-rules.store",
+                    "automation-rules.update",
+                    "automation-rules.destroy"
+                ]
+            }
         },
         "analytics/index": {
             "documented": true,
             "path": "docs/developer/frontend/pages/analytics/index.md",
-            "lastUpdated": "2026-03-15"
+            "lastUpdated": "2026-03-15",
+            "relationships": {
+                "renderedBy": [
+                    "AnalyticsController"
+                ],
+                "relatedRoutes": [
+                    "analytics.index",
+                    "analytics.nl-query"
+                ]
+            }
+        },
+        "ad-templates/index": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "docs/developer/backend/controllers/AdTemplateController.md",
+            "relationships": {
+                "renderedBy": [
+                    "AdTemplateController"
+                ],
+                "relatedRoutes": [
+                    "ad-templates.index",
+                    "ad-templates.store",
+                    "ad-templates.generate-copy",
+                    "ad-templates.destroy"
+                ]
+            }
+        },
+        "brochure-layouts/index": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "docs/developer/backend/controllers/BrochureLayoutController.md",
+            "relationships": {
+                "renderedBy": [
+                    "BrochureLayoutController"
+                ],
+                "relatedRoutes": [
+                    "brochure-layouts.index",
+                    "brochure-layouts.store",
+                    "brochure-layouts.generate-pdf"
+                ]
+            }
+        },
+        "email-campaigns/index": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "docs/developer/backend/controllers/EmailCampaignController.md",
+            "relationships": {
+                "renderedBy": [
+                    "EmailCampaignController"
+                ],
+                "relatedRoutes": [
+                    "email-campaigns.index",
+                    "email-campaigns.store",
+                    "email-campaigns.personalise",
+                    "email-campaigns.send",
+                    "email-campaigns.destroy"
+                ]
+            }
+        },
+        "landing-pages/index": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "docs/developer/backend/controllers/LandingPageController.md",
+            "relationships": {
+                "renderedBy": [
+                    "LandingPageController"
+                ],
+                "relatedRoutes": [
+                    "landing-pages.index",
+                    "landing-pages.generate",
+                    "landing-pages.update",
+                    "landing-pages.destroy"
+                ]
+            }
+        },
+        "retargeting-pixels/index": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "docs/developer/backend/controllers/RetargetingPixelController.md",
+            "relationships": {
+                "renderedBy": [
+                    "RetargetingPixelController"
+                ],
+                "relatedRoutes": [
+                    "retargeting-pixels.index",
+                    "retargeting-pixels.store",
+                    "retargeting-pixels.update",
+                    "retargeting-pixels.destroy"
+                ]
+            }
         }
     },
     "routes": {

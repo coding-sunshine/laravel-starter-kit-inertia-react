@@ -412,6 +412,12 @@ final class AppServiceProvider extends ServiceProvider
             'custom-fields-tab',
             'automation-rules-tab',
             'analytics-tab',
+            'ad-templates-tab',
+            'ad-templates-create-btn',
+            'brochure-layout-create-btn',
+            'retargeting-pixel-add-btn',
+            'email-campaign-create-btn',
+            'landing-page-generate-btn',
         ]);
     }
 

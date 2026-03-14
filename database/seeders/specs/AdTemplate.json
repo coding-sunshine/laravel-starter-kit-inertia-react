@@ -1,0 +1,103 @@
+{
+    "model": "AdTemplate",
+    "table": "ad_templates",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "channel": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "tone": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "headline": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "body_copy": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "cta_text": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "image_url": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "metadata": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "is_active": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": [],
+    "value_hints": {
+        "name": {
+            "type": "name",
+            "example": "John Doe"
+        },
+        "image_url": {
+            "type": "url",
+            "example": "https://example.com"
+        }
+    },
+    "scenarios": []
+}

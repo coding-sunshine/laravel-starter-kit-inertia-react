@@ -59,9 +59,22 @@ All Actions:
 | [GenerateLandingPageCopyAction](docs/developer/backend/actions/GenerateLandingPageCopyAction.md) | N/A | ✅ |
 | [GenerateLeadBriefAction](docs/developer/backend/actions/GenerateLeadBriefAction.md) | N/A | ✅ |
 | [RouteLeadAction](docs/developer/backend/actions/RouteLeadAction.md) | N/A | ✅ |
-| AdvanceFunnelInstanceAction | N/A | ❌ |
-| GenerateAiSummaryAction | N/A | ❌ |
-| GeneratePredictiveSuggestionsAction | N/A | ❌ |
-| GeneratePropertyDescriptionAction | N/A | ❌ |
+| [AdvanceFunnelInstanceAction](../docs/developer/backend/actions/AdvanceFunnelInstanceAction.md) | N/A | ✅ |
+| [GenerateAiSummaryAction](../docs/developer/backend/actions/GenerateAiSummaryAction.md) | N/A | ✅ |
+| [GeneratePredictiveSuggestionsAction](../docs/developer/backend/actions/GeneratePredictiveSuggestionsAction.md) | N/A | ✅ |
+| [GeneratePropertyDescriptionAction](../docs/developer/backend/actions/GeneratePropertyDescriptionAction.md) | N/A | ✅ |
+| [ValidateListingAction](./ValidateListingAction.md) | N/A | ✅ |
+| [CreateListingVersionAction](./CreateListingVersionAction.md) | N/A | ✅ |
+| [SuggestPushTimeAction](./SuggestPushTimeAction.md) | N/A | ✅ |
+| [ImportInventoryAction](./ImportInventoryAction.md) | N/A | ✅ |
+| [AddMentionAction](docs/developer/backend/actions/AddMentionAction.md) | N/A | ✅ |
+| [EvaluateAutomationRulesAction](docs/developer/backend/actions/EvaluateAutomationRulesAction.md) | N/A | ✅ |
+| [ProcessAutomationRuleAction](docs/developer/backend/actions/ProcessAutomationRuleAction.md) | N/A | ✅ |
+| [GenerateDealForecastAction](docs/developer/backend/actions/GenerateDealForecastAction.md) | N/A | ✅ |
+| [NlAnalyticsQueryAction](docs/developer/backend/actions/NlAnalyticsQueryAction.md) | N/A | ✅ |
+| GenerateAdCopyAction | N/A | ❌ |
+| GenerateBrochureV2Action | N/A | ❌ |
+| GenerateEmailCampaignAction | N/A | ❌ |
+| GenerateLandingPageAction | N/A | ❌ |
 
 

@@ -1725,6 +1725,51 @@
             "data_files": [
                 "wordpress_websites.json"
             ]
+        },
+        {
+            "name": "AdTemplateSeeder",
+            "category": "development",
+            "description": "Seeds AdTemplate data",
+            "dependencies": [],
+            "data_files": [
+                "ad_templates.json"
+            ]
+        },
+        {
+            "name": "BrochureLayoutSeeder",
+            "category": "development",
+            "description": "Seeds BrochureLayout data",
+            "dependencies": [],
+            "data_files": [
+                "brochure_layouts.json"
+            ]
+        },
+        {
+            "name": "RetargetingPixelSeeder",
+            "category": "development",
+            "description": "Seeds RetargetingPixel data",
+            "dependencies": [],
+            "data_files": [
+                "retargeting_pixels.json"
+            ]
+        },
+        {
+            "name": "EmailCampaignSeeder",
+            "category": "development",
+            "description": "Seeds EmailCampaign data",
+            "dependencies": [],
+            "data_files": [
+                "email_campaigns.json"
+            ]
+        },
+        {
+            "name": "LandingPageTemplateSeeder",
+            "category": "development",
+            "description": "Seeds LandingPageTemplate data",
+            "dependencies": [],
+            "data_files": [
+                "landing_page_templates.json"
+            ]
         }
     ],
     "categories": {

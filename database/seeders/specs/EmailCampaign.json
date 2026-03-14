@@ -1,0 +1,137 @@
+{
+    "model": "EmailCampaign",
+    "table": "email_campaigns",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "mail_list_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "subject": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "preview_text": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "html_content": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "plain_text": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "from_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "from_email": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "scheduled_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "sent_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "sent_count": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "open_count": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "click_count": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "bounce_count": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "metadata": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": [],
+    "value_hints": {
+        "name": {
+            "type": "name",
+            "example": "John Doe"
+        },
+        "from_name": {
+            "type": "name",
+            "example": "John Doe"
+        },
+        "from_email": {
+            "type": "email",
+            "example": "user@example.com"
+        }
+    },
+    "scenarios": []
+}

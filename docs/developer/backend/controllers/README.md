@@ -81,11 +81,27 @@ All Controllers:
 | [LeadCaptureController](docs/developer/backend/controllers/LeadCaptureController.md) | N/A | ✅ |
 | [LeadGenerationController](docs/developer/backend/controllers/LeadGenerationController.md) | N/A | ✅ |
 | [NurtureSequenceController](docs/developer/backend/controllers/NurtureSequenceController.md) | N/A | ✅ |
-| AiSummaryController | N/A | ❌ |
-| BotV2Controller | N/A | ❌ |
-| ConciergeController | N/A | ❌ |
-| FunnelTemplateController | N/A | ❌ |
-| PredictiveSuggestionsController | N/A | ❌ |
-| VapiController | N/A | ❌ |
+| [AiSummaryController](../docs/developer/backend/controllers/AiSummaryController.md) | N/A | ✅ |
+| [BotV2Controller](../docs/developer/backend/controllers/BotV2Controller.md) | N/A | ✅ |
+| [ConciergeController](../docs/developer/backend/controllers/ConciergeController.md) | N/A | ✅ |
+| [FunnelTemplateController](../docs/developer/backend/controllers/FunnelTemplateController.md) | N/A | ✅ |
+| [PredictiveSuggestionsController](../docs/developer/backend/controllers/PredictiveSuggestionsController.md) | N/A | ✅ |
+| [VapiController](../docs/developer/backend/controllers/VapiController.md) | N/A | ✅ |
+| [AgentPortalController](./AgentPortalController.md) | N/A | ✅ |
+| [BuilderPortalController](./BuilderPortalController.md) | N/A | ✅ |
+| [InventoryApiController](./InventoryApiController.md) | N/A | ✅ |
+| [FlyerController](./FlyerController.md) | N/A | ✅ |
+| [PuckTemplateController](./PuckTemplateController.md) | N/A | ✅ |
+| [PublicSiteController](./PublicSiteController.md) | N/A | ✅ |
+| [ProvisionerApiController](./ProvisionerApiController.md) | N/A | ✅ |
+| [CustomFieldController](docs/developer/backend/controllers/CustomFieldController.md) | N/A | ✅ |
+| [AutomationRuleController](docs/developer/backend/controllers/AutomationRuleController.md) | N/A | ✅ |
+| [AnalyticsController](docs/developer/backend/controllers/AnalyticsController.md) | N/A | ✅ |
+| [DealForecastController](docs/developer/backend/controllers/DealForecastController.md) | N/A | ✅ |
+| AdTemplateController | N/A | ❌ |
+| BrochureLayoutController | N/A | ❌ |
+| EmailCampaignController | N/A | ❌ |
+| LandingPageController | N/A | ❌ |
+| RetargetingPixelController | N/A | ❌ |
 
 

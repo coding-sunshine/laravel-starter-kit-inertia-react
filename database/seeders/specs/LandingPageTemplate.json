@@ -1,0 +1,119 @@
+{
+    "model": "LandingPageTemplate",
+    "table": "landing_page_templates",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "campaign_website_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "slug": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "description": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "headline": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "sub_headline": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "html_content": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "puck_content": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "puck_enabled": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "meta_title": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "meta_description": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "seo_config": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "is_active": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": [],
+    "value_hints": {
+        "name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    },
+    "scenarios": []
+}

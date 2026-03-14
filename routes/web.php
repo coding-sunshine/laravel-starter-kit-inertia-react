@@ -8,6 +8,7 @@ declare(strict_types=1);
  * after adding or changing routes.
  */
 
+use App\Http\Controllers\AdTemplateController;
 use App\Http\Controllers\AgentPortalController;
 use App\Http\Controllers\AiSummaryController;
 use App\Http\Controllers\AnalyticsController;
@@ -24,6 +25,7 @@ use App\Http\Controllers\Billing\PricingController;
 use App\Http\Controllers\Billing\StripeWebhookController;
 use App\Http\Controllers\Blog\BlogController;
 use App\Http\Controllers\BotV2Controller;
+use App\Http\Controllers\BrochureLayoutController;
 use App\Http\Controllers\BuilderPortalController;
 use App\Http\Controllers\CampaignSiteController;
 use App\Http\Controllers\CategoriesTableController;
@@ -39,6 +41,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DealForecastController;
 use App\Http\Controllers\Dev\ComponentShowcaseController;
 use App\Http\Controllers\Dev\PageGalleryController;
+use App\Http\Controllers\EmailCampaignController;
 use App\Http\Controllers\EnterpriseInquiryController;
 use App\Http\Controllers\FlyerController;
 use App\Http\Controllers\FunnelController;
@@ -49,6 +52,7 @@ use App\Http\Controllers\HelpCenter\RateHelpArticleController;
 use App\Http\Controllers\Internal\CaddyAskController;
 use App\Http\Controllers\InventoryApiController;
 use App\Http\Controllers\InvitationAcceptController;
+use App\Http\Controllers\LandingPageController;
 use App\Http\Controllers\LeadCaptureController;
 use App\Http\Controllers\LeadGenerationController;
 use App\Http\Controllers\LotsTableController;
@@ -79,6 +83,7 @@ use App\Http\Controllers\PropertySearchController;
 use App\Http\Controllers\PublicSiteController;
 use App\Http\Controllers\PuckTemplateController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\RetargetingPixelController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\SessionController;
@@ -357,6 +362,32 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::post('analytics/nl-query', [AnalyticsController::class, 'nlQuery'])->name('analytics.nl-query');
 
     Route::get('sales/{sale}/forecast', [DealForecastController::class, 'show'])->name('sales.forecast');
+
+    // Marketing & Content Tools (US-014)
+    Route::get('ad-templates', [AdTemplateController::class, 'index'])->name('ad-templates.index');
+    Route::post('ad-templates', [AdTemplateController::class, 'store'])->name('ad-templates.store');
+    Route::post('ad-templates/generate-copy', [AdTemplateController::class, 'generateCopy'])->name('ad-templates.generate-copy');
+    Route::delete('ad-templates/{adTemplate}', [AdTemplateController::class, 'destroy'])->name('ad-templates.destroy');
+
+    Route::get('brochure-layouts', [BrochureLayoutController::class, 'index'])->name('brochure-layouts.index');
+    Route::post('brochure-layouts', [BrochureLayoutController::class, 'store'])->name('brochure-layouts.store');
+    Route::post('brochure-layouts/flyers/{flyer}/generate-pdf', [BrochureLayoutController::class, 'generatePdf'])->name('brochure-layouts.generate-pdf');
+
+    Route::get('retargeting-pixels', [RetargetingPixelController::class, 'index'])->name('retargeting-pixels.index');
+    Route::post('retargeting-pixels', [RetargetingPixelController::class, 'store'])->name('retargeting-pixels.store');
+    Route::patch('retargeting-pixels/{retargetingPixel}', [RetargetingPixelController::class, 'update'])->name('retargeting-pixels.update');
+    Route::delete('retargeting-pixels/{retargetingPixel}', [RetargetingPixelController::class, 'destroy'])->name('retargeting-pixels.destroy');
+
+    Route::get('email-campaigns', [EmailCampaignController::class, 'index'])->name('email-campaigns.index');
+    Route::post('email-campaigns', [EmailCampaignController::class, 'store'])->name('email-campaigns.store');
+    Route::post('email-campaigns/{emailCampaign}/personalise', [EmailCampaignController::class, 'personalise'])->name('email-campaigns.personalise');
+    Route::post('email-campaigns/{emailCampaign}/send', [EmailCampaignController::class, 'send'])->name('email-campaigns.send');
+    Route::delete('email-campaigns/{emailCampaign}', [EmailCampaignController::class, 'destroy'])->name('email-campaigns.destroy');
+
+    Route::get('landing-pages', [LandingPageController::class, 'index'])->name('landing-pages.index');
+    Route::post('landing-pages/generate', [LandingPageController::class, 'generate'])->name('landing-pages.generate');
+    Route::patch('landing-pages/{landingPageTemplate}', [LandingPageController::class, 'update'])->name('landing-pages.update');
+    Route::delete('landing-pages/{landingPageTemplate}', [LandingPageController::class, 'destroy'])->name('landing-pages.destroy');
 });
 
 Route::get('/api/slug-availability', SlugAvailabilityController::class)
