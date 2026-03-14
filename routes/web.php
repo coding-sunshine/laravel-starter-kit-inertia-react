@@ -368,7 +368,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 Route::post('webhooks/stripe', StripeWebhookController::class)->name('webhooks.stripe')->withoutMiddleware([Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class]);
 Route::post('webhooks/paddle', PaddleWebhookController::class)->name('webhooks.paddle')->withoutMiddleware([Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class]);
 
-Route::middleware(['auth', 'feature:onboarding'])->group(function (): void {
+Route::middleware(['auth', 'feature:onboarding', 'redirect.settings'])->group(function (): void {
     Route::get('onboarding', [OnboardingController::class, 'show'])->name('onboarding');
     Route::post('onboarding', [OnboardingController::class, 'store'])->name('onboarding.store');
 });
@@ -386,33 +386,35 @@ Route::middleware('auth')->group(function (): void {
     Route::get('settings/profile', [UserProfileController::class, 'edit'])->name('user-profile.edit');
     Route::patch('settings/profile', [UserProfileController::class, 'update'])->name('user-profile.update');
 
-    // User Password...
-    Route::get('settings/password', [UserPasswordController::class, 'edit'])->name('password.edit');
+    // User Password (redirect to dashboard for all users)...
+    Route::get('settings/password', [UserPasswordController::class, 'edit'])
+        ->middleware('redirect.settings')
+        ->name('password.edit');
     Route::put('settings/password', [UserPasswordController::class, 'update'])
-        ->middleware('throttle:6,1')
+        ->middleware(['throttle:6,1', 'redirect.settings'])
         ->name('password.update');
 
-    // Appearance...
+    // Appearance (redirect to dashboard for all users)...
     Route::get('settings/appearance', fn () => Inertia::render('appearance/update'))
-        ->middleware('feature:appearance_settings')
+        ->middleware(['feature:appearance_settings', 'redirect.settings'])
         ->name('appearance.edit');
 
-    // Personal data export (GDPR)...
+    // Personal data export (redirect to dashboard for all users)...
     Route::get('settings/personal-data-export', fn () => Inertia::render('settings/personal-data-export'))
-        ->middleware('feature:personal_data_export')
+        ->middleware(['feature:personal_data_export', 'redirect.settings'])
         ->name('personal-data-export.edit');
     Route::post('settings/personal-data-export', PersonalDataExportController::class)
-        ->middleware(['feature:personal_data_export', 'throttle:3,1'])
+        ->middleware(['feature:personal_data_export', 'throttle:3,1', 'redirect.settings'])
         ->name('personal-data-export.store');
 
-    // User Two-Factor Authentication...
+    // User Two-Factor Authentication (redirect to dashboard for all users)...
     Route::get('settings/two-factor', [UserTwoFactorAuthenticationController::class, 'show'])
-        ->middleware('feature:two_factor_auth')
+        ->middleware(['feature:two_factor_auth', 'redirect.settings'])
         ->name('two-factor.show');
 
-    // Gamification (Level & Achievements)...
+    // Gamification (redirect to dashboard for all users)...
     Route::get('settings/achievements', [AchievementsController::class, 'show'])
-        ->middleware('feature:gamification')
+        ->middleware(['feature:gamification', 'redirect.settings'])
         ->name('achievements.show');
 });
 

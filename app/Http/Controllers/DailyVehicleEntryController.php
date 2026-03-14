@@ -32,29 +32,45 @@ final class DailyVehicleEntryController extends Controller
         $assignedShift = $user?->getAssignedRoadDispatchShift();
 
         $date = $request->get('date', now()->format('Y-m-d'));
-        $activeShift = (int) $request->get('shift', 1);
-        $sidingId = $request->has('siding_id') ? (int) $request->get('siding_id') : null;
+        $sidingsOrdered = Siding::query()->orderBy('name')->get(['id', 'name']);
+        $firstSidingId = $sidingsOrdered->first()?->id;
+
+        $sidingId = $request->has('siding_id') ? (int) $request->get('siding_id') : $firstSidingId;
+        $sidingIdForShifts = $sidingId ?? $firstSidingId;
 
         $restrictToAssignedShift = false;
         if ($assignedShift !== null) {
             $restrictToAssignedShift = true;
             $sidingId = $assignedShift['siding_id'];
+        }
+
+        $isToday = $date === now()->format('Y-m-d');
+        if ($isToday) {
+            $runningShift = $this->shiftValidation->getCurrentActiveShift(null, $sidingIdForShifts);
+            $activeShift = $request->has('shift')
+                ? (int) $request->get('shift')
+                : ($assignedShift['shift'] ?? $runningShift);
+        } else {
+            $activeShift = (int) $request->get('shift', 1);
+            if ($assignedShift !== null) {
+                $activeShift = $assignedShift['shift'];
+            }
+        }
+
+        if ($assignedShift !== null) {
             $activeShift = $assignedShift['shift'];
         }
 
-        $sidingIdForShifts = $sidingId ?? Siding::query()->orderBy('name')->value('id');
-
-        if ($date === now()->format('Y-m-d')) {
+        if ($isToday && ! $restrictToAssignedShift) {
             if (! $this->shiftValidation->canAccessShift($activeShift, $date, null, $sidingIdForShifts)) {
                 $availableShifts = $this->shiftValidation->getAvailableShifts(null, $sidingIdForShifts);
                 $defaultShift = $availableShifts->first() ?? 1;
 
-                if (! $restrictToAssignedShift && $activeShift !== $defaultShift) {
-                    return redirect()->route('road-dispatch.daily-vehicle-entries.index', [
-                        'date' => $date,
-                        'shift' => $defaultShift,
-                    ]);
-                }
+                return redirect()->route('road-dispatch.daily-vehicle-entries.index', [
+                    'date' => $date,
+                    'shift' => $defaultShift,
+                    'siding_id' => $sidingId,
+                ]);
             }
         }
 
@@ -63,7 +79,7 @@ final class DailyVehicleEntryController extends Controller
         $shiftStatus = $this->shiftValidation->getShiftCompletionStatus($date, $sidingIdForShifts);
         $shiftTimes = $this->shiftValidation->getShiftTimesForSiding($sidingIdForShifts);
 
-        $sidings = Siding::query()->orderBy('name')->get(['id', 'name']);
+        $sidings = $sidingsOrdered;
 
         return Inertia::render('road-dispatch/daily-vehicle-entries/index', [
             'entries' => $entries->values()->all(),

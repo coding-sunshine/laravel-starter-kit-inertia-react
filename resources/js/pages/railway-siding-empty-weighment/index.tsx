@@ -81,19 +81,21 @@ export default function RailwaySidingEmptyWeighmentIndex({
   );
   const [selectedDate, setSelectedDate] = useState(date);
   const [activeShiftState, setActiveShiftState] = useState(activeShift);
+  const firstSidingId = sidings[0]?.id ?? null;
   const [selectedSidingId, setSelectedSidingId] = useState<number | null>(
-    sidingIdProp ?? null
+    sidingIdProp ?? firstSidingId
   );
-  const [exportShift, setExportShift] = useState<string>('all');
+  const [exportShift, setExportShift] = useState<string>(() => String(activeShift));
   const [isExporting, setIsExporting] = useState(false);
   const [isAddingRow, setIsAddingRow] = useState(false);
   const [addRowError, setAddRowError] = useState<string | null>(null);
   const addingRowRef = useRef(false);
 
+  const effectiveSidingId = selectedSidingId ?? firstSidingId;
   const entriesForSiding =
-    selectedSidingId == null
+    effectiveSidingId == null
       ? entries
-      : entries.filter((e) => e.siding_id === selectedSidingId);
+      : entries.filter((e) => e.siding_id === effectiveSidingId);
 
   useEffect(() => {
     setEntries(Array.isArray(entriesProp) ? entriesProp : []);
@@ -102,10 +104,10 @@ export default function RailwaySidingEmptyWeighmentIndex({
   useEffect(() => {
     if (sidingIdProp !== undefined && sidingIdProp !== null) {
       setSelectedSidingId(sidingIdProp);
-    } else if (sidingIdProp === null || sidingIdProp === undefined) {
-      setSelectedSidingId(null);
+    } else {
+      setSelectedSidingId(firstSidingId);
     }
-  }, [sidingIdProp]);
+  }, [sidingIdProp, firstSidingId]);
 
   const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -115,7 +117,7 @@ export default function RailwaySidingEmptyWeighmentIndex({
   const handleDateChange = (newDate: string) => {
     setSelectedDate(newDate);
     const params: Record<string, string | number> = { date: newDate, shift: activeShiftState };
-    if (selectedSidingId != null) params.siding_id = selectedSidingId;
+    if (effectiveSidingId != null) params.siding_id = effectiveSidingId;
     router.get('/railway-siding-empty-weighment', params, {
       preserveState: true,
       preserveScroll: true,
@@ -135,8 +137,9 @@ export default function RailwaySidingEmptyWeighmentIndex({
     }
 
     setActiveShiftState(shift);
+    setExportShift(String(shift));
     const params: Record<string, string | number> = { date: selectedDate, shift };
-    if (selectedSidingId != null) params.siding_id = selectedSidingId;
+    if (effectiveSidingId != null) params.siding_id = effectiveSidingId;
     router.get('/railway-siding-empty-weighment', params, {
       preserveState: true,
       preserveScroll: true,
@@ -163,7 +166,7 @@ export default function RailwaySidingEmptyWeighmentIndex({
     setIsAddingRow(true);
     const newEntries: EmptyWeighmentEntry[] = [];
     const payload = {
-      siding_id: selectedSidingId ?? sidings[0]?.id ?? 1,
+      siding_id: effectiveSidingId ?? sidings[0]?.id ?? 1,
       entry_date: selectedDate,
       shift: activeShiftState,
     };
@@ -223,7 +226,7 @@ export default function RailwaySidingEmptyWeighmentIndex({
   const handleExport = async () => {
     setIsExporting(true);
     try {
-      const sidingParam = selectedSidingId ?? sidings[0]?.id ?? '';
+      const sidingParam = effectiveSidingId ?? sidings[0]?.id ?? '';
       const exportUrl = `/railway-siding-empty-weighment/export?date=${selectedDate}&siding=${sidingParam}&shift=${exportShift}`;
       const response = await fetch(exportUrl, {
         method: 'GET',
@@ -282,30 +285,26 @@ export default function RailwaySidingEmptyWeighmentIndex({
             {!restrictToAssignedShift && (
               <div className="flex items-center gap-2">
                 <Select
-                  value={selectedSidingId == null ? 'all' : selectedSidingId.toString()}
+                  value={effectiveSidingId == null ? '' : effectiveSidingId.toString()}
                   onValueChange={(value) => {
-                    if (value === 'all') {
-                      setSelectedSidingId(null);
-                      router.get('/railway-siding-empty-weighment', { date: selectedDate, shift: activeShiftState }, {
-                        preserveState: true,
-                        preserveScroll: true,
-                      });
-                    } else {
-                      const id = Number(value);
-                      setSelectedSidingId(id);
-                      router.get(
-                        '/railway-siding-empty-weighment',
-                        { date: selectedDate, shift: activeShiftState, siding_id: id },
-                        { preserveState: true, preserveScroll: true }
-                      );
-                    }
+                    const id = Number(value);
+                    if (Number.isNaN(id)) return;
+                    setSelectedSidingId(id);
+                    router.get(
+                      '/railway-siding-empty-weighment',
+                        {
+                          date: selectedDate,
+                          shift: activeShiftState,
+                          siding_id: id,
+                        },
+                      { preserveState: true, preserveScroll: true }
+                    );
                   }}
                 >
                   <SelectTrigger className="w-40">
                     <SelectValue placeholder="Select siding" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All sidings</SelectItem>
                     {sidings.map((siding) => (
                       <SelectItem key={siding.id} value={siding.id.toString()}>
                         {siding.name}
@@ -318,7 +317,6 @@ export default function RailwaySidingEmptyWeighmentIndex({
                     <SelectValue placeholder="Export" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Shifts</SelectItem>
                     <SelectItem value="1">Shift 1</SelectItem>
                     <SelectItem value="2">Shift 2</SelectItem>
                     <SelectItem value="3">Shift 3</SelectItem>
@@ -338,7 +336,7 @@ export default function RailwaySidingEmptyWeighmentIndex({
             {restrictToAssignedShift && (
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">
-                  Your shift: {sidings.find((s) => s.id === selectedSidingId)?.name ?? '—'} · Shift {activeShiftState}
+                  Your shift: {sidings.find((s) => s.id === effectiveSidingId)?.name ?? '—'} · Shift {activeShiftState}
                 </span>
                 <Button
                   onClick={handleExport}

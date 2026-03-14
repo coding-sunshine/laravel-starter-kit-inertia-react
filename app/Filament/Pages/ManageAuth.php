@@ -14,6 +14,8 @@ use UnitEnum;
 
 final class ManageAuth extends SettingsPage
 {
+    protected static bool $shouldRegisterNavigation = false;
+
     protected static string|UnitEnum|null $navigationGroup = 'Settings';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedShieldCheck;

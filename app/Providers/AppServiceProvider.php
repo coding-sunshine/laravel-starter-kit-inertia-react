@@ -8,6 +8,7 @@ use App\Events\DemurrageThresholdCrossed;
 use App\Events\OrganizationMemberAdded;
 use App\Events\OrganizationMemberRemoved;
 use App\Events\User\UserCreated;
+use App\Http\Responses\Filament\LoginResponse as FilamentLoginResponse;
 use App\Listeners\Billing\AddCreditsFromLemonSqueezyOrder;
 use App\Listeners\Billing\SyncSubscriptionSeatsOnMemberChange;
 use App\Listeners\CreatePersonalOrganizationOnUserCreated;
@@ -28,6 +29,7 @@ use App\Services\PaymentGateway\PaymentGatewayManager;
 use App\Services\PrismService;
 use App\Settings\SeoSettings;
 use Essa\APIToolKit\Exceptions\Handler as ApiToolKitExceptionHandler;
+use Filament\Auth\Http\Responses\Contracts\LoginResponse as FilamentLoginResponseContract;
 use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Database\Events\MigrationsEnded;
 use Illuminate\Queue\Events\JobFailed;
@@ -57,6 +59,8 @@ final class AppServiceProvider extends ServiceProvider
         $this->app->singleton(PaymentGatewayManager::class);
 
         config(['filament-impersonate.redirect_to' => '/dashboard']);
+
+        $this->app->bind(FilamentLoginResponseContract::class, FilamentLoginResponse::class);
     }
 
     public function boot(): void

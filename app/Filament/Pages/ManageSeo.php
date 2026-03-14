@@ -15,6 +15,8 @@ use UnitEnum;
 
 final class ManageSeo extends SettingsPage
 {
+    protected static bool $shouldRegisterNavigation = false;
+
     protected static string|UnitEnum|null $navigationGroup = 'Settings';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedMagnifyingGlass;

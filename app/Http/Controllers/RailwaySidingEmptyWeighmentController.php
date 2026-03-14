@@ -31,28 +31,40 @@ final class RailwaySidingEmptyWeighmentController extends Controller
         $assignedShift = $user?->getAssignedRoadDispatchShift();
 
         $date = $request->get('date', now()->format('Y-m-d'));
-        $activeShift = (int) $request->get('shift', 1);
-        $sidingId = $request->has('siding_id') ? (int) $request->get('siding_id') : null;
+        $sidingsOrdered = Siding::query()->orderBy('name')->get(['id', 'name']);
+        $firstSidingId = $sidingsOrdered->first()?->id;
+
+        $sidingId = $request->has('siding_id') ? (int) $request->get('siding_id') : $firstSidingId;
+        $sidingIdForShifts = $sidingId ?? $firstSidingId;
 
         $restrictToAssignedShift = $assignedShift !== null && $user?->hasRole('empty-weighment-shift');
         if ($restrictToAssignedShift) {
             $sidingId = $assignedShift['siding_id'];
-            $activeShift = $assignedShift['shift'];
         }
 
-        $sidingIdForShifts = $sidingId ?? Siding::query()->orderBy('name')->value('id');
+        $isToday = $date === now()->format('Y-m-d');
+        if ($isToday) {
+            $runningShift = $this->shiftValidation->getCurrentActiveShift(null, $sidingIdForShifts);
+            $activeShift = $request->has('shift')
+                ? (int) $request->get('shift')
+                : ($restrictToAssignedShift ? $assignedShift['shift'] : $runningShift);
+        } else {
+            $activeShift = (int) $request->get('shift', 1);
+            if ($restrictToAssignedShift) {
+                $activeShift = $assignedShift['shift'];
+            }
+        }
 
-        if ($date === now()->format('Y-m-d')) {
+        if ($isToday && ! $restrictToAssignedShift) {
             if (! $this->shiftValidation->canAccessShift($activeShift, $date, null, $sidingIdForShifts)) {
                 $availableShifts = $this->shiftValidation->getAvailableShifts(null, $sidingIdForShifts);
                 $defaultShift = $availableShifts->first() ?? 1;
 
-                if (! $restrictToAssignedShift && $activeShift !== $defaultShift) {
-                    return redirect()->route('railway-siding-empty-weighment.index', [
-                        'date' => $date,
-                        'shift' => $defaultShift,
-                    ]);
-                }
+                return redirect()->route('railway-siding-empty-weighment.index', [
+                    'date' => $date,
+                    'shift' => $defaultShift,
+                    'siding_id' => $sidingId,
+                ]);
             }
         }
 
@@ -66,7 +78,7 @@ final class RailwaySidingEmptyWeighmentController extends Controller
         $shiftStatus = $this->shiftValidation->getShiftCompletionStatus($date, $sidingIdForShifts);
         $shiftTimes = $this->shiftValidation->getShiftTimesForSiding($sidingIdForShifts);
 
-        $sidings = Siding::query()->orderBy('name')->get(['id', 'name']);
+        $sidings = $sidingsOrdered;
 
         return Inertia::render('railway-siding-empty-weighment/index', [
             'entries' => $entries->values()->all(),
