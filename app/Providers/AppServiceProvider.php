@@ -21,10 +21,12 @@ use App\Listeners\LoginEventListener;
 use App\Listeners\MigrationListener;
 use App\Listeners\SendSlackAlertOnJobFailed;
 use App\Models\Shareable;
+use App\Models\Task;
 use App\Models\User;
 use App\Observers\ActivityLogObserver;
 use App\Observers\PermissionActivityObserver;
 use App\Observers\RoleActivityObserver;
+use App\Observers\TaskObserver;
 use App\Observers\UserObserver;
 use App\Policies\ShareablePolicy;
 use App\Services\PaymentGateway\PaymentGatewayManager;
@@ -155,6 +157,7 @@ final class AppServiceProvider extends ServiceProvider
         });
 
         User::observe(UserObserver::class);
+        Task::observe(TaskObserver::class);
 
         foreach ([
             DataTableAiController::class,
@@ -385,6 +388,9 @@ final class AppServiceProvider extends ServiceProvider
             'sales-table',
             'commissions-table',
             'campaign-sites-table',
+            'pipeline-index',
+            'funnel-index',
+            'member-listings-index',
         ]);
     }
 

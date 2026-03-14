@@ -1,0 +1,91 @@
+{
+    "model": "ContactAttribution",
+    "table": "contact_attributions",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "contact_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "campaign_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "campaign_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "ad_id": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "ad_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "attributed_agent_contact_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "source": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "attributed_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "contact": {
+            "type": "belongsTo",
+            "model": "Contact"
+        },
+        "agentContact": {
+            "type": "belongsTo",
+            "model": "AgentContact"
+        }
+    },
+    "value_hints": {
+        "attributed_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        },
+        "campaign_name": {
+            "type": "name",
+            "example": "John Doe"
+        },
+        "ad_name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    },
+    "scenarios": []
+}

@@ -1,0 +1,26 @@
+{
+    "model": "PushHistory",
+    "table": "push_history",
+    "fields": [],
+    "relationships": {
+        "user": {
+            "type": "belongsTo",
+            "model": "User"
+        }
+    },
+    "value_hints": {
+        "channel": {
+            "type": "enum",
+            "example": "php"
+        },
+        "status": {
+            "type": "enum",
+            "example": "success"
+        },
+        "pushed_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        }
+    },
+    "scenarios": []
+}

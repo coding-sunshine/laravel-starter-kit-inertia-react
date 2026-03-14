@@ -598,6 +598,36 @@
         "relatedRoutes": []
       },
       "lastUpdated": "2026-03-15"
+    },
+    "UpdateLastContactedAtAction": {
+      "documented": true,
+      "path": "docs/developer/backend/actions/UpdateLastContactedAtAction.md",
+      "lastUpdated": "2026-03-15"
+    },
+    "UpdateContactStageAction": {
+      "documented": true,
+      "path": "docs/developer/backend/actions/UpdateContactStageAction.md",
+      "lastUpdated": "2026-03-15"
+    },
+    "UpdateSaleStageAction": {
+      "documented": true,
+      "path": "docs/developer/backend/actions/UpdateSaleStageAction.md",
+      "lastUpdated": "2026-03-15"
+    },
+    "BulkUpdateContactsAction": {
+      "documented": true,
+      "path": "docs/developer/backend/actions/BulkUpdateContactsAction.md",
+      "lastUpdated": "2026-03-15"
+    },
+    "BulkUpdateReservationsAction": {
+      "documented": true,
+      "path": "docs/developer/backend/actions/BulkUpdateReservationsAction.md",
+      "lastUpdated": "2026-03-15"
+    },
+    "PushListingAction": {
+      "documented": true,
+      "path": "docs/developer/backend/actions/PushListingAction.md",
+      "lastUpdated": "2026-03-15"
     }
   },
   "controllers": {
@@ -1502,6 +1532,21 @@
     "ReportController": {
       "documented": true,
       "path": "docs/developer/backend/controllers/ReportController.md",
+      "lastUpdated": "2026-03-15"
+    },
+    "PipelineController": {
+      "documented": true,
+      "path": "docs/developer/backend/controllers/PipelineController.md",
+      "lastUpdated": "2026-03-15"
+    },
+    "FunnelController": {
+      "documented": true,
+      "path": "docs/developer/backend/controllers/FunnelController.md",
+      "lastUpdated": "2026-03-15"
+    },
+    "MemberListingsController": {
+      "documented": true,
+      "path": "docs/developer/backend/controllers/MemberListingsController.md",
       "lastUpdated": "2026-03-15"
     }
   },
@@ -5229,6 +5274,21 @@
     "reports/show": {
       "documented": true,
       "path": "docs/developer/frontend/pages/reports/show.md",
+      "lastUpdated": "2026-03-15"
+    },
+    "pipeline/index": {
+      "documented": true,
+      "path": "docs/developer/frontend/pages/pipeline/index.md",
+      "lastUpdated": "2026-03-15"
+    },
+    "funnel/index": {
+      "documented": true,
+      "path": "docs/developer/frontend/pages/funnel/index.md",
+      "lastUpdated": "2026-03-15"
+    },
+    "member-listings/index": {
+      "documented": true,
+      "path": "docs/developer/frontend/pages/member-listings/index.md",
       "lastUpdated": "2026-03-15"
     }
   },
