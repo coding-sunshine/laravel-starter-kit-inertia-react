@@ -19,6 +19,7 @@ use App\Http\Controllers\Billing\StripeWebhookController;
 use App\Http\Controllers\Blog\BlogController;
 use App\Http\Controllers\CategoriesTableController;
 use App\Http\Controllers\Changelog\ChangelogController;
+use App\Http\Controllers\ContactController;
 use App\Http\Controllers\ContactSubmissionController;
 use App\Http\Controllers\CookieConsentController;
 use App\Http\Controllers\DashboardController;
@@ -162,6 +163,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('chat', fn () => Inertia::render('chat/index'))->name('chat');
 
     Route::get('announcements', [AnnouncementsTableController::class, 'index'])->name('announcements.table');
+    Route::get('contacts', [ContactController::class, 'index'])->name('contacts.index');
     Route::get('projects', [ProjectsTableController::class, 'index'])->name('projects.table');
     Route::get('lots', [LotsTableController::class, 'index'])->name('lots.table');
     Route::get('categories', [CategoriesTableController::class, 'index'])->name('categories.table');

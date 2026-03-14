@@ -1,0 +1,173 @@
+{
+    "model": "Contact",
+    "table": "contacts",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "contact_origin": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "first_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "last_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "job_title": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "stage": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "source_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "company_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "company_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "extra_attributes": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "last_followup_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "next_followup_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "last_contacted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "lead_score": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "legacy_lead_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        },
+        "source": {
+            "type": "belongsTo",
+            "model": "Source"
+        },
+        "company": {
+            "type": "belongsTo",
+            "model": "Company"
+        },
+        "emails": {
+            "type": "hasMany",
+            "model": "Email"
+        },
+        "phones": {
+            "type": "hasMany",
+            "model": "Phone"
+        },
+        "primaryEmail": {
+            "type": "hasMany",
+            "model": "PrimaryEmail"
+        },
+        "primaryPhone": {
+            "type": "hasMany",
+            "model": "PrimaryPhone"
+        }
+    },
+    "value_hints": {
+        "last_followup_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        },
+        "next_followup_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        },
+        "last_contacted_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        },
+        "first_name": {
+            "type": "name",
+            "example": "John Doe"
+        },
+        "last_name": {
+            "type": "name",
+            "example": "John Doe"
+        },
+        "company_name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    },
+    "scenarios": []
+}

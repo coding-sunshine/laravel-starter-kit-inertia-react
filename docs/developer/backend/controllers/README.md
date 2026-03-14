@@ -65,5 +65,6 @@ All Controllers:
 | [PostsTableController](./poststablecontroller.md) | N/A | ✅ |
 | [LotsTableController](./LotsTableController.md) | N/A | ✅ |
 | [ProjectsTableController](./ProjectsTableController.md) | N/A | ✅ |
+| ContactController | N/A | ❌ |
 
 

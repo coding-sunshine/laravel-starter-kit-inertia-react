@@ -1382,6 +1382,20 @@
                     "projects/index"
                 ]
             }
+        },
+        "ContactController": {
+            "documented": true,
+            "path": "./ContactController.md",
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "contacts.index"
+                ],
+                "rendersPages": [
+                    "contacts/index"
+                ]
+            }
         }
     },
     "pages": {
@@ -1445,6 +1459,9 @@
                     "filament.admin.resources.contact-submissions.index",
                     "filament.admin.resources.contact-submissions.view",
                     "filament.admin.resources.contact-submissions.edit",
+                    "filament.admin.resources.contacts.index",
+                    "filament.admin.resources.contacts.create",
+                    "filament.admin.resources.contacts.edit",
                     "filament.admin.resources.credit-packs.index",
                     "filament.admin.resources.credit-packs.create",
                     "filament.admin.resources.credit-packs.edit",
@@ -1548,6 +1565,9 @@
                     "filament.system.resources.contact-submissions.index",
                     "filament.system.resources.contact-submissions.view",
                     "filament.system.resources.contact-submissions.edit",
+                    "filament.system.resources.contacts.index",
+                    "filament.system.resources.contacts.create",
+                    "filament.system.resources.contacts.edit",
                     "filament.system.resources.credit-packs.index",
                     "filament.system.resources.credit-packs.create",
                     "filament.system.resources.credit-packs.edit",
@@ -1597,6 +1617,12 @@
                     "filament.system.resources.vouchers.index",
                     "filament.system.resources.vouchers.create",
                     "filament.system.resources.vouchers.edit",
+                    "debugbar.openhandler",
+                    "debugbar.cache.delete",
+                    "debugbar.queries.explain",
+                    "debugbar.clockwork",
+                    "debugbar.assets",
+                    "debugbar.telescope",
                     "api.chat",
                     "chat.memories",
                     "conversations.index",
@@ -1610,6 +1636,8 @@
                     "api.v1.users.store",
                     "api.v1.users.update",
                     "api.v1.users.destroy",
+                    "dev.components",
+                    "dev.pages",
                     "up.ready",
                     "up",
                     "invitations.show",
@@ -1630,6 +1658,7 @@
                     "terms.accept.store",
                     "dashboard",
                     "announcements.table",
+                    "contacts.index",
                     "projects.table",
                     "lots.table",
                     "categories.table",
@@ -1841,7 +1870,8 @@
                     "data-table.saved-views.index",
                     "data-table.saved-views.store",
                     "data-table.saved-views.update",
-                    "data-table.saved-views.destroy"
+                    "data-table.saved-views.destroy",
+                    "telescope"
                 ]
             }
         },
@@ -2053,6 +2083,9 @@
                     "filament.admin.resources.contact-submissions.index",
                     "filament.admin.resources.contact-submissions.view",
                     "filament.admin.resources.contact-submissions.edit",
+                    "filament.admin.resources.contacts.index",
+                    "filament.admin.resources.contacts.create",
+                    "filament.admin.resources.contacts.edit",
                     "filament.admin.resources.credit-packs.index",
                     "filament.admin.resources.credit-packs.create",
                     "filament.admin.resources.credit-packs.edit",
@@ -2156,6 +2189,9 @@
                     "filament.system.resources.contact-submissions.index",
                     "filament.system.resources.contact-submissions.view",
                     "filament.system.resources.contact-submissions.edit",
+                    "filament.system.resources.contacts.index",
+                    "filament.system.resources.contacts.create",
+                    "filament.system.resources.contacts.edit",
                     "filament.system.resources.credit-packs.index",
                     "filament.system.resources.credit-packs.create",
                     "filament.system.resources.credit-packs.edit",
@@ -2205,6 +2241,12 @@
                     "filament.system.resources.vouchers.index",
                     "filament.system.resources.vouchers.create",
                     "filament.system.resources.vouchers.edit",
+                    "debugbar.openhandler",
+                    "debugbar.cache.delete",
+                    "debugbar.queries.explain",
+                    "debugbar.clockwork",
+                    "debugbar.assets",
+                    "debugbar.telescope",
                     "api.chat",
                     "chat.memories",
                     "conversations.index",
@@ -2218,6 +2260,8 @@
                     "api.v1.users.store",
                     "api.v1.users.update",
                     "api.v1.users.destroy",
+                    "dev.components",
+                    "dev.pages",
                     "up.ready",
                     "up",
                     "invitations.show",
@@ -2238,6 +2282,7 @@
                     "terms.accept.store",
                     "dashboard",
                     "announcements.table",
+                    "contacts.index",
                     "projects.table",
                     "lots.table",
                     "categories.table",
@@ -2449,7 +2494,8 @@
                     "data-table.saved-views.index",
                     "data-table.saved-views.store",
                     "data-table.saved-views.update",
-                    "data-table.saved-views.destroy"
+                    "data-table.saved-views.destroy",
+                    "telescope"
                 ]
             }
         },
@@ -2586,6 +2632,9 @@
                     "filament.admin.resources.contact-submissions.index",
                     "filament.admin.resources.contact-submissions.view",
                     "filament.admin.resources.contact-submissions.edit",
+                    "filament.admin.resources.contacts.index",
+                    "filament.admin.resources.contacts.create",
+                    "filament.admin.resources.contacts.edit",
                     "filament.admin.resources.credit-packs.index",
                     "filament.admin.resources.credit-packs.create",
                     "filament.admin.resources.credit-packs.edit",
@@ -2689,6 +2738,9 @@
                     "filament.system.resources.contact-submissions.index",
                     "filament.system.resources.contact-submissions.view",
                     "filament.system.resources.contact-submissions.edit",
+                    "filament.system.resources.contacts.index",
+                    "filament.system.resources.contacts.create",
+                    "filament.system.resources.contacts.edit",
                     "filament.system.resources.credit-packs.index",
                     "filament.system.resources.credit-packs.create",
                     "filament.system.resources.credit-packs.edit",
@@ -2738,6 +2790,12 @@
                     "filament.system.resources.vouchers.index",
                     "filament.system.resources.vouchers.create",
                     "filament.system.resources.vouchers.edit",
+                    "debugbar.openhandler",
+                    "debugbar.cache.delete",
+                    "debugbar.queries.explain",
+                    "debugbar.clockwork",
+                    "debugbar.assets",
+                    "debugbar.telescope",
                     "api.chat",
                     "chat.memories",
                     "conversations.index",
@@ -2751,6 +2809,8 @@
                     "api.v1.users.store",
                     "api.v1.users.update",
                     "api.v1.users.destroy",
+                    "dev.components",
+                    "dev.pages",
                     "up.ready",
                     "up",
                     "invitations.show",
@@ -2771,6 +2831,7 @@
                     "terms.accept.store",
                     "dashboard",
                     "announcements.table",
+                    "contacts.index",
                     "projects.table",
                     "lots.table",
                     "categories.table",
@@ -2982,7 +3043,8 @@
                     "data-table.saved-views.index",
                     "data-table.saved-views.store",
                     "data-table.saved-views.update",
-                    "data-table.saved-views.destroy"
+                    "data-table.saved-views.destroy",
+                    "telescope"
                 ]
             }
         },
@@ -3060,6 +3122,9 @@
                     "filament.admin.resources.contact-submissions.index",
                     "filament.admin.resources.contact-submissions.view",
                     "filament.admin.resources.contact-submissions.edit",
+                    "filament.admin.resources.contacts.index",
+                    "filament.admin.resources.contacts.create",
+                    "filament.admin.resources.contacts.edit",
                     "filament.admin.resources.credit-packs.index",
                     "filament.admin.resources.credit-packs.create",
                     "filament.admin.resources.credit-packs.edit",
@@ -3163,6 +3228,9 @@
                     "filament.system.resources.contact-submissions.index",
                     "filament.system.resources.contact-submissions.view",
                     "filament.system.resources.contact-submissions.edit",
+                    "filament.system.resources.contacts.index",
+                    "filament.system.resources.contacts.create",
+                    "filament.system.resources.contacts.edit",
                     "filament.system.resources.credit-packs.index",
                     "filament.system.resources.credit-packs.create",
                     "filament.system.resources.credit-packs.edit",
@@ -3212,6 +3280,12 @@
                     "filament.system.resources.vouchers.index",
                     "filament.system.resources.vouchers.create",
                     "filament.system.resources.vouchers.edit",
+                    "debugbar.openhandler",
+                    "debugbar.cache.delete",
+                    "debugbar.queries.explain",
+                    "debugbar.clockwork",
+                    "debugbar.assets",
+                    "debugbar.telescope",
                     "api.chat",
                     "chat.memories",
                     "conversations.index",
@@ -3225,6 +3299,8 @@
                     "api.v1.users.store",
                     "api.v1.users.update",
                     "api.v1.users.destroy",
+                    "dev.components",
+                    "dev.pages",
                     "up.ready",
                     "up",
                     "invitations.show",
@@ -3245,6 +3321,7 @@
                     "terms.accept.store",
                     "dashboard",
                     "announcements.table",
+                    "contacts.index",
                     "projects.table",
                     "lots.table",
                     "categories.table",
@@ -3456,7 +3533,8 @@
                     "data-table.saved-views.index",
                     "data-table.saved-views.store",
                     "data-table.saved-views.update",
-                    "data-table.saved-views.destroy"
+                    "data-table.saved-views.destroy",
+                    "telescope"
                 ]
             }
         },
@@ -3520,6 +3598,9 @@
                     "filament.admin.resources.contact-submissions.index",
                     "filament.admin.resources.contact-submissions.view",
                     "filament.admin.resources.contact-submissions.edit",
+                    "filament.admin.resources.contacts.index",
+                    "filament.admin.resources.contacts.create",
+                    "filament.admin.resources.contacts.edit",
                     "filament.admin.resources.credit-packs.index",
                     "filament.admin.resources.credit-packs.create",
                     "filament.admin.resources.credit-packs.edit",
@@ -3623,6 +3704,9 @@
                     "filament.system.resources.contact-submissions.index",
                     "filament.system.resources.contact-submissions.view",
                     "filament.system.resources.contact-submissions.edit",
+                    "filament.system.resources.contacts.index",
+                    "filament.system.resources.contacts.create",
+                    "filament.system.resources.contacts.edit",
                     "filament.system.resources.credit-packs.index",
                     "filament.system.resources.credit-packs.create",
                     "filament.system.resources.credit-packs.edit",
@@ -3672,6 +3756,12 @@
                     "filament.system.resources.vouchers.index",
                     "filament.system.resources.vouchers.create",
                     "filament.system.resources.vouchers.edit",
+                    "debugbar.openhandler",
+                    "debugbar.cache.delete",
+                    "debugbar.queries.explain",
+                    "debugbar.clockwork",
+                    "debugbar.assets",
+                    "debugbar.telescope",
                     "api.chat",
                     "chat.memories",
                     "conversations.index",
@@ -3685,6 +3775,8 @@
                     "api.v1.users.store",
                     "api.v1.users.update",
                     "api.v1.users.destroy",
+                    "dev.components",
+                    "dev.pages",
                     "up.ready",
                     "up",
                     "invitations.show",
@@ -3705,6 +3797,7 @@
                     "terms.accept.store",
                     "dashboard",
                     "announcements.table",
+                    "contacts.index",
                     "projects.table",
                     "lots.table",
                     "categories.table",
@@ -3916,7 +4009,8 @@
                     "data-table.saved-views.index",
                     "data-table.saved-views.store",
                     "data-table.saved-views.update",
-                    "data-table.saved-views.destroy"
+                    "data-table.saved-views.destroy",
+                    "telescope"
                 ]
             }
         },
@@ -4153,6 +4247,9 @@
                     "filament.admin.resources.contact-submissions.index",
                     "filament.admin.resources.contact-submissions.view",
                     "filament.admin.resources.contact-submissions.edit",
+                    "filament.admin.resources.contacts.index",
+                    "filament.admin.resources.contacts.create",
+                    "filament.admin.resources.contacts.edit",
                     "filament.admin.resources.credit-packs.index",
                     "filament.admin.resources.credit-packs.create",
                     "filament.admin.resources.credit-packs.edit",
@@ -4256,6 +4353,9 @@
                     "filament.system.resources.contact-submissions.index",
                     "filament.system.resources.contact-submissions.view",
                     "filament.system.resources.contact-submissions.edit",
+                    "filament.system.resources.contacts.index",
+                    "filament.system.resources.contacts.create",
+                    "filament.system.resources.contacts.edit",
                     "filament.system.resources.credit-packs.index",
                     "filament.system.resources.credit-packs.create",
                     "filament.system.resources.credit-packs.edit",
@@ -4305,6 +4405,12 @@
                     "filament.system.resources.vouchers.index",
                     "filament.system.resources.vouchers.create",
                     "filament.system.resources.vouchers.edit",
+                    "debugbar.openhandler",
+                    "debugbar.cache.delete",
+                    "debugbar.queries.explain",
+                    "debugbar.clockwork",
+                    "debugbar.assets",
+                    "debugbar.telescope",
                     "api.chat",
                     "chat.memories",
                     "conversations.index",
@@ -4318,6 +4424,8 @@
                     "api.v1.users.store",
                     "api.v1.users.update",
                     "api.v1.users.destroy",
+                    "dev.components",
+                    "dev.pages",
                     "up.ready",
                     "up",
                     "invitations.show",
@@ -4338,6 +4446,7 @@
                     "terms.accept.store",
                     "dashboard",
                     "announcements.table",
+                    "contacts.index",
                     "projects.table",
                     "lots.table",
                     "categories.table",
@@ -4549,7 +4658,8 @@
                     "data-table.saved-views.index",
                     "data-table.saved-views.store",
                     "data-table.saved-views.update",
-                    "data-table.saved-views.destroy"
+                    "data-table.saved-views.destroy",
+                    "telescope"
                 ]
             }
         },
@@ -4681,7 +4791,9 @@
             "lastUpdated": "2026-03-07",
             "relationships": {
                 "renderedBy": [],
-                "relatedRoutes": []
+                "relatedRoutes": [
+                    "dev.components"
+                ]
             }
         },
         "dev/pages": {
@@ -4690,7 +4802,9 @@
             "developerGuide": null,
             "relationships": {
                 "renderedBy": [],
-                "relatedRoutes": []
+                "relatedRoutes": [
+                    "dev.pages"
+                ]
             }
         },
         "error": {
@@ -4886,6 +5000,20 @@
                     "projects.table"
                 ]
             }
+        },
+        "contacts/index": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [
+                    "ContactController"
+                ],
+                "relatedRoutes": [
+                    "contacts.index"
+                ]
+            },
+            "path": "./contacts/index.md"
         }
     },
     "routes": {

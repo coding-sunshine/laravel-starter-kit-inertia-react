@@ -1284,6 +1284,51 @@
             "data_files": [
                 "activity_log_injected_models.json"
             ]
+        },
+        {
+            "name": "ContactSeeder",
+            "category": "development",
+            "description": "Seeds Contact data",
+            "dependencies": [],
+            "data_files": [
+                "contacts.json"
+            ]
+        },
+        {
+            "name": "ContactEmailSeeder",
+            "category": "development",
+            "description": "Seeds ContactEmail data",
+            "dependencies": [],
+            "data_files": [
+                "contact_emails.json"
+            ]
+        },
+        {
+            "name": "ContactPhoneSeeder",
+            "category": "development",
+            "description": "Seeds ContactPhone data",
+            "dependencies": [],
+            "data_files": [
+                "contact_phones.json"
+            ]
+        },
+        {
+            "name": "SourceSeeder",
+            "category": "development",
+            "description": "Seeds Source data",
+            "dependencies": [],
+            "data_files": [
+                "sources.json"
+            ]
+        },
+        {
+            "name": "CompanySeeder",
+            "category": "development",
+            "description": "Seeds Company data",
+            "dependencies": [],
+            "data_files": [
+                "companies.json"
+            ]
         }
     ],
     "categories": {
