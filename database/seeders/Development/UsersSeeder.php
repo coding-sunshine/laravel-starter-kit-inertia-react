@@ -18,12 +18,16 @@ final class UsersSeeder extends Seeder
 
     /**
      * Run the database seeds (idempotent).
+     *
+     * DISABLED: RRMMS uses only the users from Essential/UserSeeder (see rrmms-accounts.txt).
+     * This seeder was creating extra development users from users.json and the factory
+     * (2 admins + 5 users + 2 unverified). Uncomment the lines below to re-enable dev user seeding.
      */
     public function run(): void
     {
-        $this->seedRelationships();
-        $this->seedFromJson();
-        $this->seedFromFactory();
+        // $this->seedRelationships();
+        // $this->seedFromJson();
+        // $this->seedFromFactory();
     }
 
     /**
@@ -36,7 +40,8 @@ final class UsersSeeder extends Seeder
     }
 
     /**
-     * Seed users from JSON data file (idempotent).
+     * Seed users from database/seeders/data/users.json (idempotent).
+     * Called from run() - currently disabled for RRMMS (see run() comment).
      */
     private function seedFromJson(): void
     {
@@ -93,7 +98,8 @@ final class UsersSeeder extends Seeder
     }
 
     /**
-     * Seed users using factory states (idempotent - safe to run multiple times).
+     * Seed users using factory (2 admins + 5 users + 2 unverified). Idempotent.
+     * Called from run() - currently disabled for RRMMS (see run() comment).
      */
     private function seedFromFactory(): void
     {

@@ -16,7 +16,6 @@ import { dashboard } from '@/routes';
 import { index as changelogIndex } from '@/routes/changelog';
 import { create as contactCreate } from '@/routes/contact';
 import { index as helpIndex } from '@/routes/help';
-import organizations from '@/routes/organizations';
 import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import {
@@ -46,152 +45,171 @@ import {
 import { useMemo } from 'react';
 import AppLogo from './app-logo';
 
+/**
+ * Section-based permissions (sections.{slug}.{action}).
+ * Must match config/section_permissions.php nav_permission and backend checks.
+ */
 const mainNavItems: NavItem[] = [
     {
         title: 'Dashboard',
         href: dashboard().url,
         icon: LayoutGrid,
+        permission: 'sections.dashboard.view',
         dataPan: 'nav-dashboard',
     },
     {
         title: 'Power Plants',
         href: '/master-data/power-plants',
         icon: Factory,
+        permission: 'sections.power_plants.view',
         dataPan: 'nav-power-plants',
     },
     {
         title: 'Sidings',
         href: '/master-data/sidings',
         icon: MapPin,
+        permission: 'sections.sidings.view',
         dataPan: 'nav-sidings',
     },
     {
         title: 'Loaders',
         href: '/master-data/loaders',
         icon: Package,
+        permission: 'sections.loaders.view',
         dataPan: 'nav-loaders',
     },
     {
         title: 'Penalty Types',
         href: '/master-data/penalty-types',
         icon: AlertTriangle,
+        permission: 'sections.penalty_types.view',
         dataPan: 'nav-penalty-types',
     },
     {
         title: 'Section Timers',
         href: '/master-data/section-timers',
         icon: Timer,
+        permission: 'sections.section_timers.view',
         dataPan: 'nav-section-timers',
     },
     {
         title: 'Distance Matrix',
         href: '/master-data/distance-matrix',
         icon: Route,
+        permission: 'sections.distance_matrix.view',
         dataPan: 'nav-distance-matrix',
     },
-    // {
-    //     title: 'Organizations',
-    //     href: organizations.index.url(),
-    //     icon: Building2,
-    //     tenancyRequired: true,
-    //     dataPan: 'nav-organizations',
-    // },
     {
         title: 'Billing',
         href: '/billing',
         icon: CreditCard,
         tenancyRequired: true,
+        permission: 'sections.billing.view',
         dataPan: 'nav-billing',
     },
     {
         title: 'Rakes',
         href: '/rakes',
         icon: Train,
+        permission: 'sections.rakes.view',
         dataPan: 'nav-rakes',
     },
     {
         title: 'Indents',
         href: '/indents',
         icon: FileText,
+        permission: 'sections.indents.view',
         dataPan: 'nav-indents',
     },
     {
         title: 'Railway Siding Record Data',
         href: '/road-dispatch/daily-vehicle-entries',
         icon: Truck,
+        permission: 'sections.railway_siding_record_data.view',
         dataPan: 'nav-road-dispatch',
     },
     {
         title: 'Railway Siding Empty Weighment',
         href: '/railway-siding-empty-weighment',
         icon: Scale,
+        permission: 'sections.railway_siding_empty_weighment.view',
         dataPan: 'nav-railway-siding-empty-weighment',
     },
     {
         title: 'Production - Coal',
         href: '/production/coal',
         icon: Factory,
+        permission: 'sections.production_coal.view',
         dataPan: 'nav-production-coal',
     },
     {
         title: 'Production - OB',
         href: '/production/ob',
         icon: Mountain,
+        permission: 'sections.production_ob.view',
         dataPan: 'nav-production-ob',
     },
     {
         title: 'Mines Dispatch Data',
         href: '/vehicle-dispatch',
         icon: Truck,
+        permission: 'sections.mines_dispatch_data.view',
         dataPan: 'nav-vehicle-dispatch',
     },
     {
         title: 'Transport',
         href: '/vehicle-workorders',
         icon: FileText,
+        permission: 'sections.transport.view',
         dataPan: 'nav-vehicle-workorders',
     },
     {
         title: 'Railway Receipts',
         href: '/railway-receipts',
         icon: FileText,
+        permission: 'sections.railway_receipts.view',
         dataPan: 'nav-railway-receipts',
     },
     {
         title: 'Penalties',
         href: '/penalties',
         icon: AlertTriangle,
+        permission: 'sections.penalties.view',
         dataPan: 'nav-penalties',
     },
     {
         title: 'Alerts',
         href: '/alerts',
         icon: AlertTriangle,
+        permission: 'sections.alerts.view',
         dataPan: 'nav-alerts',
     },
     {
         title: 'Reconciliation',
         href: '/reconciliation',
         icon: Scale,
+        permission: 'sections.reconciliation.view',
         dataPan: 'nav-reconciliation',
     },
     {
         title: 'Weighments',
         href: '/weighments',
         icon: Scale,
+        permission: 'sections.weighments.view',
         dataPan: 'nav-weighments',
     },
     {
         title: 'Reports',
         href: '/reports',
         icon: BarChart3,
+        permission: 'sections.reports.view',
         dataPan: 'nav-reports',
     },
     {
         title: 'Changelog',
         href: changelogIndex().url,
         icon: Megaphone,
-        permission: 'changelog.index',
+        permission: 'sections.changelog.view',
         feature: 'changelog',
         dataPan: 'nav-changelog',
     },
@@ -199,7 +217,7 @@ const mainNavItems: NavItem[] = [
         title: 'Help',
         href: helpIndex().url,
         icon: LifeBuoy,
-        permission: 'help.index',
+        permission: 'sections.help.view',
         feature: 'help',
         dataPan: 'nav-help',
     },
@@ -207,7 +225,7 @@ const mainNavItems: NavItem[] = [
         title: 'Contact',
         href: contactCreate().url,
         icon: Mail,
-        permission: 'contact.create',
+        permission: 'sections.contact.create',
         feature: 'contact',
         dataPan: 'nav-contact',
     },

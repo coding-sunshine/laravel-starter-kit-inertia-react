@@ -11,6 +11,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
@@ -25,15 +26,25 @@ final class RailwaySidingEmptyWeighmentController extends Controller
 
     public function index(Request $request): InertiaResponse|RedirectResponse
     {
+        $user = Auth::user();
+        $assignedShift = $user?->getAssignedRoadDispatchShift();
+
         $date = $request->get('date', now()->format('Y-m-d'));
         $activeShift = (int) $request->get('shift', 1);
+        $sidingId = $request->has('siding_id') ? (int) $request->get('siding_id') : null;
+
+        $restrictToAssignedShift = $assignedShift !== null && $user?->hasRole('empty-weighment-shift');
+        if ($restrictToAssignedShift) {
+            $sidingId = $assignedShift['siding_id'];
+            $activeShift = $assignedShift['shift'];
+        }
 
         if ($date === now()->format('Y-m-d')) {
             if (! $this->shiftValidation->canAccessShift($activeShift, $date)) {
                 $availableShifts = $this->shiftValidation->getAvailableShifts();
                 $defaultShift = $availableShifts->first() ?? 1;
 
-                if ($activeShift !== $defaultShift) {
+                if (! $restrictToAssignedShift && $activeShift !== $defaultShift) {
                     return redirect()->route('railway-siding-empty-weighment.index', [
                         'date' => $date,
                         'shift' => $defaultShift,
@@ -45,7 +56,7 @@ final class RailwaySidingEmptyWeighmentController extends Controller
         $entries = $this->service->getEntriesByDateAndShift(
             $date,
             $activeShift,
-            null,
+            $sidingId,
             DailyVehicleEntry::ENTRY_TYPE_RAILWAY_SIDING_EMPTY_WEIGHMENT
         );
         $shiftSummary = $this->service->getShiftSummary($date, DailyVehicleEntry::ENTRY_TYPE_RAILWAY_SIDING_EMPTY_WEIGHMENT);
@@ -57,7 +68,6 @@ final class RailwaySidingEmptyWeighmentController extends Controller
         ];
 
         $sidings = \App\Models\Siding::orderBy('name')->get(['id', 'name']);
-        $sidingId = $request->has('siding_id') ? (int) $request->get('siding_id') : null;
 
         return Inertia::render('railway-siding-empty-weighment/index', [
             'entries' => $entries->values()->all(),
@@ -68,16 +78,25 @@ final class RailwaySidingEmptyWeighmentController extends Controller
             'shiftTimes' => $shiftTimes,
             'sidings' => $sidings,
             'sidingId' => $sidingId,
+            'restrictToAssignedShift' => $restrictToAssignedShift,
         ]);
     }
 
     public function store(Request $request): RedirectResponse|JsonResponse
     {
+        $user = Auth::user();
+        $assignedShift = $user?->getAssignedRoadDispatchShift();
+
         $data = $request->validate([
             'siding_id' => 'required|exists:sidings,id',
             'entry_date' => 'required|date',
             'shift' => 'required|integer|between:1,3',
         ]);
+
+        if ($assignedShift !== null && $user?->hasRole('empty-weighment-shift')) {
+            $data['siding_id'] = $assignedShift['siding_id'];
+            $data['shift'] = $assignedShift['shift'];
+        }
 
         if ($data['entry_date'] === now()->format('Y-m-d')) {
             if (! $this->shiftValidation->canAccessShift($data['shift'], $data['entry_date'])) {
@@ -102,6 +121,8 @@ final class RailwaySidingEmptyWeighmentController extends Controller
 
     public function update(Request $request, DailyVehicleEntry $entry): RedirectResponse|JsonResponse
     {
+        $this->authorizeEntryForEmptyWeighmentShiftUser($entry);
+
         if ($entry->entry_type !== DailyVehicleEntry::ENTRY_TYPE_RAILWAY_SIDING_EMPTY_WEIGHMENT) {
             if ($request->wantsJson()) {
                 return response()->json(['message' => 'Entry does not belong to railway siding empty weighment.'], 403);
@@ -131,6 +152,8 @@ final class RailwaySidingEmptyWeighmentController extends Controller
 
     public function markCompleted(Request $request, DailyVehicleEntry $entry): RedirectResponse|JsonResponse
     {
+        $this->authorizeEntryForEmptyWeighmentShiftUser($entry);
+
         if ($entry->entry_type !== DailyVehicleEntry::ENTRY_TYPE_RAILWAY_SIDING_EMPTY_WEIGHMENT) {
             if ($request->wantsJson()) {
                 return response()->json(['message' => 'Entry does not belong to railway siding empty weighment.'], 403);
@@ -153,6 +176,8 @@ final class RailwaySidingEmptyWeighmentController extends Controller
 
     public function destroy(Request $request, DailyVehicleEntry $entry): RedirectResponse|JsonResponse
     {
+        $this->authorizeEntryForEmptyWeighmentShiftUser($entry);
+
         if ($entry->entry_type !== DailyVehicleEntry::ENTRY_TYPE_RAILWAY_SIDING_EMPTY_WEIGHMENT) {
             if ($request->wantsJson()) {
                 return response()->json(['message' => 'Entry does not belong to railway siding empty weighment.'], 403);
@@ -198,11 +223,19 @@ final class RailwaySidingEmptyWeighmentController extends Controller
 
     public function export(Request $request): Response|RedirectResponse
     {
+        $user = Auth::user();
+        $assignedShift = $user?->getAssignedRoadDispatchShift();
+
         $data = $request->validate([
             'date' => 'required|date_format:Y-m-d',
             'siding' => 'required|integer|exists:sidings,id',
             'shift' => 'required|in:all,1,2,3',
         ]);
+
+        if ($assignedShift !== null && $user?->hasRole('empty-weighment-shift')) {
+            $data['siding'] = $assignedShift['siding_id'];
+            $data['shift'] = (string) $assignedShift['shift'];
+        }
 
         try {
             $filepath = $this->service->exportEntries(
@@ -220,6 +253,20 @@ final class RailwaySidingEmptyWeighmentController extends Controller
             ])->deleteFileAfterSend(true);
         } catch (Throwable $th) {
             return back()->with('error', 'Failed to export data: '.$th->getMessage());
+        }
+    }
+
+    private function authorizeEntryForEmptyWeighmentShiftUser(DailyVehicleEntry $entry): void
+    {
+        $assigned = Auth::user()?->getAssignedRoadDispatchShift();
+        if ($assigned === null) {
+            return;
+        }
+        if (! Auth::user()?->hasRole('empty-weighment-shift')) {
+            return;
+        }
+        if ($entry->siding_id !== $assigned['siding_id'] || (int) $entry->shift !== $assigned['shift']) {
+            abort(403, 'You can only manage entries for your assigned shift.');
         }
     }
 }

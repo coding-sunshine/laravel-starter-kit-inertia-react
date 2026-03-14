@@ -16,15 +16,15 @@ final class AutoPermissionMiddleware
     /**
      * Handle an incoming request.
      *
-     * Requires the user to have a permission matching the route name for named
-     * application routes not in config('permission.route_skip_patterns') and
-     * without explicit permission/role middleware.
+     * Enforces section permission only for page-load requests (GET that render a full page).
+     * Skips enforcement for "under the hood" requests (fetch/XHR with JSON or XMLHttpRequest)
+     * so in-page API calls (add row, update, export, etc.) are not blocked.
      *
      * @param  Closure(Request): Response  $next
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (! config('permission.route_based_enforcement', false)) {
+        if ($this->isUnderTheHoodRequest($request)) {
             return $next($request);
         }
 
@@ -60,9 +60,37 @@ final class AutoPermissionMiddleware
             return $next($request);
         }
 
-        throw_unless($user->hasPermissionTo($routeName), UnauthorizedException::forPermissions([$routeName]));
+        $routeToPermission = config('section_permissions.route_to_permission', []);
+        $requiredPermission = $routeToPermission[$routeName] ?? null;
+
+        if ($requiredPermission !== null) {
+            throw_unless($user->hasPermissionTo($requiredPermission), UnauthorizedException::forPermissions([$requiredPermission]));
+
+            return $next($request);
+        }
+
+        if (config('permission.route_based_enforcement', false)) {
+            throw_unless($user->hasPermissionTo($routeName), UnauthorizedException::forPermissions([$routeName]));
+        }
 
         return $next($request);
+    }
+
+    /**
+     * Requests from the frontend (fetch/XHR) that are not full page loads.
+     * We do not enforce permission on these so add row, update, export, etc. work.
+     */
+    private function isUnderTheHoodRequest(Request $request): bool
+    {
+        if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
+            return true;
+        }
+
+        if ($request->wantsJson()) {
+            return true;
+        }
+
+        return false;
     }
 
     private function shouldSkipRoute(string $routeName): bool

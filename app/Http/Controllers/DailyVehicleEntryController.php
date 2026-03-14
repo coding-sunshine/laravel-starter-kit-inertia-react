@@ -12,6 +12,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
@@ -26,8 +27,19 @@ final class DailyVehicleEntryController extends Controller
 
     public function index(Request $request): InertiaResponse|RedirectResponse
     {
+        $user = Auth::user();
+        $assignedShift = $user?->getAssignedRoadDispatchShift();
+
         $date = $request->get('date', now()->format('Y-m-d'));
         $activeShift = (int) $request->get('shift', 1);
+        $sidingId = $request->has('siding_id') ? (int) $request->get('siding_id') : null;
+
+        $restrictToAssignedShift = false;
+        if ($assignedShift !== null) {
+            $restrictToAssignedShift = true;
+            $sidingId = $assignedShift['siding_id'];
+            $activeShift = $assignedShift['shift'];
+        }
 
         // Validate shift access for today
         if ($date === now()->format('Y-m-d')) {
@@ -35,8 +47,7 @@ final class DailyVehicleEntryController extends Controller
                 $availableShifts = $this->shiftValidation->getAvailableShifts();
                 $defaultShift = $availableShifts->first() ?? 1;
 
-                // Redirect to the first available shift if requested shift is not accessible
-                if ($activeShift !== $defaultShift) {
+                if (! $restrictToAssignedShift && $activeShift !== $defaultShift) {
                     return redirect()->route('road-dispatch.daily-vehicle-entries.index', [
                         'date' => $date,
                         'shift' => $defaultShift,
@@ -45,8 +56,7 @@ final class DailyVehicleEntryController extends Controller
             }
         }
 
-        // Return all entries for date+shift; frontend filters by the page siding dropdown
-        $entries = $this->service->getEntriesByDateAndShift($date, $activeShift, null);
+        $entries = $this->service->getEntriesByDateAndShift($date, $activeShift, $sidingId);
         $shiftSummary = $this->service->getShiftSummary($date);
         $shiftStatus = $this->shiftValidation->getShiftCompletionStatus($date);
         $shiftTimes = [
@@ -55,9 +65,7 @@ final class DailyVehicleEntryController extends Controller
             3 => $this->shiftValidation->getShiftTimeRange(3),
         ];
 
-        // Get available sidings for export dropdown and siding filter
         $sidings = \App\Models\Siding::orderBy('name')->get(['id', 'name']);
-        $sidingId = $request->has('siding_id') ? (int) $request->get('siding_id') : null;
 
         return Inertia::render('road-dispatch/daily-vehicle-entries/index', [
             'entries' => $entries->values()->all(),
@@ -68,11 +76,15 @@ final class DailyVehicleEntryController extends Controller
             'shiftTimes' => $shiftTimes,
             'sidings' => $sidings,
             'sidingId' => $sidingId,
+            'restrictToAssignedShift' => $restrictToAssignedShift,
         ]);
     }
 
     public function store(Request $request): RedirectResponse|JsonResponse
     {
+        $user = Auth::user();
+        $assignedShift = $user?->getAssignedRoadDispatchShift();
+
         $data = $request->validate([
             'siding_id' => 'required|exists:sidings,id',
             'entry_date' => 'required|date',
@@ -88,7 +100,11 @@ final class DailyVehicleEntryController extends Controller
             'challan_mode' => 'nullable|in:offline,online',
         ]);
 
-        // Validate shift access for today
+        if ($assignedShift !== null) {
+            $data['siding_id'] = $assignedShift['siding_id'];
+            $data['shift'] = $assignedShift['shift'];
+        }
+
         if ($data['entry_date'] === now()->format('Y-m-d')) {
             if (! $this->shiftValidation->canAccessShift($data['shift'], $data['entry_date'])) {
                 throw ValidationException::withMessages([
@@ -112,6 +128,9 @@ final class DailyVehicleEntryController extends Controller
 
     public function update(Request $request, $id): RedirectResponse|JsonResponse
     {
+        $entry = DailyVehicleEntry::findOrFail($id);
+        $this->authorizeEntryForShiftUser($entry);
+
         $data = $request->validate([
             'e_challan_no' => 'nullable|string|max:255',
             'vehicle_no' => 'nullable|string|max:255',
@@ -126,7 +145,6 @@ final class DailyVehicleEntryController extends Controller
             'status' => 'nullable|in:draft,completed',
         ]);
 
-        $entry = DailyVehicleEntry::findOrFail($id);
         $this->service->updateEntry($entry, $data);
 
         if ($request->wantsJson()) {
@@ -142,6 +160,7 @@ final class DailyVehicleEntryController extends Controller
     public function markCompleted(Request $request, $id): RedirectResponse|JsonResponse
     {
         $entry = DailyVehicleEntry::findOrFail($id);
+        $this->authorizeEntryForShiftUser($entry);
         $updatedEntry = $this->service->markCompleted($entry);
 
         if ($request->wantsJson()) {
@@ -157,6 +176,7 @@ final class DailyVehicleEntryController extends Controller
     public function destroy(Request $request, $id): RedirectResponse|JsonResponse
     {
         $entry = DailyVehicleEntry::findOrFail($id);
+        $this->authorizeEntryForShiftUser($entry);
 
         if ($entry->status !== 'draft') {
             if ($request->wantsJson()) {
@@ -224,11 +244,19 @@ final class DailyVehicleEntryController extends Controller
 
     public function export(Request $request): Response|RedirectResponse
     {
+        $user = Auth::user();
+        $assignedShift = $user?->getAssignedRoadDispatchShift();
+
         $data = $request->validate([
             'date' => 'required|date_format:Y-m-d',
             'siding' => 'required|integer|exists:sidings,id',
             'shift' => 'required|in:all,1,2,3',
         ]);
+
+        if ($assignedShift !== null) {
+            $data['siding'] = $assignedShift['siding_id'];
+            $data['shift'] = (string) $assignedShift['shift'];
+        }
 
         try {
             $filepath = $this->service->exportEntries(
@@ -245,6 +273,20 @@ final class DailyVehicleEntryController extends Controller
             ])->deleteFileAfterSend(true);
         } catch (Throwable $th) {
             return back()->with('error', 'Failed to export data: '.$th->getMessage());
+        }
+    }
+
+    /**
+     * Deny shift users from accessing entries outside their assigned siding and shift.
+     */
+    private function authorizeEntryForShiftUser(DailyVehicleEntry $entry): void
+    {
+        $assigned = Auth::user()?->getAssignedRoadDispatchShift();
+        if ($assigned === null) {
+            return;
+        }
+        if ($entry->siding_id !== $assigned['siding_id'] || (int) $entry->shift !== $assigned['shift']) {
+            abort(403, 'You can only manage entries for your assigned shift.');
         }
     }
 }

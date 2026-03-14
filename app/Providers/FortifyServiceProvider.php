@@ -8,6 +8,7 @@ use App\Actions\Fortify\LoggingConfirmTwoFactorAuthentication;
 use App\Actions\Fortify\LoggingDisableTwoFactorAuthentication;
 use App\Actions\Fortify\LoggingEnableTwoFactorAuthentication;
 use App\Actions\Fortify\LoggingGenerateNewRecoveryCodes;
+use App\Http\Responses\LoginResponse;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -17,6 +18,7 @@ use Laravel\Fortify\Actions\ConfirmTwoFactorAuthentication;
 use Laravel\Fortify\Actions\DisableTwoFactorAuthentication;
 use Laravel\Fortify\Actions\EnableTwoFactorAuthentication;
 use Laravel\Fortify\Actions\GenerateNewRecoveryCodes;
+use Laravel\Fortify\Contracts\LoginResponse as LoginResponseContract;
 use Laravel\Fortify\Contracts\TwoFactorAuthenticationProvider;
 use Laravel\Fortify\Fortify;
 
@@ -25,6 +27,8 @@ final class FortifyServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->registerTwoFactorActivityLogging();
+
+        $this->app->singleton(LoginResponseContract::class, LoginResponse::class);
     }
 
     public function boot(): void

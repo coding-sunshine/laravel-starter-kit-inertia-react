@@ -72,6 +72,8 @@ interface Props {
   shiftTimes: Record<number, ShiftTime>;
   sidings: Siding[];
   sidingId?: number | null;
+  /** When true, user only sees their assigned shift; hide shift/siding switchers. */
+  restrictToAssignedShift?: boolean;
 }
 
 export default function DailyVehicleEntriesIndex({
@@ -83,6 +85,7 @@ export default function DailyVehicleEntriesIndex({
   shiftTimes,
   sidings,
   sidingId: sidingIdProp,
+  restrictToAssignedShift = false,
 }: Props) {
   const [entries, setEntries] = useState(() =>
     Array.isArray(entriesProp) ? entriesProp : []
@@ -299,66 +302,86 @@ export default function DailyVehicleEntriesIndex({
             <p className="text-gray-600 mt-1">Excel-style shift-based vehicle entry management</p>
           </div>
           <div className="flex gap-3">
-            {/* Export Controls */}
-            <div className="flex items-center gap-2">
-              <Select
-                value={selectedSidingId == null ? 'all' : selectedSidingId.toString()}
-                onValueChange={(value) => {
-                  if (value === 'all') {
-                    setSelectedSidingId(null);
-                    router.get(
-                      '/road-dispatch/daily-vehicle-entries',
-                      { date: selectedDate, shift: activeShiftState },
-                      { preserveState: true, preserveScroll: true }
-                    );
-                  } else {
-                    const id = Number(value);
-                    setSelectedSidingId(id);
-                    router.get(
-                      '/road-dispatch/daily-vehicle-entries',
-                      { date: selectedDate, shift: activeShiftState, siding_id: id },
-                      { preserveState: true, preserveScroll: true }
-                    );
-                  }
-                }}
-              >
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Select siding" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All sidings</SelectItem>
-                  {sidings.map((siding) => (
-                    <SelectItem key={siding.id} value={siding.id.toString()}>
-                      {siding.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={exportShift} onValueChange={setExportShift}>
-                <SelectTrigger className="w-32">
-                  <SelectValue placeholder="Export" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Shifts</SelectItem>
-                  <SelectItem value="1">Shift 1</SelectItem>
-                  <SelectItem value="2">Shift 2</SelectItem>
-                  <SelectItem value="3">Shift 3</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button 
-                onClick={handleExport} 
-                disabled={isExporting}
-                variant="outline"
-                className="flex items-center gap-2"
-              >
-                <Download className="h-4 w-4" />
-                {isExporting ? 'Exporting...' : 'Export'}
-              </Button>
-            </div>
+            {/* Siding / Export: hidden when restricted to assigned shift (single siding + shift) */}
+            {!restrictToAssignedShift && (
+              <div className="flex items-center gap-2">
+                <Select
+                  value={selectedSidingId == null ? 'all' : selectedSidingId.toString()}
+                  onValueChange={(value) => {
+                    if (value === 'all') {
+                      setSelectedSidingId(null);
+                      router.get(
+                        '/road-dispatch/daily-vehicle-entries',
+                        { date: selectedDate, shift: activeShiftState },
+                        { preserveState: true, preserveScroll: true }
+                      );
+                    } else {
+                      const id = Number(value);
+                      setSelectedSidingId(id);
+                      router.get(
+                        '/road-dispatch/daily-vehicle-entries',
+                        { date: selectedDate, shift: activeShiftState, siding_id: id },
+                        { preserveState: true, preserveScroll: true }
+                      );
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder="Select siding" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All sidings</SelectItem>
+                    {sidings.map((siding) => (
+                      <SelectItem key={siding.id} value={siding.id.toString()}>
+                        {siding.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={exportShift} onValueChange={setExportShift}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue placeholder="Export" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Shifts</SelectItem>
+                    <SelectItem value="1">Shift 1</SelectItem>
+                    <SelectItem value="2">Shift 2</SelectItem>
+                    <SelectItem value="3">Shift 3</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  onClick={handleExport}
+                  disabled={isExporting}
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  {isExporting ? 'Exporting...' : 'Export'}
+                </Button>
+              </div>
+            )}
+            {restrictToAssignedShift && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">
+                  Your shift: {sidings.find((s) => s.id === selectedSidingId)?.name ?? '—'} · Shift {activeShiftState}
+                </span>
+                <Button
+                  onClick={handleExport}
+                  disabled={isExporting}
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  {isExporting ? 'Exporting...' : 'Export'}
+                </Button>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Controls Section */}
+        {/* Date filter, shift summary, shift times, shift tabs: only for superadmin / dispatch-manage-admin */}
+        {!restrictToAssignedShift && (
+          <>
         <Card>
           <CardContent className="pt-6">
             <div className="flex gap-4 items-center">
@@ -371,8 +394,6 @@ export default function DailyVehicleEntriesIndex({
                   className="w-auto"
                 />
               </div>
-              
-              {/* Shift Summary */}
               <div className="flex gap-2 ml-auto">
                 {[1, 2, 3].map((shift) => (
                   <Badge
@@ -388,20 +409,20 @@ export default function DailyVehicleEntriesIndex({
           </CardContent>
         </Card>
 
-        {/* Shift Times */}
         <p className="text-sm text-gray-500">
           Shift 1: {shiftTimes[1]?.start ?? '06:00'}–{shiftTimes[1]?.end ?? '11:00'} &nbsp;|&nbsp;{' '}
           Shift 2: {shiftTimes[2]?.start ?? '11:00'}–{shiftTimes[2]?.end ?? '22:00'} &nbsp;|&nbsp;{' '}
           Shift 3: {shiftTimes[3]?.start ?? '22:00'}–{shiftTimes[3]?.end ?? '06:00'}
         </p>
 
-        {/* Shift Tabs */}
         <ShiftTabs
-          activeShift={activeShiftState}
-          onShiftChange={handleShiftChange}
-          shiftSummary={shiftSummary}
-          shiftStatus={shiftStatus}
-        />
+            activeShift={activeShiftState}
+            onShiftChange={handleShiftChange}
+            shiftSummary={shiftSummary}
+            shiftStatus={shiftStatus}
+          />
+          </>
+        )}
 
         {/* Draft rows are completed automatically when required fields are filled, so no extra warning is needed */}
 

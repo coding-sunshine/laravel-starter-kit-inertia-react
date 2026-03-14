@@ -14,6 +14,7 @@ import VehicleEntryTable from './vehicle-entry-table';
 interface EmptyWeighmentEntry {
   id: number;
   siding_id: number;
+  siding?: { id: number; name: string };
   entry_date: string;
   shift: number;
   vehicle_no: string | null;
@@ -61,6 +62,7 @@ interface Props {
   shiftTimes: Record<number, ShiftTime>;
   sidings: Siding[];
   sidingId?: number | null;
+  restrictToAssignedShift?: boolean;
 }
 
 export default function RailwaySidingEmptyWeighmentIndex({
@@ -72,6 +74,7 @@ export default function RailwaySidingEmptyWeighmentIndex({
   shiftTimes,
   sidings,
   sidingId: sidingIdProp,
+  restrictToAssignedShift = false,
 }: Props) {
   const [entries, setEntries] = useState(() =>
     Array.isArray(entriesProp) ? entriesProp : []
@@ -276,102 +279,124 @@ export default function RailwaySidingEmptyWeighmentIndex({
             </p>
           </div>
           <div className="flex gap-3">
-            <div className="flex items-center gap-2">
-              <Select
-                value={selectedSidingId == null ? 'all' : selectedSidingId.toString()}
-                onValueChange={(value) => {
-                  if (value === 'all') {
-                    setSelectedSidingId(null);
-                    router.get('/railway-siding-empty-weighment', { date: selectedDate, shift: activeShiftState }, {
-                      preserveState: true,
-                      preserveScroll: true,
-                    });
-                  } else {
-                    const id = Number(value);
-                    setSelectedSidingId(id);
-                    router.get(
-                      '/railway-siding-empty-weighment',
-                      { date: selectedDate, shift: activeShiftState, siding_id: id },
-                      { preserveState: true, preserveScroll: true }
-                    );
-                  }
-                }}
-              >
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Select siding" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All sidings</SelectItem>
-                  {sidings.map((siding) => (
-                    <SelectItem key={siding.id} value={siding.id.toString()}>
-                      {siding.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={exportShift} onValueChange={setExportShift}>
-                <SelectTrigger className="w-32">
-                  <SelectValue placeholder="Export" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Shifts</SelectItem>
-                  <SelectItem value="1">Shift 1</SelectItem>
-                  <SelectItem value="2">Shift 2</SelectItem>
-                  <SelectItem value="3">Shift 3</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button
-                onClick={handleExport}
-                disabled={isExporting}
-                variant="outline"
-                className="flex items-center gap-2"
-              >
-                <Download className="h-4 w-4" />
-                {isExporting ? 'Exporting...' : 'Export'}
-              </Button>
-            </div>
+            {!restrictToAssignedShift && (
+              <div className="flex items-center gap-2">
+                <Select
+                  value={selectedSidingId == null ? 'all' : selectedSidingId.toString()}
+                  onValueChange={(value) => {
+                    if (value === 'all') {
+                      setSelectedSidingId(null);
+                      router.get('/railway-siding-empty-weighment', { date: selectedDate, shift: activeShiftState }, {
+                        preserveState: true,
+                        preserveScroll: true,
+                      });
+                    } else {
+                      const id = Number(value);
+                      setSelectedSidingId(id);
+                      router.get(
+                        '/railway-siding-empty-weighment',
+                        { date: selectedDate, shift: activeShiftState, siding_id: id },
+                        { preserveState: true, preserveScroll: true }
+                      );
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder="Select siding" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All sidings</SelectItem>
+                    {sidings.map((siding) => (
+                      <SelectItem key={siding.id} value={siding.id.toString()}>
+                        {siding.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={exportShift} onValueChange={setExportShift}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue placeholder="Export" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Shifts</SelectItem>
+                    <SelectItem value="1">Shift 1</SelectItem>
+                    <SelectItem value="2">Shift 2</SelectItem>
+                    <SelectItem value="3">Shift 3</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  onClick={handleExport}
+                  disabled={isExporting}
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  {isExporting ? 'Exporting...' : 'Export'}
+                </Button>
+              </div>
+            )}
+            {restrictToAssignedShift && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">
+                  Your shift: {sidings.find((s) => s.id === selectedSidingId)?.name ?? '—'} · Shift {activeShiftState}
+                </span>
+                <Button
+                  onClick={handleExport}
+                  disabled={isExporting}
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  {isExporting ? 'Exporting...' : 'Export'}
+                </Button>
+              </div>
+            )}
           </div>
         </div>
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex gap-4 items-center">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-gray-500" />
-                <Input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => handleDateChange(e.target.value)}
-                  className="w-auto"
-                />
-              </div>
-              <div className="flex gap-2 ml-auto">
-                {[1, 2, 3].map((shift) => (
-                  <Badge
-                    key={shift}
-                    variant={activeShiftState === shift ? 'default' : 'secondary'}
-                    className="cursor-pointer"
-                  >
-                    {shift === 1 ? '1ST' : shift === 2 ? '2ND' : '3RD'} SHIFT: {shiftSummary[shift] || 0}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {!restrictToAssignedShift && (
+          <>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex gap-4 items-center">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-gray-500" />
+                    <Input
+                      type="date"
+                      value={selectedDate}
+                      onChange={(e) => handleDateChange(e.target.value)}
+                      className="w-auto"
+                    />
+                  </div>
+                  <div className="flex gap-2 ml-auto">
+                    {[1, 2, 3].map((shift) => (
+                      <Badge
+                        key={shift}
+                        variant={activeShiftState === shift ? 'default' : 'secondary'}
+                        className="cursor-pointer"
+                      >
+                        {shift === 1 ? '1ST' : shift === 2 ? '2ND' : '3RD'} SHIFT: {shiftSummary[shift] || 0}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-        <p className="text-sm text-gray-500 dark:text-gray-400">
-          Shift 1: {shiftTimes[1]?.start ?? '06:00'}–{shiftTimes[1]?.end ?? '11:00'} &nbsp;|&nbsp; Shift 2:{' '}
-          {shiftTimes[2]?.start ?? '11:00'}–{shiftTimes[2]?.end ?? '22:00'} &nbsp;|&nbsp; Shift 3:{' '}
-          {shiftTimes[3]?.start ?? '22:00'}–{shiftTimes[3]?.end ?? '06:00'}
-        </p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Shift 1: {shiftTimes[1]?.start ?? '06:00'}–{shiftTimes[1]?.end ?? '11:00'} &nbsp;|&nbsp; Shift 2:{' '}
+              {shiftTimes[2]?.start ?? '11:00'}–{shiftTimes[2]?.end ?? '22:00'} &nbsp;|&nbsp; Shift 3:{' '}
+              {shiftTimes[3]?.start ?? '22:00'}–{shiftTimes[3]?.end ?? '06:00'}
+            </p>
 
-        <ShiftTabs
-          activeShift={activeShiftState}
-          onShiftChange={handleShiftChange}
-          shiftSummary={shiftSummary}
-          shiftStatus={shiftStatus}
-        />
+            <ShiftTabs
+              activeShift={activeShiftState}
+              onShiftChange={handleShiftChange}
+              shiftSummary={shiftSummary}
+              shiftStatus={shiftStatus}
+            />
+          </>
+        )}
 
         <VehicleEntryTable
           key={`${selectedDate}-${activeShiftState}`}

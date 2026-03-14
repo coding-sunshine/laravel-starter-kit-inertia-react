@@ -192,6 +192,7 @@ final class AppServiceProvider extends ServiceProvider
             'vehicle-dispatch-tab-main-data',
             'vehicle-dispatch-tab-dpr',
             'vehicle-dispatch-generate-dpr',
+            'nav-railway-siding-empty-weighment',
             'nav-vehicle-workorders',
             'vehicle-workorders-filters',
             'vehicle-workorders-table',
@@ -205,6 +206,11 @@ final class AppServiceProvider extends ServiceProvider
             'rr-tab-raw',
             'rr-upload-pdf-button',
             'indents-upload-pdf-button',
+            'nav-production-coal',
+            'nav-production-ob',
+            'production-add-entry',
+            'production-edit-entry',
+            'production-delete-entry',
         ]);
     }
 

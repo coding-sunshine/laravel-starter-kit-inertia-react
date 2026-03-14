@@ -289,6 +289,50 @@ final class User extends Authenticatable implements ExportsPersonalData, Filamen
     }
 
     /**
+     * Assigned shift context for Railway Siding Record Data (road dispatch).
+     * Used to restrict shift users to only their assigned siding and shift.
+     *
+     * @return array{siding_id: int, shift: int}|null null when user has no single assigned shift
+     */
+    public function getAssignedRoadDispatchShift(): ?array
+    {
+        $shift = $this->activeSidingShifts()->with('siding')->first();
+
+        if ($shift === null) {
+            return null;
+        }
+
+        return [
+            'siding_id' => $shift->siding_id,
+            'shift' => (int) $shift->sort_order,
+        ];
+    }
+
+    /**
+     * Whether this user is a shift user (has role "user" and an assigned siding shift).
+     */
+    public function isShiftUser(): bool
+    {
+        if (! $this->hasRole('user')) {
+            return false;
+        }
+
+        return $this->activeSidingShifts()->exists();
+    }
+
+    /**
+     * Whether this user is an empty-weighment shift user (has role "empty-weighment-shift" and an assigned siding shift).
+     */
+    public function isEmptyWeighmentShiftUser(): bool
+    {
+        if (! $this->hasRole('empty-weighment-shift')) {
+            return false;
+        }
+
+        return $this->activeSidingShifts()->exists();
+    }
+
+    /**
      * Switch the current tenant context to the given organization.
      * Validates the user is a member. Use for web (session) or API (stateless for request).
      */

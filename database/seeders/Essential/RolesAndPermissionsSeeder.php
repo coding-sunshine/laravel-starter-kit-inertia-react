@@ -15,9 +15,18 @@ final class RolesAndPermissionsSeeder extends Seeder
 {
     private const string GUARD = 'web';
 
+    private const int GLOBAL_TEAM_ID = 0;
+
     public function run(): void
     {
         resolve(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $teamKey = config('permission.column_names.team_foreign_key', 'organization_id');
+        $roleAttrs = fn (string $name): array => [
+            'name' => $name,
+            'guard_name' => self::GUARD,
+            $teamKey => self::GLOBAL_TEAM_ID,
+        ];
 
         $corePermissions = [
             'bypass-permissions',
@@ -32,44 +41,89 @@ final class RolesAndPermissionsSeeder extends Seeder
             Permission::query()->firstOrCreate(['name' => $name, 'guard_name' => self::GUARD]);
         }
 
-        $superAdmin = Role::query()->firstOrCreate(['name' => 'super-admin', 'guard_name' => self::GUARD]);
+        $this->call(SectionPermissionsSeeder::class);
+
+        $superAdmin = Role::query()->firstOrCreate($roleAttrs('super-admin'));
         $superAdmin->givePermissionTo('bypass-permissions');
 
-        $admin = Role::query()->firstOrCreate(['name' => 'admin', 'guard_name' => self::GUARD]);
-        $userRole = Role::query()->firstOrCreate(['name' => 'user', 'guard_name' => self::GUARD]);
+        $admin = Role::query()->firstOrCreate($roleAttrs('admin'));
+        $userRole = Role::query()->firstOrCreate($roleAttrs('user'));
+        $dispatchManageAdmin = Role::query()->firstOrCreate($roleAttrs('dispatch-manage-admin'));
+        $viewerRole = Role::query()->firstOrCreate($roleAttrs('viewer'));
+        $emptyWeighmentShiftRole = Role::query()->firstOrCreate($roleAttrs('empty-weighment-shift'));
+
         $defaultRolePerms = config('permission.default_role_permissions', []);
         if (is_array($defaultRolePerms) && $defaultRolePerms !== []) {
             $userRole->syncPermissions(
                 array_filter($defaultRolePerms, fn (string $name): bool => Permission::query()->where('name', $name)->where('guard_name', self::GUARD)->exists())
             );
+        } else {
+            $userRole->syncPermissions([
+                'sections.dashboard.view',
+                'sections.railway_siding_record_data.view',
+                'sections.railway_siding_record_data.create',
+                'sections.railway_siding_record_data.update',
+            ]);
         }
 
+        $dispatchManageAdmin->syncPermissions([
+            'sections.dashboard.view',
+            'sections.mines_dispatch_data.view',
+            'sections.mines_dispatch_data.upload',
+            'sections.transport.view',
+            'sections.transport.update',
+            'sections.railway_siding_record_data.view',
+            'sections.reports.view',
+            'sections.reports.generate',
+        ]);
+
+        $viewerRole->syncPermissions(['sections.dashboard.view']);
+
+        $emptyWeighmentShiftRole->syncPermissions([
+            'sections.dashboard.view',
+            'sections.railway_siding_empty_weighment.view',
+            'sections.railway_siding_empty_weighment.create',
+            'sections.railway_siding_empty_weighment.update',
+        ]);
+
+        $adminCorePerms = [
+            'access admin panel',
+            'view users',
+            'create users',
+            'edit users',
+            'delete users',
+        ];
+        $adminSectionPerms = [
+            'sections.dashboard.view',
+            'sections.rakes.view',
+            'sections.indents.view',
+            'sections.railway_siding_record_data.view',
+            'sections.railway_siding_empty_weighment.view',
+            'sections.production_coal.view',
+            'sections.production_ob.view',
+            'sections.mines_dispatch_data.view',
+            'sections.transport.view',
+            'sections.railway_receipts.view',
+            'sections.penalties.view',
+            'sections.weighments.view',
+            'sections.reports.view',
+        ];
         if (config('permission.permission_categories_enabled', false)) {
             $resolver = resolve(PermissionCategoryResolver::class);
             $adminPerms = $resolver->getPermissionsForRole('admin');
             if ($adminPerms !== []) {
-                $admin->syncPermissions($adminPerms);
+                $admin->syncPermissions(array_merge($adminCorePerms, $adminSectionPerms, $adminPerms));
             } else {
-                $admin->syncPermissions([
-                    'access admin panel',
-                    'view users',
-                    'create users',
-                    'edit users',
-                    'delete users',
-                ]);
+                $admin->syncPermissions(array_merge($adminCorePerms, $adminSectionPerms));
             }
         } else {
-            $admin->syncPermissions([
-                'access admin panel',
-                'view users',
-                'create users',
-                'edit users',
-                'delete users',
-            ]);
+            $admin->syncPermissions(array_merge($adminCorePerms, $adminSectionPerms));
         }
 
-        // Always sync route permissions so they exist in Filament for assignment to roles.
-        Artisan::call('permission:sync-routes', ['--silent' => true]);
+        // Sync route-named permissions only when using route-based enforcement. RRMMS uses section-based permissions only.
+        if (config('permission.route_based_enforcement', false)) {
+            Artisan::call('permission:sync-routes', ['--silent' => true]);
+        }
 
         // Sync org permissions from organization-permissions.json so org roles (admin/member) get org.* permissions.
         if (is_file(database_path('seeders/data/organization-permissions.json'))) {

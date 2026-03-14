@@ -233,6 +233,10 @@ export default function VehicleEntryRow({
           </div>
         </TableCell>
 
+        <TableCell className="px-2 py-3 text-xs border-t border-r border-gray-300 min-h-[4rem]">
+          {entry.siding?.name ?? '—'}
+        </TableCell>
+
         <TableCell className="px-2 py-3 border-t border-r border-gray-300 min-h-[4rem]">
           <Input
             value={formData.vehicle_no}

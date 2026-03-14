@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Database\Seeders\Essential;
 
 use Illuminate\Database\Seeder;
+use Spatie\Permission\PermissionRegistrar;
 
 final class UserSeeder extends Seeder
 {
@@ -26,6 +27,9 @@ final class UserSeeder extends Seeder
      */
     public function run(): void
     {
+        // Global roles use organization_id = 0; ensure role assignments use that team.
+        resolve(PermissionRegistrar::class)->setPermissionsTeamId(0);
+
         // === RRMMS-specific seed data (roles: super-admin, admin, user, viewer) ===
         $this->seedRrmmsUsers();
     }
@@ -71,10 +75,15 @@ final class UserSeeder extends Seeder
         $this->createAdminForSiding($kurwa, 'kurwa.sidingincharge@rmms.local', 'Kurwa Siding Incharge');
         $this->createAdminForSiding($dumka, 'dumka.sidingincharge@rmms.local', 'Dumka Siding Incharge');
 
-        // Shift users (3 per siding)
+        // Shift users (3 per siding) – Road Dispatch / Daily Vehicle Entries
         $this->createShiftUsersForSiding($pakur);
         $this->createShiftUsersForSiding($kurwa);
         $this->createShiftUsersForSiding($dumka);
+
+        // Empty weighment shift users (3 per siding) – Railway Siding Empty Weighment only
+        $this->createEmptyWeighmentShiftUsersForSiding($pakur);
+        $this->createEmptyWeighmentShiftUsersForSiding($kurwa);
+        $this->createEmptyWeighmentShiftUsersForSiding($dumka);
 
         // Viewer
         $viewer = \App\Models\User::query()->firstOrCreate(['email' => 'viewer@rmms.local'], [
@@ -137,6 +146,52 @@ final class UserSeeder extends Seeder
             }
 
             $user->syncRoles(['user']);
+
+            $user->sidings()->syncWithoutDetaching([
+                $siding->id => ['is_primary' => true],
+            ]);
+
+            $user->sidingShifts()->syncWithoutDetaching([
+                $shift->id => [
+                    'assigned_at' => now(),
+                    'is_active' => true,
+                ],
+            ]);
+        }
+    }
+
+    /**
+     * Create 3 users per siding for Railway Siding Empty Weighment (WB shift users).
+     * Emails: {siding_slug}.wbshift1@rmms.local, wbshift2, wbshift3.
+     */
+    private function createEmptyWeighmentShiftUsersForSiding(\App\Models\Siding $siding): void
+    {
+        $baseSlug = str($siding->name)->before(' ')->lower()->toString();
+
+        $shifts = \App\Models\SidingShift::query()
+            ->where('siding_id', $siding->id)
+            ->orderBy('sort_order')
+            ->get();
+
+        foreach ($shifts as $index => $shift) {
+            $number = $index + 1;
+            $email = "{$baseSlug}.wbshift{$number}@rmms.local";
+            $name = sprintf('%s WB Shift %d', str($baseSlug)->title(), $number);
+
+            $user = \App\Models\User::query()->firstOrCreate(['email' => $email], [
+                'name' => $name,
+                'password' => bcrypt('password'),
+                'email_verified_at' => now(),
+                'onboarding_completed' => true,
+                'siding_id' => $siding->id,
+            ]);
+
+            if ($user->siding_id !== $siding->id) {
+                $user->siding_id = $siding->id;
+                $user->save();
+            }
+
+            $user->syncRoles(['empty-weighment-shift']);
 
             $user->sidings()->syncWithoutDetaching([
                 $siding->id => ['is_primary' => true],

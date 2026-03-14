@@ -54,6 +54,9 @@ export default function VehicleEntryTable({
             <TableHead className="w-12 min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">
               SL NO
             </TableHead>
+            <TableHead className="w-28 min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">
+              Siding
+            </TableHead>
             <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">
               Vehicle No
             </TableHead>
@@ -97,6 +100,7 @@ export default function VehicleEntryTable({
                 }}
               >
                 <TableCell className={`${emptyCellClass} text-center`} />
+                <TableCell className={emptyCellClass} />
                 <TableCell className={emptyCellClass} />
                 <TableCell className={emptyCellClass} />
                 <TableCell className={emptyCellClass} />
