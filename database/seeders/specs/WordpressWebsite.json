@@ -1,0 +1,158 @@
+{
+    "model": "WordpressWebsite",
+    "table": "wordpress_websites",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "wordpress_template_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "title": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "url": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "stage": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "step": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "is_custom_url": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "is_verified_url": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "instance_id": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "url_key": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "wp_username": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "wp_password": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "enquiry_recipient_emails": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "primary_color": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "secondary_color": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "primary_text_color": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "is_enabled": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "legacy_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": {
+        "is_custom_url": {
+            "type": "url",
+            "example": "https://example.com"
+        },
+        "is_verified_url": {
+            "type": "url",
+            "example": "https://example.com"
+        },
+        "is_enabled": {
+            "type": "boolean",
+            "example": true
+        },
+        "url": {
+            "type": "url",
+            "example": "https://example.com"
+        },
+        "url_key": {
+            "type": "url",
+            "example": "https://example.com"
+        },
+        "wp_username": {
+            "type": "name",
+            "example": "John Doe"
+        },
+        "enquiry_recipient_emails": {
+            "type": "email",
+            "example": "user@example.com"
+        }
+    },
+    "scenarios": []
+}

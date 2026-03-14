@@ -395,6 +395,17 @@ final class AppServiceProvider extends ServiceProvider
             'ai-concierge-tab',
             'funnel-templates-tab',
             'call-logs-tab',
+            'agent-portal-tab-history',
+            'agent-portal-tab-scheduled',
+            'agent-portal-schedule-push',
+            'builder-portal-create',
+            'builder-portal-view',
+            'inventory-tab-import',
+            'inventory-tab-templates',
+            'inventory-upload-file',
+            'puck-templates-create',
+            'puck-templates-edit',
+            'puck-templates-filter',
         ]);
     }
 

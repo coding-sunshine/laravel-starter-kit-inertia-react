@@ -146,6 +146,30 @@
         "primaryPhone": {
             "type": "hasMany",
             "model": "PrimaryPhone"
+        },
+        "propertySearches": {
+            "type": "hasMany",
+            "model": "PropertySearch"
+        },
+        "tasks": {
+            "type": "hasMany",
+            "model": "Task"
+        },
+        "sequenceEnrollments": {
+            "type": "hasMany",
+            "model": "SequenceEnrollment"
+        },
+        "assignedUser": {
+            "type": "belongsTo",
+            "model": "AssignedUser"
+        },
+        "strategyTags": {
+            "type": "belongsToMany",
+            "model": "StrategyTag"
+        },
+        "callLogs": {
+            "type": "hasMany",
+            "model": "CallLog"
         }
     },
     "value_hints": {

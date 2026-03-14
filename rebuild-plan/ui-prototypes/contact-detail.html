@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sarah Mitchell — Fusion CRM</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: { brand: '#f28036', 'body-bg': '#f3f1ee', 'card-bg': '#f9f8f7', 'body-text': '#727E8C', 'heading': '#475F7B', 'border-col': '#DFE3E7' },
+          fontFamily: { sans: ['Inter', 'sans-serif'] },
+        },
+      },
+    }
+  </script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #f3f1ee; color: #727E8C; font-size: 14px; }
+    .sidebar { width: 220px; min-width: 220px; background: #f9f8f7; border-right: 1px solid #DFE3E7; height: 100vh; position: fixed; top: 0; left: 0; display: flex; flex-direction: column; z-index: 40; overflow-y: auto; }
+    .sidebar-logo { padding: 14px 20px 12px; border-bottom: 1px solid #DFE3E7; display: flex; align-items: center; flex-shrink: 0; }
+    .sidebar-logo img { height: 38px; width: auto; display: block; }
+    .nav-section { padding: 8px 0 4px; flex: 1; overflow-y: auto; }
+    .nav-divider { height: 1px; background: #DFE3E7; margin: 4px 16px; }
+    .nav-item { display: flex; align-items: center; gap: 9px; padding: 7px 16px; font-size: 13px; color: #727E8C; cursor: pointer; border-left: 2px solid transparent; transition: all 0.12s; text-decoration: none; }
+    .nav-item:hover { background: rgba(0,0,0,0.03); color: #475F7B; }
+    .nav-item.active { background: rgba(242,128,54,0.08); color: #f28036; font-weight: 500; border-left-color: #f28036; }
+    .nav-parent { display: flex; align-items: center; gap: 9px; padding: 7px 16px; font-size: 13px; color: #727E8C; cursor: pointer; border-left: 2px solid transparent; transition: all 0.12s; user-select: none; }
+    .nav-parent:hover { background: rgba(0,0,0,0.03); color: #475F7B; }
+    .nav-parent.open { color: #475F7B; font-weight: 500; }
+    .nav-parent.has-active { color: #f28036; font-weight: 500; border-left-color: #f28036; background: rgba(242,128,54,0.05); }
+    .nav-parent .chevron { margin-left: auto; transition: transform 0.15s; flex-shrink: 0; }
+    .nav-parent.open .chevron { transform: rotate(90deg); }
+    .nav-children { display: none; padding: 2px 0 4px 0; }
+    .nav-children.open { display: block; }
+    .nav-child { display: flex; align-items: center; gap: 8px; padding: 5px 16px 5px 36px; font-size: 12.5px; color: #8A97A5; cursor: pointer; text-decoration: none; transition: all 0.12s; border-left: 2px solid transparent; }
+    .nav-child:hover { color: #475F7B; background: rgba(0,0,0,0.02); }
+    .nav-child.active { color: #f28036; font-weight: 500; }
+    .nav-child-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; flex-shrink: 0; opacity: 0.6; }
+    .nav-child.active .nav-child-dot { opacity: 1; background: #f28036; }
+    .nav-bottom { border-top: 1px solid #DFE3E7; padding: 6px 0; flex-shrink: 0; }
+    .page-header { position: sticky; top: 27px; height: 56px; background: #f9f8f7; border-bottom: 1px solid #DFE3E7; display: flex; align-items: center; padding: 0 24px; z-index: 30; }
+    .breadcrumb { font-size: 13px; color: #A0ADB8; }
+    .breadcrumb a { color: #A0ADB8; text-decoration: none; }
+    .breadcrumb a:hover { color: #727E8C; }
+    .breadcrumb .sep { margin: 0 6px; }
+    .breadcrumb .current { color: #475F7B; font-weight: 500; }
+    .card { background: #f9f8f7; border: 1px solid #DFE3E7; border-radius: 8px; }
+    .btn-primary { background: #f28036; color: white; border: none; border-radius: 6px; padding: 8px 14px; font-size: 13.5px; font-family: 'Inter', sans-serif; font-weight: 500; cursor: pointer; transition: background 0.12s; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-primary:hover { background: #e0722a; }
+    .btn-outline { background: transparent; color: #475F7B; border: 1px solid #DFE3E7; border-radius: 6px; padding: 7px 12px; font-size: 13px; font-family: 'Inter', sans-serif; font-weight: 500; cursor: pointer; transition: all 0.12s; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-outline:hover { border-color: #f28036; color: #f28036; }
+    .btn-orange-outline { background: transparent; color: #f28036; border: 1px solid rgba(242,128,54,0.4); border-radius: 6px; padding: 7px 12px; font-size: 13px; font-family: 'Inter', sans-serif; font-weight: 500; cursor: pointer; transition: all 0.12s; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-orange-outline:hover { background: rgba(242,128,54,0.08); }
+    .tag { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 4px; font-size: 12px; background: #f3f1ee; color: #727E8C; border: 1px solid #DFE3E7; margin-right: 5px; margin-bottom: 4px; }
+    .timeline-item { display: flex; gap: 14px; padding-bottom: 20px; position: relative; }
+    .timeline-item::before { content: ''; position: absolute; left: 14px; top: 26px; width: 1px; height: calc(100% - 14px); background: #DFE3E7; }
+    .timeline-item:last-child::before { display: none; }
+    .tl-icon { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1.5px solid #DFE3E7; background: #f9f8f7; z-index: 1; }
+    .filter-chip { padding: 5px 12px; border-radius: 5px; font-size: 12.5px; font-family: 'Inter', sans-serif; cursor: pointer; transition: all 0.12s; border: 1px solid transparent; }
+    .filter-chip.active { background: rgba(242,128,54,0.1); color: #f28036; border-color: rgba(242,128,54,0.3); font-weight: 500; }
+    .filter-chip:not(.active) { background: transparent; color: #727E8C; border-color: #DFE3E7; }
+    .filter-chip:not(.active):hover { border-color: #A0ADB8; color: #475F7B; }
+    .stage-step { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
+    .stage-circle { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #DFE3E7; background: #f9f8f7; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .stage-circle.done { border-color: #3BAA8C; background: #3BAA8C; }
+    .stage-circle.current { border-color: #f28036; background: #f28036; }
+    .stage-line { width: 1px; height: 20px; background: #DFE3E7; margin-left: 9px; }
+    .stage-line.done { background: #3BAA8C; }
+    .info-row { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-bottom: 1px solid #DFE3E7; font-size: 13px; }
+    .info-row:last-child { border-bottom: none; }
+    .info-label { width: 72px; color: #A0ADB8; flex-shrink: 0; }
+    .info-value { color: #475F7B; font-weight: 500; }
+  </style>
+</head>
+<body>
+
+<!-- Prototype notice -->
+<div style="position:fixed;top:0;left:0;right:0;background:#f9f8f7;border-bottom:1px solid #DFE3E7;text-align:center;padding:5px 0;font-size:11px;color:#A0ADB8;z-index:100;letter-spacing:0.02em;">
+  UI Prototype — for design review only
+</div>
+<div style="height:27px;"></div>
+
+<div style="display:flex;min-height:calc(100vh - 27px);">
+
+<!-- ======= SIDEBAR ======= -->
+<aside class="sidebar" style="top:27px;">
+  <div class="sidebar-logo">
+    <img src="logo.png" alt="Fusion CRM" />
+  </div>
+
+  <nav class="nav-section">
+
+    <!-- Dashboard -->
+    <a href="dashboard.html" class="nav-item">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="5.5" height="5.5" rx="1.2" fill="currentColor"/><rect x="9.5" y="1" width="5.5" height="5.5" rx="1.2" fill="currentColor" opacity="0.5"/><rect x="1" y="9.5" width="5.5" height="5.5" rx="1.2" fill="currentColor" opacity="0.5"/><rect x="9.5" y="9.5" width="5.5" height="5.5" rx="1.2" fill="currentColor"/></svg>
+      Dashboard
+    </a>
+
+    <div class="nav-divider"></div>
+
+    <!-- Contacts group -->
+    <div class="nav-group">
+      <div class="nav-parent open has-active" onclick="toggleGroup(this)">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="6" cy="5" r="2.5" fill="currentColor"/><path d="M1 13c0-2.8 2.2-5 5-5s5 2.2 5 5" stroke="currentColor" stroke-width="1.5" fill="none"/><circle cx="12" cy="5" r="2" fill="currentColor" opacity="0.5"/><path d="M12 9c1.7.3 3 1.9 3 3.8" stroke="currentColor" stroke-width="1.5" fill="none" opacity="0.5"/></svg>
+        Contacts
+        <svg class="chevron" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4 3l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+      <div class="nav-children open">
+        <a href="contacts.html" class="nav-child active"><span class="nav-child-dot"></span>All Contacts</a>
+        <a href="#" class="nav-child"><span class="nav-child-dot"></span>Buyer Pipeline</a>
+        <a href="#" class="nav-child"><span class="nav-child-dot"></span>Seller Pipeline</a>
+      </div>
+    </div>
+
+    <!-- Properties group -->
+    <div class="nav-group">
+      <div class="nav-parent" onclick="toggleGroup(this)">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="1" y="6" width="14" height="9" rx="1.2" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M4 6V4.5A4 4 0 0 1 12 4.5V6" stroke="currentColor" stroke-width="1.5" fill="none"/><rect x="6" y="10" width="4" height="5" rx="0.8" fill="currentColor" opacity="0.5"/></svg>
+        Properties
+        <svg class="chevron" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4 3l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+      <div class="nav-children">
+        <a href="projects.html" class="nav-child"><span class="nav-child-dot"></span>Projects</a>
+        <a href="#" class="nav-child"><span class="nav-child-dot"></span>Lots</a>
+        <a href="#" class="nav-child"><span class="nav-child-dot"></span>Potential Properties</a>
+        <a href="#" class="nav-child"><span class="nav-child-dot"></span>Favourites</a>
+      </div>
+    </div>
+
+    <!-- Sales group -->
+    <div class="nav-group">
+      <div class="nav-parent" onclick="toggleGroup(this)">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2 12L6 8l3 3 5-7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Sales
+        <svg class="chevron" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4 3l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+      <div class="nav-children">
+        <a href="#" class="nav-child"><span class="nav-child-dot"></span>Reservations</a>
+        <a href="#" class="nav-child"><span class="nav-child-dot"></span>Sales &amp; Commissions</a>
+      </div>
+    </div>
+
+    <!-- Tasks (flat) -->
+    <a href="#" class="nav-item">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M5 8l2.5 2.5L11 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Tasks
+    </a>
+
+    <div class="nav-divider"></div>
+
+    <!-- Marketing group -->
+    <div class="nav-group">
+      <div class="nav-parent" onclick="toggleGroup(this)">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2 10V6l10-4v12L2 10z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" fill="none"/><path d="M12 8h3M4 10v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Marketing
+        <svg class="chevron" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4 3l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+      <div class="nav-children">
+        <a href="#" class="nav-child"><span class="nav-child-dot"></span>Mail Lists</a>
+        <a href="#" class="nav-child"><span class="nav-child-dot"></span>Campaigns</a>
+        <a href="#" class="nav-child"><span class="nav-child-dot"></span>Flyers</a>
+        <a href="#" class="nav-child"><span class="nav-child-dot"></span>Bot in a Box</a>
+        <a href="#" class="nav-child"><span class="nav-child-dot"></span>Ad Manager</a>
+      </div>
+    </div>
+
+    <!-- Reports group -->
+    <div class="nav-group">
+      <div class="nav-parent" onclick="toggleGroup(this)">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="1" y="9" width="3" height="6" rx="0.8" fill="currentColor"/><rect x="6.5" y="5" width="3" height="10" rx="0.8" fill="currentColor" opacity="0.7"/><rect x="12" y="1" width="3" height="14" rx="0.8" fill="currentColor" opacity="0.5"/></svg>
+        Reports
+        <svg class="chevron" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4 3l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+      <div class="nav-children">
+        <a href="#" class="nav-child"><span class="nav-child-dot"></span>Overview</a>
+        <a href="#" class="nav-child"><span class="nav-child-dot"></span>Agent Performance</a>
+        <a href="#" class="nav-child"><span class="nav-child-dot"></span>Login History</a>
+        <a href="#" class="nav-child"><span class="nav-child-dot"></span>Same Device Detection</a>
+      </div>
+    </div>
+
+    <!-- Resources (flat) -->
+    <a href="#" class="nav-item">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2 3h12v11H2z" stroke="currentColor" stroke-width="1.5" fill="none" rx="1"/><path d="M5 7h6M5 10h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Resources
+    </a>
+
+    <!-- Websites (flat) -->
+    <a href="#" class="nav-item">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.5C6 4 5 6 5 8s1 4 3 6.5M8 1.5C10 4 11 6 11 8s-1 4-3 6.5M1.5 8h13" stroke="currentColor" stroke-width="1.2"/></svg>
+      Websites
+    </a>
+
+  </nav>
+
+  <div class="nav-bottom">
+    <a href="#" class="nav-item">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.1 3.1l1.4 1.4M11.5 11.5l1.4 1.4M3.1 12.9l1.4-1.4M11.5 4.5l1.4-1.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Settings
+    </a>
+    <a href="#" class="nav-item">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 1L10 5h4l-3.5 2.5 1.5 4L8 9l-4 2.5 1.5-4L2 5h4z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" fill="none"/></svg>
+      Admin Panel
+    </a>
+    <a href="index.html" class="nav-item" style="font-size:11px;opacity:0.6;">
+      ← Prototype Index
+    </a>
+  </div>
+</aside>
+
+<!-- ======= MAIN CONTENT ======= -->
+<div style="margin-left:220px;flex:1;display:flex;flex-direction:column;min-height:calc(100vh - 27px);">
+
+  <!-- Page Header -->
+  <header class="page-header">
+    <div class="breadcrumb">
+      <a href="index.html">Home</a>
+      <span class="sep">/</span>
+      <a href="contacts.html">Contacts</a>
+      <span class="sep">/</span>
+      <span class="current">Sarah Mitchell</span>
+    </div>
+  </header>
+
+  <div style="padding:20px 24px;flex:1;">
+    <div style="display:grid;grid-template-columns:1fr 380px;gap:20px;align-items:start;">
+
+      <!-- ===== LEFT COLUMN ===== -->
+      <div style="display:flex;flex-direction:column;gap:16px;">
+
+        <!-- Contact Header Card -->
+        <div class="card" style="padding:20px;">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;">
+            <div style="display:flex;align-items:center;gap:14px;">
+              <!-- Avatar -->
+              <div style="width:52px;height:52px;border-radius:50%;background:#f28036;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:white;flex-shrink:0;">SM</div>
+              <div>
+                <div style="font-size:20px;font-weight:700;color:#475F7B;line-height:1.1;">Sarah Mitchell</div>
+                <div style="display:flex;align-items:center;gap:10px;margin-top:5px;flex-wrap:wrap;">
+                  <span style="display:inline-flex;align-items:center;font-size:13px;color:#475F7B;">
+                    <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#3BAA8C;margin-right:6px;"></span>Qualified
+                  </span>
+                  <span style="font-size:12.5px;font-weight:600;color:#f28036;">Lead Score 87/100</span>
+                  <span style="color:#C53030;background:#FFF5F5;padding:2px 7px;border-radius:4px;font-size:12px;font-weight:500;">31d since contact</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap;">
+                  <span style="font-size:12.5px;color:#A0ADB8;display:flex;align-items:center;gap:4px;">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1L7 4.5H11L8 6.5L9 10L6 8L3 10L4 6.5L1 4.5H5L6 1Z" fill="#A0ADB8"/></svg>
+                    Facebook Ad
+                  </span>
+                  <span style="font-size:12.5px;color:#A0ADB8;">·</span>
+                  <span style="font-size:12.5px;color:#A0ADB8;">Added 11 Feb 2026</span>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;gap:6px;flex-shrink:0;">
+              <button class="btn-outline" style="padding:6px 10px;font-size:12px;">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 9l8-6M10 3v4M10 3H6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Edit
+              </button>
+              <button class="btn-outline" style="padding:6px 10px;font-size:12px;">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="3" cy="6" r="1" fill="currentColor"/><circle cx="6" cy="6" r="1" fill="currentColor"/><circle cx="9" cy="6" r="1" fill="currentColor"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Tags -->
+          <div style="margin-bottom:14px;">
+            <span class="tag">SMSF</span>
+            <span class="tag">Sydney</span>
+            <span class="tag">Under $800k</span>
+            <span class="tag">First Home</span>
+          </div>
+
+          <!-- Action buttons -->
+          <div style="display:flex;gap:8px;flex-wrap:wrap;padding-top:12px;border-top:1px solid #DFE3E7;">
+            <button class="btn-primary" style="font-size:12.5px;padding:7px 12px;">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1 1.5h11v8H1z" stroke="white" stroke-width="1.2" fill="none"/><path d="M1 2l5.5 4L12 2" stroke="white" stroke-width="1.2" stroke-linecap="round"/></svg>
+              Send Email
+            </button>
+            <button class="btn-outline" style="font-size:12.5px;padding:7px 12px;">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 1.5c0 5.5 4.5 10 10 10l.5-2.5-2.5-1-.8 1.3C7.7 8.7 5.3 6.3 4.2 4.8L5.5 4 4.5 1.5H2Z" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>
+              Log Call
+            </button>
+            <button class="btn-outline" style="font-size:12.5px;padding:7px 12px;">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1.5" y="1.5" width="10" height="10" rx="1.2" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M4 6.5h5M6.5 4v5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+              Add Note
+            </button>
+            <button class="btn-outline" style="font-size:12.5px;padding:7px 12px;">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1.5" y="2" width="10" height="9" rx="1.2" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M1.5 5h10" stroke="currentColor" stroke-width="1.2"/><path d="M4.5 1v2M8.5 1v2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+              Schedule Task
+            </button>
+          </div>
+        </div>
+
+        <!-- AI Summary Card -->
+        <div style="background:rgba(242,128,54,0.05);border:1px solid rgba(242,128,54,0.2);border-radius:8px;padding:16px 18px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <div style="display:flex;align-items:center;gap:9px;">
+              <div style="width:28px;height:28px;background:#f28036;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M7 1L8.2 4.8L12 6L8.2 7.2L7 11L5.8 7.2L2 6L5.8 4.8L7 1Z" fill="white" stroke-linejoin="round"/>
+                  <path d="M11 9l.5 1.5L13 11l-1.5.5L11 13l-.5-1.5L9 11l1.5-.5L11 9Z" fill="white" opacity="0.7"/>
+                </svg>
+              </div>
+              <div style="font-size:14px;font-weight:600;color:#475F7B;">AI Summary</div>
+            </div>
+            <button style="font-size:12px;color:#f28036;background:none;border:none;cursor:pointer;font-family:'Inter',sans-serif;display:flex;align-items:center;gap:4px;">
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M9 5.5A3.5 3.5 0 112 5.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M9 3v2.5H6.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Refresh
+            </button>
+          </div>
+          <p style="font-size:13px;color:#475F7B;line-height:1.65;">
+            Sarah is a motivated first-home buyer looking for 2BR apartments under $800k in inner Sydney. She engaged 3× with the Aria Residences brochure last week and opened your last 2 emails. Her finance pre-approval expires in 6 weeks — she's likely to move quickly. <strong>High urgency contact.</strong>
+          </p>
+          <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+            <span style="font-size:12px;color:#C05621;background:rgba(242,128,54,0.1);padding:3px 8px;border-radius:4px;font-weight:500;">Finance deadline: ~6 weeks</span>
+            <span style="font-size:12px;color:#276749;background:#F0FFF4;padding:3px 8px;border-radius:4px;font-weight:500;">High engagement</span>
+          </div>
+        </div>
+
+        <!-- Activity Timeline -->
+        <div class="card" style="padding:18px 18px 12px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <div style="font-size:15px;font-weight:600;color:#475F7B;">Activity</div>
+            <button class="btn-outline" style="font-size:12px;padding:5px 10px;">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+              Log Activity
+            </button>
+          </div>
+
+          <!-- Filter chips -->
+          <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;">
+            <button class="filter-chip active">All</button>
+            <button class="filter-chip">Notes</button>
+            <button class="filter-chip">Emails</button>
+            <button class="filter-chip">Calls</button>
+            <button class="filter-chip">Tasks</button>
+          </div>
+
+          <!-- Timeline -->
+          <div>
+
+            <!-- Entry 1: Email -->
+            <div class="timeline-item">
+              <div class="tl-icon" style="background:rgba(242,128,54,0.08);border-color:rgba(242,128,54,0.3);">
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1 1.5h11v8H1z" stroke="#f28036" stroke-width="1.1" fill="none"/><path d="M1 2.5l5.5 4L12 2.5" stroke="#f28036" stroke-width="1.1" stroke-linecap="round"/></svg>
+              </div>
+              <div style="flex:1;padding-top:2px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;">
+                  <div style="font-size:13px;font-weight:500;color:#475F7B;">Email sent <span style="font-weight:400;color:#A0ADB8;font-size:12px;">· 31 days ago</span></div>
+                </div>
+                <div style="font-size:12.5px;color:#727E8C;margin-bottom:6px;">"Finance pre-approval follow-up" — to sarah.mitchell@gmail.com</div>
+                <div style="display:flex;gap:6px;">
+                  <button class="btn-outline" style="font-size:11.5px;padding:4px 8px;">View</button>
+                  <button class="btn-outline" style="font-size:11.5px;padding:4px 8px;">Reply</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Entry 2: Call -->
+            <div class="timeline-item">
+              <div class="tl-icon" style="background:#F0FFF4;border-color:#3BAA8C;">
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 1.5c0 5.5 4.5 10 10 10l.5-2.5-2.5-1-.8 1.3C7.7 8.7 5.3 6.3 4.2 4.8L5.5 4 4.5 1.5H2Z" stroke="#3BAA8C" stroke-width="1.1" fill="none"/></svg>
+              </div>
+              <div style="flex:1;padding-top:2px;">
+                <div style="font-size:13px;font-weight:500;color:#475F7B;margin-bottom:3px;">Call logged <span style="font-weight:400;color:#A0ADB8;font-size:12px;">· 34 days ago</span></div>
+                <div style="font-size:12.5px;color:#727E8C;margin-bottom:4px;">Duration: 6m 42s · Outcome: Very interested, sending brochures</div>
+                <div style="font-size:12px;color:#A0ADB8;background:#f3f1ee;border-radius:5px;padding:6px 10px;margin-bottom:6px;">
+                  "She confirmed budget is firm at $750k. Interested in Aria Residences 2BR. Wants north-facing if possible. Partner works in CBD — commute is a priority."
+                </div>
+                <button class="btn-outline" style="font-size:11.5px;padding:4px 8px;">Edit</button>
+              </div>
+            </div>
+
+            <!-- Entry 3: Note -->
+            <div class="timeline-item">
+              <div class="tl-icon" style="background:#FFFBEB;border-color:#F5A623;">
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1.5" y="1.5" width="10" height="10" rx="1.2" stroke="#975A16" stroke-width="1.1" fill="none"/><path d="M4 4.5h5M4 6.5h5M4 8.5h3" stroke="#975A16" stroke-width="1.1" stroke-linecap="round"/></svg>
+              </div>
+              <div style="flex:1;padding-top:2px;">
+                <div style="font-size:13px;font-weight:500;color:#475F7B;margin-bottom:3px;">Note added <span style="font-weight:400;color:#A0ADB8;font-size:12px;">· 35 days ago</span></div>
+                <div style="font-size:12.5px;color:#727E8C;background:#f3f1ee;border-radius:5px;padding:8px 10px;margin-bottom:6px;line-height:1.5;">
+                  "Wants 2BR, level 3+, north facing. Budget firm at $750k. Partner works in CBD — proximity matters. Currently renting in Newtown, lease up in August."
+                </div>
+                <div style="display:flex;gap:6px;">
+                  <button class="btn-outline" style="font-size:11.5px;padding:4px 8px;">Edit</button>
+                  <button class="btn-outline" style="font-size:11.5px;padding:4px 8px;color:#E53E3E;border-color:#FED7D7;">Delete</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Entry 4: Property viewed -->
+            <div class="timeline-item">
+              <div class="tl-icon" style="background:#f3f1ee;border-color:#DFE3E7;">
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 6.5L6.5 2l5 4.5V11H8.5V8.5h-4V11H1.5z" stroke="#727E8C" stroke-width="1.1" stroke-linejoin="round" fill="none"/></svg>
+              </div>
+              <div style="flex:1;padding-top:2px;">
+                <div style="font-size:13px;font-weight:500;color:#475F7B;margin-bottom:3px;">Property viewed <span style="font-weight:400;color:#A0ADB8;font-size:12px;">· 38 days ago</span></div>
+                <div style="font-size:12.5px;color:#727E8C;margin-bottom:6px;">Aria Residences — Lot 14B · 2BR · Level 4 · $729,000</div>
+                <button class="btn-outline" style="font-size:11.5px;padding:4px 8px;">View Lot</button>
+              </div>
+            </div>
+
+            <!-- Entry 5: Task completed -->
+            <div class="timeline-item">
+              <div class="tl-icon" style="background:#F0FFF4;border-color:#3BAA8C;">
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 6.5l3 3 6-5.5" stroke="#3BAA8C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <div style="flex:1;padding-top:2px;">
+                <div style="font-size:13px;font-weight:500;color:#475F7B;margin-bottom:3px;">Task completed <span style="font-weight:400;color:#A0ADB8;font-size:12px;">· 40 days ago</span></div>
+                <div style="font-size:12.5px;color:#727E8C;">"Send Aria Residences brochure" — completed by Jessica Park</div>
+              </div>
+            </div>
+
+            <!-- Entry 6: Email -->
+            <div class="timeline-item">
+              <div class="tl-icon" style="background:rgba(242,128,54,0.08);border-color:rgba(242,128,54,0.3);">
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1 1.5h11v8H1z" stroke="#f28036" stroke-width="1.1" fill="none"/><path d="M1 2.5l5.5 4L12 2.5" stroke="#f28036" stroke-width="1.1" stroke-linecap="round"/></svg>
+              </div>
+              <div style="flex:1;padding-top:2px;">
+                <div style="font-size:13px;font-weight:500;color:#475F7B;margin-bottom:3px;">Email sent <span style="font-weight:400;color:#A0ADB8;font-size:12px;">· 41 days ago</span></div>
+                <div style="font-size:12.5px;color:#727E8C;margin-bottom:6px;">"Welcome to Fusion Property — Here's what we found for you"</div>
+                <div style="display:flex;gap:6px;">
+                  <button class="btn-outline" style="font-size:11.5px;padding:4px 8px;">View</button>
+                  <span style="font-size:11.5px;color:#276749;background:#F0FFF4;padding:4px 8px;border-radius:5px;border:1px solid #C6F6D5;">Opened × 3</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Entry 7: Created -->
+            <div class="timeline-item" style="padding-bottom:4px;">
+              <div class="tl-icon" style="background:#f3f1ee;border-color:#DFE3E7;">
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="5" stroke="#A0ADB8" stroke-width="1.1" fill="none"/><path d="M6.5 3.5v3l2 1.5" stroke="#A0ADB8" stroke-width="1.1" stroke-linecap="round"/></svg>
+              </div>
+              <div style="flex:1;padding-top:2px;">
+                <div style="font-size:13px;font-weight:500;color:#475F7B;margin-bottom:3px;">Contact created <span style="font-weight:400;color:#A0ADB8;font-size:12px;">· 41 days ago</span></div>
+                <div style="font-size:12.5px;color:#727E8C;">Via Facebook Lead Ad — "Inner Sydney Apartments · Feb 2026" campaign</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ===== RIGHT COLUMN ===== -->
+      <div style="display:flex;flex-direction:column;gap:14px;">
+
+        <!-- Stage Progression -->
+        <div class="card" style="padding:18px;">
+          <div style="font-size:14px;font-weight:600;color:#475F7B;margin-bottom:14px;">Stage Progression</div>
+
+          <div>
+            <div class="stage-step">
+              <div class="stage-circle done">
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5 4-4" stroke="white" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <div style="font-size:13px;color:#3BAA8C;font-weight:500;">New</div>
+            </div>
+            <div class="stage-line done"></div>
+            <div class="stage-step">
+              <div class="stage-circle done">
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5 4-4" stroke="white" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <div style="font-size:13px;color:#3BAA8C;font-weight:500;">Contacted</div>
+            </div>
+            <div class="stage-line done"></div>
+            <div class="stage-step">
+              <div class="stage-circle current">
+                <svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="2.5" fill="white"/></svg>
+              </div>
+              <div style="font-size:13px;color:#f28036;font-weight:600;">Qualified</div>
+              <span style="font-size:11px;color:#f28036;background:rgba(242,128,54,0.1);padding:2px 7px;border-radius:4px;margin-left:4px;">Current</span>
+            </div>
+            <div class="stage-line"></div>
+            <div class="stage-step">
+              <div class="stage-circle"></div>
+              <div style="font-size:13px;color:#A0ADB8;">Proposal</div>
+            </div>
+            <div class="stage-line"></div>
+            <div class="stage-step">
+              <div class="stage-circle"></div>
+              <div style="font-size:13px;color:#A0ADB8;">Under Contract</div>
+            </div>
+            <div class="stage-line"></div>
+            <div class="stage-step">
+              <div class="stage-circle"></div>
+              <div style="font-size:13px;color:#A0ADB8;">Closed / Won</div>
+            </div>
+          </div>
+
+          <div style="margin-top:14px;padding-top:14px;border-top:1px solid #DFE3E7;">
+            <button class="btn-orange-outline" style="width:100%;justify-content:center;font-size:13px;padding:9px;">
+              Move to Proposal →
+            </button>
+          </div>
+        </div>
+
+        <!-- Upcoming Tasks -->
+        <div class="card" style="padding:16px 18px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <div style="font-size:14px;font-weight:600;color:#475F7B;">Upcoming Tasks</div>
+            <span style="font-size:12px;background:#f28036;color:white;padding:2px 7px;border-radius:4px;font-weight:500;">2</span>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
+
+            <div style="background:#f3f1ee;border-radius:6px;padding:10px 12px;display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+              <div style="flex:1;">
+                <div style="font-size:13px;font-weight:500;color:#475F7B;margin-bottom:3px;">Follow up re: finance approval</div>
+                <div style="font-size:12px;color:#C05621;display:flex;align-items:center;gap:4px;">
+                  <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><circle cx="5.5" cy="5.5" r="4.5" stroke="currentColor" stroke-width="1.1" fill="none"/><path d="M5.5 3v2.5l1.5 1.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+                  Due tomorrow
+                </div>
+              </div>
+              <button class="btn-outline" style="font-size:11.5px;padding:5px 10px;flex-shrink:0;">Complete</button>
+            </div>
+
+            <div style="background:#f3f1ee;border-radius:6px;padding:10px 12px;display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+              <div style="flex:1;">
+                <div style="font-size:13px;font-weight:500;color:#475F7B;margin-bottom:3px;">Schedule property inspection</div>
+                <div style="font-size:12px;color:#727E8C;display:flex;align-items:center;gap:4px;">
+                  <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><circle cx="5.5" cy="5.5" r="4.5" stroke="currentColor" stroke-width="1.1" fill="none"/><path d="M5.5 3v2.5l1.5 1.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+                  Due in 3 days
+                </div>
+              </div>
+              <button class="btn-outline" style="font-size:11.5px;padding:5px 10px;flex-shrink:0;">Complete</button>
+            </div>
+
+          </div>
+
+          <button style="font-size:13px;color:#f28036;background:none;border:none;cursor:pointer;font-family:'Inter',sans-serif;display:flex;align-items:center;gap:5px;padding:0;">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1v11M1 6.5h11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            Add Task
+          </button>
+        </div>
+
+        <!-- Property Interests -->
+        <div class="card" style="padding:16px 18px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <div style="font-size:14px;font-weight:600;color:#475F7B;">Property Interests</div>
+            <button class="btn-outline" style="font-size:11.5px;padding:4px 8px;">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+              Match
+            </button>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
+            <div style="background:#f3f1ee;border-radius:6px;padding:10px 12px;">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px;">
+                <div style="font-size:13px;font-weight:500;color:#475F7B;">Aria Residences</div>
+                <span style="font-size:12px;display:flex;align-items:center;gap:5px;color:#2E8B57;">
+                  <span style="width:7px;height:7px;border-radius:50%;background:#2E8B57;display:inline-block;"></span>Available
+                </span>
+              </div>
+              <div style="font-size:12px;color:#727E8C;">Lot 14B · 2BR · Level 4 · $729,000</div>
+              <div style="font-size:11.5px;color:#A0ADB8;margin-top:3px;">Surry Hills NSW · Meriton</div>
+            </div>
+
+            <div style="background:#f3f1ee;border-radius:6px;padding:10px 12px;">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px;">
+                <div style="font-size:13px;font-weight:500;color:#475F7B;">Skyline One</div>
+                <span style="font-size:12px;display:flex;align-items:center;gap:5px;color:#2E8B57;">
+                  <span style="width:7px;height:7px;border-radius:50%;background:#2E8B57;display:inline-block;"></span>Available
+                </span>
+              </div>
+              <div style="font-size:12px;color:#727E8C;">Lot 7A · 2BR · Level 8 · $798,000</div>
+              <div style="font-size:11.5px;color:#A0ADB8;margin-top:3px;">Parramatta NSW · Crown Group</div>
+            </div>
+          </div>
+
+          <button style="font-size:12.5px;color:#f28036;background:none;border:none;cursor:pointer;font-family:'Inter',sans-serif;display:flex;align-items:center;gap:4px;padding:0;text-decoration:none;">
+            Match more properties →
+          </button>
+        </div>
+
+        <!-- Contact Info -->
+        <div class="card" style="padding:16px 18px;">
+          <div style="font-size:14px;font-weight:600;color:#475F7B;margin-bottom:12px;">Contact Info</div>
+          <div>
+            <div class="info-row">
+              <div class="info-label">Email</div>
+              <div class="info-value">
+                <a href="mailto:sarah.mitchell@gmail.com" style="color:#f28036;text-decoration:none;font-size:13px;">sarah.mitchell@gmail.com</a>
+              </div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">Phone</div>
+              <div class="info-value">
+                <a href="tel:+61412345678" style="color:#475F7B;text-decoration:none;font-size:13px;">+61 412 345 678</a>
+              </div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">Address</div>
+              <div class="info-value" style="font-size:13px;">24 King St, Newtown NSW 2042</div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">Agent</div>
+              <div class="info-value" style="display:flex;align-items:center;gap:7px;font-size:13px;">
+                <div style="width:22px;height:22px;border-radius:50%;background:#6B8CAE;color:white;font-size:9.5px;font-weight:600;display:flex;align-items:center;justify-content:center;">JP</div>
+                Jessica Park
+              </div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">Origin</div>
+              <div class="info-value" style="font-size:13px;">Property enquiry</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<!-- Floating AI button -->
+<button style="position:fixed;bottom:28px;right:28px;width:56px;height:56px;border-radius:50%;background:#f28036;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(242,128,54,0.4);transition:background 0.15s;z-index:999;" onmouseover="this.style.background='#e0722a';" onmouseout="this.style.background='#f28036';" title="AI Assistant">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <path d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z" fill="white" stroke="white" stroke-width="0.5" stroke-linejoin="round"/>
+    <path d="M19 15l.75 2.25L22 18l-2.25.75L19 21l-.75-2.25L16 18l2.25-.75L19 15Z" fill="white" opacity="0.8"/>
+    <path d="M5 3l.5 1.5L7 5l-1.5.5L5 7l-.5-1.5L3 5l1.5-.5L5 3Z" fill="white" opacity="0.6"/>
+  </svg>
+</button>
+
+<script>
+function toggleGroup(el) {
+  const parent = el.closest('.nav-group');
+  const children = parent.querySelector('.nav-children');
+  const isOpen = el.classList.contains('open');
+  el.classList.toggle('open', !isOpen);
+  children.classList.toggle('open', !isOpen);
+}
+</script>
+</body>
+</html>

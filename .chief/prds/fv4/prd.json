@@ -140,7 +140,7 @@
         "Migrations run (if any): php artisan migrate --force"
       ],
       "priority": 8,
-      "passes": false
+      "passes": true
     },
     {
       "id": "US-009",
@@ -160,7 +160,7 @@
         "Migrations run (if any): php artisan migrate --force"
       ],
       "priority": 9,
-      "passes": false
+      "passes": true
     },
     {
       "id": "US-010",
@@ -178,7 +178,7 @@
         "Migrations run (if any): php artisan migrate --force"
       ],
       "priority": 10,
-      "passes": false
+      "passes": true
     },
     {
       "id": "US-011",
@@ -196,7 +196,7 @@
         "Migrations run (if any): php artisan migrate --force"
       ],
       "priority": 11,
-      "passes": false
+      "passes": true
     },
     {
       "id": "US-012",
@@ -215,7 +215,8 @@
         "Migrations run (if any): php artisan migrate --force"
       ],
       "priority": 12,
-      "passes": false
+      "passes": false,
+      "inProgress": true
     },
     {
       "id": "US-013",

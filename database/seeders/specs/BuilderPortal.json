@@ -1,0 +1,120 @@
+{
+    "model": "BuilderPortal",
+    "table": "builder_portals",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "slug": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "logo_path": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "primary_color": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "secondary_color": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "contact_email": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "contact_phone": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "disclaimer": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "show_prices": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "show_agent_details": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "is_active": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "allowed_project_ids": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": {
+        "show_prices": {
+            "type": "boolean",
+            "example": true
+        },
+        "show_agent_details": {
+            "type": "boolean",
+            "example": true
+        },
+        "is_active": {
+            "type": "boolean",
+            "example": true
+        },
+        "name": {
+            "type": "name",
+            "example": "John Doe"
+        },
+        "contact_email": {
+            "type": "email",
+            "example": "user@example.com"
+        }
+    },
+    "scenarios": []
+}

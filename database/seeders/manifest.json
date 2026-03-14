@@ -1680,6 +1680,51 @@
             "data_files": [
                 "cold_outreach_templates.json"
             ]
+        },
+        {
+            "name": "ListingVersionSeeder",
+            "category": "development",
+            "description": "Seeds ListingVersion data",
+            "dependencies": [],
+            "data_files": [
+                "listing_versions.json"
+            ]
+        },
+        {
+            "name": "PushScheduleSeeder",
+            "category": "development",
+            "description": "Seeds PushSchedule data",
+            "dependencies": [],
+            "data_files": [
+                "push_schedules.json"
+            ]
+        },
+        {
+            "name": "MatchScoreSeeder",
+            "category": "development",
+            "description": "Seeds MatchScore data",
+            "dependencies": [],
+            "data_files": [
+                "match_scores.json"
+            ]
+        },
+        {
+            "name": "BuilderPortalSeeder",
+            "category": "development",
+            "description": "Seeds BuilderPortal data",
+            "dependencies": [],
+            "data_files": [
+                "builder_portals.json"
+            ]
+        },
+        {
+            "name": "WordpressWebsiteSeeder",
+            "category": "development",
+            "description": "Seeds WordpressWebsite data",
+            "dependencies": [],
+            "data_files": [
+                "wordpress_websites.json"
+            ]
         }
     ],
     "categories": {

@@ -1,0 +1,87 @@
+{
+    "model": "PushSchedule",
+    "table": "push_schedules",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "pushable_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "pushable_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "channel": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "scheduled_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "published_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "notes": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        },
+        "creator": {
+            "type": "belongsTo",
+            "model": "Creator"
+        }
+    },
+    "value_hints": {
+        "scheduled_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        },
+        "published_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        }
+    },
+    "scenarios": []
+}

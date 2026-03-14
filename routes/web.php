@@ -8,9 +8,11 @@ declare(strict_types=1);
  * after adding or changing routes.
  */
 
+use App\Http\Controllers\AgentPortalController;
 use App\Http\Controllers\AiSummaryController;
 use App\Http\Controllers\AnnouncementsTableController;
 use App\Http\Controllers\Api\LoginEventController;
+use App\Http\Controllers\Api\ProvisionerApiController;
 use App\Http\Controllers\Api\SlugAvailabilityController;
 use App\Http\Controllers\Billing\BillingDashboardController;
 use App\Http\Controllers\Billing\CreditController;
@@ -20,6 +22,7 @@ use App\Http\Controllers\Billing\PricingController;
 use App\Http\Controllers\Billing\StripeWebhookController;
 use App\Http\Controllers\Blog\BlogController;
 use App\Http\Controllers\BotV2Controller;
+use App\Http\Controllers\BuilderPortalController;
 use App\Http\Controllers\CampaignSiteController;
 use App\Http\Controllers\CategoriesTableController;
 use App\Http\Controllers\Changelog\ChangelogController;
@@ -33,12 +36,14 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Dev\ComponentShowcaseController;
 use App\Http\Controllers\Dev\PageGalleryController;
 use App\Http\Controllers\EnterpriseInquiryController;
+use App\Http\Controllers\FlyerController;
 use App\Http\Controllers\FunnelController;
 use App\Http\Controllers\FunnelTemplateController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\HelpCenter\HelpCenterController;
 use App\Http\Controllers\HelpCenter\RateHelpArticleController;
 use App\Http\Controllers\Internal\CaddyAskController;
+use App\Http\Controllers\InventoryApiController;
 use App\Http\Controllers\InvitationAcceptController;
 use App\Http\Controllers\LeadCaptureController;
 use App\Http\Controllers\LeadGenerationController;
@@ -67,6 +72,8 @@ use App\Http\Controllers\ProjectsTableController;
 use App\Http\Controllers\PropertyEnquiryController;
 use App\Http\Controllers\PropertyReservationController;
 use App\Http\Controllers\PropertySearchController;
+use App\Http\Controllers\PublicSiteController;
+use App\Http\Controllers\PuckTemplateController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\SearchController;
@@ -309,6 +316,26 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::post('funnel/templates', [FunnelTemplateController::class, 'store'])->name('funnel.templates.store');
     Route::post('funnel/templates/{template}/enroll/{contact}', [FunnelTemplateController::class, 'enroll'])->name('funnel.templates.enroll');
     Route::get('ai/calls', [VapiController::class, 'index'])->name('ai.calls.index');
+
+    // Phase 2 — Property, Builder & Push Portal (US-012)
+    Route::get('agent-portal', [AgentPortalController::class, 'index'])->name('agent-portal.index');
+    Route::post('agent-portal/schedule', [AgentPortalController::class, 'schedule'])->name('agent-portal.schedule');
+
+    Route::get('builder-portal', [BuilderPortalController::class, 'index'])->name('builder-portal.index');
+    Route::post('builder-portal', [BuilderPortalController::class, 'store'])->name('builder-portal.store');
+    Route::get('builder-portal/{portal}', [BuilderPortalController::class, 'show'])->name('builder-portal.show');
+
+    Route::get('inventory', [InventoryApiController::class, 'index'])->name('inventory.index');
+    Route::post('inventory/import', [InventoryApiController::class, 'import'])->name('inventory.import');
+    Route::get('inventory/template/{type}', [InventoryApiController::class, 'template'])->name('inventory.template');
+
+    Route::get('flyers/{flyer}/edit-puck', [FlyerController::class, 'editPuck'])->name('flyers.edit-puck');
+    Route::post('flyers/{flyer}/puck-save', [FlyerController::class, 'savePuck'])->name('flyers.puck-save');
+    Route::post('flyers/{flyer}/export-pdf', [FlyerController::class, 'exportPdf'])->name('flyers.export-pdf');
+
+    Route::get('puck-templates', [PuckTemplateController::class, 'index'])->name('puck-templates.index');
+    Route::post('puck-templates', [PuckTemplateController::class, 'store'])->name('puck-templates.store');
+    Route::get('puck-templates/{template}/edit', [PuckTemplateController::class, 'edit'])->name('puck-templates.edit');
 });
 
 Route::get('/api/slug-availability', SlugAvailabilityController::class)
@@ -327,6 +354,19 @@ Route::get('/internal/caddy/ask', CaddyAskController::class)
 Route::post('webhooks/stripe', StripeWebhookController::class)->name('webhooks.stripe')->withoutMiddleware([ValidateCsrfToken::class]);
 Route::post('webhooks/paddle', PaddleWebhookController::class)->name('webhooks.paddle')->withoutMiddleware([ValidateCsrfToken::class]);
 Route::post('webhooks/vapi', [VapiController::class, 'webhook'])->name('webhooks.vapi')->withoutMiddleware([ValidateCsrfToken::class]);
+
+// Public campaign site routes (no auth)
+Route::get('w/{uuid}', [PublicSiteController::class, 'show'])->name('public.campaign-site');
+Route::get('survey/{uuid}', [PublicSiteController::class, 'survey'])->name('public.survey');
+Route::post('survey/{uuid}', [PublicSiteController::class, 'submitSurvey'])->name('public.survey.submit')->withoutMiddleware([ValidateCsrfToken::class]);
+
+// WordPress provisioner API (auth:sanctum)
+Route::middleware('auth:sanctum')->prefix('api/provisioner')->name('provisioner.')->group(function (): void {
+    Route::get('wordpress-sites/pending', [ProvisionerApiController::class, 'pending'])->name('pending');
+    Route::get('wordpress-sites/removing', [ProvisionerApiController::class, 'removing'])->name('removing');
+    Route::post('wordpress-sites/{site}/callback', [ProvisionerApiController::class, 'callback'])->name('callback')->withoutMiddleware([ValidateCsrfToken::class]);
+    Route::get('subscribers/{api_key}', [ProvisionerApiController::class, 'subscriberDetail'])->name('subscriber');
+});
 
 Route::middleware(['auth', 'feature:onboarding'])->group(function (): void {
     Route::get('onboarding', [OnboardingController::class, 'show'])->name('onboarding');

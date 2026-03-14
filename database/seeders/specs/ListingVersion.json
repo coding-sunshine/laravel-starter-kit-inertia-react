@@ -1,0 +1,59 @@
+{
+    "model": "ListingVersion",
+    "table": "listing_versions",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "listable_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "listable_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "version": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "snapshot": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "change_summary": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "creator": {
+            "type": "belongsTo",
+            "model": "Creator"
+        }
+    },
+    "value_hints": {
+        "created_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        }
+    },
+    "scenarios": []
+}

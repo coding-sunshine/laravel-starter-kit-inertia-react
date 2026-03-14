@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fusion CRM — UI Prototype Index</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: '#f28036',
+            'brand-hover': '#e0722a',
+            'body-bg': '#f3f1ee',
+            'card-bg': '#f9f8f7',
+            'body-text': '#727E8C',
+            'heading': '#475F7B',
+            'border-col': '#DFE3E7',
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    body { font-family: 'Inter', sans-serif; background: #f3f1ee; color: #727E8C; }
+  </style>
+</head>
+<body>
+  <!-- Prototype notice -->
+  <div style="background:#f9f8f7;border-bottom:1px solid #DFE3E7;text-align:center;padding:6px 0;font-size:12px;color:#A0ADB8;letter-spacing:0.02em;">
+    UI Prototype — for design review only
+  </div>
+
+  <div class="max-w-4xl mx-auto px-8 py-16">
+    <!-- Header -->
+    <div class="flex items-center gap-4 mb-4">
+      <img src="logo.png" alt="Fusion CRM" style="height:48px;width:auto;display:block;" />
+    </div>
+    <div>
+      <p style="font-size:13px;color:#A0ADB8;margin-top:2px;">High-fidelity UI Prototype · Design Review Build</p>
+    </div>
+
+    <div style="height:1px;background:#DFE3E7;margin:28px 0;"></div>
+
+    <p style="font-size:14px;color:#727E8C;margin-bottom:32px;line-height:1.6;">
+      These are <strong>visual design references only</strong> — static HTML used as QA targets for Playwright screenshot checks. They are NOT React components. The actual build uses <strong>React + Inertia + shadcn/ui + Tailwind v4 + Laravel 12</strong>. Chief compares built pages against these prototypes. See <code>rebuild-plan/00-component-map.md</code> for the full page → component mapping.
+    </p>
+
+    <!-- Page cards grid -->
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:20px;">
+
+      <!-- Dashboard -->
+      <a href="dashboard.html" style="text-decoration:none;display:block;">
+        <div style="background:#f9f8f7;border:1px solid #DFE3E7;border-radius:10px;padding:24px 24px 20px;transition:box-shadow 0.15s;" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,0.08)';this.style.borderColor='#f28036';" onmouseout="this.style.boxShadow='none';this.style.borderColor='#DFE3E7';">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+            <div style="width:36px;height:36px;background:rgba(242,128,54,0.1);border-radius:8px;display:flex;align-items:center;justify-content:center;">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                <rect x="1" y="1" width="6" height="6" rx="1.5" fill="#f28036"/>
+                <rect x="11" y="1" width="6" height="6" rx="1.5" fill="#f28036" opacity="0.5"/>
+                <rect x="1" y="11" width="6" height="6" rx="1.5" fill="#f28036" opacity="0.5"/>
+                <rect x="11" y="11" width="6" height="6" rx="1.5" fill="#f28036"/>
+              </svg>
+            </div>
+            <span style="font-size:16px;font-weight:600;color:#475F7B;">Dashboard</span>
+          </div>
+          <p style="font-size:13px;color:#727E8C;line-height:1.55;margin-bottom:16px;">Priority work queue, pipeline funnel, AI daily insight, and KPI summary cards.</p>
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-size:12px;color:#A0ADB8;">dashboard.html</span>
+            <span style="font-size:13px;font-weight:500;color:#f28036;">Preview →</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- Contacts -->
+      <a href="contacts.html" style="text-decoration:none;display:block;">
+        <div style="background:#f9f8f7;border:1px solid #DFE3E7;border-radius:10px;padding:24px 24px 20px;transition:box-shadow 0.15s;" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,0.08)';this.style.borderColor='#f28036';" onmouseout="this.style.boxShadow='none';this.style.borderColor='#DFE3E7';">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+            <div style="width:36px;height:36px;background:rgba(242,128,54,0.1);border-radius:8px;display:flex;align-items:center;justify-content:center;">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                <circle cx="9" cy="6" r="3" fill="#f28036"/>
+                <path d="M2 16c0-3.314 3.134-6 7-6s7 2.686 7 6" stroke="#f28036" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+              </svg>
+            </div>
+            <span style="font-size:16px;font-weight:600;color:#475F7B;">Contacts</span>
+          </div>
+          <p style="font-size:13px;color:#727E8C;line-height:1.55;margin-bottom:16px;">Smart List sidebar, NLQ AI search bar, filterable data table with stages, scores, and days-since coloring.</p>
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-size:12px;color:#A0ADB8;">contacts.html</span>
+            <span style="font-size:13px;font-weight:500;color:#f28036;">Preview →</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- Contact Detail -->
+      <a href="contact-detail.html" style="text-decoration:none;display:block;">
+        <div style="background:#f9f8f7;border:1px solid #DFE3E7;border-radius:10px;padding:24px 24px 20px;transition:box-shadow 0.15s;" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,0.08)';this.style.borderColor='#f28036';" onmouseout="this.style.boxShadow='none';this.style.borderColor='#DFE3E7';">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+            <div style="width:36px;height:36px;background:rgba(242,128,54,0.1);border-radius:8px;display:flex;align-items:center;justify-content:center;">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                <circle cx="7" cy="5.5" r="3" fill="#f28036"/>
+                <path d="M1 16c0-3 2.686-5.5 6-5.5s6 2.5 6 5.5" stroke="#f28036" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+                <path d="M13 8l2 2-3.5 3.5" stroke="#f28036" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+              </svg>
+            </div>
+            <span style="font-size:16px;font-weight:600;color:#475F7B;">Contact Detail</span>
+          </div>
+          <p style="font-size:13px;color:#727E8C;line-height:1.55;margin-bottom:16px;">Full contact record with AI summary, activity timeline, stage stepper, tasks, and property interests.</p>
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-size:12px;color:#A0ADB8;">contact-detail.html</span>
+            <span style="font-size:13px;font-weight:500;color:#f28036;">Preview →</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- Projects -->
+      <a href="projects.html" style="text-decoration:none;display:block;">
+        <div style="background:#f9f8f7;border:1px solid #DFE3E7;border-radius:10px;padding:24px 24px 20px;transition:box-shadow 0.15s;" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,0.08)';this.style.borderColor='#f28036';" onmouseout="this.style.boxShadow='none';this.style.borderColor='#DFE3E7';">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+            <div style="width:36px;height:36px;background:rgba(242,128,54,0.1);border-radius:8px;display:flex;align-items:center;justify-content:center;">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                <rect x="1" y="7" width="16" height="10" rx="1.5" stroke="#f28036" stroke-width="1.8" fill="none"/>
+                <path d="M5 7V5a4 4 0 018 0v2" stroke="#f28036" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+                <circle cx="9" cy="12" r="1.5" fill="#f28036"/>
+              </svg>
+            </div>
+            <span style="font-size:16px;font-weight:600;color:#475F7B;">Projects</span>
+          </div>
+          <p style="font-size:13px;color:#727E8C;line-height:1.55;margin-bottom:16px;">Project grid with cards showing lot availability, construction stage, pricing, and developer info.</p>
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-size:12px;color:#A0ADB8;">projects.html</span>
+            <span style="font-size:13px;font-weight:500;color:#f28036;">Preview →</span>
+          </div>
+        </div>
+      </a>
+
+    </div>
+
+    <!-- Design system callout -->
+    <div style="margin-top:40px;background:#f9f8f7;border:1px solid #DFE3E7;border-radius:10px;padding:20px 24px;">
+      <p style="font-size:12px;font-weight:600;color:#475F7B;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px;">Design Tokens</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+        <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#727E8C;"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#f28036;"></span> Brand #f28036</div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#727E8C;"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#f3f1ee;border:1px solid #DFE3E7;"></span> Body #f3f1ee</div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#727E8C;"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#f9f8f7;border:1px solid #DFE3E7;"></span> Card #f9f8f7</div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#727E8C;"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#475F7B;"></span> Heading #475F7B</div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#727E8C;"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#727E8C;"></span> Body text #727E8C</div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#727E8C;"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#DFE3E7;border:1px solid #ccc;"></span> Border #DFE3E7</div>
+      </div>
+      <p style="font-size:12px;color:#A0ADB8;margin-top:12px;">Font: Inter · Framework: Laravel 12 + Inertia + React · Target: Filament 5 admin</p>
+    </div>
+
+    <p style="text-align:center;font-size:12px;color:#A0ADB8;margin-top:32px;">Fusion CRM v4 · UI Prototype · March 2026</p>
+  </div>
+
+  <!-- Floating AI button -->
+  <button style="position:fixed;bottom:28px;right:28px;width:56px;height:56px;border-radius:50%;background:#f28036;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(242,128,54,0.4);transition:background 0.15s;" onmouseover="this.style.background='#e0722a';" onmouseout="this.style.background='#f28036';" title="AI Assistant">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+      <path d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z" fill="white" stroke="white" stroke-width="0.5" stroke-linejoin="round"/>
+      <path d="M19 15l.75 2.25L22 18l-2.25.75L19 21l-.75-2.25L16 18l2.25-.75L19 15Z" fill="white" opacity="0.8"/>
+      <path d="M5 3l.5 1.5L7 5l-1.5.5L5 7l-.5-1.5L3 5l1.5-.5L5 3Z" fill="white" opacity="0.6"/>
+    </svg>
+  </button>
+
+</body>
+</html>

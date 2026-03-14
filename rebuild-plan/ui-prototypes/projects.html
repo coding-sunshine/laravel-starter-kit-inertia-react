@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Projects — Fusion CRM</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: { brand: '#f28036', 'body-bg': '#f3f1ee', 'card-bg': '#f9f8f7', 'body-text': '#727E8C', 'heading': '#475F7B', 'border-col': '#DFE3E7' },
+          fontFamily: { sans: ['Inter', 'sans-serif'] },
+        },
+      },
+    }
+  </script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #f3f1ee; color: #727E8C; font-size: 14px; }
+    .sidebar { width: 220px; min-width: 220px; background: #f9f8f7; border-right: 1px solid #DFE3E7; height: 100vh; position: fixed; top: 0; left: 0; display: flex; flex-direction: column; z-index: 40; overflow-y: auto; }
+    .sidebar-logo { padding: 14px 20px 12px; border-bottom: 1px solid #DFE3E7; display: flex; align-items: center; flex-shrink: 0; }
+    .sidebar-logo img { height: 38px; width: auto; display: block; }
+    .nav-section { padding: 8px 0 4px; flex: 1; overflow-y: auto; }
+    .nav-divider { height: 1px; background: #DFE3E7; margin: 4px 16px; }
+    .nav-item { display: flex; align-items: center; gap: 9px; padding: 7px 16px; font-size: 13px; color: #727E8C; cursor: pointer; border-left: 2px solid transparent; transition: all 0.12s; text-decoration: none; }
+    .nav-item:hover { background: rgba(0,0,0,0.03); color: #475F7B; }
+    .nav-item.active { background: rgba(242,128,54,0.08); color: #f28036; font-weight: 500; border-left-color: #f28036; }
+    .nav-parent { display: flex; align-items: center; gap: 9px; padding: 7px 16px; font-size: 13px; color: #727E8C; cursor: pointer; border-left: 2px solid transparent; transition: all 0.12s; user-select: none; }
+    .nav-parent:hover { background: rgba(0,0,0,0.03); color: #475F7B; }
+    .nav-parent.open { color: #475F7B; font-weight: 500; }
+    .nav-parent.has-active { color: #f28036; font-weight: 500; border-left-color: #f28036; background: rgba(242,128,54,0.05); }
+    .nav-parent .chevron { margin-left: auto; transition: transform 0.15s; flex-shrink: 0; }
+    .nav-parent.open .chevron { transform: rotate(90deg); }
+    .nav-children { display: none; padding: 2px 0 4px 0; }
+    .nav-children.open { display: block; }
+    .nav-child { display: flex; align-items: center; gap: 8px; padding: 5px 16px 5px 36px; font-size: 12.5px; color: #8A97A5; cursor: pointer; text-decoration: none; transition: all 0.12s; border-left: 2px solid transparent; }
+    .nav-child:hover { color: #475F7B; background: rgba(0,0,0,0.02); }
+    .nav-child.active { color: #f28036; font-weight: 500; }
+    .nav-child-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; flex-shrink: 0; opacity: 0.6; }
+    .nav-child.active .nav-child-dot { opacity: 1; background: #f28036; }
+    .nav-bottom { border-top: 1px solid #DFE3E7; padding: 6px 0; flex-shrink: 0; }
+    .page-header { position: sticky; top: 27px; height: 56px; background: #f9f8f7; border-bottom: 1px solid #DFE3E7; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; z-index: 30; }
+    .breadcrumb { font-size: 13px; color: #A0ADB8; }
+    .breadcrumb a { color: #A0ADB8; text-decoration: none; }
+    .breadcrumb a:hover { color: #727E8C; }
+    .breadcrumb .sep { margin: 0 6px; }
+    .breadcrumb .current { color: #475F7B; font-weight: 500; }
+    .btn-primary { background: #f28036; color: white; border: none; border-radius: 6px; padding: 8px 14px; font-size: 14px; font-family: 'Inter', sans-serif; font-weight: 500; cursor: pointer; transition: background 0.12s; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-primary:hover { background: #e0722a; }
+    .btn-outline { background: transparent; color: #475F7B; border: 1px solid #DFE3E7; border-radius: 6px; padding: 7px 14px; font-size: 14px; font-family: 'Inter', sans-serif; font-weight: 500; cursor: pointer; transition: all 0.12s; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-outline:hover { border-color: #f28036; color: #f28036; }
+    .project-card { background: #f9f8f7; border: 1px solid #DFE3E7; border-radius: 10px; overflow: hidden; transition: box-shadow 0.18s, transform 0.18s; cursor: pointer; position: relative; }
+    .project-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.09); transform: translateY(-1px); }
+    .project-card:hover .view-lots-btn { opacity: 1; }
+    .view-lots-btn { position: absolute; bottom: 60px; right: 14px; opacity: 0; transition: opacity 0.18s; background: #f28036; color: white; border: none; border-radius: 6px; padding: 7px 12px; font-size: 12.5px; font-family: 'Inter', sans-serif; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+    .lot-pill { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 4px; font-size: 11.5px; font-weight: 500; }
+    select { height: 34px; border: 1px solid #DFE3E7; border-radius: 6px; background: #f9f8f7; font-size: 13px; color: #475F7B; padding: 0 10px; font-family: 'Inter', sans-serif; cursor: pointer; outline: none; }
+    select:focus { border-color: #f28036; }
+  </style>
+</head>
+<body>
+
+<!-- Prototype notice -->
+<div style="position:fixed;top:0;left:0;right:0;background:#f9f8f7;border-bottom:1px solid #DFE3E7;text-align:center;padding:5px 0;font-size:11px;color:#A0ADB8;z-index:100;letter-spacing:0.02em;">
+  UI Prototype — for design review only
+</div>
+<div style="height:27px;"></div>
+
+<div style="display:flex;min-height:calc(100vh - 27px);">
+
+<!-- ======= SIDEBAR ======= -->
+<aside class="sidebar" style="top:27px;">
+  <div class="sidebar-logo">
+    <img src="logo.png" alt="Fusion CRM" />
+  </div>
+
+  <nav class="nav-section">
+
+    <!-- Dashboard -->
+    <a href="dashboard.html" class="nav-item">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="5.5" height="5.5" rx="1.2" fill="currentColor"/><rect x="9.5" y="1" width="5.5" height="5.5" rx="1.2" fill="currentColor" opacity="0.5"/><rect x="1" y="9.5" width="5.5" height="5.5" rx="1.2" fill="currentColor" opacity="0.5"/><rect x="9.5" y="9.5" width="5.5" height="5.5" rx="1.2" fill="currentColor"/></svg>
+      Dashboard
+    </a>
+
+    <div class="nav-divider"></div>
+
+    <!-- Contacts group -->
+    <div class="nav-group">
+      <div class="nav-parent" onclick="toggleGroup(this)">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="6" cy="5" r="2.5" fill="currentColor"/><path d="M1 13c0-2.8 2.2-5 5-5s5 2.2 5 5" stroke="currentColor" stroke-width="1.5" fill="none"/><circle cx="12" cy="5" r="2" fill="currentColor" opacity="0.5"/><path d="M12 9c1.7.3 3 1.9 3 3.8" stroke="currentColor" stroke-width="1.5" fill="none" opacity="0.5"/></svg>
+        Contacts
+        <svg class="chevron" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4 3l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+      <div class="nav-children">
+        <a href="contacts.html" class="nav-child"><span class="nav-child-dot"></span>All Contacts</a>
+        <a href="#" class="nav-child"><span class="nav-child-dot"></span>Buyer Pipeline</a>
+        <a href="#" class="nav-child"><span class="nav-child-dot"></span>Seller Pipeline</a>
+      </div>
+    </div>
+
+    <!-- Properties group -->
+    <div class="nav-group">
+      <div class="nav-parent open has-active" onclick="toggleGroup(this)">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="1" y="6" width="14" height="9" rx="1.2" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M4 6V4.5A4 4 0 0 1 12 4.5V6" stroke="currentColor" stroke-width="1.5" fill="none"/><rect x="6" y="10" width="4" height="5" rx="0.8" fill="currentColor" opacity="0.5"/></svg>
+        Properties
+        <svg class="chevron" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4 3l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+      <div class="nav-children open">
+        <a href="projects.html" class="nav-child active"><span class="nav-child-dot"></span>Projects</a>
+        <a href="#" class="nav-child"><span class="nav-child-dot"></span>Lots</a>
+        <a href="#" class="nav-child"><span class="nav-child-dot"></span>Potential Properties</a>
+        <a href="#" class="nav-child"><span class="nav-child-dot"></span>Favourites</a>
+      </div>
+    </div>
+
+    <!-- Sales group -->
+    <div class="nav-group">
+      <div class="nav-parent" onclick="toggleGroup(this)">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2 12L6 8l3 3 5-7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Sales
+        <svg class="chevron" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4 3l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+      <div class="nav-children">
+        <a href="#" class="nav-child"><span class="nav-child-dot"></span>Reservations</a>
+        <a href="#" class="nav-child"><span class="nav-child-dot"></span>Sales &amp; Commissions</a>
+      </div>
+    </div>
+
+    <!-- Tasks (flat) -->
+    <a href="#" class="nav-item">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M5 8l2.5 2.5L11 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Tasks
+    </a>
+
+    <div class="nav-divider"></div>
+
+    <!-- Marketing group -->
+    <div class="nav-group">
+      <div class="nav-parent" onclick="toggleGroup(this)">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2 10V6l10-4v12L2 10z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" fill="none"/><path d="M12 8h3M4 10v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Marketing
+        <svg class="chevron" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4 3l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+      <div class="nav-children">
+        <a href="#" class="nav-child"><span class="nav-child-dot"></span>Mail Lists</a>
+        <a href="#" class="nav-child"><span class="nav-child-dot"></span>Campaigns</a>
+        <a href="#" class="nav-child"><span class="nav-child-dot"></span>Flyers</a>
+        <a href="#" class="nav-child"><span class="nav-child-dot"></span>Bot in a Box</a>
+        <a href="#" class="nav-child"><span class="nav-child-dot"></span>Ad Manager</a>
+      </div>
+    </div>
+
+    <!-- Reports group -->
+    <div class="nav-group">
+      <div class="nav-parent" onclick="toggleGroup(this)">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="1" y="9" width="3" height="6" rx="0.8" fill="currentColor"/><rect x="6.5" y="5" width="3" height="10" rx="0.8" fill="currentColor" opacity="0.7"/><rect x="12" y="1" width="3" height="14" rx="0.8" fill="currentColor" opacity="0.5"/></svg>
+        Reports
+        <svg class="chevron" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4 3l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+      <div class="nav-children">
+        <a href="#" class="nav-child"><span class="nav-child-dot"></span>Overview</a>
+        <a href="#" class="nav-child"><span class="nav-child-dot"></span>Agent Performance</a>
+        <a href="#" class="nav-child"><span class="nav-child-dot"></span>Login History</a>
+        <a href="#" class="nav-child"><span class="nav-child-dot"></span>Same Device Detection</a>
+      </div>
+    </div>
+
+    <!-- Resources (flat) -->
+    <a href="#" class="nav-item">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2 3h12v11H2z" stroke="currentColor" stroke-width="1.5" fill="none" rx="1"/><path d="M5 7h6M5 10h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Resources
+    </a>
+
+    <!-- Websites (flat) -->
+    <a href="#" class="nav-item">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.5C6 4 5 6 5 8s1 4 3 6.5M8 1.5C10 4 11 6 11 8s-1 4-3 6.5M1.5 8h13" stroke="currentColor" stroke-width="1.2"/></svg>
+      Websites
+    </a>
+
+  </nav>
+
+  <div class="nav-bottom">
+    <a href="#" class="nav-item">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.1 3.1l1.4 1.4M11.5 11.5l1.4 1.4M3.1 12.9l1.4-1.4M11.5 4.5l1.4-1.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Settings
+    </a>
+    <a href="#" class="nav-item">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 1L10 5h4l-3.5 2.5 1.5 4L8 9l-4 2.5 1.5-4L2 5h4z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" fill="none"/></svg>
+      Admin Panel
+    </a>
+    <a href="index.html" class="nav-item" style="font-size:11px;opacity:0.6;">
+      ← Prototype Index
+    </a>
+  </div>
+</aside>
+
+<!-- ======= MAIN CONTENT ======= -->
+<div style="margin-left:220px;flex:1;display:flex;flex-direction:column;min-height:calc(100vh - 27px);">
+
+  <!-- Page Header -->
+  <header class="page-header">
+    <div>
+      <div class="breadcrumb">
+        <a href="index.html">Home</a>
+        <span class="sep">/</span>
+        <span class="current">Projects</span>
+      </div>
+      <div style="font-size:20px;font-weight:600;color:#475F7B;margin-top:1px;">Projects</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <button class="btn-outline" style="font-size:13px;padding:7px 12px;">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1v10M3 5l3.5-4 3.5 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        Import CSV
+      </button>
+      <button class="btn-primary" style="font-size:13px;padding:8px 12px;">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1v11M1 6.5h11" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
+        New Project
+      </button>
+    </div>
+  </header>
+
+  <div style="padding:0 24px 28px;flex:1;">
+
+    <!-- AI NLQ Bar -->
+    <div style="padding:14px 0 12px;">
+      <div style="background:#f9f8f7;border:1px solid #DFE3E7;border-radius:8px;display:flex;align-items:center;padding:0 14px;height:42px;gap:10px;transition:border-color 0.15s;" onmouseover="this.style.borderColor='#f28036'" onmouseout="this.style.borderColor='#DFE3E7'">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M8 1L9 5L13 6L9 7L8 11L7 7L3 6L7 5L8 1Z" fill="#f28036" stroke="#f28036" stroke-width="0.3" stroke-linejoin="round"/>
+          <path d="M13 10l.5 1.5L15 12l-1.5.5L13 14l-.5-1.5L11 12l1.5-.5L13 10Z" fill="#f28036" opacity="0.6"/>
+        </svg>
+        <input type="text" placeholder="Ask AI: 'Show projects in Brisbane with lots under $600k available now'" style="flex:1;border:none;background:transparent;font-size:13.5px;color:#475F7B;font-family:'Inter',sans-serif;outline:none;" />
+        <kbd style="font-size:10.5px;color:#A0ADB8;background:#f3f1ee;border:1px solid #DFE3E7;border-radius:4px;padding:2px 6px;font-family:'Inter',sans-serif;">⌘K</kbd>
+      </div>
+    </div>
+
+    <!-- Filter bar -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:10px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <select>
+          <option>All Suburbs</option>
+          <option>Surry Hills NSW</option>
+          <option>Parramatta NSW</option>
+          <option>South Brisbane QLD</option>
+          <option>Fitzroy VIC</option>
+          <option>Pyrmont NSW</option>
+          <option>West End QLD</option>
+        </select>
+        <select>
+          <option>All Price Ranges</option>
+          <option>Under $600k</option>
+          <option>$600k – $900k</option>
+          <option>$900k – $1.2M</option>
+          <option>$1.2M+</option>
+        </select>
+        <select>
+          <option>All Stages</option>
+          <option>Presales</option>
+          <option>Construction</option>
+          <option>Complete</option>
+        </select>
+        <select>
+          <option>All Developers</option>
+          <option>Meriton</option>
+          <option>Crown Group</option>
+          <option>Mirvac</option>
+          <option>MAB Corp</option>
+          <option>Lendlease</option>
+          <option>Consolidated</option>
+        </select>
+        <button style="height:34px;padding:0 12px;background:none;border:1px solid transparent;border-radius:6px;font-size:13px;color:#A0ADB8;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.12s;" onmouseover="this.style.color='#E53E3E';this.style.borderColor='#FED7D7';" onmouseout="this.style.color='#A0ADB8';this.style.borderColor='transparent';">Clear filters</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:12.5px;color:#A0ADB8;">6 projects</span>
+        <div style="display:flex;border:1px solid #DFE3E7;border-radius:6px;overflow:hidden;">
+          <button style="width:32px;height:32px;background:#f28036;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;" title="Grid view">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="5" height="5" rx="1" fill="white"/><rect x="8" y="1" width="5" height="5" rx="1" fill="white" opacity="0.6"/><rect x="1" y="8" width="5" height="5" rx="1" fill="white" opacity="0.6"/><rect x="8" y="8" width="5" height="5" rx="1" fill="white" opacity="0.6"/></svg>
+          </button>
+          <button style="width:32px;height:32px;background:#f9f8f7;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;border-left:1px solid #DFE3E7;" title="List view">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 3.5h10M2 7h10M2 10.5h10" stroke="#A0ADB8" stroke-width="1.3" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Summary pills -->
+    <div style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;">
+      <div style="background:#f9f8f7;border:1px solid #DFE3E7;border-radius:6px;padding:6px 14px;font-size:12.5px;color:#727E8C;display:flex;align-items:center;gap:6px;">
+        <span style="width:7px;height:7px;border-radius:50%;background:#2E8B57;display:inline-block;"></span>
+        <strong style="color:#475F7B;">106</strong> lots available
+      </div>
+      <div style="background:#f9f8f7;border:1px solid #DFE3E7;border-radius:6px;padding:6px 14px;font-size:12.5px;color:#727E8C;display:flex;align-items:center;gap:6px;">
+        <span style="width:7px;height:7px;border-radius:50%;background:#F5A623;display:inline-block;"></span>
+        <strong style="color:#475F7B;">53</strong> reserved
+      </div>
+      <div style="background:#f9f8f7;border:1px solid #DFE3E7;border-radius:6px;padding:6px 14px;font-size:12.5px;color:#727E8C;display:flex;align-items:center;gap:6px;">
+        <span style="width:7px;height:7px;border-radius:50%;background:#A0ADB8;display:inline-block;"></span>
+        <strong style="color:#475F7B;">97</strong> sold
+      </div>
+    </div>
+
+    <!-- Project Grid -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px;">
+
+      <!-- ===== Project 1: Aria Residences ===== -->
+      <div class="project-card">
+        <!-- Image placeholder -->
+        <div style="aspect-ratio:16/9;background:linear-gradient(135deg,#e8e4df 0%,#ddd8d0 100%);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;">
+          <!-- Architectural pattern -->
+          <svg width="100%" height="100%" viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice" style="position:absolute;top:0;left:0;opacity:0.15;">
+            <rect x="0" y="60" width="320" height="120" fill="#475F7B"/>
+            <rect x="20" y="40" width="40" height="140" fill="#475F7B"/>
+            <rect x="70" y="50" width="35" height="130" fill="#475F7B"/>
+            <rect x="115" y="30" width="50" height="150" fill="#475F7B"/>
+            <rect x="175" y="45" width="38" height="135" fill="#475F7B"/>
+            <rect x="225" y="55" width="42" height="125" fill="#475F7B"/>
+            <rect x="278" y="35" width="30" height="145" fill="#475F7B"/>
+          </svg>
+          <div style="text-align:center;position:relative;z-index:1;">
+            <div style="font-size:13.5px;font-weight:600;color:#727E8C;opacity:0.7;">Aria Residences</div>
+            <div style="font-size:11px;color:#A0ADB8;margin-top:3px;">Surry Hills NSW</div>
+          </div>
+          <!-- Construction stage badge -->
+          <div style="position:absolute;top:10px;left:10px;background:#f28036;color:white;font-size:11px;font-weight:500;padding:3px 9px;border-radius:4px;display:flex;align-items:center;gap:5px;">
+            <span style="width:6px;height:6px;border-radius:50%;background:white;display:inline-block;"></span>
+            Construction
+          </div>
+        </div>
+        <!-- Card body -->
+        <div style="padding:14px 16px;">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px;">
+            <div>
+              <div style="font-size:16px;font-weight:600;color:#475F7B;line-height:1.2;">Aria Residences</div>
+              <div style="font-size:12.5px;color:#727E8C;margin-top:2px;">Surry Hills NSW</div>
+              <div style="font-size:12px;color:#A0ADB8;margin-top:1px;">Meriton Group</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:14px;font-weight:600;color:#f28036;">From $729,000</div>
+            </div>
+          </div>
+          <!-- Lot counts -->
+          <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
+            <span class="lot-pill" style="background:#F0FFF4;color:#276749;border:1px solid #C6F6D5;">8 Available</span>
+            <span class="lot-pill" style="background:#FFFBEB;color:#975A16;border:1px solid #FAD87B;">14 Reserved</span>
+            <span class="lot-pill" style="background:#f3f1ee;color:#727E8C;border:1px solid #DFE3E7;">6 Sold</span>
+          </div>
+        </div>
+        <!-- Hover view lots button -->
+        <button class="view-lots-btn">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6h8M6 2l4 4-4 4" stroke="white" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          View Lots →
+        </button>
+      </div>
+
+      <!-- ===== Project 2: Skyline One ===== -->
+      <div class="project-card">
+        <div style="aspect-ratio:16/9;background:linear-gradient(135deg,#e2e8f0 0%,#cbd5e0 100%);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;">
+          <svg width="100%" height="100%" viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice" style="position:absolute;top:0;left:0;opacity:0.12;">
+            <rect x="0" y="80" width="320" height="100" fill="#6B8CAE"/>
+            <rect x="10" y="20" width="60" height="160" fill="#6B8CAE"/>
+            <rect x="80" y="40" width="45" height="140" fill="#6B8CAE"/>
+            <rect x="135" y="10" width="55" height="170" fill="#6B8CAE"/>
+            <rect x="200" y="30" width="48" height="150" fill="#6B8CAE"/>
+            <rect x="260" y="50" width="50" height="130" fill="#6B8CAE"/>
+          </svg>
+          <div style="text-align:center;position:relative;z-index:1;">
+            <div style="font-size:13.5px;font-weight:600;color:#6B8CAE;opacity:0.8;">Skyline One</div>
+            <div style="font-size:11px;color:#A0ADB8;margin-top:3px;">Parramatta NSW</div>
+          </div>
+          <div style="position:absolute;top:10px;left:10px;background:#6B8CAE;color:white;font-size:11px;font-weight:500;padding:3px 9px;border-radius:4px;display:flex;align-items:center;gap:5px;">
+            <span style="width:6px;height:6px;border-radius:50%;background:white;display:inline-block;opacity:0.7;"></span>
+            Presales
+          </div>
+        </div>
+        <div style="padding:14px 16px;">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px;">
+            <div>
+              <div style="font-size:16px;font-weight:600;color:#475F7B;line-height:1.2;">Skyline One</div>
+              <div style="font-size:12.5px;color:#727E8C;margin-top:2px;">Parramatta NSW</div>
+              <div style="font-size:12px;color:#A0ADB8;margin-top:1px;">Crown Group</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:14px;font-weight:600;color:#f28036;">From $485,000</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
+            <span class="lot-pill" style="background:#F0FFF4;color:#276749;border:1px solid #C6F6D5;">42 Available</span>
+            <span class="lot-pill" style="background:#FFFBEB;color:#975A16;border:1px solid #FAD87B;">12 Reserved</span>
+            <span class="lot-pill" style="background:#f3f1ee;color:#727E8C;border:1px solid #DFE3E7;">0 Sold</span>
+          </div>
+        </div>
+        <button class="view-lots-btn">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6h8M6 2l4 4-4 4" stroke="white" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          View Lots →
+        </button>
+      </div>
+
+      <!-- ===== Project 3: Green Quarter ===== -->
+      <div class="project-card">
+        <div style="aspect-ratio:16/9;background:linear-gradient(135deg,#e6f4ed 0%,#c8e6d4 100%);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;">
+          <svg width="100%" height="100%" viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice" style="position:absolute;top:0;left:0;opacity:0.12;">
+            <rect x="0" y="70" width="320" height="110" fill="#3BAA8C"/>
+            <rect x="15" y="30" width="55" height="150" fill="#3BAA8C"/>
+            <rect x="80" y="55" width="40" height="125" fill="#3BAA8C"/>
+            <rect x="130" y="20" width="60" height="160" fill="#3BAA8C"/>
+            <rect x="200" y="40" width="45" height="140" fill="#3BAA8C"/>
+            <rect x="255" y="60" width="50" height="120" fill="#3BAA8C"/>
+          </svg>
+          <div style="text-align:center;position:relative;z-index:1;">
+            <div style="font-size:13.5px;font-weight:600;color:#3BAA8C;opacity:0.8;">Green Quarter</div>
+            <div style="font-size:11px;color:#A0ADB8;margin-top:3px;">South Brisbane QLD</div>
+          </div>
+          <div style="position:absolute;top:10px;left:10px;background:#2E8B57;color:white;font-size:11px;font-weight:500;padding:3px 9px;border-radius:4px;display:flex;align-items:center;gap:5px;">
+            <span style="width:6px;height:6px;border-radius:50%;background:white;display:inline-block;"></span>
+            Complete
+          </div>
+        </div>
+        <div style="padding:14px 16px;">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px;">
+            <div>
+              <div style="font-size:16px;font-weight:600;color:#475F7B;line-height:1.2;">Green Quarter</div>
+              <div style="font-size:12.5px;color:#727E8C;margin-top:2px;">South Brisbane QLD</div>
+              <div style="font-size:12px;color:#A0ADB8;margin-top:1px;">Mirvac</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:14px;font-weight:600;color:#f28036;">From $612,000</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
+            <span class="lot-pill" style="background:#F0FFF4;color:#276749;border:1px solid #C6F6D5;">2 Available</span>
+            <span class="lot-pill" style="background:#FFFBEB;color:#975A16;border:1px solid #FAD87B;">3 Reserved</span>
+            <span class="lot-pill" style="background:#f3f1ee;color:#727E8C;border:1px solid #DFE3E7;">31 Sold</span>
+          </div>
+        </div>
+        <button class="view-lots-btn">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6h8M6 2l4 4-4 4" stroke="white" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          View Lots →
+        </button>
+      </div>
+
+      <!-- ===== Project 4: The Bower ===== -->
+      <div class="project-card">
+        <div style="aspect-ratio:16/9;background:linear-gradient(135deg,#faf0e6 0%,#f0e0cc 100%);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;">
+          <svg width="100%" height="100%" viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice" style="position:absolute;top:0;left:0;opacity:0.12;">
+            <rect x="0" y="65" width="320" height="115" fill="#C05621"/>
+            <rect x="25" y="15" width="50" height="165" fill="#C05621"/>
+            <rect x="85" y="35" width="42" height="145" fill="#C05621"/>
+            <rect x="137" y="5" width="62" height="175" fill="#C05621"/>
+            <rect x="210" y="25" width="48" height="155" fill="#C05621"/>
+            <rect x="268" y="45" width="42" height="135" fill="#C05621"/>
+          </svg>
+          <div style="text-align:center;position:relative;z-index:1;">
+            <div style="font-size:13.5px;font-weight:600;color:#C05621;opacity:0.7;">The Bower</div>
+            <div style="font-size:11px;color:#A0ADB8;margin-top:3px;">Fitzroy VIC</div>
+          </div>
+          <div style="position:absolute;top:10px;left:10px;background:#6B8CAE;color:white;font-size:11px;font-weight:500;padding:3px 9px;border-radius:4px;display:flex;align-items:center;gap:5px;">
+            <span style="width:6px;height:6px;border-radius:50%;background:white;display:inline-block;opacity:0.7;"></span>
+            Presales
+          </div>
+        </div>
+        <div style="padding:14px 16px;">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px;">
+            <div>
+              <div style="font-size:16px;font-weight:600;color:#475F7B;line-height:1.2;">The Bower</div>
+              <div style="font-size:12.5px;color:#727E8C;margin-top:2px;">Fitzroy VIC</div>
+              <div style="font-size:12px;color:#A0ADB8;margin-top:1px;">MAB Corp</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:14px;font-weight:600;color:#f28036;">From $895,000</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
+            <span class="lot-pill" style="background:#F0FFF4;color:#276749;border:1px solid #C6F6D5;">18 Available</span>
+            <span class="lot-pill" style="background:#FFFBEB;color:#975A16;border:1px solid #FAD87B;">6 Reserved</span>
+            <span class="lot-pill" style="background:#f3f1ee;color:#727E8C;border:1px solid #DFE3E7;">0 Sold</span>
+          </div>
+        </div>
+        <button class="view-lots-btn">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6h8M6 2l4 4-4 4" stroke="white" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          View Lots →
+        </button>
+      </div>
+
+      <!-- ===== Project 5: Harbour Edge ===== -->
+      <div class="project-card">
+        <div style="aspect-ratio:16/9;background:linear-gradient(135deg,#e8eef5 0%,#c8d8eb 100%);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;">
+          <svg width="100%" height="100%" viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice" style="position:absolute;top:0;left:0;opacity:0.13;">
+            <rect x="0" y="55" width="320" height="125" fill="#475F7B"/>
+            <rect x="10" y="5" width="55" height="175" fill="#475F7B"/>
+            <rect x="75" y="25" width="48" height="155" fill="#475F7B"/>
+            <rect x="133" y="0" width="65" height="180" fill="#475F7B"/>
+            <rect x="208" y="15" width="50" height="165" fill="#475F7B"/>
+            <rect x="268" y="40" width="45" height="140" fill="#475F7B"/>
+          </svg>
+          <div style="text-align:center;position:relative;z-index:1;">
+            <div style="font-size:13.5px;font-weight:600;color:#475F7B;opacity:0.75;">Harbour Edge</div>
+            <div style="font-size:11px;color:#A0ADB8;margin-top:3px;">Pyrmont NSW</div>
+          </div>
+          <div style="position:absolute;top:10px;left:10px;background:#f28036;color:white;font-size:11px;font-weight:500;padding:3px 9px;border-radius:4px;display:flex;align-items:center;gap:5px;">
+            <span style="width:6px;height:6px;border-radius:50%;background:white;display:inline-block;"></span>
+            Construction
+          </div>
+        </div>
+        <div style="padding:14px 16px;">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px;">
+            <div>
+              <div style="font-size:16px;font-weight:600;color:#475F7B;line-height:1.2;">Harbour Edge</div>
+              <div style="font-size:12.5px;color:#727E8C;margin-top:2px;">Pyrmont NSW</div>
+              <div style="font-size:12px;color:#A0ADB8;margin-top:1px;">Lendlease</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:14px;font-weight:600;color:#f28036;">From $1,150,000</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
+            <span class="lot-pill" style="background:#F0FFF4;color:#276749;border:1px solid #C6F6D5;">12 Available</span>
+            <span class="lot-pill" style="background:#FFFBEB;color:#975A16;border:1px solid #FAD87B;">8 Reserved</span>
+            <span class="lot-pill" style="background:#f3f1ee;color:#727E8C;border:1px solid #DFE3E7;">4 Sold</span>
+          </div>
+        </div>
+        <button class="view-lots-btn">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6h8M6 2l4 4-4 4" stroke="white" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          View Lots →
+        </button>
+      </div>
+
+      <!-- ===== Project 6: River Terrace ===== -->
+      <div class="project-card">
+        <div style="aspect-ratio:16/9;background:linear-gradient(135deg,#edf7ef 0%,#d4ede0 100%);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;">
+          <svg width="100%" height="100%" viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice" style="position:absolute;top:0;left:0;opacity:0.12;">
+            <rect x="0" y="75" width="320" height="105" fill="#2E8B57"/>
+            <rect x="20" y="25" width="52" height="155" fill="#2E8B57"/>
+            <rect x="82" y="45" width="44" height="135" fill="#2E8B57"/>
+            <rect x="136" y="15" width="58" height="165" fill="#2E8B57"/>
+            <rect x="204" y="35" width="46" height="145" fill="#2E8B57"/>
+            <rect x="260" y="55" width="48" height="125" fill="#2E8B57"/>
+          </svg>
+          <div style="text-align:center;position:relative;z-index:1;">
+            <div style="font-size:13.5px;font-weight:600;color:#2E8B57;opacity:0.7;">River Terrace</div>
+            <div style="font-size:11px;color:#A0ADB8;margin-top:3px;">West End QLD</div>
+          </div>
+          <div style="position:absolute;top:10px;left:10px;background:#2E8B57;color:white;font-size:11px;font-weight:500;padding:3px 9px;border-radius:4px;display:flex;align-items:center;gap:5px;">
+            <span style="width:6px;height:6px;border-radius:50%;background:white;display:inline-block;"></span>
+            Complete
+          </div>
+          <!-- Sold out ribbon -->
+          <div style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.55);color:white;font-size:10.5px;font-weight:500;padding:3px 9px;border-radius:4px;">
+            Mostly Sold
+          </div>
+        </div>
+        <div style="padding:14px 16px;">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px;">
+            <div>
+              <div style="font-size:16px;font-weight:600;color:#475F7B;line-height:1.2;">River Terrace</div>
+              <div style="font-size:12.5px;color:#727E8C;margin-top:2px;">West End QLD</div>
+              <div style="font-size:12px;color:#A0ADB8;margin-top:1px;">Consolidated Properties</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:14px;font-weight:600;color:#f28036;">From $558,000</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
+            <span class="lot-pill" style="background:#f3f1ee;color:#A0ADB8;border:1px solid #DFE3E7;">0 Available</span>
+            <span class="lot-pill" style="background:#FFFBEB;color:#975A16;border:1px solid #FAD87B;">2 Reserved</span>
+            <span class="lot-pill" style="background:#f3f1ee;color:#727E8C;border:1px solid #DFE3E7;">44 Sold</span>
+          </div>
+        </div>
+        <button class="view-lots-btn">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6h8M6 2l4 4-4 4" stroke="white" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          View Lots →
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Pagination / load more -->
+    <div style="margin-top:24px;display:flex;align-items:center;justify-content:center;gap:12px;">
+      <span style="font-size:13px;color:#A0ADB8;">Showing all 6 projects</span>
+      <div style="height:1px;width:40px;background:#DFE3E7;"></div>
+      <button style="font-size:13px;color:#f28036;background:none;border:none;cursor:pointer;font-family:'Inter',sans-serif;font-weight:500;display:flex;align-items:center;gap:5px;" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        Add new project
+      </button>
+    </div>
+
+  </div>
+
+</div>
+
+</div>
+
+<!-- Floating AI button -->
+<button style="position:fixed;bottom:28px;right:28px;width:56px;height:56px;border-radius:50%;background:#f28036;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(242,128,54,0.4);transition:background 0.15s;z-index:999;" onmouseover="this.style.background='#e0722a';" onmouseout="this.style.background='#f28036';" title="AI Assistant">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <path d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z" fill="white" stroke="white" stroke-width="0.5" stroke-linejoin="round"/>
+    <path d="M19 15l.75 2.25L22 18l-2.25.75L19 21l-.75-2.25L16 18l2.25-.75L19 15Z" fill="white" opacity="0.8"/>
+    <path d="M5 3l.5 1.5L7 5l-1.5.5L5 7l-.5-1.5L3 5l1.5-.5L5 3Z" fill="white" opacity="0.6"/>
+  </svg>
+</button>
+
+<script>
+function toggleGroup(el) {
+  const parent = el.closest('.nav-group');
+  const children = parent.querySelector('.nav-children');
+  const isOpen = el.classList.contains('open');
+  el.classList.toggle('open', !isOpen);
+  children.classList.toggle('open', !isOpen);
+}
+</script>
+</body>
+</html>

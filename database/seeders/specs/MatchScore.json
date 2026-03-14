@@ -1,0 +1,54 @@
+{
+    "model": "MatchScore",
+    "table": "match_scores",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "contact_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "matchable_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "matchable_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "score": {
+            "type": "int2",
+            "nullable": true,
+            "default": null
+        },
+        "factors": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "computed_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "contact": {
+            "type": "belongsTo",
+            "model": "Contact"
+        }
+    },
+    "value_hints": {
+        "computed_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        }
+    },
+    "scenarios": []
+}

@@ -76,6 +76,21 @@
             "type": "timestamp",
             "nullable": true,
             "default": null
+        },
+        "puck_content": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "puck_enabled": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "thumbnail_path": {
+            "type": "string",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {
