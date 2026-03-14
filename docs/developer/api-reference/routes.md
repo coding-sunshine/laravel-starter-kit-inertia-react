@@ -3711,3 +3711,24 @@ Supported providers: `google`, `github` (controlled by `AuthSettings::google_oau
 | GET | `ai/calls` | `ai.calls.index` | auth, verified |
 | POST | `webhooks/vapi` | `webhooks.vapi` | none (no CSRF) |
 
+
+## New Routes (added 2026-03-15)
+
+### Deal Tracker (US-015)
+
+| Method | URI | Route Name | Middleware |
+|--------|-----|------------|------------|
+| GET | `deal-tracker` | `deal-tracker.index` | auth, verified |
+| PATCH | `deal-tracker/{reservation}/stage` | `deal-tracker.stage-update` | auth, verified |
+| GET | `sales/{sale}/payment-stages` | `payment-stages.index` | auth, verified |
+| POST | `sales/{sale}/payment-stages` | `payment-stages.store` | auth, verified |
+| PATCH | `payment-stages/{paymentStage}` | `payment-stages.update` | auth, verified |
+| DELETE | `payment-stages/{paymentStage}` | `payment-stages.destroy` | auth, verified |
+| GET | `reservations/{reservation}/pinned-notes` | `pinned-notes.reservation.index` | auth, verified |
+| POST | `reservations/{reservation}/pinned-notes` | `pinned-notes.reservation.store` | auth, verified |
+| GET | `sales/{sale}/pinned-notes` | `pinned-notes.sale.index` | auth, verified |
+| POST | `sales/{sale}/pinned-notes` | `pinned-notes.sale.store` | auth, verified |
+| DELETE | `pinned-notes/{pinnedNote}` | `pinned-notes.destroy` | auth, verified |
+| GET | `deal-documents` | `deal-documents.index` | auth, verified |
+| POST | `deal-documents` | `deal-documents.store` | auth, verified |
+| DELETE | `deal-documents/{dealDocument}` | `deal-documents.destroy` | auth, verified |

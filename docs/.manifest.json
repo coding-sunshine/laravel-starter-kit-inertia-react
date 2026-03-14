@@ -1,6 +1,6 @@
 {
     "version": "1.0.0",
-    "lastGenerated": "2026-03-14",
+    "lastGenerated": "2026-03-15",
     "actions": {
         "CreateUser": {
             "documented": true,
@@ -1071,6 +1071,62 @@
                     "landing-pages.generate",
                     "landing-pages.update",
                     "landing-pages.destroy"
+                ]
+            }
+        },
+        "CreatePaymentStageAction": {
+            "documented": true,
+            "path": "docs/developer/backend/actions/CreatePaymentStageAction.md",
+            "lastUpdated": "2026-03-15",
+            "relationships": {
+                "usedBy": [
+                    "PaymentStageController"
+                ],
+                "usesModels": [
+                    "PaymentStage",
+                    "Sale"
+                ],
+                "relatedRoutes": [
+                    "payment-stages.index",
+                    "payment-stages.store",
+                    "payment-stages.update",
+                    "payment-stages.destroy"
+                ]
+            }
+        },
+        "CreatePinnedNoteAction": {
+            "documented": true,
+            "path": "docs/developer/backend/actions/CreatePinnedNoteAction.md",
+            "lastUpdated": "2026-03-15",
+            "relationships": {
+                "usedBy": [
+                    "PinnedNoteController"
+                ],
+                "usesModels": [
+                    "PinnedNote"
+                ],
+                "relatedRoutes": [
+                    "pinned-notes.reservation.store",
+                    "pinned-notes.sale.store",
+                    "pinned-notes.destroy"
+                ]
+            }
+        },
+        "UploadDealDocumentAction": {
+            "documented": true,
+            "path": "docs/developer/backend/actions/UploadDealDocumentAction.md",
+            "lastUpdated": "2026-03-15",
+            "relationships": {
+                "usedBy": [
+                    "DealDocumentController"
+                ],
+                "usesModels": [
+                    "DealDocument"
+                ],
+                "relatedRoutes": [
+                    "deal-documents.index",
+                    "deal-documents.store",
+                    "deal-documents.destroy"
                 ]
             }
         }
@@ -2490,6 +2546,81 @@
                 ],
                 "rendersPages": [
                     "retargeting-pixels/index"
+                ]
+            }
+        },
+        "DealTrackerController": {
+            "documented": true,
+            "path": "docs/developer/backend/controllers/DealTrackerController.md",
+            "lastUpdated": "2026-03-15",
+            "relationships": {
+                "usesActions": [],
+                "usesModels": [
+                    "PropertyReservation"
+                ],
+                "relatedRoutes": [
+                    "deal-tracker.index",
+                    "deal-tracker.stage-update"
+                ]
+            }
+        },
+        "PaymentStageController": {
+            "documented": true,
+            "path": "docs/developer/backend/controllers/PaymentStageController.md",
+            "lastUpdated": "2026-03-15",
+            "relationships": {
+                "usesActions": [
+                    "CreatePaymentStageAction"
+                ],
+                "usesModels": [
+                    "PaymentStage",
+                    "Sale"
+                ],
+                "relatedRoutes": [
+                    "payment-stages.index",
+                    "payment-stages.store",
+                    "payment-stages.update",
+                    "payment-stages.destroy"
+                ]
+            }
+        },
+        "PinnedNoteController": {
+            "documented": true,
+            "path": "docs/developer/backend/controllers/PinnedNoteController.md",
+            "lastUpdated": "2026-03-15",
+            "relationships": {
+                "usesActions": [
+                    "CreatePinnedNoteAction"
+                ],
+                "usesModels": [
+                    "PinnedNote",
+                    "PropertyReservation",
+                    "Sale"
+                ],
+                "relatedRoutes": [
+                    "pinned-notes.reservation.index",
+                    "pinned-notes.reservation.store",
+                    "pinned-notes.sale.index",
+                    "pinned-notes.sale.store",
+                    "pinned-notes.destroy"
+                ]
+            }
+        },
+        "DealDocumentController": {
+            "documented": true,
+            "path": "docs/developer/backend/controllers/DealDocumentController.md",
+            "lastUpdated": "2026-03-15",
+            "relationships": {
+                "usesActions": [
+                    "UploadDealDocumentAction"
+                ],
+                "usesModels": [
+                    "DealDocument"
+                ],
+                "relatedRoutes": [
+                    "deal-documents.index",
+                    "deal-documents.store",
+                    "deal-documents.destroy"
                 ]
             }
         }
@@ -7468,6 +7599,20 @@
                     "retargeting-pixels.store",
                     "retargeting-pixels.update",
                     "retargeting-pixels.destroy"
+                ]
+            }
+        },
+        "deal-tracker/index": {
+            "documented": true,
+            "path": "docs/developer/frontend/pages/deal-tracker/index.md",
+            "lastUpdated": "2026-03-15",
+            "relationships": {
+                "renderedBy": [
+                    "DealTrackerController"
+                ],
+                "relatedRoutes": [
+                    "deal-tracker.index",
+                    "deal-tracker.stage-update"
                 ]
             }
         }

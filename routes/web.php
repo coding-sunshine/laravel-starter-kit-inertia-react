@@ -38,7 +38,9 @@ use App\Http\Controllers\ContactSubmissionController;
 use App\Http\Controllers\CookieConsentController;
 use App\Http\Controllers\CustomFieldController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DealDocumentController;
 use App\Http\Controllers\DealForecastController;
+use App\Http\Controllers\DealTrackerController;
 use App\Http\Controllers\Dev\ComponentShowcaseController;
 use App\Http\Controllers\Dev\PageGalleryController;
 use App\Http\Controllers\EmailCampaignController;
@@ -72,7 +74,9 @@ use App\Http\Controllers\OrganizationSwitchController;
 use App\Http\Controllers\OrgThemeController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\PageViewController;
+use App\Http\Controllers\PaymentStageController;
 use App\Http\Controllers\PersonalDataExportController;
+use App\Http\Controllers\PinnedNoteController;
 use App\Http\Controllers\PipelineController;
 use App\Http\Controllers\PostsTableController;
 use App\Http\Controllers\PredictiveSuggestionsController;
@@ -388,6 +392,22 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::post('landing-pages/generate', [LandingPageController::class, 'generate'])->name('landing-pages.generate');
     Route::patch('landing-pages/{landingPageTemplate}', [LandingPageController::class, 'update'])->name('landing-pages.update');
     Route::delete('landing-pages/{landingPageTemplate}', [LandingPageController::class, 'destroy'])->name('landing-pages.destroy');
+
+    // Deal Tracker (US-015)
+    Route::get('deal-tracker', [DealTrackerController::class, 'index'])->name('deal-tracker.index');
+    Route::patch('deal-tracker/{reservation}/stage', [DealTrackerController::class, 'stageUpdate'])->name('deal-tracker.stage-update');
+    Route::get('sales/{sale}/payment-stages', [PaymentStageController::class, 'index'])->name('payment-stages.index');
+    Route::post('sales/{sale}/payment-stages', [PaymentStageController::class, 'store'])->name('payment-stages.store');
+    Route::patch('payment-stages/{paymentStage}', [PaymentStageController::class, 'update'])->name('payment-stages.update');
+    Route::delete('payment-stages/{paymentStage}', [PaymentStageController::class, 'destroy'])->name('payment-stages.destroy');
+    Route::get('reservations/{reservation}/pinned-notes', [PinnedNoteController::class, 'indexForReservation'])->name('pinned-notes.reservation.index');
+    Route::post('reservations/{reservation}/pinned-notes', [PinnedNoteController::class, 'storeForReservation'])->name('pinned-notes.reservation.store');
+    Route::get('sales/{sale}/pinned-notes', [PinnedNoteController::class, 'indexForSale'])->name('pinned-notes.sale.index');
+    Route::post('sales/{sale}/pinned-notes', [PinnedNoteController::class, 'storeForSale'])->name('pinned-notes.sale.store');
+    Route::delete('pinned-notes/{pinnedNote}', [PinnedNoteController::class, 'destroy'])->name('pinned-notes.destroy');
+    Route::get('deal-documents', [DealDocumentController::class, 'index'])->name('deal-documents.index');
+    Route::post('deal-documents', [DealDocumentController::class, 'store'])->name('deal-documents.store');
+    Route::delete('deal-documents/{dealDocument}', [DealDocumentController::class, 'destroy'])->name('deal-documents.destroy');
 });
 
 Route::get('/api/slug-availability', SlugAvailabilityController::class)

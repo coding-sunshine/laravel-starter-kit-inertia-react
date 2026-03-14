@@ -8,6 +8,8 @@ use App\States\PropertyReservation\ReservationState;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Mattiverse\Userstamps\Traits\Userstamps;
 use Spatie\Activitylog\LogOptions;
@@ -130,6 +132,22 @@ final class PropertyReservation extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    /**
+     * @return MorphMany<PinnedNote, $this>
+     */
+    public function pinnedNotes(): MorphMany
+    {
+        return $this->morphMany(PinnedNote::class, 'noteable');
+    }
+
+    /**
+     * @return HasMany<DealDocument, $this>
+     */
+    public function dealDocuments(): HasMany
+    {
+        return $this->hasMany(DealDocument::class, 'deal_id')->where('deal_type', 'reservation');
     }
 
     public function getActivitylogOptions(): LogOptions

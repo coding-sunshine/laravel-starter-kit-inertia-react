@@ -418,6 +418,10 @@ final class AppServiceProvider extends ServiceProvider
             'retargeting-pixel-add-btn',
             'email-campaign-create-btn',
             'landing-page-generate-btn',
+            'deal-tracker-tab',
+            'deal-tracker-kanban',
+            'deal-documents-tab',
+            'payment-stages-tab',
         ]);
     }
 

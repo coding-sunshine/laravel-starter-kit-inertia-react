@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Laravel\Scout\Searchable;
 use Mattiverse\Userstamps\Traits\Userstamps;
@@ -187,6 +188,30 @@ final class Sale extends Model
     public function commissions(): HasMany
     {
         return $this->hasMany(Commission::class);
+    }
+
+    /**
+     * @return HasMany<PaymentStage, $this>
+     */
+    public function paymentStages(): HasMany
+    {
+        return $this->hasMany(PaymentStage::class);
+    }
+
+    /**
+     * @return MorphMany<PinnedNote, $this>
+     */
+    public function pinnedNotes(): MorphMany
+    {
+        return $this->morphMany(PinnedNote::class, 'noteable');
+    }
+
+    /**
+     * @return HasMany<DealDocument, $this>
+     */
+    public function dealDocuments(): HasMany
+    {
+        return $this->hasMany(DealDocument::class, 'deal_id')->where('deal_type', 'sale');
     }
 
     public function getActivitylogOptions(): LogOptions
