@@ -32,3 +32,4 @@ Schedule::job(new App\Jobs\Billing\GenerateBillingMetrics)->daily()->at('02:00')
 Schedule::job(new App\Jobs\Billing\ExpireCredits)->daily()->at('03:00');
 Schedule::job(new App\Jobs\Billing\ProcessTrialEndingReminders)->daily()->at('04:00');
 Schedule::job(new App\Jobs\Billing\ProcessDunningReminders)->daily()->at('05:00');
+Schedule::job(new App\Jobs\DashboardInsightJob)->dailyAt('06:00');

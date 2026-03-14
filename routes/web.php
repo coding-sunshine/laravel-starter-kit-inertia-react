@@ -9,6 +9,7 @@ declare(strict_types=1);
  */
 
 use App\Http\Controllers\AnnouncementsTableController;
+use App\Http\Controllers\Api\LoginEventController;
 use App\Http\Controllers\Api\SlugAvailabilityController;
 use App\Http\Controllers\Billing\BillingDashboardController;
 use App\Http\Controllers\Billing\CreditController;
@@ -54,6 +55,7 @@ use App\Http\Controllers\ProjectsTableController;
 use App\Http\Controllers\PropertyEnquiryController;
 use App\Http\Controllers\PropertyReservationController;
 use App\Http\Controllers\PropertySearchController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\SessionController;
@@ -182,6 +184,8 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('searches', [PropertySearchController::class, 'index'])->name('searches.index');
     Route::get('sales', [SaleController::class, 'index'])->name('sales.index');
     Route::get('commissions', [CommissionController::class, 'index'])->name('commissions.index');
+    Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
+    Route::get('reports/{type}', [ReportController::class, 'show'])->name('reports.show');
     Route::get('categories', [CategoriesTableController::class, 'index'])->name('categories.table');
     Route::get('posts', [PostsTableController::class, 'index'])->name('posts.table');
     Route::get('users', [UsersTableController::class, 'index'])->name('users.table');
@@ -260,6 +264,10 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 Route::get('/api/slug-availability', SlugAvailabilityController::class)
     ->middleware('auth')
     ->name('api.slug-availability');
+
+Route::post('api/login-event', [LoginEventController::class, 'store'])
+    ->middleware('throttle:10,1')
+    ->name('api.login-event');
 
 Route::get('/internal/caddy/ask', CaddyAskController::class)
     ->middleware(InternalRequestMiddleware::class)

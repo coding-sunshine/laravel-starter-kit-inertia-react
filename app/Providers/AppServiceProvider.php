@@ -17,6 +17,7 @@ use App\Listeners\Billing\SyncSubscriptionSeatsOnMemberChange;
 use App\Listeners\CreatePersonalOrganizationOnUserCreated;
 use App\Listeners\Gamification\GrantGamificationOnUserCreated;
 use App\Listeners\LogImpersonationEvents;
+use App\Listeners\LoginEventListener;
 use App\Listeners\MigrationListener;
 use App\Listeners\SendSlackAlertOnJobFailed;
 use App\Models\Shareable;
@@ -30,6 +31,7 @@ use App\Services\PaymentGateway\PaymentGatewayManager;
 use App\Services\PrismService;
 use App\Settings\AuthSettings;
 use App\Settings\SeoSettings;
+use Illuminate\Auth\Events\Login;
 use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Events\MigrationsEnded;
@@ -145,6 +147,7 @@ final class AppServiceProvider extends ServiceProvider
         Event::listen(OrganizationMemberAdded::class, SyncSubscriptionSeatsOnMemberChange::class);
         Event::listen(OrganizationMemberRemoved::class, SyncSubscriptionSeatsOnMemberChange::class);
         Event::listen(OrderCreated::class, AddCreditsFromLemonSqueezyOrder::class);
+        Event::listen(Login::class, LoginEventListener::class);
 
         Event::listen(function (\SocialiteProviders\Manager\SocialiteWasCalled $event): void {
             $event->extendSocialite('google', \SocialiteProviders\Google\Provider::class);
@@ -375,6 +378,13 @@ final class AppServiceProvider extends ServiceProvider
             'settings-nav-domains',
             'nav-admin-panel',
             'settings-nav-admin-panel',
+            'reports-index',
+            'contacts-table',
+            'reservations-table',
+            'tasks-table',
+            'sales-table',
+            'commissions-table',
+            'campaign-sites-table',
         ]);
     }
 

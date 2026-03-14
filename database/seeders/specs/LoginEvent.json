@@ -1,0 +1,51 @@
+{
+    "model": "LoginEvent",
+    "category": "development",
+    "columns": [
+        "id",
+        "user_id",
+        "ip_address",
+        "user_agent",
+        "device_fingerprint",
+        "created_at"
+    ],
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "user_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "ip_address": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "user_agent": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "device_fingerprint": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "user": {
+            "type": "belongsTo",
+            "model": "User"
+        }
+    },
+    "value_hints": []
+}

@@ -1498,6 +1498,11 @@
           "campaign-sites/puck-editor"
         ]
       }
+    },
+    "ReportController": {
+      "documented": true,
+      "path": "docs/developer/backend/controllers/ReportController.md",
+      "lastUpdated": "2026-03-15"
     }
   },
   "pages": {
@@ -5215,6 +5220,16 @@
         "renderedBy": "CampaignSiteController",
         "route": "campaign-sites.edit-puck"
       }
+    },
+    "reports/index": {
+      "documented": true,
+      "path": "docs/developer/frontend/pages/reports/index.md",
+      "lastUpdated": "2026-03-15"
+    },
+    "reports/show": {
+      "documented": true,
+      "path": "docs/developer/frontend/pages/reports/show.md",
+      "lastUpdated": "2026-03-15"
     }
   },
   "routes": {
