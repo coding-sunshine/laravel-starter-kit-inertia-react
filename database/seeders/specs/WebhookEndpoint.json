@@ -1,0 +1,61 @@
+{
+    "model": "WebhookEndpoint",
+    "table": "webhook_endpoints",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": false,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": false,
+            "default": null
+        },
+        "url": {
+            "type": "string",
+            "nullable": false,
+            "default": null
+        },
+        "events": {
+            "type": "jsonb",
+            "nullable": false,
+            "default": "[]"
+        },
+        "secret": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "is_active": {
+            "type": "boolean",
+            "nullable": false,
+            "default": true
+        },
+        "last_triggered_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "failure_count": {
+            "type": "integer",
+            "nullable": false,
+            "default": 0
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    }
+}

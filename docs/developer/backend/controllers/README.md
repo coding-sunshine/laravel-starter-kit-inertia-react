@@ -98,10 +98,15 @@ All Controllers:
 | [AutomationRuleController](docs/developer/backend/controllers/AutomationRuleController.md) | N/A | ✅ |
 | [AnalyticsController](docs/developer/backend/controllers/AnalyticsController.md) | N/A | ✅ |
 | [DealForecastController](docs/developer/backend/controllers/DealForecastController.md) | N/A | ✅ |
-| AdTemplateController | N/A | ❌ |
-| BrochureLayoutController | N/A | ❌ |
-| EmailCampaignController | N/A | ❌ |
-| LandingPageController | N/A | ❌ |
-| RetargetingPixelController | N/A | ❌ |
+| [AdTemplateController](docs/developer/backend/controllers/AdTemplateController.md) | N/A | ✅ |
+| [BrochureLayoutController](docs/developer/backend/controllers/BrochureLayoutController.md) | N/A | ✅ |
+| [EmailCampaignController](docs/developer/backend/controllers/EmailCampaignController.md) | N/A | ✅ |
+| [LandingPageController](docs/developer/backend/controllers/LandingPageController.md) | N/A | ✅ |
+| [RetargetingPixelController](docs/developer/backend/controllers/RetargetingPixelController.md) | N/A | ✅ |
+| [DealTrackerController](docs/developer/backend/controllers/DealTrackerController.md) | N/A | ✅ |
+| [PaymentStageController](docs/developer/backend/controllers/PaymentStageController.md) | N/A | ✅ |
+| [PinnedNoteController](docs/developer/backend/controllers/PinnedNoteController.md) | N/A | ✅ |
+| [DealDocumentController](docs/developer/backend/controllers/DealDocumentController.md) | N/A | ✅ |
+| WebsiteController | N/A | ❌ |
 
 

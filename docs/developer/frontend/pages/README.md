@@ -113,10 +113,12 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | custom-fields/index | custom-fields.index, custom-fields.store | ✅ |
 | automation-rules/index | automation-rules.index, automation-rules.store | ✅ |
 | analytics/index | analytics.index, analytics.nl-query | ✅ |
-| ad-templates/index | ad-templates.index, ad-templates.store | ❌ |
-| brochure-layouts/index | brochure-layouts.index, brochure-layouts.store | ❌ |
-| email-campaigns/index | email-campaigns.index, email-campaigns.store | ❌ |
-| landing-pages/index | landing-pages.index, landing-pages.generate | ❌ |
-| retargeting-pixels/index | retargeting-pixels.index, retargeting-pixels.store | ❌ |
+| [ad-templates/index](docs/developer/backend/controllers/AdTemplateController.md) | ad-templates.index, ad-templates.store | ✅ |
+| [brochure-layouts/index](docs/developer/backend/controllers/BrochureLayoutController.md) | brochure-layouts.index, brochure-layouts.store | ✅ |
+| [email-campaigns/index](docs/developer/backend/controllers/EmailCampaignController.md) | email-campaigns.index, email-campaigns.store | ✅ |
+| [landing-pages/index](docs/developer/backend/controllers/LandingPageController.md) | landing-pages.index, landing-pages.generate | ✅ |
+| [retargeting-pixels/index](docs/developer/backend/controllers/RetargetingPixelController.md) | retargeting-pixels.index, retargeting-pixels.store | ✅ |
+| deal-tracker/index | deal-tracker.index, deal-tracker.stage-update | ✅ |
+| websites/index | api.websites.callback, website-index.index | ❌ |
 
 

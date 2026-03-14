@@ -113,6 +113,7 @@ use App\Http\Controllers\UserProfileController;
 use App\Http\Controllers\UsersTableController;
 use App\Http\Controllers\UserTwoFactorAuthenticationController;
 use App\Http\Controllers\VapiController;
+use App\Http\Controllers\WebsiteController;
 use App\Http\Middleware\InternalRequestMiddleware;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Http\RedirectResponse;
@@ -232,6 +233,10 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::post('lead-generation/lead-brief/{contact}', [LeadGenerationController::class, 'leadBrief'])->name('lead-generation.lead-brief');
     Route::post('lead-generation/score-and-route/{contact}', [LeadGenerationController::class, 'scoreAndRoute'])->name('lead-generation.score-and-route');
     Route::get('lead-generation/coaching/{contact}', [LeadGenerationController::class, 'coaching'])->name('lead-generation.coaching');
+    Route::get('website-index', [WebsiteController::class, 'index'])->middleware('tenant')->name('website-index.index');
+    Route::post('website-index', [WebsiteController::class, 'store'])->middleware('tenant')->name('website-index.store');
+    Route::delete('website-index/{website}', [WebsiteController::class, 'destroy'])->middleware('tenant')->name('website-index.destroy');
+
     Route::get('nurture-sequences', [NurtureSequenceController::class, 'index'])->name('nurture-sequences.index');
     Route::post('nurture-sequences', [NurtureSequenceController::class, 'store'])->name('nurture-sequences.store');
     Route::post('nurture-sequences/enroll/{contact}', [NurtureSequenceController::class, 'enroll'])->name('nurture-sequences.enroll');

@@ -72,9 +72,13 @@ All Actions:
 | [ProcessAutomationRuleAction](docs/developer/backend/actions/ProcessAutomationRuleAction.md) | N/A | ✅ |
 | [GenerateDealForecastAction](docs/developer/backend/actions/GenerateDealForecastAction.md) | N/A | ✅ |
 | [NlAnalyticsQueryAction](docs/developer/backend/actions/NlAnalyticsQueryAction.md) | N/A | ✅ |
-| GenerateAdCopyAction | N/A | ❌ |
-| GenerateBrochureV2Action | N/A | ❌ |
-| GenerateEmailCampaignAction | N/A | ❌ |
-| GenerateLandingPageAction | N/A | ❌ |
+| [GenerateAdCopyAction](docs/developer/backend/actions/GenerateAdCopyAction.md) | N/A | ✅ |
+| [GenerateBrochureV2Action](docs/developer/backend/actions/GenerateBrochureV2Action.md) | N/A | ✅ |
+| [GenerateEmailCampaignAction](docs/developer/backend/actions/GenerateEmailCampaignAction.md) | N/A | ✅ |
+| [GenerateLandingPageAction](docs/developer/backend/actions/GenerateLandingPageAction.md) | N/A | ✅ |
+| [CreatePaymentStageAction](docs/developer/backend/actions/CreatePaymentStageAction.md) | N/A | ✅ |
+| [CreatePinnedNoteAction](docs/developer/backend/actions/CreatePinnedNoteAction.md) | N/A | ✅ |
+| [UploadDealDocumentAction](docs/developer/backend/actions/UploadDealDocumentAction.md) | N/A | ✅ |
+| TriggerWebhooksAction | N/A | ❌ |
 
 

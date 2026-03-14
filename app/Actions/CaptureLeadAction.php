@@ -23,7 +23,7 @@ final readonly class CaptureLeadAction
      */
     public function handle(array $data, int $organizationId): Contact
     {
-        return DB::transaction(function () use ($data, $organizationId): Contact {
+        $contact = DB::transaction(function () use ($data, $organizationId): Contact {
             $source = isset($data['source_name'])
                 ? Source::query()->firstOrCreate(['name' => $data['source_name']])
                 : null;
@@ -79,5 +79,16 @@ final readonly class CaptureLeadAction
 
             return $contact;
         });
+
+        app(TriggerWebhooksAction::class)->handle('contact.created', [
+            'contact_id' => $contact->id,
+            'first_name' => $contact->first_name,
+            'last_name' => $contact->last_name,
+            'type' => $contact->type,
+            'stage' => $contact->stage,
+            'organization_id' => $organizationId,
+        ], $organizationId);
+
+        return $contact;
     }
 }
