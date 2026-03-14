@@ -29,6 +29,7 @@ use App\Http\Controllers\Indents\IndentsController;
 use App\Http\Controllers\InvitationAcceptController;
 use App\Http\Controllers\LoadersController;
 use App\Http\Controllers\OnboardingController;
+use App\Http\Controllers\OpeningCoalStockController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\OrganizationInvitationController;
 use App\Http\Controllers\OrganizationMemberController;
@@ -56,6 +57,7 @@ use App\Http\Controllers\RR\RrUploadController;
 use App\Http\Controllers\SectionTimersController;
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\Settings\AchievementsController;
+use App\Http\Controllers\ShiftTimingsController;
 use App\Http\Controllers\SidingsController;
 use App\Http\Controllers\SidingSwitchController;
 use App\Http\Controllers\TermsAcceptController;
@@ -238,6 +240,12 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         Route::resource('loaders', LoadersController::class);
         Route::resource('penalty-types', PenaltyTypesController::class);
         Route::resource('section-timers', SectionTimersController::class);
+        Route::get('shift-timings', [ShiftTimingsController::class, 'index'])->name('shift-timings.index');
+        Route::get('shift-timings/{siding}/edit', [ShiftTimingsController::class, 'edit'])->name('shift-timings.edit');
+        Route::put('shift-timings/{siding}', [ShiftTimingsController::class, 'update'])->name('shift-timings.update');
+        Route::get('opening-coal-stock', [OpeningCoalStockController::class, 'index'])->name('opening-coal-stock.index');
+        Route::get('opening-coal-stock/{siding}/edit', [OpeningCoalStockController::class, 'edit'])->name('opening-coal-stock.edit');
+        Route::put('opening-coal-stock/{siding}', [OpeningCoalStockController::class, 'update'])->name('opening-coal-stock.update');
         Route::resource('distance-matrix', PowerplantSidingDistancesController::class)->names([
             'index' => 'master-data.distance-matrix.index',
             'create' => 'master-data.distance-matrix.create',

@@ -18,6 +18,7 @@ use App\Models\RakeWagonWeighment;
 use App\Models\RakeWeighment;
 use App\Models\RrPenaltySnapshot;
 use App\Models\Siding;
+use App\Models\SidingOpeningBalance;
 use App\Models\SidingVehicleDispatch;
 use App\Models\StockLedger;
 use App\Models\VehicleUnload;
@@ -785,9 +786,13 @@ final class ExecutiveDashboardController extends Controller
         $result = [];
         foreach ($sidingIds as $sid) {
             $latest = $latestLedgers->get($sid);
-            $closing = $latest ? (float) $latest->closing_balance_mt : 0.0;
-            // Opening = balance at start of latest transaction (0 if that was the first ever ledger row for this siding)
-            $opening = $latest ? (float) $latest->opening_balance_mt : 0.0;
+            if ($latest) {
+                $opening = (float) $latest->opening_balance_mt;
+                $closing = (float) $latest->closing_balance_mt;
+            } else {
+                $opening = SidingOpeningBalance::getOpeningBalanceForSiding($sid);
+                $closing = $opening;
+            }
 
             $result[$sid] = [
                 'siding_id' => $sid,

@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Events\CoalStockUpdated;
 use App\Models\DailyVehicleEntry;
 use App\Models\Siding;
+use App\Models\SidingOpeningBalance;
 use App\Models\StockLedger;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -157,10 +158,10 @@ final readonly class DailyVehicleEntryService
             ->latest('id')
             ->first();
 
-        // No prior ledger for this siding => opening 0 (first transaction). Else use last row's closing.
+        // No prior ledger for this siding => use configured opening balance (or 0). Else use last row's closing.
         $openingBalance = $lastLedger
             ? (float) $lastLedger->closing_balance_mt
-            : 0.0;
+            : SidingOpeningBalance::getOpeningBalanceForSiding($entry->siding_id);
 
         StockLedger::create([
             'siding_id' => $entry->siding_id,

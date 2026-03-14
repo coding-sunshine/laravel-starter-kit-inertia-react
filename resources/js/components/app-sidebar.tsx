@@ -98,6 +98,20 @@ const platformNavItems: NavItem[] = [
                 dataPan: 'nav-section-timers',
             },
             {
+                title: 'Shift Timings',
+                href: '/master-data/shift-timings',
+                icon: Timer,
+                permission: 'sections.shift_timings.view',
+                dataPan: 'nav-shift-timings',
+            },
+            {
+                title: 'Opening Coal Stock',
+                href: '/master-data/opening-coal-stock',
+                icon: Scale,
+                permission: 'sections.opening_coal_stock.view',
+                dataPan: 'nav-opening-coal-stock',
+            },
+            {
                 title: 'Distance Matrix',
                 href: '/master-data/distance-matrix',
                 icon: Route,

@@ -41,6 +41,16 @@ return [
             'actions' => ['view', 'create', 'update', 'delete'],
         ],
         [
+            'slug' => 'shift_timings',
+            'label' => 'Shift Timings',
+            'actions' => ['view', 'create', 'update', 'delete'],
+        ],
+        [
+            'slug' => 'opening_coal_stock',
+            'label' => 'Opening Coal Stock',
+            'actions' => ['view', 'update'],
+        ],
+        [
             'slug' => 'distance_matrix',
             'label' => 'Distance Matrix',
             'actions' => ['view', 'create', 'update', 'delete'],
@@ -186,6 +196,14 @@ return [
         'master-data.section-timers.edit' => 'sections.section_timers.update',
         'master-data.section-timers.update' => 'sections.section_timers.update',
         'master-data.section-timers.destroy' => 'sections.section_timers.delete',
+
+        'master-data.shift-timings.index' => 'sections.shift_timings.view',
+        'master-data.shift-timings.edit' => 'sections.shift_timings.update',
+        'master-data.shift-timings.update' => 'sections.shift_timings.update',
+
+        'master-data.opening-coal-stock.index' => 'sections.opening_coal_stock.view',
+        'master-data.opening-coal-stock.edit' => 'sections.opening_coal_stock.update',
+        'master-data.opening-coal-stock.update' => 'sections.opening_coal_stock.update',
 
         'master-data.distance-matrix.index' => 'sections.distance_matrix.view',
         'master-data.distance-matrix.show' => 'sections.distance_matrix.view',
@@ -360,6 +378,8 @@ return [
         'loaders' => 'sections.loaders.view',
         'penalty_types' => 'sections.penalty_types.view',
         'section_timers' => 'sections.section_timers.view',
+        'shift_timings' => 'sections.shift_timings.view',
+        'opening_coal_stock' => 'sections.opening_coal_stock.view',
         'distance_matrix' => 'sections.distance_matrix.view',
         'billing' => 'sections.billing.view',
         'rakes' => 'sections.rakes.view',

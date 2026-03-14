@@ -126,8 +126,8 @@ export default function RailwaySidingEmptyWeighmentIndex({
     if (shiftStatus && selectedDate === new Date().toISOString().split('T')[0]) {
       if (!shiftStatus[shift]?.is_available) {
         const messages: Record<number, string> = {
-          2: '2nd shift will be available after 1st shift completion (after 11:00)',
-          3: '3rd shift will be available after 2nd shift completion (after 22:00)',
+          2: `2nd shift will be available after 1st shift completion (after ${shiftTimes[1]?.end ?? '08:00'})`,
+          3: `3rd shift will be available after 2nd shift completion (after ${shiftTimes[2]?.end ?? '16:00'})`,
         };
         alert(messages[shift] || 'This shift is not available at the current time.');
         return;
@@ -149,9 +149,9 @@ export default function RailwaySidingEmptyWeighmentIndex({
     if (shiftStatus && selectedDate === new Date().toISOString().split('T')[0]) {
       if (!shiftStatus[activeShiftState]?.is_available) {
         const messages: Record<number, string> = {
-          1: '1st shift is only available between 06:00 - 11:00',
-          2: '2nd shift will be available after 1st shift completion (after 11:00)',
-          3: '3rd shift will be available after 2nd shift completion (after 22:00)',
+          1: `1st shift is only available between ${shiftTimes[1]?.start ?? '00:01'} - ${shiftTimes[1]?.end ?? '08:00'}`,
+          2: `2nd shift will be available after 1st shift completion (after ${shiftTimes[1]?.end ?? '08:00'})`,
+          3: `3rd shift will be available after 2nd shift completion (after ${shiftTimes[2]?.end ?? '16:00'})`,
         };
         alert(messages[activeShiftState] || 'This shift is not available at the current time.');
         addingRowRef.current = false;
@@ -384,9 +384,9 @@ export default function RailwaySidingEmptyWeighmentIndex({
             </Card>
 
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Shift 1: {shiftTimes[1]?.start ?? '06:00'}–{shiftTimes[1]?.end ?? '11:00'} &nbsp;|&nbsp; Shift 2:{' '}
-              {shiftTimes[2]?.start ?? '11:00'}–{shiftTimes[2]?.end ?? '22:00'} &nbsp;|&nbsp; Shift 3:{' '}
-              {shiftTimes[3]?.start ?? '22:00'}–{shiftTimes[3]?.end ?? '06:00'}
+              Shift 1: {shiftTimes[1]?.start ?? '00:01'}–{shiftTimes[1]?.end ?? '08:00'} &nbsp;|&nbsp; Shift 2:{' '}
+              {shiftTimes[2]?.start ?? '08:01'}–{shiftTimes[2]?.end ?? '16:00'} &nbsp;|&nbsp; Shift 3:{' '}
+              {shiftTimes[3]?.start ?? '16:01'}–{shiftTimes[3]?.end ?? '00:00'}
             </p>
 
             <ShiftTabs
@@ -394,6 +394,7 @@ export default function RailwaySidingEmptyWeighmentIndex({
               onShiftChange={handleShiftChange}
               shiftSummary={shiftSummary}
               shiftStatus={shiftStatus}
+              shiftTimes={shiftTimes}
             />
           </>
         )}

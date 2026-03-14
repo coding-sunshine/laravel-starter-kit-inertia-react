@@ -26,38 +26,39 @@ final class SidingShiftSeeder extends Seeder
         foreach ($sidings as $siding) {
             $baseName = str($siding->name)->before(' ')->title()->toString();
 
+            // Client timings: 1st 12:01 AM–08:00 AM, 2nd 08:01 AM–04:00 PM, 3rd 04:01 PM–12:00 AM
             $shifts = [
                 [
-                    'shift_name' => "{$baseName} Shift 1",
-                    'start_time' => '06:00:00',
-                    'end_time' => '14:00:00',
+                    'shift_name' => "{$baseName} 1st Shift",
+                    'start_time' => '00:01:00',
+                    'end_time' => '08:00:00',
                     'sort_order' => 1,
                 ],
                 [
-                    'shift_name' => "{$baseName} Shift 2",
-                    'start_time' => '14:00:00',
-                    'end_time' => '22:00:00',
+                    'shift_name' => "{$baseName} 2nd Shift",
+                    'start_time' => '08:01:00',
+                    'end_time' => '16:00:00',
                     'sort_order' => 2,
                 ],
                 [
-                    'shift_name' => "{$baseName} Shift 3",
-                    'start_time' => '22:00:00',
-                    'end_time' => '06:00:00',
+                    'shift_name' => "{$baseName} 3rd Shift",
+                    'start_time' => '16:01:00',
+                    'end_time' => '00:00:00', // midnight (overnight)
                     'sort_order' => 3,
                 ],
             ];
 
             foreach ($shifts as $data) {
-                SidingShift::query()->firstOrCreate(
+                SidingShift::query()->updateOrCreate(
                     [
                         'siding_id' => $siding->id,
-                        'shift_name' => $data['shift_name'],
+                        'sort_order' => $data['sort_order'],
                     ],
                     [
+                        'shift_name' => $data['shift_name'],
                         'start_time' => $data['start_time'],
                         'end_time' => $data['end_time'],
                         'is_active' => true,
-                        'sort_order' => $data['sort_order'],
                         'description' => null,
                     ],
                 );

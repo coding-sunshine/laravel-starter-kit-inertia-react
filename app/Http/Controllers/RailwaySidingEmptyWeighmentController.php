@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Models\DailyVehicleEntry;
+use App\Models\Siding;
 use App\Services\DailyVehicleEntryService;
 use App\Services\ShiftValidationService;
 use Illuminate\Http\JsonResponse;
@@ -39,9 +40,11 @@ final class RailwaySidingEmptyWeighmentController extends Controller
             $activeShift = $assignedShift['shift'];
         }
 
+        $sidingIdForShifts = $sidingId ?? Siding::query()->orderBy('name')->value('id');
+
         if ($date === now()->format('Y-m-d')) {
-            if (! $this->shiftValidation->canAccessShift($activeShift, $date)) {
-                $availableShifts = $this->shiftValidation->getAvailableShifts();
+            if (! $this->shiftValidation->canAccessShift($activeShift, $date, null, $sidingIdForShifts)) {
+                $availableShifts = $this->shiftValidation->getAvailableShifts(null, $sidingIdForShifts);
                 $defaultShift = $availableShifts->first() ?? 1;
 
                 if (! $restrictToAssignedShift && $activeShift !== $defaultShift) {
@@ -60,14 +63,10 @@ final class RailwaySidingEmptyWeighmentController extends Controller
             DailyVehicleEntry::ENTRY_TYPE_RAILWAY_SIDING_EMPTY_WEIGHMENT
         );
         $shiftSummary = $this->service->getShiftSummary($date, DailyVehicleEntry::ENTRY_TYPE_RAILWAY_SIDING_EMPTY_WEIGHMENT);
-        $shiftStatus = $this->shiftValidation->getShiftCompletionStatus($date);
-        $shiftTimes = [
-            1 => $this->shiftValidation->getShiftTimeRange(1),
-            2 => $this->shiftValidation->getShiftTimeRange(2),
-            3 => $this->shiftValidation->getShiftTimeRange(3),
-        ];
+        $shiftStatus = $this->shiftValidation->getShiftCompletionStatus($date, $sidingIdForShifts);
+        $shiftTimes = $this->shiftValidation->getShiftTimesForSiding($sidingIdForShifts);
 
-        $sidings = \App\Models\Siding::orderBy('name')->get(['id', 'name']);
+        $sidings = Siding::query()->orderBy('name')->get(['id', 'name']);
 
         return Inertia::render('railway-siding-empty-weighment/index', [
             'entries' => $entries->values()->all(),
@@ -99,7 +98,8 @@ final class RailwaySidingEmptyWeighmentController extends Controller
         }
 
         if ($data['entry_date'] === now()->format('Y-m-d')) {
-            if (! $this->shiftValidation->canAccessShift($data['shift'], $data['entry_date'])) {
+            $sidingIdForValidation = $data['siding_id'] ?? Siding::query()->orderBy('name')->value('id');
+            if (! $this->shiftValidation->canAccessShift($data['shift'], $data['entry_date'], null, $sidingIdForValidation)) {
                 throw ValidationException::withMessages([
                     'shift' => 'This shift is not available at the current time. Please wait for the shift to become active.',
                 ]);

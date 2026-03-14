@@ -6,6 +6,7 @@ namespace App\Actions;
 
 use App\Events\CoalStockUpdated;
 use App\Models\Siding;
+use App\Models\SidingOpeningBalance;
 use App\Models\StockLedger;
 use App\Models\VehicleArrival;
 use App\Models\VehicleUnload;
@@ -172,12 +173,15 @@ final readonly class UpdateStockLedger
      */
     public function getCurrentBalance(int $sidingId): float
     {
-        // Get last ledger entry's closing balance
         $lastLedger = StockLedger::query()->where('siding_id', $sidingId)
             ->latest('created_at')
             ->first();
 
-        return (float) ($lastLedger?->closing_balance_mt ?? 0);
+        if ($lastLedger !== null) {
+            return (float) $lastLedger->closing_balance_mt;
+        }
+
+        return SidingOpeningBalance::getOpeningBalanceForSiding($sidingId);
     }
 
     /**

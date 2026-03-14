@@ -12,9 +12,10 @@ interface ShiftTabsProps {
   onShiftChange: (shift: number) => void;
   shiftSummary: Record<number, number>;
   shiftStatus?: Record<number, ShiftStatus>;
+  shiftTimes?: Record<number, { start: string; end: string }>;
 }
 
-export default function ShiftTabs({ activeShift, onShiftChange, shiftSummary, shiftStatus }: ShiftTabsProps) {
+export default function ShiftTabs({ activeShift, onShiftChange, shiftSummary, shiftStatus, shiftTimes }: ShiftTabsProps) {
   const shifts = [
     { id: 1, label: '1ST SHIFT' },
     { id: 2, label: '2ND SHIFT' },
@@ -37,8 +38,8 @@ export default function ShiftTabs({ activeShift, onShiftChange, shiftSummary, sh
     const status = shiftStatus[shiftId];
     if (status.is_active) return 'Current active shift';
     if (!status.is_available) {
-      if (shiftId === 2) return '2nd shift will be available after 1st shift completion (after 11:00)';
-      if (shiftId === 3) return '3rd shift will be available after 2nd shift completion (after 22:00)';
+      if (shiftId === 2) return `2nd shift will be available after 1st shift completion (after ${shiftTimes?.[1]?.end ?? '08:00'})`;
+      if (shiftId === 3) return `3rd shift will be available after 2nd shift completion (after ${shiftTimes?.[2]?.end ?? '16:00'})`;
       return 'Shift not available';
     }
     if (status.is_completed) return 'Completed shift';

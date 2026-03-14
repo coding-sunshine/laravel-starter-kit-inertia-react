@@ -61,16 +61,6 @@
             "type": "bigint",
             "nullable": true,
             "default": null
-        },
-        "shift_config": {
-            "type": "json",
-            "nullable": true,
-            "default": null
-        },
-        "shift_description": {
-            "type": "text",
-            "nullable": true,
-            "default": null
         }
     },
     "relationships": {
@@ -101,6 +91,14 @@
         "coalStock": {
             "type": "hasMany",
             "model": "CoalStock"
+        },
+        "shifts": {
+            "type": "hasMany",
+            "model": "Shift"
+        },
+        "openingBalance": {
+            "type": "hasOne",
+            "model": "OpeningBalance"
         }
     },
     "value_hints": {
