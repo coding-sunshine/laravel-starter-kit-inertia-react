@@ -586,6 +586,18 @@
                 ]
             },
             "lastUpdated": "2026-03-15"
+        },
+        "GenerateFlyerAction": {
+            "documented": true,
+            "path": "docs/developer/backend/actions/GenerateFlyerAction.md",
+            "relationships": {
+                "usedBy": [],
+                "usesModels": [
+                    "Flyer"
+                ],
+                "relatedRoutes": []
+            },
+            "lastUpdated": "2026-03-15"
         }
     },
     "controllers": {
@@ -1342,6 +1354,34 @@
                     "posts/table"
                 ]
             }
+        },
+        "LotsTableController": {
+            "documented": true,
+            "path": "./LotsTableController.md",
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "lots.table"
+                ],
+                "rendersPages": [
+                    "lots/index"
+                ]
+            }
+        },
+        "ProjectsTableController": {
+            "documented": true,
+            "path": "./ProjectsTableController.md",
+            "relationships": {
+                "usesActions": [],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "projects.table"
+                ],
+                "rendersPages": [
+                    "projects/index"
+                ]
+            }
         }
     },
     "pages": {
@@ -1415,6 +1455,10 @@
                     "filament.admin.resources.help-articles.create",
                     "filament.admin.resources.help-articles.view",
                     "filament.admin.resources.help-articles.edit",
+                    "filament.admin.resources.lots.index",
+                    "filament.admin.resources.lots.create",
+                    "filament.admin.resources.lots.view",
+                    "filament.admin.resources.lots.edit",
                     "filament.admin.resources.mail-templates.index",
                     "filament.admin.resources.mail-templates.edit",
                     "filament.admin.resources.organization-invitations.index",
@@ -1429,6 +1473,10 @@
                     "filament.admin.resources.posts.create",
                     "filament.admin.resources.posts.view",
                     "filament.admin.resources.posts.edit",
+                    "filament.admin.resources.projects.index",
+                    "filament.admin.resources.projects.create",
+                    "filament.admin.resources.projects.view",
+                    "filament.admin.resources.projects.edit",
                     "filament.admin.resources.roles.index",
                     "filament.admin.resources.roles.create",
                     "filament.admin.resources.roles.view",
@@ -1510,6 +1558,10 @@
                     "filament.system.resources.help-articles.create",
                     "filament.system.resources.help-articles.view",
                     "filament.system.resources.help-articles.edit",
+                    "filament.system.resources.lots.index",
+                    "filament.system.resources.lots.create",
+                    "filament.system.resources.lots.view",
+                    "filament.system.resources.lots.edit",
                     "filament.system.resources.mail-templates.index",
                     "filament.system.resources.mail-templates.edit",
                     "filament.system.resources.organization-invitations.index",
@@ -1524,6 +1576,10 @@
                     "filament.system.resources.posts.create",
                     "filament.system.resources.posts.view",
                     "filament.system.resources.posts.edit",
+                    "filament.system.resources.projects.index",
+                    "filament.system.resources.projects.create",
+                    "filament.system.resources.projects.view",
+                    "filament.system.resources.projects.edit",
                     "filament.system.resources.roles.index",
                     "filament.system.resources.roles.create",
                     "filament.system.resources.roles.view",
@@ -1541,12 +1597,6 @@
                     "filament.system.resources.vouchers.index",
                     "filament.system.resources.vouchers.create",
                     "filament.system.resources.vouchers.edit",
-                    "debugbar.openhandler",
-                    "debugbar.cache.delete",
-                    "debugbar.queries.explain",
-                    "debugbar.clockwork",
-                    "debugbar.assets",
-                    "debugbar.telescope",
                     "api.chat",
                     "chat.memories",
                     "conversations.index",
@@ -1560,8 +1610,6 @@
                     "api.v1.users.store",
                     "api.v1.users.update",
                     "api.v1.users.destroy",
-                    "dev.components",
-                    "dev.pages",
                     "up.ready",
                     "up",
                     "invitations.show",
@@ -1582,6 +1630,8 @@
                     "terms.accept.store",
                     "dashboard",
                     "announcements.table",
+                    "projects.table",
+                    "lots.table",
                     "categories.table",
                     "posts.table",
                     "users.table",
@@ -1791,8 +1841,7 @@
                     "data-table.saved-views.index",
                     "data-table.saved-views.store",
                     "data-table.saved-views.update",
-                    "data-table.saved-views.destroy",
-                    "telescope"
+                    "data-table.saved-views.destroy"
                 ]
             }
         },
@@ -2014,6 +2063,10 @@
                     "filament.admin.resources.help-articles.create",
                     "filament.admin.resources.help-articles.view",
                     "filament.admin.resources.help-articles.edit",
+                    "filament.admin.resources.lots.index",
+                    "filament.admin.resources.lots.create",
+                    "filament.admin.resources.lots.view",
+                    "filament.admin.resources.lots.edit",
                     "filament.admin.resources.mail-templates.index",
                     "filament.admin.resources.mail-templates.edit",
                     "filament.admin.resources.organization-invitations.index",
@@ -2028,6 +2081,10 @@
                     "filament.admin.resources.posts.create",
                     "filament.admin.resources.posts.view",
                     "filament.admin.resources.posts.edit",
+                    "filament.admin.resources.projects.index",
+                    "filament.admin.resources.projects.create",
+                    "filament.admin.resources.projects.view",
+                    "filament.admin.resources.projects.edit",
                     "filament.admin.resources.roles.index",
                     "filament.admin.resources.roles.create",
                     "filament.admin.resources.roles.view",
@@ -2109,6 +2166,10 @@
                     "filament.system.resources.help-articles.create",
                     "filament.system.resources.help-articles.view",
                     "filament.system.resources.help-articles.edit",
+                    "filament.system.resources.lots.index",
+                    "filament.system.resources.lots.create",
+                    "filament.system.resources.lots.view",
+                    "filament.system.resources.lots.edit",
                     "filament.system.resources.mail-templates.index",
                     "filament.system.resources.mail-templates.edit",
                     "filament.system.resources.organization-invitations.index",
@@ -2123,6 +2184,10 @@
                     "filament.system.resources.posts.create",
                     "filament.system.resources.posts.view",
                     "filament.system.resources.posts.edit",
+                    "filament.system.resources.projects.index",
+                    "filament.system.resources.projects.create",
+                    "filament.system.resources.projects.view",
+                    "filament.system.resources.projects.edit",
                     "filament.system.resources.roles.index",
                     "filament.system.resources.roles.create",
                     "filament.system.resources.roles.view",
@@ -2140,12 +2205,6 @@
                     "filament.system.resources.vouchers.index",
                     "filament.system.resources.vouchers.create",
                     "filament.system.resources.vouchers.edit",
-                    "debugbar.openhandler",
-                    "debugbar.cache.delete",
-                    "debugbar.queries.explain",
-                    "debugbar.clockwork",
-                    "debugbar.assets",
-                    "debugbar.telescope",
                     "api.chat",
                     "chat.memories",
                     "conversations.index",
@@ -2159,8 +2218,6 @@
                     "api.v1.users.store",
                     "api.v1.users.update",
                     "api.v1.users.destroy",
-                    "dev.components",
-                    "dev.pages",
                     "up.ready",
                     "up",
                     "invitations.show",
@@ -2181,6 +2238,8 @@
                     "terms.accept.store",
                     "dashboard",
                     "announcements.table",
+                    "projects.table",
+                    "lots.table",
                     "categories.table",
                     "posts.table",
                     "users.table",
@@ -2390,8 +2449,7 @@
                     "data-table.saved-views.index",
                     "data-table.saved-views.store",
                     "data-table.saved-views.update",
-                    "data-table.saved-views.destroy",
-                    "telescope"
+                    "data-table.saved-views.destroy"
                 ]
             }
         },
@@ -2538,6 +2596,10 @@
                     "filament.admin.resources.help-articles.create",
                     "filament.admin.resources.help-articles.view",
                     "filament.admin.resources.help-articles.edit",
+                    "filament.admin.resources.lots.index",
+                    "filament.admin.resources.lots.create",
+                    "filament.admin.resources.lots.view",
+                    "filament.admin.resources.lots.edit",
                     "filament.admin.resources.mail-templates.index",
                     "filament.admin.resources.mail-templates.edit",
                     "filament.admin.resources.organization-invitations.index",
@@ -2552,6 +2614,10 @@
                     "filament.admin.resources.posts.create",
                     "filament.admin.resources.posts.view",
                     "filament.admin.resources.posts.edit",
+                    "filament.admin.resources.projects.index",
+                    "filament.admin.resources.projects.create",
+                    "filament.admin.resources.projects.view",
+                    "filament.admin.resources.projects.edit",
                     "filament.admin.resources.roles.index",
                     "filament.admin.resources.roles.create",
                     "filament.admin.resources.roles.view",
@@ -2633,6 +2699,10 @@
                     "filament.system.resources.help-articles.create",
                     "filament.system.resources.help-articles.view",
                     "filament.system.resources.help-articles.edit",
+                    "filament.system.resources.lots.index",
+                    "filament.system.resources.lots.create",
+                    "filament.system.resources.lots.view",
+                    "filament.system.resources.lots.edit",
                     "filament.system.resources.mail-templates.index",
                     "filament.system.resources.mail-templates.edit",
                     "filament.system.resources.organization-invitations.index",
@@ -2647,6 +2717,10 @@
                     "filament.system.resources.posts.create",
                     "filament.system.resources.posts.view",
                     "filament.system.resources.posts.edit",
+                    "filament.system.resources.projects.index",
+                    "filament.system.resources.projects.create",
+                    "filament.system.resources.projects.view",
+                    "filament.system.resources.projects.edit",
                     "filament.system.resources.roles.index",
                     "filament.system.resources.roles.create",
                     "filament.system.resources.roles.view",
@@ -2664,12 +2738,6 @@
                     "filament.system.resources.vouchers.index",
                     "filament.system.resources.vouchers.create",
                     "filament.system.resources.vouchers.edit",
-                    "debugbar.openhandler",
-                    "debugbar.cache.delete",
-                    "debugbar.queries.explain",
-                    "debugbar.clockwork",
-                    "debugbar.assets",
-                    "debugbar.telescope",
                     "api.chat",
                     "chat.memories",
                     "conversations.index",
@@ -2683,8 +2751,6 @@
                     "api.v1.users.store",
                     "api.v1.users.update",
                     "api.v1.users.destroy",
-                    "dev.components",
-                    "dev.pages",
                     "up.ready",
                     "up",
                     "invitations.show",
@@ -2705,6 +2771,8 @@
                     "terms.accept.store",
                     "dashboard",
                     "announcements.table",
+                    "projects.table",
+                    "lots.table",
                     "categories.table",
                     "posts.table",
                     "users.table",
@@ -2914,8 +2982,7 @@
                     "data-table.saved-views.index",
                     "data-table.saved-views.store",
                     "data-table.saved-views.update",
-                    "data-table.saved-views.destroy",
-                    "telescope"
+                    "data-table.saved-views.destroy"
                 ]
             }
         },
@@ -3003,6 +3070,10 @@
                     "filament.admin.resources.help-articles.create",
                     "filament.admin.resources.help-articles.view",
                     "filament.admin.resources.help-articles.edit",
+                    "filament.admin.resources.lots.index",
+                    "filament.admin.resources.lots.create",
+                    "filament.admin.resources.lots.view",
+                    "filament.admin.resources.lots.edit",
                     "filament.admin.resources.mail-templates.index",
                     "filament.admin.resources.mail-templates.edit",
                     "filament.admin.resources.organization-invitations.index",
@@ -3017,6 +3088,10 @@
                     "filament.admin.resources.posts.create",
                     "filament.admin.resources.posts.view",
                     "filament.admin.resources.posts.edit",
+                    "filament.admin.resources.projects.index",
+                    "filament.admin.resources.projects.create",
+                    "filament.admin.resources.projects.view",
+                    "filament.admin.resources.projects.edit",
                     "filament.admin.resources.roles.index",
                     "filament.admin.resources.roles.create",
                     "filament.admin.resources.roles.view",
@@ -3098,6 +3173,10 @@
                     "filament.system.resources.help-articles.create",
                     "filament.system.resources.help-articles.view",
                     "filament.system.resources.help-articles.edit",
+                    "filament.system.resources.lots.index",
+                    "filament.system.resources.lots.create",
+                    "filament.system.resources.lots.view",
+                    "filament.system.resources.lots.edit",
                     "filament.system.resources.mail-templates.index",
                     "filament.system.resources.mail-templates.edit",
                     "filament.system.resources.organization-invitations.index",
@@ -3112,6 +3191,10 @@
                     "filament.system.resources.posts.create",
                     "filament.system.resources.posts.view",
                     "filament.system.resources.posts.edit",
+                    "filament.system.resources.projects.index",
+                    "filament.system.resources.projects.create",
+                    "filament.system.resources.projects.view",
+                    "filament.system.resources.projects.edit",
                     "filament.system.resources.roles.index",
                     "filament.system.resources.roles.create",
                     "filament.system.resources.roles.view",
@@ -3129,12 +3212,6 @@
                     "filament.system.resources.vouchers.index",
                     "filament.system.resources.vouchers.create",
                     "filament.system.resources.vouchers.edit",
-                    "debugbar.openhandler",
-                    "debugbar.cache.delete",
-                    "debugbar.queries.explain",
-                    "debugbar.clockwork",
-                    "debugbar.assets",
-                    "debugbar.telescope",
                     "api.chat",
                     "chat.memories",
                     "conversations.index",
@@ -3148,8 +3225,6 @@
                     "api.v1.users.store",
                     "api.v1.users.update",
                     "api.v1.users.destroy",
-                    "dev.components",
-                    "dev.pages",
                     "up.ready",
                     "up",
                     "invitations.show",
@@ -3170,6 +3245,8 @@
                     "terms.accept.store",
                     "dashboard",
                     "announcements.table",
+                    "projects.table",
+                    "lots.table",
                     "categories.table",
                     "posts.table",
                     "users.table",
@@ -3379,8 +3456,7 @@
                     "data-table.saved-views.index",
                     "data-table.saved-views.store",
                     "data-table.saved-views.update",
-                    "data-table.saved-views.destroy",
-                    "telescope"
+                    "data-table.saved-views.destroy"
                 ]
             }
         },
@@ -3454,6 +3530,10 @@
                     "filament.admin.resources.help-articles.create",
                     "filament.admin.resources.help-articles.view",
                     "filament.admin.resources.help-articles.edit",
+                    "filament.admin.resources.lots.index",
+                    "filament.admin.resources.lots.create",
+                    "filament.admin.resources.lots.view",
+                    "filament.admin.resources.lots.edit",
                     "filament.admin.resources.mail-templates.index",
                     "filament.admin.resources.mail-templates.edit",
                     "filament.admin.resources.organization-invitations.index",
@@ -3468,6 +3548,10 @@
                     "filament.admin.resources.posts.create",
                     "filament.admin.resources.posts.view",
                     "filament.admin.resources.posts.edit",
+                    "filament.admin.resources.projects.index",
+                    "filament.admin.resources.projects.create",
+                    "filament.admin.resources.projects.view",
+                    "filament.admin.resources.projects.edit",
                     "filament.admin.resources.roles.index",
                     "filament.admin.resources.roles.create",
                     "filament.admin.resources.roles.view",
@@ -3549,6 +3633,10 @@
                     "filament.system.resources.help-articles.create",
                     "filament.system.resources.help-articles.view",
                     "filament.system.resources.help-articles.edit",
+                    "filament.system.resources.lots.index",
+                    "filament.system.resources.lots.create",
+                    "filament.system.resources.lots.view",
+                    "filament.system.resources.lots.edit",
                     "filament.system.resources.mail-templates.index",
                     "filament.system.resources.mail-templates.edit",
                     "filament.system.resources.organization-invitations.index",
@@ -3563,6 +3651,10 @@
                     "filament.system.resources.posts.create",
                     "filament.system.resources.posts.view",
                     "filament.system.resources.posts.edit",
+                    "filament.system.resources.projects.index",
+                    "filament.system.resources.projects.create",
+                    "filament.system.resources.projects.view",
+                    "filament.system.resources.projects.edit",
                     "filament.system.resources.roles.index",
                     "filament.system.resources.roles.create",
                     "filament.system.resources.roles.view",
@@ -3580,12 +3672,6 @@
                     "filament.system.resources.vouchers.index",
                     "filament.system.resources.vouchers.create",
                     "filament.system.resources.vouchers.edit",
-                    "debugbar.openhandler",
-                    "debugbar.cache.delete",
-                    "debugbar.queries.explain",
-                    "debugbar.clockwork",
-                    "debugbar.assets",
-                    "debugbar.telescope",
                     "api.chat",
                     "chat.memories",
                     "conversations.index",
@@ -3599,8 +3685,6 @@
                     "api.v1.users.store",
                     "api.v1.users.update",
                     "api.v1.users.destroy",
-                    "dev.components",
-                    "dev.pages",
                     "up.ready",
                     "up",
                     "invitations.show",
@@ -3621,6 +3705,8 @@
                     "terms.accept.store",
                     "dashboard",
                     "announcements.table",
+                    "projects.table",
+                    "lots.table",
                     "categories.table",
                     "posts.table",
                     "users.table",
@@ -3830,8 +3916,7 @@
                     "data-table.saved-views.index",
                     "data-table.saved-views.store",
                     "data-table.saved-views.update",
-                    "data-table.saved-views.destroy",
-                    "telescope"
+                    "data-table.saved-views.destroy"
                 ]
             }
         },
@@ -4078,6 +4163,10 @@
                     "filament.admin.resources.help-articles.create",
                     "filament.admin.resources.help-articles.view",
                     "filament.admin.resources.help-articles.edit",
+                    "filament.admin.resources.lots.index",
+                    "filament.admin.resources.lots.create",
+                    "filament.admin.resources.lots.view",
+                    "filament.admin.resources.lots.edit",
                     "filament.admin.resources.mail-templates.index",
                     "filament.admin.resources.mail-templates.edit",
                     "filament.admin.resources.organization-invitations.index",
@@ -4092,6 +4181,10 @@
                     "filament.admin.resources.posts.create",
                     "filament.admin.resources.posts.view",
                     "filament.admin.resources.posts.edit",
+                    "filament.admin.resources.projects.index",
+                    "filament.admin.resources.projects.create",
+                    "filament.admin.resources.projects.view",
+                    "filament.admin.resources.projects.edit",
                     "filament.admin.resources.roles.index",
                     "filament.admin.resources.roles.create",
                     "filament.admin.resources.roles.view",
@@ -4173,6 +4266,10 @@
                     "filament.system.resources.help-articles.create",
                     "filament.system.resources.help-articles.view",
                     "filament.system.resources.help-articles.edit",
+                    "filament.system.resources.lots.index",
+                    "filament.system.resources.lots.create",
+                    "filament.system.resources.lots.view",
+                    "filament.system.resources.lots.edit",
                     "filament.system.resources.mail-templates.index",
                     "filament.system.resources.mail-templates.edit",
                     "filament.system.resources.organization-invitations.index",
@@ -4187,6 +4284,10 @@
                     "filament.system.resources.posts.create",
                     "filament.system.resources.posts.view",
                     "filament.system.resources.posts.edit",
+                    "filament.system.resources.projects.index",
+                    "filament.system.resources.projects.create",
+                    "filament.system.resources.projects.view",
+                    "filament.system.resources.projects.edit",
                     "filament.system.resources.roles.index",
                     "filament.system.resources.roles.create",
                     "filament.system.resources.roles.view",
@@ -4204,12 +4305,6 @@
                     "filament.system.resources.vouchers.index",
                     "filament.system.resources.vouchers.create",
                     "filament.system.resources.vouchers.edit",
-                    "debugbar.openhandler",
-                    "debugbar.cache.delete",
-                    "debugbar.queries.explain",
-                    "debugbar.clockwork",
-                    "debugbar.assets",
-                    "debugbar.telescope",
                     "api.chat",
                     "chat.memories",
                     "conversations.index",
@@ -4223,8 +4318,6 @@
                     "api.v1.users.store",
                     "api.v1.users.update",
                     "api.v1.users.destroy",
-                    "dev.components",
-                    "dev.pages",
                     "up.ready",
                     "up",
                     "invitations.show",
@@ -4245,6 +4338,8 @@
                     "terms.accept.store",
                     "dashboard",
                     "announcements.table",
+                    "projects.table",
+                    "lots.table",
                     "categories.table",
                     "posts.table",
                     "users.table",
@@ -4454,8 +4549,7 @@
                     "data-table.saved-views.index",
                     "data-table.saved-views.store",
                     "data-table.saved-views.update",
-                    "data-table.saved-views.destroy",
-                    "telescope"
+                    "data-table.saved-views.destroy"
                 ]
             }
         },
@@ -4587,9 +4681,7 @@
             "lastUpdated": "2026-03-07",
             "relationships": {
                 "renderedBy": [],
-                "relatedRoutes": [
-                    "dev.components"
-                ]
+                "relatedRoutes": []
             }
         },
         "dev/pages": {
@@ -4598,9 +4690,7 @@
             "developerGuide": null,
             "relationships": {
                 "renderedBy": [],
-                "relatedRoutes": [
-                    "dev.pages"
-                ]
+                "relatedRoutes": []
             }
         },
         "error": {
@@ -4750,6 +4840,50 @@
                 ],
                 "relatedRoutes": [
                     "posts.table"
+                ]
+            }
+        },
+        "lot-table": {
+            "documented": true,
+            "path": "../frontend/pages/lots/index.md",
+            "lastUpdated": "2026-03-15",
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": []
+            }
+        },
+        "lots/index": {
+            "documented": true,
+            "path": "../frontend/pages/lots/index.md",
+            "lastUpdated": "2026-03-15",
+            "relationships": {
+                "renderedBy": [
+                    "LotsTableController"
+                ],
+                "relatedRoutes": [
+                    "lots.table"
+                ]
+            }
+        },
+        "project-table": {
+            "documented": true,
+            "path": "../frontend/pages/projects/index.md",
+            "lastUpdated": "2026-03-15",
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": []
+            }
+        },
+        "projects/index": {
+            "documented": true,
+            "path": "../frontend/pages/projects/index.md",
+            "lastUpdated": "2026-03-15",
+            "relationships": {
+                "renderedBy": [
+                    "ProjectsTableController"
+                ],
+                "relatedRoutes": [
+                    "projects.table"
                 ]
             }
         }

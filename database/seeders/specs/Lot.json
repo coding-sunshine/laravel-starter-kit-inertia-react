@@ -1,0 +1,263 @@
+{
+    "model": "Lot",
+    "table": "lots",
+    "fields": {
+        "id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "project_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "legacy_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "slug": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "title": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "land_price": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "build_price": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "stage": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "level": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "building": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "floorplan": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "car": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "storage": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "view": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "garage": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "aspect": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "internal": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "external": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "total": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "storeys": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "land_size": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "title_status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "living_area": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "price": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "bedrooms": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "bathrooms": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "study": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "mpr": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "powder_room": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "balcony": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "rent_yield": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "weekly_rent": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "rates": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "body_corporation": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "is_archived": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "is_nras": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "is_smsf": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "is_cashflow_positive": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "completion": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "project": {
+            "type": "belongsTo",
+            "model": "Project"
+        },
+        "flyers": {
+            "type": "hasMany",
+            "model": "Flyer"
+        }
+    },
+    "value_hints": {
+        "is_archived": {
+            "type": "boolean",
+            "example": true
+        },
+        "is_nras": {
+            "type": "boolean",
+            "example": true
+        },
+        "is_smsf": {
+            "type": "boolean",
+            "example": true
+        },
+        "is_cashflow_positive": {
+            "type": "boolean",
+            "example": true
+        },
+        "mpr": {
+            "type": "boolean",
+            "example": true
+        },
+        "powder_room": {
+            "type": "boolean",
+            "example": true
+        }
+    },
+    "scenarios": []
+}

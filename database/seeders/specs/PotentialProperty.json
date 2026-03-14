@@ -1,0 +1,102 @@
+{
+    "model": "PotentialProperty",
+    "table": "potential_properties",
+    "fields": {
+        "id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "title": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "suburb": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "state": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "developer_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "description": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "estimated_price_min": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "estimated_price_max": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "imported_from_csv": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "csv_row_data": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "createdBy": {
+            "type": "belongsTo",
+            "model": "CreatedBy"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": {
+        "imported_from_csv": {
+            "type": "boolean",
+            "example": true
+        },
+        "developer_name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    },
+    "scenarios": []
+}

@@ -1,0 +1,53 @@
+{
+    "model": "ProjectUpdate",
+    "table": "project_updates",
+    "fields": {
+        "id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "project_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "user_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "content": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "legacy_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "project": {
+            "type": "belongsTo",
+            "model": "Project"
+        },
+        "user": {
+            "type": "belongsTo",
+            "model": "User"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

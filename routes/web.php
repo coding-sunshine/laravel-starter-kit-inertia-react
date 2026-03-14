@@ -30,6 +30,7 @@ use App\Http\Controllers\HelpCenter\HelpCenterController;
 use App\Http\Controllers\HelpCenter\RateHelpArticleController;
 use App\Http\Controllers\Internal\CaddyAskController;
 use App\Http\Controllers\InvitationAcceptController;
+use App\Http\Controllers\LotsTableController;
 use App\Http\Controllers\Notifications\ClearAllNotificationsController;
 use App\Http\Controllers\Notifications\DeleteNotificationController;
 use App\Http\Controllers\Notifications\IndexNotificationsController;
@@ -46,6 +47,7 @@ use App\Http\Controllers\PageController;
 use App\Http\Controllers\PageViewController;
 use App\Http\Controllers\PersonalDataExportController;
 use App\Http\Controllers\PostsTableController;
+use App\Http\Controllers\ProjectsTableController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\Settings\AchievementsController;
@@ -160,6 +162,8 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('chat', fn () => Inertia::render('chat/index'))->name('chat');
 
     Route::get('announcements', [AnnouncementsTableController::class, 'index'])->name('announcements.table');
+    Route::get('projects', [ProjectsTableController::class, 'index'])->name('projects.table');
+    Route::get('lots', [LotsTableController::class, 'index'])->name('lots.table');
     Route::get('categories', [CategoriesTableController::class, 'index'])->name('categories.table');
     Route::get('posts', [PostsTableController::class, 'index'])->name('posts.table');
     Route::get('users', [UsersTableController::class, 'index'])->name('users.table');

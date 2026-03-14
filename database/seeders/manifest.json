@@ -1158,6 +1158,132 @@
             "data_files": [
                 "activity_log_injected_models.json"
             ]
+        },
+        {
+            "name": "DeveloperSeeder",
+            "category": "development",
+            "description": "Seeds Developer data",
+            "dependencies": [],
+            "data_files": [
+                "developers.json"
+            ]
+        },
+        {
+            "name": "ProjecttypeSeeder",
+            "category": "development",
+            "description": "Seeds Projecttype data",
+            "dependencies": [],
+            "data_files": [
+                "projecttypes.json"
+            ]
+        },
+        {
+            "name": "StateSeeder",
+            "category": "development",
+            "description": "Seeds State data",
+            "dependencies": [],
+            "data_files": [
+                "states.json"
+            ]
+        },
+        {
+            "name": "SuburbSeeder",
+            "category": "development",
+            "description": "Seeds Suburb data",
+            "dependencies": [],
+            "data_files": [
+                "suburbs.json"
+            ]
+        },
+        {
+            "name": "ProjectSeeder",
+            "category": "development",
+            "description": "Seeds Project data",
+            "dependencies": [],
+            "data_files": [
+                "projects.json"
+            ]
+        },
+        {
+            "name": "LotSeeder",
+            "category": "development",
+            "description": "Seeds Lot data",
+            "dependencies": [],
+            "data_files": [
+                "lots.json"
+            ]
+        },
+        {
+            "name": "PotentialPropertySeeder",
+            "category": "development",
+            "description": "Seeds PotentialProperty data",
+            "dependencies": [],
+            "data_files": [
+                "potential_properties.json"
+            ]
+        },
+        {
+            "name": "ProjectUpdateSeeder",
+            "category": "development",
+            "description": "Seeds ProjectUpdate data",
+            "dependencies": [],
+            "data_files": [
+                "project_updates.json"
+            ]
+        },
+        {
+            "name": "SprRequestSeeder",
+            "category": "development",
+            "description": "Seeds SprRequest data",
+            "dependencies": [],
+            "data_files": [
+                "spr_requests.json"
+            ]
+        },
+        {
+            "name": "FlyerTemplateSeeder",
+            "category": "development",
+            "description": "Seeds FlyerTemplate data",
+            "dependencies": [],
+            "data_files": [
+                "flyer_templates.json"
+            ]
+        },
+        {
+            "name": "FlyerSeeder",
+            "category": "development",
+            "description": "Seeds Flyer data",
+            "dependencies": [],
+            "data_files": [
+                "flyers.json"
+            ]
+        },
+        {
+            "name": "ActivityLogInjectedModelSeeder",
+            "category": "development",
+            "description": "Seeds ActivityLogInjectedModel data",
+            "dependencies": [],
+            "data_files": [
+                "activity_log_injected_models.json"
+            ]
+        },
+        {
+            "name": "ActivityLogInjectedModelSeeder",
+            "category": "development",
+            "description": "Seeds ActivityLogInjectedModel data",
+            "dependencies": [],
+            "data_files": [
+                "activity_log_injected_models.json"
+            ]
+        },
+        {
+            "name": "ActivityLogInjectedModelSeeder",
+            "category": "development",
+            "description": "Seeds ActivityLogInjectedModel data",
+            "dependencies": [],
+            "data_files": [
+                "activity_log_injected_models.json"
+            ]
         }
     ],
     "categories": {

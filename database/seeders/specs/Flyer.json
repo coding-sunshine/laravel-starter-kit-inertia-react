@@ -1,0 +1,106 @@
+{
+    "model": "Flyer",
+    "table": "flyers",
+    "fields": {
+        "id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "flyer_template_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "project_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "lot_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "poster_img_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "floorplan_img_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "notes": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "is_custom": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "custom_html": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "custom_css": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "legacy_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "flyerTemplate": {
+            "type": "belongsTo",
+            "model": "FlyerTemplate"
+        },
+        "project": {
+            "type": "belongsTo",
+            "model": "Project"
+        },
+        "lot": {
+            "type": "belongsTo",
+            "model": "Lot"
+        },
+        "createdByUser": {
+            "type": "belongsTo",
+            "model": "CreatedByUser"
+        }
+    },
+    "value_hints": {
+        "is_custom": {
+            "type": "boolean",
+            "example": true
+        }
+    },
+    "scenarios": []
+}

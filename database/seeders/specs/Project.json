@@ -1,0 +1,376 @@
+{
+    "model": "Project",
+    "table": "projects",
+    "fields": {
+        "id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "legacy_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "slug": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "title": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "stage": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "estate": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "total_lots": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "storeys": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "min_landsize": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "max_landsize": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "living_area": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "bedrooms": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "bathrooms": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "garage": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "min_rent": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "max_rent": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "avg_rent": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "rent_yield": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "is_hot_property": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "description": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "description_summary": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "min_price": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "max_price": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "avg_price": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "body_corporate_fees": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "rates_fees": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "is_archived": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "is_hidden": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "start_at": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "end_at": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "is_smsf": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "is_firb": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "is_ndis": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "is_cashflow_positive": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "build_time": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "historical_growth": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "land_info": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "developer_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "projecttype_id": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "lat": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "lng": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "is_featured": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "featured_order": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "is_co_living": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "is_high_cap_growth": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "is_rooming": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "is_rent_to_sell": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "is_exclusive": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "suburb": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "state": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "postcode": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "developer": {
+            "type": "belongsTo",
+            "model": "Developer"
+        },
+        "projecttype": {
+            "type": "belongsTo",
+            "model": "Projecttype"
+        },
+        "lots": {
+            "type": "hasMany",
+            "model": "Lot"
+        },
+        "projectUpdates": {
+            "type": "hasMany",
+            "model": "ProjectUpdate"
+        },
+        "flyers": {
+            "type": "hasMany",
+            "model": "Flyer"
+        },
+        "favouritedByUsers": {
+            "type": "belongsToMany",
+            "model": "FavouritedByUser"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": {
+        "is_hot_property": {
+            "type": "boolean",
+            "example": true
+        },
+        "is_archived": {
+            "type": "boolean",
+            "example": true
+        },
+        "is_hidden": {
+            "type": "boolean",
+            "example": true
+        },
+        "is_smsf": {
+            "type": "boolean",
+            "example": true
+        },
+        "is_firb": {
+            "type": "boolean",
+            "example": true
+        },
+        "is_ndis": {
+            "type": "boolean",
+            "example": true
+        },
+        "is_cashflow_positive": {
+            "type": "boolean",
+            "example": true
+        },
+        "is_featured": {
+            "type": "boolean",
+            "example": true
+        },
+        "is_co_living": {
+            "type": "boolean",
+            "example": true
+        },
+        "is_high_cap_growth": {
+            "type": "boolean",
+            "example": true
+        },
+        "is_rooming": {
+            "type": "boolean",
+            "example": true
+        },
+        "is_rent_to_sell": {
+            "type": "boolean",
+            "example": true
+        },
+        "is_exclusive": {
+            "type": "boolean",
+            "example": true
+        }
+    },
+    "scenarios": []
+}

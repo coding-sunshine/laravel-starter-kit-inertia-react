@@ -45,6 +45,7 @@ All Actions:
 | [RecordAuditLog](docs/developer/backend/actions/RecordAuditLog.md) | N/A | ✅ |
 | [VerifyCustomDomain](docs/developer/backend/actions/VerifyCustomDomain.md) | N/A | ✅ |
 | [FindOrCreateSocialUser](./FindOrCreateSocialUser.md) | N/A | ✅ |
-| BatchUpdateUsersAction | N/A | ❌ |
+| [BatchUpdateUsersAction](docs/developer/backend/actions/BatchUpdateUsersAction.md) | N/A | ✅ |
+| [GenerateFlyerAction](docs/developer/backend/actions/GenerateFlyerAction.md) | N/A | ✅ |
 
 
