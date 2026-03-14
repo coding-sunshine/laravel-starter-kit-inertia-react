@@ -10,10 +10,12 @@ declare(strict_types=1);
 
 use App\Http\Controllers\AgentPortalController;
 use App\Http\Controllers\AiSummaryController;
+use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\AnnouncementsTableController;
 use App\Http\Controllers\Api\LoginEventController;
 use App\Http\Controllers\Api\ProvisionerApiController;
 use App\Http\Controllers\Api\SlugAvailabilityController;
+use App\Http\Controllers\AutomationRuleController;
 use App\Http\Controllers\Billing\BillingDashboardController;
 use App\Http\Controllers\Billing\CreditController;
 use App\Http\Controllers\Billing\InvoiceController;
@@ -32,7 +34,9 @@ use App\Http\Controllers\ConciergeController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\ContactSubmissionController;
 use App\Http\Controllers\CookieConsentController;
+use App\Http\Controllers\CustomFieldController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DealForecastController;
 use App\Http\Controllers\Dev\ComponentShowcaseController;
 use App\Http\Controllers\Dev\PageGalleryController;
 use App\Http\Controllers\EnterpriseInquiryController;
@@ -336,6 +340,23 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('puck-templates', [PuckTemplateController::class, 'index'])->name('puck-templates.index');
     Route::post('puck-templates', [PuckTemplateController::class, 'store'])->name('puck-templates.store');
     Route::get('puck-templates/{template}/edit', [PuckTemplateController::class, 'edit'])->name('puck-templates.edit');
+
+    // US-013 — CRM Collaboration & Automation
+    Route::get('custom-fields', [CustomFieldController::class, 'index'])->name('custom-fields.index');
+    Route::post('custom-fields', [CustomFieldController::class, 'store'])->name('custom-fields.store');
+    Route::patch('custom-fields/{customField}', [CustomFieldController::class, 'update'])->name('custom-fields.update');
+    Route::delete('custom-fields/{customField}', [CustomFieldController::class, 'destroy'])->name('custom-fields.destroy');
+    Route::get('custom-fields/values', [CustomFieldController::class, 'values'])->name('custom-fields.values');
+
+    Route::get('automation-rules', [AutomationRuleController::class, 'index'])->name('automation-rules.index');
+    Route::post('automation-rules', [AutomationRuleController::class, 'store'])->name('automation-rules.store');
+    Route::patch('automation-rules/{automationRule}', [AutomationRuleController::class, 'update'])->name('automation-rules.update');
+    Route::delete('automation-rules/{automationRule}', [AutomationRuleController::class, 'destroy'])->name('automation-rules.destroy');
+
+    Route::get('analytics', [AnalyticsController::class, 'index'])->name('analytics.index');
+    Route::post('analytics/nl-query', [AnalyticsController::class, 'nlQuery'])->name('analytics.nl-query');
+
+    Route::get('sales/{sale}/forecast', [DealForecastController::class, 'show'])->name('sales.forecast');
 });
 
 Route::get('/api/slug-availability', SlugAvailabilityController::class)

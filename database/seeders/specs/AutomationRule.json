@@ -1,0 +1,96 @@
+{
+    "model": "AutomationRule",
+    "table": "automation_rules",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "description": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "event": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "conditions": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "actions": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "is_active": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "last_run_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "run_count": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": {
+        "is_active": {
+            "type": "boolean",
+            "example": true
+        },
+        "last_run_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        },
+        "name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    }
+}

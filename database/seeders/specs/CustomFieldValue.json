@@ -1,0 +1,48 @@
+{
+    "model": "CustomFieldValue",
+    "table": "custom_field_values",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "custom_field_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "entity_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "entity_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "value": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "customField": {
+            "type": "belongsTo",
+            "model": "CustomField"
+        }
+    },
+    "value_hints": []
+}

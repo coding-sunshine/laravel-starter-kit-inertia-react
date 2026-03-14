@@ -8,8 +8,10 @@ use App\Models\Contact;
 
 final readonly class UpdateContactStageAction
 {
-    public function __construct(private UpdateLastContactedAtAction $updateLastContactedAt)
-    {
+    public function __construct(
+        private UpdateLastContactedAtAction $updateLastContactedAt,
+        private EvaluateAutomationRulesAction $evaluateRules,
+    ) {
         //
     }
 
@@ -19,5 +21,10 @@ final readonly class UpdateContactStageAction
         $contact->save();
 
         $this->updateLastContactedAt->handle($contact, 'stage_updated');
+
+        $this->evaluateRules->handle('contact.stage_changed', [
+            'contact_id' => $contact->id,
+            'stage' => $stage,
+        ]);
     }
 }

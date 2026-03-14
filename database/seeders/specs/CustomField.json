@@ -1,0 +1,86 @@
+{
+    "model": "CustomField",
+    "table": "custom_fields",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "entity_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "key": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "options": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "is_required": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "sort_order": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "customFieldValues": {
+            "type": "hasMany",
+            "model": "CustomFieldValue"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": {
+        "is_required": {
+            "type": "boolean",
+            "example": true
+        },
+        "name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    }
+}

@@ -20,10 +20,12 @@ use App\Listeners\LogImpersonationEvents;
 use App\Listeners\LoginEventListener;
 use App\Listeners\MigrationListener;
 use App\Listeners\SendSlackAlertOnJobFailed;
+use App\Models\CrmNote;
 use App\Models\Shareable;
 use App\Models\Task;
 use App\Models\User;
 use App\Observers\ActivityLogObserver;
+use App\Observers\CrmNoteObserver;
 use App\Observers\PermissionActivityObserver;
 use App\Observers\RoleActivityObserver;
 use App\Observers\TaskObserver;
@@ -158,6 +160,7 @@ final class AppServiceProvider extends ServiceProvider
 
         User::observe(UserObserver::class);
         Task::observe(TaskObserver::class);
+        CrmNote::observe(CrmNoteObserver::class);
 
         foreach ([
             DataTableAiController::class,
@@ -406,6 +409,9 @@ final class AppServiceProvider extends ServiceProvider
             'puck-templates-create',
             'puck-templates-edit',
             'puck-templates-filter',
+            'custom-fields-tab',
+            'automation-rules-tab',
+            'analytics-tab',
         ]);
     }
 
