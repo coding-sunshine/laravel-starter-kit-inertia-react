@@ -85,7 +85,7 @@ export default function ReservationsIndexPage({
                 if (!values?.stage) return;
                 router.patch(
                     `/reservations/${row.id}/quick-edit`,
-                    { stage: values.stage },
+                    { stage: values.stage as string },
                     { preserveScroll: true, preserveState: true },
                 );
             },
@@ -108,7 +108,7 @@ export default function ReservationsIndexPage({
                 if (!values?.deposit_status) return;
                 router.patch(
                     `/reservations/${row.id}/quick-edit`,
-                    { deposit_status: values.deposit_status },
+                    { deposit_status: values.deposit_status as string },
                     { preserveScroll: true, preserveState: true },
                 );
             },
