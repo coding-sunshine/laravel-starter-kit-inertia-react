@@ -191,7 +191,9 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('funnel', [FunnelController::class, 'index'])->name('funnel.index');
     Route::get('member-listings', [MemberListingsController::class, 'index'])->name('member-listings.index');
     Route::post('contacts/bulk-update', [ContactController::class, 'bulkUpdate'])->name('contacts.bulk-update');
+    Route::patch('contacts/{contact}/quick-edit', [ContactController::class, 'quickEdit'])->name('contacts.quick-edit');
     Route::post('reservations/bulk-update', [PropertyReservationController::class, 'bulkUpdate'])->name('reservations.bulk-update');
+    Route::patch('reservations/{reservation}/quick-edit', [PropertyReservationController::class, 'quickEdit'])->name('reservations.quick-edit');
     Route::post('lots/{lot}/push', [LotsTableController::class, 'push'])->name('lots.push');
     Route::post('projects/{project}/push', [ProjectsTableController::class, 'push'])->name('projects.push');
     Route::get('reports', [ReportController::class, 'index'])->name('reports.index');

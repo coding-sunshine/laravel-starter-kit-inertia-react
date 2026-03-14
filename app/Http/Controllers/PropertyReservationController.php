@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\BulkUpdateReservationsAction;
 use App\DataTables\PropertyReservationDataTable;
+use App\Models\PropertyReservation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -16,6 +17,19 @@ final class PropertyReservationController extends Controller
     public function index(Request $request): Response
     {
         return Inertia::render('reservations/index', PropertyReservationDataTable::inertiaProps($request));
+    }
+
+    public function quickEdit(Request $request, PropertyReservation $reservation): JsonResponse
+    {
+        $validated = $request->validate([
+            'stage' => ['sometimes', 'string', 'max:100'],
+            'deposit_status' => ['sometimes', 'string', 'max:100'],
+            'notes' => ['sometimes', 'nullable', 'string', 'max:2000'],
+        ]);
+
+        $reservation->update($validated);
+
+        return response()->json(['success' => true, 'id' => $reservation->id]);
     }
 
     public function bulkUpdate(Request $request, BulkUpdateReservationsAction $action): JsonResponse
