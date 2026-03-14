@@ -28,7 +28,8 @@ interface Wagon {
 
 interface RakeWagonWeighmentRow {
     id: number;
-    wagon_id: number;
+    wagon_id: number | null;
+    wagon_number?: string | null;
     wagon_sequence: number | null;
     wagon_type: string | null;
     axles: number | null;
@@ -216,7 +217,9 @@ export default function WeighmentShow({ weighment }: Props) {
                                                     {row.wagon_sequence ?? row.wagon?.wagon_sequence ?? '-'}
                                                 </td>
                                                 <td className="p-2">
-                                                    {row.wagon?.wagon_number ?? '-'}
+                                                    {row.wagon_number ??
+                                                        row.wagon?.wagon_number ??
+                                                        '-'}
                                                 </td>
                                                 <td className="p-2">
                                                     {row.wagon_type ?? row.wagon?.wagon_type ?? '-'}

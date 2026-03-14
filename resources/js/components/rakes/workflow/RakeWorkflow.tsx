@@ -110,6 +110,14 @@ interface RakeData {
         penalty_date: string;
         description: string | null;
     }>;
+    appliedPenalties?: Array<{
+        id: number;
+        amount: string | number;
+        quantity?: string | number | null;
+        wagon_id?: number | null;
+        penalty_type?: { id: number; code: string; name: string; calculation_type: string };
+        wagon?: { id: number; wagon_number: string; overload_weight_mt?: string | number | null };
+    }>;
     siding?: {
         loaders?: Array<{
             id: number;

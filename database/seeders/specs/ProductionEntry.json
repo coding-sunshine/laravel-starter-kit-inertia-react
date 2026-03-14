@@ -1,0 +1,72 @@
+{
+    "model": "ProductionEntry",
+    "table": "production_entries",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "trip": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "qty": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "siding_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "siding": {
+            "type": "belongsTo",
+            "model": "Siding"
+        },
+        "creator": {
+            "type": "belongsTo",
+            "model": "Creator"
+        },
+        "updater": {
+            "type": "belongsTo",
+            "model": "Updater"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

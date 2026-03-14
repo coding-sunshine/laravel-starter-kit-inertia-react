@@ -15,8 +15,9 @@ final readonly class DailyVehicleEntryService
 {
     /**
      * @param  int|null  $sidingId  When set (e.g. from SidingContext), only entries for this siding are returned so the list matches the user's context.
+     * @param  string|null  $entryType  When set, only entries of this type are returned (e.g. 'railway_siding_empty_weighment').
      */
-    public function getEntriesByDateAndShift(string $date, int $shift, ?int $sidingId = null): Collection
+    public function getEntriesByDateAndShift(string $date, int $shift, ?int $sidingId = null, ?string $entryType = null): Collection
     {
         $query = DailyVehicleEntry::query()
             ->with(['siding', 'creator', 'updater'])
@@ -28,14 +29,21 @@ final readonly class DailyVehicleEntryService
             $query->where('siding_id', $sidingId);
         }
 
+        if ($entryType !== null) {
+            $query->where('entry_type', $entryType);
+        }
+
         return $query->get();
     }
 
     public function createEntry(array $data): DailyVehicleEntry
     {
+        $entryType = $data['entry_type'] ?? DailyVehicleEntry::ENTRY_TYPE_ROAD_DISPATCH;
+
         return DailyVehicleEntry::create([
             ...$data,
-            'reached_at' => now(),
+            'entry_type' => $entryType,
+            'reached_at' => $data['reached_at'] ?? now(),
             'created_by' => auth()->id(),
         ]);
     }
@@ -61,7 +69,7 @@ final readonly class DailyVehicleEntryService
             }
 
             if ($oldStatus !== 'completed' && $newStatus === 'completed') {
-                $this->createStockLedgerEntry($entry);
+                $this->createStockLedgerEntry($entry->fresh());
             }
 
             if ($oldStatus === 'completed' && $newStatus === 'completed') {
@@ -88,40 +96,54 @@ final readonly class DailyVehicleEntryService
         return $this->updateEntry($entry, []);
     }
 
-    public function getShiftSummary(string $date): array
+    /**
+     * @param  string|null  $entryType  When set, count only entries of this type.
+     */
+    public function getShiftSummary(string $date, ?string $entryType = null): array
     {
         $summary = [];
 
         for ($shift = 1; $shift <= 3; $shift++) {
-            $count = DailyVehicleEntry::where('entry_date', $date)
-                ->where('shift', $shift)
-                ->count();
+            $query = DailyVehicleEntry::query()
+                ->where('entry_date', $date)
+                ->where('shift', $shift);
 
-            $summary[$shift] = $count;
+            if ($entryType !== null) {
+                $query->where('entry_type', $entryType);
+            }
+
+            $summary[$shift] = $query->count();
         }
 
         return $summary;
     }
 
-    public function exportEntries(string $date, int $sidingId, string $shift): string
+    /**
+     * @param  string|null  $entryType  When set, export only entries of this type (e.g. 'railway_siding_empty_weighment').
+     */
+    public function exportEntries(string $date, int $sidingId, string $shift, ?string $entryType = null): string
     {
         $siding = Siding::findOrFail($sidingId);
 
         if ($shift === 'all') {
-            return $this->exportAllShifts($date, $siding);
+            return $this->exportAllShifts($date, $siding, $entryType);
         }
 
-        return $this->exportSingleShift($date, $siding, (int) $shift);
-
+        return $this->exportSingleShift($date, $siding, (int) $shift, $entryType);
     }
 
     /**
      * Create a stock_ledgers receipt row for this completed daily vehicle entry.
      * Opening balance: when no ledger row exists for this siding, opening = 0 (first ever transaction).
      * Otherwise opening = previous row's closing_balance_mt (running balance).
+     * Skipped for entry_type other than road_dispatch (e.g. railway_siding_empty_weighment).
      */
     private function createStockLedgerEntry(DailyVehicleEntry $entry): void
     {
+        if ($entry->entry_type !== DailyVehicleEntry::ENTRY_TYPE_ROAD_DISPATCH) {
+            return;
+        }
+
         $grossWt = (float) ($entry->gross_wt ?? 0);
         $tareWt = (float) ($entry->tare_wt ?? 0);
         $netWeight = round($grossWt - $tareWt, 2);
@@ -157,6 +179,13 @@ final readonly class DailyVehicleEntryService
 
     private function shouldAutoComplete(array $data, DailyVehicleEntry $entry): bool
     {
+        if ($entry->entry_type === DailyVehicleEntry::ENTRY_TYPE_RAILWAY_SIDING_EMPTY_WEIGHMENT) {
+            $tareWtTwo = (float) ($data['tare_wt_two'] ?? $entry->tare_wt_two ?? 0);
+            $vehicleNo = mb_trim((string) ($data['vehicle_no'] ?? $entry->vehicle_no ?? ''));
+
+            return $tareWtTwo > 0 && $vehicleNo !== '';
+        }
+
         $grossWt = (float) ($data['gross_wt'] ?? $entry->gross_wt ?? 0);
         $tareWt = (float) ($data['tare_wt'] ?? $entry->tare_wt ?? 0);
         $netWeight = round($grossWt - $tareWt, 2);
@@ -170,7 +199,7 @@ final readonly class DailyVehicleEntryService
             return 'completed';
         }
 
-        return 'draft';
+        return $data['status'] ?? $entry->status ?? 'draft';
     }
 
     private function deleteStockLedgerEntry(DailyVehicleEntry $entry): void
@@ -189,7 +218,7 @@ final readonly class DailyVehicleEntryService
         $query->delete();
     }
 
-    private function exportAllShifts(string $date, Siding $siding): string
+    private function exportAllShifts(string $date, Siding $siding, ?string $entryType = null): string
     {
         $filename = "{$siding->name}_{$date}_AllShifts.xlsx";
         $filepath = storage_path("app/public/{$filename}");
@@ -201,9 +230,9 @@ final readonly class DailyVehicleEntryService
         $html .= '<table border="1">';
 
         // Get entries for all shifts
-        $shift1Entries = $this->getEntriesForExport($date, $siding->id, 1);
-        $shift2Entries = $this->getEntriesForExport($date, $siding->id, 2);
-        $shift3Entries = $this->getEntriesForExport($date, $siding->id, 3);
+        $shift1Entries = $this->getEntriesForExport($date, $siding->id, 1, $entryType);
+        $shift2Entries = $this->getEntriesForExport($date, $siding->id, 2, $entryType);
+        $shift3Entries = $this->getEntriesForExport($date, $siding->id, 3, $entryType);
 
         $maxRows = max(count($shift1Entries), count($shift2Entries), count($shift3Entries));
 
@@ -258,7 +287,7 @@ final readonly class DailyVehicleEntryService
         return $filepath;
     }
 
-    private function exportSingleShift(string $date, Siding $siding, int $shift): string
+    private function exportSingleShift(string $date, Siding $siding, int $shift, ?string $entryType = null): string
     {
         $filename = "{$siding->name}_{$date}_Shift{$shift}.xlsx";
         $filepath = storage_path("app/public/{$filename}");
@@ -269,7 +298,7 @@ final readonly class DailyVehicleEntryService
         $html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>'.$filename.'</title></head><body>';
         $html .= '<table border="1">';
 
-        $entries = $this->getEntriesForExport($date, $siding->id, $shift);
+        $entries = $this->getEntriesForExport($date, $siding->id, $shift, $entryType);
 
         // Write title row
         $html .= '<tr><td colspan="10" style="font-weight:bold; text-align:center; background-color:#f0f0f0;">SHIFT '.$shift.' - '.$date.' - '.$siding->name.'</td></tr>';
@@ -312,14 +341,19 @@ final readonly class DailyVehicleEntryService
         return $filepath;
     }
 
-    private function getEntriesForExport(string $date, int $sidingId, int $shift): Collection
+    private function getEntriesForExport(string $date, int $sidingId, int $shift, ?string $entryType = null): Collection
     {
-        return DailyVehicleEntry::query()
+        $query = DailyVehicleEntry::query()
             ->where('entry_date', $date)
             ->where('siding_id', $sidingId)
             ->where('shift', $shift)
-            ->orderBy('reached_at', 'asc')
-            ->get();
+            ->orderBy('reached_at', 'asc');
+
+        if ($entryType !== null) {
+            $query->where('entry_type', $entryType);
+        }
+
+        return $query->get();
     }
 
     private function getShiftData(Collection $entries, int $rowIndex): array

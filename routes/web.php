@@ -37,8 +37,10 @@ use App\Http\Controllers\PenaltyTypesController;
 use App\Http\Controllers\PersonalDataExportController;
 use App\Http\Controllers\PowerPlantController;
 use App\Http\Controllers\PowerplantSidingDistancesController;
+use App\Http\Controllers\ProductionEntryController;
 use App\Http\Controllers\RailwayReceipts\PenaltyController;
 use App\Http\Controllers\RailwayReceipts\RrDocumentController;
+use App\Http\Controllers\RailwaySidingEmptyWeighmentController;
 use App\Http\Controllers\Rakes\RakeGuardInspectionController;
 use App\Http\Controllers\Rakes\RakeLoadController;
 use App\Http\Controllers\Rakes\RakesController;
@@ -271,6 +273,30 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::post('road-dispatch/daily-vehicle-entries/{entry}/complete', [DailyVehicleEntryController::class, 'markCompleted'])->name('road-dispatch.daily-vehicle-entries.complete');
     Route::get('road-dispatch/daily-vehicle-entries/export', [DailyVehicleEntryController::class, 'export'])->name('road-dispatch.daily-vehicle-entries.export');
     Route::get('road-dispatch/vehicle-workorders/lookup', [DailyVehicleEntryController::class, 'lookupVehicle'])->name('road-dispatch.vehicle-workorders.lookup');
+
+    // Railway Siding Empty Weighment
+    Route::get('railway-siding-empty-weighment', [RailwaySidingEmptyWeighmentController::class, 'index'])->name('railway-siding-empty-weighment.index');
+    Route::post('railway-siding-empty-weighment', [RailwaySidingEmptyWeighmentController::class, 'store'])->name('railway-siding-empty-weighment.store');
+    Route::patch('railway-siding-empty-weighment/{entry}', [RailwaySidingEmptyWeighmentController::class, 'update'])->name('railway-siding-empty-weighment.update');
+    Route::delete('railway-siding-empty-weighment/{entry}', [RailwaySidingEmptyWeighmentController::class, 'destroy'])->name('railway-siding-empty-weighment.destroy');
+    Route::post('railway-siding-empty-weighment/{entry}/complete', [RailwaySidingEmptyWeighmentController::class, 'markCompleted'])->name('railway-siding-empty-weighment.complete');
+    Route::get('railway-siding-empty-weighment/export', [RailwaySidingEmptyWeighmentController::class, 'export'])->name('railway-siding-empty-weighment.export');
+
+    // Production (Coal / OB)
+    Route::prefix('production/coal')->name('production.coal.')->group(function (): void {
+        Route::get('/', [ProductionEntryController::class, 'index'])->name('index');
+        Route::post('/', [ProductionEntryController::class, 'store'])->name('store');
+        Route::get('{production_entry}/edit', [ProductionEntryController::class, 'edit'])->name('edit');
+        Route::patch('{production_entry}', [ProductionEntryController::class, 'update'])->name('update');
+        Route::delete('{production_entry}', [ProductionEntryController::class, 'destroy'])->name('destroy');
+    });
+    Route::prefix('production/ob')->name('production.ob.')->group(function (): void {
+        Route::get('/', [ProductionEntryController::class, 'index'])->name('index');
+        Route::post('/', [ProductionEntryController::class, 'store'])->name('store');
+        Route::get('{production_entry}/edit', [ProductionEntryController::class, 'edit'])->name('edit');
+        Route::patch('{production_entry}', [ProductionEntryController::class, 'update'])->name('update');
+        Route::delete('{production_entry}', [ProductionEntryController::class, 'destroy'])->name('destroy');
+    });
 
     // Vehicle Dispatch Register
     Route::get('vehicle-dispatch', [VehicleDispatchController::class, 'index'])->name('vehicle-dispatch.index');

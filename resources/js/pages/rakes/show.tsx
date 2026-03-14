@@ -121,6 +121,15 @@ interface PenaltyRecord {
     calculation_breakdown?: PenaltyBreakdown | null;
 }
 
+interface AppliedPenaltyRecord {
+    id: number;
+    amount: string | number;
+    quantity?: string | number | null;
+    wagon_id?: number | null;
+    penalty_type?: { id: number; code: string; name: string; calculation_type: string };
+    wagon?: { id: number; wagon_number: string; overload_weight_mt?: string | number | null };
+}
+
 interface RakeData {
     id: number;
     rake_number: string;
@@ -137,6 +146,7 @@ interface RakeData {
     guardInspections?: GuardInspectionRecord[];
     weighments?: WeighmentRecord[];
     penalties?: PenaltyRecord[];
+    appliedPenalties?: AppliedPenaltyRecord[];
 }
 
 interface Props {

@@ -28,6 +28,8 @@ import {
     Check,
     CheckCircle,
     ChevronDown,
+    ChevronLeft,
+    ChevronRight,
     ChevronUp,
     Factory,
     Filter,
@@ -41,7 +43,8 @@ import {
     X,
     Zap,
 } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSidingStockBroadcast } from '@/hooks/use-siding-stock-broadcast';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import {
     Area,
     AreaChart as RechartsAreaChart,
@@ -96,13 +99,15 @@ const DASHBOARD_SECTIONS = [
     { id: 'executive-overview', label: 'Executive overview' },
     { id: 'operations', label: 'Operations control' },
     { id: 'penalty-control', label: 'Penalty control' },
-    { id: 'siding-stock', label: 'Siding stock' },
     { id: 'rake-performance', label: 'Rake-wise performance' },
     { id: 'loader-overload', label: 'Loader-wise overloading trends' },
     { id: 'power-plant', label: 'Power plant wise dispatch' },
 ] as const;
 
 const DEFAULT_DASHBOARD_SECTION = 'executive-overview';
+
+/** MT of coal required to load one rake; used for "rakes we can load" KPI. */
+const MT_PER_RAKE_LOAD = 3500;
 
 interface SidingOption {
     id: number;
@@ -115,6 +120,8 @@ interface SidingStock {
     opening_balance_mt: number;
     closing_balance_mt: number;
     total_rakes: number;
+    received_mt: number;
+    dispatched_mt: number;
 }
 
 interface SidingPerformanceItem {
@@ -148,6 +155,7 @@ interface DateWiseDispatchData {
 }
 
 interface RakePerformanceItem {
+    id: number;
     rake_number: string;
     siding: string;
     dispatch_date: string;
@@ -195,6 +203,47 @@ interface DashboardFilters {
     loader_id: number | null;
     shift: string | null;
     penalty_type: number | null;
+    daily_rake_date?: string;
+    coal_transport_date?: string;
+    coal_stock_date?: string;
+}
+
+interface DailyRakeDetailsRow {
+    sl_no: number;
+    siding_name: string;
+    day_rakes: number;
+    day_qty: number;
+    month_rakes: number;
+    month_qty: number;
+    rake_day_avg: number;
+    remarks: string;
+}
+
+interface DailyRakeDetailsData {
+    date: string;
+    rows: DailyRakeDetailsRow[];
+    totals: { day_rakes: number; day_qty: number; month_rakes: number; month_qty: number; rake_day_avg: number };
+}
+
+interface CoalTransportSidingMetric {
+    siding_name: string;
+    trips: number;
+    qty: number;
+}
+
+interface CoalTransportReportRow {
+    sl_no: number;
+    shift_label: string;
+    siding_metrics: CoalTransportSidingMetric[];
+    total_trips: number;
+    total_qty: number;
+}
+
+interface CoalTransportReportData {
+    date: string;
+    sidings: Array<{ id: number; name: string }>;
+    rows: CoalTransportReportRow[];
+    totals: { siding_metrics: CoalTransportSidingMetric[]; total_trips: number; total_qty: number };
 }
 
 interface FilterOptions {
@@ -229,6 +278,25 @@ interface PenaltyBySidingPoint {
     total: number;
 }
 
+interface YesterdayPenaltyRow {
+    type_code: string;
+    type_name: string;
+    amount: number;
+}
+
+interface YesterdayPenaltyRake {
+    rake_id: number;
+    rake_number: string;
+    total_penalty: number;
+    penalties: YesterdayPenaltyRow[];
+}
+
+interface YesterdayPredictedPenaltyItem {
+    siding_id: number;
+    siding_name: string;
+    rakes: YesterdayPenaltyRake[];
+}
+
 interface DashboardAlert {
     id: number;
     type: string;
@@ -253,6 +321,12 @@ interface TruckReceiptHour {
     count: number;
 }
 
+/** Shift label + one key per siding name with vehicle count. */
+interface ShiftWiseVehicleReceiptPoint {
+    shift_label: string;
+    [sidingName: string]: string | number;
+}
+
 interface StockGaugeSidingItem {
     siding_id: number;
     siding_name: string;
@@ -274,7 +348,10 @@ type DashboardProps = SharedData & {
     penaltyBySiding?: PenaltyBySidingPoint[];
     alerts?: DashboardAlert[];
     liveRakeStatus?: LiveRakeStatusRow[];
+    dailyRakeDetails?: DailyRakeDetailsData;
+    coalTransportReport?: CoalTransportReportData;
     truckReceiptTrend?: TruckReceiptHour[];
+    shiftWiseVehicleReceipt?: ShiftWiseVehicleReceiptPoint[];
     stockGauge?: StockGaugeData;
     predictedVsActualPenalty?: { predicted: number; actual: number; bySiding?: Array<{ name: string; predicted: number; actual: number }> };
     sidingStocks?: Record<number, SidingStock>;
@@ -285,6 +362,7 @@ type DashboardProps = SharedData & {
     rakePerformance?: RakePerformanceItem[];
     loaderOverloadTrends?: LoaderOverloadTrends;
     powerPlantDispatch?: PowerPlantDispatchItem[];
+    yesterdayPredictedPenalties?: YesterdayPredictedPenaltyItem[];
 };
 
 function formatCurrency(n: number): string {
@@ -298,11 +376,12 @@ function formatWeight(n: number): string {
     return `${n.toLocaleString()} MT`;
 }
 
-function SectionHeader({ icon: Icon, title, subtitle, action }: {
+function SectionHeader({ icon: Icon, title, subtitle, action, titleClassName }: {
     icon: React.ComponentType<{ className?: string }>;
     title: string;
     subtitle?: string;
     action?: React.ReactNode;
+    titleClassName?: string;
 }) {
     return (
         <div className="flex items-center justify-between gap-4">
@@ -311,7 +390,7 @@ function SectionHeader({ icon: Icon, title, subtitle, action }: {
                     <Icon className="size-4.5 text-primary" />
                 </div>
                 <div>
-                    <h3 className="text-base font-semibold">{title}</h3>
+                    <h3 className={`text-base font-semibold ${titleClassName ?? ''}`.trim()}>{title}</h3>
                     {subtitle && <p className="text-xs text-gray-600">{subtitle}</p>}
                 </div>
             </div>
@@ -400,45 +479,6 @@ function SidingComparisonVertical({ data }: { data: SidingComparisonItem[] }) {
 }
 
 const SIDING_ACCENT: Record<string, string> = { Dumka: '#3B82F6', Kurwa: '#10B981', Pakur: '#F59E0B' };
-
-function SidingStockSection({ sidings, stocks }: { sidings: SidingOption[]; stocks: Record<number, SidingStock> }) {
-    return (
-        <div className="dashboard-card rounded-xl border-0 p-6">
-            <SectionHeader icon={BarChart3} title="Siding stock" subtitle="Current balance per siding" />
-            <div className="mt-5 grid gap-6 sm:grid-cols-1 md:grid-cols-3">
-                {sidings.map((s) => {
-                    const st = stocks[s.id];
-                    const currentBalance = st?.closing_balance_mt ?? 0;
-                    const accent = SIDING_ACCENT[s.name] ?? '#6B7280';
-                    const status = currentBalance === 0 ? 'empty' : currentBalance < 1000 ? 'low' : 'sufficient';
-                    return (
-                        <div
-                            key={s.id}
-                            className="dashboard-card flex flex-1 flex-col rounded-xl border-0 p-5 transition-shadow"
-                            style={{
-                                borderTop: `4px solid ${accent}`,
-                                background: `linear-gradient(to bottom, ${accent}08 0%, transparent 100%)`,
-                            }}
-                        >
-                            <h4 className="text-[1.25rem] font-bold text-gray-900">{s.name}</h4>
-                            <p className="mt-3 text-[3rem] font-extrabold tabular-nums leading-none text-gray-900">
-                                {currentBalance === 0 ? '--' : `${currentBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })} MT`}
-                            </p>
-                            <p className="mt-1 text-xs text-gray-600">Current balance</p>
-                            <div className="mt-3 flex items-center gap-2">
-                                <span className={`size-2 rounded-full ${status === 'sufficient' ? 'bg-green-500' : status === 'low' ? 'bg-amber-500' : 'bg-red-500'}`} />
-                                <span className={`text-xs font-medium ${status === 'sufficient' ? 'text-green-700' : status === 'low' ? 'text-amber-700' : 'text-red-700'}`}>
-                                    {status === 'sufficient' ? 'Sufficient' : status === 'low' ? 'Low stock' : 'Empty'}
-                                </span>
-                            </div>
-                            <p className="mt-auto pt-4 text-xs text-gray-600">Last updated: 5 mins ago</p>
-                        </div>
-                    );
-                })}
-            </div>
-        </div>
-    );
-}
 
 const SIDING_PERF_COLORS = [
     // Vibrant palette inspired by rd2.jpeg for siding rows
@@ -640,6 +680,11 @@ function RakePerformanceSection({ rakes }: { rakes: RakePerformanceItem[] }) {
         return items;
     }, [r]);
 
+    const wagonOverloadChartData = useMemo(() => {
+        const list = r.wagon_overloads ?? [];
+        return list.map((w, i) => ({ position: i + 1, wagon_number: w.wagon_number, over_load_mt: w.over_load_mt }));
+    }, [r.wagon_overloads]);
+
     const canPrev = selectedIdx > 0;
     const canNext = selectedIdx < rakes.length - 1 && rakes.length > 1;
 
@@ -746,18 +791,31 @@ function RakePerformanceSection({ rakes }: { rakes: RakePerformanceItem[] }) {
                 </div>
                 <div>
                     <p className="mb-2 text-xs font-medium text-gray-600">Wagon-wise overload (MT)</p>
-                    {(r.wagon_overloads?.length ?? 0) > 0 ? (
+                    {wagonOverloadChartData.length > 0 ? (
                         <ResponsiveContainer width="100%" height={220}>
                             <RechartsBarChart
-                                data={r.wagon_overloads}
+                                data={wagonOverloadChartData}
                                 margin={{ top: 8, right: 8, left: 8, bottom: 24 }}
                             >
                                 <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
-                                <XAxis dataKey="wagon_number" tick={{ fontSize: 10 }} interval={0} height={40} />
+                                <XAxis dataKey="position" tick={{ fontSize: 10 }} interval={0} height={40} />
                                 <YAxis tick={{ fontSize: 11 }} tickFormatter={(v: number) => `${v} MT`} label={{ value: 'Overload (MT)', angle: -90, position: 'insideLeft', style: { fontSize: 10 } }} />
-                                <Tooltip formatter={(v: number | string | undefined) => [`${Number(v ?? 0).toLocaleString()} MT`, 'Overload']} labelFormatter={(label) => `Wagon ${label}`} />
+                                <Tooltip
+                                    content={({ active, payload }) => {
+                                        if (!active || !payload?.length) return null;
+                                        const p = payload[0];
+                                        const wagonNum = (p.payload as { wagon_number?: string }).wagon_number ?? '—';
+                                        const value = Number(p.value ?? 0);
+                                        return (
+                                            <div className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm shadow-lg">
+                                                <p className="font-medium text-gray-800">Wagon {wagonNum}</p>
+                                                <p className="tabular-nums text-gray-600">Overload: {value.toLocaleString()} MT</p>
+                                            </div>
+                                        );
+                                    }}
+                                />
                                 <Bar dataKey="over_load_mt" radius={[4, 4, 0, 0]} barSize={20} isAnimationActive>
-                                    {r.wagon_overloads!.map((entry, i) => (
+                                    {wagonOverloadChartData.map((entry, i) => (
                                         <Cell key={i} fill={entry.over_load_mt > 0 ? '#DC2626' : '#E5E7EB'} />
                                     ))}
                                 </Bar>
@@ -1209,6 +1267,15 @@ function DashboardFiltersBar({
         const penaltyType = (overrides.penalty_type !== undefined ? overrides.penalty_type : filters.penalty_type) ?? null;
         if (penaltyType != null) params.penalty_type = penaltyType;
 
+        const dailyRakeDate = (overrides.daily_rake_date !== undefined ? overrides.daily_rake_date : filters.daily_rake_date) ?? '';
+        if (dailyRakeDate !== '') params.daily_rake_date = dailyRakeDate;
+
+        const coalTransportDate = (overrides.coal_transport_date !== undefined ? overrides.coal_transport_date : filters.coal_transport_date) ?? '';
+        if (coalTransportDate !== '') params.coal_transport_date = coalTransportDate;
+
+        const coalStockDate = (overrides.coal_stock_date !== undefined ? overrides.coal_stock_date : filters.coal_stock_date) ?? '';
+        if (coalStockDate !== '') params.coal_stock_date = coalStockDate;
+
         if (currentSection) params.section = currentSection;
 
         // Use pathname only so query is exactly our params (no merge with current URL).
@@ -1513,6 +1580,12 @@ export default function Dashboard() {
     const [alertsOpen, setAlertsOpen] = useState(false);
     const [filtersExpanded, setFiltersExpanded] = useState(false);
     const sidings = props.sidings ?? [];
+    const allSidingIds = useMemo(() => sidings.map((s) => s.id), [sidings]);
+    const [stockOverrides, setStockOverrides] = useState<Record<number, number>>({});
+    const [yesterdayPenaltyHeatmapPage, setYesterdayPenaltyHeatmapPage] = useState(1);
+    useSidingStockBroadcast(allSidingIds, (sidingId, closingBalanceMt) => {
+        setStockOverrides((prev) => ({ ...prev, [sidingId]: closingBalanceMt }));
+    });
     const defaultFilters: DashboardFilters = {
         period: 'month',
         from: '',
@@ -1523,6 +1596,9 @@ export default function Dashboard() {
         loader_id: null,
         shift: null,
         penalty_type: null,
+        daily_rake_date: undefined,
+        coal_transport_date: undefined,
+        coal_stock_date: undefined,
     };
     const filters: DashboardFilters = {
         ...defaultFilters,
@@ -1572,6 +1648,61 @@ export default function Dashboard() {
         router.get(dashboardPath, params as Record<string, string>, { replace: true, preserveState: false });
     }, [dashboardPath, filters.period, filters.siding_ids, filters.power_plant, filters.rake_number, filters.loader_id, filters.shift, filters.penalty_type, sidings.length]);
 
+    const applyDailyRakeDate = useCallback((date: string) => {
+        const params: Record<string, unknown> = {
+            period: filters.period,
+            section: activeSection,
+        };
+        if (date !== '') params.daily_rake_date = date;
+        if (filters.siding_ids.length > 0 && filters.siding_ids.length < allSidingIds.length) {
+            params.siding_ids = filters.siding_ids;
+        }
+        if (filters.power_plant) params.power_plant = filters.power_plant;
+        if (filters.rake_number) params.rake_number = filters.rake_number;
+        if (filters.loader_id) params.loader_id = filters.loader_id;
+        if (filters.shift) params.shift = filters.shift;
+        if (filters.penalty_type != null) params.penalty_type = filters.penalty_type;
+        router.get(dashboardPath, params as Record<string, string>, { preserveState: true, preserveScroll: true });
+    }, [dashboardPath, filters, activeSection, allSidingIds.length]);
+
+    const applyCoalStockDate = useCallback((date: string) => {
+        const params: Record<string, unknown> = {
+            period: filters.period,
+            section: activeSection,
+        };
+        if (date !== '') params.coal_stock_date = date;
+        if (filters.siding_ids.length > 0 && filters.siding_ids.length < allSidingIds.length) {
+            params.siding_ids = filters.siding_ids;
+        }
+        if (filters.power_plant) params.power_plant = filters.power_plant;
+        if (filters.rake_number) params.rake_number = filters.rake_number;
+        if (filters.loader_id) params.loader_id = filters.loader_id;
+        if (filters.shift) params.shift = filters.shift;
+        if (filters.penalty_type != null) params.penalty_type = filters.penalty_type;
+        if (filters.daily_rake_date) params.daily_rake_date = filters.daily_rake_date;
+        if (filters.coal_transport_date) params.coal_transport_date = filters.coal_transport_date;
+        router.get(dashboardPath, params as Record<string, string>, { preserveState: true, preserveScroll: true });
+    }, [dashboardPath, filters, activeSection, allSidingIds.length]);
+
+    const applyCoalTransportDate = useCallback((date: string) => {
+        const params: Record<string, unknown> = {
+            period: filters.period,
+            section: activeSection,
+        };
+        if (date !== '') params.coal_transport_date = date;
+        if (filters.siding_ids.length > 0 && filters.siding_ids.length < allSidingIds.length) {
+            params.siding_ids = filters.siding_ids;
+        }
+        if (filters.power_plant) params.power_plant = filters.power_plant;
+        if (filters.rake_number) params.rake_number = filters.rake_number;
+        if (filters.loader_id) params.loader_id = filters.loader_id;
+        if (filters.shift) params.shift = filters.shift;
+        if (filters.penalty_type != null) params.penalty_type = filters.penalty_type;
+        if (filters.daily_rake_date) params.daily_rake_date = filters.daily_rake_date;
+        if (filters.coal_stock_date) params.coal_stock_date = filters.coal_stock_date;
+        router.get(dashboardPath, params as Record<string, string>, { preserveState: true, preserveScroll: true });
+    }, [dashboardPath, filters, activeSection, allSidingIds.length]);
+
     const filterOptions = props.filterOptions ?? { powerPlants: [], loaders: [], shifts: [], penaltyTypes: [] };
     const kpis = props.kpis;
     const penaltyTrendDaily = props.penaltyTrendDaily ?? [];
@@ -1579,10 +1710,37 @@ export default function Dashboard() {
     const penaltyBySiding = props.penaltyBySiding ?? [];
     const alerts = props.alerts ?? [];
     const liveRakeStatus = props.liveRakeStatus ?? [];
+    const dailyRakeDetails = props.dailyRakeDetails;
+    const coalTransportReport = props.coalTransportReport;
     const truckReceiptTrend = props.truckReceiptTrend ?? [];
+    const shiftWiseVehicleReceipt = props.shiftWiseVehicleReceipt ?? [];
     const stockGauge = props.stockGauge;
     const predictedVsActualPenalty = props.predictedVsActualPenalty ?? { predicted: 0, actual: 0, bySiding: [] };
-    const sidingStocks = props.sidingStocks ?? {};
+    const baseSidingStocks = props.sidingStocks ?? {};
+    const sidingStocks = useMemo(() => {
+        if (Object.keys(stockOverrides).length === 0) return baseSidingStocks;
+        const merged: Record<number, SidingStock> = {};
+        for (const [idStr, st] of Object.entries(baseSidingStocks)) {
+            const id = Number(idStr);
+            merged[id] = {
+                ...st,
+                closing_balance_mt: stockOverrides[id] ?? st.closing_balance_mt,
+            };
+        }
+        for (const id of Object.keys(stockOverrides).map(Number)) {
+            if (!(id in merged)) {
+                merged[id] = {
+                    siding_id: id,
+                    opening_balance_mt: 0,
+                    closing_balance_mt: stockOverrides[id],
+                    total_rakes: 0,
+                    received_mt: 0,
+                    dispatched_mt: 0,
+                };
+            }
+        }
+        return merged;
+    }, [baseSidingStocks, stockOverrides]);
     const sidingPerformance = props.sidingPerformance ?? [];
     const sidingWiseMonthly = props.sidingWiseMonthly ?? [];
     const sidingRadar = props.sidingRadar ?? { sidings: [] };
@@ -1590,6 +1748,14 @@ export default function Dashboard() {
     const rakePerformance = props.rakePerformance ?? [];
     const loaderOverloadTrends = props.loaderOverloadTrends ?? { loaders: [], monthly: [] };
     const powerPlantDispatch = props.powerPlantDispatch ?? [];
+    const yesterdayPredictedPenalties = props.yesterdayPredictedPenalties ?? [];
+    const yesterdayPenaltyTotalRakes = useMemo(
+        () => yesterdayPredictedPenalties.reduce((s, sid) => s + sid.rakes.length, 0),
+        [yesterdayPredictedPenalties],
+    );
+    useEffect(() => {
+        setYesterdayPenaltyHeatmapPage(1);
+    }, [yesterdayPenaltyTotalRakes]);
 
     const filteredSidings = useMemo(() => {
         if (filters.siding_ids.length === 0 || filters.siding_ids.length === sidings.length) {
@@ -1707,6 +1873,56 @@ export default function Dashboard() {
                     </div>
                 )}
 
+                {filteredSidings.length > 0 && (
+                    <div className="space-y-3">
+                        <div className="flex flex-wrap items-center gap-3">
+                            <label htmlFor="coal-stock-date" className="text-xs font-medium text-gray-600">Coal stock as of</label>
+                            <input
+                                id="coal-stock-date"
+                                type="date"
+                                value={filters.coal_stock_date ?? filters.to}
+                                onChange={(e) => {
+                                    const v = e.target.value;
+                                    applyCoalStockDate(v ?? '');
+                                }}
+                                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
+                            />
+                        </div>
+                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                            {filteredSidings.map((s) => {
+                                const stockMt = sidingStocks[s.id]?.closing_balance_mt ?? 0;
+                                const rakesLoadable = Math.floor(stockMt / MT_PER_RAKE_LOAD);
+                                const accent = SIDING_ACCENT[s.name] ?? '#6B7280';
+                                return (
+                                    <div
+                                        key={s.id}
+                                        className="dashboard-card flex min-w-[160px] flex-1 flex-col rounded-xl border-0 p-4 sm:min-w-0"
+                                        style={{ borderTop: `4px solid ${accent}` }}
+                                    >
+                                        <div className="text-[0.7rem] font-semibold text-gray-600 leading-snug">
+                                            {s.name}
+                                        </div>
+                                        <div className="mt-2 flex items-baseline justify-between gap-4">
+                                            <div>
+                                                <p className="text-[1.25rem] font-bold tabular-nums leading-tight text-gray-900">
+                                                    {stockMt.toLocaleString(undefined, { maximumFractionDigits: 0 })} MT
+                                                </p>
+                                                <p className="text-xs text-gray-600">Stock available</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-[1.25rem] font-bold tabular-nums leading-tight text-gray-900">
+                                                    {rakesLoadable}
+                                                </p>
+                                                <p className="text-xs text-gray-600">Rakes we can load</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+
                 {sidings.length === 0 ? (
                     <div className="dashboard-card rounded-xl border-0 p-8 text-center text-sm text-gray-600">
                         <p>No sidings assigned to your account. Contact your administrator to get access.</p>
@@ -1793,9 +2009,10 @@ export default function Dashboard() {
 
                         {activeSection === 'operations' && (
                             <div className="space-y-6">
-                                <div className="dashboard-card rounded-xl border-0 p-5">
-                                    <div className="flex flex-wrap items-center justify-between gap-3">
-                                        <SectionHeader icon={Train} title="Live rake status" subtitle="Active rakes (not yet dispatched)" />
+                                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                                    <div className="dashboard-card rounded-xl border-0 p-5">
+                                        <div className="flex flex-wrap items-center justify-between gap-3">
+                                            <SectionHeader icon={Train} title="Live rake status" subtitle="Active rakes (not yet dispatched)" />
                                         <Button variant="outline" size="sm" className="rounded-lg" asChild>
                                             <Link href={rakesIndex().url} data-pan="dashboard-live-rakes-view-all">View all</Link>
                                         </Button>
@@ -1868,28 +2085,140 @@ export default function Dashboard() {
                                     ) : (
                                         <div className="mt-4 py-8 text-center text-sm text-gray-600">No active rakes.</div>
                                     )}
+                                    </div>
+                                    <div className="dashboard-card rounded-xl border-0 p-5">
+                                        <div className="flex flex-wrap items-center justify-between gap-3">
+                                            <SectionHeader icon={Calendar} title="Daily rake details" subtitle="One day — filtered by selected sidings" titleClassName="font-bold text-black" />
+                                            <div className="flex items-center gap-2">
+                                                <label htmlFor="daily-rake-date" className="text-xs font-medium text-gray-600">Date</label>
+                                                <input
+                                                    id="daily-rake-date"
+                                                    type="date"
+                                                    value={filters.daily_rake_date ?? dailyRakeDetails?.date ?? ''}
+                                                    onChange={(e) => {
+                                                        const v = e.target.value;
+                                                        applyDailyRakeDate(v ?? '');
+                                                    }}
+                                                    className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
+                                                />
+                                            </div>
+                                        </div>
+                                        {dailyRakeDetails ? (
+                                            <>
+                                                <p className="mt-1 text-xs text-gray-600">
+                                                    {new Date(dailyRakeDetails.date + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                                    {dailyRakeDetails.totals.day_rakes === 0 && dailyRakeDetails.rows.length > 0 && (
+                                                        <span className="ml-2 text-amber-600">— No rake dispatches for this date</span>
+                                                    )}
+                                                </p>
+                                                <div className="dashboard-table-scroll mt-3 max-h-[420px] overflow-y-auto overflow-x-auto">
+                                                    <table className="w-full border-separate text-sm" style={{ borderSpacing: 0 }}>
+                                                        <thead className="sticky top-0 z-10 bg-[#369c7a] text-black">
+                                                            <tr>
+                                                                <th className="border border-[#1a3d2e] px-2 py-2 text-center font-medium" style={{ borderWidth: '1px' }}>SL NO</th>
+                                                                <th className="border border-[#1a3d2e] px-2 py-2 text-center font-medium" style={{ borderWidth: '1px' }}>SIDING</th>
+                                                                <th colSpan={2} className="border border-[#1a3d2e] px-2 py-2 text-center font-medium" style={{ borderWidth: '1px' }}>DAY</th>
+                                                                <th colSpan={2} className="border border-[#1a3d2e] px-2 py-2 text-center font-medium" style={{ borderWidth: '1px' }}>MONTH</th>
+                                                                <th className="border border-[#1a3d2e] px-2 py-2 text-center font-medium" style={{ borderWidth: '1px' }}>FOR RAKE DAY/AVG</th>
+                                                                <th className="border border-[#1a3d2e] px-2 py-2 text-center font-medium" style={{ borderWidth: '1px' }}>REMARKS</th>
+                                                            </tr>
+                                                            <tr>
+                                                                <th className="border border-[#1a3d2e] px-2 py-1" style={{ borderWidth: '1px' }} />
+                                                                <th className="border border-[#1a3d2e] px-2 py-1" style={{ borderWidth: '1px' }} />
+                                                                <th className="border border-[#1a3d2e] px-2 py-1 text-center font-medium" style={{ borderWidth: '1px' }}>RAKES</th>
+                                                                <th className="border border-[#1a3d2e] px-2 py-1 text-center font-medium" style={{ borderWidth: '1px' }}>QTY</th>
+                                                                <th className="border border-[#1a3d2e] px-2 py-1 text-center font-medium" style={{ borderWidth: '1px' }}>RAKES</th>
+                                                                <th className="border border-[#1a3d2e] px-2 py-1 text-center font-medium" style={{ borderWidth: '1px' }}>QTY</th>
+                                                                <th className="border border-[#1a3d2e] px-2 py-1" style={{ borderWidth: '1px' }} />
+                                                                <th className="border border-[#1a3d2e] px-2 py-1" style={{ borderWidth: '1px' }} />
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {dailyRakeDetails.rows.map((r) => (
+                                                                <tr key={r.siding_name} className="bg-white text-[0.875rem]">
+                                                                    <td className="border border-[#1a3d2e] px-2 py-2 tabular-nums" style={{ borderWidth: '1px' }}>{r.sl_no}</td>
+                                                                    <td className="border border-[#1a3d2e] px-2 py-2 font-medium" style={{ borderWidth: '1px' }}>{r.siding_name}</td>
+                                                                    <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{r.day_rakes}</td>
+                                                                    <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{r.day_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                                                    <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{r.month_rakes}</td>
+                                                                    <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{r.month_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                                                    <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{r.rake_day_avg.toFixed(2)}</td>
+                                                                    <td className="border border-[#1a3d2e] px-2 py-2 text-gray-600" style={{ borderWidth: '1px' }}>{r.remarks || '—'}</td>
+                                                                </tr>
+                                                            ))}
+                                                            <tr className="bg-[#369c7a] font-bold text-black">
+                                                                <td className="border border-[#1a3d2e] px-2 py-2" style={{ borderWidth: '1px' }} />
+                                                                <td className="border border-[#1a3d2e] px-2 py-2" style={{ borderWidth: '1px' }}>TOTAL</td>
+                                                                <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{dailyRakeDetails.totals.day_rakes}</td>
+                                                                <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{dailyRakeDetails.totals.day_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                                                <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{dailyRakeDetails.totals.month_rakes}</td>
+                                                                <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{dailyRakeDetails.totals.month_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                                                <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{dailyRakeDetails.totals.rake_day_avg.toFixed(2)}</td>
+                                                                <td className="border border-[#1a3d2e] px-2 py-2" style={{ borderWidth: '1px' }} />
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="mt-4 py-8 text-center text-sm text-gray-600">No siding selected or no data for this date.</div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         )}
 
                         {activeSection === 'operations' && (
                             <div className="space-y-6">
-                                <div className="dashboard-card rounded-xl border-0 p-5">
-                                    <SectionHeader icon={BarChart3} title="Truck receipt trend" subtitle="Trips per hour (today)" />
-                                    {truckReceiptTrend.length > 0 ? (
-                                        <ResponsiveContainer width="100%" height={260}>
-                                            <RechartsBarChart data={truckReceiptTrend} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
-                                                <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
-                                                <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-                                                <YAxis tick={{ fontSize: 11 }} />
-                                                <Tooltip formatter={(v: number | undefined) => `Trips: ${v ?? 0}`} />
-                                                <Bar dataKey="count" fill="#3B82F6" radius={[4, 4, 0, 0]} barSize={24} isAnimationActive />
-                                            </RechartsBarChart>
-                                        </ResponsiveContainer>
-                                    ) : (
-                                        <div className="mt-4 py-8 text-center text-sm text-gray-600">No truck receipt data for today.</div>
-                                    )}
+                                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                                    <div className="dashboard-card rounded-xl border-0 p-5">
+                                        <SectionHeader icon={BarChart3} title="Truck receipt trend" subtitle="Vehicles arrived per hour (today)" />
+                                        {truckReceiptTrend.length > 0 ? (
+                                            <ResponsiveContainer width="100%" height={260}>
+                                                <RechartsBarChart data={truckReceiptTrend} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
+                                                    <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
+                                                    <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                                                    <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                                                    <Tooltip formatter={(v: number | undefined) => `Vehicles: ${v ?? 0}`} />
+                                                    <Bar dataKey="count" fill="#3B82F6" radius={[4, 4, 0, 0]} barSize={24} isAnimationActive />
+                                                </RechartsBarChart>
+                                            </ResponsiveContainer>
+                                        ) : (
+                                            <div className="mt-4 py-8 text-center text-sm text-gray-600">No vehicle arrivals for today.</div>
+                                        )}
+                                    </div>
+                                    <div className="dashboard-card rounded-xl border-0 p-5">
+                                        <SectionHeader icon={BarChart3} title="Shift-wise vehicle receipt" subtitle="Vehicles received by shift and siding (today)" />
+                                        {shiftWiseVehicleReceipt.length > 0 ? (() => {
+                                            const sidingKeys = Object.keys(shiftWiseVehicleReceipt[0]).filter((k) => k !== 'shift_label');
+                                            return (
+                                                <ResponsiveContainer width="100%" height={260}>
+                                                    <RechartsBarChart data={shiftWiseVehicleReceipt} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
+                                                        <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
+                                                        <XAxis dataKey="shift_label" tick={{ fontSize: 11 }} />
+                                                        <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                                                        <Tooltip formatter={(v: number | undefined) => `Vehicles: ${v ?? 0}`} />
+                                                        <Legend />
+                                                        {sidingKeys.map((sidingName, i) => (
+                                                            <Bar
+                                                                key={sidingName}
+                                                                dataKey={sidingName}
+                                                                name={sidingName}
+                                                                fill={SIDING_ACCENT[sidingName] ?? ['#3B82F6', '#10B981', '#F59E0B'][i % 3]}
+                                                                radius={[4, 4, 0, 0]}
+                                                                barSize={24}
+                                                                isAnimationActive
+                                                            />
+                                                        ))}
+                                                    </RechartsBarChart>
+                                                </ResponsiveContainer>
+                                            );
+                                        })() : (
+                                            <div className="mt-4 py-8 text-center text-sm text-gray-600">No shift-wise vehicle data for today.</div>
+                                        )}
+                                    </div>
                                 </div>
+                                {/* Stock vs requirement — hidden for now
                                 <SpeedometerGauge
                                     sidings={
                                         stockGauge?.map((item) => ({
@@ -1901,12 +2230,89 @@ export default function Dashboard() {
                                     title="Stock vs requirement"
                                     subtitle="Minimum 3,800 MT per rake — side-wise"
                                 />
+                                */}
+                                {coalTransportReport && coalTransportReport.sidings.length > 0 && (
+                                    <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-2">
+                                        <div className="dashboard-card min-w-0 rounded-xl border-0 p-5">
+                                            <div className="flex flex-wrap items-center justify-between gap-3">
+                                                <SectionHeader icon={Truck} title="Coal Transport Report" subtitle="Trips and quantity by shift and siding" titleClassName="font-bold text-black" />
+                                                <div className="flex items-center gap-2">
+                                                    <label htmlFor="coal-transport-date" className="text-xs font-medium text-gray-600">Date</label>
+                                                    <input
+                                                        id="coal-transport-date"
+                                                        type="date"
+                                                        value={filters.coal_transport_date ?? coalTransportReport.date ?? ''}
+                                                        onChange={(e) => {
+                                                            const v = e.target.value;
+                                                            applyCoalTransportDate(v ?? '');
+                                                        }}
+                                                        className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <p className="mt-1 text-xs text-gray-600">
+                                                {new Date(coalTransportReport.date + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                            </p>
+                                            <div className="dashboard-table-scroll mt-3 max-h-[420px] overflow-y-auto overflow-x-auto">
+                                                <table className="w-full border-separate text-sm" style={{ borderSpacing: 0 }}>
+                                                    <thead className="sticky top-0 z-10 bg-[#369c7a] text-black">
+                                                        <tr>
+                                                            <th className="border border-[#1a3d2e] px-2 py-2 text-center font-medium" style={{ borderWidth: '1px' }}>Sl No</th>
+                                                            <th className="border border-[#1a3d2e] px-2 py-2 text-center font-medium" style={{ borderWidth: '1px' }}>Shift</th>
+                                                            {coalTransportReport.sidings.map((s) => (
+                                                                <th key={s.id} colSpan={2} className="border border-[#1a3d2e] px-2 py-2 text-center font-medium" style={{ borderWidth: '1px' }}>{s.name}</th>
+                                                            ))}
+                                                            <th colSpan={2} className="border border-[#1a3d2e] px-2 py-2 text-center font-medium" style={{ borderWidth: '1px' }}>Total</th>
+                                                        </tr>
+                                                        <tr>
+                                                            <th className="border border-[#1a3d2e] px-2 py-1" style={{ borderWidth: '1px' }} />
+                                                            <th className="border border-[#1a3d2e] px-2 py-1" style={{ borderWidth: '1px' }} />
+                                                            {coalTransportReport.sidings.flatMap((s) => [<th key={`${s.id}-t`} className="border border-[#1a3d2e] px-2 py-1 text-center font-medium" style={{ borderWidth: '1px' }}>Trips</th>, <th key={`${s.id}-q`} className="border border-[#1a3d2e] px-2 py-1 text-center font-medium" style={{ borderWidth: '1px' }}>Qty</th>])}
+                                                            <th className="border border-[#1a3d2e] px-2 py-1 text-center font-medium" style={{ borderWidth: '1px' }}>Trips</th>
+                                                            <th className="border border-[#1a3d2e] px-2 py-1 text-center font-medium" style={{ borderWidth: '1px' }}>Qty</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {coalTransportReport.rows.map((row) => (
+                                                            <tr key={row.shift_label} className="bg-white text-[0.875rem]">
+                                                                <td className="border border-[#1a3d2e] px-2 py-2 tabular-nums" style={{ borderWidth: '1px' }}>{row.sl_no}</td>
+                                                                <td className="border border-[#1a3d2e] px-2 py-2 font-medium" style={{ borderWidth: '1px' }}>{row.shift_label}</td>
+                                                                {row.siding_metrics.map((m) => (
+                                                                    <Fragment key={m.siding_name}>
+                                                                        <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{m.trips}</td>
+                                                                        <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{m.qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                                                    </Fragment>
+                                                                ))}
+                                                                <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{row.total_trips}</td>
+                                                                <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{row.total_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                                            </tr>
+                                                        ))}
+                                                        <tr className="bg-[#369c7a] font-bold text-black">
+                                                            <td className="border border-[#1a3d2e] px-2 py-2" style={{ borderWidth: '1px' }} />
+                                                            <td className="border border-[#1a3d2e] px-2 py-2" style={{ borderWidth: '1px' }}>TOTAL</td>
+                                                            {coalTransportReport.totals.siding_metrics.map((m) => (
+                                                                <Fragment key={m.siding_name}>
+                                                                    <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{m.trips}</td>
+                                                                    <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{m.qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                                                </Fragment>
+                                                            ))}
+                                                            <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{coalTransportReport.totals.total_trips}</td>
+                                                            <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{coalTransportReport.totals.total_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                        {/* Placeholder for second data table — add your table here */}
+                                        <div className="min-w-0" />
+                                    </div>
+                                )}
                             </div>
                         )}
 
                         {activeSection === 'penalty-control' && (
                             <div className="space-y-6">
-                                {/* Penalty type distribution + Penalty amount by type: two equal columns first */}
+                                {/* Penalty type distribution (left) + Yesterday predicted penalties (right) */}
                                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                                     <div className="dashboard-card min-w-0 rounded-xl border-0 p-6">
                                         <SectionHeader icon={AlertTriangle} title="Penalty type distribution" subtitle="Overloading, demurrage, wharfage, etc." />
@@ -1971,38 +2377,146 @@ export default function Dashboard() {
                                             <div className="mt-4 py-8 text-center text-sm text-gray-600">No penalty type data.</div>
                                         )}
                                     </div>
-                                    <div className="dashboard-card min-w-0 rounded-xl border-0 p-6">
-                                        <SectionHeader icon={BarChart3} title="Penalty amount by type" subtitle="Amount by penalty type" />
-                                        {penaltyByType.length > 0 ? (() => {
-                                            const typeColors: Record<string, string> = { Demurrage: '#DC2626', Overloading: '#F59E0B', Wharfage: '#8B5CF6' };
+                                    <div className="dashboard-card min-w-0 rounded-xl border-0 p-5" style={{ padding: '1rem' }}>
+                                        <div className="flex flex-wrap items-center justify-between gap-3">
+                                            <SectionHeader icon={Calendar} title="Yesterday predicted penalties" subtitle="Penalty heatmap by siding and rake (yesterday's loading date)" />
+                                            <Button variant="outline" size="sm" className="rounded-lg" asChild>
+                                                <Link href={rakesIndex().url} data-pan="dashboard-yesterday-penalties-view-all">View all rakes</Link>
+                                            </Button>
+                                        </div>
+                                        {(() => {
+                                            const RAKES_PER_PAGE = 6;
+                                            const HEATMAP_COLORS = {
+                                                dark: { bg: '#E24B4A', text: '#fff' },      // ₹11K+
+                                                medium: { bg: '#F09595', text: '#fff' },   // ₹8–11K
+                                                light: { bg: '#F7C1C1', text: '#991B1B' },  // ₹5–8K
+                                                lightest: { bg: '#FCEBEB', text: '#991B1B' }, // ₹0–5K
+                                            };
+                                            const getCellStyle = (amount: number) => {
+                                                if (amount >= 11000) return HEATMAP_COLORS.dark;
+                                                if (amount >= 8000) return HEATMAP_COLORS.medium;
+                                                if (amount >= 5000) return HEATMAP_COLORS.light;
+                                                return HEATMAP_COLORS.lightest;
+                                            };
+                                            const allRakes = yesterdayPredictedPenalties.flatMap((s) =>
+                                                s.rakes.map((r) => ({ ...r, siding_name: s.siding_name })),
+                                            );
+                                            const sidings = [...new Set(yesterdayPredictedPenalties.map((s) => s.siding_name))];
+                                            const totalRakes = allRakes.length;
+                                            const totalPages = Math.max(1, Math.ceil(totalRakes / RAKES_PER_PAGE));
+                                            const page = Math.min(Math.max(1, yesterdayPenaltyHeatmapPage), totalPages);
+                                            const start = (page - 1) * RAKES_PER_PAGE;
+                                            const pageRakes = allRakes.slice(start, start + RAKES_PER_PAGE);
+                                            const getAmount = (sidingName: string, rake: { siding_name: string; total_penalty: number }) =>
+                                                rake.siding_name === sidingName ? rake.total_penalty : 0;
+
+                                            if (totalRakes === 0) {
+                                                return (
+                                                    <div className="mt-4 py-8 text-center text-sm text-gray-600">No predicted penalties for yesterday's rakes.</div>
+                                                );
+                                            }
                                             return (
-                                                <div className="mt-4">
-                                                    <ResponsiveContainer width="100%" height={280}>
-                                                        <RechartsBarChart
-                                                            data={penaltyByType}
-                                                            margin={{ top: 8, right: 16, bottom: 24, left: 16 }}
-                                                        >
-                                                            <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
-                                                            <XAxis dataKey="name" type="category" tick={{ fontSize: 11 }} />
-                                                            <YAxis type="number" tickFormatter={(v: number) => formatCurrency(v)} width={64} tick={{ fontSize: 10 }} />
-                                                            <Tooltip formatter={(v: number | string | undefined) => formatCurrency(Number(v ?? 0))} />
-                                                            <Bar dataKey="value" radius={[4, 4, 0, 0]} barSize={36} isAnimationActive>
-                                                                <LabelList dataKey="value" position="top" formatter={(v: unknown) => formatCurrency(Number(v ?? 0))} />
-                                                                {penaltyByType.map((entry, i) => (
-                                                                    <Cell key={i} fill={typeColors[entry.name] ?? ['#64748b', '#94a3b8'][i % 2]} />
+                                                <div className="mt-4 space-y-4">
+                                                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-600">
+                                                        <span>{totalRakes} rake{totalRakes === 1 ? '' : 's'} with predicted penalties</span>
+                                                        <div className="flex items-center gap-3">
+                                                            <span className="flex items-center gap-2">
+                                                                <span className="text-[10px] font-medium text-gray-500">Low</span>
+                                                                <span className="flex h-4 w-24 rounded overflow-hidden border border-gray-200" style={{ borderRadius: 'var(--radius-md, 0.375rem)' }}>
+                                                                    <span className="flex-1" style={{ backgroundColor: '#FCEBEB' }} />
+                                                                    <span className="flex-1" style={{ backgroundColor: '#F7C1C1' }} />
+                                                                    <span className="flex-1" style={{ backgroundColor: '#F09595' }} />
+                                                                    <span className="flex-1" style={{ backgroundColor: '#E24B4A' }} />
+                                                                </span>
+                                                                <span className="text-[10px] font-medium text-gray-500">High</span>
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="overflow-x-auto -mx-1" style={{ borderRadius: 'var(--radius-md, 0.5rem)' }}>
+                                                        <table className="w-full border-collapse text-[12px]" style={{ fontSize: '12px' }}>
+                                                            <thead>
+                                                                <tr className="border-b border-gray-200 bg-gray-50">
+                                                                    <th className="sticky left-0 z-10 min-w-[100px] bg-gray-50 px-3 py-2 text-left font-semibold text-gray-700">Siding</th>
+                                                                    {pageRakes.map((rake) => (
+                                                                        <th key={rake.rake_id} className="min-w-[80px] px-3 py-2 text-center font-semibold text-gray-700">
+                                                                            <Link href={`/rakes/${rake.rake_id}`} className="text-primary hover:underline">
+                                                                                {rake.rake_number}
+                                                                            </Link>
+                                                                        </th>
+                                                                    ))}
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {sidings.map((sidingName) => (
+                                                                    <tr key={sidingName} className="border-b border-gray-100 last:border-0">
+                                                                        <td className="sticky left-0 z-10 bg-white px-3 py-2 font-medium text-gray-800 border-r border-gray-100">
+                                                                            {sidingName}
+                                                                        </td>
+                                                                        {pageRakes.map((rake) => {
+                                                                            const amount = getAmount(sidingName, rake);
+                                                                            const style = getCellStyle(amount);
+                                                                            return (
+                                                                                <td
+                                                                                    key={`${sidingName}-${rake.rake_id}`}
+                                                                                    className="min-w-[80px] px-3 py-2 text-center tabular-nums font-medium border-r border-gray-100 last:border-r-0"
+                                                                                    style={{
+                                                                                        backgroundColor: style.bg,
+                                                                                        color: style.text,
+                                                                                        borderRadius: 'var(--radius-md, 0.375rem)',
+                                                                                    }}
+                                                                                >
+                                                                                    {amount > 0 ? formatCurrency(amount) : '—'}
+                                                                                </td>
+                                                                            );
+                                                                        })}
+                                                                    </tr>
                                                                 ))}
-                                                            </Bar>
-                                                        </RechartsBarChart>
-                                                    </ResponsiveContainer>
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                                        <p className="text-xs text-gray-500">
+                                                            Page {page} of {totalPages}
+                                                            {totalRakes > 0 && (
+                                                                <span className="ml-2">
+                                                                    (Rakes {start + 1}–{Math.min(start + RAKES_PER_PAGE, totalRakes)} of {totalRakes})
+                                                                </span>
+                                                            )}
+                                                        </p>
+                                                        <div className="flex items-center gap-2">
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                className="h-8 rounded-lg"
+                                                                disabled={page <= 1}
+                                                                onClick={() => setYesterdayPenaltyHeatmapPage((p) => Math.max(1, p - 1))}
+                                                            >
+                                                                <ChevronLeft className="size-4" />
+                                                                <span className="sr-only">Previous</span>
+                                                            </Button>
+                                                            <span className="text-xs font-medium text-gray-600 min-w-[80px] text-center">
+                                                                {page} / {totalPages}
+                                                            </span>
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                className="h-8 rounded-lg"
+                                                                disabled={page >= totalPages}
+                                                                onClick={() => setYesterdayPenaltyHeatmapPage((p) => Math.min(totalPages, p + 1))}
+                                                            >
+                                                                <ChevronRight className="size-4" />
+                                                                <span className="sr-only">Next</span>
+                                                            </Button>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             );
-                                        })() : (
-                                            <div className="mt-4 py-8 text-center text-sm text-gray-600">No penalty type data.</div>
-                                        )}
+                                        })()}
                                     </div>
                                 </div>
-                                <div className="dashboard-card rounded-xl border-0 p-6">
-                                    <SectionHeader icon={BarChart3} title="Penalty by siding" subtitle="Which siding causes most penalties" />
+                                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                                    <div className="dashboard-card min-w-0 rounded-xl border-0 p-6">
+                                        <SectionHeader icon={BarChart3} title="Penalty by siding" subtitle="Which siding causes most penalties" />
                                     {penaltyBySiding.length > 0 ? (
                                         <div className="mt-4">
                                             {(() => {
@@ -2032,9 +2546,9 @@ export default function Dashboard() {
                                     ) : (
                                         <div className="mt-4 py-8 text-center text-sm text-gray-600">No sidings available for selected filters.</div>
                                     )}
-                                </div>
-                                <div className="dashboard-card rounded-xl border-0 p-6">
-                                    <SectionHeader icon={BarChart3} title="Predicted vs actual penalty" subtitle="All sidings comparison" />
+                                    </div>
+                                    <div className="dashboard-card min-w-0 rounded-xl border-0 p-6">
+                                        <SectionHeader icon={BarChart3} title="Predicted vs actual penalty" subtitle="All sidings comparison" />
                                     <div className="mt-3 flex flex-wrap items-center justify-center gap-4 rounded-lg border border-gray-200 bg-gray-50/80 px-4 py-2 text-sm">
                                         <span className="flex items-center gap-2">
                                             <span className="font-medium text-gray-600">Total Predicted:</span>
@@ -2078,6 +2592,7 @@ export default function Dashboard() {
                                             </div>
                                         );
                                     })()}
+                                    </div>
                                 </div>
                             </div>
                         )}
@@ -2092,21 +2607,6 @@ export default function Dashboard() {
                                             <BarChart3 className="mb-3 h-10 w-10 opacity-30" />
                                             <p className="text-sm font-medium">No data available</p>
                                             <p className="mt-1 text-xs">Apply filters or wait for dispatch data.</p>
-                                        </div>
-                                    </div>
-                                )
-                        )}
-
-                        {activeSection === 'siding-stock' && (
-                            Object.keys(sidingStocks).length > 0
-                                ? <SidingStockSection sidings={filteredSidings} stocks={sidingStocks} />
-                                : (
-                                    <div className="dashboard-card rounded-xl border-0 p-6">
-                                        <SectionHeader icon={BarChart3} title="Siding stock" subtitle="Opening & closing balance with total rakes" />
-                                        <div className="mt-6 flex flex-col items-center justify-center py-10 text-center text-gray-600">
-                                            <BarChart3 className="mb-3 h-10 w-10 opacity-30" />
-                                            <p className="text-sm font-medium">No stock data available</p>
-                                            <p className="mt-1 text-xs">Apply filters or wait for stock ledger data.</p>
                                         </div>
                                     </div>
                                 )

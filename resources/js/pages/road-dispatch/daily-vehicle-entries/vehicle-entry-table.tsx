@@ -17,6 +17,7 @@ interface DailyVehicleEntry {
   transport_name: string | null;
   gross_wt: number | null;
   tare_wt: number | null;
+  tare_wt_two: number | null;
   reached_at: string | null;
   wb_no: string | null;
   d_challan_no: string | null;
@@ -109,20 +110,20 @@ export default function VehicleEntryTable({
       <Table className="text-xs border border-gray-300 border-collapse">
         <TableHeader>
           <TableRow>
-            <TableHead className="w-12 h-8 px-2 py-1 text-center border-r border-gray-300">SL NO</TableHead>
-            <TableHead className="w-28 h-8 px-2 py-1 text-center border-r border-gray-300">Siding</TableHead>
-            <TableHead className="h-8 px-2 py-1 text-center border-r border-gray-300">E Challan No</TableHead>
-            <TableHead className="h-8 px-2 py-1 text-center border-r border-gray-300">Vehicle No</TableHead>
-            <TableHead className="h-8 px-2 py-1 text-center border-r border-gray-300">Trip ID No</TableHead>
-            <TableHead className="h-8 px-2 py-1 text-center border-r border-gray-300">Transport Name</TableHead>
-            <TableHead className="h-8 px-2 py-1 text-center border-r border-gray-300">Gross WT (G2)</TableHead>
-            <TableHead className="h-8 px-2 py-1 text-center border-r border-gray-300">Tare WT (T1)</TableHead>
-            <TableHead className="h-8 px-2 py-1 text-center border-r border-gray-300">Net Weight</TableHead>
-            <TableHead className="h-8 px-2 py-1 text-center border-r border-gray-300">Reached At</TableHead>
-            <TableHead className="h-8 px-2 py-1 text-center border-r border-gray-300">WB No</TableHead>
-            <TableHead className="h-8 px-2 py-1 text-center border-r border-gray-300">D Challan No</TableHead>
-            <TableHead className="h-8 px-2 py-1 text-center border-r border-gray-300">Challan Mode</TableHead>
-            <TableHead className="h-8 px-2 py-1 text-center">Status</TableHead>
+            <TableHead className="w-12 min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">SL NO</TableHead>
+            <TableHead className="w-28 min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">Siding</TableHead>
+            <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">E Challan No</TableHead>
+            <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">Vehicle No</TableHead>
+            <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">Trip ID No</TableHead>
+            <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">Transport Name</TableHead>
+            <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">Gross WT (G2)</TableHead>
+            <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">Tare WT (T1)</TableHead>
+            <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">Net Weight</TableHead>
+            <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">Reached At</TableHead>
+            <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">WB No</TableHead>
+            <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">D Challan No</TableHead>
+            <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">Challan Mode</TableHead>
+            <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center">Status</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -143,8 +144,8 @@ export default function VehicleEntryTable({
               );
             }
 
-            const emptyCellClass = 'min-h-[3rem] px-2 py-2 border-t border-r border-gray-300';
-            const emptyCellClassLast = 'min-h-[3rem] px-2 py-2 border-t border-gray-300';
+            const emptyCellClass = 'min-h-[4rem] px-2 py-3 border-t border-r border-gray-300';
+            const emptyCellClassLast = 'min-h-[4rem] px-2 py-3 border-t border-gray-300';
             return (
               <TableRow
                 key={`empty-${index}`}

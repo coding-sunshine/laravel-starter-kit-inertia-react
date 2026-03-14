@@ -101,6 +101,11 @@
             "type": "numeric",
             "nullable": true,
             "default": null
+        },
+        "entry_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {

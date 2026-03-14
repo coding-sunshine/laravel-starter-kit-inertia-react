@@ -31,6 +31,7 @@ import {
     LifeBuoy,
     Mail,
     Megaphone,
+    Mountain,
     Scale,
     Train,
     Truck,
@@ -119,6 +120,24 @@ const mainNavItems: NavItem[] = [
         href: '/road-dispatch/daily-vehicle-entries',
         icon: Truck,
         dataPan: 'nav-road-dispatch',
+    },
+    {
+        title: 'Railway Siding Empty Weighment',
+        href: '/railway-siding-empty-weighment',
+        icon: Scale,
+        dataPan: 'nav-railway-siding-empty-weighment',
+    },
+    {
+        title: 'Production - Coal',
+        href: '/production/coal',
+        icon: Factory,
+        dataPan: 'nav-production-coal',
+    },
+    {
+        title: 'Production - OB',
+        href: '/production/ob',
+        icon: Mountain,
+        dataPan: 'nav-production-ob',
     },
     {
         title: 'Mines Dispatch Data',

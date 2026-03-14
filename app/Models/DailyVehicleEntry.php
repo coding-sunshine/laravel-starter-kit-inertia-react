@@ -10,15 +10,20 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 final class DailyVehicleEntry extends Model
 {
-    protected $table = 'daily_vehicle_entries';
-
     /**
      * Mass assignable attributes.
      */
+    public const ENTRY_TYPE_ROAD_DISPATCH = 'road_dispatch';
+
+    public const ENTRY_TYPE_RAILWAY_SIDING_EMPTY_WEIGHMENT = 'railway_siding_empty_weighment';
+
+    protected $table = 'daily_vehicle_entries';
+
     protected $fillable = [
         'siding_id',
         'entry_date',
         'shift',
+        'entry_type',
         'e_challan_no',
         'vehicle_no',
         'gross_wt',
@@ -46,6 +51,7 @@ final class DailyVehicleEntry extends Model
         'tare_wt_two' => 'decimal:2',
         'shift' => 'integer',
         'vehicle_no' => 'string',
+        'entry_type' => 'string',
     ];
 
     /*

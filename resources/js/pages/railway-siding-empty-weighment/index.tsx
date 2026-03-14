@@ -1,38 +1,27 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar, Plus, Download } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import ShiftTabs from './shift-tabs';
 import VehicleEntryTable from './vehicle-entry-table';
 
-interface DailyVehicleEntry {
+interface EmptyWeighmentEntry {
   id: number;
   siding_id: number;
   entry_date: string;
   shift: number;
-  e_challan_no: string | null;
   vehicle_no: string | null;
-  trip_id_no: string | null;
   transport_name: string | null;
-  gross_wt: number | null;
-  tare_wt: number | null;
   tare_wt_two: number | null;
   reached_at: string;
-  wb_no: string | null;
-  d_challan_no: string | null;
-  challan_mode: 'offline' | 'online' | null;
-  status: 'draft' | 'completed';
-  created_by: number;
-  updated_by: number | null;
   created_at: string;
-  updated_at: string;
+  status: 'draft' | 'completed';
 }
 
 interface Siding {
@@ -64,7 +53,7 @@ function getCsrfHeaders(): Record<string, string> {
 }
 
 interface Props {
-  entries: DailyVehicleEntry[];
+  entries: EmptyWeighmentEntry[];
   date: string;
   activeShift: number;
   shiftSummary: Record<number, number>;
@@ -74,7 +63,7 @@ interface Props {
   sidingId?: number | null;
 }
 
-export default function DailyVehicleEntriesIndex({
+export default function RailwaySidingEmptyWeighmentIndex({
   entries: entriesProp,
   date,
   activeShift,
@@ -102,10 +91,6 @@ export default function DailyVehicleEntriesIndex({
     selectedSidingId == null
       ? entries
       : entries.filter((e) => e.siding_id === selectedSidingId);
-  const hasDraftEntry =
-    selectedSidingId == null
-      ? entries.some((e) => e.status === 'draft')
-      : entriesForSiding.some((e) => e.status === 'draft');
 
   useEffect(() => {
     setEntries(Array.isArray(entriesProp) ? entriesProp : []);
@@ -121,30 +106,27 @@ export default function DailyVehicleEntriesIndex({
 
   const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
-    { title: 'Road Dispatch', href: '/road-dispatch/daily-vehicle-entries' },
-    { title: 'Daily Vehicle Entries', href: '' },
+    { title: 'Railway Siding Empty Weighment', href: '' },
   ];
 
   const handleDateChange = (newDate: string) => {
     setSelectedDate(newDate);
     const params: Record<string, string | number> = { date: newDate, shift: activeShiftState };
     if (selectedSidingId != null) params.siding_id = selectedSidingId;
-    router.get('/road-dispatch/daily-vehicle-entries', params, {
+    router.get('/railway-siding-empty-weighment', params, {
       preserveState: true,
       preserveScroll: true,
     });
   };
 
   const handleShiftChange = (shift: number) => {
-    // Check if shift is available for today
     if (shiftStatus && selectedDate === new Date().toISOString().split('T')[0]) {
       if (!shiftStatus[shift]?.is_available) {
-        // Show alert or message instead of changing shift
-        const messages = {
+        const messages: Record<number, string> = {
           2: '2nd shift will be available after 1st shift completion (after 11:00)',
           3: '3rd shift will be available after 2nd shift completion (after 22:00)',
         };
-        alert(messages[shift as keyof typeof messages] || 'This shift is not available at the current time.');
+        alert(messages[shift] || 'This shift is not available at the current time.');
         return;
       }
     }
@@ -152,7 +134,7 @@ export default function DailyVehicleEntriesIndex({
     setActiveShiftState(shift);
     const params: Record<string, string | number> = { date: selectedDate, shift };
     if (selectedSidingId != null) params.siding_id = selectedSidingId;
-    router.get('/road-dispatch/daily-vehicle-entries', params, {
+    router.get('/railway-siding-empty-weighment', params, {
       preserveState: true,
       preserveScroll: true,
     });
@@ -163,12 +145,12 @@ export default function DailyVehicleEntriesIndex({
     addingRowRef.current = true;
     if (shiftStatus && selectedDate === new Date().toISOString().split('T')[0]) {
       if (!shiftStatus[activeShiftState]?.is_available) {
-        const messages = {
+        const messages: Record<number, string> = {
           1: '1st shift is only available between 06:00 - 11:00',
           2: '2nd shift will be available after 1st shift completion (after 11:00)',
           3: '3rd shift will be available after 2nd shift completion (after 22:00)',
         };
-        alert(messages[activeShiftState as keyof typeof messages] || 'This shift is not available at the current time.');
+        alert(messages[activeShiftState] || 'This shift is not available at the current time.');
         addingRowRef.current = false;
         return;
       }
@@ -176,7 +158,7 @@ export default function DailyVehicleEntriesIndex({
 
     setAddRowError(null);
     setIsAddingRow(true);
-    const newEntries: DailyVehicleEntry[] = [];
+    const newEntries: EmptyWeighmentEntry[] = [];
     const payload = {
       siding_id: selectedSidingId ?? sidings[0]?.id ?? 1,
       entry_date: selectedDate,
@@ -184,7 +166,7 @@ export default function DailyVehicleEntriesIndex({
     };
     try {
       for (let i = 0; i < count; i++) {
-        const res = await fetch('/road-dispatch/daily-vehicle-entries', {
+        const res = await fetch('/railway-siding-empty-weighment', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -197,7 +179,11 @@ export default function DailyVehicleEntriesIndex({
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
-          const msg = (data as { message?: string }).message ?? (data as { errors?: Record<string, string[]> }).errors ? Object.values((data as { errors: Record<string, string[]> }).errors).flat().join(', ') : res.statusText;
+          const msg =
+            (data as { message?: string }).message ??
+            ((data as { errors?: Record<string, string[]> }).errors
+              ? Object.values((data as { errors: Record<string, string[]> }).errors).flat().join(', ')
+              : res.statusText);
           setAddRowError(msg ?? 'Failed to add row');
           if (res.status === 419) {
             setAddRowError('Session expired. Please refresh the page.');
@@ -205,7 +191,7 @@ export default function DailyVehicleEntriesIndex({
           addingRowRef.current = false;
           return;
         }
-        const newEntry = (data as { entry?: DailyVehicleEntry }).entry;
+        const newEntry = (data as { entry?: EmptyWeighmentEntry }).entry;
         if (newEntry) {
           newEntries.push(newEntry);
         }
@@ -221,7 +207,7 @@ export default function DailyVehicleEntriesIndex({
     }
   };
 
-  const handleEntryUpdated = (entry: DailyVehicleEntry) => {
+  const handleEntryUpdated = (entry: EmptyWeighmentEntry) => {
     setEntries((prev) =>
       prev.some((e) => e.id === entry.id) ? prev.map((e) => (e.id === entry.id ? entry : e)) : prev
     );
@@ -233,26 +219,22 @@ export default function DailyVehicleEntriesIndex({
 
   const handleExport = async () => {
     setIsExporting(true);
-    
     try {
-      // Create export URL with parameters
-      const exportUrl = `/road-dispatch/daily-vehicle-entries/export?date=${selectedDate}&siding=${selectedSidingId}&shift=${exportShift}`;
-      
-      // Use fetch to get the file with authentication cookies
+      const sidingParam = selectedSidingId ?? sidings[0]?.id ?? '';
+      const exportUrl = `/railway-siding-empty-weighment/export?date=${selectedDate}&siding=${sidingParam}&shift=${exportShift}`;
       const response = await fetch(exportUrl, {
         method: 'GET',
         headers: {
-          'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
           'X-Requested-With': 'XMLHttpRequest',
         },
-        credentials: 'same-origin', // Include cookies
+        credentials: 'same-origin',
       });
-      
+
       if (!response.ok) {
         throw new Error(`Export failed: ${response.statusText}`);
       }
-      
-      // Get the filename from the Content-Disposition header or use a default
+
       const contentDisposition = response.headers.get('Content-Disposition');
       let filename = 'export.xlsx';
       if (contentDisposition) {
@@ -261,25 +243,17 @@ export default function DailyVehicleEntriesIndex({
           filename = filenameMatch[1];
         }
       }
-      
-      // Convert response to blob
+
       const blob = await response.blob();
-      
-      // Create download link
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       link.download = filename;
       document.body.appendChild(link);
       link.click();
-      
-      // Cleanup
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-      
     } catch (error) {
-      console.error('Export error:', error);
-      // Show error message to user
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       alert('Export failed: ' + errorMessage);
     } finally {
@@ -289,33 +263,34 @@ export default function DailyVehicleEntriesIndex({
 
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
-      <Head title="Daily Vehicle Entries" />
-      
+      <Head title="Railway Siding Empty Weighment" />
+
       <div className="space-y-6">
-        {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Daily Vehicle Entries</h1>
-            <p className="text-gray-600 mt-1">Excel-style shift-based vehicle entry management</p>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+              Railway Siding Empty Weighment
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">
+              Record T2 (tare weight 2) for empty weighment by shift
+            </p>
           </div>
           <div className="flex gap-3">
-            {/* Export Controls */}
             <div className="flex items-center gap-2">
               <Select
                 value={selectedSidingId == null ? 'all' : selectedSidingId.toString()}
                 onValueChange={(value) => {
                   if (value === 'all') {
                     setSelectedSidingId(null);
-                    router.get(
-                      '/road-dispatch/daily-vehicle-entries',
-                      { date: selectedDate, shift: activeShiftState },
-                      { preserveState: true, preserveScroll: true }
-                    );
+                    router.get('/railway-siding-empty-weighment', { date: selectedDate, shift: activeShiftState }, {
+                      preserveState: true,
+                      preserveScroll: true,
+                    });
                   } else {
                     const id = Number(value);
                     setSelectedSidingId(id);
                     router.get(
-                      '/road-dispatch/daily-vehicle-entries',
+                      '/railway-siding-empty-weighment',
                       { date: selectedDate, shift: activeShiftState, siding_id: id },
                       { preserveState: true, preserveScroll: true }
                     );
@@ -345,8 +320,8 @@ export default function DailyVehicleEntriesIndex({
                   <SelectItem value="3">Shift 3</SelectItem>
                 </SelectContent>
               </Select>
-              <Button 
-                onClick={handleExport} 
+              <Button
+                onClick={handleExport}
                 disabled={isExporting}
                 variant="outline"
                 className="flex items-center gap-2"
@@ -358,7 +333,6 @@ export default function DailyVehicleEntriesIndex({
           </div>
         </div>
 
-        {/* Controls Section */}
         <Card>
           <CardContent className="pt-6">
             <div className="flex gap-4 items-center">
@@ -371,13 +345,11 @@ export default function DailyVehicleEntriesIndex({
                   className="w-auto"
                 />
               </div>
-              
-              {/* Shift Summary */}
               <div className="flex gap-2 ml-auto">
                 {[1, 2, 3].map((shift) => (
                   <Badge
                     key={shift}
-                    variant={activeShiftState === shift ? "default" : "secondary"}
+                    variant={activeShiftState === shift ? 'default' : 'secondary'}
                     className="cursor-pointer"
                   >
                     {shift === 1 ? '1ST' : shift === 2 ? '2ND' : '3RD'} SHIFT: {shiftSummary[shift] || 0}
@@ -388,14 +360,12 @@ export default function DailyVehicleEntriesIndex({
           </CardContent>
         </Card>
 
-        {/* Shift Times */}
-        <p className="text-sm text-gray-500">
-          Shift 1: {shiftTimes[1]?.start ?? '06:00'}–{shiftTimes[1]?.end ?? '11:00'} &nbsp;|&nbsp;{' '}
-          Shift 2: {shiftTimes[2]?.start ?? '11:00'}–{shiftTimes[2]?.end ?? '22:00'} &nbsp;|&nbsp;{' '}
-          Shift 3: {shiftTimes[3]?.start ?? '22:00'}–{shiftTimes[3]?.end ?? '06:00'}
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          Shift 1: {shiftTimes[1]?.start ?? '06:00'}–{shiftTimes[1]?.end ?? '11:00'} &nbsp;|&nbsp; Shift 2:{' '}
+          {shiftTimes[2]?.start ?? '11:00'}–{shiftTimes[2]?.end ?? '22:00'} &nbsp;|&nbsp; Shift 3:{' '}
+          {shiftTimes[3]?.start ?? '22:00'}–{shiftTimes[3]?.end ?? '06:00'}
         </p>
 
-        {/* Shift Tabs */}
         <ShiftTabs
           activeShift={activeShiftState}
           onShiftChange={handleShiftChange}
@@ -403,9 +373,6 @@ export default function DailyVehicleEntriesIndex({
           shiftStatus={shiftStatus}
         />
 
-        {/* Draft rows are completed automatically when required fields are filled, so no extra warning is needed */}
-
-        {/* Vehicle Entry Table (filtered by selected siding) */}
         <VehicleEntryTable
           key={`${selectedDate}-${activeShiftState}`}
           entries={entriesForSiding}
@@ -425,9 +392,7 @@ export default function DailyVehicleEntriesIndex({
                 <Plus className="h-4 w-4" />
                 {isAddingRow ? 'Adding...' : 'Add 5 Rows'}
               </Button>
-              {addRowError && (
-                <span className="text-sm text-destructive">{addRowError}</span>
-              )}
+              {addRowError && <span className="text-sm text-destructive">{addRowError}</span>}
             </>
           }
         />
