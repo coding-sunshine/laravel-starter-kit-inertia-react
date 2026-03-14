@@ -19,6 +19,7 @@ use App\Http\Controllers\Billing\StripeWebhookController;
 use App\Http\Controllers\Blog\BlogController;
 use App\Http\Controllers\CategoriesTableController;
 use App\Http\Controllers\Changelog\ChangelogController;
+use App\Http\Controllers\CommissionController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\ContactSubmissionController;
 use App\Http\Controllers\CookieConsentController;
@@ -49,6 +50,10 @@ use App\Http\Controllers\PageViewController;
 use App\Http\Controllers\PersonalDataExportController;
 use App\Http\Controllers\PostsTableController;
 use App\Http\Controllers\ProjectsTableController;
+use App\Http\Controllers\PropertyEnquiryController;
+use App\Http\Controllers\PropertyReservationController;
+use App\Http\Controllers\PropertySearchController;
+use App\Http\Controllers\SaleController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\Settings\AchievementsController;
@@ -166,6 +171,11 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('contacts', [ContactController::class, 'index'])->name('contacts.index');
     Route::get('projects', [ProjectsTableController::class, 'index'])->name('projects.table');
     Route::get('lots', [LotsTableController::class, 'index'])->name('lots.table');
+    Route::get('reservations', [PropertyReservationController::class, 'index'])->name('reservations.index');
+    Route::get('enquiries', [PropertyEnquiryController::class, 'index'])->name('enquiries.index');
+    Route::get('searches', [PropertySearchController::class, 'index'])->name('searches.index');
+    Route::get('sales', [SaleController::class, 'index'])->name('sales.index');
+    Route::get('commissions', [CommissionController::class, 'index'])->name('commissions.index');
     Route::get('categories', [CategoriesTableController::class, 'index'])->name('categories.table');
     Route::get('posts', [PostsTableController::class, 'index'])->name('posts.table');
     Route::get('users', [UsersTableController::class, 'index'])->name('users.table');
@@ -200,6 +210,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         Route::post('billing/credits/checkout/lemon-squeezy', [CreditController::class, 'checkoutLemonSqueezy'])->name('billing.credits.checkout.lemon-squeezy');
         Route::get('billing/invoices', [InvoiceController::class, 'index'])->name('billing.invoices.index');
         Route::get('billing/invoices/{invoice}', [InvoiceController::class, 'download'])->name('billing.invoices.download');
+        Route::get('billing/stub-return', fn () => redirect()->route('reservations.index'))->name('billing.stub-return');
     });
 
     Route::middleware(['tenant', 'permission:org.settings.manage'])->group(function (): void {

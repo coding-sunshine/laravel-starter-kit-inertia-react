@@ -1,0 +1,154 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\DataTables;
+
+use App\Models\PropertyReservation;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
+use Machour\DataTable\AbstractDataTable;
+use Machour\DataTable\Columns\ColumnBuilder;
+use Machour\DataTable\Concerns\HasExport;
+use Machour\DataTable\QuickView;
+use Override;
+use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\TypeScriptTransformer\Attributes\TypeScript;
+
+#[TypeScript]
+final class PropertyReservationDataTable extends AbstractDataTable
+{
+    use HasExport;
+
+    #[Override]
+    protected static ?int $defaultPerPage = 25;
+
+    #[Override]
+    protected static ?int $maxPerPage = 100;
+
+    public function __construct(
+        public int $id,
+        public string $stage,
+        public string $deposit_status,
+        public ?float $purchase_price,
+        public ?int $lot_id,
+        public ?int $project_id,
+        public ?int $agent_contact_id,
+        public ?int $primary_contact_id,
+        public ?string $created_at,
+    ) {}
+
+    public static function fromModel(PropertyReservation $model): self
+    {
+        return new self(
+            id: $model->id,
+            stage: $model->stage,
+            deposit_status: $model->deposit_status,
+            purchase_price: $model->purchase_price,
+            lot_id: $model->lot_id,
+            project_id: $model->project_id,
+            agent_contact_id: $model->agent_contact_id,
+            primary_contact_id: $model->primary_contact_id,
+            created_at: $model->created_at?->format('Y-m-d H:i'),
+        );
+    }
+
+    #[Override]
+    public static function tableColumns(): array
+    {
+        return [
+            ColumnBuilder::make('id')->label('ID')->sortable(),
+            ColumnBuilder::make('stage')->label('Stage')->sortable(),
+            ColumnBuilder::make('deposit_status')->label('Deposit Status')->sortable(),
+            ColumnBuilder::make('purchase_price')->label('Purchase Price')->sortable(),
+            ColumnBuilder::make('lot_id')->label('Lot'),
+            ColumnBuilder::make('project_id')->label('Project'),
+            ColumnBuilder::make('agent_contact_id')->label('Agent'),
+            ColumnBuilder::make('primary_contact_id')->label('Primary Contact'),
+            ColumnBuilder::make('created_at')->label('Created')->sortable(),
+        ];
+    }
+
+    #[Override]
+    public static function tableAllowedFilters(): array
+    {
+        return [
+            AllowedFilter::exact('stage'),
+            AllowedFilter::exact('deposit_status'),
+        ];
+    }
+
+    #[Override]
+    public static function tableQuickViews(): array
+    {
+        return [
+            new QuickView(
+                id: 'all',
+                label: 'All',
+                params: [],
+                icon: 'list',
+                columns: ['id', 'stage', 'deposit_status', 'purchase_price', 'lot_id', 'project_id', 'primary_contact_id', 'created_at'],
+            ),
+            new QuickView(
+                id: 'active',
+                label: 'Active',
+                params: ['filter[stage]' => 'active'],
+                icon: 'check-circle',
+                columns: ['id', 'stage', 'deposit_status', 'purchase_price', 'lot_id', 'project_id', 'primary_contact_id', 'created_at'],
+            ),
+            new QuickView(
+                id: 'settling_soon',
+                label: 'Settling Soon',
+                params: ['filter[stage]' => 'settling_soon'],
+                icon: 'clock',
+                columns: ['id', 'stage', 'deposit_status', 'purchase_price', 'lot_id', 'project_id', 'primary_contact_id', 'created_at'],
+            ),
+            new QuickView(
+                id: 'settled',
+                label: 'Settled',
+                params: ['filter[stage]' => 'settled'],
+                icon: 'flag',
+                columns: ['id', 'stage', 'deposit_status', 'purchase_price', 'lot_id', 'project_id', 'primary_contact_id', 'created_at'],
+            ),
+        ];
+    }
+
+    #[Override]
+    public static function tableSoftDeletesEnabled(): bool
+    {
+        return true;
+    }
+
+    #[Override]
+    public static function inertiaProps(Request $request): array
+    {
+        return [
+            'tableData' => self::makeTable($request)->toArray(),
+            'searchableColumns' => self::tableSearchableColumns(),
+        ];
+    }
+
+    #[Override]
+    public static function tableBaseQuery(): Builder
+    {
+        return PropertyReservation::query();
+    }
+
+    #[Override]
+    public static function tableDefaultSort(): string
+    {
+        return '-created_at';
+    }
+
+    #[Override]
+    public static function tableAuthorize(string $action, Request $request): bool
+    {
+        return $request->user() !== null;
+    }
+
+    #[Override]
+    public static function tableExportName(): string
+    {
+        return 'property-reservations';
+    }
+}

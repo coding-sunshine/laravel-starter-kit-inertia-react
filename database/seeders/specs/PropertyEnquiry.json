@@ -1,0 +1,114 @@
+{
+    "model": "PropertyEnquiry",
+    "table": "property_enquiries",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "client_contact_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "agent_contact_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "logged_in_user_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "lot_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "project_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "message": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "budget_min": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "budget_max": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "legacy_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        },
+        "clientContact": {
+            "type": "belongsTo",
+            "model": "ClientContact"
+        },
+        "agentContact": {
+            "type": "belongsTo",
+            "model": "AgentContact"
+        },
+        "loggedInUser": {
+            "type": "belongsTo",
+            "model": "LoggedInUser"
+        },
+        "lot": {
+            "type": "belongsTo",
+            "model": "Lot"
+        },
+        "project": {
+            "type": "belongsTo",
+            "model": "Project"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

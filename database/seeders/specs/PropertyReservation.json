@@ -1,0 +1,257 @@
+{
+    "model": "PropertyReservation",
+    "table": "property_reservations",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "agent_contact_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "primary_contact_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "secondary_contact_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "logged_in_user_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "lot_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "project_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "stage": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "purchase_price": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "purchaser_type": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "trustee_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "abn_acn": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "smsf_trust_setup": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "bare_trust_setup": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "funds_rollover": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "agree_lawlab": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "firm": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "broker": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "finance_condition": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "finance_days": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "deposit": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "deposit_bal": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "build_deposit": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "payment_duedate": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "contract_send": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "agree": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "agree_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "deposit_status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "eway_transaction_id": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "eway_access_code": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "notes": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "legacy_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        },
+        "agentContact": {
+            "type": "belongsTo",
+            "model": "AgentContact"
+        },
+        "primaryContact": {
+            "type": "belongsTo",
+            "model": "PrimaryContact"
+        },
+        "secondaryContact": {
+            "type": "belongsTo",
+            "model": "SecondaryContact"
+        },
+        "loggedInUser": {
+            "type": "belongsTo",
+            "model": "LoggedInUser"
+        },
+        "lot": {
+            "type": "belongsTo",
+            "model": "Lot"
+        },
+        "project": {
+            "type": "belongsTo",
+            "model": "Project"
+        }
+    },
+    "value_hints": {
+        "smsf_trust_setup": {
+            "type": "boolean",
+            "example": true
+        },
+        "bare_trust_setup": {
+            "type": "boolean",
+            "example": true
+        },
+        "funds_rollover": {
+            "type": "boolean",
+            "example": true
+        },
+        "agree_lawlab": {
+            "type": "boolean",
+            "example": true
+        },
+        "finance_condition": {
+            "type": "boolean",
+            "example": true
+        },
+        "agree": {
+            "type": "boolean",
+            "example": true
+        },
+        "trustee_name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    },
+    "scenarios": []
+}

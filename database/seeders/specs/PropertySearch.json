@@ -1,0 +1,111 @@
+{
+    "model": "PropertySearch",
+    "table": "property_searches",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "client_contact_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "agent_contact_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "logged_in_user_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "preferred_states": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "preferred_project_types": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "budget_min": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "budget_max": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "bedrooms_min": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "bedrooms_max": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "notes": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "legacy_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        },
+        "clientContact": {
+            "type": "belongsTo",
+            "model": "ClientContact"
+        },
+        "agentContact": {
+            "type": "belongsTo",
+            "model": "AgentContact"
+        },
+        "loggedInUser": {
+            "type": "belongsTo",
+            "model": "LoggedInUser"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

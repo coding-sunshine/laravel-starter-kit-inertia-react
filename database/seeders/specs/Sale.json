@@ -1,0 +1,294 @@
+{
+    "model": "Sale",
+    "table": "sales",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "legacy_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "client_contact_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "lot_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "project_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "developer_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "sales_agent_contact_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "subscriber_contact_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "bdm_contact_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "referral_partner_contact_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "affiliate_contact_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "agent_contact_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "comm_in_notes": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "comm_out_notes": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "payment_terms": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "expected_commissions": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "finance_due_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "comms_in_total": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "comms_out_total": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "piab_comm": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "affiliate_comm": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "subscriber_comm": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "sales_agent_comm": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "bdm_comm": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "referral_partner_comm": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "agent_comm": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "divide_percent": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "is_comments_enabled": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "comments": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "is_sas_enabled": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "is_sas_max": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "sas_percent": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "sas_fee": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "summary_note": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "status_updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "settled_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "updated_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        },
+        "clientContact": {
+            "type": "belongsTo",
+            "model": "ClientContact"
+        },
+        "salesAgentContact": {
+            "type": "belongsTo",
+            "model": "SalesAgentContact"
+        },
+        "subscriberContact": {
+            "type": "belongsTo",
+            "model": "SubscriberContact"
+        },
+        "bdmContact": {
+            "type": "belongsTo",
+            "model": "BdmContact"
+        },
+        "referralPartnerContact": {
+            "type": "belongsTo",
+            "model": "ReferralPartnerContact"
+        },
+        "affiliateContact": {
+            "type": "belongsTo",
+            "model": "AffiliateContact"
+        },
+        "agentContact": {
+            "type": "belongsTo",
+            "model": "AgentContact"
+        },
+        "lot": {
+            "type": "belongsTo",
+            "model": "Lot"
+        },
+        "project": {
+            "type": "belongsTo",
+            "model": "Project"
+        },
+        "developer": {
+            "type": "belongsTo",
+            "model": "Developer"
+        },
+        "commissions": {
+            "type": "hasMany",
+            "model": "Commission"
+        }
+    },
+    "value_hints": {
+        "is_comments_enabled": {
+            "type": "boolean",
+            "example": true
+        },
+        "is_sas_enabled": {
+            "type": "boolean",
+            "example": true
+        },
+        "is_sas_max": {
+            "type": "boolean",
+            "example": true
+        },
+        "status_updated_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        },
+        "settled_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        }
+    },
+    "scenarios": []
+}

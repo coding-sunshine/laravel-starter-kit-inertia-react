@@ -1329,6 +1329,51 @@
             "data_files": [
                 "companies.json"
             ]
+        },
+        {
+            "name": "PropertyReservationSeeder",
+            "category": "development",
+            "description": "Seeds PropertyReservation data",
+            "dependencies": [],
+            "data_files": [
+                "property_reservations.json"
+            ]
+        },
+        {
+            "name": "PropertyEnquirySeeder",
+            "category": "development",
+            "description": "Seeds PropertyEnquiry data",
+            "dependencies": [],
+            "data_files": [
+                "property_enquiries.json"
+            ]
+        },
+        {
+            "name": "PropertySearchSeeder",
+            "category": "development",
+            "description": "Seeds PropertySearch data",
+            "dependencies": [],
+            "data_files": [
+                "property_searches.json"
+            ]
+        },
+        {
+            "name": "SaleSeeder",
+            "category": "development",
+            "description": "Seeds Sale data",
+            "dependencies": [],
+            "data_files": [
+                "sales.json"
+            ]
+        },
+        {
+            "name": "CommissionSeeder",
+            "category": "development",
+            "description": "Seeds Commission data",
+            "dependencies": [],
+            "data_files": [
+                "commissions.json"
+            ]
         }
     ],
     "categories": {

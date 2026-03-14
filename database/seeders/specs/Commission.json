@@ -1,0 +1,78 @@
+{
+    "model": "Commission",
+    "table": "commissions",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "sale_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "commission_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "agent_user_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "rate_percentage": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "amount": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "override_amount": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "notes": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "sale": {
+            "type": "belongsTo",
+            "model": "Sale"
+        },
+        "agentUser": {
+            "type": "belongsTo",
+            "model": "AgentUser"
+        }
+    },
+    "value_hints": {
+        "override_amount": {
+            "type": "boolean",
+            "example": true
+        }
+    },
+    "scenarios": []
+}
