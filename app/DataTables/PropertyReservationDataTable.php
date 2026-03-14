@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Machour\DataTable\AbstractDataTable;
 use Machour\DataTable\Columns\ColumnBuilder;
+use Machour\DataTable\Concerns\HasAi;
 use Machour\DataTable\Concerns\HasExport;
 use Machour\DataTable\QuickView;
 use Override;
@@ -18,6 +19,7 @@ use Spatie\TypeScriptTransformer\Attributes\TypeScript;
 #[TypeScript]
 final class PropertyReservationDataTable extends AbstractDataTable
 {
+    use HasAi;
     use HasExport;
 
     #[Override]
@@ -150,5 +152,10 @@ final class PropertyReservationDataTable extends AbstractDataTable
     public static function tableExportName(): string
     {
         return 'property-reservations';
+    }
+
+    public static function tableAiSystemContext(): string
+    {
+        return 'You are analyzing a property reservation pipeline for a real estate sales agency. Reservations track buyers from initial enquiry to settlement. Stages: enquiry/qualified/reservation/contract/unconditional/settled. Key fields: deposit_status, settlement_date, assigned_agent. Help identify at-risk deals, upcoming settlements, and unpaid deposits.';
     }
 }

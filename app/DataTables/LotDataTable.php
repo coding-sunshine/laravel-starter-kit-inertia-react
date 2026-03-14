@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Machour\DataTable\AbstractDataTable;
 use Machour\DataTable\Columns\ColumnBuilder;
+use Machour\DataTable\Concerns\HasAi;
 use Machour\DataTable\Concerns\HasExport;
 use Machour\DataTable\QuickView;
 use Override;
@@ -18,6 +19,7 @@ use Spatie\TypeScriptTransformer\Attributes\TypeScript;
 #[TypeScript]
 final class LotDataTable extends AbstractDataTable
 {
+    use HasAi;
     use HasExport;
 
     #[Override]
@@ -208,5 +210,10 @@ final class LotDataTable extends AbstractDataTable
     public static function tableExportName(): string
     {
         return 'lots';
+    }
+
+    public static function tableAiSystemContext(): string
+    {
+        return 'You are analyzing a lot/unit inventory for a property development project. Each lot has bed/bath/car counts, size in m², price, and a status (available/reserved/sold). Help agents identify lots that match specific buyer criteria (budget, size, bedrooms).';
     }
 }

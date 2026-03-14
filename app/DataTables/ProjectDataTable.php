@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Machour\DataTable\AbstractDataTable;
 use Machour\DataTable\Columns\ColumnBuilder;
+use Machour\DataTable\Concerns\HasAi;
 use Machour\DataTable\Concerns\HasExport;
 use Machour\DataTable\QuickView;
 use Override;
@@ -18,6 +19,7 @@ use Spatie\TypeScriptTransformer\Attributes\TypeScript;
 #[TypeScript]
 final class ProjectDataTable extends AbstractDataTable
 {
+    use HasAi;
     use HasExport;
 
     #[Override]
@@ -212,5 +214,10 @@ final class ProjectDataTable extends AbstractDataTable
     public static function tableExportName(): string
     {
         return 'projects';
+    }
+
+    public static function tableAiSystemContext(): string
+    {
+        return 'You are analyzing a real estate project inventory for a property sales agency. Projects are residential developments (apartments, houses, land). Key fields: stage (pre_launch/selling/completed), available/reserved/sold lot counts, price range, developer, suburb/state. Help agents identify projects to present to specific buyer profiles.';
     }
 }

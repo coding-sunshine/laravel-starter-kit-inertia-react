@@ -121,6 +121,11 @@
             "type": "numeric",
             "nullable": true,
             "default": null
+        },
+        "ai_credits_per_period": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {

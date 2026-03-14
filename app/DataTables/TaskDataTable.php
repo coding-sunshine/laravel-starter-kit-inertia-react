@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Machour\DataTable\AbstractDataTable;
 use Machour\DataTable\Columns\ColumnBuilder;
+use Machour\DataTable\Concerns\HasAi;
 use Machour\DataTable\Concerns\HasExport;
 use Machour\DataTable\QuickView;
 use Override;
@@ -18,6 +19,7 @@ use Spatie\TypeScriptTransformer\Attributes\TypeScript;
 #[TypeScript]
 final class TaskDataTable extends AbstractDataTable
 {
+    use HasAi;
     use HasExport;
 
     #[Override]
@@ -146,5 +148,10 @@ final class TaskDataTable extends AbstractDataTable
     public static function tableExportName(): string
     {
         return 'tasks';
+    }
+
+    public static function tableAiSystemContext(): string
+    {
+        return 'You are analyzing a CRM task list for real estate agents. Tasks are follow-up actions linked to contacts. Types: call, email, meeting, follow_up. Priority: low/medium/high/urgent. Help identify overdue tasks, agents with heavy workloads, and contacts without recent follow-up activity.';
     }
 }

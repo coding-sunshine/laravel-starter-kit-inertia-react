@@ -1,0 +1,18 @@
+{
+    "model": "AiUserByok",
+    "table": "ai_user_byok",
+    "fields": [],
+    "relationships": {
+        "user": {
+            "type": "belongsTo",
+            "model": "User"
+        }
+    },
+    "value_hints": {
+        "is_active": {
+            "type": "boolean",
+            "example": true
+        }
+    },
+    "scenarios": []
+}

@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Machour\DataTable\AbstractDataTable;
 use Machour\DataTable\Columns\ColumnBuilder;
+use Machour\DataTable\Concerns\HasAi;
 use Machour\DataTable\Concerns\HasExport;
 use Machour\DataTable\QuickView;
 use Override;
@@ -18,6 +19,7 @@ use Spatie\TypeScriptTransformer\Attributes\TypeScript;
 #[TypeScript]
 final class SaleDataTable extends AbstractDataTable
 {
+    use HasAi;
     use HasExport;
 
     #[Override]
@@ -149,5 +151,10 @@ final class SaleDataTable extends AbstractDataTable
     public static function tableExportName(): string
     {
         return 'sales';
+    }
+
+    public static function tableAiSystemContext(): string
+    {
+        return 'You are analyzing a property sales register for a real estate agency. Sales track completed or in-progress property transactions. Key fields: sale_price, commission_total (sum of all agent commissions), status (state machine), settled_at. Help calculate commission forecasts and identify pipeline value.';
     }
 }

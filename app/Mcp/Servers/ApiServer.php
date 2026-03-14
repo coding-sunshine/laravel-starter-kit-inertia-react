@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Mcp\Servers;
 
+use App\Mcp\Tools\ContactSearchTool;
+use App\Mcp\Tools\LotsFilterTool;
+use App\Mcp\Tools\PipelineSummaryTool;
 use App\Mcp\Tools\UsersIndexTool;
 use App\Mcp\Tools\UsersShowTool;
 use Laravel\Mcp\Server;
@@ -28,7 +31,12 @@ final class ApiServer extends Server
      */
     #[Override]
     protected string $instructions = <<<'MARKDOWN'
-        This server exposes API capabilities as tools. Use users_index to list users with optional filters/sort, and users_show to get a single user by ID. All tools require an authenticated session (Sanctum).
+        This server exposes Fusion CRM capabilities as tools. Tools:
+        - users_index / users_show: list and view users
+        - contacts_search: search CRM contacts (returns ContactCard data for C1 UI)
+        - lots_filter: find available lots matching buyer criteria (returns PropertyCard data)
+        - pipeline_summary: get reservation pipeline by stage (returns PipelineFunnel data)
+        All tools require an authenticated session.
     MARKDOWN;
 
     /**
@@ -40,6 +48,9 @@ final class ApiServer extends Server
     protected array $tools = [
         UsersIndexTool::class,
         UsersShowTool::class,
+        ContactSearchTool::class,
+        LotsFilterTool::class,
+        PipelineSummaryTool::class,
     ];
 
     /**

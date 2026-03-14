@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Machour\DataTable\AbstractDataTable;
 use Machour\DataTable\Columns\ColumnBuilder;
+use Machour\DataTable\Concerns\HasAi;
 use Machour\DataTable\Concerns\HasExport;
 use Machour\DataTable\QuickView;
 use Override;
@@ -18,6 +19,7 @@ use Spatie\TypeScriptTransformer\Attributes\TypeScript;
 #[TypeScript]
 final class ContactDataTable extends AbstractDataTable
 {
+    use HasAi;
     use HasExport;
 
     #[Override]
@@ -160,5 +162,11 @@ final class ContactDataTable extends AbstractDataTable
     public static function tableExportName(): string
     {
         return 'contacts';
+    }
+
+    #[Override]
+    public static function tableAiSystemContext(): string
+    {
+        return 'You are analyzing a CRM contacts table for a real estate agency. Contacts represent buyers, investors, and vendors. Key fields: stage (new/qualified/hot/warm/cold/dead), lead_score (0–100, AI-generated), last_contacted_at (days since last interaction). Help agents identify who to follow up with and surface pipeline insights.';
     }
 }
