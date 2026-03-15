@@ -12,7 +12,6 @@ use Machour\DataTable\Columns\ColumnBuilder;
 use Machour\DataTable\Concerns\HasAi;
 use Machour\DataTable\Concerns\HasExport;
 use Machour\DataTable\QuickView;
-use Override;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\TypeScriptTransformer\Attributes\TypeScript;
 use Throwable;
@@ -23,10 +22,8 @@ final class ProjectDataTable extends AbstractDataTable
     use HasAi;
     use HasExport;
 
-    #[Override]
     protected static ?int $defaultPerPage = 25;
 
-    #[Override]
     protected static ?int $maxPerPage = 100;
 
     public function __construct(

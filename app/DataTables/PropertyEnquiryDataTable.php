@@ -10,17 +10,14 @@ use Illuminate\Http\Request;
 use Machour\DataTable\AbstractDataTable;
 use Machour\DataTable\Columns\ColumnBuilder;
 use Machour\DataTable\QuickView;
-use Override;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\TypeScriptTransformer\Attributes\TypeScript;
 
 #[TypeScript]
 final class PropertyEnquiryDataTable extends AbstractDataTable
 {
-    #[Override]
     protected static ?int $defaultPerPage = 25;
 
-    #[Override]
     protected static ?int $maxPerPage = 100;
 
     public function __construct(
@@ -46,7 +43,6 @@ final class PropertyEnquiryDataTable extends AbstractDataTable
         );
     }
 
-    #[Override]
     public static function tableColumns(): array
     {
         return [
@@ -60,7 +56,6 @@ final class PropertyEnquiryDataTable extends AbstractDataTable
         ];
     }
 
-    #[Override]
     public static function tableAllowedFilters(): array
     {
         return [
@@ -68,7 +63,6 @@ final class PropertyEnquiryDataTable extends AbstractDataTable
         ];
     }
 
-    #[Override]
     public static function tableQuickViews(): array
     {
         return [
@@ -89,7 +83,6 @@ final class PropertyEnquiryDataTable extends AbstractDataTable
         ];
     }
 
-    #[Override]
     public static function tableSoftDeletesEnabled(): bool
     {
         return false;
@@ -103,19 +96,16 @@ final class PropertyEnquiryDataTable extends AbstractDataTable
         ];
     }
 
-    #[Override]
     public static function tableBaseQuery(): Builder
     {
         return PropertyEnquiry::query();
     }
 
-    #[Override]
     public static function tableDefaultSort(): string
     {
         return '-created_at';
     }
 
-    #[Override]
     public static function tableAuthorize(string $action, Request $request): bool
     {
         return $request->user() !== null;

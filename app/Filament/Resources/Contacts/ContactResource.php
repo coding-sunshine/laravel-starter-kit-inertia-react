@@ -17,45 +17,35 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Override;
 use UnitEnum;
 
 final class ContactResource extends Resource
 {
-    #[Override]
     protected static ?string $model = Contact::class;
 
-    #[Override]
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUsers;
 
-    #[Override]
     protected static ?string $recordTitleAttribute = 'first_name';
 
-    #[Override]
     protected static string|UnitEnum|null $navigationGroup = 'CRM';
 
-    #[Override]
     protected static ?int $navigationSort = 1;
 
-    #[Override]
     public static function form(Schema $schema): Schema
     {
         return ContactForm::configure($schema);
     }
 
-    #[Override]
     public static function table(Table $table): Table
     {
         return ContactsTable::configure($table);
     }
 
-    #[Override]
     public static function getRelations(): array
     {
         return [];
     }
 
-    #[Override]
     public static function getPages(): array
     {
         return [
@@ -65,7 +55,6 @@ final class ContactResource extends Resource
         ];
     }
 
-    #[Override]
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()

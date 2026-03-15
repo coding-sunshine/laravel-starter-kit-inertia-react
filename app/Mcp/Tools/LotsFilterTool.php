@@ -9,17 +9,13 @@ use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
-use Override;
 
 final class LotsFilterTool extends Tool
 {
-    #[Override]
     protected string $name = 'lots_filter';
 
-    #[Override]
     protected string $title = 'Filter lots';
 
-    #[Override]
     protected string $description = 'Find lots matching buyer criteria (budget, bedrooms, suburb). Returns PropertyCard data for C1 generative UI rendering.';
 
     public function handle(Request $request): Response

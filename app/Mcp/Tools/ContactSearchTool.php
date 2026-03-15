@@ -9,17 +9,13 @@ use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
-use Override;
 
 final class ContactSearchTool extends Tool
 {
-    #[Override]
     protected string $name = 'contacts_search';
 
-    #[Override]
     protected string $title = 'Search contacts';
 
-    #[Override]
     protected string $description = 'Search CRM contacts by name, email, stage, or type. Returns ContactCard-structured data for C1 generative UI rendering.';
 
     public function handle(Request $request): Response

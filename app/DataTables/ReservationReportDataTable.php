@@ -11,7 +11,6 @@ use Machour\DataTable\AbstractDataTable;
 use Machour\DataTable\Columns\ColumnBuilder;
 use Machour\DataTable\Concerns\HasAi;
 use Machour\DataTable\Concerns\HasExport;
-use Override;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\TypeScriptTransformer\Attributes\TypeScript;
 
@@ -21,7 +20,6 @@ final class ReservationReportDataTable extends AbstractDataTable
     use HasAi;
     use HasExport;
 
-    #[Override]
     protected static ?int $defaultPerPage = 25;
 
     public function __construct(
@@ -49,7 +47,6 @@ final class ReservationReportDataTable extends AbstractDataTable
         );
     }
 
-    #[Override]
     public static function tableColumns(): array
     {
         return [
@@ -64,7 +61,6 @@ final class ReservationReportDataTable extends AbstractDataTable
         ];
     }
 
-    #[Override]
     public static function tableAllowedFilters(): array
     {
         return [
@@ -80,19 +76,16 @@ final class ReservationReportDataTable extends AbstractDataTable
         ];
     }
 
-    #[Override]
     public static function tableBaseQuery(): Builder
     {
         return PropertyReservation::query()->with(['primaryContact', 'lot.project', 'agentContact']);
     }
 
-    #[Override]
     public static function tableDefaultSort(): string
     {
         return '-created_at';
     }
 
-    #[Override]
     public static function tableAuthorize(string $action, Request $request): bool
     {
         return $request->user() !== null;

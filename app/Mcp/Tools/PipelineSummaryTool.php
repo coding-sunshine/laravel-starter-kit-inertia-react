@@ -9,17 +9,13 @@ use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
-use Override;
 
 final class PipelineSummaryTool extends Tool
 {
-    #[Override]
     protected string $name = 'pipeline_summary';
 
-    #[Override]
     protected string $title = 'Pipeline summary';
 
-    #[Override]
     protected string $description = 'Get the reservation pipeline summary grouped by stage. Returns PipelineFunnel data for C1 rendering.';
 
     public function handle(Request $request): Response

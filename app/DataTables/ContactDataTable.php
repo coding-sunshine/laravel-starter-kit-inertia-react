@@ -13,7 +13,6 @@ use Machour\DataTable\Concerns\HasAi;
 use Machour\DataTable\Concerns\HasExport;
 use Machour\DataTable\Concerns\HasInlineEdit;
 use Machour\DataTable\QuickView;
-use Override;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\TypeScriptTransformer\Attributes\TypeScript;
 
@@ -24,10 +23,8 @@ final class ContactDataTable extends AbstractDataTable
     use HasExport;
     use HasInlineEdit;
 
-    #[Override]
     protected static ?int $defaultPerPage = 25;
 
-    #[Override]
     protected static ?int $maxPerPage = 100;
 
     public function __construct(
@@ -61,7 +58,6 @@ final class ContactDataTable extends AbstractDataTable
         );
     }
 
-    #[Override]
     public static function tableColumns(): array
     {
         return [
@@ -79,7 +75,6 @@ final class ContactDataTable extends AbstractDataTable
         ];
     }
 
-    #[Override]
     public static function tableAllowedFilters(): array
     {
         return [
@@ -92,7 +87,6 @@ final class ContactDataTable extends AbstractDataTable
         ];
     }
 
-    #[Override]
     public static function tableQuickViews(): array
     {
         return [
@@ -127,7 +121,6 @@ final class ContactDataTable extends AbstractDataTable
         ];
     }
 
-    #[Override]
     public static function tableSoftDeletesEnabled(): bool
     {
         return true;
@@ -176,19 +169,16 @@ final class ContactDataTable extends AbstractDataTable
         ];
     }
 
-    #[Override]
     public static function tableBaseQuery(): Builder
     {
         return Contact::query();
     }
 
-    #[Override]
     public static function tableDefaultSort(): string
     {
         return '-created_at';
     }
 
-    #[Override]
     public static function tableAuthorize(string $action, Request $request): bool
     {
         return $request->user() !== null;

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Http\Integrations\Xero\Requests;
 
-use Override;
 use Saloon\Contracts\Body\HasBody;
 use Saloon\Enums\Method;
 use Saloon\Http\Request;
@@ -17,7 +16,6 @@ final class CreateInvoiceRequest extends Request implements HasBody
 {
     use HasJsonBody;
 
-    #[Override]
     protected Method $method = Method::POST;
 
     /**

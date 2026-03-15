@@ -11,7 +11,6 @@ use Machour\DataTable\AbstractDataTable;
 use Machour\DataTable\Columns\ColumnBuilder;
 use Machour\DataTable\Concerns\HasExport;
 use Machour\DataTable\QuickView;
-use Override;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\TypeScriptTransformer\Attributes\TypeScript;
 
@@ -20,10 +19,8 @@ final class CommissionDataTable extends AbstractDataTable
 {
     use HasExport;
 
-    #[Override]
     protected static ?int $defaultPerPage = 25;
 
-    #[Override]
     protected static ?int $maxPerPage = 100;
 
     public function __construct(
@@ -51,7 +48,6 @@ final class CommissionDataTable extends AbstractDataTable
         );
     }
 
-    #[Override]
     public static function tableColumns(): array
     {
         return [
@@ -66,7 +62,6 @@ final class CommissionDataTable extends AbstractDataTable
         ];
     }
 
-    #[Override]
     public static function tableAllowedFilters(): array
     {
         return [
@@ -75,7 +70,6 @@ final class CommissionDataTable extends AbstractDataTable
         ];
     }
 
-    #[Override]
     public static function tableQuickViews(): array
     {
         return [
@@ -110,7 +104,6 @@ final class CommissionDataTable extends AbstractDataTable
         ];
     }
 
-    #[Override]
     public static function tableSoftDeletesEnabled(): bool
     {
         return true;
@@ -124,19 +117,16 @@ final class CommissionDataTable extends AbstractDataTable
         ];
     }
 
-    #[Override]
     public static function tableBaseQuery(): Builder
     {
         return Commission::query();
     }
 
-    #[Override]
     public static function tableDefaultSort(): string
     {
         return '-created_at';
     }
 
-    #[Override]
     public static function tableAuthorize(string $action, Request $request): bool
     {
         return $request->user() !== null;
