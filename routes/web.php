@@ -114,6 +114,7 @@ use App\Http\Controllers\UsersTableController;
 use App\Http\Controllers\UserTwoFactorAuthenticationController;
 use App\Http\Controllers\VapiController;
 use App\Http\Controllers\WebsiteController;
+use App\Http\Controllers\XeroController;
 use App\Http\Middleware\InternalRequestMiddleware;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Http\RedirectResponse;
@@ -413,6 +414,14 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('deal-documents', [DealDocumentController::class, 'index'])->name('deal-documents.index');
     Route::post('deal-documents', [DealDocumentController::class, 'store'])->name('deal-documents.store');
     Route::delete('deal-documents/{dealDocument}', [DealDocumentController::class, 'destroy'])->name('deal-documents.destroy');
+
+    // Xero Integration (US-017)
+    Route::get('/xero', [XeroController::class, 'index'])->name('xero.index');
+    Route::get('/xero/connect', [XeroController::class, 'connect'])->name('xero.connect');
+    Route::get('/xero/callback', [XeroController::class, 'callback'])->name('xero.callback');
+    Route::post('/xero/disconnect', [XeroController::class, 'disconnect'])->name('xero.disconnect');
+    Route::post('/xero/sync-contacts', [XeroController::class, 'syncContacts'])->name('xero.sync-contacts');
+    Route::post('/xero/sync-invoices', [XeroController::class, 'syncInvoices'])->name('xero.sync-invoices');
 });
 
 Route::get('/api/slug-availability', SlugAvailabilityController::class)
@@ -431,6 +440,7 @@ Route::get('/internal/caddy/ask', CaddyAskController::class)
 Route::post('webhooks/stripe', StripeWebhookController::class)->name('webhooks.stripe')->withoutMiddleware([ValidateCsrfToken::class]);
 Route::post('webhooks/paddle', PaddleWebhookController::class)->name('webhooks.paddle')->withoutMiddleware([ValidateCsrfToken::class]);
 Route::post('webhooks/vapi', [VapiController::class, 'webhook'])->name('webhooks.vapi')->withoutMiddleware([ValidateCsrfToken::class]);
+Route::post('/xero/webhook', [XeroController::class, 'webhook'])->name('xero.webhook')->withoutMiddleware([ValidateCsrfToken::class]);
 
 // Public campaign site routes (no auth)
 Route::get('w/{uuid}', [PublicSiteController::class, 'show'])->name('public.campaign-site');

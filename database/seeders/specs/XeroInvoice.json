@@ -1,0 +1,94 @@
+{
+    "model": "XeroInvoice",
+    "table": "xero_invoices",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": false,
+            "default": null
+        },
+        "sale_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "xero_connection_id": {
+            "type": "bigint",
+            "nullable": false,
+            "default": null
+        },
+        "xero_invoice_id": {
+            "type": "string",
+            "nullable": false,
+            "default": null
+        },
+        "invoice_number": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "amount": {
+            "type": "decimal",
+            "nullable": true,
+            "default": null
+        },
+        "status": {
+            "type": "string",
+            "nullable": false,
+            "default": "DRAFT"
+        },
+        "invoice_type": {
+            "type": "string",
+            "nullable": false,
+            "default": "ACCREC"
+        },
+        "issued_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "due_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "last_synced_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": [
+        {
+            "type": "belongsTo",
+            "model": "Sale",
+            "foreign_key": "sale_id"
+        },
+        {
+            "type": "belongsTo",
+            "model": "XeroConnection",
+            "foreign_key": "xero_connection_id"
+        }
+    ],
+    "value_hints": {
+        "xero_invoice_id": {
+            "type": "uuid",
+            "example": "c03e4d2a-6789-0123-defg-bc4567890123"
+        },
+        "invoice_number": {
+            "type": "string",
+            "example": "INV-0001"
+        }
+    },
+    "scenarios": []
+}

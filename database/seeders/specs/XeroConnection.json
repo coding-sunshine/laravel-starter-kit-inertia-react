@@ -1,0 +1,89 @@
+{
+    "model": "XeroConnection",
+    "table": "xero_connections",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": false,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "xero_tenant_id": {
+            "type": "string",
+            "nullable": false,
+            "default": null
+        },
+        "xero_tenant_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "access_token": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "refresh_token": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "token_expires_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "scopes": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "connected_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "disconnected_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "deleted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": [
+        {
+            "type": "belongsTo",
+            "model": "Organization",
+            "foreign_key": "organization_id"
+        }
+    ],
+    "value_hints": {
+        "xero_tenant_id": {
+            "type": "uuid",
+            "example": "a81c5b3e-1234-5678-abcd-ef1234567890"
+        },
+        "xero_tenant_name": {
+            "type": "name",
+            "example": "Demo Org Ltd"
+        }
+    },
+    "scenarios": []
+}

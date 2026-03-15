@@ -422,6 +422,9 @@ final class AppServiceProvider extends ServiceProvider
             'deal-tracker-kanban',
             'deal-documents-tab',
             'payment-stages-tab',
+            'xero-tab',
+            'xero-sync-contacts',
+            'xero-sync-invoices',
         ]);
     }
 

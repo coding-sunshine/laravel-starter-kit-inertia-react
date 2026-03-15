@@ -1,0 +1,65 @@
+{
+    "model": "XeroReconciliation",
+    "table": "xero_reconciliations",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": false,
+            "default": null
+        },
+        "xero_invoice_id": {
+            "type": "bigint",
+            "nullable": false,
+            "default": null
+        },
+        "xero_payment_id": {
+            "type": "string",
+            "nullable": false,
+            "default": null
+        },
+        "amount": {
+            "type": "decimal",
+            "nullable": false,
+            "default": null
+        },
+        "payment_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "reconciled_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "raw_payload": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": [
+        {
+            "type": "belongsTo",
+            "model": "XeroInvoice",
+            "foreign_key": "xero_invoice_id"
+        }
+    ],
+    "value_hints": {
+        "xero_payment_id": {
+            "type": "uuid",
+            "example": "d14f5e3b-7890-1234-efgh-cd5678901234"
+        }
+    },
+    "scenarios": []
+}

@@ -1,0 +1,71 @@
+{
+    "model": "XeroContact",
+    "table": "xero_contacts",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": false,
+            "default": null
+        },
+        "contact_id": {
+            "type": "bigint",
+            "nullable": false,
+            "default": null
+        },
+        "xero_connection_id": {
+            "type": "bigint",
+            "nullable": false,
+            "default": null
+        },
+        "xero_contact_id": {
+            "type": "string",
+            "nullable": false,
+            "default": null
+        },
+        "sync_status": {
+            "type": "enum",
+            "nullable": false,
+            "default": "pending",
+            "values": ["pending", "synced", "error"]
+        },
+        "last_synced_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "error_message": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": [
+        {
+            "type": "belongsTo",
+            "model": "Contact",
+            "foreign_key": "contact_id"
+        },
+        {
+            "type": "belongsTo",
+            "model": "XeroConnection",
+            "foreign_key": "xero_connection_id"
+        }
+    ],
+    "value_hints": {
+        "xero_contact_id": {
+            "type": "uuid",
+            "example": "b92d3c1f-5678-9012-cdef-ab3456789012"
+        }
+    },
+    "scenarios": []
+}

@@ -1143,6 +1143,36 @@
                 ],
                 "relatedRoutes": []
             }
+        },
+        "SyncContactToXeroAction": {
+            "documented": true,
+            "path": "./SyncContactToXeroAction.md",
+            "lastUpdated": "2026-03-15",
+            "relationships": {
+                "usedBy": ["XeroController", "SyncContactToXeroJob"],
+                "usesModels": ["Contact", "XeroConnection", "XeroContact"],
+                "relatedRoutes": ["xero.sync-contacts"]
+            }
+        },
+        "SyncInvoiceToXeroAction": {
+            "documented": true,
+            "path": "./SyncInvoiceToXeroAction.md",
+            "lastUpdated": "2026-03-15",
+            "relationships": {
+                "usedBy": ["XeroController", "SyncInvoiceToXeroJob"],
+                "usesModels": ["Sale", "XeroConnection", "XeroInvoice"],
+                "relatedRoutes": ["xero.sync-invoices"]
+            }
+        },
+        "ReconcileXeroPaymentAction": {
+            "documented": true,
+            "path": "./ReconcileXeroPaymentAction.md",
+            "lastUpdated": "2026-03-15",
+            "relationships": {
+                "usedBy": ["XeroController"],
+                "usesModels": ["XeroInvoice", "XeroReconciliation"],
+                "relatedRoutes": ["xero.webhook"]
+            }
         }
     },
     "controllers": {
@@ -2288,6 +2318,31 @@
                 ],
                 "rendersPages": [
                     "call-logs/index"
+                ]
+            }
+        },
+        "XeroController": {
+            "documented": true,
+            "path": "./XeroController.md",
+            "lastUpdated": "2026-03-15",
+            "relationships": {
+                "usesActions": [
+                    "SyncContactToXeroAction",
+                    "SyncInvoiceToXeroAction",
+                    "ReconcileXeroPaymentAction"
+                ],
+                "usesFormRequests": [],
+                "relatedRoutes": [
+                    "xero.index",
+                    "xero.connect",
+                    "xero.callback",
+                    "xero.disconnect",
+                    "xero.sync-contacts",
+                    "xero.sync-invoices",
+                    "xero.webhook"
+                ],
+                "rendersPages": [
+                    "xero/index"
                 ]
             }
         },
@@ -7915,6 +7970,24 @@
                     "website-index.index",
                     "website-index.store",
                     "website-index.destroy"
+                ]
+            }
+        },
+        "xero/index": {
+            "documented": true,
+            "userGuide": null,
+            "developerGuide": "developer/frontend/pages/xero/index.md",
+            "lastUpdated": "2026-03-15",
+            "relationships": {
+                "renderedBy": [
+                    "XeroController"
+                ],
+                "relatedRoutes": [
+                    "xero.index",
+                    "xero.connect",
+                    "xero.disconnect",
+                    "xero.sync-contacts",
+                    "xero.sync-invoices"
                 ]
             }
         }
