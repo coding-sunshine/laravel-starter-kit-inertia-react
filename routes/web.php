@@ -100,6 +100,7 @@ use App\Http\Controllers\Settings\OrgDomainsController;
 use App\Http\Controllers\Settings\OrgFeaturesController;
 use App\Http\Controllers\Settings\OrgRolesController;
 use App\Http\Controllers\Settings\OrgSlugController;
+use App\Http\Controllers\SignupController;
 use App\Http\Controllers\SocialAuthController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TermsAcceptController;
@@ -441,6 +442,22 @@ Route::post('webhooks/stripe', StripeWebhookController::class)->name('webhooks.s
 Route::post('webhooks/paddle', PaddleWebhookController::class)->name('webhooks.paddle')->withoutMiddleware([ValidateCsrfToken::class]);
 Route::post('webhooks/vapi', [VapiController::class, 'webhook'])->name('webhooks.vapi')->withoutMiddleware([ValidateCsrfToken::class]);
 Route::post('/xero/webhook', [XeroController::class, 'webhook'])->name('xero.webhook')->withoutMiddleware([ValidateCsrfToken::class]);
+
+// Signup & Onboarding (US-018) — public signup flow, auth onboarding
+Route::middleware('guest')->prefix('signup')->name('signup.')->group(function (): void {
+    Route::get('/', [SignupController::class, 'index'])->name('index');
+    Route::get('/register', [SignupController::class, 'create'])->name('register');
+    Route::post('/provision', [SignupController::class, 'provision'])->middleware(ProtectAgainstSpam::class)->name('provision');
+});
+
+Route::get('/signup/complete', [SignupController::class, 'complete'])
+    ->middleware('auth')
+    ->name('signup.complete');
+
+Route::middleware('auth')->prefix('signup')->name('signup.')->group(function (): void {
+    Route::get('/onboarding', [SignupController::class, 'onboarding'])->name('onboarding');
+    Route::post('/onboarding/{stepKey}/complete', [SignupController::class, 'completeStep'])->name('onboarding.complete-step');
+});
 
 // Public campaign site routes (no auth)
 Route::get('w/{uuid}', [PublicSiteController::class, 'show'])->name('public.campaign-site');

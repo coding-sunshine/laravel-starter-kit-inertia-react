@@ -26,10 +26,17 @@ final class OrganizationPolicy
         return $user->isSuperAdmin();
     }
 
-    public function create(): bool
+    /**
+     * Only superadmins may create organisations via the UI.
+     * Self-service subscribers get an org auto-provisioned via SignupController::provision().
+     */
+    public function create(?User $user): bool
     {
-        return config('tenancy.enabled', true)
-            && config('tenancy.allow_user_organization_creation', true);
+        if ($user === null) {
+            return false;
+        }
+
+        return $user->isSuperAdmin();
     }
 
     public function update(User $user, Organization $organization): bool

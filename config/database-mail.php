@@ -56,5 +56,7 @@ return [
         App\Events\Billing\InvoicePaid::class,
         App\Events\NewTermsVersionPublished::class,
         App\Events\CommissionUpdatedEvent::class,
+        App\Events\SubscriberSignedUpEvent::class,
+        App\Events\OnboardingReminderEvent::class,
     ],
 ];

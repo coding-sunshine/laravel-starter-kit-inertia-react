@@ -106,6 +106,14 @@ final class AppServiceProvider extends ServiceProvider
 
         $this->app->singleton(PaymentGatewayManager::class);
 
+        // Bind SubscriptionBillingContract to the configured driver (stripe | eway)
+        $this->app->bind(\App\Billing\Contracts\SubscriptionBillingContract::class, function (): \App\Billing\Contracts\SubscriptionBillingContract {
+            return match (config('billing.billing_gateway', 'stripe')) {
+                'eway' => new \App\Billing\Drivers\EwayBillingDriver,
+                default => new \App\Billing\Drivers\StripeBillingDriver,
+            };
+        });
+
         config(['filament-impersonate.redirect_to' => '/dashboard']);
     }
 
@@ -425,6 +433,18 @@ final class AppServiceProvider extends ServiceProvider
             'xero-tab',
             'xero-sync-contacts',
             'xero-sync-invoices',
+            'signup-plan-fusion-starter',
+            'signup-plan-fusion-growth',
+            'signup-plan-fusion-growth-annual',
+            'signup-register-submit',
+            'onboarding-complete-set_password',
+            'onboarding-complete-sign_agreement',
+            'onboarding-complete-crm_tour',
+            'onboarding-complete-upload_contacts',
+            'onboarding-complete-connect_website',
+            'onboarding-complete-launch_flyer',
+            'onboarding-complete-meet_bdm',
+            'onboarding-go-dashboard',
         ]);
     }
 

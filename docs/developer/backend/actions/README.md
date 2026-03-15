@@ -79,6 +79,10 @@ All Actions:
 | [CreatePaymentStageAction](docs/developer/backend/actions/CreatePaymentStageAction.md) | N/A | ✅ |
 | [CreatePinnedNoteAction](docs/developer/backend/actions/CreatePinnedNoteAction.md) | N/A | ✅ |
 | [UploadDealDocumentAction](docs/developer/backend/actions/UploadDealDocumentAction.md) | N/A | ✅ |
-| TriggerWebhooksAction | N/A | ❌ |
+| [TriggerWebhooksAction](developer/backend/actions/TriggerWebhooksAction.md) | N/A | ✅ |
+| [SyncContactToXeroAction](./SyncContactToXeroAction.md) | N/A | ✅ |
+| [SyncInvoiceToXeroAction](./SyncInvoiceToXeroAction.md) | N/A | ✅ |
+| [ReconcileXeroPaymentAction](./ReconcileXeroPaymentAction.md) | N/A | ✅ |
+| ProvisionSubscriberFeaturesAction | N/A | ❌ |
 
 

@@ -15,6 +15,15 @@ return [
     */
     'default_gateway' => 'stripe',
 
+    /*
+    |--------------------------------------------------------------------------
+    | Subscription Billing Gateway (US-018)
+    |--------------------------------------------------------------------------
+    | Controls which driver handles subscription checkout (stripe | eway).
+    | Both drivers write to the kit's plan_subscriptions table.
+    */
+    'billing_gateway' => env('BILLING_GATEWAY', 'stripe'),
+
     'currency' => 'usd',
 
     'trial_days' => 14,

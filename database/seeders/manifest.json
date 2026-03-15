@@ -1770,6 +1770,24 @@
             "data_files": [
                 "landing_page_templates.json"
             ]
+        },
+        {
+            "name": "OnboardingProgressSeeder",
+            "category": "development",
+            "description": "Seeds OnboardingProgress data",
+            "dependencies": [],
+            "data_files": [
+                "onboarding_progresses.json"
+            ]
+        },
+        {
+            "name": "OnboardingProgressSeeder",
+            "category": "development",
+            "description": "Seeds OnboardingProgress data",
+            "dependencies": [],
+            "data_files": [
+                "onboarding_progresses.json"
+            ]
         }
     ],
     "categories": {

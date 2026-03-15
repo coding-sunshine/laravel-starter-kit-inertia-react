@@ -119,6 +119,10 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | [landing-pages/index](docs/developer/backend/controllers/LandingPageController.md) | landing-pages.index, landing-pages.generate | ✅ |
 | [retargeting-pixels/index](docs/developer/backend/controllers/RetargetingPixelController.md) | retargeting-pixels.index, retargeting-pixels.store | ✅ |
 | deal-tracker/index | deal-tracker.index, deal-tracker.stage-update | ✅ |
-| websites/index | api.websites.callback, website-index.index | ❌ |
+| [websites/index](developer/frontend/pages/websites/index.md) | api.websites.callback, website-index.index | ✅ |
+| [xero/index](developer/frontend/pages/xero/index.md) | xero.index, xero.connect | ✅ |
+| signup/index | signup.index, signup.register | ❌ |
+| signup/onboarding | signup.index, signup.register | ❌ |
+| signup/register | signup.index, signup.register | ❌ |
 
 

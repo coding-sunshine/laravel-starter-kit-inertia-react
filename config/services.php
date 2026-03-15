@@ -97,4 +97,10 @@ return [
         'webhook_key' => env('XERO_WEBHOOK_KEY'),
     ],
 
+    'eway' => [
+        'api_key' => env('EWAY_API_KEY'),
+        'api_password' => env('EWAY_API_PASSWORD'),
+        'endpoint' => env('EWAY_ENDPOINT', 'https://api.sandbox.ewaypayments.com'),
+    ],
+
 ];

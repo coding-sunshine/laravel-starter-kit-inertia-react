@@ -87,6 +87,7 @@ All Controllers:
 | [FunnelTemplateController](../docs/developer/backend/controllers/FunnelTemplateController.md) | N/A | ✅ |
 | [PredictiveSuggestionsController](../docs/developer/backend/controllers/PredictiveSuggestionsController.md) | N/A | ✅ |
 | [VapiController](../docs/developer/backend/controllers/VapiController.md) | N/A | ✅ |
+| [XeroController](./XeroController.md) | N/A | ✅ |
 | [AgentPortalController](./AgentPortalController.md) | N/A | ✅ |
 | [BuilderPortalController](./BuilderPortalController.md) | N/A | ✅ |
 | [InventoryApiController](./InventoryApiController.md) | N/A | ✅ |
@@ -107,6 +108,7 @@ All Controllers:
 | [PaymentStageController](docs/developer/backend/controllers/PaymentStageController.md) | N/A | ✅ |
 | [PinnedNoteController](docs/developer/backend/controllers/PinnedNoteController.md) | N/A | ✅ |
 | [DealDocumentController](docs/developer/backend/controllers/DealDocumentController.md) | N/A | ✅ |
-| WebsiteController | N/A | ❌ |
+| [WebsiteController](developer/backend/controllers/WebsiteController.md) | N/A | ✅ |
+| SignupController | N/A | ❌ |
 
 
