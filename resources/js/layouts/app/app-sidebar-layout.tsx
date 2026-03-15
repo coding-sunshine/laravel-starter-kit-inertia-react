@@ -1,3 +1,4 @@
+import { AiChatPanel } from '@/components/ai-chat-panel';
 import { AnnouncementsBanner } from '@/components/announcements-banner';
 import { AppContent } from '@/components/app-content';
 import { AppShell } from '@/components/app-shell';
@@ -6,15 +7,16 @@ import { AppSidebarHeader } from '@/components/app-sidebar-header';
 import { CommandPalette } from '@/components/command-dialog';
 import { ThemeCustomizer } from '@/components/ui/theme-customizer';
 import { type BreadcrumbItem, type SharedData } from '@/types';
-import { Link, usePage } from '@inertiajs/react';
+import { usePage } from '@inertiajs/react';
 import { Sparkles } from 'lucide-react';
-import { type PropsWithChildren } from 'react';
+import { type PropsWithChildren, useState } from 'react';
 
 export default function AppSidebarLayout({
     children,
     breadcrumbs = [],
 }: PropsWithChildren<{ breadcrumbs?: BreadcrumbItem[] }>) {
     const { setup_complete } = usePage<SharedData>().props;
+    const [chatOpen, setChatOpen] = useState(false);
 
     if (!setup_complete) {
         return (
@@ -41,14 +43,18 @@ export default function AppSidebarLayout({
                 <AppSidebarHeader breadcrumbs={breadcrumbs} />
                 <AnnouncementsBanner />
                 {children}
-                <Link
-                    href="/ai/concierge"
-                    className="fixed right-6 bottom-6 z-50 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-110"
+                <button
+                    onClick={() => setChatOpen(true)}
+                    className="fixed right-6 bottom-6 z-40 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-110"
                     data-pan="ai-concierge-fab"
                     aria-label="AI Assistant"
                 >
                     <Sparkles className="size-6" />
-                </Link>
+                </button>
+                <AiChatPanel
+                    open={chatOpen}
+                    onClose={() => setChatOpen(false)}
+                />
             </AppContent>
         </AppShell>
     );
