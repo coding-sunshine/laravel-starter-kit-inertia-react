@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Models\Contact;
 use App\Models\FunnelInstance;
 use App\Models\FunnelTemplate;
+use App\Services\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,7 +21,7 @@ final class FunnelTemplateController extends Controller
 {
     public function index(): Response
     {
-        $orgId = request()->user()?->currentOrganization()?->id;
+        $orgId = TenantContext::id();
 
         $templates = FunnelTemplate::query()
             ->where(fn ($q) => $q->whereNull('organization_id')
@@ -52,7 +53,7 @@ final class FunnelTemplateController extends Controller
         ]);
 
         FunnelTemplate::query()->create([
-            'organization_id' => $request->user()?->currentOrganization()?->id,
+            'organization_id' => TenantContext::id(),
             'name' => $data['name'],
             'type' => $data['type'],
             'description' => $data['description'] ?? null,

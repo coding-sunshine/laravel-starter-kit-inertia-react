@@ -116,6 +116,11 @@
             "type": "timestamp",
             "nullable": true,
             "default": null
+        },
+        "site_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {

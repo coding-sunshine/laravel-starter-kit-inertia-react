@@ -14,7 +14,10 @@ interface CampaignSite {
 
 interface PaginatedSites {
     data: CampaignSite[];
-    meta: { total: number; current_page: number; last_page: number };
+    total?: number;
+    current_page?: number;
+    last_page?: number;
+    meta?: { total: number; current_page: number; last_page: number };
 }
 
 interface Props {
@@ -27,6 +30,8 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 export default function CampaignSitesIndexPage({ sites }: Props) {
+    const total = sites?.total ?? sites?.meta?.total ?? sites?.data?.length ?? 0;
+
     return (
         <AppSidebarLayout breadcrumbs={breadcrumbs}>
             <Head title="Campaign Sites" />
@@ -34,7 +39,7 @@ export default function CampaignSitesIndexPage({ sites }: Props) {
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-2xl font-bold tracking-tight">Campaign Sites</h1>
-                        <p className="text-muted-foreground">{sites.meta.total} campaign sites</p>
+                        <p className="text-muted-foreground">{total} campaign sites</p>
                     </div>
                     <Link
                         href="/campaign-sites/create"
@@ -46,7 +51,7 @@ export default function CampaignSitesIndexPage({ sites }: Props) {
                     </Link>
                 </div>
 
-                {sites.data.length === 0 ? (
+                {(sites?.data ?? []).length === 0 ? (
                     <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
                         <Globe className="mb-4 h-12 w-12 text-muted-foreground" />
                         <h2 className="text-lg font-semibold">No campaign sites yet</h2>
@@ -56,7 +61,7 @@ export default function CampaignSitesIndexPage({ sites }: Props) {
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                        {sites.data.map((site) => (
+                        {(sites?.data ?? []).map((site) => (
                             <div
                                 key={site.id}
                                 className="rounded-lg border bg-card p-4 shadow-sm"

@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\GenerateColdOutreachAction;
 use App\Models\ColdOutreachTemplate;
+use App\Services\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -25,7 +26,7 @@ final class ColdOutreachController extends Controller
     {
         $templates = ColdOutreachTemplate::query()
             ->where(fn ($q) => $q->whereNull('organization_id')
-                ->orWhere('organization_id', request()->user()?->currentOrganization()?->id))
+                ->orWhere('organization_id', TenantContext::id()))
             ->latest()
             ->paginate(20);
 
@@ -50,7 +51,7 @@ final class ColdOutreachController extends Controller
             'context.name' => ['nullable', 'string'],
         ]);
 
-        $organizationId = $request->user()?->currentOrganization()?->id ?? 1;
+        $organizationId = TenantContext::id() ?? 1;
 
         $template = $this->generateAction->handle(
             channel: $data['channel'],

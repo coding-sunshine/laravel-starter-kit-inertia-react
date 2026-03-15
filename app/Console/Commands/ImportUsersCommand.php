@@ -52,29 +52,36 @@ final class ImportUsersCommand extends Command
         $query->orderBy('id')->chunk($chunk, function ($rows) use (
             $dryRun, $contactMap, &$processed, &$skipped, &$failed, $bar
         ) {
-            DB::beginTransaction();
-            try {
-                foreach ($rows as $row) {
-                    try {
-                        $row = (array) $row;
+            foreach ($rows as $row) {
+                try {
+                    $row = (array) $row;
 
-                        // Skip superadmin users — kept manual or seeded separately
-                        if (($row['role'] ?? null) === 'superadmin') {
-                            $skipped++;
-                            $bar->advance();
+                    // Skip superadmin users — kept manual or seeded separately
+                    if (($row['role'] ?? null) === 'superadmin') {
+                        $skipped++;
+                        $bar->advance();
 
-                            continue;
-                        }
+                        continue;
+                    }
 
-                        $newUser = DB::table('users')->where('email', $row['email'])->first();
-                        if (! $newUser) {
-                            $skipped++;
-                            $bar->advance();
+                    if (! $dryRun) {
+                        DB::transaction(function () use ($row, $contactMap) {
+                            $newUser = DB::table('users')->where('email', $row['email'])->first();
 
-                            continue;
-                        }
+                            if (! $newUser) {
+                                // Create the user from v3 data
+                                $name = mb_trim(($row['first_name'] ?? $row['username'] ?? 'User').' '.($row['last_name'] ?? ''));
+                                $newUserId = DB::table('users')->insertGetId([
+                                    'name' => $name,
+                                    'email' => $row['email'],
+                                    'password' => $row['password'] ?? bcrypt('changeme'),
+                                    'email_verified_at' => $row['email_verified_at'] ?? now(),
+                                    'created_at' => $row['created_at'] ?? now(),
+                                    'updated_at' => $row['updated_at'] ?? now(),
+                                ]);
+                                $newUser = DB::table('users')->find($newUserId);
+                            }
 
-                        if (! $dryRun) {
                             // Link contact via lead_id → contact_id map
                             $leadId = $row['lead_id'] ?? null;
                             $contactId = $leadId ? ($contactMap[$leadId] ?? null) : null;
@@ -84,26 +91,38 @@ final class ImportUsersCommand extends Command
                                 'updated_at' => now(),
                             ]);
 
+                            // Assign v3 role to v4
+                            $v3Role = DB::connection('mysql_legacy')->table('model_has_roles')
+                                ->join('roles', 'roles.id', '=', 'model_has_roles.role_id')
+                                ->where('model_has_roles.model_id', $row['id'])
+                                ->where('model_has_roles.model_type', 'App\\Models\\User')
+                                ->value('roles.name');
+
+                            if ($v3Role) {
+                                $v4Role = DB::table('roles')->where('name', $v3Role)->first();
+                                if ($v4Role) {
+                                    DB::table('model_has_roles')->insertOrIgnore([
+                                        'role_id' => $v4Role->id,
+                                        'model_type' => 'App\\Models\\User',
+                                        'model_id' => $newUser->id,
+                                        'organization_id' => 0,
+                                    ]);
+                                }
+                            }
+
                             // Create one organization per subscriber user
                             if (($row['role'] ?? null) === 'subscriber') {
-                                $this->ensureSubscriberOrganization((object) $newUser, $contactId, $dryRun);
+                                $this->ensureSubscriberOrganization($newUser, $contactId, false);
                             }
-                        }
-
-                        $processed++;
-                    } catch (Throwable $e) {
-                        $failed++;
-                        Log::warning("fusion:import-users row {$row['id']} failed: {$e->getMessage()}");
+                        });
                     }
-                    $bar->advance();
+
+                    $processed++;
+                } catch (Throwable $e) {
+                    $failed++;
+                    Log::warning("fusion:import-users row {$row['id']} failed: {$e->getMessage()}");
                 }
-                if (! $dryRun) {
-                    DB::commit();
-                }
-            } catch (Throwable $e) {
-                DB::rollBack();
-                $this->error('Chunk failed: '.$e->getMessage());
-                $failed += count($rows);
+                $bar->advance();
             }
         });
 

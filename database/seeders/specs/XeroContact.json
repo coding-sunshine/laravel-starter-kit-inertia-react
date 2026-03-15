@@ -4,29 +4,28 @@
     "fields": {
         "id": {
             "type": "bigint",
-            "nullable": false,
+            "nullable": true,
             "default": null
         },
         "contact_id": {
             "type": "bigint",
-            "nullable": false,
+            "nullable": true,
             "default": null
         },
         "xero_connection_id": {
             "type": "bigint",
-            "nullable": false,
+            "nullable": true,
             "default": null
         },
         "xero_contact_id": {
             "type": "string",
-            "nullable": false,
+            "nullable": true,
             "default": null
         },
         "sync_status": {
-            "type": "enum",
-            "nullable": false,
-            "default": "pending",
-            "values": ["pending", "synced", "error"]
+            "type": "string",
+            "nullable": true,
+            "default": null
         },
         "last_synced_at": {
             "type": "timestamp",
@@ -49,22 +48,24 @@
             "default": null
         }
     },
-    "relationships": [
-        {
+    "relationships": {
+        "contact": {
             "type": "belongsTo",
-            "model": "Contact",
-            "foreign_key": "contact_id"
+            "model": "Contact"
         },
-        {
+        "xeroConnection": {
             "type": "belongsTo",
-            "model": "XeroConnection",
-            "foreign_key": "xero_connection_id"
+            "model": "XeroConnection"
         }
-    ],
+    },
     "value_hints": {
         "xero_contact_id": {
             "type": "uuid",
             "example": "b92d3c1f-5678-9012-cdef-ab3456789012"
+        },
+        "last_synced_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
         }
     },
     "scenarios": []

@@ -25,6 +25,8 @@ final class PushHistory extends Model
 {
     use HasFactory;
 
+    protected $table = 'push_history';
+
     /**
      * @var array<int, string>
      */

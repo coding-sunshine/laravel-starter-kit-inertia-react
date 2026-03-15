@@ -40,8 +40,8 @@ final class CommissionReportDataTable extends AbstractDataTable
         return new self(
             id: $model->id,
             commission_type: $model->commission_type,
-            amount: $model->amount,
-            rate_percentage: $model->rate_percentage,
+            amount: is_numeric($model->amount) ? (float) $model->amount : null,
+            rate_percentage: is_numeric($model->rate_percentage) ? (float) $model->rate_percentage : null,
             agent_name: $model->agentUser?->name,
             project_name: $model->sale?->lot?->project?->name,
             override_amount: $model->override_amount,
@@ -53,14 +53,14 @@ final class CommissionReportDataTable extends AbstractDataTable
     public static function tableColumns(): array
     {
         return [
-            ColumnBuilder::make('id')->label('ID')->sortable(),
-            ColumnBuilder::make('commission_type')->label('Type')->sortable(),
-            ColumnBuilder::make('amount')->label('Amount')->sortable(),
-            ColumnBuilder::make('rate_percentage')->label('Rate %')->sortable(),
-            ColumnBuilder::make('agent_name')->label('Agent'),
-            ColumnBuilder::make('project_name')->label('Project'),
-            ColumnBuilder::make('override_amount')->label('Override'),
-            ColumnBuilder::make('created_at')->label('Created')->sortable(),
+            ColumnBuilder::make('id', 'ID')->sortable()->build(),
+            ColumnBuilder::make('commission_type', 'Type')->sortable()->build(),
+            ColumnBuilder::make('amount', 'Amount')->currency('AUD')->sortable()->build(),
+            ColumnBuilder::make('rate_percentage', 'Rate %')->sortable()->build(),
+            ColumnBuilder::make('agent_name', 'Agent')->build(),
+            ColumnBuilder::make('project_name', 'Project')->build(),
+            ColumnBuilder::make('override_amount', 'Override')->build(),
+            ColumnBuilder::make('created_at', 'Created')->sortable()->build(),
         ];
     }
 
@@ -72,7 +72,6 @@ final class CommissionReportDataTable extends AbstractDataTable
         ];
     }
 
-    #[Override]
     public static function inertiaProps(Request $request): array
     {
         return [
@@ -99,13 +98,11 @@ final class CommissionReportDataTable extends AbstractDataTable
         return $request->user() !== null;
     }
 
-    #[Override]
     public static function tableExportName(): string
     {
         return 'commissions-report';
     }
 
-    #[Override]
     public static function tableAiSystemContext(): string
     {
         return 'You are analyzing a commission report for a real estate agency. Key fields: commission_type, amount, rate_percentage, agent. Filter by commission_type to find totals by type and agent performance.';

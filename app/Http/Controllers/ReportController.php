@@ -15,6 +15,7 @@ use App\Models\PropertyReservation;
 use App\Models\Sale;
 use App\Models\Task;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -66,6 +67,20 @@ final class ReportController extends Controller
                     'icon' => 'shield',
                     'href' => '/reports/same-device',
                 ],
+                [
+                    'id' => 'notes',
+                    'title' => 'Notes History',
+                    'description' => 'View all CRM notes by contact and date with search.',
+                    'icon' => 'file-text',
+                    'href' => '/reports/notes',
+                ],
+                [
+                    'id' => 'network-activity',
+                    'title' => 'Network Activity',
+                    'description' => 'User activity log aggregated by user and date.',
+                    'icon' => 'activity',
+                    'href' => '/reports/network-activity',
+                ],
             ],
         ]);
     }
@@ -79,6 +94,8 @@ final class ReportController extends Controller
             'commissions' => $this->commissionsReport($request),
             'login-history' => $this->loginHistoryReport($request),
             'same-device' => $this->sameDeviceReport($request),
+            'notes' => $this->notesReport($request),
+            'network-activity' => $this->networkActivityReport($request),
             default => abort(404),
         };
     }
@@ -188,8 +205,8 @@ final class ReportController extends Controller
             ->whereNotNull('device_fingerprint')
             ->where('created_at', '>=', now()->subDays(30))
             ->groupBy('device_fingerprint')
-            ->having('user_count', '>=', 2)
-            ->orderByDesc('user_count')
+            ->havingRaw('COUNT(DISTINCT user_id) >= 2')
+            ->orderByRaw('COUNT(DISTINCT user_id) DESC')
             ->get()
             ->map(fn ($row) => [
                 'fingerprint_masked' => mb_substr((string) $row->device_fingerprint, 0, 8).'...',
@@ -207,6 +224,77 @@ final class ReportController extends Controller
             'tableData' => null,
             'searchableColumns' => [],
             'sharedDevices' => $sharedDevices,
+        ]);
+    }
+
+    private function notesReport(Request $request): Response
+    {
+        $byDay = DB::table('crm_notes')
+            ->selectRaw('DATE(created_at) as date, COUNT(*) as count')
+            ->where('created_at', '>=', now()->subDays(30))
+            ->groupBy('date')
+            ->orderBy('date')
+            ->pluck('count', 'date')
+            ->toArray();
+
+        $notes = DB::table('crm_notes')
+            ->leftJoin('users', 'crm_notes.author_id', '=', 'users.id')
+            ->select([
+                'crm_notes.id',
+                'crm_notes.content',
+                'crm_notes.noteable_type',
+                'crm_notes.noteable_id',
+                'users.name as author_name',
+                'crm_notes.created_at',
+            ])
+            ->orderByDesc('crm_notes.created_at')
+            ->paginate(25);
+
+        return Inertia::render('reports/show', [
+            'reportType' => 'notes',
+            'reportTitle' => 'Notes History',
+            'chartData' => collect($byDay)->map(fn ($count, $date) => ['name' => $date, 'value' => $count])->values()->all(),
+            'chartType' => 'line',
+            'tableData' => null,
+            'searchableColumns' => [],
+            'customTableData' => $notes,
+        ]);
+    }
+
+    private function networkActivityReport(Request $request): Response
+    {
+        $byDay = DB::table('activity_log')
+            ->selectRaw('DATE(created_at) as date, COUNT(*) as count')
+            ->where('created_at', '>=', now()->subDays(30))
+            ->groupBy('date')
+            ->orderBy('date')
+            ->pluck('count', 'date')
+            ->toArray();
+
+        $activities = DB::table('activity_log')
+            ->leftJoin('users', function ($join) {
+                $join->on('activity_log.causer_id', '=', 'users.id')
+                    ->where('activity_log.causer_type', '=', 'App\\Models\\User');
+            })
+            ->select([
+                'activity_log.id',
+                'activity_log.description',
+                'activity_log.event',
+                'activity_log.subject_type',
+                'users.name as user_name',
+                'activity_log.created_at',
+            ])
+            ->orderByDesc('activity_log.created_at')
+            ->paginate(25);
+
+        return Inertia::render('reports/show', [
+            'reportType' => 'network-activity',
+            'reportTitle' => 'Network Activity',
+            'chartData' => collect($byDay)->map(fn ($count, $date) => ['name' => $date, 'value' => $count])->values()->all(),
+            'chartType' => 'line',
+            'tableData' => null,
+            'searchableColumns' => [],
+            'customTableData' => $activities,
         ]);
     }
 }

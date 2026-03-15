@@ -15,6 +15,7 @@ use Machour\DataTable\QuickView;
 use Override;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\TypeScriptTransformer\Attributes\TypeScript;
+use Throwable;
 
 #[TypeScript]
 final class ProjectDataTable extends AbstractDataTable
@@ -41,6 +42,7 @@ final class ProjectDataTable extends AbstractDataTable
         public bool $is_hot_property,
         public bool $is_featured,
         public bool $is_archived,
+        public ?string $image,
         public ?string $created_at,
     ) {}
 
@@ -53,12 +55,13 @@ final class ProjectDataTable extends AbstractDataTable
             suburb: $model->suburb,
             state: $model->state,
             developer_name: $model->relationLoaded('developer') ? $model->developer?->name : null,
-            min_price: $model->min_price !== null ? (float) $model->min_price : null,
-            max_price: $model->max_price !== null ? (float) $model->max_price : null,
+            min_price: is_numeric($model->min_price) ? (float) $model->min_price : null,
+            max_price: is_numeric($model->max_price) ? (float) $model->max_price : null,
             total_lots: $model->total_lots,
             is_hot_property: $model->is_hot_property,
             is_featured: $model->is_featured,
             is_archived: $model->is_archived,
+            image: self::safeMediaUrl($model, 'photo'),
             created_at: $model->created_at?->format('Y-m-d H:i'),
         );
     }
@@ -66,6 +69,9 @@ final class ProjectDataTable extends AbstractDataTable
     public static function tableColumns(): array
     {
         return [
+            ColumnBuilder::make('image', 'Photo')
+                ->image()
+                ->build(),
             ColumnBuilder::make('id', 'ID')
                 ->number()
                 ->sortable()
@@ -102,7 +108,7 @@ final class ProjectDataTable extends AbstractDataTable
                 ->sortable()
                 ->build(),
             ColumnBuilder::make('min_price', 'From Price')
-                ->money()
+                ->currency('AUD')
                 ->sortable()
                 ->build(),
             ColumnBuilder::make('total_lots', 'Total Lots')
@@ -196,9 +202,48 @@ final class ProjectDataTable extends AbstractDataTable
         ];
     }
 
+    public static function tableDefaultLayout(): string
+    {
+        return 'cards';
+    }
+
+    public static function tableAnalytics(): array
+    {
+        $query = self::tableBaseQuery();
+
+        return [
+            [
+                'label' => 'Total Projects',
+                'value' => $query->count(),
+                'icon' => 'building-2',
+                'color' => 'blue',
+            ],
+            [
+                'label' => 'Available Lots',
+                'value' => \App\Models\Lot::query()->where('title_status', 'available')->where('is_archived', false)->count(),
+                'icon' => 'layers',
+                'color' => 'green',
+            ],
+            [
+                'label' => 'Avg Price',
+                'value' => $query->whereNotNull('avg_price')->avg('avg_price'),
+                'format' => 'currency',
+                'prefix' => '$',
+                'icon' => 'dollar-sign',
+                'color' => 'amber',
+            ],
+            [
+                'label' => 'Hot Properties',
+                'value' => $query->where('is_hot_property', true)->count(),
+                'icon' => 'flame',
+                'color' => 'red',
+            ],
+        ];
+    }
+
     public static function tableBaseQuery(): Builder
     {
-        return Project::query()->with('developer');
+        return Project::query()->with(['developer', 'media']);
     }
 
     public static function tableDefaultSort(): string
@@ -219,5 +264,16 @@ final class ProjectDataTable extends AbstractDataTable
     public static function tableAiSystemContext(): string
     {
         return 'You are analyzing a real estate project inventory for a property sales agency. Projects are residential developments (apartments, houses, land). Key fields: stage (pre_launch/selling/completed), available/reserved/sold lot counts, price range, developer, suburb/state. Help agents identify projects to present to specific buyer profiles.';
+    }
+
+    private static function safeMediaUrl(\Spatie\MediaLibrary\HasMedia $model, string $collection): ?string
+    {
+        try {
+            $url = $model->getFirstMediaUrl($collection);
+
+            return $url !== '' ? $url : null;
+        } catch (Throwable) {
+            return null;
+        }
     }
 }

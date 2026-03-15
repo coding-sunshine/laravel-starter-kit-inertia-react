@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Models\BuilderPortal;
 use App\Models\Project;
+use App\Services\TenantContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -15,7 +16,7 @@ final class BuilderPortalController extends Controller
 {
     public function index(): Response
     {
-        $orgId = auth()->user()?->currentOrganization?->id;
+        $orgId = TenantContext::id();
 
         $portals = BuilderPortal::query()
             ->when($orgId, fn ($q) => $q->where('organization_id', $orgId))
@@ -24,7 +25,7 @@ final class BuilderPortalController extends Controller
 
         $projects = Project::query()
             ->when($orgId, fn ($q) => $q->where('organization_id', $orgId))
-            ->orderBy('name')
+            ->orderBy('title')
             ->get();
 
         return Inertia::render('builder-portal/index', [
@@ -45,7 +46,7 @@ final class BuilderPortalController extends Controller
             'show_agent_details' => ['boolean'],
         ]);
 
-        $orgId = auth()->user()?->currentOrganization?->id;
+        $orgId = TenantContext::id();
 
         BuilderPortal::query()->create([
             ...$validated,

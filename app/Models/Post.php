@@ -104,6 +104,12 @@ final class Post extends Model implements HasMedia
         ];
     }
 
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('featured_image')->singleFile();
+        $this->addMediaCollection('images');
+    }
+
     protected function casts(): array
     {
         return [

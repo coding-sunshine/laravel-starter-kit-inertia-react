@@ -46,7 +46,7 @@ final class PropertyReservationDataTable extends AbstractDataTable
             id: $model->id,
             stage: $model->stage,
             deposit_status: $model->deposit_status,
-            purchase_price: $model->purchase_price,
+            purchase_price: is_numeric($model->purchase_price) ? (float) $model->purchase_price : null,
             lot_id: $model->lot_id,
             project_id: $model->project_id,
             agent_contact_id: $model->agent_contact_id,
@@ -59,15 +59,15 @@ final class PropertyReservationDataTable extends AbstractDataTable
     public static function tableColumns(): array
     {
         return [
-            ColumnBuilder::make('id')->label('ID')->sortable(),
-            ColumnBuilder::make('stage')->label('Stage')->sortable(),
-            ColumnBuilder::make('deposit_status')->label('Deposit Status')->sortable(),
-            ColumnBuilder::make('purchase_price')->label('Purchase Price')->sortable(),
-            ColumnBuilder::make('lot_id')->label('Lot'),
-            ColumnBuilder::make('project_id')->label('Project'),
-            ColumnBuilder::make('agent_contact_id')->label('Agent'),
-            ColumnBuilder::make('primary_contact_id')->label('Primary Contact'),
-            ColumnBuilder::make('created_at')->label('Created')->sortable(),
+            ColumnBuilder::make('id', 'ID')->sortable()->build(),
+            ColumnBuilder::make('stage', 'Stage')->sortable()->build(),
+            ColumnBuilder::make('deposit_status', 'Deposit Status')->sortable()->build(),
+            ColumnBuilder::make('purchase_price', 'Purchase Price')->currency('AUD')->sortable()->build(),
+            ColumnBuilder::make('lot_id', 'Lot')->build(),
+            ColumnBuilder::make('project_id', 'Project')->build(),
+            ColumnBuilder::make('agent_contact_id', 'Agent')->build(),
+            ColumnBuilder::make('primary_contact_id', 'Primary Contact')->build(),
+            ColumnBuilder::make('created_at', 'Created')->sortable()->build(),
         ];
     }
 
@@ -121,7 +121,6 @@ final class PropertyReservationDataTable extends AbstractDataTable
         return true;
     }
 
-    #[Override]
     public static function inertiaProps(Request $request): array
     {
         return [
@@ -148,7 +147,6 @@ final class PropertyReservationDataTable extends AbstractDataTable
         return $request->user() !== null;
     }
 
-    #[Override]
     public static function tableExportName(): string
     {
         return 'property-reservations';

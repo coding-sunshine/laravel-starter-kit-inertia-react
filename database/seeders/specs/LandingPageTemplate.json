@@ -108,11 +108,28 @@
             "default": null
         }
     },
-    "relationships": [],
+    "relationships": {
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        },
+        "campaignWebsite": {
+            "type": "belongsTo",
+            "model": "CampaignWebsite"
+        }
+    },
     "value_hints": {
         "name": {
             "type": "name",
             "example": "John Doe"
+        },
+        "puck_enabled": {
+            "type": "boolean",
+            "example": true
+        },
+        "is_active": {
+            "type": "boolean",
+            "example": true
         }
     },
     "scenarios": []

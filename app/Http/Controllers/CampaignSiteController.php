@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Models\CampaignWebsite;
+use App\Services\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -14,7 +15,7 @@ final class CampaignSiteController extends Controller
 {
     public function index(Request $request): Response
     {
-        $orgId = auth()->user()?->currentOrganization?->id;
+        $orgId = TenantContext::id();
 
         $sites = CampaignWebsite::query()
             ->when($orgId, fn ($q) => $q->where('organization_id', $orgId))

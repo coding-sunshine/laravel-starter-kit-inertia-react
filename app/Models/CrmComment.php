@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 
 /**
  * @property int $id
@@ -22,9 +24,10 @@ use Spatie\Activitylog\Traits\LogsActivity;
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
  */
-final class CrmComment extends Model
+final class CrmComment extends Model implements HasMedia
 {
     use HasFactory;
+    use InteractsWithMedia;
     use LogsActivity;
 
     /**
@@ -53,6 +56,11 @@ final class CrmComment extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('attachments');
     }
 
     public function getActivitylogOptions(): LogOptions

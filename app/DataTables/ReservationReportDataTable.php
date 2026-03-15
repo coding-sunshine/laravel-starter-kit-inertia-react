@@ -44,7 +44,7 @@ final class ReservationReportDataTable extends AbstractDataTable
             lot_number: $model->lot?->title ?? $model->lot?->slug,
             stage: $model->stage,
             agent_name: $model->agentContact ? ($model->agentContact->first_name.' '.$model->agentContact->last_name) : null,
-            purchase_price: $model->purchase_price,
+            purchase_price: is_numeric($model->purchase_price) ? (float) $model->purchase_price : null,
             created_at: $model->created_at?->format('Y-m-d'),
         );
     }
@@ -53,14 +53,14 @@ final class ReservationReportDataTable extends AbstractDataTable
     public static function tableColumns(): array
     {
         return [
-            ColumnBuilder::make('id')->label('ID')->sortable(),
-            ColumnBuilder::make('contact_name')->label('Contact')->searchable(),
-            ColumnBuilder::make('project_name')->label('Project'),
-            ColumnBuilder::make('lot_number')->label('Lot'),
-            ColumnBuilder::make('stage')->label('Stage')->sortable(),
-            ColumnBuilder::make('agent_name')->label('Agent'),
-            ColumnBuilder::make('purchase_price')->label('Price')->sortable(),
-            ColumnBuilder::make('created_at')->label('Created')->sortable(),
+            ColumnBuilder::make('id', 'ID')->sortable()->build(),
+            ColumnBuilder::make('contact_name', 'Contact')->build(),
+            ColumnBuilder::make('project_name', 'Project')->build(),
+            ColumnBuilder::make('lot_number', 'Lot')->build(),
+            ColumnBuilder::make('stage', 'Stage')->sortable()->build(),
+            ColumnBuilder::make('agent_name', 'Agent')->build(),
+            ColumnBuilder::make('purchase_price', 'Price')->currency('AUD')->sortable()->build(),
+            ColumnBuilder::make('created_at', 'Created')->sortable()->build(),
         ];
     }
 
@@ -72,7 +72,6 @@ final class ReservationReportDataTable extends AbstractDataTable
         ];
     }
 
-    #[Override]
     public static function inertiaProps(Request $request): array
     {
         return [
@@ -99,13 +98,11 @@ final class ReservationReportDataTable extends AbstractDataTable
         return $request->user() !== null;
     }
 
-    #[Override]
     public static function tableExportName(): string
     {
         return 'reservations-report';
     }
 
-    #[Override]
     public static function tableAiSystemContext(): string
     {
         return 'You are analyzing a property reservation report for a real estate CRM. Key fields: stage (enquiry/qualified/reservation/contract/unconditional/settled), purchase_price, agent_name. Help identify pipeline bottlenecks, settlement rates, and agent performance.';

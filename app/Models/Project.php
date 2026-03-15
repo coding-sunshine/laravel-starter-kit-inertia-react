@@ -16,6 +16,8 @@ use Laravel\Scout\Searchable;
 use Mattiverse\Userstamps\Traits\Userstamps;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\Sluggable\HasSlug;
 use Spatie\Sluggable\SlugOptions;
 
@@ -76,13 +78,14 @@ use Spatie\Sluggable\SlugOptions;
  * @property \Carbon\Carbon $updated_at
  * @property \Carbon\Carbon|null $deleted_at
  */
-final class Project extends Model
+final class Project extends Model implements HasMedia
 {
     /** @use HasFactory<ProjectFactory> */
     use BelongsToOrganization;
 
     use HasFactory;
     use HasSlug;
+    use InteractsWithMedia;
     use LogsActivity;
     use Searchable;
     use SoftDeletes;
@@ -186,6 +189,13 @@ final class Project extends Model
     {
         return $this->belongsToMany(User::class, 'user_project_favourites')
             ->withTimestamps();
+    }
+
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('photo');
+        $this->addMediaCollection('brochure')->singleFile();
+        $this->addMediaCollection('documents');
     }
 
     /**

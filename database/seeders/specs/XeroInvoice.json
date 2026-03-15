@@ -4,7 +4,7 @@
     "fields": {
         "id": {
             "type": "bigint",
-            "nullable": false,
+            "nullable": true,
             "default": null
         },
         "sale_id": {
@@ -14,12 +14,12 @@
         },
         "xero_connection_id": {
             "type": "bigint",
-            "nullable": false,
+            "nullable": true,
             "default": null
         },
         "xero_invoice_id": {
             "type": "string",
-            "nullable": false,
+            "nullable": true,
             "default": null
         },
         "invoice_number": {
@@ -28,19 +28,19 @@
             "default": null
         },
         "amount": {
-            "type": "decimal",
+            "type": "numeric",
             "nullable": true,
             "default": null
         },
         "status": {
             "type": "string",
-            "nullable": false,
-            "default": "DRAFT"
+            "nullable": true,
+            "default": null
         },
         "invoice_type": {
             "type": "string",
-            "nullable": false,
-            "default": "ACCREC"
+            "nullable": true,
+            "default": null
         },
         "issued_at": {
             "type": "timestamp",
@@ -68,18 +68,20 @@
             "default": null
         }
     },
-    "relationships": [
-        {
+    "relationships": {
+        "sale": {
             "type": "belongsTo",
-            "model": "Sale",
-            "foreign_key": "sale_id"
+            "model": "Sale"
         },
-        {
+        "xeroConnection": {
             "type": "belongsTo",
-            "model": "XeroConnection",
-            "foreign_key": "xero_connection_id"
+            "model": "XeroConnection"
+        },
+        "xeroReconciliations": {
+            "type": "hasMany",
+            "model": "XeroReconciliation"
         }
-    ],
+    },
     "value_hints": {
         "xero_invoice_id": {
             "type": "uuid",
@@ -88,6 +90,18 @@
         "invoice_number": {
             "type": "string",
             "example": "INV-0001"
+        },
+        "issued_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        },
+        "due_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        },
+        "last_synced_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
         }
     },
     "scenarios": []

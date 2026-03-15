@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Actions\EnrollInNurtureSequenceAction;
 use App\Models\Contact;
 use App\Models\NurtureSequence;
+use App\Services\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -28,7 +29,7 @@ final class NurtureSequenceController extends Controller
         $sequences = NurtureSequence::query()
             ->withCount(['enrollments', 'steps'])
             ->where(fn ($q) => $q->whereNull('organization_id')
-                ->orWhere('organization_id', request()->user()?->currentOrganization()?->id))
+                ->orWhere('organization_id', TenantContext::id()))
             ->latest()
             ->paginate(20);
 
@@ -53,7 +54,7 @@ final class NurtureSequenceController extends Controller
         ]);
 
         $sequence = NurtureSequence::query()->create([
-            'organization_id' => $request->user()?->currentOrganization()?->id,
+            'organization_id' => TenantContext::id(),
             'name' => $data['name'],
             'description' => $data['description'] ?? null,
             'trigger_stage' => $data['trigger_stage'] ?? null,

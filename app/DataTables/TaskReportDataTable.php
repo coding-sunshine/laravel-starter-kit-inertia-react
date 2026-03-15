@@ -55,15 +55,15 @@ final class TaskReportDataTable extends AbstractDataTable
     public static function tableColumns(): array
     {
         return [
-            ColumnBuilder::make('id')->label('ID')->sortable(),
-            ColumnBuilder::make('title')->label('Title')->searchable()->sortable(),
-            ColumnBuilder::make('status')->label('Status')->sortable(),
-            ColumnBuilder::make('priority')->label('Priority')->sortable(),
-            ColumnBuilder::make('assigned_to_name')->label('Assigned To'),
-            ColumnBuilder::make('contact_name')->label('Contact'),
-            ColumnBuilder::make('due_at')->label('Due Date')->sortable(),
-            ColumnBuilder::make('completed_at')->label('Completed')->sortable(),
-            ColumnBuilder::make('created_at')->label('Created')->sortable(),
+            ColumnBuilder::make('id', 'ID')->sortable()->build(),
+            ColumnBuilder::make('title', 'Title')->sortable()->build(),
+            ColumnBuilder::make('status', 'Status')->sortable()->build(),
+            ColumnBuilder::make('priority', 'Priority')->sortable()->build(),
+            ColumnBuilder::make('assigned_to_name', 'Assigned To')->build(),
+            ColumnBuilder::make('contact_name', 'Contact')->build(),
+            ColumnBuilder::make('due_at', 'Due Date')->sortable()->build(),
+            ColumnBuilder::make('completed_at', 'Completed')->sortable()->build(),
+            ColumnBuilder::make('created_at', 'Created')->sortable()->build(),
         ];
     }
 
@@ -76,7 +76,6 @@ final class TaskReportDataTable extends AbstractDataTable
         ];
     }
 
-    #[Override]
     public static function inertiaProps(Request $request): array
     {
         return [
@@ -103,13 +102,11 @@ final class TaskReportDataTable extends AbstractDataTable
         return $request->user() !== null;
     }
 
-    #[Override]
     public static function tableExportName(): string
     {
         return 'tasks-report';
     }
 
-    #[Override]
     public static function tableAiSystemContext(): string
     {
         return 'You are analyzing a CRM task report. Key fields: status (pending/in_progress/done), priority (low/medium/high/urgent), due_at, completed_at. Help identify overdue tasks, completion rates, and agent workload distribution.';

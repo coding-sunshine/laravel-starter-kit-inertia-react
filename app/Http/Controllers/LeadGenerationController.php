@@ -14,6 +14,7 @@ use App\Models\Lot;
 use App\Models\NurtureSequence;
 use App\Models\Project;
 use App\Services\LeadScoringService;
+use App\Services\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -35,7 +36,7 @@ final class LeadGenerationController extends Controller
 
     public function index(): Response
     {
-        $orgId = request()->user()?->currentOrganization()?->id;
+        $orgId = TenantContext::id();
 
         $recentLeads = Contact::query()
             ->where('organization_id', $orgId)

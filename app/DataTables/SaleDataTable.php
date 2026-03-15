@@ -45,8 +45,8 @@ final class SaleDataTable extends AbstractDataTable
         return new self(
             id: $model->id,
             status: $model->status,
-            comms_in_total: $model->comms_in_total,
-            comms_out_total: $model->comms_out_total,
+            comms_in_total: is_numeric($model->comms_in_total) ? (float) $model->comms_in_total : null,
+            comms_out_total: is_numeric($model->comms_out_total) ? (float) $model->comms_out_total : null,
             lot_id: $model->lot_id,
             project_id: $model->project_id,
             client_contact_id: $model->client_contact_id,
@@ -59,15 +59,15 @@ final class SaleDataTable extends AbstractDataTable
     public static function tableColumns(): array
     {
         return [
-            ColumnBuilder::make('id')->label('ID')->sortable(),
-            ColumnBuilder::make('status')->label('Status')->sortable(),
-            ColumnBuilder::make('comms_in_total')->label('Comms In')->sortable(),
-            ColumnBuilder::make('comms_out_total')->label('Comms Out')->sortable(),
-            ColumnBuilder::make('lot_id')->label('Lot'),
-            ColumnBuilder::make('project_id')->label('Project'),
-            ColumnBuilder::make('client_contact_id')->label('Client'),
-            ColumnBuilder::make('settled_at')->label('Settled At')->sortable(),
-            ColumnBuilder::make('created_at')->label('Created')->sortable(),
+            ColumnBuilder::make('id', 'ID')->sortable()->build(),
+            ColumnBuilder::make('status', 'Status')->sortable()->build(),
+            ColumnBuilder::make('comms_in_total', 'Comms In')->currency('AUD')->sortable()->build(),
+            ColumnBuilder::make('comms_out_total', 'Comms Out')->currency('AUD')->sortable()->build(),
+            ColumnBuilder::make('lot_id', 'Lot')->build(),
+            ColumnBuilder::make('project_id', 'Project')->build(),
+            ColumnBuilder::make('client_contact_id', 'Client')->build(),
+            ColumnBuilder::make('settled_at', 'Settled At')->sortable()->build(),
+            ColumnBuilder::make('created_at', 'Created')->sortable()->build(),
         ];
     }
 
@@ -120,7 +120,6 @@ final class SaleDataTable extends AbstractDataTable
         return true;
     }
 
-    #[Override]
     public static function inertiaProps(Request $request): array
     {
         return [
@@ -147,7 +146,6 @@ final class SaleDataTable extends AbstractDataTable
         return $request->user() !== null;
     }
 
-    #[Override]
     public static function tableExportName(): string
     {
         return 'sales';

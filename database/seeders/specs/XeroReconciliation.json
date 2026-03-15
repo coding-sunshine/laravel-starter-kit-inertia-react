@@ -4,22 +4,22 @@
     "fields": {
         "id": {
             "type": "bigint",
-            "nullable": false,
+            "nullable": true,
             "default": null
         },
         "xero_invoice_id": {
             "type": "bigint",
-            "nullable": false,
+            "nullable": true,
             "default": null
         },
         "xero_payment_id": {
             "type": "string",
-            "nullable": false,
+            "nullable": true,
             "default": null
         },
         "amount": {
-            "type": "decimal",
-            "nullable": false,
+            "type": "numeric",
+            "nullable": true,
             "default": null
         },
         "payment_date": {
@@ -48,17 +48,20 @@
             "default": null
         }
     },
-    "relationships": [
-        {
+    "relationships": {
+        "xeroInvoice": {
             "type": "belongsTo",
-            "model": "XeroInvoice",
-            "foreign_key": "xero_invoice_id"
+            "model": "XeroInvoice"
         }
-    ],
+    },
     "value_hints": {
         "xero_payment_id": {
             "type": "uuid",
             "example": "d14f5e3b-7890-1234-efgh-cd5678901234"
+        },
+        "reconciled_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
         }
     },
     "scenarios": []

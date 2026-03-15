@@ -50,13 +50,13 @@ final class PropertyEnquiryDataTable extends AbstractDataTable
     public static function tableColumns(): array
     {
         return [
-            ColumnBuilder::make('id')->label('ID')->sortable(),
-            ColumnBuilder::make('status')->label('Status')->sortable(),
-            ColumnBuilder::make('client_contact_id')->label('Client'),
-            ColumnBuilder::make('agent_contact_id')->label('Agent'),
-            ColumnBuilder::make('lot_id')->label('Lot'),
-            ColumnBuilder::make('project_id')->label('Project'),
-            ColumnBuilder::make('created_at')->label('Created')->sortable(),
+            ColumnBuilder::make('id', 'ID')->sortable()->build(),
+            ColumnBuilder::make('status', 'Status')->sortable()->build(),
+            ColumnBuilder::make('client_contact_id', 'Client')->build(),
+            ColumnBuilder::make('agent_contact_id', 'Agent')->build(),
+            ColumnBuilder::make('lot_id', 'Lot')->build(),
+            ColumnBuilder::make('project_id', 'Project')->build(),
+            ColumnBuilder::make('created_at', 'Created')->sortable()->build(),
         ];
     }
 
@@ -95,7 +95,6 @@ final class PropertyEnquiryDataTable extends AbstractDataTable
         return false;
     }
 
-    #[Override]
     public static function inertiaProps(Request $request): array
     {
         return [

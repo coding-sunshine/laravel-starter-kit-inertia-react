@@ -44,8 +44,8 @@ final class CommissionDataTable extends AbstractDataTable
             sale_id: $model->sale_id,
             commission_type: $model->commission_type,
             agent_user_id: $model->agent_user_id,
-            rate_percentage: $model->rate_percentage,
-            amount: $model->amount,
+            rate_percentage: is_numeric($model->rate_percentage) ? (float) $model->rate_percentage : null,
+            amount: is_numeric($model->amount) ? (float) $model->amount : 0.0,
             override_amount: $model->override_amount,
             created_at: $model->created_at?->format('Y-m-d H:i'),
         );
@@ -55,14 +55,14 @@ final class CommissionDataTable extends AbstractDataTable
     public static function tableColumns(): array
     {
         return [
-            ColumnBuilder::make('id')->label('ID')->sortable(),
-            ColumnBuilder::make('sale_id')->label('Sale')->sortable(),
-            ColumnBuilder::make('commission_type')->label('Type')->sortable(),
-            ColumnBuilder::make('agent_user_id')->label('Agent'),
-            ColumnBuilder::make('rate_percentage')->label('Rate %')->sortable(),
-            ColumnBuilder::make('amount')->label('Amount')->sortable(),
-            ColumnBuilder::make('override_amount')->label('Override'),
-            ColumnBuilder::make('created_at')->label('Created')->sortable(),
+            ColumnBuilder::make('id', 'ID')->sortable()->build(),
+            ColumnBuilder::make('sale_id', 'Sale')->sortable()->build(),
+            ColumnBuilder::make('commission_type', 'Type')->sortable()->build(),
+            ColumnBuilder::make('agent_user_id', 'Agent')->build(),
+            ColumnBuilder::make('rate_percentage', 'Rate %')->sortable()->build(),
+            ColumnBuilder::make('amount', 'Amount')->currency('AUD')->sortable()->build(),
+            ColumnBuilder::make('override_amount', 'Override')->build(),
+            ColumnBuilder::make('created_at', 'Created')->sortable()->build(),
         ];
     }
 
@@ -116,7 +116,6 @@ final class CommissionDataTable extends AbstractDataTable
         return true;
     }
 
-    #[Override]
     public static function inertiaProps(Request $request): array
     {
         return [
@@ -143,7 +142,6 @@ final class CommissionDataTable extends AbstractDataTable
         return $request->user() !== null;
     }
 
-    #[Override]
     public static function tableExportName(): string
     {
         return 'commissions';

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Models\PuckTemplate;
+use App\Services\TenantContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -14,7 +15,7 @@ final class PuckTemplateController extends Controller
 {
     public function index(): Response
     {
-        $orgId = auth()->user()?->currentOrganization?->id;
+        $orgId = TenantContext::id();
 
         $templates = PuckTemplate::query()
             ->where(function ($q) use ($orgId) {
@@ -38,7 +39,7 @@ final class PuckTemplateController extends Controller
             'puck_content' => ['required', 'array'],
         ]);
 
-        $orgId = auth()->user()?->currentOrganization?->id;
+        $orgId = TenantContext::id();
 
         PuckTemplate::query()->create([
             ...$validated,

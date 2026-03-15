@@ -61,7 +61,7 @@ export default function ContactsIndexPage({
         {
             id: 'view',
             label: 'View / Edit',
-            onClick: (row) => router.visit(`/admin/contacts/${row.id}/edit`),
+            onClick: (row) => router.visit(`/contacts/${row.id}`),
         },
         {
             id: 'quick-edit-stage',
@@ -168,6 +168,8 @@ export default function ContactsIndexPage({
                     searchableColumns={searchableColumns}
                     debounceMs={300}
                     partialReloadKey="tableData"
+                    onRowClick={(row) => router.visit(`/contacts/${row.id}`)}
+                    aiBaseUrl="/data-table/ai/contacts"
                     actions={rowActions}
                     bulkActions={bulkActions}
                     emptyState={
@@ -198,6 +200,9 @@ export default function ContactsIndexPage({
                         emptyStateIllustration: true,
                         keyboardNavigation: true,
                         shortcutsOverlay: true,
+                        searchHighlight: true,
+                        stickyHeader: true,
+                        batchEdit: true,
                     }}
                     translations={{
                         noData: 'No contacts',

@@ -266,6 +266,14 @@
         "commissions": {
             "type": "hasMany",
             "model": "Commission"
+        },
+        "paymentStages": {
+            "type": "hasMany",
+            "model": "PaymentStage"
+        },
+        "dealDocuments": {
+            "type": "hasMany",
+            "model": "DealDocument"
         }
     },
     "value_hints": {

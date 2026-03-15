@@ -1,0 +1,49 @@
+{
+    "model": "ContactEmbedding",
+    "table": "contact_embeddings",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "contact_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "content": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "embedding": {
+            "type": "vector",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "contact": {
+            "type": "belongsTo",
+            "model": "Contact"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

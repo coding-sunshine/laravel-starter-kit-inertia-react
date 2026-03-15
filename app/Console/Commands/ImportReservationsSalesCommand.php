@@ -139,9 +139,9 @@ final class ImportReservationsSalesCommand extends Command
                     'lot_id' => isset($row['lot_id']) ? ($lotMap[$row['lot_id']] ?? null) : null,
                     'project_id' => isset($row['project_id']) ? ($projectMap[$row['project_id']] ?? null) : null,
                     'stage' => $row['stage'] ?? 'enquiry',
-                    'purchase_price' => $row['purchase_price'] ?? null,
-                    'deposit' => $row['deposit'] ?? null,
-                    'deposit_bal' => $row['deposit_bal'] ?? null,
+                    'purchase_price' => $this->numericOrNull($row['purchase_price'] ?? null),
+                    'deposit' => $this->numericOrNull($row['deposit'] ?? null),
+                    'deposit_bal' => $this->numericOrNull($row['deposit_bal'] ?? null),
                     'deposit_status' => $row['deposit_status'] ?? 'pending',
                     'finance_condition' => (bool) ($row['finance_condition'] ?? false),
                     'finance_days' => $row['finance_days'] ?? null,
@@ -242,7 +242,9 @@ final class ImportReservationsSalesCommand extends Command
             $query->where('updated_at', '>=', $since);
         }
 
-        return $this->runImport(
+        $commissionCount = 0;
+
+        $result = $this->runImport(
             query: $query,
             logKey: 'sales',
             dryRun: $dryRun,
@@ -267,15 +269,15 @@ final class ImportReservationsSalesCommand extends Command
                     'status' => $row['status'] ?? 'active',
                     'comm_in_notes' => $row['comm_in_notes'] ?? null,
                     'comm_out_notes' => $row['comm_out_notes'] ?? null,
-                    'piab_comm' => $row['piab_comm'] ?? null,
-                    'subscriber_comm' => $row['subscriber_comm'] ?? null,
-                    'sales_agent_comm' => $row['sales_agent_comm'] ?? null,
-                    'bdm_comm' => $row['bdm_comm'] ?? null,
-                    'referral_partner_comm' => $row['referral_partner_comm'] ?? null,
-                    'affiliate_comm' => $row['affiliate_comm'] ?? null,
-                    'agent_comm' => $row['agent_comm'] ?? null,
-                    'comms_in_total' => $row['comms_in_total'] ?? null,
-                    'comms_out_total' => $row['comms_out_total'] ?? null,
+                    'piab_comm' => $this->numericOrNull($row['piab_comm'] ?? null),
+                    'subscriber_comm' => $this->numericOrNull($row['subscriber_comm'] ?? null),
+                    'sales_agent_comm' => $this->numericOrNull($row['sales_agent_comm'] ?? null),
+                    'bdm_comm' => $this->numericOrNull($row['bdm_comm'] ?? null),
+                    'referral_partner_comm' => $this->numericOrNull($row['referral_partner_comm'] ?? null),
+                    'affiliate_comm' => $this->numericOrNull($row['affiliate_comm'] ?? null),
+                    'agent_comm' => $this->numericOrNull($row['agent_comm'] ?? null),
+                    'comms_in_total' => $this->numericOrNull($row['comms_in_total'] ?? null),
+                    'comms_out_total' => $this->numericOrNull($row['comms_out_total'] ?? null),
                     'settled_at' => $row['settled_at'] ?? null,
                     'summary_note' => $row['summary_note'] ?? null,
                     'is_comments_enabled' => (bool) ($row['is_comments_enabled'] ?? true),
@@ -286,56 +288,134 @@ final class ImportReservationsSalesCommand extends Command
             },
             upsertKey: 'legacy_id',
             targetTable: 'sales',
-        );
-    }
-
-    private function importCommissions(bool $dryRun, int $chunk, ?string $since, bool $force): int
-    {
-        $this->info('Importing commissions...');
-
-        // Build sale legacy_id → new sale id map
-        $saleMap = DB::table('sales')
-            ->whereNotNull('legacy_id')
-            ->pluck('id', 'legacy_id')
-            ->all();
-
-        $query = DB::connection('mysql_legacy')->table('commissions');
-        if ($since) {
-            $query->where('updated_at', '>=', $since);
-        }
-
-        return $this->runImport(
-            query: $query,
-            logKey: 'commissions',
-            dryRun: $dryRun,
-            chunk: $chunk,
-            force: $force,
-            mapRow: function (array $row) use ($saleMap): ?array {
-                $saleId = $saleMap[$row['sale_id'] ?? 0] ?? null;
-                if ($saleId === null) {
-                    Log::warning("fusion:import commissions: no sale found for legacy sale_id {$row['sale_id']}");
-
-                    return null;
+            afterUpsert: $dryRun ? null : function (array $mapped) use (&$commissionCount): void {
+                // Generate commission records from the sale's own commission columns
+                $sale = DB::table('sales')->where('legacy_id', $mapped['legacy_id'])->first();
+                if (! $sale) {
+                    return;
                 }
 
-                return [
-                    'sale_id' => $saleId,
-                    'commission_type' => $row['commission_type'] ?? 'piab',
-                    'rate_percentage' => $row['rate_percentage'] ?? null,
-                    'amount' => $row['amount'] ?? 0,
-                    'override_amount' => (bool) ($row['override_amount'] ?? false),
-                    'notes' => $row['notes'] ?? null,
-                    'created_at' => $row['created_at'] ?? now(),
-                    'updated_at' => $row['updated_at'] ?? now(),
+                $commissionTypes = [
+                    'piab' => 'piab_comm',
+                    'affiliate' => 'affiliate_comm',
+                    'subscriber' => 'subscriber_comm',
+                    'sales_agent' => 'sales_agent_comm',
+                    'bdm' => 'bdm_comm',
+                    'referral_partner' => 'referral_partner_comm',
+                    'agent' => 'agent_comm',
                 ];
+
+                foreach ($commissionTypes as $type => $column) {
+                    $amount = $mapped[$column] ?? null;
+                    if ($amount !== null && $amount > 0) {
+                        DB::table('commissions')->updateOrInsert(
+                            ['sale_id' => $sale->id, 'commission_type' => $type],
+                            [
+                                'sale_id' => $sale->id,
+                                'commission_type' => $type,
+                                'amount' => $amount,
+                                'rate_percentage' => null,
+                                'override_amount' => false,
+                                'created_at' => $mapped['created_at'],
+                                'updated_at' => $mapped['updated_at'],
+                            ]
+                        );
+                        $commissionCount++;
+                    }
+                }
             },
-            upsertKey: null,
-            targetTable: 'commissions',
         );
+
+        if (! $dryRun) {
+            $this->info("[commissions] Generated from sales columns: {$commissionCount}");
+        }
+
+        return $result;
+    }
+
+    /**
+     * @deprecated Commission records are now generated from sales columns in importSales().
+     *             This method is kept for backwards compatibility with the --table=commissions flag.
+     */
+    private function importCommissions(bool $dryRun, int $chunk, ?string $since, bool $force): int
+    {
+        $this->info('Generating commissions from imported sales...');
+
+        if ($dryRun) {
+            $this->info('[DRY RUN] Skipping commission generation.');
+
+            return 0;
+        }
+
+        $commissionCount = 0;
+        $failed = 0;
+
+        $commissionTypes = [
+            'piab' => 'piab_comm',
+            'affiliate' => 'affiliate_comm',
+            'subscriber' => 'subscriber_comm',
+            'sales_agent' => 'sales_agent_comm',
+            'bdm' => 'bdm_comm',
+            'referral_partner' => 'referral_partner_comm',
+            'agent' => 'agent_comm',
+        ];
+
+        $total = DB::table('sales')->whereNotNull('legacy_id')->count();
+        $bar = $this->output->createProgressBar($total);
+        $bar->start();
+
+        DB::table('sales')->whereNotNull('legacy_id')->orderBy('id')->chunk($chunk, function ($sales) use (
+            $commissionTypes, &$commissionCount, &$failed, $bar
+        ) {
+            foreach ($sales as $sale) {
+                try {
+                    DB::transaction(function () use ($sale, $commissionTypes, &$commissionCount) {
+                        foreach ($commissionTypes as $type => $column) {
+                            $amount = $sale->$column ?? null;
+                            if ($amount !== null && $amount > 0) {
+                                DB::table('commissions')->updateOrInsert(
+                                    ['sale_id' => $sale->id, 'commission_type' => $type],
+                                    [
+                                        'sale_id' => $sale->id,
+                                        'commission_type' => $type,
+                                        'amount' => (float) $amount,
+                                        'rate_percentage' => null,
+                                        'override_amount' => false,
+                                        'created_at' => $sale->created_at ?? now(),
+                                        'updated_at' => $sale->updated_at ?? now(),
+                                    ]
+                                );
+                                $commissionCount++;
+                            }
+                        }
+                    });
+                } catch (Throwable $e) {
+                    $failed++;
+                    Log::warning("fusion:import [commissions] sale {$sale->id} failed: {$e->getMessage()}");
+                }
+                $bar->advance();
+            }
+        });
+
+        $bar->finish();
+        $this->newLine();
+        $this->info("[commissions] Generated: {$commissionCount} | Failed: {$failed}");
+
+        return $failed;
+    }
+
+    private function numericOrNull(mixed $value): ?float
+    {
+        if ($value === null || $value === '' || $value === ' ') {
+            return null;
+        }
+
+        return is_numeric($value) ? (float) $value : null;
     }
 
     /**
      * @param  callable(array): ?array  $mapRow
+     * @param  (callable(array): void)|null  $afterUpsert
      */
     private function runImport(
         \Illuminate\Database\Query\Builder $query,
@@ -346,6 +426,7 @@ final class ImportReservationsSalesCommand extends Command
         callable $mapRow,
         ?string $upsertKey,
         string $targetTable,
+        ?callable $afterUpsert = null,
     ): int {
         $total = $query->count();
         $processed = 0;
@@ -356,21 +437,20 @@ final class ImportReservationsSalesCommand extends Command
         $bar->start();
 
         $query->orderBy('id')->chunk($chunk, function ($rows) use (
-            $dryRun, $logKey, $mapRow, $upsertKey, $targetTable,
+            $dryRun, $logKey, $mapRow, $upsertKey, $targetTable, $afterUpsert,
             &$processed, &$skipped, &$failed, $bar
         ) {
-            DB::beginTransaction();
-            try {
-                foreach ($rows as $row) {
-                    try {
-                        $mapped = $mapRow((array) $row);
-                        if ($mapped === null) {
-                            $skipped++;
-                            $bar->advance();
+            foreach ($rows as $row) {
+                try {
+                    $mapped = $mapRow((array) $row);
+                    if ($mapped === null) {
+                        $skipped++;
+                        $bar->advance();
 
-                            continue;
-                        }
-                        if (! $dryRun) {
+                        continue;
+                    }
+                    if (! $dryRun) {
+                        DB::transaction(function () use ($targetTable, $upsertKey, $mapped, $afterUpsert): void {
                             if ($upsertKey !== null) {
                                 DB::table($targetTable)->updateOrInsert(
                                     [$upsertKey => $mapped[$upsertKey]],
@@ -379,21 +459,18 @@ final class ImportReservationsSalesCommand extends Command
                             } else {
                                 DB::table($targetTable)->insert($mapped);
                             }
-                        }
-                        $processed++;
-                    } catch (Throwable $e) {
-                        $failed++;
-                        Log::warning("fusion:import [{$logKey}] row {$row->id} failed: {$e->getMessage()}");
+
+                            if ($afterUpsert !== null) {
+                                $afterUpsert($mapped);
+                            }
+                        });
                     }
-                    $bar->advance();
+                    $processed++;
+                } catch (Throwable $e) {
+                    $failed++;
+                    Log::warning("fusion:import [{$logKey}] row {$row->id} failed: {$e->getMessage()}");
                 }
-                if (! $dryRun) {
-                    DB::commit();
-                }
-            } catch (Throwable $e) {
-                DB::rollBack();
-                $this->error("Chunk failed: {$e->getMessage()}");
-                $failed += count($rows);
+                $bar->advance();
             }
         });
 

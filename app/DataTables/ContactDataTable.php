@@ -11,6 +11,7 @@ use Machour\DataTable\AbstractDataTable;
 use Machour\DataTable\Columns\ColumnBuilder;
 use Machour\DataTable\Concerns\HasAi;
 use Machour\DataTable\Concerns\HasExport;
+use Machour\DataTable\Concerns\HasInlineEdit;
 use Machour\DataTable\QuickView;
 use Override;
 use Spatie\QueryBuilder\AllowedFilter;
@@ -21,6 +22,7 @@ final class ContactDataTable extends AbstractDataTable
 {
     use HasAi;
     use HasExport;
+    use HasInlineEdit;
 
     #[Override]
     protected static ?int $defaultPerPage = 25;
@@ -63,17 +65,17 @@ final class ContactDataTable extends AbstractDataTable
     public static function tableColumns(): array
     {
         return [
-            ColumnBuilder::make('id')->label('ID')->sortable(),
-            ColumnBuilder::make('first_name')->label('First Name')->sortable()->searchable(),
-            ColumnBuilder::make('last_name')->label('Last Name')->sortable()->searchable(),
-            ColumnBuilder::make('type')->label('Type')->sortable(),
-            ColumnBuilder::make('stage')->label('Stage')->sortable(),
-            ColumnBuilder::make('contact_origin')->label('Origin')->sortable(),
-            ColumnBuilder::make('company_name')->label('Company')->searchable(),
-            ColumnBuilder::make('lead_score')->label('Score')->sortable(),
-            ColumnBuilder::make('last_contacted_at')->label('Last Contacted')->sortable(),
-            ColumnBuilder::make('next_followup_at')->label('Next Follow-up')->sortable(),
-            ColumnBuilder::make('created_at')->label('Created')->sortable(),
+            ColumnBuilder::make('id', 'ID')->sortable()->build(),
+            ColumnBuilder::make('first_name', 'First Name')->sortable()->build(),
+            ColumnBuilder::make('last_name', 'Last Name')->sortable()->build(),
+            ColumnBuilder::make('type', 'Type')->sortable()->build(),
+            ColumnBuilder::make('stage', 'Stage')->sortable()->editable()->build(),
+            ColumnBuilder::make('contact_origin', 'Origin')->sortable()->build(),
+            ColumnBuilder::make('company_name', 'Company')->build(),
+            ColumnBuilder::make('lead_score', 'Score')->sortable()->editable()->build(),
+            ColumnBuilder::make('last_contacted_at', 'Last Contacted')->sortable()->build(),
+            ColumnBuilder::make('next_followup_at', 'Next Follow-up')->sortable()->editable()->build(),
+            ColumnBuilder::make('created_at', 'Created')->sortable()->build(),
         ];
     }
 
@@ -131,12 +133,46 @@ final class ContactDataTable extends AbstractDataTable
         return true;
     }
 
-    #[Override]
     public static function inertiaProps(Request $request): array
     {
         return [
             'tableData' => self::makeTable($request)->toArray(),
             'searchableColumns' => self::tableSearchableColumns(),
+        ];
+    }
+
+    public static function tableInlineEditModel(): string
+    {
+        return Contact::class;
+    }
+
+    public static function tableAnalytics(): array
+    {
+        return [
+            [
+                'label' => 'Total Contacts',
+                'value' => Contact::query()->count(),
+                'icon' => 'users',
+                'color' => 'blue',
+            ],
+            [
+                'label' => 'New This Week',
+                'value' => Contact::query()->where('created_at', '>=', now()->subWeek())->count(),
+                'icon' => 'user-plus',
+                'color' => 'green',
+            ],
+            [
+                'label' => 'Hot Leads',
+                'value' => Contact::query()->where('stage', 'hot')->count(),
+                'icon' => 'flame',
+                'color' => 'red',
+            ],
+            [
+                'label' => 'Avg Lead Score',
+                'value' => (int) Contact::query()->whereNotNull('lead_score')->avg('lead_score'),
+                'icon' => 'target',
+                'color' => 'amber',
+            ],
         ];
     }
 
@@ -158,13 +194,11 @@ final class ContactDataTable extends AbstractDataTable
         return $request->user() !== null;
     }
 
-    #[Override]
     public static function tableExportName(): string
     {
         return 'contacts';
     }
 
-    #[Override]
     public static function tableAiSystemContext(): string
     {
         return 'You are analyzing a CRM contacts table for a real estate agency. Contacts represent buyers, investors, and vendors. Key fields: stage (new/qualified/hot/warm/cold/dead), lead_score (0–100, AI-generated), last_contacted_at (days since last interaction). Help agents identify who to follow up with and surface pipeline insights.';

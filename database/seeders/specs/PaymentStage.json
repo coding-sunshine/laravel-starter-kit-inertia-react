@@ -1,4 +1,71 @@
 {
     "model": "PaymentStage",
-    "fields": []
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "sale_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "stage": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "amount": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "due_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "paid_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "notes": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "sale": {
+            "type": "belongsTo",
+            "model": "Sale"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": {
+        "paid_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        }
+    }
 }

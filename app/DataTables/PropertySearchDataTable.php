@@ -37,8 +37,8 @@ final class PropertySearchDataTable extends AbstractDataTable
             id: $model->id,
             client_contact_id: $model->client_contact_id,
             agent_contact_id: $model->agent_contact_id,
-            budget_min: $model->budget_min,
-            budget_max: $model->budget_max,
+            budget_min: is_numeric($model->budget_min) ? (float) $model->budget_min : null,
+            budget_max: is_numeric($model->budget_max) ? (float) $model->budget_max : null,
             created_at: $model->created_at?->format('Y-m-d H:i'),
         );
     }
@@ -47,12 +47,12 @@ final class PropertySearchDataTable extends AbstractDataTable
     public static function tableColumns(): array
     {
         return [
-            ColumnBuilder::make('id')->label('ID')->sortable(),
-            ColumnBuilder::make('client_contact_id')->label('Client'),
-            ColumnBuilder::make('agent_contact_id')->label('Agent'),
-            ColumnBuilder::make('budget_min')->label('Budget Min')->sortable(),
-            ColumnBuilder::make('budget_max')->label('Budget Max')->sortable(),
-            ColumnBuilder::make('created_at')->label('Created')->sortable(),
+            ColumnBuilder::make('id', 'ID')->sortable()->build(),
+            ColumnBuilder::make('client_contact_id', 'Client')->build(),
+            ColumnBuilder::make('agent_contact_id', 'Agent')->build(),
+            ColumnBuilder::make('budget_min', 'Budget Min')->sortable()->build(),
+            ColumnBuilder::make('budget_max', 'Budget Max')->sortable()->build(),
+            ColumnBuilder::make('created_at', 'Created')->sortable()->build(),
         ];
     }
 
@@ -82,7 +82,6 @@ final class PropertySearchDataTable extends AbstractDataTable
         return false;
     }
 
-    #[Override]
     public static function inertiaProps(Request $request): array
     {
         return [

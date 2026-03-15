@@ -45,9 +45,9 @@ final class SaleReportDataTable extends AbstractDataTable
             project_name: $model->lot?->project?->name,
             status: $model->status,
             agent_name: $model->salesAgentContact ? ($model->salesAgentContact->first_name.' '.$model->salesAgentContact->last_name) : null,
-            comms_in_total: $model->comms_in_total,
-            comms_out_total: $model->comms_out_total,
-            commission_total: $model->commissions()->sum('amount'),
+            comms_in_total: is_numeric($model->comms_in_total) ? (float) $model->comms_in_total : null,
+            comms_out_total: is_numeric($model->comms_out_total) ? (float) $model->comms_out_total : null,
+            commission_total: is_numeric($total = $model->commissions()->sum('amount')) ? (float) $total : null,
             settled_at: $model->settled_at?->format('Y-m-d'),
             created_at: $model->created_at?->format('Y-m-d'),
         );
@@ -57,16 +57,16 @@ final class SaleReportDataTable extends AbstractDataTable
     public static function tableColumns(): array
     {
         return [
-            ColumnBuilder::make('id')->label('ID')->sortable(),
-            ColumnBuilder::make('contact_name')->label('Contact')->searchable(),
-            ColumnBuilder::make('project_name')->label('Project'),
-            ColumnBuilder::make('status')->label('Status')->sortable(),
-            ColumnBuilder::make('agent_name')->label('Agent'),
-            ColumnBuilder::make('comms_in_total')->label('Comms In')->sortable(),
-            ColumnBuilder::make('comms_out_total')->label('Comms Out')->sortable(),
-            ColumnBuilder::make('commission_total')->label('Commission Total'),
-            ColumnBuilder::make('settled_at')->label('Settled')->sortable(),
-            ColumnBuilder::make('created_at')->label('Created')->sortable(),
+            ColumnBuilder::make('id', 'ID')->sortable()->build(),
+            ColumnBuilder::make('contact_name', 'Contact')->build(),
+            ColumnBuilder::make('project_name', 'Project')->build(),
+            ColumnBuilder::make('status', 'Status')->sortable()->build(),
+            ColumnBuilder::make('agent_name', 'Agent')->build(),
+            ColumnBuilder::make('comms_in_total', 'Comms In')->currency('AUD')->sortable()->build(),
+            ColumnBuilder::make('comms_out_total', 'Comms Out')->currency('AUD')->sortable()->build(),
+            ColumnBuilder::make('commission_total', 'Commission Total')->currency('AUD')->build(),
+            ColumnBuilder::make('settled_at', 'Settled')->sortable()->build(),
+            ColumnBuilder::make('created_at', 'Created')->sortable()->build(),
         ];
     }
 
@@ -78,7 +78,6 @@ final class SaleReportDataTable extends AbstractDataTable
         ];
     }
 
-    #[Override]
     public static function inertiaProps(Request $request): array
     {
         return [
@@ -105,13 +104,11 @@ final class SaleReportDataTable extends AbstractDataTable
         return $request->user() !== null;
     }
 
-    #[Override]
     public static function tableExportName(): string
     {
         return 'sales-report';
     }
 
-    #[Override]
     public static function tableAiSystemContext(): string
     {
         return 'You are analyzing a property sales and commission report for management. Key fields: comms_in_total, comms_out_total, commission_total (sum of all agent commissions), agent, settled_at, project. Calculate totals, compare agent performance, and identify commission trends.';

@@ -4,7 +4,7 @@
     "fields": {
         "id": {
             "type": "bigint",
-            "nullable": false,
+            "nullable": true,
             "default": null
         },
         "organization_id": {
@@ -14,7 +14,7 @@
         },
         "xero_tenant_id": {
             "type": "string",
-            "nullable": false,
+            "nullable": true,
             "default": null
         },
         "xero_tenant_name": {
@@ -68,13 +68,20 @@
             "default": null
         }
     },
-    "relationships": [
-        {
+    "relationships": {
+        "organization": {
             "type": "belongsTo",
-            "model": "Organization",
-            "foreign_key": "organization_id"
+            "model": "Organization"
+        },
+        "xeroContacts": {
+            "type": "hasMany",
+            "model": "XeroContact"
+        },
+        "xeroInvoices": {
+            "type": "hasMany",
+            "model": "XeroInvoice"
         }
-    ],
+    },
     "value_hints": {
         "xero_tenant_id": {
             "type": "uuid",
@@ -82,7 +89,19 @@
         },
         "xero_tenant_name": {
             "type": "name",
-            "example": "Demo Org Ltd"
+            "example": "John Doe"
+        },
+        "token_expires_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        },
+        "connected_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        },
+        "disconnected_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
         }
     },
     "scenarios": []

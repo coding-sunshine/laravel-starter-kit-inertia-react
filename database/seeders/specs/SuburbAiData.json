@@ -2,23 +2,115 @@
     "model": "SuburbAiData",
     "table": "suburb_ai_data",
     "fields": {
-        "id": { "type": "bigint", "nullable": false, "default": null },
-        "organization_id": { "type": "bigint", "nullable": true, "default": null },
-        "suburb_id": { "type": "bigint", "nullable": true, "default": null },
-        "suburb_name": { "type": "string", "nullable": false, "default": null },
-        "state": { "type": "string", "nullable": true, "default": null },
-        "postcode": { "type": "string", "nullable": true, "default": null },
-        "source": { "type": "string", "nullable": false, "default": "ai" },
-        "median_house_price": { "type": "decimal", "nullable": true, "default": null },
-        "median_unit_price": { "type": "decimal", "nullable": true, "default": null },
-        "median_rent_house": { "type": "decimal", "nullable": true, "default": null },
-        "median_rent_unit": { "type": "decimal", "nullable": true, "default": null },
-        "rental_yield": { "type": "decimal", "nullable": true, "default": null },
-        "annual_growth": { "type": "decimal", "nullable": true, "default": null },
-        "price_rent_json": { "type": "json", "nullable": true, "default": null },
-        "ai_insights": { "type": "json", "nullable": true, "default": null },
-        "fetched_at": { "type": "timestamp", "nullable": true, "default": null },
-        "created_at": { "type": "timestamp", "nullable": true, "default": null },
-        "updated_at": { "type": "timestamp", "nullable": true, "default": null }
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "suburb_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "suburb_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "state": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "postcode": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "source": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "median_house_price": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "median_unit_price": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "median_rent_house": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "median_rent_unit": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "rental_yield": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "annual_growth": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "price_rent_json": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "ai_insights": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "fetched_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "suburb": {
+            "type": "belongsTo",
+            "model": "Suburb"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": {
+        "fetched_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        },
+        "suburb_name": {
+            "type": "name",
+            "example": "John Doe"
+        }
     }
 }

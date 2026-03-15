@@ -22,6 +22,7 @@ export interface LotsTableRow {
     title_status: string;
     weekly_rent: number | null;
     is_archived: boolean;
+    image: string | null;
     created_at: string | null;
 }
 
@@ -69,6 +70,7 @@ export default function LotsIndexPage({
                     searchableColumns={searchableColumns}
                     debounceMs={300}
                     partialReloadKey="tableData"
+                    aiBaseUrl="/data-table/ai/lots"
                     emptyState={
                         <div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
                             <div className="rounded-full bg-muted p-4">
@@ -97,6 +99,8 @@ export default function LotsIndexPage({
                         emptyStateIllustration: true,
                         keyboardNavigation: true,
                         shortcutsOverlay: true,
+                        searchHighlight: true,
+                        stickyHeader: true,
                     }}
                     translations={{
                         noData: 'No lots',

@@ -297,6 +297,17 @@ final class User extends Authenticatable implements ExportsPersonalData, Filamen
     }
 
     /**
+     * Projects this user has favourited.
+     *
+     * @return BelongsToMany<Project, $this>
+     */
+    public function favouriteProjects(): BelongsToMany
+    {
+        return $this->belongsToMany(Project::class, 'user_project_favourites')
+            ->withPivot('created_at');
+    }
+
+    /**
      * Organizations this user belongs to.
      *
      * @return BelongsToMany<Organization, $this>

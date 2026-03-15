@@ -59,15 +59,15 @@ final class TaskDataTable extends AbstractDataTable
     public static function tableColumns(): array
     {
         return [
-            ColumnBuilder::make('id')->label('ID')->sortable(),
-            ColumnBuilder::make('title')->label('Title')->sortable()->searchable(),
-            ColumnBuilder::make('contact_name')->label('Contact')->searchable(),
-            ColumnBuilder::make('type')->label('Type')->sortable(),
-            ColumnBuilder::make('priority')->label('Priority')->sortable(),
-            ColumnBuilder::make('due_at')->label('Due Date')->sortable(),
-            ColumnBuilder::make('is_completed')->label('Completed')->sortable(),
-            ColumnBuilder::make('completed_at')->label('Completed At')->sortable(),
-            ColumnBuilder::make('created_at')->label('Created')->sortable(),
+            ColumnBuilder::make('id', 'ID')->sortable()->build(),
+            ColumnBuilder::make('title', 'Title')->sortable()->build(),
+            ColumnBuilder::make('contact_name', 'Contact')->build(),
+            ColumnBuilder::make('type', 'Type')->sortable()->build(),
+            ColumnBuilder::make('priority', 'Priority')->sortable()->build(),
+            ColumnBuilder::make('due_at', 'Due Date')->sortable()->build(),
+            ColumnBuilder::make('is_completed', 'Completed')->sortable()->build(),
+            ColumnBuilder::make('completed_at', 'Completed At')->sortable()->build(),
+            ColumnBuilder::make('created_at', 'Created')->sortable()->build(),
         ];
     }
 
@@ -117,7 +117,6 @@ final class TaskDataTable extends AbstractDataTable
         return true;
     }
 
-    #[Override]
     public static function inertiaProps(Request $request): array
     {
         return [
@@ -144,7 +143,6 @@ final class TaskDataTable extends AbstractDataTable
         return $request->user() !== null;
     }
 
-    #[Override]
     public static function tableExportName(): string
     {
         return 'tasks';

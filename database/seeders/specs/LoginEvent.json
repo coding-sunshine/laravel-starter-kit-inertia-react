@@ -39,6 +39,31 @@
             "type": "timestamp",
             "nullable": true,
             "default": null
+        },
+        "browser_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "browser_version": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "os_name": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "os_version": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "device_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {
@@ -47,5 +72,14 @@
             "model": "User"
         }
     },
-    "value_hints": []
+    "value_hints": {
+        "browser_name": {
+            "type": "name",
+            "example": "John Doe"
+        },
+        "os_name": {
+            "type": "name",
+            "example": "John Doe"
+        }
+    }
 }

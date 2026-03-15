@@ -215,8 +215,7 @@
         "Migrations run (if any): php artisan migrate --force"
       ],
       "priority": 12,
-      "passes": true,
-      "inProgress": false
+      "passes": true
     },
     {
       "id": "US-013",
@@ -232,7 +231,7 @@
         "Migrations run (if any): php artisan migrate --force"
       ],
       "priority": 13,
-      "passes": false
+      "passes": true
     },
     {
       "id": "US-014",
@@ -248,7 +247,7 @@
         "Migrations run (if any): php artisan migrate --force"
       ],
       "priority": 14,
-      "passes": false
+      "passes": true
     },
     {
       "id": "US-015",
@@ -263,7 +262,7 @@
         "Migrations run (if any): php artisan migrate --force"
       ],
       "priority": 15,
-      "passes": false
+      "passes": true
     },
     {
       "id": "US-016",
@@ -278,7 +277,7 @@
         "Migrations run (if any): php artisan migrate --force"
       ],
       "priority": 16,
-      "passes": false
+      "passes": true
     },
     {
       "id": "US-017",
@@ -296,7 +295,7 @@
         "Migrations run (if any): php artisan migrate --force"
       ],
       "priority": 17,
-      "passes": false
+      "passes": true
     },
     {
       "id": "US-018",
@@ -313,7 +312,7 @@
         "Migrations run (if any): php artisan migrate --force"
       ],
       "priority": 18,
-      "passes": false
+      "passes": true
     },
     {
       "id": "US-019",
@@ -329,7 +328,7 @@
         "Migrations run (if any): php artisan migrate --force"
       ],
       "priority": 19,
-      "passes": false
+      "passes": true
     },
     {
       "id": "US-020",
@@ -345,7 +344,7 @@
         "Scripts are production-ready but sync is opt-in"
       ],
       "priority": 20,
-      "passes": false
+      "passes": true
     }
   ]
 }

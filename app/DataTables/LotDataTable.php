@@ -15,6 +15,7 @@ use Machour\DataTable\QuickView;
 use Override;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\TypeScriptTransformer\Attributes\TypeScript;
+use Throwable;
 
 #[TypeScript]
 final class LotDataTable extends AbstractDataTable
@@ -42,6 +43,7 @@ final class LotDataTable extends AbstractDataTable
         public string $title_status,
         public ?float $weekly_rent,
         public bool $is_archived,
+        public ?string $image,
         public ?string $created_at,
     ) {}
 
@@ -55,12 +57,13 @@ final class LotDataTable extends AbstractDataTable
             bedrooms: $model->bedrooms,
             bathrooms: $model->bathrooms,
             car: $model->car,
-            internal: $model->internal !== null ? (float) $model->internal : null,
-            total: $model->total !== null ? (float) $model->total : null,
-            price: $model->price !== null ? (float) $model->price : null,
+            internal: is_numeric($model->internal) ? (float) $model->internal : null,
+            total: is_numeric($model->total) ? (float) $model->total : null,
+            price: is_numeric($model->price) ? (float) $model->price : null,
             title_status: $model->title_status,
-            weekly_rent: $model->weekly_rent !== null ? (float) $model->weekly_rent : null,
+            weekly_rent: is_numeric($model->weekly_rent) ? (float) $model->weekly_rent : null,
             is_archived: $model->is_archived,
+            image: self::safeProjectMediaUrl($model),
             created_at: $model->created_at?->format('Y-m-d H:i'),
         );
     }
@@ -68,6 +71,9 @@ final class LotDataTable extends AbstractDataTable
     public static function tableColumns(): array
     {
         return [
+            ColumnBuilder::make('image', 'Photo')
+                ->image()
+                ->build(),
             ColumnBuilder::make('id', 'ID')
                 ->number()
                 ->sortable()
@@ -110,7 +116,7 @@ final class LotDataTable extends AbstractDataTable
                 ->sortable()
                 ->build(),
             ColumnBuilder::make('price', 'Price')
-                ->money()
+                ->currency('AUD')
                 ->sortable()
                 ->build(),
             ColumnBuilder::make('title_status', 'Status')
@@ -192,9 +198,14 @@ final class LotDataTable extends AbstractDataTable
         ];
     }
 
+    public static function tableDefaultLayout(): string
+    {
+        return 'cards';
+    }
+
     public static function tableBaseQuery(): Builder
     {
-        return Lot::query()->with('project');
+        return Lot::query()->with(['project', 'project.media']);
     }
 
     public static function tableDefaultSort(): string
@@ -215,5 +226,20 @@ final class LotDataTable extends AbstractDataTable
     public static function tableAiSystemContext(): string
     {
         return 'You are analyzing a lot/unit inventory for a property development project. Each lot has bed/bath/car counts, size in m², price, and a status (available/reserved/sold). Help agents identify lots that match specific buyer criteria (budget, size, bedrooms).';
+    }
+
+    private static function safeProjectMediaUrl(Lot $model): ?string
+    {
+        if (! $model->relationLoaded('project') || $model->project === null) {
+            return null;
+        }
+
+        try {
+            $url = $model->project->getFirstMediaUrl('photo');
+
+            return $url !== '' ? $url : null;
+        } catch (Throwable) {
+            return null;
+        }
     }
 }

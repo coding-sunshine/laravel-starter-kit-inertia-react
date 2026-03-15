@@ -7,6 +7,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
@@ -19,11 +20,13 @@ use Spatie\Activitylog\Traits\LogsActivity;
  * @property int $order_column
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
+ * @property \Carbon\Carbon|null $deleted_at
  */
 final class ContactPhone extends Model
 {
     use HasFactory;
     use LogsActivity;
+    use SoftDeletes;
 
     /**
      * @var array<int, string>

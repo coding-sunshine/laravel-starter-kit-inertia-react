@@ -15,6 +15,8 @@ use Laravel\Scout\Searchable;
 use Mattiverse\Userstamps\Traits\Userstamps;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\ModelStates\HasStates;
 
 /**
@@ -29,10 +31,11 @@ use Spatie\ModelStates\HasStates;
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
  */
-final class Sale extends Model
+final class Sale extends Model implements HasMedia
 {
     use HasFactory;
     use HasStates;
+    use InteractsWithMedia;
     use LogsActivity;
     use Searchable;
     use SoftDeletes;
@@ -212,6 +215,12 @@ final class Sale extends Model
     public function dealDocuments(): HasMany
     {
         return $this->hasMany(DealDocument::class, 'deal_id')->where('deal_type', 'sale');
+    }
+
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('documents');
+        $this->addMediaCollection('contracts');
     }
 
     public function getActivitylogOptions(): LogOptions

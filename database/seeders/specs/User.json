@@ -111,12 +111,26 @@
             "type": "bigint",
             "nullable": true,
             "default": null
+        },
+        "created_via": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "eway_token_customer_id": {
+            "type": "string",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {
         "contact": {
             "type": "belongsTo",
             "model": "Contact"
+        },
+        "favouriteProjects": {
+            "type": "belongsToMany",
+            "model": "FavouriteProject"
         },
         "organizations": {
             "type": "belongsToMany",

@@ -221,6 +221,10 @@
         "project": {
             "type": "belongsTo",
             "model": "Project"
+        },
+        "dealDocuments": {
+            "type": "hasMany",
+            "model": "DealDocument"
         }
     },
     "value_hints": {

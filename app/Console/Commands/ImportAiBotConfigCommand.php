@@ -63,19 +63,21 @@ final class ImportAiBotConfigCommand extends Command
             ->chunk($chunk, function ($rows) use ($dryRun, $force, &$failed) {
                 foreach ($rows as $row) {
                     try {
+                        $catName = $row->title ?? $row->name ?? 'Category '.$row->id;
+
                         if ($dryRun) {
-                            $this->line("  [DRY] Category: {$row->name}");
+                            $this->line("  [DRY] Category: {$catName}");
 
                             continue;
                         }
 
                         $data = [
-                            'name' => $row->name,
-                            'slug' => $row->slug ?? \Illuminate\Support\Str::slug($row->name),
-                            'description' => $row->description ?? null,
+                            'name' => $catName,
+                            'slug' => \Illuminate\Support\Str::slug($catName),
+                            'description' => $row->sub_title ?? $row->description ?? null,
                             'icon' => $row->icon ?? null,
-                            'is_system' => $row->is_system ?? false,
-                            'is_active' => $row->is_active ?? true,
+                            'is_system' => false,
+                            'is_active' => ($row->status ?? 1) === 1,
                         ];
 
                         if ($force) {
@@ -115,26 +117,29 @@ final class ImportAiBotConfigCommand extends Command
             ->chunk($chunk, function ($rows) use ($dryRun, $force, &$failed) {
                 foreach ($rows as $row) {
                     try {
+                        $botName = $row->title ?? $row->name ?? 'Bot '.$row->id;
+
                         if ($dryRun) {
-                            $this->line("  [DRY] Bot: {$row->name}");
+                            $this->line("  [DRY] Bot: {$botName}");
 
                             continue;
                         }
 
                         $categoryId = null;
-                        if (! empty($row->category_id)) {
-                            $cat = DB::table('ai_bot_categories')->where('slug', 'general')->first();
-                            $categoryId = $cat?->id;
+                        if (! empty($row->ai_bot_category_id ?? $row->category_id)) {
+                            $legacyCatId = $row->ai_bot_category_id ?? $row->category_id;
+                            // Try to match by position/order since IDs may differ
+                            $categoryId = DB::table('ai_bot_categories')->skip((int) $legacyCatId - 1)->value('id');
                         }
 
                         $data = [
                             'category_id' => $categoryId,
-                            'name' => $row->name,
-                            'slug' => $row->slug ?? \Illuminate\Support\Str::slug($row->name),
-                            'description' => $row->description ?? null,
-                            'icon' => $row->icon ?? null,
-                            'is_system' => $row->is_system ?? false,
-                            'is_active' => $row->is_active ?? true,
+                            'name' => $botName,
+                            'slug' => \Illuminate\Support\Str::slug($botName).'-'.$row->id,
+                            'description' => $row->description ?? $row->page_overview ?? null,
+                            'icon' => null,
+                            'is_system' => false,
+                            'is_active' => ($row->status ?? 1) === 1,
                         ];
 
                         if ($force) {
@@ -180,30 +185,35 @@ final class ImportAiBotConfigCommand extends Command
             ->chunk($chunk, function ($rows) use ($dryRun, $force, &$failed) {
                 foreach ($rows as $row) {
                     try {
+                        $promptText = $row->prompt_command ?? $row->prompt ?? $row->name ?? 'Prompt '.$row->id;
+
                         if ($dryRun) {
-                            $this->line("  [DRY] Prompt: {$row->name}");
+                            $this->line('  [DRY] Prompt: '.mb_substr($promptText, 0, 50));
 
                             continue;
                         }
 
-                        // Try to map legacy bot_id to new bot
+                        // Map legacy bot_id to new bot
                         $botId = null;
-                        if (! empty($row->bot_id)) {
-                            $bot = DB::table('ai_bots')->inRandomOrder()->first();
-                            $botId = $bot?->id;
+                        $legacyBotId = $row->ai_bot_box_id ?? $row->bot_id ?? null;
+                        if ($legacyBotId) {
+                            $botId = DB::table('ai_bots')->skip((int) $legacyBotId - 1)->value('id');
                         }
 
                         $data = [
                             'bot_id' => $botId,
-                            'name' => $row->name ?? 'Prompt',
-                            'slug' => $row->slug ?? \Illuminate\Support\Str::slug($row->name ?? 'prompt-'.$row->id),
-                            'prompt' => $row->prompt ?? $row->content ?? '',
-                            'description' => $row->description ?? null,
-                            'is_active' => $row->is_active ?? true,
+                            'label' => mb_substr($promptText, 0, 255),
+                            'prompt_template' => $promptText,
+                            'sort_order' => $row->sort_order ?? 0,
+                            'created_at' => $row->created_at ?? now(),
+                            'updated_at' => $row->updated_at ?? now(),
                         ];
 
                         if ($force) {
-                            DB::table('ai_bot_prompts')->updateOrInsert(['slug' => $data['slug']], $data);
+                            DB::table('ai_bot_prompts')->updateOrInsert(
+                                ['bot_id' => $botId, 'label' => $data['label']],
+                                $data
+                            );
                         } else {
                             DB::table('ai_bot_prompts')->insertOrIgnore($data);
                         }

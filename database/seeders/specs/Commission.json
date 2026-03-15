@@ -56,6 +56,21 @@
             "type": "timestamp",
             "nullable": true,
             "default": null
+        },
+        "legacy_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "commissionable_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "commissionable_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {

@@ -169,6 +169,7 @@ final class AppServiceProvider extends ServiceProvider
         User::observe(UserObserver::class);
         Task::observe(TaskObserver::class);
         CrmNote::observe(CrmNoteObserver::class);
+        \App\Models\Contact::observe(\App\Observers\ContactObserver::class);
 
         foreach ([
             DataTableAiController::class,

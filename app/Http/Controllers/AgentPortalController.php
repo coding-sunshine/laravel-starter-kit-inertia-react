@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Models\PushHistory;
 use App\Models\PushSchedule;
+use App\Services\TenantContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -15,7 +16,7 @@ final class AgentPortalController extends Controller
 {
     public function index(): Response
     {
-        $orgId = auth()->user()?->currentOrganization?->id;
+        $orgId = TenantContext::id();
 
         $pushHistory = PushHistory::query()
             ->when($orgId, fn ($q) => $q->where('organization_id', $orgId))
@@ -45,7 +46,7 @@ final class AgentPortalController extends Controller
             'scheduled_at' => ['required', 'date'],
         ]);
 
-        $orgId = auth()->user()?->currentOrganization?->id;
+        $orgId = TenantContext::id();
 
         PushSchedule::query()->create([
             ...$validated,

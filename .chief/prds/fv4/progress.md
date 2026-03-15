@@ -297,3 +297,187 @@
   - ShouldBroadcast events need `broadcastOn()` returning PrivateChannel and `broadcastWith()` for payload
   - Provisioner API uses Sanctum `auth:sanctum` middleware + separate route group (not `tenant` middleware — external callback from WP provisioner server)
 ---
+
+## 2026-03-15 - US-013
+- What was implemented:
+  - **4 migrations**: mentions (polymorphic @mention tracking), custom_fields (per-org entity field definitions), custom_field_values (entity-scoped values with unique constraint), automation_rules (JSON conditions/actions with SoftDeletes)
+  - **4 Models**: Mention (morphTo mentionable, mentionedUser, mentionedByUser), CustomField (hasMany values, belongsTo org, casts options/is_required), CustomFieldValue (belongsTo customField), AutomationRule (SoftDeletes, casts conditions/actions arrays)
+  - **5 Actions**: AddMentionAction (creates mention + sends MentionNotification), EvaluateAutomationRulesAction (loads rules by event, evaluates JSON conditions), ProcessAutomationRuleAction (executes send_notification/create_task/update_field/send_email, increments run_count), GenerateDealForecastAction (Prism AI forecast with credit check + fallback), NlAnalyticsQueryAction (Prism NL query with credit check + fallback)
+  - **MentionNotification**: database + broadcast channels
+  - **CrmNoteObserver**: parses @username patterns in note content, calls AddMentionAction; registered in AppServiceProvider
+  - **4 Controllers**: CustomFieldController (CRUD + values endpoint), AutomationRuleController (CRUD), AnalyticsController (stats/charts dashboard + nlQuery POST), DealForecastController (JSON forecast for a sale)
+  - **3 React Pages**: custom-fields/index.tsx (fields by entity type + inline add form), automation-rules/index.tsx (rule list with enable/disable toggle), analytics/index.tsx (stats grid, bar charts, NL query UI)
+  - **14 routes**: custom-fields CRUD + values, automation-rules CRUD, analytics.index + nl-query, sales.forecast
+  - **Integration**: UpdateContactStageAction and UpdateSaleStageAction now call EvaluateAutomationRulesAction
+  - **Pan analytics**: custom-fields-tab, automation-rules-tab, analytics-tab added
+  - **Development seeders + spec JSON** for all 4 new models
+  - **Documentation**: 9 doc files (5 actions, 4 controllers, 3 pages), manifest updated
+  - migrations run via `php artisan migrate --force`
+- Files changed: 51 files, 9616 insertions
+- tests skipped (speed mode)
+- **Learnings for future iterations:**
+  - CrmNote uses `noteable` (not `notable`) as the polymorphic relation name — check existing model before adding observer
+  - Prism structured output: use `ObjectSchema` with typed child schemas; wrap in try/catch with meaningful fallback values
+  - AiCreditService credit check: `$this->aiCredits->canUse(auth()->id(), cost)` — uses user ID not User object in some variants; check the actual service signature first
+  - EvaluateAutomationRulesAction condition evaluators: eq/neq/gt/lt/gte/lte/contains — store operator strings consistently in JSON conditions
+  - For automation rule `create_task` action, need at minimum: title, type, assigned_to_user_id from rule config
+---
+
+## 2026-03-15 - US-014
+- What was implemented:
+  - **5 migrations**: ad_templates (channel/type/tone/headline/body_copy/cta_text), brochure_layouts (puck|blade template_type, layout_config jsonb), retargeting_pixels (platform/pixel_id/script_tag/events), email_campaigns (mail_list_id, status/sent_count/open_count/click_count), landing_page_templates (slug, puck_content, status, seo_config)
+  - **5 Models**: AdTemplate, BrochureLayout, RetargetingPixel, EmailCampaign, LandingPageTemplate (all SoftDeletes, LogsActivity, Userstamps, HasFactory)
+  - **4 Actions**: GenerateAdCopyAction (Prism AI headline/body/CTA with fallback), GenerateEmailCampaignAction (per-recipient personalisation with fallback), GenerateLandingPageAction (creates LandingPageTemplate record with AI copy), GenerateBrochureV2Action (AI content fill + Spatie PDF for brochure_layouts)
+  - **5 Controllers**: AdTemplateController (CRUD + generateCopy endpoint), BrochureLayoutController (CRUD + generatePdf), RetargetingPixelController (CRUD + toggle), EmailCampaignController (CRUD + personalise + send), LandingPageController (CRUD + generate + publish toggle)
+  - **18 routes** added under `// Marketing & Content Tools (US-014)` in routes/web.php
+  - **5 React pages**: ad-templates/index.tsx, brochure-layouts/index.tsx, retargeting-pixels/index.tsx, email-campaigns/index.tsx, landing-pages/index.tsx (all with dialogs, cards, data-pan attributes)
+  - **Blade view**: resources/views/brochures/v2.blade.php — A4 landscape PDF template with AI content slots
+  - **Pan analytics**: 6 new entries in AppServiceProvider::configurePan()
+  - **Development seeders** stubs for all 5 new models
+  - **Documentation**: 9 docs files (4 actions, 5 controllers), manifest updated
+  - migrations run via `php artisan migrate --force`
+- Files changed: 56 files, 4177 insertions
+- tests skipped (speed mode)
+- **Learnings for future iterations:**
+  - Development/{Model}Seeder.php stubs must exist even when make:model:full is run — pre-commit hook checks for them; create stubs manually if they are missing
+  - Prism AI actions should always use try/catch with a meaningful fallback return array — AI generation fails silently in many environments
+  - `pud.json` `inProgress: true` field must be removed when setting `passes: true` — the edit must replace both fields
+---
+
+## 2026-03-15 - US-015
+- What was implemented:
+  - **3 DB migrations**: payment_stages (sale_id FK, stage enum eoi/deposit/commission/payout, amount, due_date, paid_at), pinned_notes (polymorphic noteable, role_visibility JSON, order, is_active), deal_documents (polymorphic deal_type/deal_id, file_path, version, access_roles JSON)
+  - **3 new models**: PaymentStage (BelongsTo Sale+Organization, HasFactory, LogsActivity), PinnedNote (morphTo noteable, BelongsTo User+Organization), DealDocument (BelongsTo User+Organization, casts access_roles→array)
+  - **Sale model updated**: added paymentStages() hasMany, pinnedNotes() morphMany, dealDocuments() hasMany
+  - **PropertyReservation model updated**: added pinnedNotes() morphMany, dealDocuments() hasMany
+  - **3 Actions**: CreatePaymentStageAction (creates PaymentStage inheriting org from sale), CreatePinnedNoteAction (polymorphic, auto-order, auth user as author), UploadDealDocumentAction (stores to private disk deal-docs/{type}/{id}/, creates DealDocument record)
+  - **4 Controllers**: DealTrackerController (Kanban page + stageUpdate JSON), PaymentStageController (CRUD), PinnedNoteController (list/create/delete for reservations+sales), DealDocumentController (list/upload/delete with file cleanup)
+  - **React page**: resources/js/pages/deal-tracker/index.tsx — Kanban board (6 columns: Enquiry→Settled), toggle to list view, optimistic stage updates, Pan analytics attributes
+  - **14 routes** added under auth+verified group
+  - **Development seeders** + spec JSON for all 3 new models
+  - **Documentation**: 8 doc files, routes.md updated, manifest updated
+  - **Pan analytics**: deal-tracker-tab, deal-tracker-kanban, deal-documents-tab, payment-stages-tab added
+  - migrations run via `php artisan migrate --force`
+- Files changed: 37 files, 1685 insertions
+- tests skipped (speed mode)
+- **Learnings for future iterations:**
+  - The deal_documents table uses `deal_type`/`deal_id` (string+int polymorphic pattern) instead of morphs() — avoids type registration issues
+  - DealDocumentController::destroy() must delete the file from storage before deleting the DB record (Storage::disk('private')->delete($doc->file_path))
+  - prd.json `inProgress: true` must be removed when marking passes: true — replace both fields in one edit
+---
+
+## 2026-03-15 - US-016
+- What was implemented:
+  - **2 migrations**: webhook_endpoints (org-scoped, events JSON, secret, failure tracking), add site_type to wordpress_websites
+  - **Fusion API v2**: 25 routes under /api/v2/ with auth:sanctum; controllers for Contact (CRUD), Project (read), Lot (read), Sale (CRUD), Task (CRUD), Reservation (CRUD), Webhook (CRUD); Eloquent resources for each; QueryBuilder filters/sorts/pagination
+  - **Webhook system**: WebhookEndpoint model (BelongsToOrganization, SoftDeletes, LogsActivity), TriggerWebhooksAction (filters by event, dispatches jobs), TriggerWebhookJob (HMAC-SHA256 X-Fusion-Signature header, increments failure_count on error); CaptureLeadAction triggers contact.created; UpdateSaleStageAction triggers sale.updated
+  - **WordPress provisioning**: WebsiteController (Inertia index + API store/destroy + provisionerCallback PATCH /api/websites/{id}), ProvisionPendingWordpressSitesCommand (wp:provision-pending --limit=10), scheduler entry everyMinute()->withoutOverlapping()
+  - **Website index page**: resources/js/pages/websites/index.tsx — 5-slot management UI (2 PHP + 3 WP types) with status badges and create/delete CTAs
+  - **OpenAPI docs**: api.json exported via php artisan scramble:export (accessible at /docs/api)
+  - Development seeder + spec JSON for WebhookEndpoint
+  - Documentation: TriggerWebhooksAction.md, WebsiteController.md, Api/V2/ContactController.md, websites/index.md, manifest updated
+- Files changed: 39 files, 6411 insertions
+- tests skipped (speed mode)
+- **Learnings for future iterations:**
+  - `scramble:export` (not `generate:api-documentation`) is the Scramble command in dedoc/scramble v0.13.x
+  - V2 API controllers go in `app/Http/Controllers/Api/V2/` namespace; resources in `app/Http/Resources/Api/V2/`
+  - TriggerWebhooksAction dispatches queued jobs (TriggerWebhookJob) — avoids blocking request lifecycle
+  - WordPress site_type column added via separate migration with default value — safe pattern
+---
+
+## 2026-03-15 - US-017
+- What was implemented:
+  - **4 migrations**: xero_connections (org_id, tenant_id, access/refresh tokens encrypted, SoftDeletes), xero_contacts (contact_id FK, xero_contact_id, sync_status), xero_invoices (sale_id nullable FK, xero_invoice_id, amount, status), xero_reconciliations (xero_invoice_id FK, xero_payment_id, amount, raw_payload)
+  - **4 Models**: XeroConnection (BelongsTo Organization, SoftDeletes, encrypted tokens, scopes array), XeroContact (BelongsTo Contact+XeroConnection), XeroInvoice (BelongsTo Sale+XeroConnection, HasMany XeroReconciliation), XeroReconciliation (BelongsTo XeroInvoice)
+  - **Saloon connector**: XeroConnector with static `isConfigured()` guard + 5 Requests (GetContacts, CreateOrUpdateContact, GetInvoices, CreateInvoice, RefreshToken)
+  - **3 Actions**: SyncContactToXeroAction (deferred log if not configured), SyncInvoiceToXeroAction (deferred log if not configured), ReconcileXeroPaymentAction (parses Xero payment webhook payloads)
+  - **2 Jobs**: SyncContactToXeroJob + SyncInvoiceToXeroJob (tries=3, backoff=60)
+  - **XeroController**: index (Inertia dashboard), connect (OAuth redirect or deferred), callback (token storage), disconnect (soft-delete), webhook (HMAC validation + ReconcileXeroPaymentAction), syncContacts/syncInvoices (dispatch jobs)
+  - **React page**: xero/index.tsx (connection status card, stats, sync buttons, reconciliation list, Pan analytics)
+  - **7 routes**: 6 under auth+verified, 1 public webhook route
+  - **Pan analytics**: xero-tab, xero-sync-contacts, xero-sync-invoices
+  - **Development seeders + spec JSON** for all 4 new models
+  - **Documentation**: 3 action docs, 1 controller doc, 1 page doc, manifest updated
+  - migrations ran via `php artisan migrate --force`
+- Files changed: 38 files, 2004 insertions
+- tests skipped (speed mode)
+- **Learnings for future iterations:**
+  - Xero OAuth2 is credential-gated via XeroConnector::isConfigured() — all flows log 'xero.deferred' and return gracefully when XERO_CLIENT_ID not set
+  - Saloon connector base URL is https://api.xero.com; each request sends Xero-Tenant-Id header required by Xero API v2
+  - RefreshTokenRequest posts to identity.xero.com (different host) — needs custom endpoint, not the connector base URL
+  - access_token/refresh_token on XeroConnection should use 'encrypted' cast to protect OAuth tokens at rest
+---
+
+## 2026-03-15 - US-018
+- What was implemented:
+  - **3 migrations**: add_extended_fields_to_plans_table (setup_fee, is_public, max_users, max_php_sites, max_wp_sites, features JSON), add_created_via_to_users_table (created_via, eway_token_customer_id), create_onboarding_progress_table (user_id + step_key unique)
+  - **SubscriptionBillingContract interface**: `app/Billing/Contracts/SubscriptionBillingContract.php` with `checkout()`, `cancel()`, `resume()`, `getGateway()` methods
+  - **StripeBillingDriver**: wraps kit PaymentGatewayManager; defers gracefully when STRIPE_SECRET not set
+  - **EwayBillingDriver**: stub returning success; ready for Saloon EwayPaymentConnector when credentials provided
+  - **12 new Feature flags**: PropertyAccessFeature, AiToolsFeature, AiBotsCustomFeature, BotInABoxFeature, SprFeature, WebsitesFeature, WordPressSitesFeature, PhpSitesFeature, CampaignWebsitesFeature, FlyersFeature, XeroIntegrationFeature, AdvancedReportsFeature
+  - **FusionPlansSeeder** (Essential): seeds Starter $330/mo + setup, Growth $415/mo, Growth Annual $3,960 with features JSON
+  - **OnboardingStep enum**: 7 steps (SetPassword, SignAgreement, CrmTour, UploadContacts, ConnectWebsite, LaunchFlyer, MeetBdm) with label()/description()
+  - **OnboardingProgress model**: BelongsTo User, casts step_key to OnboardingStep enum, no timestamps (custom created_at)
+  - **ProvisionSubscriberFeaturesAction**: activates Pennant flags from plan.features.flags array + creates AiCreditPool for org
+  - **SignupController**: index (plan selection), create (registration form), provision() (create user + assign subscriber role + firstOrCreate org + add to org_user + subscribeTo plan + provision features + init onboarding rows + billing checkout), complete(), onboarding() checklist, completeStep()
+  - **OrganizationPolicy::create()** updated to superadmin-only — self-service subscribers get org auto-provisioned
+  - **SignupRequest**: validates name, email, mobile, business_name, abn, plan_slug, referral_code
+  - **2 Events**: SubscriberSignedUpEvent + OnboardingReminderEvent (both TriggersDatabaseMail, registered in config/database-mail.php)
+  - **React pages**: signup/index.tsx (plan selection cards), signup/register.tsx (registration form), signup/onboarding.tsx (progress tracker with tick marks + "Mark done" buttons)
+  - **Routes**: 6 routes under /signup prefix (guest + auth groups)
+  - **config/billing.php**: added billing_gateway key (env BILLING_GATEWAY, default 'stripe')
+  - **config/services.php**: added eway block (api_key, api_password, endpoint)
+  - **AppServiceProvider**: binds SubscriptionBillingContract to configured driver; 14 new Pan analytics entries
+  - **Documentation**: ProvisionSubscriberFeaturesAction.md, SignupController.md, 3 page docs, manifest updated
+  - migrations ran (all 3 were already applied from previous batch run)
+- Files changed: 48 files, ~850 insertions
+- tests skipped (speed mode)
+- **Learnings for future iterations:**
+  - `OrganizationPolicy::create()` previously used config checks — updated to `?User $user` nullable parameter + superadmin check; subscriber org is always provisioned via SignupController
+  - `SubscriptionBillingContract` lives in `app/Billing/Contracts/` (new namespace), NOT `app/Contracts/` where `BillingGatewayContract` (deposit payments) lives — keep them separate
+  - `billing.billing_gateway` env = BILLING_GATEWAY; bound in AppServiceProvider so drivers are swappable at runtime
+  - `OnboardingProgress` uses `$timestamps = false` with manual `created_at` — no `updated_at` column in table
+  - When `make:model:full` creates specs/seeders they land in manifest.json but the Development/{Model}Seeder.php file may not be created — always check and create manually
+  - Plans use `laravelcm/laravel-subscriptions` Plan model (`App\Models\Billing\Plan`) — always use that namespace, not a custom Plan model
+---
+
+## 2026-03-15 - US-019
+- AI suburb & state info implemented: `FetchSuburbAiDataAction`, `SuburbAiData` model, `suburb_ai_data` migration, `SuburbAiDataController`, `suburb-ai/index.tsx` page
+- AI brochure extraction implemented: `ExtractBrochureMediaAction`, `BrochureExtractionController`, `brochure-extraction/index.tsx` with drag-and-drop upload
+- Email to builders implemented: `SendBuilderEmailAction`, `BuilderEmail` mailable, 4 blade templates (price_list, more_info, hold_request, property_request), `BuilderEmailLog` model, `builder_email_logs` migration, `BuilderEmailController`, `builder-email/index.tsx`
+- Resemble.ai voice cloning (R&D): `ResembleConnector` (Saloon), `CreateVoiceAction`, `GenerateSpeechAction`, `GetVoiceRequest` — deferred (logged) when RESEMBLE_API_KEY not set; fallback to Vapi default TTS
+- Joey's/Geanelle's suggestions: Documented as R&D placeholders per step file
+- Tests skipped (speed mode)
+- Migrations run: suburb_ai_data and builder_email_logs tables created
+- Files changed: 32 files created/modified including routes/web.php, config/services.php, docs/.manifest.json
+- **Learnings for future iterations:**
+  - Resemble.ai: voice UUID should be stored in user `extra_attributes` JSON column — check if this column exists before implementing
+  - Email templates use Blade markdown mail (`x-mail::message`) — the default `resources/views/emails/builder.blade.php` created by artisan is replaced by per-template files under `emails/builder/`
+  - When using `BuilderEmail` with `markdown: "emails.builder.{$type}"`, the template path must match the blade file structure exactly
+  - `tenant('id')` is the correct way to get organization_id in controllers and actions (not `currentOrganizationId()`)
+---
+
+## 2026-03-15 - US-020
+- What was implemented:
+  - `sync_state` migration: direction + table_name composite unique, last_synced_at, last_synced_id, metadata
+  - `sync_log` migration: direction, table_name, row_key, status, message — audit trail for sync errors
+  - `fusion:sync-mysql-to-postgres` command: incremental pull from MySQL (`mysql_legacy`) into PG for contacts/projects/lots; last-write-wins conflict resolution (PG wins ties); `--dry-run`, `--chunk`, `--since`, `--tables`; updates sync_state; writes sync_log; log entry on start/end
+  - `fusion:sync-postgres-to-mysql` command: incremental push from PG back to MySQL for contacts/projects/lots; last-write-wins (MySQL wins if newer); skips PG-native rows (null legacy_key); `--dry-run`, `--chunk`, `--since`, `--tables`
+  - `config/app.php`: `sync_coexistence_enabled` config key backed by `SYNC_COEXISTENCE_ENABLED` env var (default false)
+  - `routes/console.php`: scheduler entries for both commands `everyThirtyMinutes()` wrapped in `if (config('app.sync_coexistence_enabled'))` — disabled unless coexistence explicitly required
+  - Dry-run of both commands confirmed: MySQL→PG processed 146,576 rows, PG→MySQL processed 0 rows (not yet imported to PG)
+- Files changed:
+  - `app/Console/Commands/SyncMysqlToPostgresCommand.php` (new)
+  - `app/Console/Commands/SyncPostgresToMysqlCommand.php` (new)
+  - `database/migrations/2026_03_15_900000_create_sync_state_table.php` (new)
+  - `database/migrations/2026_03_15_900001_create_sync_log_table.php` (new)
+  - `config/app.php` (modified — added sync_coexistence_enabled)
+  - `routes/console.php` (modified — added disabled scheduler entries)
+- tests skipped (speed mode)
+- **Learnings for future iterations:**
+  - Sync commands follow the same import command template (runImport pattern): `--dry-run`, `--chunk`, progress bar, DB::beginTransaction, chunk, error log
+  - Conflict resolution: mysql-to-pgsql uses `>=` for PG wins ties; pgsql-to-mysql uses `>` for MySQL strict newer wins
+  - PG-native rows (legacy_key is null) are skipped in postgres-to-mysql — they have no MySQL counterpart
+  - Scheduler entries should be wrapped in a config/env guard for opt-in infrastructure; `SYNC_COEXISTENCE_ENABLED` follows the pattern of `MULTI_ORGANIZATION_ENABLED`
+  - The `sync_log` table uses `created_at` only (no `updated_at`) — use `$table->timestamp('created_at')->useCurrent()` without timestamps()
+---

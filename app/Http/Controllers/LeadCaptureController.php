@@ -8,6 +8,7 @@ use App\Actions\CaptureLeadAction;
 use App\Actions\EnrollInNurtureSequenceAction;
 use App\Actions\RouteLeadAction;
 use App\Models\NurtureSequence;
+use App\Services\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -87,7 +88,7 @@ final class LeadCaptureController extends Controller
             'leads.*.channel' => ['nullable', 'string'],
         ]);
 
-        $organizationId = $request->user()?->currentOrganization()?->id ?? 1;
+        $organizationId = TenantContext::id() ?? 1;
         $created = 0;
 
         foreach ($data['leads'] as $lead) {

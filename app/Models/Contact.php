@@ -16,6 +16,8 @@ use Laravel\Scout\Searchable;
 use Mattiverse\Userstamps\Traits\Userstamps;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 
 /**
  * @property int $id
@@ -40,10 +42,11 @@ use Spatie\Activitylog\Traits\LogsActivity;
  * @property \Carbon\Carbon $updated_at
  * @property \Carbon\Carbon|null $deleted_at
  */
-final class Contact extends Model
+final class Contact extends Model implements HasMedia
 {
     use BelongsToOrganization;
     use HasFactory;
+    use InteractsWithMedia;
     use LogsActivity;
     use Searchable;
     use SoftDeletes;
@@ -167,7 +170,7 @@ final class Contact extends Model
     public function strategyTags(): BelongsToMany
     {
         return $this->belongsToMany(StrategyTag::class, 'contact_strategy_tag')
-            ->withTimestamps();
+            ->withPivot('created_at');
     }
 
     /**
@@ -179,11 +182,25 @@ final class Contact extends Model
     }
 
     /**
+     * @return HasMany<ContactEmbedding, $this>
+     */
+    public function embeddings(): HasMany
+    {
+        return $this->hasMany(ContactEmbedding::class);
+    }
+
+    /**
      * @return MorphMany<AiSummary, $this>
      */
     public function aiSummaries(): MorphMany
     {
         return $this->morphMany(AiSummary::class, 'summarizable');
+    }
+
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('avatar')->singleFile();
+        $this->addMediaCollection('documents');
     }
 
     public function getActivitylogOptions(): LogOptions

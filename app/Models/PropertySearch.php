@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Mattiverse\Userstamps\Traits\Userstamps;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 
 /**
  * @property int $id
@@ -21,9 +23,10 @@ use Spatie\Activitylog\Traits\LogsActivity;
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
  */
-final class PropertySearch extends Model
+final class PropertySearch extends Model implements HasMedia
 {
     use HasFactory;
+    use InteractsWithMedia;
     use LogsActivity;
     use Userstamps;
 
@@ -75,6 +78,11 @@ final class PropertySearch extends Model
     public function loggedInUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'logged_in_user_id');
+    }
+
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('documents');
     }
 
     public function getActivitylogOptions(): LogOptions

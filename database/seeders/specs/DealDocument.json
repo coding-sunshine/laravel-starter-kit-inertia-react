@@ -1,4 +1,91 @@
 {
     "model": "DealDocument",
-    "fields": []
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "organization_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "deal_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "deal_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "document_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "title": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "description": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "file_path": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "file_size": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "mime_type": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "version": {
+            "type": "integer",
+            "nullable": true,
+            "default": null
+        },
+        "uploaded_by": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "access_roles": {
+            "type": "json",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "uploader": {
+            "type": "belongsTo",
+            "model": "Uploader"
+        },
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": []
 }

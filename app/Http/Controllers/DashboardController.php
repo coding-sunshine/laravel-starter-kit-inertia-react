@@ -6,7 +6,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Contact;
 use App\Models\ContactSubmission;
+use App\Models\Lot;
 use App\Models\Organization;
+use App\Models\Project;
 use App\Models\PropertyReservation;
 use App\Models\Sale;
 use App\Models\Task;
@@ -38,6 +40,7 @@ final class DashboardController
             $props['crmKpis'] = Inertia::defer(fn () => $this->crmKpis($agentId));
             $props['pipelineFunnel'] = Inertia::defer(fn () => $this->pipelineFunnel($agentId));
             $props['aiInsight'] = Cache::get('dashboard_insight');
+            $props['featuredProjects'] = Inertia::defer(fn () => $this->featuredProjects());
         }
 
         if ($isSuperAdmin) {
@@ -86,12 +89,42 @@ final class DashboardController
         }
         $overdueTasksCount = $tasksQuery->count();
 
+        $staleContacts = Contact::query()
+            ->where(function (Builder $q): void {
+                $q->whereNull('last_contacted_at')
+                    ->orWhere('last_contacted_at', '<', Date::now()->subDays(30));
+            })
+            ->count();
+
+        $totalContacts = Contact::query()->count();
+
+        $priorityQueue = Contact::query()
+            ->select(['id', 'first_name', 'last_name', 'stage', 'contact_origin', 'lead_score', 'last_contacted_at', 'created_at'])
+            ->orderByRaw('last_contacted_at IS NULL DESC, last_contacted_at ASC')
+            ->limit(7)
+            ->get()
+            ->map(fn (Contact $c): array => [
+                'id' => $c->id,
+                'name' => mb_trim($c->first_name.' '.$c->last_name),
+                'stage' => $c->stage ?? 'New',
+                'source' => $c->contact_origin ?? 'property',
+                'leadScore' => $c->lead_score ?? 0,
+                'daysSince' => $c->last_contacted_at
+                    ? (int) abs(Date::now()->diffInDays($c->last_contacted_at))
+                    : (int) abs(Date::now()->diffInDays($c->created_at)),
+            ]);
+
         return [
             'newContactsThisWeek' => $newContacts,
             'newContactsDelta' => $newContactsDelta,
             'activeReservations' => $activeReservations,
             'settledThisMonth' => $settledThisMonth,
             'overdueTasksCount' => $overdueTasksCount,
+            'staleContacts' => $staleContacts,
+            'totalContacts' => $totalContacts,
+            'totalLotsAvailable' => Lot::query()->where('is_archived', false)->count(),
+            'totalLotsSold' => Lot::query()->where('is_archived', true)->count(),
+            'priorityQueue' => $priorityQueue,
         ];
     }
 
@@ -110,6 +143,32 @@ final class DashboardController
             'stage' => ucfirst($stage),
             'count' => (int) ($counts[$stage] ?? 0),
         ])->values()->all();
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private function featuredProjects(): array
+    {
+        return Project::query()
+            ->where('is_featured', true)
+            ->whereNull('deleted_at')
+            ->orderByDesc('updated_at')
+            ->limit(5)
+            ->with('media')
+            ->get(['id', 'title', 'suburb', 'state', 'min_price', 'max_price', 'rent_yield', 'total_lots', 'stage'])
+            ->map(fn (Project $p): array => [
+                'id' => $p->id,
+                'title' => $p->title,
+                'location' => mb_trim(($p->suburb ?? '').', '.($p->state ?? ''), ', '),
+                'priceRange' => $p->min_price && $p->max_price
+                    ? '$'.number_format((float) $p->min_price).' - $'.number_format((float) $p->max_price)
+                    : ($p->min_price ? '$'.number_format((float) $p->min_price) : null),
+                'image' => rescue(fn () => $p->getFirstMediaUrl('photo'), null),
+                'type' => $p->stage,
+                'rentYield' => $p->rent_yield ? number_format((float) $p->rent_yield, 2).'%' : null,
+                'totalLots' => $p->total_lots,
+                'stage' => $p->stage,
+            ])
+            ->all();
     }
 
     /** @param Closure(): Builder<Model> $factory */

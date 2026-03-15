@@ -8,6 +8,7 @@ use App\Events\WordpressSiteProvisioned;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\WordpressWebsite;
+use App\Services\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -63,7 +64,7 @@ final class ProvisionerApiController extends Controller
             'id' => $user->id,
             'name' => $user->name,
             'email' => $user->email,
-            'organization' => $user->currentOrganization?->only(['id', 'name']),
+            'organization' => TenantContext::get()?->only(['id', 'name']),
         ]);
     }
 }

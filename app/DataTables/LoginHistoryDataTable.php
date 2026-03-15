@@ -47,12 +47,12 @@ final class LoginHistoryDataTable extends AbstractDataTable
     public static function tableColumns(): array
     {
         return [
-            ColumnBuilder::make('id')->label('ID')->sortable(),
-            ColumnBuilder::make('user_name')->label('User'),
-            ColumnBuilder::make('ip_address')->label('IP Address'),
-            ColumnBuilder::make('device_fingerprint')->label('Device (masked)'),
-            ColumnBuilder::make('user_agent')->label('User Agent'),
-            ColumnBuilder::make('created_at')->label('Login At')->sortable(),
+            ColumnBuilder::make('id', 'ID')->sortable()->build(),
+            ColumnBuilder::make('user_name', 'User')->build(),
+            ColumnBuilder::make('ip_address', 'IP Address')->build(),
+            ColumnBuilder::make('device_fingerprint', 'Device (masked)')->build(),
+            ColumnBuilder::make('user_agent', 'User Agent')->build(),
+            ColumnBuilder::make('created_at', 'Login At')->sortable()->build(),
         ];
     }
 
@@ -64,7 +64,6 @@ final class LoginHistoryDataTable extends AbstractDataTable
         ];
     }
 
-    #[Override]
     public static function inertiaProps(Request $request): array
     {
         return [
@@ -91,7 +90,6 @@ final class LoginHistoryDataTable extends AbstractDataTable
         return $request->user()?->hasRole('super-admin') ?? false;
     }
 
-    #[Override]
     public static function tableExportName(): string
     {
         return 'login-history';

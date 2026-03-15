@@ -73,11 +73,24 @@
             "default": null
         }
     },
-    "relationships": [],
+    "relationships": {
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
     "value_hints": {
         "name": {
             "type": "name",
             "example": "John Doe"
+        },
+        "is_active": {
+            "type": "boolean",
+            "example": true
+        },
+        "is_default": {
+            "type": "boolean",
+            "example": true
         }
     },
     "scenarios": []

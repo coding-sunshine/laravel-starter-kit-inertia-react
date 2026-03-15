@@ -138,6 +138,17 @@ final class ImportContactsCommand extends Command
             ->pluck('id', 'legacy_id')
             ->all();
 
+        // Build lookup sets for contact type derivation from v3 relationships
+        $agentContactIds = $this->buildAgentContactIds();
+        $developerContactIds = $this->buildDeveloperContactIds();
+        $subscriberLeadIds = $this->buildSubscriberLeadIds();
+
+        // Build source name map for origin derivation (v3 uses 'label' not 'name')
+        $sourceNameMap = DB::connection('mysql_legacy')
+            ->table('sources')
+            ->pluck('label', 'id')
+            ->all();
+
         $failed = $this->runImport(
             sourceTable: 'leads',
             targetTable: 'contacts',
@@ -145,11 +156,9 @@ final class ImportContactsCommand extends Command
             dryRun: $dryRun,
             chunk: $chunk,
             since: $since,
-            mapRow: function (array $row) use ($sourceMap, $companyMap): ?array {
-                $type = 'lead';
-                if (! empty($row['is_partner']) && (bool) $row['is_partner']) {
-                    $type = 'partner';
-                }
+            mapRow: function (array $row) use ($sourceMap, $companyMap, $agentContactIds, $developerContactIds, $subscriberLeadIds, $sourceNameMap): ?array {
+                $type = $this->deriveContactType($row, $agentContactIds, $developerContactIds, $subscriberLeadIds);
+                $origin = $this->deriveContactOrigin($row, $sourceNameMap);
 
                 $sourceId = null;
                 if (! empty($row['source_id'])) {
@@ -163,19 +172,20 @@ final class ImportContactsCommand extends Command
 
                 return [
                     'legacy_lead_id' => $row['id'],
-                    'contact_origin' => 'property',
-                    'first_name' => $row['first_name'] ?? $row['name'] ?? 'Unknown',
+                    'organization_id' => 1,
+                    'contact_origin' => $origin,
+                    'first_name' => $row['first_name'] ?? 'Unknown',
                     'last_name' => $row['last_name'] ?? null,
-                    'job_title' => $row['job_title'] ?? $row['occupation'] ?? null,
+                    'job_title' => $row['job_title'] ?? null,
                     'type' => $type,
-                    'stage' => $row['stage'] ?? $row['status'] ?? null,
+                    'stage' => $row['stage'] ?? null,
                     'source_id' => $sourceId,
                     'company_id' => $companyId,
-                    'company_name' => $row['company'] ?? $row['company_name'] ?? null,
-                    'extra_attributes' => null,
-                    'last_followup_at' => $row['last_followup_at'] ?? $row['last_followup'] ?? null,
-                    'next_followup_at' => $row['next_followup_at'] ?? $row['next_followup'] ?? null,
-                    'last_contacted_at' => $row['last_contacted_at'] ?? null,
+                    'company_name' => null,
+                    'extra_attributes' => ! empty($row['extra_attributes']) ? $row['extra_attributes'] : null,
+                    'last_followup_at' => $row['last_followup_at'] ?? null,
+                    'next_followup_at' => $row['next_followup_at'] ?? null,
+                    'last_contacted_at' => null,
                     'lead_score' => null,
                     'created_at' => $row['created_at'] ?? now(),
                     'updated_at' => $row['updated_at'] ?? now(),
@@ -198,6 +208,191 @@ final class ImportContactsCommand extends Command
         return $failed;
     }
 
+    /**
+     * Derive contact type from v3 relationships.
+     *
+     * @param  array<string, mixed>  $row
+     * @param  array<int, bool>  $agentContactIds
+     * @param  array<int, bool>  $developerContactIds
+     * @param  array<int, bool>  $subscriberLeadIds
+     */
+    private function deriveContactType(array $row, array $agentContactIds, array $developerContactIds, array $subscriberLeadIds): string
+    {
+        $leadId = (int) $row['id'];
+
+        if (! empty($row['is_partner']) && (bool) $row['is_partner']) {
+            return 'partner';
+        }
+
+        if (isset($developerContactIds[$leadId])) {
+            return 'developer_rep';
+        }
+
+        if (isset($agentContactIds[$leadId])) {
+            return 'sales_agent';
+        }
+
+        if (isset($subscriberLeadIds[$leadId])) {
+            return 'subscriber';
+        }
+
+        return 'lead';
+    }
+
+    /**
+     * Derive contact origin from v3 source name.
+     *
+     * @param  array<string, mixed>  $row
+     * @param  array<int, string>  $sourceNameMap
+     */
+    private function deriveContactOrigin(array $row, array $sourceNameMap): string
+    {
+        if (empty($row['source_id'])) {
+            return 'manual';
+        }
+
+        $sourceName = $sourceNameMap[$row['source_id']] ?? null;
+        if ($sourceName === null) {
+            return 'manual';
+        }
+
+        $sourceName = mb_strtolower($sourceName);
+
+        return match (true) {
+            str_contains($sourceName, 'website') => 'website',
+            str_contains($sourceName, 'referral') => 'referral',
+            str_contains($sourceName, 'phone'), str_contains($sourceName, 'call') => 'phone',
+            str_contains($sourceName, 'facebook') => 'facebook_ad',
+            str_contains($sourceName, 'google') => 'google_ad',
+            str_contains($sourceName, 'linkedin') => 'linkedin',
+            str_contains($sourceName, 'instagram') => 'instagram',
+            str_contains($sourceName, 'email') => 'email',
+            str_contains($sourceName, 'event'), str_contains($sourceName, 'seminar') => 'event',
+            str_contains($sourceName, 'walk-in'), str_contains($sourceName, 'walk in') => 'walk_in',
+            default => 'manual',
+        };
+    }
+
+    /**
+     * Build set of lead IDs that appear as agents in v3.
+     *
+     * @return array<int, bool>
+     */
+    private function buildAgentContactIds(): array
+    {
+        $ids = [];
+
+        try {
+            // Leads referenced as agents in property_reservations (column: agent_id references lead)
+            $reservationAgents = DB::connection('mysql_legacy')
+                ->table('property_reservations')
+                ->whereNotNull('agent_id')
+                ->distinct()
+                ->pluck('agent_id');
+
+            foreach ($reservationAgents as $id) {
+                $ids[(int) $id] = true;
+            }
+
+            // Sales agents referenced by lead_id via users table
+            $salesAgentUserIds = DB::connection('mysql_legacy')
+                ->table('sales')
+                ->whereNotNull('sales_agent_id')
+                ->distinct()
+                ->pluck('sales_agent_id');
+
+            // sales_agent_id may reference leads directly or users — map users→leads
+            if ($salesAgentUserIds->isNotEmpty()) {
+                $userLeadMap = DB::connection('mysql_legacy')
+                    ->table('users')
+                    ->whereIn('id', $salesAgentUserIds)
+                    ->whereNotNull('lead_id')
+                    ->pluck('lead_id');
+
+                foreach ($userLeadMap as $leadId) {
+                    $ids[(int) $leadId] = true;
+                }
+            }
+        } catch (Throwable) {
+            // Tables may not exist in legacy
+        }
+
+        return $ids;
+    }
+
+    /**
+     * Build set of lead IDs linked to developers in v3.
+     * Developers have user_id → users.lead_id → leads.id
+     *
+     * @return array<int, bool>
+     */
+    private function buildDeveloperContactIds(): array
+    {
+        $ids = [];
+
+        try {
+            $developerUserIds = DB::connection('mysql_legacy')
+                ->table('developers')
+                ->whereNotNull('user_id')
+                ->distinct()
+                ->pluck('user_id');
+
+            if ($developerUserIds->isNotEmpty()) {
+                $leadIds = DB::connection('mysql_legacy')
+                    ->table('users')
+                    ->whereIn('id', $developerUserIds)
+                    ->whereNotNull('lead_id')
+                    ->pluck('lead_id');
+
+                foreach ($leadIds as $id) {
+                    $ids[(int) $id] = true;
+                }
+            }
+        } catch (Throwable) {
+            // Table may not exist
+        }
+
+        return $ids;
+    }
+
+    /**
+     * Build set of lead IDs that are subscribers in v3.
+     * subscribers: model_has_roles → users.lead_id → leads.id
+     *
+     * @return array<int, bool>
+     */
+    private function buildSubscriberLeadIds(): array
+    {
+        $ids = [];
+
+        try {
+            $subscriberUserIds = DB::connection('mysql_legacy')
+                ->table('model_has_roles')
+                ->join('roles', 'model_has_roles.role_id', '=', 'roles.id')
+                ->where('roles.name', 'subscriber')
+                ->where('model_has_roles.model_type', 'App\\Models\\User')
+                ->distinct()
+                ->pluck('model_has_roles.model_id');
+
+            // Map user_id → lead_id via users table
+            if ($subscriberUserIds->isNotEmpty()) {
+                $leadIds = DB::connection('mysql_legacy')
+                    ->table('users')
+                    ->whereIn('id', $subscriberUserIds)
+                    ->whereNotNull('lead_id')
+                    ->pluck('lead_id');
+
+                foreach ($leadIds as $leadId) {
+                    $ids[(int) $leadId] = true;
+                }
+            }
+        } catch (Throwable) {
+            // Tables may not exist
+        }
+
+        return $ids;
+    }
+
     private function importContactEmails(int $chunk, array $sourceMap, array $companyMap): void
     {
         $this->info('Importing contact emails...');
@@ -211,37 +406,36 @@ final class ImportContactsCommand extends Command
         $count = 0;
         DB::connection('mysql_legacy')
             ->table('contacts')
-            ->where('type', 'email')
+            ->whereIn('type', ['email', 'email_1', 'email_2'])
             ->where('model_type', 'App\\Models\\Lead')
             ->orderBy('id')
             ->chunk($chunk, function ($rows) use ($contactMap, &$count) {
-                DB::beginTransaction();
-                try {
-                    foreach ($rows as $row) {
+                foreach ($rows as $row) {
+                    try {
                         $leadId = $row->model_id ?? null;
                         $contactId = $leadId ? ($contactMap[$leadId] ?? null) : null;
                         if ($contactId === null) {
                             continue;
                         }
 
-                        DB::table('contact_emails')->updateOrInsert(
-                            ['contact_id' => $contactId, 'value' => $row->value ?? $row->contact ?? ''],
-                            [
-                                'contact_id' => $contactId,
-                                'type' => $row->label ?? 'work',
-                                'value' => $row->value ?? $row->contact ?? '',
-                                'is_primary' => (bool) ($row->is_primary ?? false),
-                                'order_column' => $row->order ?? 0,
-                                'created_at' => now(),
-                                'updated_at' => now(),
-                            ]
-                        );
+                        DB::transaction(function () use ($row, $contactId) {
+                            DB::table('contact_emails')->updateOrInsert(
+                                ['contact_id' => $contactId, 'value' => $row->value ?? $row->contact ?? ''],
+                                [
+                                    'contact_id' => $contactId,
+                                    'type' => $row->label ?? 'work',
+                                    'value' => $row->value ?? $row->contact ?? '',
+                                    'is_primary' => (bool) ($row->is_primary ?? false),
+                                    'order_column' => $row->order ?? 0,
+                                    'created_at' => now(),
+                                    'updated_at' => now(),
+                                ]
+                            );
+                        });
                         $count++;
+                    } catch (Throwable $e) {
+                        Log::warning("fusion:import-contacts [emails] row {$row->id} failed: {$e->getMessage()}");
                     }
-                    DB::commit();
-                } catch (Throwable $e) {
-                    DB::rollBack();
-                    Log::warning('fusion:import-contacts [emails] chunk failed: '.$e->getMessage());
                 }
             });
 
@@ -265,33 +459,32 @@ final class ImportContactsCommand extends Command
             ->where('model_type', 'App\\Models\\Lead')
             ->orderBy('id')
             ->chunk($chunk, function ($rows) use ($contactMap, &$count) {
-                DB::beginTransaction();
-                try {
-                    foreach ($rows as $row) {
+                foreach ($rows as $row) {
+                    try {
                         $leadId = $row->model_id ?? null;
                         $contactId = $leadId ? ($contactMap[$leadId] ?? null) : null;
                         if ($contactId === null) {
                             continue;
                         }
 
-                        DB::table('contact_phones')->updateOrInsert(
-                            ['contact_id' => $contactId, 'value' => $row->value ?? $row->contact ?? ''],
-                            [
-                                'contact_id' => $contactId,
-                                'type' => $row->type ?? $row->label ?? 'mobile',
-                                'value' => $row->value ?? $row->contact ?? '',
-                                'is_primary' => (bool) ($row->is_primary ?? false),
-                                'order_column' => $row->order ?? 0,
-                                'created_at' => now(),
-                                'updated_at' => now(),
-                            ]
-                        );
+                        DB::transaction(function () use ($row, $contactId) {
+                            DB::table('contact_phones')->updateOrInsert(
+                                ['contact_id' => $contactId, 'value' => $row->value ?? $row->contact ?? ''],
+                                [
+                                    'contact_id' => $contactId,
+                                    'type' => $row->type ?? $row->label ?? 'mobile',
+                                    'value' => $row->value ?? $row->contact ?? '',
+                                    'is_primary' => (bool) ($row->is_primary ?? false),
+                                    'order_column' => $row->order ?? 0,
+                                    'created_at' => now(),
+                                    'updated_at' => now(),
+                                ]
+                            );
+                        });
                         $count++;
+                    } catch (Throwable $e) {
+                        Log::warning("fusion:import-contacts [phones] row {$row->id} failed: {$e->getMessage()}");
                     }
-                    DB::commit();
-                } catch (Throwable $e) {
-                    DB::rollBack();
-                    Log::warning('fusion:import-contacts [phones] chunk failed: '.$e->getMessage());
                 }
             });
 
@@ -335,34 +528,24 @@ final class ImportContactsCommand extends Command
         $query->orderBy('id')->chunk($chunk, function ($rows) use (
             $dryRun, $mapRow, $upsertRow, &$processed, &$skipped, &$failed, $bar, $logKey
         ) {
-            DB::beginTransaction();
-            try {
-                foreach ($rows as $row) {
-                    try {
-                        $mapped = $mapRow((array) $row);
-                        if ($mapped === null) {
-                            $skipped++;
-                            $bar->advance();
+            foreach ($rows as $row) {
+                try {
+                    $mapped = $mapRow((array) $row);
+                    if ($mapped === null) {
+                        $skipped++;
+                        $bar->advance();
 
-                            continue;
-                        }
-                        if (! $dryRun) {
-                            $upsertRow($mapped);
-                        }
-                        $processed++;
-                    } catch (Throwable $e) {
-                        $failed++;
-                        Log::warning("fusion:import [{$logKey}] row {$row->id} failed: {$e->getMessage()}");
+                        continue;
                     }
-                    $bar->advance();
+                    if (! $dryRun) {
+                        DB::transaction(fn () => $upsertRow($mapped));
+                    }
+                    $processed++;
+                } catch (Throwable $e) {
+                    $failed++;
+                    Log::warning("fusion:import [{$logKey}] row {$row->id} failed: {$e->getMessage()}");
                 }
-                if (! $dryRun) {
-                    DB::commit();
-                }
-            } catch (Throwable $e) {
-                DB::rollBack();
-                $this->error("Chunk failed: {$e->getMessage()}");
-                $failed += count($rows);
+                $bar->advance();
             }
         });
 

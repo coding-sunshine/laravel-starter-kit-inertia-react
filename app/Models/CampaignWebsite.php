@@ -12,6 +12,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 
 /**
  * @property int $id
@@ -38,10 +40,11 @@ use Spatie\Activitylog\Traits\LogsActivity;
  * @property \Carbon\Carbon $updated_at
  * @property \Carbon\Carbon|null $deleted_at
  */
-final class CampaignWebsite extends Model
+final class CampaignWebsite extends Model implements HasMedia
 {
     use BelongsToOrganization;
     use HasFactory;
+    use InteractsWithMedia;
     use LogsActivity;
     use SoftDeletes;
 
@@ -84,6 +87,13 @@ final class CampaignWebsite extends Model
     public function projects(): BelongsToMany
     {
         return $this->belongsToMany(Project::class, 'campaign_website_project');
+    }
+
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('logo')->singleFile();
+        $this->addMediaCollection('banner')->singleFile();
+        $this->addMediaCollection('assets');
     }
 
     public function getActivitylogOptions(): LogOptions

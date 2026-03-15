@@ -118,7 +118,16 @@
             "default": null
         }
     },
-    "relationships": [],
+    "relationships": {
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        },
+        "mailList": {
+            "type": "belongsTo",
+            "model": "MailList"
+        }
+    },
     "value_hints": {
         "name": {
             "type": "name",
@@ -131,6 +140,14 @@
         "from_email": {
             "type": "email",
             "example": "user@example.com"
+        },
+        "scheduled_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        },
+        "sent_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
         }
     },
     "scenarios": []

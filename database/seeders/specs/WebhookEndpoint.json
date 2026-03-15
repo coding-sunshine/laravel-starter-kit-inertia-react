@@ -4,23 +4,23 @@
     "fields": {
         "id": {
             "type": "bigint",
-            "nullable": false,
+            "nullable": true,
             "default": null
         },
         "organization_id": {
             "type": "bigint",
-            "nullable": false,
+            "nullable": true,
             "default": null
         },
         "url": {
             "type": "string",
-            "nullable": false,
+            "nullable": true,
             "default": null
         },
         "events": {
-            "type": "jsonb",
-            "nullable": false,
-            "default": "[]"
+            "type": "json",
+            "nullable": true,
+            "default": null
         },
         "secret": {
             "type": "string",
@@ -29,8 +29,8 @@
         },
         "is_active": {
             "type": "boolean",
-            "nullable": false,
-            "default": true
+            "nullable": true,
+            "default": null
         },
         "last_triggered_at": {
             "type": "timestamp",
@@ -39,8 +39,8 @@
         },
         "failure_count": {
             "type": "integer",
-            "nullable": false,
-            "default": 0
+            "nullable": true,
+            "default": null
         },
         "created_at": {
             "type": "timestamp",
@@ -56,6 +56,26 @@
             "type": "timestamp",
             "nullable": true,
             "default": null
+        }
+    },
+    "relationships": {
+        "organization": {
+            "type": "belongsTo",
+            "model": "Organization"
+        }
+    },
+    "value_hints": {
+        "is_active": {
+            "type": "boolean",
+            "example": true
+        },
+        "last_triggered_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
+        },
+        "url": {
+            "type": "url",
+            "example": "https://example.com"
         }
     }
 }

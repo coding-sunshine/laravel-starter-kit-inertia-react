@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use Closure;
-use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -197,7 +196,7 @@ final class ImportProjectsLotsCommand extends Command
         $this->info('Importing project types...');
 
         return $this->runImport(
-            sourceTable: 'project_types',
+            sourceTable: 'projecttypes',
             targetTable: 'projecttypes',
             logKey: 'projecttypes',
             dryRun: $dryRun,
@@ -270,9 +269,9 @@ final class ImportProjectsLotsCommand extends Command
                     'min_landsize' => $row['min_landsize'] ?? null,
                     'max_landsize' => $row['max_landsize'] ?? null,
                     'living_area' => $row['living_area'] ?? null,
-                    'bedrooms' => $row['bedrooms'] ?? null,
-                    'bathrooms' => $row['bathrooms'] ?? null,
-                    'garage' => $row['garage'] ?? null,
+                    'bedrooms' => is_numeric($row['bedrooms'] ?? null) ? (int) $row['bedrooms'] : ((int) ($row['bedrooms'] ?? 0) ?: null),
+                    'bathrooms' => is_numeric($row['bathrooms'] ?? null) ? (int) $row['bathrooms'] : ((int) ($row['bathrooms'] ?? 0) ?: null),
+                    'garage' => is_numeric($row['garage'] ?? null) ? (int) $row['garage'] : ((int) ($row['garage'] ?? 0) ?: null),
                     'min_rent' => $row['min_rent'] ?? null,
                     'max_rent' => $row['max_rent'] ?? null,
                     'avg_rent' => $row['avg_rent'] ?? null,
@@ -348,47 +347,47 @@ final class ImportProjectsLotsCommand extends Command
 
                 $projectId = $projectMap[$row['project_id']] ?? null;
                 if ($projectId === null) {
-                    throw new Exception("No project found for legacy project_id {$row['project_id']}");
+                    return null; // Skip orphan lots — project was deleted or not imported
                 }
 
                 return [
                     'legacy_id' => $row['id'],
                     'project_id' => $projectId,
                     'title' => $row['title'] ?? null,
-                    'land_price' => $row['land_price'] ?? null,
-                    'build_price' => $row['build_price'] ?? null,
+                    'land_price' => $this->numericOrNull($row['land_price'] ?? null),
+                    'build_price' => $this->numericOrNull($row['build_price'] ?? null),
                     'stage' => $row['stage'] ?? null,
                     'level' => $row['level'] ?? null,
                     'building' => $row['building'] ?? null,
                     'floorplan' => $row['floorplan'] ?? null,
-                    'car' => $row['car'] ?? null,
+                    'car' => is_numeric($row['car'] ?? null) ? (int) $row['car'] : null,
                     'storage' => $row['storage'] ?? null,
                     'view' => $row['view'] ?? null,
-                    'garage' => $row['garage'] ?? null,
+                    'garage' => is_numeric($row['garage'] ?? null) ? (int) $row['garage'] : null,
                     'aspect' => $row['aspect'] ?? null,
-                    'internal' => $row['internal'] ?? null,
-                    'external' => $row['external'] ?? null,
-                    'total' => $row['total'] ?? null,
-                    'storeys' => $row['storeys'] ?? null,
-                    'land_size' => $row['land_size'] ?? null,
+                    'internal' => $this->numericOrNull($row['internal'] ?? null),
+                    'external' => $this->numericOrNull($row['external'] ?? null),
+                    'total' => $this->numericOrNull($row['total'] ?? null),
+                    'storeys' => is_numeric($row['storeys'] ?? null) ? (int) $row['storeys'] : null,
+                    'land_size' => $this->numericOrNull($row['land_size'] ?? null),
                     'title_status' => $row['title_status'] ?? 'available',
-                    'living_area' => $row['living_area'] ?? null,
-                    'price' => $row['price'] ?? null,
-                    'bedrooms' => $row['bedrooms'] ?? null,
-                    'bathrooms' => $row['bathrooms'] ?? null,
-                    'study' => $row['study'] ?? null,
+                    'living_area' => $this->numericOrNull($row['living_area'] ?? null),
+                    'price' => $this->numericOrNull($row['price'] ?? null),
+                    'bedrooms' => is_numeric($row['bedrooms'] ?? null) ? (int) $row['bedrooms'] : null,
+                    'bathrooms' => is_numeric($row['bathrooms'] ?? null) ? (int) $row['bathrooms'] : null,
+                    'study' => is_numeric($row['study'] ?? null) ? (int) $row['study'] : null,
                     'mpr' => (bool) ($row['mpr'] ?? false),
                     'powder_room' => (bool) ($row['powder_room'] ?? false),
-                    'balcony' => $row['balcony'] ?? null,
-                    'rent_yield' => $row['rent_yield'] ?? null,
-                    'weekly_rent' => $row['weekly_rent'] ?? null,
-                    'rates' => $row['rates'] ?? null,
-                    'body_corporation' => $row['body_corporation'] ?? null,
+                    'balcony' => $this->numericOrNull($row['balcony'] ?? null),
+                    'rent_yield' => $this->numericOrNull($row['rent_yield'] ?? null),
+                    'weekly_rent' => $this->numericOrNull($row['weekly_rent'] ?? null),
+                    'rates' => $this->numericOrNull($row['rates'] ?? null),
+                    'body_corporation' => $this->numericOrNull($row['body_corporation'] ?? null),
                     'is_archived' => (bool) ($row['is_archived'] ?? false),
                     'is_nras' => (bool) ($row['is_nras'] ?? false),
                     'is_smsf' => (bool) ($row['is_smsf'] ?? false),
                     'is_cashflow_positive' => (bool) ($row['is_cashflow_positive'] ?? false),
-                    'completion' => $row['completion'] ?? null,
+                    'completion' => $this->safeDateOrNull($row['completion'] ?? null),
                     'created_at' => $row['created_at'] ?? now(),
                     'updated_at' => $row['updated_at'] ?? now(),
                 ];
@@ -543,9 +542,28 @@ final class ImportProjectsLotsCommand extends Command
         );
     }
 
-    /**
-     * Generic import runner following the base import command pattern.
-     */
+    private function numericOrNull(mixed $value): ?float
+    {
+        if ($value === null || $value === '' || $value === ' ') {
+            return null;
+        }
+
+        return is_numeric($value) ? (float) $value : null;
+    }
+
+    private function safeDateOrNull(?string $value): ?string
+    {
+        if ($value === null || mb_trim($value) === '') {
+            return null;
+        }
+
+        try {
+            return \Carbon\Carbon::parse($value)->toDateString();
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
     private function runImport(
         string $sourceTable,
         string $targetTable,
@@ -574,34 +592,24 @@ final class ImportProjectsLotsCommand extends Command
         $query->orderBy('id')->chunk($chunk, function ($rows) use (
             $dryRun, $force, $mapRow, $upsertRow, &$processed, &$skipped, &$failed, $bar, $logKey
         ) {
-            DB::beginTransaction();
-            try {
-                foreach ($rows as $row) {
-                    try {
-                        $mapped = $mapRow((array) $row);
-                        if ($mapped === null) {
-                            $skipped++;
-                            $bar->advance();
+            foreach ($rows as $row) {
+                try {
+                    $mapped = $mapRow((array) $row);
+                    if ($mapped === null) {
+                        $skipped++;
+                        $bar->advance();
 
-                            continue;
-                        }
-                        if (! $dryRun) {
-                            $upsertRow($mapped, $force);
-                        }
-                        $processed++;
-                    } catch (Throwable $e) {
-                        $failed++;
-                        Log::warning("fusion:import [{$logKey}] row {$row->id} failed: {$e->getMessage()}");
+                        continue;
                     }
-                    $bar->advance();
+                    if (! $dryRun) {
+                        DB::transaction(fn () => $upsertRow($mapped, $force));
+                    }
+                    $processed++;
+                } catch (Throwable $e) {
+                    $failed++;
+                    Log::warning("fusion:import [{$logKey}] row {$row->id} failed: {$e->getMessage()}");
                 }
-                if (! $dryRun) {
-                    DB::commit();
-                }
-            } catch (Throwable $e) {
-                DB::rollBack();
-                $this->error("Chunk failed: {$e->getMessage()}");
-                $failed += count($rows);
+                $bar->advance();
             }
         });
 

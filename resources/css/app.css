@@ -72,8 +72,7 @@
 }
 
 /* Fusion brand theme — applied when THEME_PRESET=fusion */
-[data-preset="fusion"],
-:root {
+[data-theme="fusion"] {
     /* Brand orange — primary for buttons, links, active states, focus rings */
     --primary: oklch(70% 0.18 48);           /* #f28036 */
     --primary-foreground: oklch(98% 0 0);
@@ -132,8 +131,8 @@
 
 /* Fusion dark theme */
 [data-theme="fusion-dark"],
-[data-preset="fusion"].dark,
-[data-preset="fusion"] .dark {
+[data-theme="fusion"].dark,
+[data-theme="fusion"] .dark {
     --background: oklch(15% 0.01 240);
     --card: oklch(18% 0.01 240);
     --card-foreground: oklch(90% 0.02 240);
@@ -161,7 +160,8 @@
     --sidebar-ring: oklch(72% 0.18 48);
 }
 
-:root {
+/* Default theme — only applies when no named theme is active */
+:root:not([data-theme="fusion"]) {
     --background: oklch(1 0 0);
     --foreground: oklch(0.145 0 0);
     --card: oklch(1 0 0);
@@ -197,7 +197,8 @@
     --sidebar-ring: oklch(0.87 0 0);
 }
 
-.dark {
+:root:not([data-theme="fusion"]) .dark,
+:root:not([data-theme="fusion"]).dark {
     --background: oklch(0.145 0 0);
     --foreground: oklch(0.985 0 0);
     --card: oklch(0.145 0 0);

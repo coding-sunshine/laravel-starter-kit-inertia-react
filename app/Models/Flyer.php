@@ -74,6 +74,13 @@ final class Flyer extends Model implements HasMedia
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('poster')->singleFile();
+        $this->addMediaCollection('floorplan')->singleFile();
+        $this->addMediaCollection('pdf')->singleFile();
+    }
+
     protected function casts(): array
     {
         return [
