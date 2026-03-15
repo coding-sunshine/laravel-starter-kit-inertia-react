@@ -21,7 +21,7 @@
         }
     ],
     "require": {
-        "php": "^8.5.0",
+        "php": "^8.4.0",
         "a909m/filament-statefusion": "^2.3.0",
         "akaunting/laravel-money": "^6.0.2",
         "alizharb/filament-activity-log": "^1.3.1",
@@ -34,8 +34,8 @@
         "devrabiul/laravel-geo-genius": "^1.5",
         "essa/api-tool-kit": "^3.1.0",
         "eznix86/laravel-ai-memory": "dev-main",
-        "filament/filament": "^5.3.4",
-        "filament/spatie-laravel-settings-plugin": "^5.3.4",
+        "filament/filament": "^5.3.5",
+        "filament/spatie-laravel-settings-plugin": "^5.3.5",
         "genealabs/laravel-governor": ">=0.22",
         "inertiajs/inertia-laravel": "^2.0.22",
         "jijunair/laravel-referral": "^1.0.4",

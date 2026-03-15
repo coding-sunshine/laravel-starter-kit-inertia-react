@@ -255,7 +255,9 @@
       "Bash(npx tsc:*)",
       "Bash(gh api:*)",
       "mcp__playwright__browser_snapshot",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(php:*)",
+      "mcp__plugin_context-mode_context-mode__ctx_batch_execute"
     ]
   },
   "enableAllProjectMcpServers": true,

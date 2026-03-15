@@ -83,6 +83,13 @@ All Actions:
 | [SyncContactToXeroAction](./SyncContactToXeroAction.md) | N/A | ✅ |
 | [SyncInvoiceToXeroAction](./SyncInvoiceToXeroAction.md) | N/A | ✅ |
 | [ReconcileXeroPaymentAction](./ReconcileXeroPaymentAction.md) | N/A | ✅ |
-| ProvisionSubscriberFeaturesAction | N/A | ❌ |
+| [ProvisionSubscriberFeaturesAction](docs/developer/backend/actions/ProvisionSubscriberFeaturesAction.md) | N/A | ✅ |
+| [CreateVoiceAction](./actions/CreateVoiceAction.md) | N/A | ✅ |
+| [ExtractBrochureMediaAction](./actions/ExtractBrochureMediaAction.md) | N/A | ✅ |
+| [FetchSuburbAiDataAction](./actions/FetchSuburbAiDataAction.md) | N/A | ✅ |
+| [GenerateSpeechAction](./actions/GenerateSpeechAction.md) | N/A | ✅ |
+| [SendBuilderEmailAction](./actions/SendBuilderEmailAction.md) | N/A | ✅ |
+| ClassifyContactTypeAction | N/A | ❌ |
+| GenerateContactEmbeddingAction | N/A | ❌ |
 
 

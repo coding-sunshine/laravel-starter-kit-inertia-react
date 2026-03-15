@@ -109,6 +109,14 @@ All Controllers:
 | [PinnedNoteController](docs/developer/backend/controllers/PinnedNoteController.md) | N/A | ✅ |
 | [DealDocumentController](docs/developer/backend/controllers/DealDocumentController.md) | N/A | ✅ |
 | [WebsiteController](developer/backend/controllers/WebsiteController.md) | N/A | ✅ |
-| SignupController | N/A | ❌ |
+| [SignupController](docs/developer/backend/controllers/SignupController.md) | N/A | ✅ |
+| [BrochureExtractionController](./controllers/BrochureExtractionController.md) | N/A | ✅ |
+| [BuilderEmailController](./controllers/BuilderEmailController.md) | N/A | ✅ |
+| [SuburbAiDataController](./controllers/SuburbAiDataController.md) | N/A | ✅ |
+| FavouritesController | N/A | ❌ |
+| FinanceAssessmentController | N/A | ❌ |
+| MailStatusController | N/A | ❌ |
+| PotentialPropertyController | N/A | ❌ |
+| ResourceLibraryController | N/A | ❌ |
 
 

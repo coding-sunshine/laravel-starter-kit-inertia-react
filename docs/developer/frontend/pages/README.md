@@ -79,8 +79,8 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | lot-table | N/A | ✅ |
 | lots/index | lots.table, lots.push | ✅ |
 | project-table | N/A | ✅ |
-| projects/index | projects.table, projects.push | ✅ |
-| contacts/index | contacts.index, contacts.bulk-update | ✅ |
+| projects/index | projects.table, projects.show | ✅ |
+| contacts/index | contacts.index, contacts.show | ✅ |
 | reservations/index | reservations.index, reservations.bulk-update | ✅ |
 | enquiries/index | enquiries.index | ✅ |
 | searches/index | searches.index | ✅ |
@@ -121,8 +121,18 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | deal-tracker/index | deal-tracker.index, deal-tracker.stage-update | ✅ |
 | [websites/index](developer/frontend/pages/websites/index.md) | api.websites.callback, website-index.index | ✅ |
 | [xero/index](developer/frontend/pages/xero/index.md) | xero.index, xero.connect | ✅ |
-| signup/index | signup.index, signup.register | ❌ |
-| signup/onboarding | signup.index, signup.register | ❌ |
-| signup/register | signup.index, signup.register | ❌ |
+| signup/index | signup.index, signup.register | ✅ |
+| signup/onboarding | signup.index, signup.register | ✅ |
+| signup/register | signup.index, signup.register | ✅ |
+| [brochure-extraction/index](./pages/brochure-extraction-index.md) | brochure-extraction.index, brochure-extraction.extract | ✅ |
+| [builder-email/index](./pages/builder-email-index.md) | builder-email.index, builder-email.send | ✅ |
+| [suburb-ai/index](./pages/suburb-ai-index.md) | suburb-ai.index, suburb-ai.fetch | ✅ |
+| contacts/show | contacts.index, contacts.show | ❌ |
+| favourites/index | favourites.index, favourites.toggle | ❌ |
+| finance-assessments/index | finance-assessments.index | ❌ |
+| mail-status/index | mail-status.index | ❌ |
+| potential-properties/index | potential-properties.index | ❌ |
+| projects/show | projects.table, projects.show | ❌ |
+| resources/index | resources.index | ❌ |
 
 
