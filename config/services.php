@@ -103,4 +103,19 @@ return [
         'endpoint' => env('EWAY_ENDPOINT', 'https://api.sandbox.ewaypayments.com'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Resemble.ai Voice Cloning (R&D)
+    |--------------------------------------------------------------------------
+    |
+    | Resemble.ai API for voice cloning. Set RESEMBLE_API_KEY and
+    | RESEMBLE_PROJECT_UUID to enable. When not set, voice cloning features
+    | are skipped and logged as deferred.
+    |
+    */
+    'resemble' => [
+        'api_key' => env('RESEMBLE_API_KEY'),
+        'project_uuid' => env('RESEMBLE_PROJECT_UUID'),
+    ],
+
 ];

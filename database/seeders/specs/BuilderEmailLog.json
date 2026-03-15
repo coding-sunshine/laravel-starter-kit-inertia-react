@@ -1,0 +1,19 @@
+{
+    "model": "BuilderEmailLog",
+    "table": "builder_email_logs",
+    "fields": {
+        "id": { "type": "bigint", "nullable": false, "default": null },
+        "organization_id": { "type": "bigint", "nullable": true, "default": null },
+        "contact_id": { "type": "bigint", "nullable": true, "default": null },
+        "project_id": { "type": "bigint", "nullable": true, "default": null },
+        "sent_by": { "type": "bigint", "nullable": true, "default": null },
+        "template_type": { "type": "string", "nullable": false, "default": null },
+        "recipient_email": { "type": "string", "nullable": false, "default": null },
+        "recipient_name": { "type": "string", "nullable": true, "default": null },
+        "subject": { "type": "string", "nullable": false, "default": null },
+        "payload": { "type": "json", "nullable": true, "default": null },
+        "status": { "type": "string", "nullable": false, "default": "sent" },
+        "created_at": { "type": "timestamp", "nullable": true, "default": null },
+        "updated_at": { "type": "timestamp", "nullable": true, "default": null }
+    }
+}

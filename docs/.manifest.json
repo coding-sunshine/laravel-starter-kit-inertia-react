@@ -1199,6 +1199,78 @@
       "documented": true,
       "path": "docs/developer/backend/actions/ProvisionSubscriberFeaturesAction.md",
       "lastUpdated": "2026-03-15"
+    },
+    "CreateVoiceAction": {
+      "documented": true,
+      "path": "./actions/CreateVoiceAction.md",
+      "relationships": {
+        "usedBy": [],
+        "usesModels": [
+          "User"
+        ],
+        "relatedRoutes": []
+      }
+    },
+    "ExtractBrochureMediaAction": {
+      "documented": true,
+      "path": "./actions/ExtractBrochureMediaAction.md",
+      "relationships": {
+        "usedBy": [
+          "BrochureExtractionController"
+        ],
+        "usesModels": [
+          "Project",
+          "Lot",
+          "Flyer"
+        ],
+        "relatedRoutes": [
+          "brochure-extraction.extract"
+        ]
+      }
+    },
+    "FetchSuburbAiDataAction": {
+      "documented": true,
+      "path": "./actions/FetchSuburbAiDataAction.md",
+      "relationships": {
+        "usedBy": [
+          "SuburbAiDataController"
+        ],
+        "usesModels": [
+          "SuburbAiData"
+        ],
+        "relatedRoutes": [
+          "suburb-ai.fetch"
+        ]
+      }
+    },
+    "GenerateSpeechAction": {
+      "documented": true,
+      "path": "./actions/GenerateSpeechAction.md",
+      "relationships": {
+        "usedBy": [],
+        "usesModels": [
+          "User"
+        ],
+        "relatedRoutes": []
+      }
+    },
+    "SendBuilderEmailAction": {
+      "documented": true,
+      "path": "./actions/SendBuilderEmailAction.md",
+      "relationships": {
+        "usedBy": [
+          "BuilderEmailController"
+        ],
+        "usesModels": [
+          "BuilderEmailLog",
+          "Contact",
+          "Project",
+          "User"
+        ],
+        "relatedRoutes": [
+          "builder-email.send"
+        ]
+      }
     }
   },
   "controllers": {
@@ -2734,6 +2806,57 @@
       "documented": true,
       "path": "docs/developer/backend/controllers/SignupController.md",
       "lastUpdated": "2026-03-15"
+    },
+    "BrochureExtractionController": {
+      "documented": true,
+      "path": "./controllers/BrochureExtractionController.md",
+      "relationships": {
+        "usesActions": [
+          "ExtractBrochureMediaAction"
+        ],
+        "usesFormRequests": [],
+        "relatedRoutes": [
+          "brochure-extraction.index",
+          "brochure-extraction.extract"
+        ],
+        "rendersPages": [
+          "brochure-extraction/index"
+        ]
+      }
+    },
+    "BuilderEmailController": {
+      "documented": true,
+      "path": "./controllers/BuilderEmailController.md",
+      "relationships": {
+        "usesActions": [
+          "SendBuilderEmailAction"
+        ],
+        "usesFormRequests": [],
+        "relatedRoutes": [
+          "builder-email.index",
+          "builder-email.send"
+        ],
+        "rendersPages": [
+          "builder-email/index"
+        ]
+      }
+    },
+    "SuburbAiDataController": {
+      "documented": true,
+      "path": "./controllers/SuburbAiDataController.md",
+      "relationships": {
+        "usesActions": [
+          "FetchSuburbAiDataAction"
+        ],
+        "usesFormRequests": [],
+        "relatedRoutes": [
+          "suburb-ai.index",
+          "suburb-ai.fetch"
+        ],
+        "rendersPages": [
+          "suburb-ai/index"
+        ]
+      }
     }
   },
   "pages": {
@@ -8114,6 +8237,48 @@
       "documented": true,
       "path": "docs/developer/frontend/pages/signup/register.md",
       "lastUpdated": "2026-03-15"
+    },
+    "brochure-extraction/index": {
+      "documented": true,
+      "userGuide": null,
+      "developerGuide": "./pages/brochure-extraction-index.md",
+      "relationships": {
+        "renderedBy": [
+          "BrochureExtractionController"
+        ],
+        "relatedRoutes": [
+          "brochure-extraction.index",
+          "brochure-extraction.extract"
+        ]
+      }
+    },
+    "builder-email/index": {
+      "documented": true,
+      "userGuide": null,
+      "developerGuide": "./pages/builder-email-index.md",
+      "relationships": {
+        "renderedBy": [
+          "BuilderEmailController"
+        ],
+        "relatedRoutes": [
+          "builder-email.index",
+          "builder-email.send"
+        ]
+      }
+    },
+    "suburb-ai/index": {
+      "documented": true,
+      "userGuide": null,
+      "developerGuide": "./pages/suburb-ai-index.md",
+      "relationships": {
+        "renderedBy": [
+          "SuburbAiDataController"
+        ],
+        "relatedRoutes": [
+          "suburb-ai.index",
+          "suburb-ai.fetch"
+        ]
+      }
     }
   },
   "routes": {

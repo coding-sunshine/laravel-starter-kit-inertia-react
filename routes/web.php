@@ -25,7 +25,9 @@ use App\Http\Controllers\Billing\PricingController;
 use App\Http\Controllers\Billing\StripeWebhookController;
 use App\Http\Controllers\Blog\BlogController;
 use App\Http\Controllers\BotV2Controller;
+use App\Http\Controllers\BrochureExtractionController;
 use App\Http\Controllers\BrochureLayoutController;
+use App\Http\Controllers\BuilderEmailController;
 use App\Http\Controllers\BuilderPortalController;
 use App\Http\Controllers\CampaignSiteController;
 use App\Http\Controllers\CategoriesTableController;
@@ -102,6 +104,7 @@ use App\Http\Controllers\Settings\OrgRolesController;
 use App\Http\Controllers\Settings\OrgSlugController;
 use App\Http\Controllers\SignupController;
 use App\Http\Controllers\SocialAuthController;
+use App\Http\Controllers\SuburbAiDataController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TermsAcceptController;
 use App\Http\Controllers\UserController;
@@ -415,6 +418,16 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('deal-documents', [DealDocumentController::class, 'index'])->name('deal-documents.index');
     Route::post('deal-documents', [DealDocumentController::class, 'store'])->name('deal-documents.store');
     Route::delete('deal-documents/{dealDocument}', [DealDocumentController::class, 'destroy'])->name('deal-documents.destroy');
+
+    // R&D & Special Features (US-019)
+    Route::get('suburb-ai', [SuburbAiDataController::class, 'index'])->name('suburb-ai.index');
+    Route::post('suburb-ai/fetch', [SuburbAiDataController::class, 'fetch'])->name('suburb-ai.fetch');
+
+    Route::get('brochure-extraction', [BrochureExtractionController::class, 'index'])->name('brochure-extraction.index');
+    Route::post('brochure-extraction/extract', [BrochureExtractionController::class, 'extract'])->name('brochure-extraction.extract');
+
+    Route::get('builder-email', [BuilderEmailController::class, 'index'])->name('builder-email.index');
+    Route::post('builder-email/send', [BuilderEmailController::class, 'send'])->name('builder-email.send');
 
     // Xero Integration (US-017)
     Route::get('/xero', [XeroController::class, 'index'])->name('xero.index');
