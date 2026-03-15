@@ -8,6 +8,7 @@ use App\Events\DemurrageThresholdCrossed;
 use App\Events\OrganizationMemberAdded;
 use App\Events\OrganizationMemberRemoved;
 use App\Events\User\UserCreated;
+use App\Http\Responses\Filament\LoginResponse as FilamentLoginResponse;
 use App\Listeners\Billing\AddCreditsFromLemonSqueezyOrder;
 use App\Listeners\Billing\SyncSubscriptionSeatsOnMemberChange;
 use App\Listeners\CreatePersonalOrganizationOnUserCreated;
@@ -28,6 +29,7 @@ use App\Services\PaymentGateway\PaymentGatewayManager;
 use App\Services\PrismService;
 use App\Settings\SeoSettings;
 use Essa\APIToolKit\Exceptions\Handler as ApiToolKitExceptionHandler;
+use Filament\Auth\Http\Responses\Contracts\LoginResponse as FilamentLoginResponseContract;
 use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Database\Events\MigrationsEnded;
 use Illuminate\Queue\Events\JobFailed;
@@ -57,6 +59,8 @@ final class AppServiceProvider extends ServiceProvider
         $this->app->singleton(PaymentGatewayManager::class);
 
         config(['filament-impersonate.redirect_to' => '/dashboard']);
+
+        $this->app->bind(FilamentLoginResponseContract::class, FilamentLoginResponse::class);
     }
 
     public function boot(): void
@@ -192,6 +196,11 @@ final class AppServiceProvider extends ServiceProvider
             'vehicle-dispatch-tab-main-data',
             'vehicle-dispatch-tab-dpr',
             'vehicle-dispatch-generate-dpr',
+            'nav-railway-siding-empty-weighment',
+            'nav-shift-timings',
+            'shift-timings-edit',
+            'nav-opening-coal-stock',
+            'opening-coal-stock-edit',
             'nav-vehicle-workorders',
             'vehicle-workorders-filters',
             'vehicle-workorders-table',
@@ -204,7 +213,13 @@ final class AppServiceProvider extends ServiceProvider
             'rr-tab-penalties',
             'rr-tab-raw',
             'rr-upload-pdf-button',
+            'rake-rr-upload-pdf-button',
             'indents-upload-pdf-button',
+            'nav-production-coal',
+            'nav-production-ob',
+            'production-add-entry',
+            'production-edit-entry',
+            'production-delete-entry',
         ]);
     }
 

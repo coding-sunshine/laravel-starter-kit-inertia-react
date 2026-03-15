@@ -23,6 +23,7 @@ interface DailyVehicleEntry {
   transport_name: string | null;
   gross_wt: number | null;
   tare_wt: number | null;
+  tare_wt_two: number | null;
   reached_at: string;
   wb_no: string | null;
   d_challan_no: string | null;
@@ -71,6 +72,8 @@ interface Props {
   shiftTimes: Record<number, ShiftTime>;
   sidings: Siding[];
   sidingId?: number | null;
+  /** When true, user only sees their assigned shift; hide shift/siding switchers. */
+  restrictToAssignedShift?: boolean;
 }
 
 export default function DailyVehicleEntriesIndex({
@@ -82,27 +85,30 @@ export default function DailyVehicleEntriesIndex({
   shiftTimes,
   sidings,
   sidingId: sidingIdProp,
+  restrictToAssignedShift = false,
 }: Props) {
   const [entries, setEntries] = useState(() =>
     Array.isArray(entriesProp) ? entriesProp : []
   );
   const [selectedDate, setSelectedDate] = useState(date);
   const [activeShiftState, setActiveShiftState] = useState(activeShift);
+  const firstSidingId = sidings[0]?.id ?? null;
   const [selectedSidingId, setSelectedSidingId] = useState<number | null>(
-    sidingIdProp ?? null
+    sidingIdProp ?? firstSidingId
   );
-  const [exportShift, setExportShift] = useState<string>('all');
+  const [exportShift, setExportShift] = useState<string>(() => String(activeShift));
   const [isExporting, setIsExporting] = useState(false);
   const [isAddingRow, setIsAddingRow] = useState(false);
   const [addRowError, setAddRowError] = useState<string | null>(null);
   const addingRowRef = useRef(false);
 
+  const effectiveSidingId = selectedSidingId ?? firstSidingId;
   const entriesForSiding =
-    selectedSidingId == null
+    effectiveSidingId == null
       ? entries
-      : entries.filter((e) => e.siding_id === selectedSidingId);
+      : entries.filter((e) => e.siding_id === effectiveSidingId);
   const hasDraftEntry =
-    selectedSidingId == null
+    effectiveSidingId == null
       ? entries.some((e) => e.status === 'draft')
       : entriesForSiding.some((e) => e.status === 'draft');
 
@@ -113,10 +119,10 @@ export default function DailyVehicleEntriesIndex({
   useEffect(() => {
     if (sidingIdProp !== undefined && sidingIdProp !== null) {
       setSelectedSidingId(sidingIdProp);
-    } else if (sidingIdProp === null || sidingIdProp === undefined) {
-      setSelectedSidingId(null);
+    } else {
+      setSelectedSidingId(firstSidingId);
     }
-  }, [sidingIdProp]);
+  }, [sidingIdProp, firstSidingId]);
 
   const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -127,7 +133,7 @@ export default function DailyVehicleEntriesIndex({
   const handleDateChange = (newDate: string) => {
     setSelectedDate(newDate);
     const params: Record<string, string | number> = { date: newDate, shift: activeShiftState };
-    if (selectedSidingId != null) params.siding_id = selectedSidingId;
+    if (effectiveSidingId != null) params.siding_id = effectiveSidingId;
     router.get('/road-dispatch/daily-vehicle-entries', params, {
       preserveState: true,
       preserveScroll: true,
@@ -140,8 +146,8 @@ export default function DailyVehicleEntriesIndex({
       if (!shiftStatus[shift]?.is_available) {
         // Show alert or message instead of changing shift
         const messages = {
-          2: '2nd shift will be available after 1st shift completion (after 11:00)',
-          3: '3rd shift will be available after 2nd shift completion (after 22:00)',
+          2: `2nd shift will be available after 1st shift completion (after ${shiftTimes[1]?.end ?? '08:00'})`,
+          3: `3rd shift will be available after 2nd shift completion (after ${shiftTimes[2]?.end ?? '16:00'})`,
         };
         alert(messages[shift as keyof typeof messages] || 'This shift is not available at the current time.');
         return;
@@ -149,8 +155,9 @@ export default function DailyVehicleEntriesIndex({
     }
 
     setActiveShiftState(shift);
+    setExportShift(String(shift));
     const params: Record<string, string | number> = { date: selectedDate, shift };
-    if (selectedSidingId != null) params.siding_id = selectedSidingId;
+    if (effectiveSidingId != null) params.siding_id = effectiveSidingId;
     router.get('/road-dispatch/daily-vehicle-entries', params, {
       preserveState: true,
       preserveScroll: true,
@@ -163,9 +170,9 @@ export default function DailyVehicleEntriesIndex({
     if (shiftStatus && selectedDate === new Date().toISOString().split('T')[0]) {
       if (!shiftStatus[activeShiftState]?.is_available) {
         const messages = {
-          1: '1st shift is only available between 06:00 - 11:00',
-          2: '2nd shift will be available after 1st shift completion (after 11:00)',
-          3: '3rd shift will be available after 2nd shift completion (after 22:00)',
+          1: `1st shift is only available between ${shiftTimes[1]?.start ?? '00:01'} - ${shiftTimes[1]?.end ?? '08:00'}`,
+          2: `2nd shift will be available after 1st shift completion (after ${shiftTimes[1]?.end ?? '08:00'})`,
+          3: `3rd shift will be available after 2nd shift completion (after ${shiftTimes[2]?.end ?? '16:00'})`,
         };
         alert(messages[activeShiftState as keyof typeof messages] || 'This shift is not available at the current time.');
         addingRowRef.current = false;
@@ -177,7 +184,7 @@ export default function DailyVehicleEntriesIndex({
     setIsAddingRow(true);
     const newEntries: DailyVehicleEntry[] = [];
     const payload = {
-      siding_id: selectedSidingId ?? sidings[0]?.id ?? 1,
+      siding_id: effectiveSidingId ?? sidings[0]?.id ?? 1,
       entry_date: selectedDate,
       shift: activeShiftState,
     };
@@ -235,7 +242,7 @@ export default function DailyVehicleEntriesIndex({
     
     try {
       // Create export URL with parameters
-      const exportUrl = `/road-dispatch/daily-vehicle-entries/export?date=${selectedDate}&siding=${selectedSidingId}&shift=${exportShift}`;
+      const exportUrl = `/road-dispatch/daily-vehicle-entries/export?date=${selectedDate}&siding=${effectiveSidingId}&shift=${exportShift}`;
       
       // Use fetch to get the file with authentication cookies
       const response = await fetch(exportUrl, {
@@ -298,66 +305,80 @@ export default function DailyVehicleEntriesIndex({
             <p className="text-gray-600 mt-1">Excel-style shift-based vehicle entry management</p>
           </div>
           <div className="flex gap-3">
-            {/* Export Controls */}
-            <div className="flex items-center gap-2">
-              <Select
-                value={selectedSidingId == null ? 'all' : selectedSidingId.toString()}
-                onValueChange={(value) => {
-                  if (value === 'all') {
-                    setSelectedSidingId(null);
-                    router.get(
-                      '/road-dispatch/daily-vehicle-entries',
-                      { date: selectedDate, shift: activeShiftState },
-                      { preserveState: true, preserveScroll: true }
-                    );
-                  } else {
+            {/* Siding / Export: hidden when restricted to assigned shift (single siding + shift) */}
+            {!restrictToAssignedShift && (
+              <div className="flex items-center gap-2">
+                <Select
+                  value={effectiveSidingId == null ? '' : effectiveSidingId.toString()}
+                  onValueChange={(value) => {
                     const id = Number(value);
+                    if (Number.isNaN(id)) return;
                     setSelectedSidingId(id);
                     router.get(
                       '/road-dispatch/daily-vehicle-entries',
-                      { date: selectedDate, shift: activeShiftState, siding_id: id },
+                        {
+                          date: selectedDate,
+                          shift: activeShiftState,
+                          siding_id: id,
+                        },
                       { preserveState: true, preserveScroll: true }
                     );
-                  }
-                }}
-              >
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Select siding" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All sidings</SelectItem>
-                  {sidings.map((siding) => (
-                    <SelectItem key={siding.id} value={siding.id.toString()}>
-                      {siding.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={exportShift} onValueChange={setExportShift}>
-                <SelectTrigger className="w-32">
-                  <SelectValue placeholder="Export" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Shifts</SelectItem>
-                  <SelectItem value="1">Shift 1</SelectItem>
-                  <SelectItem value="2">Shift 2</SelectItem>
-                  <SelectItem value="3">Shift 3</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button 
-                onClick={handleExport} 
-                disabled={isExporting}
-                variant="outline"
-                className="flex items-center gap-2"
-              >
-                <Download className="h-4 w-4" />
-                {isExporting ? 'Exporting...' : 'Export'}
-              </Button>
-            </div>
+                  }}
+                >
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder="Select siding" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sidings.map((siding) => (
+                      <SelectItem key={siding.id} value={siding.id.toString()}>
+                        {siding.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={exportShift} onValueChange={setExportShift}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue placeholder="Export" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">Shift 1</SelectItem>
+                    <SelectItem value="2">Shift 2</SelectItem>
+                    <SelectItem value="3">Shift 3</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  onClick={handleExport}
+                  disabled={isExporting}
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  {isExporting ? 'Exporting...' : 'Export'}
+                </Button>
+              </div>
+            )}
+            {restrictToAssignedShift && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">
+                  Your shift: {sidings.find((s) => s.id === effectiveSidingId)?.name ?? '—'} · Shift {activeShiftState}
+                </span>
+                <Button
+                  onClick={handleExport}
+                  disabled={isExporting}
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  {isExporting ? 'Exporting...' : 'Export'}
+                </Button>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Controls Section */}
+        {/* Date filter, shift summary, shift times, shift tabs: only for superadmin / dispatch-manage-admin */}
+        {!restrictToAssignedShift && (
+          <>
         <Card>
           <CardContent className="pt-6">
             <div className="flex gap-4 items-center">
@@ -370,8 +391,6 @@ export default function DailyVehicleEntriesIndex({
                   className="w-auto"
                 />
               </div>
-              
-              {/* Shift Summary */}
               <div className="flex gap-2 ml-auto">
                 {[1, 2, 3].map((shift) => (
                   <Badge
@@ -387,20 +406,21 @@ export default function DailyVehicleEntriesIndex({
           </CardContent>
         </Card>
 
-        {/* Shift Times */}
         <p className="text-sm text-gray-500">
-          Shift 1: {shiftTimes[1]?.start ?? '06:00'}–{shiftTimes[1]?.end ?? '11:00'} &nbsp;|&nbsp;{' '}
-          Shift 2: {shiftTimes[2]?.start ?? '11:00'}–{shiftTimes[2]?.end ?? '22:00'} &nbsp;|&nbsp;{' '}
-          Shift 3: {shiftTimes[3]?.start ?? '22:00'}–{shiftTimes[3]?.end ?? '06:00'}
+          Shift 1: {shiftTimes[1]?.start ?? '00:01'}–{shiftTimes[1]?.end ?? '08:00'} &nbsp;|&nbsp;{' '}
+          Shift 2: {shiftTimes[2]?.start ?? '08:01'}–{shiftTimes[2]?.end ?? '16:00'} &nbsp;|&nbsp;{' '}
+          Shift 3: {shiftTimes[3]?.start ?? '16:01'}–{shiftTimes[3]?.end ?? '00:00'}
         </p>
 
-        {/* Shift Tabs */}
         <ShiftTabs
-          activeShift={activeShiftState}
-          onShiftChange={handleShiftChange}
-          shiftSummary={shiftSummary}
-          shiftStatus={shiftStatus}
-        />
+            activeShift={activeShiftState}
+            onShiftChange={handleShiftChange}
+            shiftSummary={shiftSummary}
+            shiftStatus={shiftStatus}
+            shiftTimes={shiftTimes}
+          />
+          </>
+        )}
 
         {/* Draft rows are completed automatically when required fields are filled, so no extra warning is needed */}
 

@@ -21,6 +21,7 @@ interface DailyVehicleEntry {
   transport_name: string | null;
   gross_wt: number | null;
   tare_wt: number | null;
+  tare_wt_two: number | null;
   reached_at: string;
   wb_no: string | null;
   d_challan_no: string | null;
@@ -268,14 +269,14 @@ export default function VehicleEntryRow({
         onMouseEnter={() => setShowContextMenu(true)}
         onMouseLeave={() => setShowContextMenu(false)}
       >
-        <TableCell className="px-2 py-1 font-medium border-t border-r border-gray-300">
+        <TableCell className="px-2 py-3 font-medium border-t border-r border-gray-300 min-h-[4rem]">
           <div className="flex items-center gap-2">
             <div className={`opacity-0 group-hover:opacity-100 transition-opacity duration-200 ${showContextMenu ? 'opacity-100' : ''}`}>
               <Button
                 size="sm"
                 variant="ghost"
                 onClick={() => setShowDetailModal(true)}
-                className="h-7 w-7 p-0 min-w-0"
+                className="h-9 w-9 p-0 min-w-0"
                 title="More options"
               >
                 <MoreHorizontal className="h-3 w-3" />
@@ -285,11 +286,11 @@ export default function VehicleEntryRow({
           </div>
         </TableCell>
 
-        <TableCell className="px-2 py-1 text-muted-foreground text-xs whitespace-nowrap border-t border-r border-gray-300" title="Siding (read-only)">
+        <TableCell className="px-2 py-3 text-muted-foreground text-xs whitespace-nowrap border-t border-r border-gray-300 min-h-[4rem]" title="Siding (read-only)">
           {entry.siding?.name ?? '—'}
         </TableCell>
 
-      <TableCell className="px-2 py-1 border-t border-r border-gray-300">
+      <TableCell className="px-2 py-3 border-t border-r border-gray-300 min-h-[4rem]">
         <Input
           value={formData.e_challan_no}
           onChange={(e) => {
@@ -297,23 +298,65 @@ export default function VehicleEntryRow({
             debouncedSave();
           }}
           placeholder="E-CH"
-          className="w-24 h-8 px-2 text-xs"
+          className="w-24 h-12 px-2 text-xs"
         />
       </TableCell>
 
-      <TableCell className="px-2 py-1 border-t border-r border-gray-300">
+      <TableCell className="px-2 py-3 border-t border-r border-gray-300 min-h-[4rem]">
         <Input
           value={formData.vehicle_no}
           onChange={(e) => {
             updateField('vehicle_no', e.target.value);
-            debouncedSave();
+          }}
+          onBlur={async () => {
+            const vehicleNo = formDataRef.current.vehicle_no.trim();
+            if (!vehicleNo) {
+              return;
+            }
+            try {
+              const res = await fetch(
+                `/road-dispatch/vehicle-workorders/lookup?vehicle_no=${encodeURIComponent(vehicleNo)}`,
+                {
+                  method: 'GET',
+                  headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                  },
+                  credentials: 'include',
+                }
+              );
+
+              if (!res.ok) {
+                return;
+              }
+
+              const data = (await res.json()) as {
+                tare_wt?: number | null;
+                transport_name?: string | null;
+              };
+
+              setFormData((prev) => {
+                const next = { ...prev };
+                if (!next.tare_wt && data.tare_wt != null) {
+                  next.tare_wt = data.tare_wt.toString();
+                }
+                if (!next.transport_name && data.transport_name) {
+                  next.transport_name = data.transport_name;
+                }
+                return next;
+              });
+
+              debouncedSave();
+            } catch {
+              // fail silently; user can still enter manually
+            }
           }}
           placeholder="VEH"
-          className="w-24 h-8 px-2 text-xs"
+          className="w-24 h-12 px-2 text-xs"
         />
       </TableCell>
 
-      <TableCell className="px-2 py-1 border-t border-r border-gray-300">
+      <TableCell className="px-2 py-3 border-t border-r border-gray-300 min-h-[4rem]">
         <Input
           value={formData.trip_id_no}
           onChange={(e) => {
@@ -321,11 +364,11 @@ export default function VehicleEntryRow({
             debouncedSave();
           }}
           placeholder="TRIP"
-          className="w-20 h-8 px-2 text-xs"
+          className="w-20 h-12 px-2 text-xs"
         />
       </TableCell>
 
-      <TableCell className="px-2 py-1 border-t border-r border-gray-300">
+      <TableCell className="px-2 py-3 border-t border-r border-gray-300 min-h-[4rem]">
         <Input
           value={formData.transport_name}
           onChange={(e) => {
@@ -333,11 +376,11 @@ export default function VehicleEntryRow({
             debouncedSave();
           }}
           placeholder="TRANS"
-          className="w-32 h-8 px-2 text-xs"
+          className="w-32 h-12 px-2 text-xs"
         />
       </TableCell>
 
-      <TableCell className="px-2 py-1 border-t border-r border-gray-300">
+      <TableCell className="px-2 py-3 border-t border-r border-gray-300 min-h-[4rem]">
         <Input
           type="number"
           step="0.01"
@@ -347,11 +390,11 @@ export default function VehicleEntryRow({
             debouncedSave();
           }}
           placeholder="G2"
-          className="w-20 h-8 px-2 text-right text-xs"
+          className="w-20 h-12 px-2 text-right text-xs"
         />
       </TableCell>
 
-      <TableCell className="px-2 py-1 border-t border-r border-gray-300">
+      <TableCell className="px-2 py-3 border-t border-r border-gray-300 min-h-[4rem]">
         <Input
           type="number"
           step="0.01"
@@ -361,19 +404,19 @@ export default function VehicleEntryRow({
             debouncedSave();
           }}
           placeholder="T1"
-          className="w-20 h-8 px-2 text-right text-xs"
+          className="w-20 h-12 px-2 text-right text-xs"
         />
       </TableCell>
 
-      <TableCell className="px-2 py-1 font-medium text-blue-600 text-right text-xs border-t border-r border-gray-300">
+      <TableCell className="px-2 py-3 font-medium text-blue-600 text-right text-xs border-t border-r border-gray-300 min-h-[4rem]">
         {calculateNetWeight()}
       </TableCell>
 
-      <TableCell className="px-2 py-1 text-xs text-gray-600 border-t border-r border-gray-300">
+      <TableCell className="px-2 py-3 text-xs text-gray-600 border-t border-r border-gray-300 min-h-[4rem]">
         {formatDateTime(entry.reached_at)}
       </TableCell>
 
-      <TableCell className="px-2 py-1 border-t border-r border-gray-300">
+      <TableCell className="px-2 py-3 border-t border-r border-gray-300 min-h-[4rem]">
         <Input
           value={formData.wb_no}
           onChange={(e) => {
@@ -381,11 +424,11 @@ export default function VehicleEntryRow({
             debouncedSave();
           }}
           placeholder="WB"
-          className="w-20 h-8 px-2 text-xs"
+          className="w-20 h-12 px-2 text-xs"
         />
       </TableCell>
 
-      <TableCell className="px-2 py-1 border-t border-r border-gray-300">
+      <TableCell className="px-2 py-3 border-t border-r border-gray-300 min-h-[4rem]">
         <Input
           value={formData.d_challan_no}
           onChange={(e) => {
@@ -393,11 +436,11 @@ export default function VehicleEntryRow({
             debouncedSave();
           }}
           placeholder="D-CH"
-          className="w-24 h-8 px-2 text-xs"
+          className="w-24 h-12 px-2 text-xs"
         />
       </TableCell>
 
-      <TableCell className="px-2 py-1 border-t border-r border-gray-300">
+      <TableCell className="px-2 py-3 border-t border-r border-gray-300 min-h-[4rem]">
         <Select
           value={formData.challan_mode}
           onValueChange={(value) => {
@@ -406,7 +449,7 @@ export default function VehicleEntryRow({
             setTimeout(save, 50);
           }}
         >
-          <SelectTrigger className="w-20 h-8 text-xs px-2">
+          <SelectTrigger className="w-20 h-12 text-xs px-2">
             <SelectValue placeholder="MODE" />
           </SelectTrigger>
           <SelectContent>
@@ -416,7 +459,7 @@ export default function VehicleEntryRow({
         </Select>
       </TableCell>
 
-      <TableCell className="px-2 py-1 border-t border-gray-300">
+      <TableCell className="px-2 py-3 border-t border-gray-300 min-h-[4rem]">
         {entry.status === 'completed' ? (
           <Badge variant="default" className="text-xs px-2 py-0.5">Stock updated</Badge>
         ) : hasMeaningfulValues() ? (

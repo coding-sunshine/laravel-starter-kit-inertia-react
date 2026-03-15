@@ -12,6 +12,7 @@ final class RakeWagonWeighment extends Model
     protected $fillable = [
         'rake_weighment_id',
         'wagon_id',
+        'wagon_number',
         'wagon_sequence',
         'wagon_type',
         'axles',

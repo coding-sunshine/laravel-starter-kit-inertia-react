@@ -7,6 +7,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Mattiverse\Userstamps\Traits\Userstamps;
 
@@ -61,6 +62,22 @@ final class Siding extends Model
     public function coalStock(): HasMany
     {
         return $this->hasMany(CoalStock::class);
+    }
+
+    /**
+     * @return HasMany<SidingShift, $this>
+     */
+    public function shifts(): HasMany
+    {
+        return $this->hasMany(SidingShift::class)->orderBy('sort_order');
+    }
+
+    /**
+     * @return HasOne<SidingOpeningBalance, $this>
+     */
+    public function openingBalance(): HasOne
+    {
+        return $this->hasOne(SidingOpeningBalance::class);
     }
 
     public function users()

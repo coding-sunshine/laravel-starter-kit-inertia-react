@@ -12,6 +12,9 @@ use Inertia\Middleware;
 use Spatie\Honeypot\Honeypot;
 use Throwable;
 
+use function getPermissionsTeamId;
+use function setPermissionsTeamId;
+
 final class HandleInertiaRequests extends Middleware
 {
     /**
@@ -61,15 +64,30 @@ final class HandleInertiaRequests extends Middleware
             ? $user->sidings()->get(['sidings.id', 'sidings.name', 'sidings.code'])
             : [];
 
+        $permissions = [];
+        $canBypass = false;
+        $roleNames = [];
+        if ($user) {
+            $previousTeamId = getPermissionsTeamId();
+            setPermissionsTeamId(0);
+            try {
+                $permissions = $user->getAllPermissions()->pluck('name')->all();
+                $canBypass = $user->can('bypass-permissions');
+                $roleNames = $user->getRoleNames()->all();
+            } finally {
+                setPermissionsTeamId($previousTeamId);
+            }
+        }
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
             'quote' => ['message' => mb_trim((string) $message), 'author' => mb_trim((string) $author)],
             'auth' => [
                 'user' => $user,
-                'permissions' => $user?->getAllPermissions()->pluck('name')->all() ?? [],
-                'roles' => $user?->getRoleNames()->all() ?? [],
-                'can_bypass' => $user?->can('bypass-permissions') ?? false,
+                'permissions' => $permissions,
+                'roles' => $roleNames,
+                'can_bypass' => $canBypass,
                 'tenancy_enabled' => $tenancyEnabled,
                 'current_organization' => $currentOrganization?->only(['id', 'name', 'slug']),
                 'organizations' => $tenancyEnabled ? $userOrganizations : [],

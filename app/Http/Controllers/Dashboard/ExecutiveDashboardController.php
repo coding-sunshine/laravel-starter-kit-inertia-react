@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Dashboard;
 use App\Http\Controllers\Controller;
 use App\Models\Alert;
 use App\Models\AppliedPenalty;
+use App\Models\DailyVehicleEntry;
 use App\Models\Indent;
 use App\Models\Loader;
 use App\Models\Penalty;
@@ -15,7 +16,9 @@ use App\Models\PenaltyType;
 use App\Models\Rake;
 use App\Models\RakeWagonWeighment;
 use App\Models\RakeWeighment;
+use App\Models\RrPenaltySnapshot;
 use App\Models\Siding;
+use App\Models\SidingOpeningBalance;
 use App\Models\SidingVehicleDispatch;
 use App\Models\StockLedger;
 use App\Models\VehicleUnload;
@@ -65,8 +68,11 @@ final class ExecutiveDashboardController extends Controller
         $loaderId = $request->integer('loader_id') ?: null;
         $shift = $request->filled('shift') ? (string) $request->input('shift') : null;
         $penaltyTypeId = $request->integer('penalty_type') ?: null;
+        $dailyRakeDate = $this->parseDailyRakeDate($request);
+        $coalTransportDate = $this->parseCoalTransportDate($request);
+        $coalStockDate = $this->parseCoalStockDate($request);
 
-        $allowedSections = ['executive-overview', 'operations', 'penalty-control', 'siding-stock', 'siding-performance', 'rake-performance', 'loader-overload', 'power-plant'];
+        $allowedSections = ['executive-overview', 'operations', 'penalty-control', 'siding-performance', 'rake-performance', 'loader-overload', 'power-plant'];
         $section = $request->input('section', 'executive-overview');
         $section = in_array($section, $allowedSections, true) ? $section : 'executive-overview';
 
@@ -95,6 +101,9 @@ final class ExecutiveDashboardController extends Controller
                 'loader_id' => $loaderId,
                 'shift' => $shift,
                 'penalty_type' => $penaltyTypeId,
+                'daily_rake_date' => $dailyRakeDate->toDateString(),
+                'coal_transport_date' => $coalTransportDate->toDateString(),
+                'coal_stock_date' => $coalStockDate->toDateString(),
             ],
             'filterOptions' => $filterOptions,
             'kpis' => $this->buildKpis($filteredSidingIds, $from, $to, $filterContext),
@@ -103,13 +112,17 @@ final class ExecutiveDashboardController extends Controller
             'penaltyBySiding' => $this->buildPenaltyBySiding($filteredSidingIds, $from, $to, $filterContext),
             'alerts' => $this->buildAlerts($filteredSidingIds),
             'liveRakeStatus' => $this->buildLiveRakeStatus($filteredSidingIds, $filterContext),
+            'dailyRakeDetails' => $this->buildDailyRakeDetails($filteredSidingIds, $dailyRakeDate),
+            'coalTransportReport' => $this->buildCoalTransportReport($filteredSidingIds, $coalTransportDate, $filterContext['shift'] ?? null),
             'truckReceiptTrend' => $this->buildTruckReceiptTrend($filteredSidingIds, $filterContext),
-            'stockGauge' => $this->buildStockGauge($filteredSidingIds, $to),
+            'shiftWiseVehicleReceipt' => $this->buildShiftWiseVehicleReceipt($filteredSidingIds, $filterContext['shift'] ?? null),
+            // 'stockGauge' => $this->buildStockGauge($filteredSidingIds, $to), // hidden for now
             'predictedVsActualPenalty' => $this->buildPredictedVsActualPenalty($filteredSidingIds, $from, $to, $filterContext),
+            'yesterdayPredictedPenalties' => $this->buildYesterdayPredictedPenalties($allSidingIds),
             'sidingWiseMonthly' => $this->buildSidingWiseMonthly($filteredSidingIds, $from, $to),
             'sidingRadar' => $this->buildSidingRadar($filteredSidingIds, $from, $to),
             'sidingPerformance' => $this->buildSidingPerformance($filteredSidingIds, $from, $to, $filterContext),
-            'sidingStocks' => $this->buildSidingStocks($filteredSidingIds, $from, $to),
+            'sidingStocks' => $this->buildSidingStocks($filteredSidingIds, $from, $to, $coalStockDate),
             'dateWiseDispatch' => $this->buildDateWiseDispatch($filteredSidingIds, $from, $to),
             'rakePerformance' => $this->buildRakePerformance($filteredSidingIds, $from, $to, $filterContext),
             'loaderOverloadTrends' => $this->buildLoaderOverloadTrends($filteredSidingIds, $from, $to, $filterContext),
@@ -162,6 +175,39 @@ final class ExecutiveDashboardController extends Controller
         }
 
         return Carbon::parse($value, $tz)->startOfDay();
+    }
+
+    /**
+     * Single date for Daily Rake Details section (default: yesterday).
+     */
+    private function parseDailyRakeDate(Request $request): CarbonInterface
+    {
+        $tz = config('app.timezone', 'UTC');
+        $parsed = $this->parseRequestDate($request, 'daily_rake_date', $tz);
+
+        return $parsed ?? now($tz)->subDay()->startOfDay();
+    }
+
+    /**
+     * Single date for Coal Transport Report section only (default: yesterday). Does not affect Daily Rake or any other section.
+     */
+    private function parseCoalTransportDate(Request $request): CarbonInterface
+    {
+        $tz = config('app.timezone', 'UTC');
+        $parsed = $this->parseRequestDate($request, 'coal_transport_date', $tz);
+
+        return $parsed ?? now($tz)->subDay()->startOfDay();
+    }
+
+    /**
+     * Single date for Coal Stock section — stock "as of" this date (default: today).
+     */
+    private function parseCoalStockDate(Request $request): CarbonInterface
+    {
+        $tz = config('app.timezone', 'UTC');
+        $parsed = $this->parseRequestDate($request, 'coal_stock_date', $tz);
+
+        return $parsed ?? now($tz)->startOfDay();
     }
 
     /**
@@ -435,7 +481,7 @@ final class ExecutiveDashboardController extends Controller
     }
 
     /**
-     * Penalty trend: date vs total amount. Uses applied_penalties.created_at for
+     * Penalty trend: date vs total amount. Uses rr_penalty_snapshots.created_at for
      * date-wise filter and grouping. Respects the selected date range (capped to 30 days).
      *
      * @param  array<int>  $sidingIds
@@ -487,24 +533,25 @@ final class ExecutiveDashboardController extends Controller
         }
 
         if ($driver === 'pgsql') {
-            $tzEscaped = str_replace("'", "''", $tz);
-            $dateSql = "(applied_penalties.created_at AT TIME ZONE 'UTC' AT TIME ZONE '{$tzEscaped}')::date";
+            $dateSql = '(rakes.loading_date)::date';
         } else {
-            $dateSql = 'DATE(applied_penalties.created_at)';
+            $dateSql = 'DATE(rakes.loading_date)';
         }
 
         $startDate = $start->toDateString();
         $endDate = $end->toDateString();
-        $penaltyQuery = AppliedPenalty::query()
-            ->whereRaw($this->dateOnlyBetweenSql('created_at'), [$startDate, $endDate]);
+        $penaltyQuery = RrPenaltySnapshot::query()
+            ->join('rakes', 'rr_penalty_snapshots.rake_id', '=', 'rakes.id')
+            ->whereNotNull('rakes.loading_date')
+            ->whereRaw($this->dateOnlyBetweenSql('rakes.loading_date'), [$startDate, $endDate]);
         if ($rakeIds !== null) {
-            $penaltyQuery->whereIn('rake_id', $rakeIds);
+            $penaltyQuery->whereIn('rr_penalty_snapshots.rake_id', $rakeIds);
         } else {
-            $penaltyQuery->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
+            $penaltyQuery->whereIn('rakes.siding_id', $sidingIds);
         }
 
         $rows = $penaltyQuery
-            ->selectRaw("{$dateSql} as d, sum(applied_penalties.amount * 1.05) as total")
+            ->selectRaw("{$dateSql} as d, sum(rr_penalty_snapshots.amount * 1.05) as total")
             ->groupBy(DB::raw($dateSql))
             ->get();
 
@@ -554,25 +601,25 @@ final class ExecutiveDashboardController extends Controller
         }
 
         if ($driver === 'pgsql') {
-            $tzEscaped = str_replace("'", "''", $tz);
-            $monthSql = "date_trunc('month', (applied_penalties.created_at AT TIME ZONE 'UTC' AT TIME ZONE '{$tzEscaped}'))::date";
+            $monthSql = "date_trunc('month', rakes.loading_date)::date";
         } else {
-            $monthSql = "DATE_FORMAT(applied_penalties.created_at, '%Y-%m-01')";
+            $monthSql = "DATE_FORMAT(rakes.loading_date, '%Y-%m-01')";
         }
 
         $startDate = $start->toDateString();
         $endDate = $end->toDateString();
-        $penaltyQuery = AppliedPenalty::whereDate('created_at', '>=', $startDate)
-            ->whereDate('created_at', '<=', $endDate);
-        // ->whereRaw($this->dateOnlyBetweenSql('created_at'), [$startDate, $endDate]);
+        $penaltyQuery = RrPenaltySnapshot::query()
+            ->join('rakes', 'rr_penalty_snapshots.rake_id', '=', 'rakes.id')
+            ->whereNotNull('rakes.loading_date')
+            ->whereRaw($this->dateOnlyBetweenSql('rakes.loading_date'), [$startDate, $endDate]);
         if ($rakeIds !== null) {
-            $penaltyQuery->whereIn('rake_id', $rakeIds);
+            $penaltyQuery->whereIn('rr_penalty_snapshots.rake_id', $rakeIds);
         } else {
-            $penaltyQuery->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
+            $penaltyQuery->whereIn('rakes.siding_id', $sidingIds);
         }
 
         $rows = $penaltyQuery
-            ->selectRaw("{$monthSql} as m, sum(applied_penalties.amount + applied_penalties.amount * 0.05) as total")
+            ->selectRaw("{$monthSql} as m, sum(rr_penalty_snapshots.amount + rr_penalty_snapshots.amount * 0.05) as total")
             ->groupBy(DB::raw($monthSql))
             ->get();
 
@@ -594,10 +641,102 @@ final class ExecutiveDashboardController extends Controller
     }
 
     /**
+     * Yesterday's predicted penalties (applied_penalties) grouped by siding and rake.
+     * Limited to recent rakes (like Live rake status). Only rakes from user's accessible sidings.
+     *
      * @param  array<int>  $sidingIds
-     * @return array<int, array{siding_id: int, opening_balance_mt: float, closing_balance_mt: float, total_rakes: int}>
+     * @return array<int, array{siding_id: int, siding_name: string, rakes: array<int, array{rake_id: int, rake_number: string, total_penalty: float, penalties: array<int, array{type_code: string, type_name: string, amount: float}>}>}>
      */
-    private function buildSidingStocks(array $sidingIds, CarbonInterface $from, CarbonInterface $to): array
+    private function buildYesterdayPredictedPenalties(array $sidingIds): array
+    {
+        if ($sidingIds === []) {
+            return [];
+        }
+
+        $businessDate = today()->toDateString();
+
+        $rakes = Rake::query()
+            ->with('siding:id,name')
+            ->whereIn('siding_id', $sidingIds)
+            ->whereNotNull('loading_date')
+            ->where('loading_date', $businessDate)
+            ->orderByDesc('loading_start_time')
+            ->orderByDesc('id')
+            ->limit(10)
+            ->get(['id', 'rake_number', 'siding_id']);
+
+        if ($rakes->isEmpty()) {
+            return [];
+        }
+
+        $rakeIds = $rakes->pluck('id')->all();
+
+        $penalties = AppliedPenalty::query()
+            ->with('penaltyType:id,code,name')
+            ->whereIn('rake_id', $rakeIds)
+            ->get();
+
+        if ($penalties->isEmpty()) {
+            return [];
+        }
+
+        $penaltiesByRake = $penalties->groupBy('rake_id');
+
+        $resultBySiding = [];
+
+        foreach ($rakes as $rake) {
+            $rakePenalties = $penaltiesByRake->get($rake->id);
+            if ($rakePenalties === null || $rakePenalties->isEmpty()) {
+                continue;
+            }
+
+            $penaltyRows = [];
+            $totalPenalty = 0.0;
+
+            foreach ($rakePenalties as $p) {
+                $amount = (float) $p->amount;
+                $totalPenalty += $amount;
+
+                $penaltyRows[] = [
+                    'type_code' => (string) ($p->penaltyType?->code ?? '—'),
+                    'type_name' => (string) ($p->penaltyType?->name ?? ''),
+                    'amount' => $amount,
+                ];
+            }
+
+            if ($penaltyRows === []) {
+                continue;
+            }
+
+            $sidingId = $rake->siding_id;
+            if (! isset($resultBySiding[$sidingId])) {
+                $resultBySiding[$sidingId] = [
+                    'siding_id' => $sidingId,
+                    'siding_name' => $rake->siding?->name ?? "Siding {$sidingId}",
+                    'rakes' => [],
+                ];
+            }
+
+            $resultBySiding[$sidingId]['rakes'][] = [
+                'rake_id' => $rake->id,
+                'rake_number' => (string) $rake->rake_number,
+                'total_penalty' => round($totalPenalty, 2),
+                'penalties' => $penaltyRows,
+            ];
+        }
+
+        return array_values($resultBySiding);
+    }
+
+    /**
+     * Siding stock from stock_ledger only (no date filter).
+     * Receipts (daily_vehicle_entry_id) increase stock; dispatches (rake_id) decrease it.
+     * Stock = latest ledger row's closing_balance_mt per siding (as of $asOfDate when provided).
+     *
+     * @param  array<int>  $sidingIds
+     * @return array<int, array{siding_id: int, opening_balance_mt: float, closing_balance_mt: float, total_rakes: int, received_mt: float, dispatched_mt: float}>
+     */
+    private function buildSidingStocks(array $sidingIds, CarbonInterface $from, CarbonInterface $to, CarbonInterface $asOfDate): array
     {
         if ($sidingIds === []) {
             return [];
@@ -605,31 +744,36 @@ final class ExecutiveDashboardController extends Controller
 
         $fromDate = $from->toDateString();
         $toDate = $to->toDateString();
-        $firstLedgerIds = StockLedger::query()
-            ->whereIn('siding_id', $sidingIds)
-            ->whereRaw($this->dateOnlyBetweenSql('created_at'), [$fromDate, $toDate])
-            ->selectRaw('min(id) as id')
-            ->groupBy('siding_id')
-            ->pluck('id')
-            ->all();
+        $asOfEnd = $asOfDate->copy()->endOfDay();
 
-        $lastLedgerIds = StockLedger::query()
+        $latestLedgerIds = StockLedger::query()
             ->whereIn('siding_id', $sidingIds)
-            ->whereRaw($this->dateOnlyBetweenSql('created_at'), [$fromDate, $toDate])
+            ->where('created_at', '<=', $asOfEnd)
             ->selectRaw('max(id) as id')
             ->groupBy('siding_id')
             ->pluck('id')
             ->all();
 
-        $firstLedgers = StockLedger::query()
-            ->whereIn('id', $firstLedgerIds)
+        $latestLedgers = StockLedger::query()
+            ->whereIn('id', $latestLedgerIds)
             ->get()
             ->keyBy('siding_id');
 
-        $lastLedgers = StockLedger::query()
-            ->whereIn('id', $lastLedgerIds)
-            ->get()
-            ->keyBy('siding_id');
+        $receivedBySiding = StockLedger::query()
+            ->whereIn('siding_id', $sidingIds)
+            ->whereNotNull('daily_vehicle_entry_id')
+            ->where('transaction_type', 'receipt')
+            ->selectRaw('siding_id, coalesce(sum(quantity_mt), 0) as total')
+            ->groupBy('siding_id')
+            ->pluck('total', 'siding_id');
+
+        $dispatchedBySiding = StockLedger::query()
+            ->whereIn('siding_id', $sidingIds)
+            ->whereNotNull('rake_id')
+            ->where('transaction_type', 'dispatch')
+            ->selectRaw('siding_id, coalesce(sum(quantity_mt), 0) as total')
+            ->groupBy('siding_id')
+            ->pluck('total', 'siding_id');
 
         $rakeCountsBySiding = Rake::query()
             ->whereIn('siding_id', $sidingIds)
@@ -641,14 +785,22 @@ final class ExecutiveDashboardController extends Controller
 
         $result = [];
         foreach ($sidingIds as $sid) {
-            $first = $firstLedgers->get($sid);
-            $last = $lastLedgers->get($sid);
+            $latest = $latestLedgers->get($sid);
+            if ($latest) {
+                $opening = (float) $latest->opening_balance_mt;
+                $closing = (float) $latest->closing_balance_mt;
+            } else {
+                $opening = SidingOpeningBalance::getOpeningBalanceForSiding($sid);
+                $closing = $opening;
+            }
 
             $result[$sid] = [
                 'siding_id' => $sid,
-                'opening_balance_mt' => $first ? (float) $first->opening_balance_mt : 0.0,
-                'closing_balance_mt' => $last ? (float) $last->closing_balance_mt : 0.0,
+                'opening_balance_mt' => $opening,
+                'closing_balance_mt' => $closing,
                 'total_rakes' => (int) ($rakeCountsBySiding[$sid] ?? 0),
+                'received_mt' => (float) ($receivedBySiding[$sid] ?? 0),
+                'dispatched_mt' => (float) ($dispatchedBySiding[$sid] ?? 0),
             ];
         }
 
@@ -779,7 +931,96 @@ final class ExecutiveDashboardController extends Controller
     }
 
     /**
-     * Truck receipt trend: hourly count for today (for operations dashboard).
+     * Daily rake details: one-day view per siding (day rakes/qty, month-to-date rakes/qty, avg).
+     * Used when siding filter is applied; date defaults to yesterday.
+     *
+     * @param  array<int>  $sidingIds
+     * @return array{date: string, rows: array<int, array{sl_no: int, siding_name: string, day_rakes: int, day_qty: float, month_rakes: int, month_qty: float, rake_day_avg: float, remarks: string}>, totals: array{day_rakes: int, day_qty: float, month_rakes: int, month_qty: float, rake_day_avg: float}}
+     */
+    private function buildDailyRakeDetails(array $sidingIds, CarbonInterface $date): array
+    {
+        $dateStr = $date->toDateString();
+        $monthStart = $date->copy()->startOfMonth()->toDateString();
+        $daysInMonthSoFar = max(1, (int) $date->day);
+
+        if ($sidingIds === []) {
+            return [
+                'date' => $dateStr,
+                'rows' => [],
+                'totals' => [
+                    'day_rakes' => 0,
+                    'day_qty' => 0.0,
+                    'month_rakes' => 0,
+                    'month_qty' => 0.0,
+                    'rake_day_avg' => 0.0,
+                ],
+            ];
+        }
+
+        $sidings = Siding::query()
+            ->whereIn('id', $sidingIds)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        $daySql = $this->dateOnlyBetweenSql('loading_date');
+        $dayRows = Rake::query()
+            ->whereIn('siding_id', $sidingIds)
+            ->whereNotNull('loading_date')
+            ->whereRaw($daySql, [$dateStr, $dateStr])
+            ->selectRaw('siding_id, count(*) as rakes, coalesce(sum(loaded_weight_mt), 0) as qty')
+            ->groupBy('siding_id')
+            ->get()
+            ->keyBy('siding_id');
+
+        $monthRows = Rake::query()
+            ->whereIn('siding_id', $sidingIds)
+            ->whereNotNull('loading_date')
+            ->whereRaw($daySql, [$monthStart, $dateStr])
+            ->selectRaw('siding_id, count(*) as rakes, coalesce(sum(loaded_weight_mt), 0) as qty')
+            ->groupBy('siding_id')
+            ->get()
+            ->keyBy('siding_id');
+
+        $rows = [];
+        $totals = ['day_rakes' => 0, 'day_qty' => 0.0, 'month_rakes' => 0, 'month_qty' => 0.0, 'rake_day_avg' => 0.0];
+        $slNo = 1;
+        foreach ($sidings as $siding) {
+            $day = $dayRows->get($siding->id);
+            $month = $monthRows->get($siding->id);
+            $dayRakes = $day !== null ? (int) $day->rakes : 0;
+            $dayQty = $day !== null ? (float) $day->qty : 0.0;
+            $monthRakes = $month !== null ? (int) $month->rakes : 0;
+            $monthQty = $month !== null ? (float) $month->qty : 0.0;
+            $rakeDayAvg = $daysInMonthSoFar > 0 ? round($monthRakes / $daysInMonthSoFar, 2) : 0.0;
+
+            $rows[] = [
+                'sl_no' => $slNo++,
+                'siding_name' => $siding->name,
+                'day_rakes' => $dayRakes,
+                'day_qty' => round($dayQty, 2),
+                'month_rakes' => $monthRakes,
+                'month_qty' => round($monthQty, 2),
+                'rake_day_avg' => $rakeDayAvg,
+                'remarks' => '',
+            ];
+            $totals['day_rakes'] += $dayRakes;
+            $totals['day_qty'] += $dayQty;
+            $totals['month_rakes'] += $monthRakes;
+            $totals['month_qty'] += $monthQty;
+        }
+        $totals['day_qty'] = round($totals['day_qty'], 2);
+        $totals['month_qty'] = round($totals['month_qty'], 2);
+        $totals['rake_day_avg'] = $daysInMonthSoFar > 0 ? round($totals['month_rakes'] / $daysInMonthSoFar, 2) : 0.0;
+
+        return [
+            'date' => $dateStr,
+            'rows' => $rows,
+            'totals' => $totals,
+        ];
+    }
+
+    /**
+     * Truck receipt trend: hourly count of vehicles arrived today (from daily_vehicle_entries).
      *
      * @param  array<int>  $sidingIds
      * @param  array{power_plant: string|null, rake_number: string|null, loader_id: int|null, shift: string|null}  $filterContext
@@ -804,16 +1045,16 @@ final class ExecutiveDashboardController extends Controller
         $todayEnd = today()->endOfDay();
 
         $driver = DB::getDriverName();
-        $hourSql = $driver === 'pgsql' ? 'EXTRACT(HOUR FROM issued_on)::int' : 'HOUR(issued_on)';
+        $hourSql = $driver === 'pgsql' ? 'EXTRACT(HOUR FROM reached_at)::int' : 'HOUR(reached_at)';
 
-        $dispatchQuery = SidingVehicleDispatch::query()
+        $query = DailyVehicleEntry::query()
             ->whereIn('siding_id', $sidingIds)
-            ->whereBetween('issued_on', [$todayStart, $todayEnd]);
-        if (! empty($filterContext['shift'])) {
-            $dispatchQuery->where('shift', $filterContext['shift']);
+            ->whereBetween('reached_at', [$todayStart, $todayEnd]);
+        if (isset($filterContext['shift']) && $filterContext['shift'] !== null && $filterContext['shift'] !== '') {
+            $query->where('shift', $filterContext['shift']);
         }
-        $rows = $dispatchQuery
-            ->selectRaw("{$hourSql} as h, count(DISTINCT truck_regd_no) as cnt")
+        $rows = $query
+            ->selectRaw("{$hourSql} as h, count(*) as cnt")
             ->groupBy('h')
             ->get()
             ->keyBy('h');
@@ -826,6 +1067,176 @@ final class ExecutiveDashboardController extends Controller
         }
 
         return $hours;
+    }
+
+    /**
+     * Shift-wise vehicle receipt by siding (today): for operations dashboard bar chart.
+     * Affected by the dashboard shift filter — when set, only that shift is shown.
+     *
+     * @param  array<int>  $sidingIds
+     * @param  string|null  $shiftFilter  '1'|'2'|'3' to show one shift, null for all
+     * @return array<int, array{shift_label: string, ...array<string, int>}>
+     */
+    private function buildShiftWiseVehicleReceipt(array $sidingIds, ?string $shiftFilter): array
+    {
+        if ($sidingIds === []) {
+            return [];
+        }
+
+        $todayStart = today()->startOfDay();
+        $todayEnd = today()->endOfDay();
+
+        $sidings = Siding::query()
+            ->whereIn('id', $sidingIds)
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->keyBy('id');
+
+        $query = DailyVehicleEntry::query()
+            ->whereIn('siding_id', $sidingIds)
+            ->whereBetween('reached_at', [$todayStart, $todayEnd]);
+        if ($shiftFilter !== null && $shiftFilter !== '') {
+            $query->where('shift', (int) $shiftFilter);
+        }
+        $rows = $query
+            ->selectRaw('shift, siding_id, count(*) as cnt')
+            ->groupBy('shift', 'siding_id')
+            ->get();
+
+        $shiftLabels = [
+            1 => 'Shift 1',
+            2 => 'Shift 2',
+            3 => 'Shift 3',
+        ];
+        $shiftsOrdered = ($shiftFilter !== null && $shiftFilter !== '') ? [(int) $shiftFilter] : [1, 2, 3];
+        $result = [];
+        foreach ($shiftsOrdered as $shiftNum) {
+            $row = ['shift_label' => $shiftLabels[$shiftNum] ?? "Shift {$shiftNum}"];
+            foreach ($sidings as $siding) {
+                $row[$siding->name] = 0;
+            }
+            $result[] = $row;
+        }
+
+        foreach ($rows as $r) {
+            $shiftNum = (int) $r->shift;
+            $sidingName = $sidings->get($r->siding_id)?->name;
+            if ($sidingName !== null) {
+                $idx = array_search($shiftNum, $shiftsOrdered, true);
+                if ($idx !== false && isset($result[$idx])) {
+                    $result[$idx][$sidingName] = (int) $r->cnt;
+                }
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Coal Transport Report: trips and qty by shift and siding for one day.
+     * Data from daily_vehicle_entries (trips) and stock_ledgers receipts (qty).
+     * Affected by the dashboard shift filter — when set, only that shift row is shown; otherwise all three shifts.
+     *
+     * @param  array<int>  $sidingIds
+     * @param  string|null  $shiftFilter  '1'|'2'|'3' to show one shift, null for all
+     * @return array{date: string, sidings: array<int, array{id: int, name: string}>, rows: array<int, array{sl_no: int, shift_label: string, siding_metrics: array<int, array{siding_name: string, trips: int, qty: float}>, total_trips: int, total_qty: float}>, totals: array{siding_metrics: array<int, array{siding_name: string, trips: int, qty: float}>, total_trips: int, total_qty: float}}
+     */
+    private function buildCoalTransportReport(array $sidingIds, CarbonInterface $date, ?string $shiftFilter): array
+    {
+        $dateStr = $date->toDateString();
+        if ($sidingIds === []) {
+            return [
+                'date' => $dateStr,
+                'sidings' => [],
+                'rows' => [],
+                'totals' => ['siding_metrics' => [], 'total_trips' => 0, 'total_qty' => 0.0],
+            ];
+        }
+
+        $sidings = Siding::query()
+            ->whereIn('id', $sidingIds)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        $shiftsToShow = ($shiftFilter !== null && $shiftFilter !== '') ? [(int) $shiftFilter] : [1, 2, 3];
+        $shiftLabels = [1 => '1st', 2 => '2nd', 3 => '3rd'];
+
+        $q = DailyVehicleEntry::query()
+            ->leftJoin('stock_ledgers', function ($join): void {
+                $join->on('stock_ledgers.daily_vehicle_entry_id', '=', 'daily_vehicle_entries.id')
+                    ->where('stock_ledgers.transaction_type', '=', 'receipt');
+            })
+            ->where('daily_vehicle_entries.entry_date', $dateStr)
+            ->whereIn('daily_vehicle_entries.siding_id', $sidingIds)
+            ->whereIn('daily_vehicle_entries.shift', $shiftsToShow)
+            ->selectRaw('daily_vehicle_entries.shift, daily_vehicle_entries.siding_id, count(*) as trips, coalesce(sum(stock_ledgers.quantity_mt), 0) as qty')
+            ->groupBy('daily_vehicle_entries.shift', 'daily_vehicle_entries.siding_id');
+
+        $rawRows = $q->get();
+
+        $byShiftSiding = [];
+        foreach ($rawRows as $r) {
+            $byShiftSiding[(int) $r->shift][(int) $r->siding_id] = [
+                'trips' => (int) $r->trips,
+                'qty' => round((float) $r->qty, 2),
+            ];
+        }
+
+        $rows = [];
+        $slNo = 1;
+        $totalsBySiding = [];
+        foreach ($sidings as $s) {
+            $totalsBySiding[$s->name] = ['trips' => 0, 'qty' => 0.0];
+        }
+        $grandTrips = 0;
+        $grandQty = 0.0;
+
+        foreach ($shiftsToShow as $shiftNum) {
+            $sidingMetrics = [];
+            $rowTrips = 0;
+            $rowQty = 0.0;
+            foreach ($sidings as $siding) {
+                $cell = $byShiftSiding[$shiftNum][$siding->id] ?? ['trips' => 0, 'qty' => 0.0];
+                $sidingMetrics[] = [
+                    'siding_name' => $siding->name,
+                    'trips' => $cell['trips'],
+                    'qty' => $cell['qty'],
+                ];
+                $rowTrips += $cell['trips'];
+                $rowQty += $cell['qty'];
+                $totalsBySiding[$siding->name]['trips'] += $cell['trips'];
+                $totalsBySiding[$siding->name]['qty'] += $cell['qty'];
+            }
+            $grandTrips += $rowTrips;
+            $grandQty += $rowQty;
+            $rows[] = [
+                'sl_no' => $slNo++,
+                'shift_label' => $shiftLabels[$shiftNum] ?? (string) $shiftNum,
+                'siding_metrics' => $sidingMetrics,
+                'total_trips' => $rowTrips,
+                'total_qty' => round($rowQty, 2),
+            ];
+        }
+
+        $totalsSidingMetrics = [];
+        foreach ($sidings as $siding) {
+            $totalsSidingMetrics[] = [
+                'siding_name' => $siding->name,
+                'trips' => $totalsBySiding[$siding->name]['trips'],
+                'qty' => round($totalsBySiding[$siding->name]['qty'], 2),
+            ];
+        }
+
+        return [
+            'date' => $dateStr,
+            'sidings' => $sidings->map(fn (Siding $s): array => ['id' => $s->id, 'name' => $s->name])->values()->all(),
+            'rows' => $rows,
+            'totals' => [
+                'siding_metrics' => $totalsSidingMetrics,
+                'total_trips' => $grandTrips,
+                'total_qty' => round($grandQty, 2),
+            ],
+        ];
     }
 
     /**
@@ -906,19 +1317,30 @@ final class ExecutiveDashboardController extends Controller
         if (! empty($filterContext['rake_number']) || ! empty($filterContext['power_plant'])) {
             $rakeIds = $this->getFilteredRakeIds($sidingIds, $filterContext);
         }
-        $actualQuery = AppliedPenalty::query()
-            ->join('rakes', 'applied_penalties.rake_id', '=', 'rakes.id')
-            ->whereRaw($this->dateOnlyBetweenSql('applied_penalties.created_at'), [$fromDate, $toDate]);
+
+        $actualQuery = RrPenaltySnapshot::query()
+            ->join('rakes', 'rr_penalty_snapshots.rake_id', '=', 'rakes.id')
+            ->whereNotNull('rakes.loading_date')
+            ->whereRaw($this->dateOnlyBetweenSql('rakes.loading_date'), [$fromDate, $toDate]);
+
         if (! empty($filterContext['penalty_type_id'])) {
-            $actualQuery->where('applied_penalties.penalty_type_id', $filterContext['penalty_type_id']);
+            $code = PenaltyType::query()
+                ->whereKey($filterContext['penalty_type_id'])
+                ->value('code');
+
+            if ($code !== null) {
+                $actualQuery->where('rr_penalty_snapshots.penalty_code', $code);
+            }
         }
+
         if ($rakeIds !== null) {
             $actualQuery->whereIn('rakes.id', $rakeIds);
         } else {
             $actualQuery->whereIn('rakes.siding_id', $sidingIds);
         }
+
         $actualBySiding = $actualQuery
-            ->selectRaw('rakes.siding_id, sum(applied_penalties.amount) as total')
+            ->selectRaw('rakes.siding_id, sum(rr_penalty_snapshots.amount) as total')
             ->groupBy('rakes.siding_id')
             ->get()
             ->keyBy('siding_id');
@@ -1019,20 +1441,28 @@ final class ExecutiveDashboardController extends Controller
         }
         $fromDate = $from->toDateString();
         $toDate = $to->toDateString();
-        $query = AppliedPenalty::query()
-            ->join('penalty_types', 'applied_penalties.penalty_type_id', '=', 'penalty_types.id')
-            ->whereRaw($this->dateOnlyBetweenSql('applied_penalties.created_at'), [$fromDate, $toDate]);
+        $query = RrPenaltySnapshot::query()
+            ->join('penalty_types', 'rr_penalty_snapshots.penalty_code', '=', 'penalty_types.code')
+            ->join('rakes', 'rr_penalty_snapshots.rake_id', '=', 'rakes.id')
+            ->whereNotNull('rakes.loading_date')
+            ->whereRaw($this->dateOnlyBetweenSql('rakes.loading_date'), [$fromDate, $toDate]);
         if (! empty($filterContext['penalty_type_id'])) {
-            $query->where('applied_penalties.penalty_type_id', $filterContext['penalty_type_id']);
+            $code = PenaltyType::query()
+                ->whereKey($filterContext['penalty_type_id'])
+                ->value('code');
+
+            if ($code !== null) {
+                $query->where('rr_penalty_snapshots.penalty_code', $code);
+            }
         }
         if ($rakeIds !== null) {
-            $query->whereIn('applied_penalties.rake_id', $rakeIds);
+            $query->whereIn('rr_penalty_snapshots.rake_id', $rakeIds);
         } else {
-            $query->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
+            $query->whereIn('rakes.siding_id', $sidingIds);
         }
 
         return $query
-            ->selectRaw('penalty_types.name as penalty_type_name, sum(applied_penalties.amount) as total')
+            ->selectRaw('penalty_types.name as penalty_type_name, sum(rr_penalty_snapshots.amount) as total')
             ->groupBy('penalty_types.name')
             ->orderByDesc('total')
             ->get()
@@ -1068,20 +1498,27 @@ final class ExecutiveDashboardController extends Controller
 
         $fromDate = $from->toDateString();
         $toDate = $to->toDateString();
-        $query = AppliedPenalty::query()
-            ->join('rakes', 'applied_penalties.rake_id', '=', 'rakes.id')
+        $query = RrPenaltySnapshot::query()
+            ->join('rakes', 'rr_penalty_snapshots.rake_id', '=', 'rakes.id')
             ->join('sidings', 'rakes.siding_id', '=', 'sidings.id')
-            ->whereRaw($this->dateOnlyBetweenSql('applied_penalties.created_at'), [$fromDate, $toDate]);
+            ->whereNotNull('rakes.loading_date')
+            ->whereRaw($this->dateOnlyBetweenSql('rakes.loading_date'), [$fromDate, $toDate]);
         if (! empty($filterContext['penalty_type_id'])) {
-            $query->where('applied_penalties.penalty_type_id', $filterContext['penalty_type_id']);
+            $code = PenaltyType::query()
+                ->whereKey($filterContext['penalty_type_id'])
+                ->value('code');
+
+            if ($code !== null) {
+                $query->where('rr_penalty_snapshots.penalty_code', $code);
+            }
         }
         if ($rakeIds !== null) {
             if ($rakeIds === []) {
                 $totalsByName = collect();
             } else {
-                $query->whereIn('rakes.id', $rakeIds);
+                $query->whereIn('rr_penalty_snapshots.rake_id', $rakeIds);
                 $totalsByName = $query
-                    ->selectRaw('sidings.name, sum(applied_penalties.amount) as total')
+                    ->selectRaw('sidings.name, sum(rr_penalty_snapshots.amount) as total')
                     ->groupBy('sidings.name')
                     ->get()
                     ->keyBy('name');
@@ -1089,7 +1526,7 @@ final class ExecutiveDashboardController extends Controller
         } else {
             $query->whereIn('rakes.siding_id', $sidingIds);
             $totalsByName = $query
-                ->selectRaw('sidings.name, sum(applied_penalties.amount) as total')
+                ->selectRaw('sidings.name, sum(rr_penalty_snapshots.amount) as total')
                 ->groupBy('sidings.name')
                 ->get()
                 ->keyBy('name');
@@ -1370,9 +1807,9 @@ final class ExecutiveDashboardController extends Controller
             ->pluck('total_rakes', 'name')
             ->all();
 
-        // Penalties for rakes in the same period (filter by rakes.loading_date).
-        $penaltyQuery = AppliedPenalty::query()
-            ->join('rakes', 'applied_penalties.rake_id', '=', 'rakes.id')
+        // Actual penalties (RR penalty snapshots) for rakes in the same period (filter by rakes.loading_date).
+        $penaltyQuery = RrPenaltySnapshot::query()
+            ->join('rakes', 'rr_penalty_snapshots.rake_id', '=', 'rakes.id')
             ->join('sidings', 'rakes.siding_id', '=', 'sidings.id')
             ->whereNotNull('rakes.loading_date')
             ->whereRaw($this->dateOnlyBetweenSql('rakes.loading_date'), [$fromDate, $toDate]);
@@ -1382,7 +1819,7 @@ final class ExecutiveDashboardController extends Controller
             $penaltyQuery->whereIn('rakes.siding_id', $sidingIds);
         }
         $penaltiesBySiding = $penaltyQuery
-            ->selectRaw('sidings.name, count(*) as penalty_count, count(DISTINCT applied_penalties.rake_id) as penalised_rakes, sum(applied_penalties.amount) as penalty_total')
+            ->selectRaw('sidings.name, count(*) as penalty_count, count(DISTINCT rr_penalty_snapshots.rake_id) as penalised_rakes, sum(rr_penalty_snapshots.amount) as penalty_total')
             ->groupBy('sidings.name')
             ->get()
             ->keyBy('name');
@@ -1542,15 +1979,14 @@ final class ExecutiveDashboardController extends Controller
         $rakeQuery = Rake::query()
             ->with('siding:id,name,code')
             ->whereIn('siding_id', $sidingIds)
-            ->whereNotNull('created_at')
-            ->whereRaw($this->dateOnlyBetweenSql('created_at'), [$fromDate, $toDate]);
+            ->whereBetween('created_at', [$fromDate, $toDate]);
         if (! empty($filterContext['rake_number'])) {
             $rakeQuery->where('rake_number', 'like', '%'.$filterContext['rake_number'].'%');
         }
         if (! empty($filterContext['power_plant'])) {
             $rakeQuery->whereIn('id', RakeWeighment::query()->where('to_station', $filterContext['power_plant'])->select('rake_id'));
         }
-        $rakes = $rakeQuery->orderByDesc('created_at')->limit(50)->get();
+        $rakes = $rakeQuery->orderByRaw('COALESCE(rakes.loading_date, rakes.created_at) DESC')->limit(50)->get();
 
         $rakeIds = $rakes->pluck('id')->all();
 
@@ -1611,10 +2047,13 @@ final class ExecutiveDashboardController extends Controller
                 $loadingMinutes = (int) $rake->loading_start_time->diffInMinutes($rake->loading_end_time);
             }
 
+            $displayDate = $rake->loading_date ?? $rake->created_at;
+
             return [
+                'id' => $rake->id,
                 'rake_number' => $rake->rake_number,
                 'siding' => $rake->siding?->name ?? '—',
-                'dispatch_date' => $rake->created_at->format('d M Y'),
+                'dispatch_date' => $displayDate ? Carbon::parse($displayDate)->format('d M Y') : '—',
                 'wagon_count' => $rake->wagon_count,
                 'net_weight' => $w ? round((float) $w->net_weight, 2) : null,
                 'over_load' => $w ? round((float) $w->over_load, 2) : null,

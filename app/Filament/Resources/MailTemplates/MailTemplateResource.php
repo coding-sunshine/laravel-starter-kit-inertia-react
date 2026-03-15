@@ -18,6 +18,8 @@ use UnitEnum;
 
 final class MailTemplateResource extends Resource
 {
+    protected static bool $shouldRegisterNavigation = false;
+
     protected static ?string $model = MailTemplate::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedEnvelope;

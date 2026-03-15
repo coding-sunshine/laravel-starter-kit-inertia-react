@@ -5,28 +5,32 @@ import {
     MobileLayout,
     MobileSafeArea,
 } from '@/layouts/MobileLayout';
+import { useSidingStockBroadcast } from '@/hooks/use-siding-stock-broadcast';
 import { usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 
+interface SidingWithId {
+    id?: number;
+    name?: string;
+}
+
 /**
  * SidingDashboard - Real-time operational dashboard for siding managers
- * Shows: Stock levels, pending rakes, demurrage timers, active indents
+ * Shows: Stock levels, pending rakes, demurrage timers, active indents.
+ * Current stock updates live via broadcast when ledger changes (daily entries, unloads, etc.).
  */
 export default function SidingDashboard() {
-    const { props } = usePage<{ siding?: unknown; metrics?: unknown }>();
+    const { props } = usePage<{ siding?: SidingWithId; metrics?: { current_stock_mt?: number; [key: string]: unknown } }>();
     const { siding, metrics } = props;
 
-    const [refreshInterval] = useState(30000); // 30 seconds
+    const [liveStockMt, setLiveStockMt] = useState<number | null>(null);
     const [lastUpdated, setLastUpdated] = useState(() => new Date());
 
-    useEffect(() => {
-        const timer = setInterval(() => {
-            setLastUpdated(new Date());
-            // In production, trigger data refresh via polling or WebSocket
-        }, refreshInterval);
-
-        return () => clearInterval(timer);
-    }, [refreshInterval]);
+    const sidingIds = siding?.id != null ? [siding.id] : [];
+    useSidingStockBroadcast(sidingIds, (_sidingId, closingBalanceMt) => {
+        setLiveStockMt(closingBalanceMt);
+        setLastUpdated(new Date());
+    });
 
     return (
         <MobileLayout>
@@ -50,17 +54,17 @@ export default function SidingDashboard() {
                                     Current Stock
                                 </p>
                                 <p className="text-3xl font-bold text-gray-900">
-                                    {metrics?.current_stock_mt || 0} MT
+                                    {(liveStockMt ?? metrics?.current_stock_mt ?? 0)} MT
                                 </p>
                             </div>
                             <span
                                 className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
-                                    (metrics?.current_stock_mt || 0) > 500
+                                    (liveStockMt ?? metrics?.current_stock_mt ?? 0) > 500
                                         ? 'bg-green-100 text-green-800'
                                         : 'bg-orange-100 text-orange-800'
                                 }`}
                             >
-                                {(metrics?.current_stock_mt || 0) > 500
+                                {(liveStockMt ?? metrics?.current_stock_mt ?? 0) > 500
                                     ? '✓ Adequate'
                                     : '⚠ Low'}
                             </span>

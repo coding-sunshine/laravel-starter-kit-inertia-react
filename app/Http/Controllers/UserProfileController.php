@@ -4,11 +4,6 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Actions\UpdateUser;
-use App\Http\Requests\UpdateUserRequest;
-use App\Models\User;
-use Illuminate\Container\Attributes\CurrentUser;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -22,10 +17,8 @@ final readonly class UserProfileController
         ]);
     }
 
-    public function update(UpdateUserRequest $request, #[CurrentUser] User $user, UpdateUser $action): RedirectResponse
+    public function update(): never
     {
-        $action->handle($user, $request->validated(), $request);
-
-        return to_route('user-profile.edit');
+        abort(403, 'Profile updates are disabled.');
     }
 }

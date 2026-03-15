@@ -31,6 +31,15 @@ interface PenaltiesWorkflowProps {
         id: number;
         state: string;
         penalties?: PenaltyRecord[];
+        appliedPenalties?: Array<{
+            id: number;
+            amount: string | number;
+            quantity?: string | number | null;
+            wagon_id?: number | null;
+            wagon_number?: string | null;
+            penalty_type?: { id: number; code: string; name: string; calculation_type: string };
+            wagon?: { id: number; wagon_number: string; overload_weight_mt?: string | number | null };
+        }>;
     };
     demurrage_rate_per_mt_hour: number;
     disabled: boolean;
@@ -58,17 +67,25 @@ export function PenaltiesWorkflow({ rake, demurrage_rate_per_mt_hour, disabled }
     };
 
     const penalties = rake.penalties || [];
+    const appliedPenalties = rake.appliedPenalties || [];
     const hasPenalties = penalties.length > 0;
     const totalPenaltyAmount = penalties.reduce((sum, p) => sum + parseFloat(p.penalty_amount), 0);
 
+    const hasAppliedPenalties = appliedPenalties.length > 0;
+    const totalAppliedAmount = appliedPenalties.reduce(
+        (sum, ap) => sum + Number(ap.amount ?? 0),
+        0,
+    );
+
     const getStatusIcon = () => {
-        if (!hasPenalties) return <Clock className="h-4 w-4" />;
+        if (!hasPenalties && !hasAppliedPenalties) return <Clock className="h-4 w-4" />;
         return <Scale className="h-4 w-4 text-orange-600" />;
     };
 
     const getStatusText = () => {
-        if (!hasPenalties) return 'No Penalties';
-        return `${penalties.length} Penalties`;
+        if (!hasPenalties && !hasAppliedPenalties) return 'No Penalties';
+        const count = penalties.length + appliedPenalties.length;
+        return `${count} Penalties`;
     };
 
     const getStatusVariant = () => {
@@ -125,7 +142,54 @@ export function PenaltiesWorkflow({ rake, demurrage_rate_per_mt_hour, disabled }
                     </Button>
                 </div>
 
-                {/* Manual penalty form */}
+                {/* Weighment-based penalties */}
+                {hasAppliedPenalties && (
+                    <div className="p-4 border rounded-lg">
+                        <Label className="text-base font-medium mb-2 block">
+                            Weighment-based penalties
+                        </Label>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Code</TableHead>
+                                    <TableHead>Wagon</TableHead>
+                                    <TableHead>Excess (MT)</TableHead>
+                                    <TableHead>Amount</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {appliedPenalties.map((ap) => (
+                                    <TableRow key={ap.id}>
+                                        <TableCell>
+                                            <Badge variant="outline">
+                                                {ap.penalty_type?.code ?? '-'}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell>
+                                            {ap.wagon_number ??
+                                                ap.wagon?.wagon_number ??
+                                                (ap.wagon_id != null ? `Wagon #${ap.wagon_id}` : 'Rake')}
+                                        </TableCell>
+                                        <TableCell>
+                                            {ap.quantity != null ? `${ap.quantity}` : '-'}
+                                        </TableCell>
+                                        <TableCell className="font-medium">
+                                            ₹{Number(ap.amount ?? 0).toFixed(2)}
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                        <div className="mt-2 text-xs text-muted-foreground">
+                            Total weighment-based penalties:&nbsp;
+                            <span className="font-semibold">
+                                ₹{totalAppliedAmount.toFixed(2)}
+                            </span>
+                        </div>
+                    </div>
+                )}
+
+                {/* Manual / demurrage penalty form */}
                 {showAddForm && (
                     <div className="p-4 border rounded-lg">
                         <Label className="text-base font-medium mb-4 block">Add Manual Penalty</Label>

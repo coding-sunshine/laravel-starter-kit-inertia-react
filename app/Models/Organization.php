@@ -187,7 +187,9 @@ final class Organization extends Model
             throw new InvalidArgumentException(sprintf("Invalid role '%s'. Must be one of: ", $role).implode(', ', self::ASSIGNABLE_ORG_ROLES));
         }
 
-        $this->ensureOrgRolesExist();
+        if (config('permission.teams', false)) {
+            $this->ensureOrgRolesExist();
+        }
 
         $this->users()->syncWithoutDetaching([
             $user->id => [
@@ -197,19 +199,23 @@ final class Organization extends Model
             ],
         ]);
 
-        $previousContext = TenantContext::get();
-        TenantContext::set($this);
-        $previousTeamId = getPermissionsTeamId();
-        setPermissionsTeamId($this->id);
-        try {
-            $user->assignRole($role);
-        } finally {
-            setPermissionsTeamId($previousTeamId);
-            if ($previousContext instanceof self) {
-                TenantContext::set($previousContext);
-            } else {
-                TenantContext::forget();
+        if (config('permission.teams', false)) {
+            $previousContext = TenantContext::get();
+            TenantContext::set($this);
+            $previousTeamId = getPermissionsTeamId();
+            setPermissionsTeamId($this->id);
+            try {
+                $user->assignRole($role);
+            } finally {
+                setPermissionsTeamId($previousTeamId);
+                if ($previousContext instanceof self) {
+                    TenantContext::set($previousContext);
+                } else {
+                    TenantContext::forget();
+                }
             }
+        } else {
+            $user->assignRole($role === 'member' ? 'user' : $role);
         }
     }
 
@@ -218,13 +224,15 @@ final class Organization extends Model
      */
     public function removeMember(User $user): void
     {
-        $tableNames = config('permission.table_names');
-        $teamKey = config('permission.column_names.team_foreign_key');
-        DB::table($tableNames['model_has_roles'])
-            ->where('model_id', $user->id)
-            ->where('model_type', User::class)
-            ->where($teamKey, $this->id)
-            ->delete();
+        if (config('permission.teams', false)) {
+            $tableNames = config('permission.table_names');
+            $teamKey = config('permission.column_names.team_foreign_key');
+            DB::table($tableNames['model_has_roles'])
+                ->where('model_id', $user->id)
+                ->where('model_type', User::class)
+                ->where($teamKey, $this->id)
+                ->delete();
+        }
         $this->users()->detach($user->id);
     }
 
@@ -248,6 +256,9 @@ final class Organization extends Model
      */
     private function ensureOrgRolesExist(): void
     {
+        if (! config('permission.teams', false)) {
+            return;
+        }
         $teamKey = config('permission.column_names.team_foreign_key');
         $guard = 'web';
 

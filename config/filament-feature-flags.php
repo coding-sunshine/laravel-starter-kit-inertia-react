@@ -67,6 +67,6 @@ return [
     ],
 
     'resources' => [
-        Stephenjude\FilamentFeatureFlag\Resources\FeatureSegmentResource::class,
+        App\Filament\Resources\FeatureSegmentResource::class,
     ],
 ];

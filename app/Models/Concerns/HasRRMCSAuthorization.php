@@ -159,6 +159,10 @@ trait HasRRMCSAuthorization
      */
     public function getPrimarySiding(): ?Siding
     {
+        if (property_exists($this, 'siding_id') && $this->siding_id !== null) {
+            return Siding::query()->find($this->siding_id);
+        }
+
         return $this->sidings()
             ->orderByPivot('assigned_at', 'desc')
             ->first();

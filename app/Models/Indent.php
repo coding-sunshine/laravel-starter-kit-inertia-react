@@ -34,6 +34,9 @@ final class Indent extends Model implements HasMedia
         'demanded_stock',
         'total_units',
         'railway_reference_no',
+        'created_by',
+        'updated_by',
+        'deleted_by',
     ];
 
     protected $casts = [
@@ -73,6 +76,11 @@ final class Indent extends Model implements HasMedia
     public function updatedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    public function deletedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'deleted_by');
     }
 
     public function getIndentPdfUrlAttribute(): ?string

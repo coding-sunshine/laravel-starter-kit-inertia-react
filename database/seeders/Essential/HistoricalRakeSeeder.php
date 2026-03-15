@@ -17,8 +17,13 @@ final class HistoricalRakeSeeder extends Seeder
 
     public function run(): void
     {
-        // $file = storage_path('app/excel/rake-history.xlsx');
         $file = database_path('excel/rake-history.xlsx');
+
+        if (! is_file($file)) {
+            $this->command?->info('HistoricalRakeSeeder skipped: database/excel/rake-history.xlsx not found.');
+
+            return;
+        }
 
         Excel::import(
             new HistoricalRakeImport(1), // siding_id

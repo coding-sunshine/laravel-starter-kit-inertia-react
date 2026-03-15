@@ -18,8 +18,10 @@ final readonly class IndentPdfImporter
 {
     /**
      * Import a historical e-Demand Confirmation Slip from an uploaded PDF.
+     *
+     * @param  array<int>  $allowedSidingIds  If non-empty, the detected siding must be in this list or an InvalidArgumentException is thrown (no record is created).
      */
-    public function import(UploadedFile $pdf, int $userId): Indent
+    public function import(UploadedFile $pdf, int $userId, array $allowedSidingIds = []): Indent
     {
         Log::info('Indent PDF import: starting', [
             'user_id' => $userId,
@@ -30,19 +32,28 @@ final readonly class IndentPdfImporter
         $absolutePath = $pdf->getRealPath();
         $text = Pdf::getText($absolutePath, null, ['-layout']);
 
-        return $this->importFromText($text, $pdf, $userId);
+        return $this->importFromText($text, $pdf, $userId, $allowedSidingIds);
     }
 
     /**
      * Import from already-extracted PDF text (e.g. for testing).
+     *
+     * @param  array<int>  $allowedSidingIds  If non-empty, the detected siding must be in this list or an InvalidArgumentException is thrown (no record is created).
      */
-    public function importFromText(string $text, UploadedFile $pdf, int $userId): Indent
+    public function importFromText(string $text, UploadedFile $pdf, int $userId, array $allowedSidingIds = []): Indent
     {
         $parsed = $this->parsePdfText($text);
         $siding = $this->detectSiding($text, $parsed);
         if (! $siding) {
             throw new InvalidArgumentException(
                 'Unable to detect siding from indent PDF. Ensure "Station From" (e.g. WBPC, DMK, PKR) or siding name is present.'
+            );
+        }
+
+        if ($allowedSidingIds !== [] && ! in_array($siding->id, $allowedSidingIds, true)) {
+            $sidingLabel = $siding->name.($siding->code ? " ({$siding->code})" : '');
+            throw new InvalidArgumentException(
+                'The PDF was parsed but the detected siding ('.$sidingLabel.') is not accessible to you. Ask an admin to assign you to that siding.'
             );
         }
 

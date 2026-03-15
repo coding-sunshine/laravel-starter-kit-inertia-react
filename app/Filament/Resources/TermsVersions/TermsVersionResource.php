@@ -19,6 +19,8 @@ use UnitEnum;
 
 final class TermsVersionResource extends Resource
 {
+    protected static bool $shouldRegisterNavigation = false;
+
     protected static ?string $model = TermsVersion::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocumentText;

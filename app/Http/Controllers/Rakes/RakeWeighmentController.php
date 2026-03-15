@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Rakes;
 
 use App\Http\Controllers\Controller;
+use App\Models\AppliedPenalty;
 use App\Models\Rake;
 use App\Services\RakeWeighmentPdfImporter;
 use Illuminate\Http\RedirectResponse;
@@ -66,6 +67,16 @@ final class RakeWeighmentController extends Controller
 
             $weighment->delete();
         }
+
+        // Delete penalties that were derived from rake weighment data,
+        // but keep demurrage and other non-weighment penalties intact.
+        AppliedPenalty::query()
+            ->where('rake_id', $rake->id)
+            ->where('meta->source', 'weighment')
+            ->whereHas('penaltyType', function ($query): void {
+                $query->where('code', '!=', 'DEM');
+            })
+            ->delete();
 
         return to_route('rakes.show', $rake)
             ->with('success', 'Rake weighment data deleted.');

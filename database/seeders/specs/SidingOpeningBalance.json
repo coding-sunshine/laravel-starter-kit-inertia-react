@@ -1,0 +1,49 @@
+{
+    "model": "SidingOpeningBalance",
+    "table": "siding_opening_balances",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "siding_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "opening_balance_mt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "as_of_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "remarks": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "siding": {
+            "type": "belongsTo",
+            "model": "Siding"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

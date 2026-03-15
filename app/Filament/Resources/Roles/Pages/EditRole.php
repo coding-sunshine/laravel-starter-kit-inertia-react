@@ -67,16 +67,6 @@ final class EditRole extends EditRecord
      */
     private function getRoleFormStateFromRecord(): array
     {
-        $resolver = resolve(\App\Services\PermissionCategoryResolver::class);
-        $grouped = $resolver->getPermissionsGroupedByCategory();
-        $rolePermissionIds = $this->record->permissions->pluck('id')->all();
-        $state = [];
-
-        foreach ($grouped as $categoryKey => $options) {
-            $fieldName = 'permissions_'.$categoryKey;
-            $state[$fieldName] = array_values(array_intersect(array_keys($options), $rolePermissionIds));
-        }
-
-        return $state;
+        return RoleForm::getPermissionStateFromRecord($this->record);
     }
 }

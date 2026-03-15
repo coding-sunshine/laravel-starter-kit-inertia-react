@@ -16,8 +16,7 @@ import { dashboard } from '@/routes';
 import { index as changelogIndex } from '@/routes/changelog';
 import { create as contactCreate } from '@/routes/contact';
 import { index as helpIndex } from '@/routes/help';
-import organizations from '@/routes/organizations';
-import { type NavItem, type SharedData } from '@/types';
+import { type NavGroup, type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import {
     AlertTriangle,
@@ -31,11 +30,11 @@ import {
     LifeBuoy,
     Mail,
     Megaphone,
+    Mountain,
     Scale,
     Train,
     Truck,
     Settings,
-    Database,
     Factory,
     MapPin,
     Package,
@@ -45,153 +44,212 @@ import {
 import { useMemo } from 'react';
 import AppLogo from './app-logo';
 
-const mainNavItems: NavItem[] = [
+/**
+ * Section-based permissions (sections.{slug}.{action}).
+ * Must match config/section_permissions.php nav_permission and backend checks.
+ */
+const platformNavItems: NavItem[] = [
     {
         title: 'Dashboard',
         href: dashboard().url,
         icon: LayoutGrid,
+        permission: 'sections.dashboard.view',
         dataPan: 'nav-dashboard',
     },
     {
-        title: 'Power Plants',
-        href: '/master-data/power-plants',
-        icon: Factory,
-        dataPan: 'nav-power-plants',
-    },
-    {
-        title: 'Sidings',
-        href: '/master-data/sidings',
-        icon: MapPin,
-        dataPan: 'nav-sidings',
-    },
-    {
-        title: 'Loaders',
-        href: '/master-data/loaders',
-        icon: Package,
-        dataPan: 'nav-loaders',
-    },
-    {
-        title: 'Penalty Types',
-        href: '/master-data/penalty-types',
-        icon: AlertTriangle,
-        dataPan: 'nav-penalty-types',
-    },
-    {
-        title: 'Section Timers',
-        href: '/master-data/section-timers',
-        icon: Timer,
-        dataPan: 'nav-section-timers',
-    },
-    {
-        title: 'Distance Matrix',
-        href: '/master-data/distance-matrix',
-        icon: Route,
-        dataPan: 'nav-distance-matrix',
-    },
-    // {
-    //     title: 'Organizations',
-    //     href: organizations.index.url(),
-    //     icon: Building2,
-    //     tenancyRequired: true,
-    //     dataPan: 'nav-organizations',
-    // },
-    {
-        title: 'Billing',
-        href: '/billing',
-        icon: CreditCard,
-        tenancyRequired: true,
-        dataPan: 'nav-billing',
+        title: 'Settings',
+        href: '#',
+        icon: Settings,
+        collapsible: true,
+        subItems: [
+            {
+                title: 'Power Plants',
+                href: '/master-data/power-plants',
+                icon: Factory,
+                permission: 'sections.power_plants.view',
+                dataPan: 'nav-power-plants',
+            },
+            {
+                title: 'Sidings',
+                href: '/master-data/sidings',
+                icon: MapPin,
+                permission: 'sections.sidings.view',
+                dataPan: 'nav-sidings',
+            },
+            {
+                title: 'Loaders',
+                href: '/master-data/loaders',
+                icon: Package,
+                permission: 'sections.loaders.view',
+                dataPan: 'nav-loaders',
+            },
+            {
+                title: 'Penalty Types',
+                href: '/master-data/penalty-types',
+                icon: AlertTriangle,
+                permission: 'sections.penalty_types.view',
+                dataPan: 'nav-penalty-types',
+            },
+            {
+                title: 'Section Timers',
+                href: '/master-data/section-timers',
+                icon: Timer,
+                permission: 'sections.section_timers.view',
+                dataPan: 'nav-section-timers',
+            },
+            {
+                title: 'Shift Timings',
+                href: '/master-data/shift-timings',
+                icon: Timer,
+                permission: 'sections.shift_timings.view',
+                dataPan: 'nav-shift-timings',
+            },
+            {
+                title: 'Opening Coal Stock',
+                href: '/master-data/opening-coal-stock',
+                icon: Scale,
+                permission: 'sections.opening_coal_stock.view',
+                dataPan: 'nav-opening-coal-stock',
+            },
+            {
+                title: 'Distance Matrix',
+                href: '/master-data/distance-matrix',
+                icon: Route,
+                permission: 'sections.distance_matrix.view',
+                dataPan: 'nav-distance-matrix',
+            },
+            {
+                title: 'Billing',
+                href: '/billing',
+                icon: CreditCard,
+                tenancyRequired: true,
+                permission: 'sections.billing.view',
+                dataPan: 'nav-billing',
+            },
+            {
+                title: 'Production - Coal',
+                href: '/production/coal',
+                icon: Factory,
+                permission: 'sections.production_coal.view',
+                dataPan: 'nav-production-coal',
+            },
+            {
+                title: 'Production - OB',
+                href: '/production/ob',
+                icon: Mountain,
+                permission: 'sections.production_ob.view',
+                dataPan: 'nav-production-ob',
+            },
+        ],
     },
     {
         title: 'Rakes',
         href: '/rakes',
         icon: Train,
+        permission: 'sections.rakes.view',
         dataPan: 'nav-rakes',
     },
     {
         title: 'Indents',
         href: '/indents',
         icon: FileText,
+        permission: 'sections.indents.view',
         dataPan: 'nav-indents',
     },
     {
         title: 'Railway Siding Record Data',
         href: '/road-dispatch/daily-vehicle-entries',
         icon: Truck,
+        permission: 'sections.railway_siding_record_data.view',
         dataPan: 'nav-road-dispatch',
+    },
+    {
+        title: 'Railway Siding Empty Weighment',
+        href: '/railway-siding-empty-weighment',
+        icon: Scale,
+        permission: 'sections.railway_siding_empty_weighment.view',
+        dataPan: 'nav-railway-siding-empty-weighment',
     },
     {
         title: 'Mines Dispatch Data',
         href: '/vehicle-dispatch',
         icon: Truck,
+        permission: 'sections.mines_dispatch_data.view',
         dataPan: 'nav-vehicle-dispatch',
     },
     {
         title: 'Transport',
         href: '/vehicle-workorders',
         icon: FileText,
+        permission: 'sections.transport.view',
         dataPan: 'nav-vehicle-workorders',
     },
     {
         title: 'Railway Receipts',
         href: '/railway-receipts',
         icon: FileText,
+        permission: 'sections.railway_receipts.view',
         dataPan: 'nav-railway-receipts',
     },
-    {
-        title: 'Penalties',
-        href: '/penalties',
-        icon: AlertTriangle,
-        dataPan: 'nav-penalties',
-    },
-    {
-        title: 'Alerts',
-        href: '/alerts',
-        icon: AlertTriangle,
-        dataPan: 'nav-alerts',
-    },
-    {
-        title: 'Reconciliation',
-        href: '/reconciliation',
-        icon: Scale,
-        dataPan: 'nav-reconciliation',
-    },
+    // {
+    //     title: 'Penalties',
+    //     href: '/penalties',
+    //     icon: AlertTriangle,
+    //     permission: 'sections.penalties.view',
+    //     dataPan: 'nav-penalties',
+    // },
+    // {
+    //     title: 'Alerts',
+    //     href: '/alerts',
+    //     icon: AlertTriangle,
+    //     permission: 'sections.alerts.view',
+    //     dataPan: 'nav-alerts',
+    // },
+    // {
+    //     title: 'Reconciliation',
+    //     href: '/reconciliation',
+    //     icon: Scale,
+    //     permission: 'sections.reconciliation.view',
+    //     dataPan: 'nav-reconciliation',
+    // },
     {
         title: 'Weighments',
         href: '/weighments',
         icon: Scale,
+        permission: 'sections.weighments.view',
         dataPan: 'nav-weighments',
     },
-    {
-        title: 'Reports',
-        href: '/reports',
-        icon: BarChart3,
-        dataPan: 'nav-reports',
-    },
-    {
-        title: 'Changelog',
-        href: changelogIndex().url,
-        icon: Megaphone,
-        permission: 'changelog.index',
-        feature: 'changelog',
-        dataPan: 'nav-changelog',
-    },
-    {
-        title: 'Help',
-        href: helpIndex().url,
-        icon: LifeBuoy,
-        permission: 'help.index',
-        feature: 'help',
-        dataPan: 'nav-help',
-    },
-    {
-        title: 'Contact',
-        href: contactCreate().url,
-        icon: Mail,
-        permission: 'contact.create',
-        feature: 'contact',
-        dataPan: 'nav-contact',
-    },
+    // {
+    //     title: 'Reports',
+    //     href: '/reports',
+    //     icon: BarChart3,
+    //     permission: 'sections.reports.view',
+    //     dataPan: 'nav-reports',
+    // },
+    // {
+    //     title: 'Changelog',
+    //     href: changelogIndex().url,
+    //     icon: Megaphone,
+    //     permission: 'sections.changelog.view',
+    //     feature: 'changelog',
+    //     dataPan: 'nav-changelog',
+    // },
+    // {
+    //     title: 'Help',
+    //     href: helpIndex().url,
+    //     icon: LifeBuoy,
+    //     permission: 'sections.help.view',
+    //     feature: 'help',
+    //     dataPan: 'nav-help',
+    // },
+    // {
+    //     title: 'Contact',
+    //     href: contactCreate().url,
+    //     icon: Mail,
+    //     permission: 'sections.contact.create',
+    //     feature: 'contact',
+    //     dataPan: 'nav-contact',
+    // },
 ];
 
 const footerNavItems: NavItem[] = [
@@ -241,9 +299,9 @@ function canShowNavItem(
 
 export function AppSidebar() {
     const { auth, features } = usePage<SharedData>().props;
-    const visibleMainNavItems = useMemo(
+    const canShow = useMemo(
         () =>
-            mainNavItems.filter((item) =>
+            (item: NavItem) =>
                 canShowNavItem(
                     item,
                     auth.permissions ?? [],
@@ -251,9 +309,32 @@ export function AppSidebar() {
                     features ?? {},
                     auth.tenancy_enabled ?? true,
                 ),
-            ),
         [auth.permissions, auth.can_bypass, auth.tenancy_enabled, features],
     );
+
+    const navGroups = useMemo((): NavGroup[] => {
+        const [dashboardItem, settingsItem, ...restPlatform] = platformNavItems;
+        const visibleSettingsSubItems =
+            settingsItem?.collapsible && settingsItem.subItems
+                ? settingsItem.subItems.filter(canShow)
+                : [];
+        const showSettings = visibleSettingsSubItems.length > 0;
+
+        const platformItems: NavItem[] = [];
+        if (dashboardItem && canShow(dashboardItem)) {
+            platformItems.push(dashboardItem);
+        }
+        if (showSettings && settingsItem) {
+            platformItems.push({
+                ...settingsItem,
+                subItems: visibleSettingsSubItems,
+            });
+        }
+        restPlatform.filter(canShow).forEach((item) => platformItems.push(item));
+
+        if (platformItems.length === 0) return [];
+        return [{ title: 'Platform', items: platformItems }];
+    }, [canShow]);
 
     const visibleFooterNavItems = useMemo(() => {
         const f = features ?? {};
@@ -286,7 +367,7 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={visibleMainNavItems} />
+                <NavMain groups={navGroups} />
             </SidebarContent>
 
             <SidebarFooter>

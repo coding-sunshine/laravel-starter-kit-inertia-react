@@ -19,6 +19,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
  * @property string $transaction_type receipt|dispatch|correction
  * @property int|null $vehicle_arrival_id
  * @property int|null $rake_id
+ * @property int|null $daily_vehicle_entry_id
  * @property decimal $quantity_mt
  * @property decimal $opening_balance_mt
  * @property decimal $closing_balance_mt
@@ -43,6 +44,7 @@ final class StockLedger extends Model
         'transaction_type',
         'vehicle_arrival_id',
         'rake_id',
+        'daily_vehicle_entry_id',
         'quantity_mt',
         'opening_balance_mt',
         'closing_balance_mt',
@@ -97,6 +99,16 @@ final class StockLedger extends Model
     public function rake(): BelongsTo
     {
         return $this->belongsTo(Rake::class);
+    }
+
+    /**
+     * Daily vehicle entry relationship (for receipts from daily vehicle entries)
+     *
+     * @return BelongsTo<DailyVehicleEntry, $this>
+     */
+    public function dailyVehicleEntry(): BelongsTo
+    {
+        return $this->belongsTo(DailyVehicleEntry::class);
     }
 
     /**

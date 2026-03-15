@@ -7,10 +7,6 @@ namespace App\Actions;
 use App\Models\Organization;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
-use Spatie\Permission\Models\Role;
-
-use function getPermissionsTeamId;
-use function setPermissionsTeamId;
 
 final readonly class CreatePersonalOrganizationForUserAction
 {
@@ -31,33 +27,13 @@ final readonly class CreatePersonalOrganizationForUserAction
                 'owner_id' => $user->id,
             ]);
 
-            $teamKey = config('permission.column_names.team_foreign_key');
-            $guard = 'web';
-
-            Role::query()->create([
-                'name' => 'admin',
-                'guard_name' => $guard,
-                $teamKey => $organization->id,
-            ]);
-            Role::query()->create([
-                'name' => 'member',
-                'guard_name' => $guard,
-                $teamKey => $organization->id,
-            ]);
-
             $organization->users()->attach($user->id, [
                 'is_default' => true,
                 'joined_at' => now(),
                 'invited_by' => null,
             ]);
 
-            $previousTeamId = getPermissionsTeamId();
-            setPermissionsTeamId($organization->id);
-            try {
-                $user->assignRole('admin');
-            } finally {
-                setPermissionsTeamId($previousTeamId);
-            }
+            $user->assignRole('admin');
 
             return $organization;
         });

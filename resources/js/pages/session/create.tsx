@@ -32,6 +32,12 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                 {({ processing, errors }) => (
                     <>
                         <div className="grid gap-6">
+                            {errors.email && (
+                                <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                                    {errors.email}
+                                </div>
+                            )}
+
                             <div className="grid gap-2">
                                 <Label htmlFor="email">Email address</Label>
                                 <Input

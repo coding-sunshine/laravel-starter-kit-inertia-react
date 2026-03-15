@@ -29,6 +29,7 @@ use App\Http\Controllers\Indents\IndentsController;
 use App\Http\Controllers\InvitationAcceptController;
 use App\Http\Controllers\LoadersController;
 use App\Http\Controllers\OnboardingController;
+use App\Http\Controllers\OpeningCoalStockController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\OrganizationInvitationController;
 use App\Http\Controllers\OrganizationMemberController;
@@ -37,8 +38,10 @@ use App\Http\Controllers\PenaltyTypesController;
 use App\Http\Controllers\PersonalDataExportController;
 use App\Http\Controllers\PowerPlantController;
 use App\Http\Controllers\PowerplantSidingDistancesController;
+use App\Http\Controllers\ProductionEntryController;
 use App\Http\Controllers\RailwayReceipts\PenaltyController;
 use App\Http\Controllers\RailwayReceipts\RrDocumentController;
+use App\Http\Controllers\RailwaySidingEmptyWeighmentController;
 use App\Http\Controllers\Rakes\RakeGuardInspectionController;
 use App\Http\Controllers\Rakes\RakeLoadController;
 use App\Http\Controllers\Rakes\RakesController;
@@ -54,6 +57,7 @@ use App\Http\Controllers\RR\RrUploadController;
 use App\Http\Controllers\SectionTimersController;
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\Settings\AchievementsController;
+use App\Http\Controllers\ShiftTimingsController;
 use App\Http\Controllers\SidingsController;
 use App\Http\Controllers\SidingSwitchController;
 use App\Http\Controllers\TermsAcceptController;
@@ -236,6 +240,12 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         Route::resource('loaders', LoadersController::class);
         Route::resource('penalty-types', PenaltyTypesController::class);
         Route::resource('section-timers', SectionTimersController::class);
+        Route::get('shift-timings', [ShiftTimingsController::class, 'index'])->name('shift-timings.index');
+        Route::get('shift-timings/{siding}/edit', [ShiftTimingsController::class, 'edit'])->name('shift-timings.edit');
+        Route::put('shift-timings/{siding}', [ShiftTimingsController::class, 'update'])->name('shift-timings.update');
+        Route::get('opening-coal-stock', [OpeningCoalStockController::class, 'index'])->name('opening-coal-stock.index');
+        Route::get('opening-coal-stock/{siding}/edit', [OpeningCoalStockController::class, 'edit'])->name('opening-coal-stock.edit');
+        Route::put('opening-coal-stock/{siding}', [OpeningCoalStockController::class, 'update'])->name('opening-coal-stock.update');
         Route::resource('distance-matrix', PowerplantSidingDistancesController::class)->names([
             'index' => 'master-data.distance-matrix.index',
             'create' => 'master-data.distance-matrix.create',
@@ -270,6 +280,31 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::delete('road-dispatch/daily-vehicle-entries/{entry}', [DailyVehicleEntryController::class, 'destroy'])->name('road-dispatch.daily-vehicle-entries.destroy');
     Route::post('road-dispatch/daily-vehicle-entries/{entry}/complete', [DailyVehicleEntryController::class, 'markCompleted'])->name('road-dispatch.daily-vehicle-entries.complete');
     Route::get('road-dispatch/daily-vehicle-entries/export', [DailyVehicleEntryController::class, 'export'])->name('road-dispatch.daily-vehicle-entries.export');
+    Route::get('road-dispatch/vehicle-workorders/lookup', [DailyVehicleEntryController::class, 'lookupVehicle'])->name('road-dispatch.vehicle-workorders.lookup');
+
+    // Railway Siding Empty Weighment
+    Route::get('railway-siding-empty-weighment', [RailwaySidingEmptyWeighmentController::class, 'index'])->name('railway-siding-empty-weighment.index');
+    Route::post('railway-siding-empty-weighment', [RailwaySidingEmptyWeighmentController::class, 'store'])->name('railway-siding-empty-weighment.store');
+    Route::patch('railway-siding-empty-weighment/{entry}', [RailwaySidingEmptyWeighmentController::class, 'update'])->name('railway-siding-empty-weighment.update');
+    Route::delete('railway-siding-empty-weighment/{entry}', [RailwaySidingEmptyWeighmentController::class, 'destroy'])->name('railway-siding-empty-weighment.destroy');
+    Route::post('railway-siding-empty-weighment/{entry}/complete', [RailwaySidingEmptyWeighmentController::class, 'markCompleted'])->name('railway-siding-empty-weighment.complete');
+    Route::get('railway-siding-empty-weighment/export', [RailwaySidingEmptyWeighmentController::class, 'export'])->name('railway-siding-empty-weighment.export');
+
+    // Production (Coal / OB)
+    Route::prefix('production/coal')->name('production.coal.')->group(function (): void {
+        Route::get('/', [ProductionEntryController::class, 'index'])->name('index');
+        Route::post('/', [ProductionEntryController::class, 'store'])->name('store');
+        Route::get('{production_entry}/edit', [ProductionEntryController::class, 'edit'])->name('edit');
+        Route::patch('{production_entry}', [ProductionEntryController::class, 'update'])->name('update');
+        Route::delete('{production_entry}', [ProductionEntryController::class, 'destroy'])->name('destroy');
+    });
+    Route::prefix('production/ob')->name('production.ob.')->group(function (): void {
+        Route::get('/', [ProductionEntryController::class, 'index'])->name('index');
+        Route::post('/', [ProductionEntryController::class, 'store'])->name('store');
+        Route::get('{production_entry}/edit', [ProductionEntryController::class, 'edit'])->name('edit');
+        Route::patch('{production_entry}', [ProductionEntryController::class, 'update'])->name('update');
+        Route::delete('{production_entry}', [ProductionEntryController::class, 'destroy'])->name('destroy');
+    });
 
     // Vehicle Dispatch Register
     Route::get('vehicle-dispatch', [VehicleDispatchController::class, 'index'])->name('vehicle-dispatch.index');
@@ -333,7 +368,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 Route::post('webhooks/stripe', StripeWebhookController::class)->name('webhooks.stripe')->withoutMiddleware([Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class]);
 Route::post('webhooks/paddle', PaddleWebhookController::class)->name('webhooks.paddle')->withoutMiddleware([Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class]);
 
-Route::middleware(['auth', 'feature:onboarding'])->group(function (): void {
+Route::middleware(['auth', 'feature:onboarding', 'redirect.settings'])->group(function (): void {
     Route::get('onboarding', [OnboardingController::class, 'show'])->name('onboarding');
     Route::post('onboarding', [OnboardingController::class, 'store'])->name('onboarding.store');
 });
@@ -351,33 +386,35 @@ Route::middleware('auth')->group(function (): void {
     Route::get('settings/profile', [UserProfileController::class, 'edit'])->name('user-profile.edit');
     Route::patch('settings/profile', [UserProfileController::class, 'update'])->name('user-profile.update');
 
-    // User Password...
-    Route::get('settings/password', [UserPasswordController::class, 'edit'])->name('password.edit');
+    // User Password (redirect to dashboard for all users)...
+    Route::get('settings/password', [UserPasswordController::class, 'edit'])
+        ->middleware('redirect.settings')
+        ->name('password.edit');
     Route::put('settings/password', [UserPasswordController::class, 'update'])
-        ->middleware('throttle:6,1')
+        ->middleware(['throttle:6,1', 'redirect.settings'])
         ->name('password.update');
 
-    // Appearance...
+    // Appearance (redirect to dashboard for all users)...
     Route::get('settings/appearance', fn () => Inertia::render('appearance/update'))
-        ->middleware('feature:appearance_settings')
+        ->middleware(['feature:appearance_settings', 'redirect.settings'])
         ->name('appearance.edit');
 
-    // Personal data export (GDPR)...
+    // Personal data export (redirect to dashboard for all users)...
     Route::get('settings/personal-data-export', fn () => Inertia::render('settings/personal-data-export'))
-        ->middleware('feature:personal_data_export')
+        ->middleware(['feature:personal_data_export', 'redirect.settings'])
         ->name('personal-data-export.edit');
     Route::post('settings/personal-data-export', PersonalDataExportController::class)
-        ->middleware(['feature:personal_data_export', 'throttle:3,1'])
+        ->middleware(['feature:personal_data_export', 'throttle:3,1', 'redirect.settings'])
         ->name('personal-data-export.store');
 
-    // User Two-Factor Authentication...
+    // User Two-Factor Authentication (redirect to dashboard for all users)...
     Route::get('settings/two-factor', [UserTwoFactorAuthenticationController::class, 'show'])
-        ->middleware('feature:two_factor_auth')
+        ->middleware(['feature:two_factor_auth', 'redirect.settings'])
         ->name('two-factor.show');
 
-    // Gamification (Level & Achievements)...
+    // Gamification (redirect to dashboard for all users)...
     Route::get('settings/achievements', [AchievementsController::class, 'show'])
-        ->middleware('feature:gamification')
+        ->middleware(['feature:gamification', 'redirect.settings'])
         ->name('achievements.show');
 });
 

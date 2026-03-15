@@ -71,6 +71,11 @@
             "type": "string",
             "nullable": true,
             "default": null
+        },
+        "siding_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {
@@ -85,6 +90,18 @@
         "termsAcceptances": {
             "type": "hasMany",
             "model": "TermsAcceptance"
+        },
+        "siding": {
+            "type": "belongsTo",
+            "model": "Siding"
+        },
+        "sidingShifts": {
+            "type": "belongsTo",
+            "model": "SidingShift"
+        },
+        "activeSidingShifts": {
+            "type": "belongsTo",
+            "model": "ActiveSidingShift"
         },
         "categories": {
             "type": "belongsTo",

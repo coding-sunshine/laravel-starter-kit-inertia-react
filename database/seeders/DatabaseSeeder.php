@@ -177,6 +177,13 @@ final class DatabaseSeeder extends Seeder
                     continue;
                 }
 
+                if ($category === SeederCategory::Development) {
+                    $whitelist = config('seeding.development_whitelist', []);
+                    if (! is_array($whitelist) || $whitelist === [] || ! in_array($className, $whitelist, true)) {
+                        continue;
+                    }
+                }
+
                 if ($this->only !== null && ! in_array($shortName, $this->only, true)) {
                     continue;
                 }

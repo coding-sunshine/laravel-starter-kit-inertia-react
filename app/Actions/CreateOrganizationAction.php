@@ -6,12 +6,7 @@ namespace App\Actions;
 
 use App\Models\Organization;
 use App\Models\User;
-use App\Services\TenantContext;
 use Illuminate\Support\Facades\DB;
-use Spatie\Permission\Models\Role;
-
-use function getPermissionsTeamId;
-use function setPermissionsTeamId;
 
 final readonly class CreateOrganizationAction
 {
@@ -26,20 +21,6 @@ final readonly class CreateOrganizationAction
                 'owner_id' => $user->id,
             ]);
 
-            $teamKey = config('permission.column_names.team_foreign_key');
-            $guard = 'web';
-
-            Role::query()->create([
-                'name' => 'admin',
-                'guard_name' => $guard,
-                $teamKey => $organization->id,
-            ]);
-            Role::query()->create([
-                'name' => 'member',
-                'guard_name' => $guard,
-                $teamKey => $organization->id,
-            ]);
-
             $isDefault = $user->organizations()->count() === 0;
             $organization->users()->attach($user->id, [
                 'is_default' => $isDefault,
@@ -47,20 +28,7 @@ final readonly class CreateOrganizationAction
                 'invited_by' => null,
             ]);
 
-            $previousContext = TenantContext::get();
-            TenantContext::set($organization);
-            $previousTeamId = getPermissionsTeamId();
-            setPermissionsTeamId($organization->id);
-            try {
-                $user->assignRole('admin');
-            } finally {
-                setPermissionsTeamId($previousTeamId);
-                if ($previousContext instanceof Organization) {
-                    TenantContext::set($previousContext);
-                } else {
-                    TenantContext::forget();
-                }
-            }
+            $user->assignRole('admin');
 
             return $organization;
         });

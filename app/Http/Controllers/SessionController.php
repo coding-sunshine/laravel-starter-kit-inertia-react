@@ -39,6 +39,30 @@ final readonly class SessionController
 
         $request->session()->regenerate();
 
+        $authenticatedUser = $request->user();
+        // dd($authenticatedUser->roles);
+        if ($authenticatedUser !== null) {
+            if ($authenticatedUser->hasRole('super-admin')) {
+                return redirect()->intended(route('dashboard', absolute: false));
+            }
+
+            if ($authenticatedUser->hasRole('admin')) {
+                return redirect()->intended(route('rakes.index', absolute: false));
+            }
+
+            if ($authenticatedUser->hasRole('dispatch-manage-admin')) {
+                return redirect()->intended(route('vehicle-dispatch.index', absolute: false));
+            }
+
+            if ($authenticatedUser->hasRole('user')) {
+                return redirect()->intended(route('road-dispatch.daily-vehicle-entries.index', absolute: false));
+            }
+
+            if ($authenticatedUser->hasRole('viewer')) {
+                return redirect()->intended(route('dashboard', absolute: false));
+            }
+        }
+
         return redirect()->intended(route('dashboard', absolute: false));
     }
 
