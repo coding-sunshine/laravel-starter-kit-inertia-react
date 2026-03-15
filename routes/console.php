@@ -37,3 +37,10 @@ Schedule::job(new App\Jobs\DashboardInsightJob)->dailyAt('06:00');
 Schedule::job(new App\Jobs\ProcessNurtureSequencesJob)->hourly();
 
 Schedule::command('wp:provision-pending')->everyMinute()->withoutOverlapping();
+
+// Two-way MySQL ↔ PostgreSQL coexistence sync — opt-in only.
+// Enable by setting SYNC_COEXISTENCE_ENABLED=true in .env when running parallel systems.
+if (config('app.sync_coexistence_enabled', false)) {
+    Schedule::command('fusion:sync-mysql-to-postgres')->everyThirtyMinutes()->withoutOverlapping();
+    Schedule::command('fusion:sync-postgres-to-mysql')->everyThirtyMinutes()->withoutOverlapping();
+}

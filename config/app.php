@@ -43,6 +43,8 @@ return [
 
     'debug' => (bool) env('APP_DEBUG', false),
 
+    'sync_coexistence_enabled' => (bool) env('SYNC_COEXISTENCE_ENABLED', false),
+
     /*
     |--------------------------------------------------------------------------
     | Application URL
