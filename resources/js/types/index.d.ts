@@ -56,6 +56,8 @@ export interface NavItem {
     subItems?: NavItem[];
     /** Permission name(s) required to show this item (user must have any). Omit to show to all authenticated users. */
     permission?: string | string[];
+    /** Role name(s) required to show this item (user must have any). Typically used for super-admin only items. */
+    roles?: string[];
     /** Feature flag key (e.g. 'blog'). Item is hidden when this feature is inactive. */
     feature?: string;
     /** When true, item is hidden in single-tenant mode (MULTI_ORGANIZATION_ENABLED=false). */

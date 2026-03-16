@@ -31,6 +31,8 @@ final class DailyVehicleEntryController extends Controller
         $user = Auth::user();
         $assignedShift = $user?->getAssignedRoadDispatchShift();
 
+        $entryType = DailyVehicleEntry::ENTRY_TYPE_ROAD_DISPATCH;
+
         $date = $request->get('date', now()->format('Y-m-d'));
         $sidingsOrdered = Siding::query()->orderBy('name')->get(['id', 'name']);
         $firstSidingId = $sidingsOrdered->first()?->id;
@@ -74,8 +76,8 @@ final class DailyVehicleEntryController extends Controller
             }
         }
 
-        $entries = $this->service->getEntriesByDateAndShift($date, $activeShift, $sidingId);
-        $shiftSummary = $this->service->getShiftSummary($date);
+        $entries = $this->service->getEntriesByDateAndShift($date, $activeShift, $sidingId, $entryType);
+        $shiftSummary = $this->service->getShiftSummary($date, $entryType);
         $shiftStatus = $this->shiftValidation->getShiftCompletionStatus($date, $sidingIdForShifts);
         $shiftTimes = $this->shiftValidation->getShiftTimesForSiding($sidingIdForShifts);
 
@@ -277,7 +279,8 @@ final class DailyVehicleEntryController extends Controller
             $filepath = $this->service->exportEntries(
                 $data['date'],
                 $data['siding'],
-                $data['shift']
+                $data['shift'],
+                DailyVehicleEntry::ENTRY_TYPE_ROAD_DISPATCH
             );
 
             $filename = basename($filepath);
