@@ -26,6 +26,7 @@ import {
     CreditCard,
     FileText,
     Folder,
+    History,
     LayoutGrid,
     LifeBuoy,
     Mail,
@@ -140,6 +141,42 @@ const platformNavItems: NavItem[] = [
                 permission: 'sections.production_ob.view',
                 dataPan: 'nav-production-ob',
             },
+            {
+                title: 'Transpoters',
+                href: '/vehicle-workorders',
+                icon: FileText,
+                permission: 'sections.transport.view',
+                dataPan: 'nav-vehicle-workorders',
+            },
+            {
+                title: 'Reports',
+                href: '/reports',
+                icon: BarChart3,
+                permission: 'sections.reports.view',
+                dataPan: 'nav-reports',
+            },
+        ],
+    },
+    {
+        title: 'Historic',
+        href: '#',
+        icon: History,
+        collapsible: true,
+        subItems: [
+            {
+                title: 'Mines historical',
+                href: '/historical/mines',
+                icon: Train,
+                permission: 'sections.historical_mines.view',
+                dataPan: 'nav-historical-mines',
+            },
+            {
+                title: 'Railway siding historical',
+                href: '/historical/railway-siding',
+                icon: Train,
+                permission: 'sections.historical_railway_siding.view',
+                dataPan: 'nav-historical-railway-siding',
+            },
         ],
     },
     {
@@ -178,13 +215,6 @@ const platformNavItems: NavItem[] = [
         dataPan: 'nav-vehicle-dispatch',
     },
     {
-        title: 'Transport',
-        href: '/vehicle-workorders',
-        icon: FileText,
-        permission: 'sections.transport.view',
-        dataPan: 'nav-vehicle-workorders',
-    },
-    {
         title: 'Railway Receipts',
         href: '/railway-receipts',
         icon: FileText,
@@ -219,13 +249,6 @@ const platformNavItems: NavItem[] = [
         permission: 'sections.weighments.view',
         dataPan: 'nav-weighments',
     },
-    // {
-    //     title: 'Reports',
-    //     href: '/reports',
-    //     icon: BarChart3,
-    //     permission: 'sections.reports.view',
-    //     dataPan: 'nav-reports',
-    // },
     // {
     //     title: 'Changelog',
     //     href: changelogIndex().url,

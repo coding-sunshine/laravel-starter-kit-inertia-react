@@ -1628,6 +1628,33 @@ export default function Dashboard() {
         }
     }, [filters.period, filters.from, filters.to]);
 
+    const formatDate = useCallback((value: string | undefined | null) => {
+        if (!value) {
+            return '';
+        }
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) {
+            return value;
+        }
+        return d.toLocaleDateString(undefined, {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+        });
+    }, []);
+
+    const mainDateRangeLabel = useMemo(() => {
+        const from = formatDate(filters.from);
+        const to = formatDate(filters.to);
+        if (!from || !to) {
+            return '';
+        }
+        if (from === to) {
+            return `Data for ${from}`;
+        }
+        return `Data from ${from} to ${to}`;
+    }, [filters.from, filters.to, formatDate]);
+
     // When period is not custom, URL must not contain from/to or backend can receive stale range from shared links or history.
     const dashboardPath = useMemo(() => dashboard().url.split('?')[0] || dashboard().url, []);
     useEffect(() => {
@@ -1672,7 +1699,7 @@ export default function Dashboard() {
         };
         if (date !== '') params.coal_stock_date = date;
         if (filters.siding_ids.length > 0 && filters.siding_ids.length < allSidingIds.length) {
-            params.siding_ids = filters.siding_ids;
+            params.siding_ids = filters.siding_ids;S
         }
         if (filters.power_plant) params.power_plant = filters.power_plant;
         if (filters.rake_number) params.rake_number = filters.rake_number;
@@ -1803,10 +1830,17 @@ export default function Dashboard() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dashboard" />
             <div className="dashboard-page flex h-full flex-1 flex-col gap-5 overflow-x-auto bg-[#FAFAFA] p-3">
-                <div className="sticky top-0 z-10 -mx-3 flex flex-col gap-3 bg-[#FAFAFA] px-3 pb-2 pt-1">
-                    <h2 className="text-xl font-semibold tracking-tight">
-                        Management Dashboard
-                    </h2>
+                <div className="sticky top-0 z-10 -mx-3 flex flex-col gap-1 bg-[#FAFAFA] px-3 pb-2 pt-1">
+                    <div className="flex flex-col">
+                        <h2 className="text-xl font-semibold tracking-tight">
+                            Management Dashboard
+                        </h2>
+                        {mainDateRangeLabel && (
+                            <span className="mt-1 inline-flex items-center self-start rounded-full border border-green-500/70 bg-green-50 px-3 py-0.5 text-[11px] font-medium text-green-700">
+                                {mainDateRangeLabel} ({periodLabel})
+                            </span> 
+                        )}
+                    </div>
                     <div className="flex flex-wrap items-center justify-end gap-2">
                         {hasActiveFilters && !filtersExpanded && (
                             <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
@@ -2010,81 +2044,81 @@ export default function Dashboard() {
                         {activeSection === 'operations' && (
                             <div className="space-y-6">
                                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                                    <div className="dashboard-card rounded-xl border-0 p-5">
+                                    <div className="dashboard-card min-w-0 rounded-xl border-0 p-5">
                                         <div className="flex flex-wrap items-center justify-between gap-3">
-                                            <SectionHeader icon={Train} title="Live rake status" subtitle="Active rakes (not yet dispatched)" />
-                                        <Button variant="outline" size="sm" className="rounded-lg" asChild>
-                                            <Link href={rakesIndex().url} data-pan="dashboard-live-rakes-view-all">View all</Link>
-                                        </Button>
-                                    </div>
-                                    <p className="mt-1 text-xs text-gray-600">
-                                        Last updated: Just now
-                                        {liveRakeStatus.length > 0 && (
-                                            <span className="ml-2 font-medium text-gray-600">
-                                                • {liveRakeStatus.length} active rake{liveRakeStatus.length === 1 ? '' : 's'}
-                                            </span>
-                                        )}
-                                    </p>
-                                    {liveRakeStatus.length > 0 ? (
-                                        <div className="dashboard-table-scroll mt-4 max-h-[520px] overflow-y-auto overflow-x-auto">
-                                            <table className="w-full text-sm">
-                                                <thead className="sticky top-0 z-10 bg-white shadow-sm">
-                                                    <tr className="border-b text-left text-gray-600">
-                                                        <th className="group cursor-pointer pb-3 pl-4 pr-2 pt-2 font-medium"><span className="inline-flex items-center gap-1">Rake <ArrowUp className="size-3.5 opacity-0 group-hover:opacity-50" /></span></th>
-                                                        <th className="group cursor-pointer pb-3 px-2 pt-2 font-medium"><span className="inline-flex items-center gap-1">Siding <ArrowUp className="size-3.5 opacity-0 group-hover:opacity-50" /></span></th>
-                                                        <th className="group cursor-pointer pb-3 px-2 pt-2 font-medium"><span className="inline-flex items-center gap-1">Status <ArrowUp className="size-3.5 opacity-0 group-hover:opacity-50" /></span></th>
-                                                        <th className="group cursor-pointer pb-3 px-2 pt-2 font-medium"><span className="inline-flex items-center gap-1">Time elapsed <ArrowUp className="size-3.5 opacity-0 group-hover:opacity-50" /></span></th>
-                                                        <th className="group cursor-pointer pb-3 pr-4 pl-2 pt-2 font-medium"><span className="inline-flex items-center gap-1">Risk <ArrowUp className="size-3.5 opacity-0 group-hover:opacity-50" /></span></th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {liveRakeStatus.map((row, i) => {
-                                                        const statusVariant = row.state === 'completed' ? 'completed' : row.state === 'loading' || row.state === 'in-progress' ? 'in-progress' : 'pending';
-                                                        const riskVariant = row.risk === 'penalty_risk' ? 'high' : row.risk === 'attention' ? 'medium' : 'normal';
-                                                        const borderColor = riskVariant === 'high' ? '#DC2626' : riskVariant === 'medium' ? '#F59E0B' : '#E5E7EB';
-                                                        return (
-                                                            <tr
-                                                                key={i}
-                                                                className="border-b text-[0.875rem] last:border-0"
-                                                                style={{ backgroundColor: i % 2 === 1 ? '#F9FAFB' : undefined, borderLeft: `3px solid ${borderColor}` }}
-                                                            >
-                                                                <td className="py-3 pl-4 font-medium">
-                                                                    <span className="inline-flex items-center gap-2">
-                                                                        <span
-                                                                            className="inline-block size-2.5 rounded-full"
-                                                                            style={{ backgroundColor: borderColor }}
-                                                                        />
-                                                                        <span>{row.rake_number}</span>
-                                                                    </span>
-                                                                </td>
-                                                                <td className="py-3 px-2">{row.siding_name}</td>
-                                                                <td className="py-3 px-2">
-                                                                    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                                                                        statusVariant === 'completed' ? 'bg-[#DCFCE7] text-[#16A34A]' :
-                                                                        statusVariant === 'in-progress' ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-600'
-                                                                    }`}>
-                                                                        {statusVariant === 'completed' ? 'Completed' : statusVariant === 'in-progress' ? 'In progress' : row.state || 'Pending'}
-                                                                    </span>
-                                                                </td>
-                                                                <td className="py-3 tabular-nums px-2">{row.time_elapsed}</td>
-                                                                <td className="py-3 pr-4 pl-2">
-                                                                    {riskVariant === 'high' ? (
-                                                                        <span className="inline-flex rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700">High</span>
-                                                                    ) : riskVariant === 'medium' ? (
-                                                                        <span className="inline-flex rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">Medium</span>
-                                                                    ) : (
-                                                                        <span className="text-gray-600">Normal</span>
-                                                                    )}
-                                                                </td>
-                                                            </tr>
-                                                        );
-                                                    })}
-                                                </tbody>
-                                            </table>
+                                            <SectionHeader icon={Truck} title="Coal Transport Report" subtitle="Trips and quantity by shift and siding" titleClassName="font-bold text-black" />
+                                            <div className="flex items-center gap-2">
+                                                <label htmlFor="coal-transport-date" className="text-xs font-medium text-gray-600">Date</label>
+                                                <input
+                                                    id="coal-transport-date"
+                                                    type="date"
+                                                    value={filters.coal_transport_date ?? coalTransportReport?.date ?? ''}
+                                                    onChange={(e) => {
+                                                        const v = e.target.value;
+                                                        applyCoalTransportDate(v ?? '');
+                                                    }}
+                                                    className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
+                                                />
+                                            </div>
                                         </div>
-                                    ) : (
-                                        <div className="mt-4 py-8 text-center text-sm text-gray-600">No active rakes.</div>
-                                    )}
+                                        {coalTransportReport ? (
+                                            <>
+                                                <p className="mt-1 text-xs text-gray-600">
+                                                    {new Date(coalTransportReport.date + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                                </p>
+                                                <div className="dashboard-table-scroll mt-3 max-h-[420px] overflow-y-auto overflow-x-auto">
+                                                    <table className="w-full border-separate text-sm" style={{ borderSpacing: 0 }}>
+                                                        <thead className="sticky top-0 z-10 bg-[#369c7a] text-black">
+                                                            <tr>
+                                                                <th className="border border-[#1a3d2e] px-2 py-2 text-center font-medium" style={{ borderWidth: '1px' }}>Sl No</th>
+                                                                <th className="border border-[#1a3d2e] px-2 py-2 text-center font-medium" style={{ borderWidth: '1px' }}>Shift</th>
+                                                                {coalTransportReport.sidings.map((s) => (
+                                                                    <th key={s.id} colSpan={2} className="border border-[#1a3d2e] px-2 py-2 text-center font-medium" style={{ borderWidth: '1px' }}>{s.name}</th>
+                                                                ))}
+                                                                <th colSpan={2} className="border border-[#1a3d2e] px-2 py-2 text-center font-medium" style={{ borderWidth: '1px' }}>Total</th>
+                                                            </tr>
+                                                            <tr>
+                                                                <th className="border border-[#1a3d2e] px-2 py-1" style={{ borderWidth: '1px' }} />
+                                                                <th className="border border-[#1a3d2e] px-2 py-1" style={{ borderWidth: '1px' }} />
+                                                                {coalTransportReport.sidings.flatMap((s) => [<th key={`${s.id}-t`} className="border border-[#1a3d2e] px-2 py-1 text-center font-medium" style={{ borderWidth: '1px' }}>Trips</th>, <th key={`${s.id}-q`} className="border border-[#1a3d2e] px-2 py-1 text-center font-medium" style={{ borderWidth: '1px' }}>Qty</th>])}
+                                                                <th className="border border-[#1a3d2e] px-2 py-1 text-center font-medium" style={{ borderWidth: '1px' }}>Trips</th>
+                                                                <th className="border border-[#1a3d2e] px-2 py-1 text-center font-medium" style={{ borderWidth: '1px' }}>Qty</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {coalTransportReport.rows.map((row) => (
+                                                                <tr key={row.shift_label} className="bg-white text-[0.875rem]">
+                                                                    <td className="border border-[#1a3d2e] px-2 py-2 tabular-nums" style={{ borderWidth: '1px' }}>{row.sl_no}</td>
+                                                                    <td className="border border-[#1a3d2e] px-2 py-2 font-medium" style={{ borderWidth: '1px' }}>{row.shift_label}</td>
+                                                                    {row.siding_metrics.map((m) => (
+                                                                        <Fragment key={m.siding_name}>
+                                                                            <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{m.trips}</td>
+                                                                            <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{m.qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                                                        </Fragment>
+                                                                    ))}
+                                                                    <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{row.total_trips}</td>
+                                                                    <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{row.total_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                                                </tr>
+                                                            ))}
+                                                            <tr className="bg-[#369c7a] font-bold text-black">
+                                                                <td className="border border-[#1a3d2e] px-2 py-2" style={{ borderWidth: '1px' }} />
+                                                                <td className="border border-[#1a3d2e] px-2 py-2" style={{ borderWidth: '1px' }}>TOTAL</td>
+                                                                {coalTransportReport.totals.siding_metrics.map((m) => (
+                                                                    <Fragment key={m.siding_name}>
+                                                                        <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{m.trips}</td>
+                                                                        <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{m.qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                                                    </Fragment>
+                                                                ))}
+                                                                <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{coalTransportReport.totals.total_trips}</td>
+                                                                <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{coalTransportReport.totals.total_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="mt-4 py-8 text-center text-sm text-gray-600">No coal transport data.</div>
+                                        )}
                                     </div>
                                     <div className="dashboard-card rounded-xl border-0 p-5">
                                         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -2231,82 +2265,141 @@ export default function Dashboard() {
                                     subtitle="Minimum 3,800 MT per rake — side-wise"
                                 />
                                 */}
-                                {coalTransportReport && coalTransportReport.sidings.length > 0 && (
-                                    <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-2">
-                                        <div className="dashboard-card min-w-0 rounded-xl border-0 p-5">
-                                            <div className="flex flex-wrap items-center justify-between gap-3">
-                                                <SectionHeader icon={Truck} title="Coal Transport Report" subtitle="Trips and quantity by shift and siding" titleClassName="font-bold text-black" />
-                                                <div className="flex items-center gap-2">
-                                                    <label htmlFor="coal-transport-date" className="text-xs font-medium text-gray-600">Date</label>
-                                                    <input
-                                                        id="coal-transport-date"
-                                                        type="date"
-                                                        value={filters.coal_transport_date ?? coalTransportReport.date ?? ''}
-                                                        onChange={(e) => {
-                                                            const v = e.target.value;
-                                                            applyCoalTransportDate(v ?? '');
-                                                        }}
-                                                        className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <p className="mt-1 text-xs text-gray-600">
-                                                {new Date(coalTransportReport.date + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-                                            </p>
-                                            <div className="dashboard-table-scroll mt-3 max-h-[420px] overflow-y-auto overflow-x-auto">
-                                                <table className="w-full border-separate text-sm" style={{ borderSpacing: 0 }}>
-                                                    <thead className="sticky top-0 z-10 bg-[#369c7a] text-black">
-                                                        <tr>
-                                                            <th className="border border-[#1a3d2e] px-2 py-2 text-center font-medium" style={{ borderWidth: '1px' }}>Sl No</th>
-                                                            <th className="border border-[#1a3d2e] px-2 py-2 text-center font-medium" style={{ borderWidth: '1px' }}>Shift</th>
-                                                            {coalTransportReport.sidings.map((s) => (
-                                                                <th key={s.id} colSpan={2} className="border border-[#1a3d2e] px-2 py-2 text-center font-medium" style={{ borderWidth: '1px' }}>{s.name}</th>
-                                                            ))}
-                                                            <th colSpan={2} className="border border-[#1a3d2e] px-2 py-2 text-center font-medium" style={{ borderWidth: '1px' }}>Total</th>
-                                                        </tr>
-                                                        <tr>
-                                                            <th className="border border-[#1a3d2e] px-2 py-1" style={{ borderWidth: '1px' }} />
-                                                            <th className="border border-[#1a3d2e] px-2 py-1" style={{ borderWidth: '1px' }} />
-                                                            {coalTransportReport.sidings.flatMap((s) => [<th key={`${s.id}-t`} className="border border-[#1a3d2e] px-2 py-1 text-center font-medium" style={{ borderWidth: '1px' }}>Trips</th>, <th key={`${s.id}-q`} className="border border-[#1a3d2e] px-2 py-1 text-center font-medium" style={{ borderWidth: '1px' }}>Qty</th>])}
-                                                            <th className="border border-[#1a3d2e] px-2 py-1 text-center font-medium" style={{ borderWidth: '1px' }}>Trips</th>
-                                                            <th className="border border-[#1a3d2e] px-2 py-1 text-center font-medium" style={{ borderWidth: '1px' }}>Qty</th>
+                                 <div className="dashboard-card rounded-xl border-0 p-5">
+                                        <div className="flex flex-wrap items-center justify-between gap-3">
+                                            <SectionHeader icon={Train} title="Live rake status" subtitle="Active rakes (not yet dispatched)" />
+                                            <Button variant="outline" size="sm" className="rounded-lg" asChild>
+                                                <Link href={rakesIndex().url} data-pan="dashboard-live-rakes-view-all">
+                                                    View all
+                                                </Link>
+                                            </Button>
+                                        </div>
+                                        <p className="mt-1 text-xs text-gray-600">
+                                            Last updated: Just now
+                                            {liveRakeStatus.length > 0 && (
+                                                <span className="ml-2 font-medium text-gray-600">
+                                                    • {liveRakeStatus.length} active rake{liveRakeStatus.length === 1 ? '' : 's'}
+                                                </span>
+                                            )}
+                                        </p>
+                                        {liveRakeStatus.length > 0 ? (
+                                            <div className="dashboard-table-scroll mt-4 max-h-[520px] overflow-y-auto overflow-x-auto">
+                                                <table className="w-full text-sm">
+                                                    <thead className="sticky top-0 z-10 bg-white shadow-sm">
+                                                        <tr className="border-b text-left text-gray-600">
+                                                            <th className="group cursor-pointer pb-3 pl-4 pr-2 pt-2 font-medium">
+                                                                <span className="inline-flex items-center gap-1">
+                                                                    Rake
+                                                                    <ArrowUp className="size-3.5 opacity-0 group-hover:opacity-50" />
+                                                                </span>
+                                                            </th>
+                                                            <th className="group cursor-pointer pb-3 px-2 pt-2 font-medium">
+                                                                <span className="inline-flex items-center gap-1">
+                                                                    Siding
+                                                                    <ArrowUp className="size-3.5 opacity-0 group-hover:opacity-50" />
+                                                                </span>
+                                                            </th>
+                                                            <th className="group cursor-pointer pb-3 px-2 pt-2 font-medium">
+                                                                <span className="inline-flex items-center gap-1">
+                                                                    Status
+                                                                    <ArrowUp className="size-3.5 opacity-0 group-hover:opacity-50" />
+                                                                </span>
+                                                            </th>
+                                                            <th className="group cursor-pointer pb-3 px-2 pt-2 font-medium">
+                                                                <span className="inline-flex items-center gap-1">
+                                                                    Time elapsed
+                                                                    <ArrowUp className="size-3.5 opacity-0 group-hover:opacity-50" />
+                                                                </span>
+                                                            </th>
+                                                            <th className="group cursor-pointer pb-3 pr-4 pl-2 pt-2 font-medium">
+                                                                <span className="inline-flex items-center gap-1">
+                                                                    Risk
+                                                                    <ArrowUp className="size-3.5 opacity-0 group-hover:opacity-50" />
+                                                                </span>
+                                                            </th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
-                                                        {coalTransportReport.rows.map((row) => (
-                                                            <tr key={row.shift_label} className="bg-white text-[0.875rem]">
-                                                                <td className="border border-[#1a3d2e] px-2 py-2 tabular-nums" style={{ borderWidth: '1px' }}>{row.sl_no}</td>
-                                                                <td className="border border-[#1a3d2e] px-2 py-2 font-medium" style={{ borderWidth: '1px' }}>{row.shift_label}</td>
-                                                                {row.siding_metrics.map((m) => (
-                                                                    <Fragment key={m.siding_name}>
-                                                                        <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{m.trips}</td>
-                                                                        <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{m.qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                                                                    </Fragment>
-                                                                ))}
-                                                                <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{row.total_trips}</td>
-                                                                <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{row.total_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                                                            </tr>
-                                                        ))}
-                                                        <tr className="bg-[#369c7a] font-bold text-black">
-                                                            <td className="border border-[#1a3d2e] px-2 py-2" style={{ borderWidth: '1px' }} />
-                                                            <td className="border border-[#1a3d2e] px-2 py-2" style={{ borderWidth: '1px' }}>TOTAL</td>
-                                                            {coalTransportReport.totals.siding_metrics.map((m) => (
-                                                                <Fragment key={m.siding_name}>
-                                                                    <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{m.trips}</td>
-                                                                    <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{m.qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                                                                </Fragment>
-                                                            ))}
-                                                            <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{coalTransportReport.totals.total_trips}</td>
-                                                            <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{coalTransportReport.totals.total_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                                                        </tr>
+                                                        {liveRakeStatus.map((row, i) => {
+                                                            const statusVariant =
+                                                                row.state === 'completed'
+                                                                    ? 'completed'
+                                                                    : row.state === 'loading' || row.state === 'in-progress'
+                                                                        ? 'in-progress'
+                                                                        : 'pending';
+                                                            const riskVariant =
+                                                                row.risk === 'penalty_risk'
+                                                                    ? 'high'
+                                                                    : row.risk === 'attention'
+                                                                        ? 'medium'
+                                                                        : 'normal';
+                                                            const borderColor =
+                                                                riskVariant === 'high'
+                                                                    ? '#DC2626'
+                                                                    : riskVariant === 'medium'
+                                                                        ? '#F59E0B'
+                                                                        : '#E5E7EB';
+
+                                                            return (
+                                                                <tr
+                                                                    key={i}
+                                                                    className="border-b text-[0.875rem] last:border-0"
+                                                                    style={{
+                                                                        backgroundColor: i % 2 === 1 ? '#F9FAFB' : undefined,
+                                                                        borderLeft: `3px solid ${borderColor}`,
+                                                                    }}
+                                                                >
+                                                                    <td className="py-3 pl-4 font-medium">
+                                                                        <span className="inline-flex items-center gap-2">
+                                                                            <span
+                                                                                className="inline-block size-2.5 rounded-full"
+                                                                                style={{ backgroundColor: borderColor }}
+                                                                            />
+                                                                            <span>{row.rake_number}</span>
+                                                                        </span>
+                                                                    </td>
+                                                                    <td className="py-3 px-2">{row.siding_name}</td>
+                                                                    <td className="py-3 px-2">
+                                                                        <span
+                                                                            className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                                                                                statusVariant === 'completed'
+                                                                                    ? 'bg-[#DCFCE7] text-[#16A34A]'
+                                                                                    : statusVariant === 'in-progress'
+                                                                                        ? 'bg-amber-100 text-amber-800'
+                                                                                        : 'bg-gray-100 text-gray-600'
+                                                                            }`}
+                                                                        >
+                                                                            {statusVariant === 'completed'
+                                                                                ? 'Completed'
+                                                                                : statusVariant === 'in-progress'
+                                                                                    ? 'In progress'
+                                                                                    : row.state || 'Pending'}
+                                                                        </span>
+                                                                    </td>
+                                                                    <td className="py-3 tabular-nums px-2">{row.time_elapsed}</td>
+                                                                    <td className="py-3 pr-4 pl-2">
+                                                                        {riskVariant === 'high' ? (
+                                                                            <span className="inline-flex rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700">
+                                                                                High
+                                                                            </span>
+                                                                        ) : riskVariant === 'medium' ? (
+                                                                            <span className="inline-flex rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">
+                                                                                Medium
+                                                                            </span>
+                                                                        ) : (
+                                                                            <span className="text-gray-600">Normal</span>
+                                                                        )}
+                                                                    </td>
+                                                                </tr>
+                                                            );
+                                                        })}
                                                     </tbody>
                                                 </table>
                                             </div>
-                                        </div>
-                                        {/* Placeholder for second data table — add your table here */}
-                                        <div className="min-w-0" />
+                                        ) : (
+                                            <div className="mt-4 py-8 text-center text-sm text-gray-600">No active rakes.</div>
+                                        )}
                                     </div>
-                                )}
                             </div>
                         )}
 
@@ -2517,7 +2610,7 @@ export default function Dashboard() {
                                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                                     <div className="dashboard-card min-w-0 rounded-xl border-0 p-6">
                                         <SectionHeader icon={BarChart3} title="Penalty by siding" subtitle="Which siding causes most penalties" />
-                                    {penaltyBySiding.length > 0 ? (
+                                        {penaltyBySiding.length > 0 ? (
                                         <div className="mt-4">
                                             {(() => {
                                                 const sorted = [...penaltyBySiding].sort((a, b) => b.total - a.total);
@@ -2542,11 +2635,13 @@ export default function Dashboard() {
                                                     </ResponsiveContainer>
                                                 );
                                             })()}
-                                        </div>
-                                    ) : (
+                                            </div>
+                                        ) : (
                                         <div className="mt-4 py-8 text-center text-sm text-gray-600">No sidings available for selected filters.</div>
-                                    )}
+                                        )}
                                     </div>
+                                    <div className="grid grid-cols-1 gap-6">
+                                   
                                     <div className="dashboard-card min-w-0 rounded-xl border-0 p-6">
                                         <SectionHeader icon={BarChart3} title="Predicted vs actual penalty" subtitle="All sidings comparison" />
                                     <div className="mt-3 flex flex-wrap items-center justify-center gap-4 rounded-lg border border-gray-200 bg-gray-50/80 px-4 py-2 text-sm">
@@ -2594,6 +2689,9 @@ export default function Dashboard() {
                                     })()}
                                     </div>
                                 </div>
+                                </div>
+
+                                
                             </div>
                         )}
 
