@@ -25,6 +25,8 @@ use App\Http\Controllers\EnterpriseInquiryController;
 use App\Http\Controllers\GenerateDispatchReportController;
 use App\Http\Controllers\HelpCenter\HelpCenterController;
 use App\Http\Controllers\HelpCenter\RateHelpArticleController;
+use App\Http\Controllers\HistoricalMineController;
+use App\Http\Controllers\HistoricalRakeController;
 use App\Http\Controllers\Indents\IndentsController;
 use App\Http\Controllers\InvitationAcceptController;
 use App\Http\Controllers\LoadersController;
@@ -289,6 +291,18 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::delete('railway-siding-empty-weighment/{entry}', [RailwaySidingEmptyWeighmentController::class, 'destroy'])->name('railway-siding-empty-weighment.destroy');
     Route::post('railway-siding-empty-weighment/{entry}/complete', [RailwaySidingEmptyWeighmentController::class, 'markCompleted'])->name('railway-siding-empty-weighment.complete');
     Route::get('railway-siding-empty-weighment/export', [RailwaySidingEmptyWeighmentController::class, 'export'])->name('railway-siding-empty-weighment.export');
+
+    // Historical Railway Siding (historical rake data)
+    Route::get('historical/railway-siding', [HistoricalRakeController::class, 'index'])->name('historical.railway-siding.index');
+    Route::post('historical/railway-siding', [HistoricalRakeController::class, 'store'])->name('historical.railway-siding.store');
+    Route::patch('historical/railway-siding/{rake}', [HistoricalRakeController::class, 'update'])->name('historical.railway-siding.update');
+    Route::delete('historical/railway-siding/{rake}', [HistoricalRakeController::class, 'destroy'])->name('historical.railway-siding.destroy');
+
+    // Historical Mines (monthly mines data)
+    Route::get('historical/mines', [HistoricalMineController::class, 'index'])->name('historical.mines.index');
+    Route::post('historical/mines', [HistoricalMineController::class, 'store'])->name('historical.mines.store');
+    Route::patch('historical/mines/{mine}', [HistoricalMineController::class, 'update'])->name('historical.mines.update');
+    Route::delete('historical/mines/{mine}', [HistoricalMineController::class, 'destroy'])->name('historical.mines.destroy');
 
     // Production (Coal / OB)
     Route::prefix('production/coal')->name('production.coal.')->group(function (): void {

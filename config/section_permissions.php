@@ -126,6 +126,16 @@ return [
             'actions' => ['view', 'upload'],
         ],
         [
+            'slug' => 'historical_mines',
+            'label' => 'Historical Mines',
+            'actions' => ['view'],
+        ],
+        [
+            'slug' => 'historical_railway_siding',
+            'label' => 'Historical Railway Siding',
+            'actions' => ['view'],
+        ],
+        [
             'slug' => 'reports',
             'label' => 'Reports',
             'actions' => ['view', 'generate'],
@@ -399,5 +409,7 @@ return [
         'changelog' => 'sections.changelog.view',
         'help' => 'sections.help.view',
         'contact' => 'sections.contact.create',
+        'historical_mines' => 'sections.historical_mines.view',
+        'historical_railway_siding' => 'sections.historical_railway_siding.view',
     ],
 ];
