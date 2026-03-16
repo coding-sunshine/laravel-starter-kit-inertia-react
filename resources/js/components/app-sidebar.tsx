@@ -162,6 +162,7 @@ const platformNavItems: NavItem[] = [
         href: '#',
         icon: History,
         collapsible: true,
+        roles: ['super-admin'],
         subItems: [
             {
                 title: 'Mines historical',
@@ -301,6 +302,7 @@ const footerNavItems: NavItem[] = [
 function canShowNavItem(
     item: NavItem,
     permissions: string[],
+    roles: string[],
     canBypass: boolean,
     features: SharedData['features'],
     tenancyEnabled: boolean,
@@ -310,6 +312,13 @@ function canShowNavItem(
     }
     if (item.feature && !features?.[item.feature]) {
         return false;
+    }
+    if (item.roles && item.roles.length > 0 && !canBypass) {
+        const hasRole = item.roles.some((role) => roles.includes(role));
+
+        if (!hasRole) {
+            return false;
+        }
     }
     if (canBypass || !item.permission) {
         return true;
@@ -328,11 +337,12 @@ export function AppSidebar() {
                 canShowNavItem(
                     item,
                     auth.permissions ?? [],
+                    auth.roles ?? [],
                     auth.can_bypass ?? false,
                     features ?? {},
                     auth.tenancy_enabled ?? true,
                 ),
-        [auth.permissions, auth.can_bypass, auth.tenancy_enabled, features],
+        [auth.permissions, auth.roles, auth.can_bypass, auth.tenancy_enabled, features],
     );
 
     const navGroups = useMemo((): NavGroup[] => {
