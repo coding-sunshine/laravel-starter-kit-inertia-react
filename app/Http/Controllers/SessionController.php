@@ -58,6 +58,10 @@ final readonly class SessionController
                 return redirect()->intended(route('road-dispatch.daily-vehicle-entries.index', absolute: false));
             }
 
+            if ($authenticatedUser->hasRole('empty-weighment-shift')) {
+                return redirect()->intended(route('railway-siding-empty-weighment.index', absolute: false));
+            }
+
             if ($authenticatedUser->hasRole('viewer')) {
                 return redirect()->intended(route('dashboard', absolute: false));
             }
