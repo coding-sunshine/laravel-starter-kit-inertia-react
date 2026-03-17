@@ -44,6 +44,8 @@ final class EnsureOnboardingComplete
 
         /** @var User $user */
         $user = $request->user();
+        // Skip onboarding for global admin roles
+       
 
         if (! FeatureHelper::isActiveForClass(OnboardingFeature::class, $user)) {
             return $next($request);

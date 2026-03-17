@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Users\Schemas;
 
-use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TagsInput;
-use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
 
@@ -24,16 +22,20 @@ final class UserForm
                     ->email()
                     ->required(),
                 Select::make('roles')
-                    ->relationship(titleAttribute: 'name')
+                    ->label('Roles')
                     ->multiple()
                     ->preload()
-                    ->searchable(),
+                    ->searchable()
+                    ->options(function (): array {
+                        $teamKey = config('permission.column_names.team_foreign_key', 'organization_id');
+
+                        return \Spatie\Permission\Models\Role::query()
+                            ->whereIn($teamKey, [0, null])
+                            ->pluck('name', 'id')
+                            ->all();
+                    }),
                 Select::make('sidings')
-                    ->relationship(
-                        'sidings',
-                        'name',
-                        fn ($query) => tenant_id() ? $query->where('organization_id', tenant_id()) : $query
-                    )
+                    ->relationship('sidings', 'name')
                     ->multiple()
                     ->preload()
                     ->searchable()
@@ -55,21 +57,31 @@ final class UserForm
                     })
                     ->searchable()
                     ->helperText('Optional: default siding for this user.'),
+                Select::make('siding_shifts')
+                    ->label('Shifts')
+                    ->relationship(
+                        'sidingShifts',
+                        'shift_name',
+                        fn ($query) => $query->where('siding_shifts.is_active', true)->orderBy('siding_shifts.sort_order')
+                    )
+                    ->multiple()
+                    ->preload()
+                    ->searchable()
+                    ->helperText('Optional: active shifts this user is assigned to.'),
                 TagsInput::make('tag_names')
                     ->label('Tags')
                     ->placeholder('Add a tag')
                     ->suggestions(
                         fn (): array => \Spatie\Tags\Tag::query()->pluck('name')->unique()->values()->all()
                     ),
-                DateTimePicker::make('email_verified_at'),
                 TextInput::make('password')
                     ->password()
+                    ->required()
+                    ->same('password_confirmation'),
+                TextInput::make('password_confirmation')
+                    ->password()
+                    ->label('Confirm password')
                     ->required(),
-                Textarea::make('two_factor_secret')
-                    ->columnSpanFull(),
-                Textarea::make('two_factor_recovery_codes')
-                    ->columnSpanFull(),
-                DateTimePicker::make('two_factor_confirmed_at'),
             ]);
     }
 }

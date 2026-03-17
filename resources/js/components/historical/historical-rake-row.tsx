@@ -3,6 +3,7 @@ import { TableCell, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Save, Pencil, Trash2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { useCan } from '@/hooks/use-can';
 
 interface HistoricalRake {
   id: number;
@@ -66,6 +67,8 @@ export default function HistoricalRakeRow({
   onRakeUpdated,
   onRakeDeleted,
 }: HistoricalRakeRowProps) {
+  const canUpdate = useCan('sections.historical_railway_siding.update');
+  const canDeletePermission = useCan('sections.historical_railway_siding.delete');
   const [formData, setFormData] = useState({
     rake_number: rake.rake_number?.toString() ?? '',
     priority_number: rake.priority_number?.toString() ?? '',
@@ -177,7 +180,7 @@ export default function HistoricalRakeRow({
     }
   }, [rake.id, onRakeDeleted]);
 
-  const canDelete = rake.data_source !== 'historical_excel';
+  const canDelete = canDeletePermission && rake.data_source !== 'historical_excel';
 
   if (isEditing) {
     return (
@@ -306,16 +309,18 @@ export default function HistoricalRakeRow({
         </TableCell>
         <TableCell className={`${cellClass} border-r-0 text-center`}>
           <div className="flex items-center justify-center gap-1">
-            <Button
-              size="icon"
-              variant="outline"
-              className="h-7 w-7"
-              onClick={save}
-              title="Save"
-              aria-label="Save"
-            >
-              <Save className="h-3.5 w-3.5" />
-            </Button>
+            {canUpdate && (
+              <Button
+                size="icon"
+                variant="outline"
+                className="h-7 w-7"
+                onClick={save}
+                title="Save"
+                aria-label="Save"
+              >
+                <Save className="h-3.5 w-3.5" />
+              </Button>
+            )}
             {canDelete && (
               <Button
                 size="icon"
@@ -355,16 +360,18 @@ export default function HistoricalRakeRow({
       <TableCell className={cellClass}>{formatCell(rake.remarks)}</TableCell>
       <TableCell className={`${cellClass} border-r-0 text-center`}>
         <div className="flex items-center justify-center gap-1">
-          <Button
-            size="icon"
-            variant="outline"
-            className="h-7 w-7"
-            onClick={onEditClick}
-            title="Edit"
-            aria-label="Edit"
-          >
-            <Pencil className="h-3.5 w-3.5" />
-          </Button>
+          {canUpdate && (
+            <Button
+              size="icon"
+              variant="outline"
+              className="h-7 w-7"
+              onClick={onEditClick}
+              title="Edit"
+              aria-label="Edit"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+          )}
           {canDelete && (
             <Button
               size="icon"

@@ -2,6 +2,7 @@ import React, { useRef } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Save, Pencil, Trash2 } from 'lucide-react';
+import { useCan } from '@/hooks/use-can';
 
 interface HistoricalMine {
   id: number;
@@ -50,6 +51,9 @@ export default function HistoricalMineTable({
   onAddRow,
   isAddingRow = false,
 }: HistoricalMineTableProps) {
+  const canCreate = useCan('sections.historical_mines.create');
+  const canUpdate = useCan('sections.historical_mines.update');
+  const canDelete = useCan('sections.historical_mines.delete');
   const totalEntries = mines.length;
   const totalRows = Math.max(totalEntries, 100);
 
@@ -141,7 +145,7 @@ export default function HistoricalMineTable({
         <span>
           Rows: <span className="font-semibold">{totalEntries}</span>
         </span>
-        {onAddRow && (
+        {onAddRow && canCreate && (
           <Button
             size="sm"
             onClick={() => onAddRow()}
@@ -270,26 +274,30 @@ export default function HistoricalMineTable({
                       </TableCell>
                       <TableCell className={`${cellClass()} border-r-0 text-center`}>
                         <div className="flex items-center justify-center gap-1">
-                          <Button
-                            size="icon"
-                            variant="outline"
-                            className="h-7 w-7"
-                            onClick={() => handleSave(mine)}
-                            title="Save"
-                            aria-label="Save"
-                          >
-                            <Save className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="outline"
-                            className="h-7 w-7 text-destructive hover:text-destructive"
-                            onClick={() => handleDelete(mine)}
-                            title="Delete"
-                            aria-label="Delete"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
+                          {canUpdate && (
+                            <Button
+                              size="icon"
+                              variant="outline"
+                              className="h-7 w-7"
+                              onClick={() => handleSave(mine)}
+                              title="Save"
+                              aria-label="Save"
+                            >
+                              <Save className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                          {canDelete && (
+                            <Button
+                              size="icon"
+                              variant="outline"
+                              className="h-7 w-7 text-destructive hover:text-destructive"
+                              onClick={() => handleDelete(mine)}
+                              title="Delete"
+                              aria-label="Delete"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </>
@@ -319,26 +327,30 @@ export default function HistoricalMineTable({
                       </TableCell>
                       <TableCell className={`${cellClass()} border-r-0 text-center`}>
                         <div className="flex items-center justify-center gap-1">
-                          <Button
-                            size="icon"
-                            variant="outline"
-                            className="h-7 w-7"
-                            onClick={() => onEditingChange(mine.id)}
-                            title="Edit"
-                            aria-label="Edit"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="outline"
-                            className="h-7 w-7 text-destructive hover:text-destructive"
-                            onClick={() => handleDelete(mine)}
-                            title="Delete"
-                            aria-label="Delete"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
+                          {canUpdate && (
+                            <Button
+                              size="icon"
+                              variant="outline"
+                              className="h-7 w-7"
+                              onClick={() => onEditingChange(mine.id)}
+                              title="Edit"
+                              aria-label="Edit"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                          {canDelete && (
+                            <Button
+                              size="icon"
+                              variant="outline"
+                              className="h-7 w-7 text-destructive hover:text-destructive"
+                              onClick={() => handleDelete(mine)}
+                              title="Delete"
+                              aria-label="Delete"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </>
@@ -354,7 +366,7 @@ export default function HistoricalMineTable({
                 key={`empty-${index}`}
                 className={isAddingRow ? 'opacity-60' : 'cursor-pointer hover:bg-gray-50'}
                 onClick={() => {
-                  if (onAddRow && !isAddingRow) {
+                  if (onAddRow && canCreate && !isAddingRow) {
                     onAddRow();
                   }
                 }}
@@ -376,7 +388,7 @@ export default function HistoricalMineTable({
       </Table>
 
       <div className="border border-gray-300 border-t-0 px-2 py-2 flex items-center justify-center bg-white">
-        {onAddRow && (
+        {onAddRow && canCreate && (
           <Button
             onClick={() => onAddRow()}
             disabled={isAddingRow}

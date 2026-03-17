@@ -2,6 +2,7 @@ import React from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import HistoricalRakeRow from '@/components/historical/historical-rake-row';
+import { useCan } from '@/hooks/use-can';
 
 interface HistoricalRake {
   id: number;
@@ -44,6 +45,7 @@ export default function HistoricalRakeTable({
   onAddRow,
   isAddingRow = false,
 }: HistoricalRakeTableProps) {
+  const canCreate = useCan('sections.historical_railway_siding.create');
   const totalEntries = rakes.length;
   const totalRows = Math.max(totalEntries, 100);
 
@@ -53,7 +55,7 @@ export default function HistoricalRakeTable({
         <span>
           Rows: <span className="font-semibold">{totalEntries}</span>
         </span>
-        {onAddRow && (
+        {onAddRow && canCreate && (
           <Button
             size="sm"
             onClick={() => onAddRow()}
@@ -114,7 +116,7 @@ export default function HistoricalRakeTable({
                 key={`empty-${index}`}
                 className={isAddingRow ? 'opacity-60' : 'cursor-pointer hover:bg-gray-50'}
                 onClick={() => {
-                  if (onAddRow && !isAddingRow) {
+                  if (onAddRow && canCreate && !isAddingRow) {
                     onAddRow();
                   }
                 }}
@@ -143,7 +145,7 @@ export default function HistoricalRakeTable({
       </Table>
 
       <div className="border border-gray-300 border-t-0 px-2 py-2 flex items-center justify-center bg-white">
-        {onAddRow && (
+        {onAddRow && canCreate && (
           <Button
             onClick={() => onAddRow()}
             disabled={isAddingRow}

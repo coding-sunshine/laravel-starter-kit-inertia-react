@@ -162,7 +162,10 @@ const platformNavItems: NavItem[] = [
         href: '#',
         icon: History,
         collapsible: true,
-        roles: ['super-admin'],
+        permission: [
+            'sections.historical_mines.view',
+            'sections.historical_railway_siding.view',
+        ],
         subItems: [
             {
                 title: 'Mines historical',
