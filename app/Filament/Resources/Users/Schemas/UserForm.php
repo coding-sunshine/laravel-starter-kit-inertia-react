@@ -76,12 +76,14 @@ final class UserForm
                     ),
                 TextInput::make('password')
                     ->password()
-                    ->required()
-                    ->same('password_confirmation'),
+                    ->same('password_confirmation')
+                    ->visible(fn (string $context): bool => $context === 'create')
+                    ->required(fn (string $context): bool => $context === 'create'),
                 TextInput::make('password_confirmation')
                     ->password()
                     ->label('Confirm password')
-                    ->required(),
+                    ->visible(fn (string $context): bool => $context === 'create')
+                    ->required(fn (string $context): bool => $context === 'create'),
             ]);
     }
 }
