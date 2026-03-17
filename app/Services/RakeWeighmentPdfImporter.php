@@ -110,6 +110,13 @@ final readonly class RakeWeighmentPdfImporter
                     'total_rows' => count($wagonRows),
                 ]);
 
+                $rake->update([
+                    'data_source' => 'system',
+                    'loaded_weight_mt' => $weighment->total_net_weight_mt,
+                    'under_load_mt' => $weighment->total_under_load_mt,
+                    'over_load_mt' => $weighment->total_over_load_mt,
+                ]);
+
                 $this->applyWeighmentPenalties->handle($rake, $weighment);
 
                 return $weighment->fresh(['rakeWagonWeighments.wagon']);
