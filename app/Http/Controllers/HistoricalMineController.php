@@ -31,6 +31,7 @@ final class HistoricalMineController extends Controller
                     'received_qty' => $mine->received_qty,
                     'coal_production_qty' => $mine->coal_production_qty,
                     'ob_production_qty' => $mine->ob_production_qty,
+                    'remarks' => $mine->remarks,
                 ];
             });
 
@@ -49,6 +50,7 @@ final class HistoricalMineController extends Controller
             'received_qty' => 'nullable|numeric',
             'coal_production_qty' => 'nullable|numeric',
             'ob_production_qty' => 'nullable|numeric',
+            'remarks' => 'nullable|string|max:65535',
         ]);
 
         if (array_key_exists('month', $data)) {
@@ -67,6 +69,7 @@ final class HistoricalMineController extends Controller
                 'received_qty' => $mine->received_qty,
                 'coal_production_qty' => $mine->coal_production_qty,
                 'ob_production_qty' => $mine->ob_production_qty,
+                'remarks' => $mine->remarks,
             ],
         ], 201);
     }
@@ -81,6 +84,7 @@ final class HistoricalMineController extends Controller
             'received_qty' => 'nullable|numeric',
             'coal_production_qty' => 'nullable|numeric',
             'ob_production_qty' => 'nullable|numeric',
+            'remarks' => 'nullable|string|max:65535',
         ]);
 
         if (array_key_exists('month', $data)) {
@@ -100,6 +104,7 @@ final class HistoricalMineController extends Controller
                 'received_qty' => $mine->received_qty,
                 'coal_production_qty' => $mine->coal_production_qty,
                 'ob_production_qty' => $mine->ob_production_qty,
+                'remarks' => $mine->remarks,
             ],
         ]);
     }

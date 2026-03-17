@@ -41,6 +41,7 @@ interface HistoricalRake {
   destination: string | null;
   pakur_imwb_period: string | null;
   loading_date: string | null;
+  remarks: string | null;
 }
 
 interface PaginatedRakes {
@@ -71,6 +72,8 @@ export default function HistoricalRailwaySidingIndex({
   const [rakesState, setRakesState] = useState<HistoricalRake[]>(() =>
     Array.isArray(rakes?.data) ? rakes.data : []
   );
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [isAddingRow, setIsAddingRow] = useState(false);
 
   useEffect(() => {
     setRakesState(Array.isArray(rakes?.data) ? rakes.data : []);
@@ -135,6 +138,8 @@ export default function HistoricalRailwaySidingIndex({
           <CardContent className="pt-4">
             <HistoricalRakeTable
               rakes={rakesState}
+              editingId={editingId}
+              onEditingChange={setEditingId}
               onRakeUpdated={(updated) => {
                 setRakesState((prev) =>
                   prev.map((r) => (r.id === updated.id ? updated : r))
@@ -142,11 +147,13 @@ export default function HistoricalRailwaySidingIndex({
               }}
               onRakeDeleted={(id) => {
                 setRakesState((prev) => prev.filter((r) => r.id !== id));
+                setEditingId((prev) => (prev === id ? null : prev));
               }}
               onAddRow={async () => {
                 const payload = {
                   siding_id: effectiveSidingId,
                 };
+                setIsAddingRow(true);
                 try {
                   const res = await fetch('/historical/railway-siding', {
                     method: 'POST',
@@ -168,11 +175,15 @@ export default function HistoricalRailwaySidingIndex({
                     setRakesState((prev) =>
                       [newRake, ...prev].sort((a, b) => b.id - a.id)
                     );
+                    setEditingId(newRake.id);
                   }
                 } catch {
                   // ignore for now
+                } finally {
+                  setIsAddingRow(false);
                 }
               }}
+              isAddingRow={isAddingRow}
             />
 
             <div className="mt-6 flex flex-col items-center gap-3 text-sm text-gray-700">

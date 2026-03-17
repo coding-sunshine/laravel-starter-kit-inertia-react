@@ -21,11 +21,14 @@ interface HistoricalRake {
   destination: string | null;
   pakur_imwb_period: string | null;
   loading_date: string | null;
+  remarks: string | null;
   data_source?: string | null;
 }
 
 interface HistoricalRakeTableProps {
   rakes: HistoricalRake[];
+  editingId: number | null;
+  onEditingChange: (id: number | null) => void;
   onRakeUpdated?: (rake: HistoricalRake) => void;
   onRakeDeleted?: (id: number) => void;
   onAddRow?: () => void;
@@ -34,6 +37,8 @@ interface HistoricalRakeTableProps {
 
 export default function HistoricalRakeTable({
   rakes,
+  editingId,
+  onEditingChange,
   onRakeUpdated,
   onRakeDeleted,
   onAddRow,
@@ -79,6 +84,7 @@ export default function HistoricalRakeTable({
             <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">Total Amount (Rs)</TableHead>
             <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">Destination</TableHead>
             <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">IMWB Period</TableHead>
+            <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">Remarks</TableHead>
             <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center">Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -91,6 +97,9 @@ export default function HistoricalRakeTable({
                   key={rake.id}
                   rake={rake}
                   index={index}
+                  isEditing={editingId === rake.id}
+                  onEditClick={() => onEditingChange(rake.id)}
+                  onSaveSuccess={() => onEditingChange(null)}
                   onRakeUpdated={onRakeUpdated}
                   onRakeDeleted={onRakeDeleted}
                 />
@@ -111,6 +120,7 @@ export default function HistoricalRakeTable({
                 }}
               >
                 <TableCell className={`${emptyCellClass} text-center`} />
+                <TableCell className={emptyCellClass} />
                 <TableCell className={emptyCellClass} />
                 <TableCell className={emptyCellClass} />
                 <TableCell className={emptyCellClass} />

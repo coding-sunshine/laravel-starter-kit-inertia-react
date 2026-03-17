@@ -56,6 +56,7 @@ final class Rake extends Model
         'total_amount_rs',
         'destination',
         'pakur_imwb_period',
+        'remarks',
     ];
 
     protected $casts = [

@@ -16,6 +16,7 @@ final class HistoricalMine extends Model
         'received_qty',
         'coal_production_qty',
         'ob_production_qty',
+        'remarks',
     ];
 
     protected $casts = [

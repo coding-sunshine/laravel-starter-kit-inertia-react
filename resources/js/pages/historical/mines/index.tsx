@@ -26,6 +26,7 @@ interface HistoricalMine {
   received_qty: string | number | null;
   coal_production_qty: string | number | null;
   ob_production_qty: string | number | null;
+  remarks: string | null;
 }
 
 interface PaginatedMines {
@@ -50,6 +51,8 @@ export default function HistoricalMinesIndex({ mines }: Props) {
   const [minesState, setMinesState] = useState<HistoricalMine[]>(() =>
     Array.isArray(mines?.data) ? mines.data : [],
   );
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [isAddingRow, setIsAddingRow] = useState(false);
 
   useEffect(() => {
     setMinesState(Array.isArray(mines?.data) ? mines.data : []);
@@ -74,13 +77,17 @@ export default function HistoricalMinesIndex({ mines }: Props) {
           <CardContent className="pt-4">
             <HistoricalMineTable
               mines={minesState}
+              editingId={editingId}
+              onEditingChange={setEditingId}
               onMineUpdated={(updated) => {
                 setMinesState((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
               }}
               onMineDeleted={(id) => {
                 setMinesState((prev) => prev.filter((m) => m.id !== id));
+                setEditingId((prev) => (prev === id ? null : prev));
               }}
               onAddRow={async () => {
+                setIsAddingRow(true);
                 try {
                   const res = await fetch('/historical/mines', {
                     method: 'POST',
@@ -100,11 +107,15 @@ export default function HistoricalMinesIndex({ mines }: Props) {
                   const newMine = (data as { mine?: HistoricalMine }).mine;
                   if (newMine) {
                     setMinesState((prev) => [newMine, ...prev].sort((a, b) => b.id - a.id));
+                    setEditingId(newMine.id);
                   }
                 } catch {
                   // ignore for now
+                } finally {
+                  setIsAddingRow(false);
                 }
               }}
+              isAddingRow={isAddingRow}
             />
 
             <div className="mt-6 flex flex-col items-center gap-3 text-sm text-gray-700">
