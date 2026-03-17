@@ -35,6 +35,16 @@ final class EditUser extends EditRecord
     private array $pendingSidingsPivot = [];
 
     /**
+     * @var array<int, array<string, mixed>>
+     */
+    private array $pendingSidingShiftsPivot = [];
+
+    /**
+     * @var list<int>
+     */
+    private array $pendingRoleIds = [];
+
+    /**
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
@@ -44,6 +54,15 @@ final class EditUser extends EditRecord
         $data['sidings'] = $this->getRecord()->sidings->pluck('id')->values()->all();
         $primary = $this->getRecord()->sidings()->wherePivot('is_primary', true)->first();
         $data['primary_siding_id'] = $primary?->getKey();
+        $data['siding_shifts'] = $this->getRecord()->sidingShifts->pluck('id')->values()->all();
+
+        $roleTeamKey = config('permission.column_names.team_foreign_key', 'organization_id');
+        $data['roles'] = $this->getRecord()
+            ->roles()
+            ->wherePivot($roleTeamKey, 0)
+            ->pluck('id')
+            ->values()
+            ->all();
 
         return $data;
     }
@@ -83,6 +102,19 @@ final class EditUser extends EditRecord
         }
         unset($data['sidings'], $data['primary_siding_id']);
 
+        $sidingShiftIds = array_filter(array_map(intval(...), (array) ($data['siding_shifts'] ?? [])));
+        foreach ($sidingShiftIds as $shiftId) {
+            $this->pendingSidingShiftsPivot[$shiftId] = [
+                'assigned_at' => now(),
+                'is_active' => true,
+            ];
+        }
+        unset($data['siding_shifts']);
+
+        $roles = (array) ($data['roles'] ?? []);
+        $this->pendingRoleIds = array_values(array_filter(array_map(intval(...), $roles)));
+        unset($data['roles']);
+
         $user = $this->getRecord();
         if (! $user->isLastSuperAdmin() || ! $user->hasRole('super-admin')) {
             return $data;
@@ -93,8 +125,7 @@ final class EditUser extends EditRecord
             return $data;
         }
 
-        $newRoleIds = $data['roles'] ?? [];
-        $hasSuperAdmin = is_array($newRoleIds) && in_array($superAdminRole->getKey(), $newRoleIds, true);
+        $hasSuperAdmin = in_array($superAdminRole->getKey(), $this->pendingRoleIds, true);
         if (! $hasSuperAdmin) {
             throw ValidationException::withMessages([
                 'roles' => ['Cannot remove the super-admin role from the last super-admin user.'],
@@ -113,6 +144,12 @@ final class EditUser extends EditRecord
     {
         $this->record->syncTags($this->pendingTagNames);
         $this->record->sidings()->sync($this->pendingSidingsPivot);
+        if ($this->pendingSidingShiftsPivot !== []) {
+            $this->record->sidingShifts()->sync($this->pendingSidingShiftsPivot);
+        }
+        if ($this->pendingRoleIds !== []) {
+            $this->record->syncRoles($this->pendingRoleIds, 0);
+        }
         $this->record->load('roles', 'sidings');
         resolve(ActivityLogRbac::class)->logRolesUpdated(
             $this->record,

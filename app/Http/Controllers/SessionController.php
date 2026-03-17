@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Http\Requests\CreateSessionRequest;
+use App\Services\Auth\HomeRedirectService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -40,34 +41,13 @@ final readonly class SessionController
         $request->session()->regenerate();
 
         $authenticatedUser = $request->user();
-        // dd($authenticatedUser->roles);
         if ($authenticatedUser !== null) {
-            if ($authenticatedUser->hasRole('super-admin')) {
-                return redirect()->intended(route('dashboard', absolute: false));
-            }
+            $homeRoute = resolve(HomeRedirectService::class)->getHomeRouteFor($authenticatedUser);
 
-            if ($authenticatedUser->hasRole('admin')) {
-                return redirect()->intended(route('rakes.index', absolute: false));
-            }
-
-            if ($authenticatedUser->hasRole('dispatch-manage-admin')) {
-                return redirect()->intended(route('vehicle-dispatch.index', absolute: false));
-            }
-
-            if ($authenticatedUser->hasRole('user')) {
-                return redirect()->intended(route('road-dispatch.daily-vehicle-entries.index', absolute: false));
-            }
-
-            if ($authenticatedUser->hasRole('empty-weighment-shift')) {
-                return redirect()->intended(route('railway-siding-empty-weighment.index', absolute: false));
-            }
-
-            if ($authenticatedUser->hasRole('viewer')) {
-                return redirect()->intended(route('dashboard', absolute: false));
-            }
+            return redirect()->route($homeRoute);
         }
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        return redirect()->route('dashboard');
     }
 
     public function destroy(Request $request): RedirectResponse

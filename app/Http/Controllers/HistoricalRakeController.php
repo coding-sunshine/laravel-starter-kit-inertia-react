@@ -48,6 +48,7 @@ final class HistoricalRakeController extends Controller
                 'pakur_imwb_period' => $rake->pakur_imwb_period,
                 'loading_date' => $rake->loading_date?->toDateString(),
                 'data_source' => $rake->data_source,
+                'remarks' => $rake->remarks,
             ];
         });
 
@@ -96,6 +97,7 @@ final class HistoricalRakeController extends Controller
                 'pakur_imwb_period' => $rake->pakur_imwb_period,
                 'loading_date' => $rake->loading_date?->toDateString(),
                 'data_source' => $rake->data_source,
+                'remarks' => $rake->remarks,
             ],
         ], 201);
     }
@@ -121,6 +123,7 @@ final class HistoricalRakeController extends Controller
             'destination' => 'nullable|string|max:255',
             'pakur_imwb_period' => 'nullable|string|max:255',
             'loading_date' => 'nullable|date',
+            'remarks' => 'nullable|string|max:65535',
         ]);
 
         $rake->fill($data);
@@ -147,6 +150,7 @@ final class HistoricalRakeController extends Controller
                 'pakur_imwb_period' => $rake->pakur_imwb_period,
                 'loading_date' => $rake->loading_date?->toDateString(),
                 'data_source' => $rake->data_source,
+                'remarks' => $rake->remarks,
             ],
         ]);
     }

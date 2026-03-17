@@ -196,6 +196,11 @@
             "type": "text",
             "nullable": true,
             "default": null
+        },
+        "remarks": {
+            "type": "text",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {

@@ -24,6 +24,16 @@ final class CreateUser extends CreateRecord
     private array $pendingSidingsPivot = [];
 
     /**
+     * @var array<int, array<string, mixed>>
+     */
+    private array $pendingSidingShiftsPivot = [];
+
+    /**
+     * @var list<int>
+     */
+    private array $pendingRoleIds = [];
+
+    /**
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
@@ -45,15 +55,37 @@ final class CreateUser extends CreateRecord
         }
         unset($data['sidings'], $data['primary_siding_id']);
 
-        $roles = $data['roles'] ?? [];
+        $sidingShiftIds = array_filter(array_map(intval(...), (array) ($data['siding_shifts'] ?? [])));
+        foreach ($sidingShiftIds as $shiftId) {
+            $this->pendingSidingShiftsPivot[$shiftId] = [
+                'assigned_at' => now(),
+                'is_active' => true,
+            ];
+        }
+        unset($data['siding_shifts'], $data['password_confirmation']);
+
+        $roles = (array) ($data['roles'] ?? []);
         if ($roles === [] || $roles === null) {
             $defaultRoleName = config('permission.default_role');
             if (is_string($defaultRoleName) && $defaultRoleName !== '') {
                 $defaultRole = Role::query()->where('name', $defaultRoleName)->first();
                 if ($defaultRole !== null) {
-                    $data['roles'] = [$defaultRole->getKey()];
+                    $roles = [$defaultRole->getKey()];
                 }
             }
+        }
+
+        $this->pendingRoleIds = array_values(array_filter(array_map(intval(...), $roles)));
+        unset($data['roles']);
+
+        // Users created by superadmin in Filament should be immediately active / verified.
+        if (! array_key_exists('email_verified_at', $data) || $data['email_verified_at'] === null) {
+            $data['email_verified_at'] = now();
+        }
+
+        // Treat admin-created users as already onboarded to avoid onboarding loops.
+        if (! array_key_exists('onboarding_completed', $data)) {
+            $data['onboarding_completed'] = true;
         }
 
         return $data;
@@ -61,8 +93,17 @@ final class CreateUser extends CreateRecord
 
     protected function afterCreate(): void
     {
+
         $this->record->syncTags($this->pendingTagNames);
         $this->record->sidings()->sync($this->pendingSidingsPivot);
+
+        if ($this->pendingSidingShiftsPivot !== []) {
+            $this->record->sidingShifts()->sync($this->pendingSidingShiftsPivot);
+        }
+        if ($this->pendingRoleIds !== []) {
+            // Assign roles for the global team (organization_id = 0).
+            $this->record->syncRoles($this->pendingRoleIds, 0);
+        }
         $this->record->load('roles', 'sidings');
         resolve(ActivityLogRbac::class)->logRolesAssigned(
             $this->record,

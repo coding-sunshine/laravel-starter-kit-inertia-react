@@ -128,12 +128,12 @@ return [
         [
             'slug' => 'historical_mines',
             'label' => 'Historical Mines',
-            'actions' => ['view'],
+            'actions' => ['view', 'create', 'update', 'delete'],
         ],
         [
             'slug' => 'historical_railway_siding',
             'label' => 'Historical Railway Siding',
-            'actions' => ['view'],
+            'actions' => ['view', 'create', 'update', 'delete'],
         ],
         [
             'slug' => 'reports',
@@ -367,6 +367,18 @@ return [
         'weighments.index' => 'sections.weighments.view',
         'weighments.show' => 'sections.weighments.view',
         'weighments.import' => 'sections.weighments.upload',
+
+        // Historical Mines (monthly mines data)
+        'historical.mines.index' => 'sections.historical_mines.view',
+        'historical.mines.store' => 'sections.historical_mines.create',
+        'historical.mines.update' => 'sections.historical_mines.update',
+        'historical.mines.destroy' => 'sections.historical_mines.delete',
+
+        // Historical Railway Siding (historical rake data)
+        'historical.railway-siding.index' => 'sections.historical_railway_siding.view',
+        'historical.railway-siding.store' => 'sections.historical_railway_siding.create',
+        'historical.railway-siding.update' => 'sections.historical_railway_siding.update',
+        'historical.railway-siding.destroy' => 'sections.historical_railway_siding.delete',
 
         // Changelog / Help / Contact (public or feature-gated)
         'changelog.index' => 'sections.changelog.view',
