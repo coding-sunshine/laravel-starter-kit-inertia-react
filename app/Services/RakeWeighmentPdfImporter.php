@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Actions\ApplyWeighmentPenaltiesAction;
+use App\Actions\UpdateStockLedger;
 use App\Models\Rake;
 use App\Models\RakeWagonWeighment;
 use App\Models\RakeWeighment;
@@ -19,6 +20,7 @@ final readonly class RakeWeighmentPdfImporter
     public function __construct(
         private WeighmentPdfImporter $importer,
         private ApplyWeighmentPenaltiesAction $applyWeighmentPenalties,
+        private UpdateStockLedger $updateStockLedger,
     ) {}
 
     /**
@@ -116,6 +118,19 @@ final readonly class RakeWeighmentPdfImporter
                     'under_load_mt' => $weighment->total_under_load_mt,
                     'over_load_mt' => $weighment->total_over_load_mt,
                 ]);
+
+                $siding = $rake->siding;
+                $quantity = $weighment->total_net_weight_mt !== null ? (float) $weighment->total_net_weight_mt : 0.0;
+
+                if ($siding !== null && $quantity > 0) {
+                    $this->updateStockLedger->recordDispatch(
+                        $siding,
+                        $quantity,
+                        $rake->id,
+                        'Rake weighment imported',
+                        $userId,
+                    );
+                }
 
                 $this->applyWeighmentPenalties->handle($rake, $weighment);
 

@@ -14,9 +14,16 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
 use Throwable;
+use App\Actions\UpdateStockLedger;
+use App\Models\StockLedger;
 
 final class RakeWeighmentController extends Controller
 {
+    
+    public function __construct(
+        private UpdateStockLedger $updateStockLedger,
+    ) {}
+
     public function store(Request $request, Rake $rake, RakeWeighmentPdfImporter $importer): RedirectResponse
     {
         // $this->authorize('update', $rake);
@@ -57,6 +64,40 @@ final class RakeWeighmentController extends Controller
     public function destroy(Rake $rake): RedirectResponse
     {
         // $this->authorize('update', $rake);
+
+        // 1) Reverse any dispatch ledgers for this rake
+        $dispatchLedgers = StockLedger::query()
+        ->where('rake_id', $rake->id)
+        ->where('transaction_type', 'dispatch')
+        ->get();
+
+        $userId = (int) auth()->id();
+
+        foreach ($dispatchLedgers as $dispatch) {
+            $siding = $dispatch->siding;
+            $quantity = (float) $dispatch->quantity_mt;
+
+            if ($siding !== null && $quantity > 0) {
+                // Add coal back by writing a correction row that increases balance
+                $currentBalance = $this->updateStockLedger->getCurrentBalance($siding->id);
+                $newBalance = $currentBalance + $quantity;
+
+                StockLedger::query()->create([
+                    'siding_id' => $siding->id,
+                    'transaction_type' => 'correction',
+                    'rake_id' => $rake->id,
+                    'quantity_mt' => $quantity,
+                    'opening_balance_mt' => $currentBalance,
+                    'closing_balance_mt' => $newBalance,
+                    'reference_number' => 'REV-DISP-'.$dispatch->id,
+                    'remarks' => 'Reversal for deleted rake weighment #'.$rake->id,
+                    'created_by' => $userId ?: null,
+                ]);
+
+                // Let the rest of the app know stock changed
+                event(new \App\Events\CoalStockUpdated($siding->id, $newBalance));
+            }
+        }
 
         $weighments = $rake->rakeWeighments()->get();
 

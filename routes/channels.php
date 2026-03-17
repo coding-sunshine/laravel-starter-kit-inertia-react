@@ -22,7 +22,5 @@ Broadcast::channel('rake-load.{rakeId}', function ($user, int $rakeId): bool {
 });
 
 Broadcast::channel('siding.{sidingId}.stock', function ($user, int $sidingId): bool {
-    $siding = Siding::query()->find($sidingId);
-
-    return $siding && $user->belongsToOrganization($siding->organization_id);
+    return (bool) Siding::query()->find($sidingId);
 });
