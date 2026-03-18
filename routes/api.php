@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\RailwayReceiptUploadController;
 use App\Http\Controllers\Api\V1\RakeController;
 use App\Http\Controllers\Api\V1\RakeWeighmentApiController;
 use App\Http\Controllers\Api\V1\RolePermissionController;
+use App\Http\Controllers\Api\V1\SidingController;
 use App\Http\Controllers\Api\V1\SidingVehicleDispatchController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\WeighmentUploadController;
@@ -55,6 +56,8 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:60,1')->group(functio
 
         // Weighments
         Route::post('weighments/upload', [WeighmentUploadController::class, 'store'])->name('weighments.upload');
+
+        Route::get('sidings', [SidingController::class, 'index'])->name('sidings.index');
 
         // Siding vehicle dispatches
         Route::get('siding-vehicle-dispatches', [SidingVehicleDispatchController::class, 'index'])->name('siding-vehicle-dispatches.index');

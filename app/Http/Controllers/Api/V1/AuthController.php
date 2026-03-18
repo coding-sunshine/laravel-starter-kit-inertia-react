@@ -46,6 +46,8 @@ final class AuthController extends Controller
 
         $roles = $user->roles()->select('id', 'name')->get();
 
+        $primarySiding = $user->getPrimarySiding();
+
         return response()->json([
             'data' => [
                 'access_token' => $accessToken->plainTextToken,
@@ -57,6 +59,12 @@ final class AuthController extends Controller
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
+                    'siding_id' => $primarySiding?->id,
+                    'siding' => $primarySiding !== null ? [
+                        'id' => $primarySiding->id,
+                        'name' => $primarySiding->name,
+                        'code' => $primarySiding->code,
+                    ] : null,
                     'role' => $primaryRole !== null ? [
                         'id' => $primaryRole->id,
                         'name' => $primaryRole->name,
