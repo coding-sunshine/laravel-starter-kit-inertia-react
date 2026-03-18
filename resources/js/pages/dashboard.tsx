@@ -65,6 +65,7 @@ import {
 } from 'recharts';
 import { PieChart } from '@/components/charts/pie-chart';
 import SpeedometerGauge from '@/Components/Charts/SpeedometerGauge';
+import { SlidingNumber } from '@/components/SlidingNumber';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: dashboard().url },
@@ -1939,7 +1940,10 @@ export default function Dashboard() {
                                         <div className="mt-2 flex items-baseline justify-between gap-4">
                                             <div>
                                                 <p className="text-[1.25rem] font-bold tabular-nums leading-tight text-gray-900">
-                                                    {stockMt.toLocaleString(undefined, { maximumFractionDigits: 0 })} MT
+                                                    <SlidingNumber
+                                                        value={stockMt}
+                                                        format={(v) => `${v.toLocaleString(undefined, { maximumFractionDigits: 0 })} MT`}
+                                                    />
                                                 </p>
                                                 <p className="text-xs text-gray-600">Stock available</p>
                                             </div>
