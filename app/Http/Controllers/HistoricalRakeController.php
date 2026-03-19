@@ -24,7 +24,7 @@ final class HistoricalRakeController extends Controller
 
         $query = Rake::query()
             ->with('siding')
-            ->whereIn('data_source', ['historical_excel', 'historical_manual'])
+            ->whereIn('data_source', ['historical_excel', 'historical_manual', 'historical_import'])
             ->when($sidingId !== null, fn ($q) => $q->where('siding_id', $sidingId))
             ->orderByDesc('id');
         // dd($query->limit(50)->get());

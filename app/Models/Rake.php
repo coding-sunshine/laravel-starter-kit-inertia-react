@@ -46,10 +46,19 @@ final class Rake extends Model
         'guard_end_time',
         'weighment_start_time',
         'weighment_end_time',
+        'chargeable_weight',
+        'e_mining_chalan',
+        'weighment_place',
+        'arrival_time',
+        'drawn_out',
+        'out_ward_wt',
         'created_by',
         'updated_by',
         'deleted_by',
         'rr_number',
+        'invoice_no',
+        'invoice_date',
+        'is_diverted',
         'overload_wagon_count',
         'detention_hours',
         'shunting_hours',
@@ -82,6 +91,12 @@ final class Rake extends Model
         'guard_end_time' => 'datetime',
         'weighment_start_time' => 'datetime',
         'weighment_end_time' => 'datetime',
+        'chargeable_weight' => 'decimal:2',
+        'arrival_time' => 'datetime',
+        'drawn_out' => 'datetime',
+        'out_ward_wt' => 'decimal:2',
+        'invoice_date' => 'date',
+        'is_diverted' => 'boolean',
 
     ];
 
@@ -138,6 +153,16 @@ final class Rake extends Model
     public function appliedPenalties(): HasMany
     {
         return $this->hasMany(AppliedPenalty::class);
+    }
+
+    public function rakeCharges(): HasMany
+    {
+        return $this->hasMany(RakeCharge::class);
+    }
+
+    public function diverrtDestinations(): HasMany
+    {
+        return $this->hasMany(DiverrtDestination::class);
     }
 
     public function createdBy(): BelongsTo
