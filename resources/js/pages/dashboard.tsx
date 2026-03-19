@@ -105,6 +105,27 @@ const DASHBOARD_SECTIONS = [
     { id: 'power-plant', label: 'Power plant wise dispatch' },
 ] as const;
 
+const SECTION_FILTER_KEYS = {
+    'executive-overview': ['power_plant', 'rake_number', 'penalty_type'] as const,
+    operations: ['shift', 'daily_rake_date', 'coal_transport_date'] as const,
+    'penalty-control': ['penalty_type'] as const,
+    'rake-performance': ['rake_number', 'power_plant'] as const,
+    'loader-overload': ['loader_id'] as const,
+    'power-plant': ['power_plant'] as const,
+} satisfies Record<
+    (typeof DASHBOARD_SECTIONS)[number]['id'],
+    readonly (
+        | 'power_plant'
+        | 'rake_number'
+        | 'loader_id'
+        | 'shift'
+        | 'penalty_type'
+        | 'daily_rake_date'
+        | 'coal_transport_date'
+        | 'coal_stock_date'
+    )[]
+>;
+
 const DEFAULT_DASHBOARD_SECTION = 'executive-overview';
 
 /** MT of coal required to load one rake; used for "rakes we can load" KPI. */
@@ -1209,6 +1230,7 @@ function DashboardFiltersBar({
     inline?: boolean;
     onClose?: () => void;
 }) {
+    const [period, setPeriod] = useState(filters.period);
     const [customFrom, setCustomFrom] = useState(filters.from);
     const [customTo, setCustomTo] = useState(filters.to);
     const [showSidingDropdown, setShowSidingDropdown] = useState(false);
@@ -1217,9 +1239,15 @@ function DashboardFiltersBar({
         setRakeNumberInput(filters.rake_number ?? '');
     }, [filters.rake_number]);
     useEffect(() => {
+        setPeriod(filters.period);
         setCustomFrom(filters.from);
         setCustomTo(filters.to);
-    }, [filters.from, filters.to]);
+    }, [filters.period, filters.from, filters.to]);
+
+    const sectionId = (currentSection as (typeof DASHBOARD_SECTIONS)[number]['id']) ?? DEFAULT_DASHBOARD_SECTION;
+    const sectionFilterKeys = SECTION_FILTER_KEYS[sectionId] ?? [];
+    const sectionHasFilter = (key: (typeof sectionFilterKeys)[number] | string): boolean =>
+        (sectionFilterKeys as readonly string[]).includes(key);
 
     const allSidingIds = useMemo(() => sidings.map((s) => s.id), [sidings]);
 
@@ -1241,7 +1269,7 @@ function DashboardFiltersBar({
 
     const applyFilters = useCallback((overrides: Record<string, unknown> = {}) => {
         const params: Record<string, unknown> = {
-            period: overrides.period ?? filters.period,
+            period: overrides.period ?? period,
             ...overrides,
         };
 
@@ -1256,28 +1284,51 @@ function DashboardFiltersBar({
 
         const sidingIds = (overrides.siding_ids as number[] | undefined) ?? filters.siding_ids;
         if (sidingIds.length > 0 && sidingIds.length < allSidingIds.length) {
-            params.siding_ids = sidingIds;
+            params.siding_ids = sidingIds.join(',');
         }
 
-        const powerPlant = (overrides.power_plant !== undefined ? overrides.power_plant : filters.power_plant) ?? '';
-        if (powerPlant !== '') params.power_plant = powerPlant;
-        const rakeNumber = (overrides.rake_number !== undefined ? overrides.rake_number : filters.rake_number) ?? '';
-        if (rakeNumber !== '') params.rake_number = rakeNumber;
-        const loaderId = (overrides.loader_id !== undefined ? overrides.loader_id : filters.loader_id) ?? '';
-        if (loaderId !== '') params.loader_id = loaderId;
-        const shift = (overrides.shift !== undefined ? overrides.shift : filters.shift) ?? '';
-        if (shift !== '') params.shift = shift;
-        const penaltyType = (overrides.penalty_type !== undefined ? overrides.penalty_type : filters.penalty_type) ?? null;
-        if (penaltyType != null) params.penalty_type = penaltyType;
+        if (sectionHasFilter('power_plant')) {
+            const powerPlant = (overrides.power_plant !== undefined ? overrides.power_plant : filters.power_plant) ?? '';
+            if (powerPlant !== '') params.power_plant = powerPlant;
+        }
 
-        const dailyRakeDate = (overrides.daily_rake_date !== undefined ? overrides.daily_rake_date : filters.daily_rake_date) ?? '';
-        if (dailyRakeDate !== '') params.daily_rake_date = dailyRakeDate;
+        if (sectionHasFilter('rake_number')) {
+            const rakeNumber = (overrides.rake_number !== undefined ? overrides.rake_number : filters.rake_number) ?? '';
+            if (rakeNumber !== '') params.rake_number = rakeNumber;
+        }
 
-        const coalTransportDate = (overrides.coal_transport_date !== undefined ? overrides.coal_transport_date : filters.coal_transport_date) ?? '';
-        if (coalTransportDate !== '') params.coal_transport_date = coalTransportDate;
+        if (sectionHasFilter('loader_id')) {
+            const loaderId = (overrides.loader_id !== undefined ? overrides.loader_id : filters.loader_id) ?? '';
+            if (loaderId !== '') params.loader_id = loaderId;
+        }
 
-        const coalStockDate = (overrides.coal_stock_date !== undefined ? overrides.coal_stock_date : filters.coal_stock_date) ?? '';
-        if (coalStockDate !== '') params.coal_stock_date = coalStockDate;
+        if (sectionHasFilter('shift')) {
+            const shift = (overrides.shift !== undefined ? overrides.shift : filters.shift) ?? '';
+            if (shift !== '') params.shift = shift;
+        }
+
+        if (sectionHasFilter('penalty_type')) {
+            const penaltyType = (overrides.penalty_type !== undefined ? overrides.penalty_type : filters.penalty_type) ?? null;
+            if (penaltyType != null) params.penalty_type = penaltyType;
+        }
+
+        if (sectionHasFilter('daily_rake_date')) {
+            const dailyRakeDate =
+                (overrides.daily_rake_date !== undefined ? overrides.daily_rake_date : filters.daily_rake_date) ?? '';
+            if (dailyRakeDate !== '') params.daily_rake_date = dailyRakeDate;
+        }
+
+        if (sectionHasFilter('coal_transport_date')) {
+            const coalTransportDate =
+                (overrides.coal_transport_date !== undefined ? overrides.coal_transport_date : filters.coal_transport_date) ?? '';
+            if (coalTransportDate !== '') params.coal_transport_date = coalTransportDate;
+        }
+
+        if (sectionHasFilter('coal_stock_date')) {
+            const coalStockDate =
+                (overrides.coal_stock_date !== undefined ? overrides.coal_stock_date : filters.coal_stock_date) ?? '';
+            if (coalStockDate !== '') params.coal_stock_date = coalStockDate;
+        }
 
         if (currentSection) params.section = currentSection;
 
@@ -1314,6 +1365,26 @@ function DashboardFiltersBar({
         applyFilters({ siding_ids: allSidingIds });
     }, [allSidingIds, applyFilters]);
 
+    const resetAllFilters = useCallback(() => {
+        setPeriod('today');
+        setCustomFrom(filters.from);
+        setCustomTo(filters.to);
+        setPendingSidingIds(allSidingIds);
+        setRakeNumberInput('');
+        applyFilters({
+            period: 'today',
+            siding_ids: allSidingIds,
+            power_plant: null,
+            rake_number: null,
+            loader_id: null,
+            shift: null,
+            penalty_type: null,
+            daily_rake_date: '',
+            coal_transport_date: '',
+            coal_stock_date: '',
+        });
+    }, [allSidingIds, applyFilters, filters.from, filters.to]);
+
     const selectedSidingNames = useMemo(() => {
         if (isAllSidingsSelected) return 'All sidings';
         return sidings
@@ -1332,7 +1403,17 @@ function DashboardFiltersBar({
             )}
             {/* Period: dropdown when inline, pills when not */}
             {inline ? (
-                <Select value={filters.period} onValueChange={(v) => applyFilters({ period: v })}>
+                <Select
+                    value={period}
+                    onValueChange={(v) => {
+                        if (v === 'custom') {
+                            setPeriod('custom');
+                            return;
+                        }
+                        setPeriod(v);
+                        applyFilters({ period: v });
+                    }}
+                >
                     <SelectTrigger className="h-7 w-[100px] rounded-md border text-[11px]">
                         <SelectValue placeholder="Period" />
                     </SelectTrigger>
@@ -1350,10 +1431,17 @@ function DashboardFiltersBar({
                         <button
                             key={p.key}
                             type="button"
-                            onClick={() => applyFilters({ period: p.key })}
+                            onClick={() => {
+                                if (p.key === 'custom') {
+                                    setPeriod('custom');
+                                    return;
+                                }
+                                setPeriod(p.key);
+                                applyFilters({ period: p.key });
+                            }}
                             className={
                                 'rounded-full px-3 py-1.5 text-[11px] font-medium transition-colors ' +
-                                (filters.period === p.key
+                                (period === p.key
                                     ? 'bg-[#111827] text-white'
                                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200')
                             }
@@ -1363,7 +1451,7 @@ function DashboardFiltersBar({
                     ))}
                 </div>
             )}
-            {filters.period === 'custom' && (
+            {period === 'custom' && (
                 <>
                     <Calendar className="size-3.5 shrink-0 text-muted-foreground" />
                     <input
@@ -1392,6 +1480,16 @@ function DashboardFiltersBar({
                 </>
             )}
             <div className={inline ? 'flex flex-wrap items-center gap-2' : 'ml-auto flex flex-wrap items-center gap-2'}>
+                <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-7 px-2 text-[11px]"
+                    onClick={resetAllFilters}
+                >
+                    Reset
+                </Button>
+                {sectionHasFilter('power_plant') && (
                     <Select
                         value={filters.power_plant ?? ALL_FILTER_VALUE}
                         onValueChange={(v) => applyFilters({ power_plant: v === ALL_FILTER_VALUE ? null : v })}
@@ -1400,7 +1498,9 @@ function DashboardFiltersBar({
                             <SelectValue placeholder="Plant" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value={ALL_FILTER_VALUE} className="text-xs">All plants</SelectItem>
+                            <SelectItem value={ALL_FILTER_VALUE} className="text-xs">
+                                All plants
+                            </SelectItem>
                             {filterOptions.powerPlants.map((pp) => (
                                 <SelectItem key={pp.value} value={pp.value} className="text-xs">
                                     {pp.label}
@@ -1408,6 +1508,8 @@ function DashboardFiltersBar({
                             ))}
                         </SelectContent>
                     </Select>
+                )}
+                {sectionHasFilter('rake_number') && (
                     <input
                         type="text"
                         placeholder="Rake #"
@@ -1417,6 +1519,8 @@ function DashboardFiltersBar({
                         onKeyDown={(e) => e.key === 'Enter' && applyFilters({ rake_number: rakeNumberInput.trim() || null })}
                         className="h-7 w-20 rounded-md border bg-background px-2 text-[11px]"
                     />
+                )}
+                {sectionHasFilter('loader_id') && (
                     <Select
                         value={filters.loader_id != null ? String(filters.loader_id) : ALL_FILTER_VALUE}
                         onValueChange={(v) => applyFilters({ loader_id: v === ALL_FILTER_VALUE ? null : Number(v) })}
@@ -1425,7 +1529,9 @@ function DashboardFiltersBar({
                             <SelectValue placeholder="Loader" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value={ALL_FILTER_VALUE} className="text-xs">All loaders</SelectItem>
+                            <SelectItem value={ALL_FILTER_VALUE} className="text-xs">
+                                All loaders
+                            </SelectItem>
                             {filterOptions.loaders.map((l) => (
                                 <SelectItem key={l.id} value={String(l.id)} className="text-xs">
                                     {l.name} ({l.siding_name})
@@ -1433,6 +1539,8 @@ function DashboardFiltersBar({
                             ))}
                         </SelectContent>
                     </Select>
+                )}
+                {sectionHasFilter('shift') && (
                     <Select
                         value={filters.shift ?? ALL_FILTER_VALUE}
                         onValueChange={(v) => applyFilters({ shift: v === ALL_FILTER_VALUE ? null : v })}
@@ -1441,7 +1549,9 @@ function DashboardFiltersBar({
                             <SelectValue placeholder="Shift" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value={ALL_FILTER_VALUE} className="text-xs">All</SelectItem>
+                            <SelectItem value={ALL_FILTER_VALUE} className="text-xs">
+                                All
+                            </SelectItem>
                             {filterOptions.shifts.map((s) => (
                                 <SelectItem key={s.value} value={s.value} className="text-xs">
                                     {s.label}
@@ -1449,6 +1559,8 @@ function DashboardFiltersBar({
                             ))}
                         </SelectContent>
                     </Select>
+                )}
+                {sectionHasFilter('penalty_type') && (
                     <Select
                         value={filters.penalty_type != null ? String(filters.penalty_type) : ALL_FILTER_VALUE}
                         onValueChange={(v) => applyFilters({ penalty_type: v === ALL_FILTER_VALUE ? null : Number(v) })}
@@ -1457,7 +1569,9 @@ function DashboardFiltersBar({
                             <SelectValue placeholder="Penalty type" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value={ALL_FILTER_VALUE} className="text-xs">All types</SelectItem>
+                            <SelectItem value={ALL_FILTER_VALUE} className="text-xs">
+                                All types
+                            </SelectItem>
                             {(filterOptions.penaltyTypes ?? []).map((pt) => (
                                 <SelectItem key={pt.value} value={pt.value} className="text-xs">
                                     {pt.label}
@@ -1465,6 +1579,7 @@ function DashboardFiltersBar({
                             ))}
                         </SelectContent>
                     </Select>
+                )}
                     <div className="relative">
                         <button
                             type="button"
@@ -1856,6 +1971,18 @@ export default function Dashboard() {
                                     {activeFilterCount > 9 ? '9+' : activeFilterCount}
                                 </span>
                             )}
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="shrink-0 rounded-[10px]"
+                            onClick={() => {
+                                const basePath = dashboard().url.split('?')[0] || dashboard().url;
+                                router.get(basePath, { section: activeSection }, { preserveState: false, preserveScroll: true });
+                            }}
+                        >
+                            Reset
                         </Button>
                         <Select value={activeSection} onValueChange={setActiveSection}>
                             <SelectTrigger className="min-w-[200px] rounded-[10px] border border-gray-200 bg-white shadow-sm w-full sm:w-auto">
