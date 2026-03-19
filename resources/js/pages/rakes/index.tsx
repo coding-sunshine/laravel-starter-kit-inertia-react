@@ -1,7 +1,8 @@
 import { DataTable } from 'laravel-data-table';
 import type { DataTableResponse } from 'laravel-data-table';
-import { GlossaryTerm } from '@/components/glossary-term';
 import Heading from '@/components/heading';
+import type { WorkflowSteps } from '@/components/rake-workflow-progress';
+import { RakeWorkflowProgressCell } from '@/components/rake-workflow-progress';
 import { RrmcsGuidance } from '@/components/rrmcs-guidance';
 import { StatusPill } from '@/components/status-pill';
 import {
@@ -15,20 +16,7 @@ import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/react';
-import { Train, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipTrigger,
-} from '@/components/ui/tooltip';
-
-interface WorkflowSteps {
-    txr_done: boolean;
-    wagon_loading_done: boolean;
-    guard_done: boolean;
-    weighment_done: boolean;
-    rr_done: boolean;
-}
+import { Train } from 'lucide-react';
 
 interface RakeRow {
     id: number;
@@ -45,53 +33,6 @@ interface RakeRow {
     pdf_download_url: string | null;
     workflow_has_pending: boolean;
     workflow_steps: WorkflowSteps;
-}
-
-const STEP_LABELS: Array<{ key: keyof WorkflowSteps; label: string }> = [
-    { key: 'txr_done', label: 'TXR' },
-    { key: 'wagon_loading_done', label: 'Wagon loading' },
-    { key: 'guard_done', label: 'Guard inspection' },
-    { key: 'weighment_done', label: 'Weighment' },
-    { key: 'rr_done', label: 'RR document' },
-];
-
-function ProgressCell({ row }: { row: RakeRow }) {
-    const steps = row.workflow_steps;
-    const allDone = STEP_LABELS.every(({ key }) => steps[key]);
-    const tooltipContent = (
-        <div className="space-y-1 text-left">
-            {STEP_LABELS.map(({ key, label }) => (
-                <div key={key} className="flex items-center gap-2">
-                    {steps[key] ? (
-                        <CheckCircle2 className="size-3.5 shrink-0 text-green-500" />
-                    ) : (
-                        <Clock className="size-3.5 shrink-0 text-amber-500" />
-                    )}
-                    <span>{label}: {steps[key] ? 'Done' : 'Pending'}</span>
-                </div>
-            ))}
-        </div>
-    );
-    return (
-        <Tooltip>
-            <TooltipTrigger asChild>
-                <button
-                    type="button"
-                    className="inline-flex cursor-default items-center justify-center rounded p-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    onClick={(e) => e.preventDefault()}
-                >
-                    {allDone ? (
-                        <CheckCircle2 className="size-5 text-green-600 dark:text-green-400" />
-                    ) : (
-                        <AlertCircle className="size-5 text-amber-600 dark:text-amber-400" />
-                    )}
-                </button>
-            </TooltipTrigger>
-            <TooltipContent side="left" className="max-w-xs">
-                {tooltipContent}
-            </TooltipContent>
-        </Tooltip>
-    );
 }
 
 interface Props {
@@ -178,7 +119,11 @@ export default function RakesIndex({ tableData }: Props) {
                                     return <StatusPill status={row.state} />;
                                 }
                                 if (columnId === 'progress') {
-                                    return <ProgressCell row={row} />;
+                                    return (
+                                        <RakeWorkflowProgressCell
+                                            steps={row.workflow_steps}
+                                        />
+                                    );
                                 }
                                 if (columnId === 'placement_time') {
                                     return row.placement_time

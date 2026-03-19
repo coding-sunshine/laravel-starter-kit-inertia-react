@@ -49,6 +49,16 @@ const REPORT_CATEGORIES: Record<string, string[]> = {
     'Indents & RR': ['rake_indent', 'indent_fulfillment', 'txr', 'rr_summary'],
 };
 
+const RAKE_MANAGEMENT_REPORTS: string[] = [
+    'wagon_loading',
+    'weighment',
+    'loader_vs_weighment',
+    'rake_movement',
+    'rr_summary',
+    'penalty_register_rr_snapshot',
+    'penalty_register_applied',
+];
+
 /** Determine the best chart for a given report key. */
 function getChartType(key: string): 'area' | 'bar' | 'pie' | 'table' {
     if (['demurrage_analysis', 'siding_coal_receipt'].includes(key)) return 'area';
@@ -74,7 +84,13 @@ function extractChartData(key: string, data: ReportData): { chartData: Record<st
         return { chartData: first.by_month as Record<string, unknown>[], xKey: 'month', yKey: 'total' };
     }
     if (key === 'siding_coal_receipt') {
-        return { chartData: data, xKey: 'date', yKey: 'total_mt' };
+        const grouped: Record<string, number> = {};
+        data.forEach((r) => {
+            const dt = String(r.date ?? 'Unknown');
+            grouped[dt] = (grouped[dt] ?? 0) + Number(r.received_qty_mt ?? 0);
+        });
+        const chartData = Object.entries(grouped).map(([date, total_mt]) => ({ date, total_mt }));
+        return { chartData, xKey: 'date', yKey: 'total_mt' };
     }
     if (key === 'penalty_register') {
         // Group by penalty_type for bar
@@ -163,6 +179,8 @@ export default function ReportsIndex({ reports, sidings }: Props) {
                 siding_id: sidingId || undefined,
                 date_from: dateFrom || undefined,
                 date_to: dateTo || undefined,
+                preview: true,
+                preview_limit: 25,
             });
             setData(resp.data.data ?? []);
         } catch (e: unknown) {
@@ -196,6 +214,32 @@ export default function ReportsIndex({ reports, sidings }: Props) {
             window.URL.revokeObjectURL(url);
         } catch {
             setError('CSV download failed');
+        }
+    }, [activeKey, sidingId, dateFrom, dateTo, activeReport]);
+
+    const downloadXlsx = useCallback(async () => {
+        try {
+            const resp = await axios.post(
+                '/reports/generate',
+                {
+                    key: activeKey,
+                    siding_id: sidingId || undefined,
+                    date_from: dateFrom || undefined,
+                    date_to: dateTo || undefined,
+                    export_xlsx: true,
+                },
+                { responseType: 'blob' },
+            );
+            const url = window.URL.createObjectURL(new Blob([resp.data]));
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${activeReport?.name ?? activeKey}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        } catch {
+            setError('XLSX download failed');
         }
     }, [activeKey, sidingId, dateFrom, dateTo, activeReport]);
 
@@ -252,6 +296,35 @@ export default function ReportsIndex({ reports, sidings }: Props) {
                             <CardTitle className="text-sm">Report Types</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4 p-3 pt-0">
+                            <div>
+                                <p className="mb-1 px-2 text-xs font-medium text-muted-foreground uppercase">
+                                    Rake Management Reports
+                                </p>
+                                <div className="space-y-0.5">
+                                    {RAKE_MANAGEMENT_REPORTS
+                                        .filter((k) => reports[k])
+                                        .map((k) => (
+                                            <button
+                                                key={k}
+                                                onClick={() => {
+                                                    setActiveKey(k);
+                                                    setData(null);
+                                                    setError(null);
+                                                }}
+                                                className={`w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors ${
+                                                    activeKey === k
+                                                        ? 'bg-primary text-primary-foreground'
+                                                        : 'hover:bg-muted'
+                                                }`}
+                                                data-pan="report-select-type"
+                                                type="button"
+                                            >
+                                                {reports[k].name}
+                                            </button>
+                                        ))}
+                                </div>
+                            </div>
+
                             {Object.entries(REPORT_CATEGORIES).map(([category, keys]) => (
                                 <div key={category}>
                                     <p className="mb-1 px-2 text-xs font-medium text-muted-foreground uppercase">
@@ -358,6 +431,16 @@ export default function ReportsIndex({ reports, sidings }: Props) {
                                             CSV
                                         </Button>
                                     )}
+                                    {data && data.length > 0 && (
+                                        <Button
+                                            variant="outline"
+                                            onClick={downloadXlsx}
+                                            data-pan="report-download-xlsx"
+                                        >
+                                            <Download className="mr-1.5 h-4 w-4" />
+                                            XLSX
+                                        </Button>
+                                    )}
                                 </div>
                             </CardContent>
                         </Card>
@@ -375,7 +458,7 @@ export default function ReportsIndex({ reports, sidings }: Props) {
                                 <CardHeader>
                                     <CardTitle>Results</CardTitle>
                                     <CardDescription>
-                                        {tableRows.length} {tableRows.length === 1 ? 'record' : 'records'} found
+                                        Showing first {tableRows.length} rows (preview). Export for full data.
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
@@ -383,6 +466,11 @@ export default function ReportsIndex({ reports, sidings }: Props) {
                                     <ReportSummary data={data} reportKey={activeKey} />
 
                                     {/* Chart */}
+                                    {/*
+                                      Chart preview is intentionally hidden for now.
+                                      Re-enable by uncommenting this block.
+                                    */}
+                                    {/*
                                     {chartInfo && chartInfo.chartData.length > 0 && (
                                         <div className="rounded-lg border bg-muted/20 p-4">
                                             {chartType === 'area' && (
@@ -431,6 +519,7 @@ export default function ReportsIndex({ reports, sidings }: Props) {
                                             )}
                                         </div>
                                     )}
+                                    */}
 
                                     {/* Data table */}
                                     {tableRows.length > 0 && tableColumns.length > 0 ? (
