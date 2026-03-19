@@ -67,9 +67,23 @@ final class ExecutiveDashboardController extends Controller
             ->map(fn (Siding $s): array => ['id' => $s->id, 'name' => $s->name, 'code' => $s->code]);
 
         [$from, $to] = $this->resolveDateRange($request);
-        // dd($request->all(),$request->input('period'),$period,$from, $to);
-        $filteredSidingIds = $request->has('siding_ids')
-            ? array_values(array_intersect($allSidingIds, array_map('intval', (array) $request->input('siding_ids', []))))
+
+        $rawSidingIds = $request->has('siding_ids')
+            ? $request->input('siding_ids')
+            : ($request->has('siding_id') ? $request->input('siding_id') : null);
+
+        $parsedSidingIds = [];
+        if (is_string($rawSidingIds)) {
+            $parsedSidingIds = array_filter(
+                array_map('intval', preg_split('/\s*,\s*/', $rawSidingIds) ?: []),
+                static fn (int $v): bool => $v > 0,
+            );
+        } elseif ($rawSidingIds !== null) {
+            $parsedSidingIds = array_map('intval', (array) $rawSidingIds);
+        }
+
+        $filteredSidingIds = $parsedSidingIds !== []
+            ? array_values(array_intersect($allSidingIds, $parsedSidingIds))
             : $allSidingIds;
 
         $powerPlant = $request->filled('power_plant') ? (string) $request->input('power_plant') : null;
@@ -2216,6 +2230,7 @@ final class ExecutiveDashboardController extends Controller
      * Power plant wise dispatch with siding breakdown.
      *
      * @param  array<int>  $sidingIds
+     * @param  array{power_plant?: string|null}|array<string, mixed>  $filterContext
      * @return array<int, array{name: string, rakes: int, weight_mt: float, sidings: array<string, array{rakes: int, weight_mt: float}>}>
      */
     private function buildPowerPlantDispatch(array $sidingIds, CarbonInterface $from, CarbonInterface $to, array $filterContext = []): array
@@ -2243,6 +2258,16 @@ final class ExecutiveDashboardController extends Controller
             ->selectRaw(
                 "COALESCE(destination, destination_code, 'Unknown') as power_plant_name, ".
                 'siding_id, count(*) as rakes, coalesce(sum(loaded_weight_mt), 0) as weight_mt'
+            )
+            ->when(
+                ! empty($filterContext['power_plant'] ?? null),
+                static function ($q) use ($filterContext): void {
+                    $plant = (string) $filterContext['power_plant'];
+                    $q->where(function ($inner) use ($plant): void {
+                        $inner->where('destination', $plant)
+                            ->orWhere('destination_code', $plant);
+                    });
+                }
             )
             ->groupBy('power_plant_name', 'siding_id')
             ->get();
