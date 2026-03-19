@@ -13,6 +13,8 @@ use Illuminate\Contracts\Support\Responsable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Validation\ValidationException;
+use InvalidArgumentException;
 
 final class IndentController extends Controller
 {
@@ -127,11 +129,17 @@ final class IndentController extends Controller
             ? Siding::query()->pluck('id')->all()
             : $user->accessibleSidings()->get()->pluck('id')->all();
 
-        $indent = $importer->import(
-            $validated['pdf'],
-            $user->id,
-            $sidingIds
-        );
+        try {
+            $indent = $importer->import(
+                $validated['pdf'],
+                $user->id,
+                $sidingIds
+            );
+        } catch (InvalidArgumentException $e) {
+            throw ValidationException::withMessages([
+                'pdf' => [$e->getMessage()],
+            ]);
+        }
 
         return response()->json([
             'data' => $indent->fresh(),

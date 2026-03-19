@@ -85,6 +85,8 @@ final readonly class RrParserService
      */
     public function parseExtractedText(string $text): array
     {
+        $this->assertRailwayReceiptDocument($text);
+
         $headerSection = $this->extractHeaderSection($text);
         $wagonSection = $this->extractWagonSection($text);
         $chargesSection = $this->extractChargesSection($text);
@@ -92,6 +94,10 @@ final readonly class RrParserService
         $header = $this->parseHeaderSection($headerSection);
         $wagons = $this->parseWagonSection($wagonSection);
         $charges = $this->parseChargesSection($chargesSection);
+
+        if (empty($header['rr_number'])) {
+            throw new InvalidArgumentException('This does not appear to be a Railway Receipt PDF. RR number could not be found.');
+        }
 
         $totalWeight = (float) ($header['total_weight'] ?? 0);
         if ($totalWeight === 0.0 && ! empty($wagons)) {
@@ -106,7 +112,7 @@ final readonly class RrParserService
         $rrDate = $header['rr_received_date'] ?? null;
 
         return [
-            'rr_number' => $header['rr_number'] ?? 'RR-'.now()->timestamp,
+            'rr_number' => $header['rr_number'],
             'fnr' => $header['fnr'] ?? null,
             'rr_date' => $rrDate,
             'rr_received_date' => $rrDate,
@@ -127,6 +133,17 @@ final readonly class RrParserService
             'charges' => $charges,
             'raw_text' => $text,
         ];
+    }
+
+    private function assertRailwayReceiptDocument(string $text): void
+    {
+        $lower = mb_strtolower($text);
+        $hasEtRr = str_contains($lower, 'electronically transmitted railway receipt')
+            || str_contains($lower, 'et-rr');
+
+        if (! $hasEtRr) {
+            throw new InvalidArgumentException('This does not appear to be a Railway Receipt PDF.');
+        }
     }
 
     private function extractHeaderSection(string $text): string

@@ -16,7 +16,9 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
+use Spatie\PdfToText\Exceptions\CouldNotExtractText;
 use Spatie\PdfToText\Pdf;
 use Throwable;
 
@@ -33,26 +35,26 @@ final readonly class WeighmentPdfImporter
             'size' => $pdf->getSize(),
         ]);
 
+        $text = $this->extractPdfText($pdf);
+        $validated = $this->validateHistoricalWeighmentText($text);
+
         $storedPath = $pdf->store('weighment-pdfs', 'public');
-        $absolutePath = storage_path('app/public/'.$storedPath);
 
-        $text = Pdf::getText($absolutePath, null, ['-layout']);
-
-        // dd($text);
-        return $this->importFromText($text, $storedPath, $userId);
+        return $this->persistHistoricalWeighment($validated, $storedPath, $userId);
     }
 
     /**
      * Parse a weighment PDF for use with an existing rake (no Rake/Wagon creation).
-     * Returns parsed header, totals, wagon rows and the stored file path.
+     * Validates document shape and that the parsed rake number matches the given rake.
+     * Does not persist the file; call {@see UploadedFile::store()} after validation succeeds.
      *
-     * @return array{stored_path: string, header: array<string, mixed>, totals: array<string, float|null>, wagon_rows: array<int, array<string, mixed>>}
+     * @return array{header: array<string, mixed>, totals: array<string, float|null>, wagon_rows: array<int, array<string, mixed>>}
      */
-    public function parsePdfForRake(UploadedFile $pdf): array
+    public function parsePdfForRake(Rake $rake, UploadedFile $pdf): array
     {
-        $storedPath = $pdf->store('weighment-pdfs', 'public');
-        $absolutePath = storage_path('app/public/'.$storedPath);
-        $text = Pdf::getText($absolutePath, null, ['-layout']);
+        $text = $this->extractPdfText($pdf);
+        $this->assertWeighmentPdfDocumentShape($text);
+
         $lines = preg_split("/\r\n|\r|\n/", $text) ?: [];
         $header = $this->parseHeader($lines);
         $totals = $this->parseTotalsFooter($text);
@@ -61,8 +63,15 @@ final readonly class WeighmentPdfImporter
             throw new InvalidArgumentException('No wagon rows detected in weighment PDF.');
         }
 
+        if (empty($header['rake_number'])) {
+            throw new InvalidArgumentException('Rake number could not be detected from weighment PDF.');
+        }
+
+        if (! $this->rakeNumbersMatch((string) $header['rake_number'], (string) $rake->rake_number)) {
+            throw new InvalidArgumentException('Weighment PDF is for a different rake.');
+        }
+
         return [
-            'stored_path' => $storedPath,
             'header' => $header,
             'totals' => $totals,
             'wagon_rows' => $wagonRows,
@@ -76,6 +85,62 @@ final readonly class WeighmentPdfImporter
      */
     public function importFromText(string $text, string $storedPdfPath, int $userId): Weighment
     {
+        $validated = $this->validateHistoricalWeighmentText($text);
+
+        return $this->persistHistoricalWeighment($validated, $storedPdfPath, $userId);
+    }
+
+    /**
+     * Extract text from an uploaded PDF without storing it on the public disk.
+     */
+    public function extractPdfText(UploadedFile $file): string
+    {
+        $realPath = $file->getRealPath();
+        $storedPath = null;
+        if ($realPath !== false && $realPath !== '' && is_readable($realPath)) {
+            $fullPath = $realPath;
+        } else {
+            $storedPath = $file->store('weighment-parse-temp', 'local');
+            $fullPath = Storage::disk('local')->path($storedPath);
+        }
+
+        try {
+            $text = Pdf::getText($fullPath, null, ['-layout']);
+        } catch (CouldNotExtractText $e) {
+            Log::error('Weighment PDF text extraction failed', ['path' => $fullPath, 'error' => $e->getMessage()]);
+            throw new InvalidArgumentException('Could not extract text from PDF. Ensure the file is a valid PDF and pdftotext is installed.', 0, $e);
+        } finally {
+            if ($storedPath !== null) {
+                Storage::disk('local')->delete($storedPath);
+            }
+        }
+
+        if (mb_trim($text) === '') {
+            throw new InvalidArgumentException('PDF appears to be empty or could not extract any text.');
+        }
+
+        return $text;
+    }
+
+    private function assertWeighmentPdfDocumentShape(string $text): void
+    {
+        $lower = mb_strtolower($text);
+        if (! str_contains($lower, 'weigh bill') || ! str_contains($lower, 'receipt')) {
+            throw new InvalidArgumentException('This does not appear to be a weighment PDF.');
+        }
+
+        if (! preg_match('/Report\s+Print\s+Date\s*&\s*Time\s*:\s*\d{2}-\d{2}-\d{4}/i', $text)) {
+            throw new InvalidArgumentException('This does not appear to be a weighment PDF. Expected "Report Print Date & Time" with a date.');
+        }
+    }
+
+    /**
+     * @return array{header: array<string, mixed>, siding: Siding, wagon_rows: array<int, array<string, mixed>>, totals: array<string, float|null>}
+     */
+    private function validateHistoricalWeighmentText(string $text): array
+    {
+        $this->assertWeighmentPdfDocumentShape($text);
+
         $lines = preg_split("/\r\n|\r|\n/", $text) ?: [];
 
         $header = $this->parseHeader($lines);
@@ -85,12 +150,11 @@ final readonly class WeighmentPdfImporter
         $totals = $this->parseTotalsFooter($text);
 
         Log::info('Weighment PDF import: parsed header and detection', [
-            'user_id' => $userId,
             'rake_number' => $header['rake_number'] ?? null,
             'from_station' => $header['from_station'] ?? null,
             'to_station' => $header['to_station'] ?? null,
-            'siding_id' => $siding?->id,
-            'siding_station_code' => $siding?->station_code,
+            'siding_id' => $siding->id,
+            'siding_station_code' => $siding->station_code,
             'power_plant_id' => $powerPlant?->id,
             'power_plant_code' => $powerPlant?->code,
         ]);
@@ -105,6 +169,24 @@ final readonly class WeighmentPdfImporter
         }
 
         $this->ensureRakeNumberIsUnique($header['rake_number']);
+
+        return [
+            'header' => $header,
+            'siding' => $siding,
+            'wagon_rows' => $wagonRows,
+            'totals' => $totals,
+        ];
+    }
+
+    /**
+     * @param  array{header: array<string, mixed>, siding: Siding, wagon_rows: array<int, array<string, mixed>>, totals: array<string, float|null>}  $validated
+     */
+    private function persistHistoricalWeighment(array $validated, string $storedPdfPath, int $userId): Weighment
+    {
+        $header = $validated['header'];
+        $siding = $validated['siding'];
+        $wagonRows = $validated['wagon_rows'];
+        $totals = $validated['totals'];
 
         try {
             return DB::transaction(function () use ($header, $siding, $wagonRows, $storedPdfPath, $userId, $totals) {
@@ -138,6 +220,17 @@ final readonly class WeighmentPdfImporter
 
             throw $e;
         }
+    }
+
+    private function rakeNumbersMatch(string $parsed, string $expected): bool
+    {
+        $normalize = function (string $v): string {
+            $v = mb_strtoupper(mb_trim(preg_replace('/\s+/', ' ', $v) ?? ''));
+
+            return $v;
+        };
+
+        return $normalize($parsed) === $normalize($expected);
     }
 
     /**

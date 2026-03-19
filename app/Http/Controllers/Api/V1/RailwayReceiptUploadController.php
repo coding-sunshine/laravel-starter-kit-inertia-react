@@ -13,6 +13,7 @@ use App\Services\Railway\RrImportService;
 use App\Services\Railway\RrParserService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 use Throwable;
 
@@ -111,9 +112,9 @@ final class RailwayReceiptUploadController extends Controller
                 ],
             ], 201);
         } catch (InvalidArgumentException $e) {
-            return response()->json([
-                'message' => $e->getMessage(),
-            ], 422);
+            throw ValidationException::withMessages([
+                'pdf' => [$e->getMessage()],
+            ]);
         } catch (Throwable $e) {
             report($e);
 
