@@ -122,7 +122,6 @@ const SECTION_FILTER_KEYS = {
         | 'penalty_type'
         | 'daily_rake_date'
         | 'coal_transport_date'
-        | 'coal_stock_date'
     )[]
 >;
 
@@ -227,7 +226,6 @@ interface DashboardFilters {
     penalty_type: number | null;
     daily_rake_date?: string;
     coal_transport_date?: string;
-    coal_stock_date?: string;
 }
 
 interface DailyRakeDetailsRow {
@@ -1324,12 +1322,6 @@ function DashboardFiltersBar({
             if (coalTransportDate !== '') params.coal_transport_date = coalTransportDate;
         }
 
-        if (sectionHasFilter('coal_stock_date')) {
-            const coalStockDate =
-                (overrides.coal_stock_date !== undefined ? overrides.coal_stock_date : filters.coal_stock_date) ?? '';
-            if (coalStockDate !== '') params.coal_stock_date = coalStockDate;
-        }
-
         if (currentSection) params.section = currentSection;
 
         // Use pathname only so query is exactly our params (no merge with current URL).
@@ -1381,7 +1373,6 @@ function DashboardFiltersBar({
             penalty_type: null,
             daily_rake_date: '',
             coal_transport_date: '',
-            coal_stock_date: '',
         });
     }, [allSidingIds, applyFilters, filters.from, filters.to]);
 
@@ -1480,15 +1471,15 @@ function DashboardFiltersBar({
                 </>
             )}
             <div className={inline ? 'flex flex-wrap items-center gap-2' : 'ml-auto flex flex-wrap items-center gap-2'}>
-                <Button
+                {/* <Button
                     type="button"
                     size="sm"
                     variant="outline"
                     className="h-7 px-2 text-[11px]"
                     onClick={resetAllFilters}
                 >
-                    Reset
-                </Button>
+                    Reset Test
+                </Button> */}
                 {sectionHasFilter('power_plant') && (
                     <Select
                         value={filters.power_plant ?? ALL_FILTER_VALUE}
@@ -1715,7 +1706,6 @@ export default function Dashboard() {
         penalty_type: null,
         daily_rake_date: undefined,
         coal_transport_date: undefined,
-        coal_stock_date: undefined,
     };
     const filters: DashboardFilters = {
         ...defaultFilters,
@@ -1809,25 +1799,6 @@ export default function Dashboard() {
         router.get(dashboardPath, params as Record<string, string>, { preserveState: true, preserveScroll: true });
     }, [dashboardPath, filters, activeSection, allSidingIds.length]);
 
-    const applyCoalStockDate = useCallback((date: string) => {
-        const params: Record<string, unknown> = {
-            period: filters.period,
-            section: activeSection,
-        };
-        if (date !== '') params.coal_stock_date = date;
-        if (filters.siding_ids.length > 0 && filters.siding_ids.length < allSidingIds.length) {
-            params.siding_ids = filters.siding_ids;
-        }
-        if (filters.power_plant) params.power_plant = filters.power_plant;
-        if (filters.rake_number) params.rake_number = filters.rake_number;
-        if (filters.loader_id) params.loader_id = filters.loader_id;
-        if (filters.shift) params.shift = filters.shift;
-        if (filters.penalty_type != null) params.penalty_type = filters.penalty_type;
-        if (filters.daily_rake_date) params.daily_rake_date = filters.daily_rake_date;
-        if (filters.coal_transport_date) params.coal_transport_date = filters.coal_transport_date;
-        router.get(dashboardPath, params as Record<string, string>, { preserveState: true, preserveScroll: true });
-    }, [dashboardPath, filters, activeSection, allSidingIds.length]);
-
     const applyCoalTransportDate = useCallback((date: string) => {
         const params: Record<string, unknown> = {
             period: filters.period,
@@ -1843,7 +1814,6 @@ export default function Dashboard() {
         if (filters.shift) params.shift = filters.shift;
         if (filters.penalty_type != null) params.penalty_type = filters.penalty_type;
         if (filters.daily_rake_date) params.daily_rake_date = filters.daily_rake_date;
-        if (filters.coal_stock_date) params.coal_stock_date = filters.coal_stock_date;
         router.get(dashboardPath, params as Record<string, string>, { preserveState: true, preserveScroll: true });
     }, [dashboardPath, filters, activeSection, allSidingIds.length]);
 
@@ -2031,19 +2001,7 @@ export default function Dashboard() {
 
                 {filteredSidings.length > 0 && (
                     <div className="space-y-3">
-                        <div className="flex flex-wrap items-center gap-3">
-                            <label htmlFor="coal-stock-date" className="text-xs font-medium text-gray-600">Coal stock as of</label>
-                            <input
-                                id="coal-stock-date"
-                                type="date"
-                                value={filters.coal_stock_date ?? filters.to}
-                                onChange={(e) => {
-                                    const v = e.target.value;
-                                    applyCoalStockDate(v ?? '');
-                                }}
-                                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
-                            />
-                        </div>
+                        <p className="text-xs text-gray-600">Coal stock updates live from the ledger (and real-time events when connected).</p>
                         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                             {filteredSidings.map((s) => {
                                 const stockMt = sidingStocks[s.id]?.closing_balance_mt ?? 0;

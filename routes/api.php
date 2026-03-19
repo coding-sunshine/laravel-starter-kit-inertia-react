@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Api\Dashboard\MobileDashboardController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\IndentController;
 use App\Http\Controllers\Api\V1\RailwayReceiptApiController;
@@ -73,5 +74,16 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:60,1')->group(functio
         Route::get('rake-weighments', [RakeWeighmentApiController::class, 'index'])->name('rake-weighments.index');
         Route::get('rake-weighments/{rakeWeighment}', [RakeWeighmentApiController::class, 'show'])->name('rake-weighments.show');
         Route::get('rake-weighments/{rakeWeighment}/download', [RakeWeighmentApiController::class, 'download'])->name('rake-weighments.download');
+
+        // Management dashboard (mobile)
+        Route::prefix('dashboard')->name('dashboard.')->group(function (): void {
+            Route::get('filter-options', [MobileDashboardController::class, 'filterOptions'])->name('filter-options');
+            Route::get('executive-overview', [MobileDashboardController::class, 'executiveOverview'])->name('executive-overview');
+            Route::get('operations', [MobileDashboardController::class, 'operations'])->name('operations');
+            Route::get('penalty-control', [MobileDashboardController::class, 'penaltyControl'])->name('penalty-control');
+            Route::get('rake-performance', [MobileDashboardController::class, 'rakePerformance'])->name('rake-performance');
+            Route::get('loader-overload', [MobileDashboardController::class, 'loaderOverload'])->name('loader-overload');
+            Route::get('power-plant', [MobileDashboardController::class, 'powerPlant'])->name('power-plant');
+        });
     });
 });
