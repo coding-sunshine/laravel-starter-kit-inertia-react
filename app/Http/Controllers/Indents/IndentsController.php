@@ -252,7 +252,13 @@ final class IndentsController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'code']);
 
-        $nextPriorityNumber = (int) Rake::query()->max('priority_number') + 1;
+        $maxPriorityThisMonthOnSiding = Rake::query()
+            ->where('siding_id', $indent->siding_id)
+            ->whereYear('created_at', now()->year)
+            ->whereMonth('created_at', now()->month)
+            ->max('priority_number');
+
+        $nextPriorityNumber = (int) $maxPriorityThisMonthOnSiding + 1;
 
         return Inertia::render('rakes/create-from-indent', [
             'indent' => $indent->load('siding:id,name,code'),
@@ -273,19 +279,19 @@ final class IndentsController extends Controller
             return to_route('indents.show', $indent)
                 ->with('error', 'A rake already exists for this indent.');
         }
-
         $validated = $request->validate([
             'rake_number' => [
-                'nullable',
+                'required',
                 'string',
                 'max:100',
-                function (string $attribute, mixed $value, Closure $fail) {
+                function (string $attribute, mixed $value, Closure $fail) use ($indent) {
                     $trimmed = $value !== null && mb_trim((string) $value) !== '' ? mb_trim((string) $value) : null;
                     if ($trimmed === null) {
                         return;
                     }
                     $existsInMonth = Rake::query()
                         ->where('rake_number', $trimmed)
+                        ->where('siding_id', $indent->siding_id)
                         ->whereYear('created_at', now()->year)
                         ->whereMonth('created_at', now()->month)
                         ->exists();
@@ -294,10 +300,29 @@ final class IndentsController extends Controller
                     }
                 },
             ],
-            'rake_priority_number' => ['nullable', 'integer', 'min:0'],
-            'loading_date' => ['nullable', 'date'],
-            'rake_type' => ['nullable', 'string', 'max:50'],
-            'wagon_count' => ['nullable', 'integer', 'min:0'],
+            'rake_priority_number' => [
+                'required',
+                'integer',
+                'min:0',
+                function (string $attribute, mixed $value, Closure $fail) use ($indent) {
+                    if (! is_numeric($value)) {
+                        return;
+                    }
+                    $num = (int) $value;
+                    $existsInMonth = Rake::query()
+                        ->where('priority_number', $num)
+                        ->where('siding_id', $indent->siding_id)
+                        ->whereYear('created_at', now()->year)
+                        ->whereMonth('created_at', now()->month)
+                        ->exists();
+                    if ($existsInMonth) {
+                        $fail('This rake priority number is already in use this month.');
+                    }
+                },
+            ],
+            'loading_date' => ['required', 'date'],
+            'rake_type' => ['required', 'string', 'max:50'],
+            'wagon_count' => ['required', 'integer', 'min:0'],
             'rr_expected_date' => ['nullable', 'date'],
             'placement_time' => ['nullable', 'date'],
             'remarks' => ['nullable', 'string', 'max:1000'],
@@ -307,22 +332,7 @@ final class IndentsController extends Controller
         $rake = new Rake;
         $rake->indent_id = $indent->id;
         $rake->siding_id = $indent->siding_id; // Use indent's siding
-
-        // Rake number: unique within current month (use submitted value if provided and unique this month, else auto-generate)
-        $rakeNumber = isset($validated['rake_number']) && mb_trim((string) $validated['rake_number']) !== ''
-            ? mb_trim((string) $validated['rake_number'])
-            : null;
-        if ($rakeNumber === null) {
-            $rakeNumber = $indent->indent_number ? 'RK-'.$indent->indent_number : 'RK-'.uniqid();
-        }
-        while (Rake::query()
-            ->where('rake_number', $rakeNumber)
-            ->whereYear('created_at', now()->year)
-            ->whereMonth('created_at', now()->month)
-            ->exists()) {
-            $rakeNumber = 'RK-'.uniqid();
-        }
-        $rake->rake_number = $rakeNumber;
+        $rake->rake_number = $validated['rake_number'];
         $rake->priority_number = isset($validated['rake_priority_number']) ? (int) $validated['rake_priority_number'] : ((int) Rake::query()->max('priority_number') + 1);
         $rake->loading_date = isset($validated['loading_date']) ? $validated['loading_date'] : null;
         $rake->rake_type = $validated['rake_type'] ?? null;

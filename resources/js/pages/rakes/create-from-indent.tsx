@@ -10,8 +10,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, useForm } from '@inertiajs/react';
-import { ArrowLeft, Train } from 'lucide-react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { ArrowLeft, Train, AlertCircle, CheckCircle } from 'lucide-react';
+import { useMemo } from 'react';
 
 interface Siding {
     id: number;
@@ -27,15 +28,30 @@ interface Indent {
     demanded_stock: string | null;
     total_units: string | null;
     siding?: Siding | null;
+    siding_id?: number | null;
 }
 
 interface Props {
     indent: Indent;
     sidings: Siding[];
     next_priority_number: number;
+    flash?: {
+        success?: string;
+        error?: string;
+    };
 }
 
-export default function CreateRakeFromIndent({ indent, sidings, next_priority_number }: Props) {
+interface FormErrors {
+    [key: string]: string | string[];
+}
+
+type InertiaPageProps = {
+    errors?: FormErrors;
+};
+
+export default function CreateRakeFromIndent({ indent, sidings, next_priority_number, flash }: Props) {
+    const page = usePage<InertiaPageProps>();
+
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: '/dashboard' },
         { title: 'Indents', href: '/indents' },
@@ -43,12 +59,10 @@ export default function CreateRakeFromIndent({ indent, sidings, next_priority_nu
         { title: 'Create Rake', href: `/indents/${indent.id}/create-rake` },
     ];
 
-    const totalUnits =
-        indent.total_units ??
-        (indent as Record<string, unknown>).total_units;
+    const totalUnits = indent.total_units;
 
-    const { data, setData, post, processing, errors, reset } = useForm({
-        rake_number: indent.indent_number ? `RK-${indent.indent_number}` : '',
+    const { data, setData, post, processing, errors: formErrors } = useForm({
+        rake_number: '',
         rake_priority_number: String(next_priority_number),
         loading_date: indent.expected_loading_date
             ? new Date(indent.expected_loading_date).toISOString().slice(0, 10)
@@ -60,12 +74,38 @@ export default function CreateRakeFromIndent({ indent, sidings, next_priority_nu
         remarks: '',
     });
 
+    /**
+     * Validation errors can arrive two ways:
+     * - 422 Inertia response: populated on `useForm().errors`
+     * - redirect()->back()->withErrors(): only on shared `page.props.errors` (useForm resets on new visit)
+     */
+    const errors = useMemo((): FormErrors => {
+        const shared = page.props.errors ?? {};
+
+        return { ...shared, ...formErrors };
+    }, [page.props.errors, formErrors]);
+
+    const hasErrors = Object.keys(errors).length > 0;
+
     function submit(e: React.FormEvent) {
         e.preventDefault();
         post(`/indents/${indent.id}/store-rake`, {
-            onFinish: () => reset(),
+            preserveScroll: true,
         });
     }
+
+    const getErrorMessage = (fieldErrors: string | string[] | undefined): string => {
+        if (!fieldErrors) {
+            return '';
+        }
+        if (Array.isArray(fieldErrors)) {
+            return fieldErrors[0] ?? '';
+        }
+
+        return fieldErrors;
+    };
+
+    const hasError = (fieldName: string): boolean => fieldName in errors;
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -84,6 +124,60 @@ export default function CreateRakeFromIndent({ indent, sidings, next_priority_nu
                     </h2>
                 </div>
 
+                {/* Flash Messages */}
+                {flash?.error && (
+                    <Card className="border-destructive bg-destructive/5">
+                        <CardContent className="flex gap-4 pt-6">
+                            <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
+                            <div>
+                                <h3 className="font-semibold text-destructive">Error</h3>
+                                <p className="text-sm text-destructive mt-1">{flash.error}</p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {flash?.success && (
+                    <Card className="border-green-600 bg-green-50">
+                        <CardContent className="flex gap-4 pt-6">
+                            <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                            <div>
+                                <h3 className="font-semibold text-green-600">Success</h3>
+                                <p className="text-sm text-green-600 mt-1">{flash.success}</p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* Validation Errors Summary */}
+                {hasErrors && (
+                    <Card className="border-destructive bg-destructive/5">
+                        <CardContent className="pt-6">
+                            <div className="flex gap-4">
+                                <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
+                                <div className="flex-1">
+                                    <h3 className="font-semibold text-destructive mb-3">
+                                        Please fix the {Object.keys(errors).length} error(s) below
+                                    </h3>
+                                    <ul className="space-y-2 text-sm">
+                                        {Object.entries(errors).map(([field, message]) => (
+                                            <li key={field} className="flex items-start gap-2 text-destructive">
+                                                <span className="text-lg leading-none mt-0.5">•</span>
+                                                <span>
+                                                    <strong className="capitalize">
+                                                        {field.replace(/_/g, ' ')}:
+                                                    </strong>{' '}
+                                                    {getErrorMessage(message)}
+                                                </span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
@@ -97,6 +191,7 @@ export default function CreateRakeFromIndent({ indent, sidings, next_priority_nu
                     <CardContent>
                         <form onSubmit={submit} className="space-y-6">
                             <div className="grid gap-4 sm:grid-cols-2">
+                                {/* Indent Number - Read Only */}
                                 <div>
                                     <Label htmlFor="indent_number">Indent Number</Label>
                                     <Input
@@ -106,44 +201,91 @@ export default function CreateRakeFromIndent({ indent, sidings, next_priority_nu
                                         className="bg-muted"
                                     />
                                 </div>
+
+                                {/* Rake Number */}
                                 <div>
-                                    <Label htmlFor="rake_number">Rake Number</Label>
+                                    <Label htmlFor="rake_number" className="flex items-center gap-1">
+                                        Rake Number
+                                        {hasError('rake_number') && (
+                                            <span className="text-destructive text-lg leading-none">*</span>
+                                        )}
+                                    </Label>
                                     <Input
                                         id="rake_number"
                                         value={data.rake_number}
                                         onChange={(e) => setData('rake_number', e.target.value)}
-                                        placeholder="e.g. RK-12345"
+                                        placeholder="e.g. 1"
+                                        className={`${
+                                            hasError('rake_number')
+                                                ? 'border-destructive focus-visible:ring-destructive'
+                                                : ''
+                                        }`}
                                     />
-                                    {errors.rake_number && (
-                                        <p className="text-sm text-destructive mt-1">{errors.rake_number}</p>
+                                    {hasError('rake_number') && (
+                                        <p className="text-sm text-destructive mt-1.5 flex items-center gap-1.5">
+                                            <span className="text-lg leading-none">⚠</span>
+                                            {getErrorMessage(errors.rake_number)}
+                                        </p>
                                     )}
                                 </div>
+
+                                {/* Rake Priority Number */}
                                 <div>
-                                    <Label htmlFor="rake_priority_number">Rake Priority Number</Label>
+                                    <Label htmlFor="rake_priority_number" className="flex items-center gap-1">
+                                        Rake Priority Number
+                                        {hasError('rake_priority_number') && (
+                                            <span className="text-destructive text-lg leading-none">*</span>
+                                        )}
+                                    </Label>
                                     <Input
                                         id="rake_priority_number"
                                         type="number"
                                         min="0"
                                         value={data.rake_priority_number}
                                         onChange={(e) => setData('rake_priority_number', e.target.value)}
-                                        placeholder="Default: next after last rake"
+                                        placeholder="Priority order"
+                                        className={`${
+                                            hasError('rake_priority_number')
+                                                ? 'border-destructive focus-visible:ring-destructive'
+                                                : ''
+                                        }`}
                                     />
-                                    {errors.rake_priority_number && (
-                                        <p className="text-sm text-destructive mt-1">{errors.rake_priority_number}</p>
+                                    {hasError('rake_priority_number') && (
+                                        <p className="text-sm text-destructive mt-1.5 flex items-center gap-1.5">
+                                            <span className="text-lg leading-none">⚠</span>
+                                            {getErrorMessage(errors.rake_priority_number)}
+                                        </p>
                                     )}
                                 </div>
+
+                                {/* Loading Date */}
                                 <div>
-                                    <Label htmlFor="loading_date">Loading Date</Label>
+                                    <Label htmlFor="loading_date" className="flex items-center gap-1">
+                                        Loading Date
+                                        {hasError('loading_date') && (
+                                            <span className="text-destructive text-lg leading-none">*</span>
+                                        )}
+                                    </Label>
                                     <Input
                                         id="loading_date"
                                         type="date"
                                         value={data.loading_date}
                                         onChange={(e) => setData('loading_date', e.target.value)}
+                                        className={`${
+                                            hasError('loading_date')
+                                                ? 'border-destructive focus-visible:ring-destructive'
+                                                : ''
+                                        }`}
                                     />
-                                    {errors.loading_date && (
-                                        <p className="text-sm text-destructive mt-1">{errors.loading_date}</p>
+                                    {hasError('loading_date') && (
+                                        <p className="text-sm text-destructive mt-1.5 flex items-center gap-1.5">
+                                            <span className="text-lg leading-none">⚠</span>
+                                            {getErrorMessage(errors.loading_date)}
+                                        </p>
                                     )}
                                 </div>
+
+                                {/* Siding - Read Only */}
                                 <div>
                                     <Label htmlFor="siding">Siding</Label>
                                     <Input
@@ -155,23 +297,45 @@ export default function CreateRakeFromIndent({ indent, sidings, next_priority_nu
                                 </div>
                             </div>
 
+                            {/* Rake Details Section */}
                             <div className="border-t pt-6">
                                 <h3 className="text-lg font-medium mb-4">Rake Details</h3>
                                 <div className="grid gap-4 sm:grid-cols-2">
+                                    {/* Rake Type */}
                                     <div>
-                                        <Label htmlFor="rake_type">Rake Type</Label>
+                                        <Label htmlFor="rake_type" className="flex items-center gap-1">
+                                            Rake Type
+                                            {hasError('rake_type') && (
+                                                <span className="text-destructive text-lg leading-none">*</span>
+                                            )}
+                                        </Label>
                                         <Input
                                             id="rake_type"
                                             value={data.rake_type}
                                             onChange={(e) => setData('rake_type', e.target.value)}
                                             placeholder={indent.demanded_stock || 'e.g., BOBRN, BOXN'}
+                                            className={`${
+                                                hasError('rake_type')
+                                                    ? 'border-destructive focus-visible:ring-destructive'
+                                                    : ''
+                                            }`}
                                         />
-                                        {errors.rake_type && (
-                                            <p className="text-sm text-destructive mt-1">{errors.rake_type}</p>
+                                        {hasError('rake_type') && (
+                                            <p className="text-sm text-destructive mt-1.5 flex items-center gap-1.5">
+                                                <span className="text-lg leading-none">⚠</span>
+                                                {getErrorMessage(errors.rake_type)}
+                                            </p>
                                         )}
                                     </div>
+
+                                    {/* Wagon Count */}
                                     <div>
-                                        <Label htmlFor="wagon_count">Wagon Count</Label>
+                                        <Label htmlFor="wagon_count" className="flex items-center gap-1">
+                                            Wagon Count
+                                            {hasError('wagon_count') && (
+                                                <span className="text-destructive text-lg leading-none">*</span>
+                                            )}
+                                        </Label>
                                         <Input
                                             id="wagon_count"
                                             type="number"
@@ -179,29 +343,120 @@ export default function CreateRakeFromIndent({ indent, sidings, next_priority_nu
                                             value={data.wagon_count}
                                             onChange={(e) => setData('wagon_count', e.target.value)}
                                             placeholder="Number of wagons"
+                                            className={`${
+                                                hasError('wagon_count')
+                                                    ? 'border-destructive focus-visible:ring-destructive'
+                                                    : ''
+                                            }`}
                                         />
-                                        {errors.wagon_count && (
-                                            <p className="text-sm text-destructive mt-1">{errors.wagon_count}</p>
+                                        {hasError('wagon_count') && (
+                                            <p className="text-sm text-destructive mt-1.5 flex items-center gap-1.5">
+                                                <span className="text-lg leading-none">⚠</span>
+                                                {getErrorMessage(errors.wagon_count)}
+                                            </p>
                                         )}
                                     </div>
                                 </div>
                             </div>
 
+                            {/* Optional Fields Section */}
+                            <div className="border-t pt-6">
+                                <h3 className="text-lg font-medium mb-4">Additional Information</h3>
+                                <div className="grid gap-4 sm:grid-cols-2">
+                                    {/* RR Expected Date */}
+                                    <div>
+                                        <Label htmlFor="rr_expected_date" className="flex items-center gap-1">
+                                            RR Expected Date
+                                            {hasError('rr_expected_date') && (
+                                                <span className="text-destructive text-lg leading-none">*</span>
+                                            )}
+                                        </Label>
+                                        <Input
+                                            id="rr_expected_date"
+                                            type="date"
+                                            value={data.rr_expected_date}
+                                            onChange={(e) => setData('rr_expected_date', e.target.value)}
+                                            className={`${
+                                                hasError('rr_expected_date')
+                                                    ? 'border-destructive focus-visible:ring-destructive'
+                                                    : ''
+                                            }`}
+                                        />
+                                        {hasError('rr_expected_date') && (
+                                            <p className="text-sm text-destructive mt-1.5 flex items-center gap-1.5">
+                                                <span className="text-lg leading-none">⚠</span>
+                                                {getErrorMessage(errors.rr_expected_date)}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    {/* Placement Time */}
+                                    <div>
+                                        <Label htmlFor="placement_time" className="flex items-center gap-1">
+                                            Placement Time
+                                            {hasError('placement_time') && (
+                                                <span className="text-destructive text-lg leading-none">*</span>
+                                            )}
+                                        </Label>
+                                        <Input
+                                            id="placement_time"
+                                            type="date"
+                                            value={data.placement_time}
+                                            onChange={(e) => setData('placement_time', e.target.value)}
+                                            className={`${
+                                                hasError('placement_time')
+                                                    ? 'border-destructive focus-visible:ring-destructive'
+                                                    : ''
+                                            }`}
+                                        />
+                                        {hasError('placement_time') && (
+                                            <p className="text-sm text-destructive mt-1.5 flex items-center gap-1.5">
+                                                <span className="text-lg leading-none">⚠</span>
+                                                {getErrorMessage(errors.placement_time)}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Remarks */}
                             <div>
-                                <Label htmlFor="remarks">Remarks</Label>
+                                <Label htmlFor="remarks" className="flex items-center gap-1">
+                                    Remarks
+                                    {hasError('remarks') && (
+                                        <span className="text-destructive text-lg leading-none">*</span>
+                                    )}
+                                </Label>
                                 <textarea
                                     id="remarks"
                                     value={data.remarks}
                                     onChange={(e) => setData('remarks', e.target.value)}
-                                    placeholder="Additional notes about this rake"
-                                    className="min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                    placeholder="Additional notes about this rake (max 1000 characters)"
+                                    className={`min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+                                        hasError('remarks')
+                                            ? 'border-destructive focus-visible:ring-destructive'
+                                            : ''
+                                    }`}
                                     maxLength={1000}
                                 />
-                                {errors.remarks && (
-                                    <p className="text-sm text-destructive mt-1">{errors.remarks}</p>
-                                )}
+                                <div className="flex items-center justify-between mt-1.5">
+                                    {hasError('remarks') && (
+                                        <p className="text-sm text-destructive flex items-center gap-1.5">
+                                            <span className="text-lg leading-none">⚠</span>
+                                            {getErrorMessage(errors.remarks)}
+                                        </p>
+                                    )}
+                                    <span className={`text-xs ml-auto ${
+                                        data.remarks.length > 900
+                                            ? 'text-yellow-600'
+                                            : 'text-muted-foreground'
+                                    }`}>
+                                        {data.remarks.length}/1000
+                                    </span>
+                                </div>
                             </div>
 
+                            {/* Form Actions */}
                             <div className="flex justify-end gap-4 pt-6 border-t">
                                 <Link href={`/indents/${indent.id}`}>
                                     <Button type="button" variant="outline">
@@ -209,7 +464,7 @@ export default function CreateRakeFromIndent({ indent, sidings, next_priority_nu
                                     </Button>
                                 </Link>
                                 <Button type="submit" disabled={processing}>
-                                    {processing ? 'Creating...' : 'Create Rake'}
+                                    {processing ? 'Creating Rake...' : 'Create Rake'}
                                 </Button>
                             </div>
                         </form>
