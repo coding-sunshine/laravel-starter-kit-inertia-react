@@ -23,6 +23,7 @@ use App\Models\SidingOpeningBalance;
 use App\Models\SidingVehicleDispatch;
 use App\Models\StockLedger;
 use App\Models\VehicleUnload;
+use App\Support\Dashboard\DashboardFilterResolver;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use DateTimeInterface;
@@ -30,8 +31,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
-
-use function in_array;
 
 final class ExecutiveDashboardController extends Controller
 {
@@ -46,236 +45,62 @@ final class ExecutiveDashboardController extends Controller
      */
     private const OPERATIONAL_RAKE_DATA_SOURCES = ['system', 'manual'];
 
+    public function __construct(
+        private readonly DashboardFilterResolver $filters,
+    ) {}
+
     public function __invoke(Request $request): Response
     {
-        $user = $request->user();
-        $period = $request->input('period', 'today');
-
-        // When period is not custom, ignore any from/to in the request so shared links or history don't show stale range.
-        if ($period !== 'custom') {
-            $request->merge(['from' => null, 'to' => null]);
-        }
-
-        $allSidingIds = $user->isSuperAdmin()
-            ? Siding::query()->pluck('id')->all()
-            : $user->accessibleSidings()->get()->pluck('id')->all();
+        $resolved = $this->filters->resolve($request);
 
         $allSidings = Siding::query()
-            ->whereIn('id', $allSidingIds)
+            ->whereIn('id', $resolved['allSidingIds'])
             ->orderBy('name')
             ->get(['id', 'name', 'code'])
             ->map(fn (Siding $s): array => ['id' => $s->id, 'name' => $s->name, 'code' => $s->code]);
 
-        [$from, $to] = $this->resolveDateRange($request);
-
-        $rawSidingIds = $request->has('siding_ids')
-            ? $request->input('siding_ids')
-            : ($request->has('siding_id') ? $request->input('siding_id') : null);
-
-        $parsedSidingIds = [];
-        if (is_string($rawSidingIds)) {
-            $parsedSidingIds = array_filter(
-                array_map('intval', preg_split('/\s*,\s*/', $rawSidingIds) ?: []),
-                static fn (int $v): bool => $v > 0,
-            );
-        } elseif ($rawSidingIds !== null) {
-            $parsedSidingIds = array_map('intval', (array) $rawSidingIds);
-        }
-
-        $filteredSidingIds = $parsedSidingIds !== []
-            ? array_values(array_intersect($allSidingIds, $parsedSidingIds))
-            : $allSidingIds;
-
-        $powerPlant = $request->filled('power_plant') ? (string) $request->input('power_plant') : null;
-        $rakeNumber = $request->filled('rake_number') ? (string) $request->input('rake_number') : null;
-        $loaderId = $request->integer('loader_id') ?: null;
-        $shift = $request->filled('shift') ? (string) $request->input('shift') : null;
-        $penaltyTypeId = $request->integer('penalty_type') ?: null;
-        $dailyRakeDate = $this->parseDailyRakeDate($request);
-        $coalTransportDate = $this->parseCoalTransportDate($request);
-        $coalStockDate = $this->parseCoalStockDate($request);
-
-        $allowedSections = ['executive-overview', 'operations', 'penalty-control', 'siding-performance', 'rake-performance', 'loader-overload', 'power-plant'];
-        $section = $request->input('section', 'executive-overview');
-        $section = in_array($section, $allowedSections, true) ? $section : 'executive-overview';
-
-        $filterContext = [
-            'period' => $period,
-            'power_plant' => $powerPlant,
-            'rake_number' => $rakeNumber,
-            'loader_id' => $loaderId,
-            'shift' => $shift,
-            'penalty_type_id' => $penaltyTypeId,
-        ];
-
-        $filterOptions = $this->buildFilterOptions($filteredSidingIds);
+        $filterOptions = $this->buildFilterOptions($resolved['filteredSidingIds']);
 
         // dd($this->buildSidingPerformance($filteredSidingIds, $from, $to, $filterContext));
         return Inertia::render('dashboard', [
             'sidings' => $allSidings,
-            'section' => $section,
+            'section' => $resolved['section'],
             'filters' => [
-                'period' => $period,
-                'from' => $from->toDateString(),
-                'to' => $to->toDateString(),
-                'siding_ids' => $filteredSidingIds,
-                'power_plant' => $powerPlant,
-                'rake_number' => $rakeNumber,
-                'loader_id' => $loaderId,
-                'shift' => $shift,
-                'penalty_type' => $penaltyTypeId,
-                'daily_rake_date' => $dailyRakeDate->toDateString(),
-                'coal_transport_date' => $coalTransportDate->toDateString(),
-                'coal_stock_date' => $coalStockDate->toDateString(),
+                'period' => $resolved['period'],
+                'from' => $resolved['from']->toDateString(),
+                'to' => $resolved['to']->toDateString(),
+                'siding_ids' => $resolved['filteredSidingIds'],
+                'power_plant' => $resolved['powerPlant'],
+                'rake_number' => $resolved['rakeNumber'],
+                'loader_id' => $resolved['loaderId'],
+                'shift' => $resolved['shift'],
+                'penalty_type' => $resolved['penaltyTypeId'],
+                'daily_rake_date' => $resolved['dailyRakeDate']->toDateString(),
+                'coal_transport_date' => $resolved['coalTransportDate']->toDateString(),
             ],
             'filterOptions' => $filterOptions,
-            'kpis' => $this->buildKpis($filteredSidingIds, $from, $to, $filterContext),
-            'penaltyTrendDaily' => $this->buildPenaltyTrendDaily($filteredSidingIds, $from, $to, $filterContext),
-            'penaltyByType' => $this->buildPenaltyByType($filteredSidingIds, $from, $to, $filterContext),
-            'penaltyBySiding' => $this->buildPenaltyBySiding($filteredSidingIds, $from, $to, $filterContext),
-            'alerts' => $this->buildAlerts($filteredSidingIds),
-            'liveRakeStatus' => $this->buildLiveRakeStatus($filteredSidingIds, $filterContext),
-            'dailyRakeDetails' => $this->buildDailyRakeDetails($filteredSidingIds, $dailyRakeDate),
-            'coalTransportReport' => $this->buildCoalTransportReport($filteredSidingIds, $coalTransportDate, $filterContext['shift'] ?? null),
-            'truckReceiptTrend' => $this->buildTruckReceiptTrend($filteredSidingIds, $filterContext),
-            'shiftWiseVehicleReceipt' => $this->buildShiftWiseVehicleReceipt($filteredSidingIds, $filterContext['shift'] ?? null),
-            // 'stockGauge' => $this->buildStockGauge($filteredSidingIds, $to), // hidden for now
-            'predictedVsActualPenalty' => $this->buildPredictedVsActualPenalty($filteredSidingIds, $from, $to, $filterContext),
-            'yesterdayPredictedPenalties' => $this->buildYesterdayPredictedPenalties($allSidingIds),
-            'sidingWiseMonthly' => $this->buildSidingWiseMonthly($filteredSidingIds, $from, $to),
-            'sidingRadar' => $this->buildSidingRadar($filteredSidingIds, $from, $to),
-            'sidingPerformance' => $this->buildSidingPerformance($filteredSidingIds, $from, $to, $filterContext),
-            'sidingStocks' => $this->buildSidingStocks($filteredSidingIds, $from, $to, $coalStockDate),
-            'dateWiseDispatch' => $this->buildDateWiseDispatch($filteredSidingIds, $from, $to),
-            'rakePerformance' => $this->buildRakePerformance($filteredSidingIds, $from, $to, $filterContext),
-            'loaderOverloadTrends' => $this->buildLoaderOverloadTrends($filteredSidingIds, $from, $to, $filterContext),
-            'powerPlantDispatch' => $this->buildPowerPlantDispatch($filteredSidingIds, $from, $to, $filterContext),
+            'kpis' => $this->buildKpis($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
+            'penaltyTrendDaily' => $this->buildPenaltyTrendDaily($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
+            'penaltyByType' => $this->buildPenaltyByType($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
+            'penaltyBySiding' => $this->buildPenaltyBySiding($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
+            'alerts' => $this->buildAlerts($resolved['filteredSidingIds']),
+            'liveRakeStatus' => $this->buildLiveRakeStatus($resolved['filteredSidingIds'], $resolved['filterContext']),
+            'dailyRakeDetails' => $this->buildDailyRakeDetails($resolved['filteredSidingIds'], $resolved['dailyRakeDate']),
+            'coalTransportReport' => $this->buildCoalTransportReport($resolved['filteredSidingIds'], $resolved['coalTransportDate'], $resolved['filterContext']['shift'] ?? null),
+            'truckReceiptTrend' => $this->buildTruckReceiptTrend($resolved['filteredSidingIds'], $resolved['filterContext']),
+            'shiftWiseVehicleReceipt' => $this->buildShiftWiseVehicleReceipt($resolved['filteredSidingIds'], $resolved['filterContext']['shift'] ?? null),
+            // 'stockGauge' => $this->buildStockGauge($resolved['filteredSidingIds'], $resolved['to']), // hidden for now
+            'predictedVsActualPenalty' => $this->buildPredictedVsActualPenalty($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
+            'yesterdayPredictedPenalties' => $this->buildYesterdayPredictedPenalties($resolved['allSidingIds']),
+            'sidingWiseMonthly' => $this->buildSidingWiseMonthly($resolved['filteredSidingIds'], $resolved['from'], $resolved['to']),
+            'sidingRadar' => $this->buildSidingRadar($resolved['filteredSidingIds'], $resolved['from'], $resolved['to']),
+            'sidingPerformance' => $this->buildSidingPerformance($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
+            'sidingStocks' => $this->buildSidingStocks($resolved['filteredSidingIds'], $resolved['from'], $resolved['to']),
+            'dateWiseDispatch' => $this->buildDateWiseDispatch($resolved['filteredSidingIds'], $resolved['from'], $resolved['to']),
+            'rakePerformance' => $this->buildRakePerformance($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
+            'loaderOverloadTrends' => $this->buildLoaderOverloadTrends($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
+            'powerPlantDispatch' => $this->buildPowerPlantDispatch($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
         ]);
-    }
-
-    /**
-     * Resolve date range from request. For GET/dashboard, from/to come from query string when period=custom.
-     *
-     * @return array{0: CarbonInterface, 1: CarbonInterface}
-     */
-    private function resolveDateRange(Request $request): array
-    {
-        $period = (string) $request->input('period', 'today');
-        $tz = config('app.timezone', 'UTC');
-        $to = now($tz)->endOfDay();
-
-        $from = match ($period) {
-            'today' => now($tz)->startOfDay(),
-            'week' => now($tz)->startOfWeek(),
-            'month' => now($tz)->startOfMonth(),
-            'quarter' => now($tz)->startOfQuarter(),
-            'year' => now($tz)->startOfYear(),
-            'custom' => $this->parseRequestDate($request, 'from', $tz) ?? now($tz)->startOfMonth(),
-            default => now($tz)->startOfMonth(),
-        };
-
-        if ($period === 'custom') {
-            $parsedTo = $this->parseRequestDate($request, 'to', $tz);
-            if ($parsedTo !== null) {
-                $to = $parsedTo->copy()->endOfDay();
-            }
-        }
-
-        return [$from, $to];
-    }
-
-    /**
-     * Parse a date from request (query or input) in the given timezone.
-     */
-    private function parseRequestDate(Request $request, string $key, string $tz): ?Carbon
-    {
-        $value = $request->query($key) ?? $request->input($key);
-        if ($value === null || $value === '') {
-            return null;
-        }
-        if ($value instanceof CarbonInterface) {
-            return Carbon::parse($value->format('Y-m-d'), $tz)->startOfDay();
-        }
-
-        return Carbon::parse($value, $tz)->startOfDay();
-    }
-
-    /**
-     * Single date for Daily Rake Details section (default: yesterday).
-     */
-    private function parseDailyRakeDate(Request $request): CarbonInterface
-    {
-        $tz = config('app.timezone', 'UTC');
-        $parsed = $this->parseRequestDate($request, 'daily_rake_date', $tz);
-
-        return $parsed ?? now($tz)->subDay()->startOfDay();
-    }
-
-    /**
-     * Single date for Coal Transport Report section only (default: yesterday). Does not affect Daily Rake or any other section.
-     */
-    private function parseCoalTransportDate(Request $request): CarbonInterface
-    {
-        $tz = config('app.timezone', 'UTC');
-        $parsed = $this->parseRequestDate($request, 'coal_transport_date', $tz);
-
-        return $parsed ?? now($tz)->subDay()->startOfDay();
-    }
-
-    /**
-     * Single date for Coal Stock section — stock "as of" this date (default: today).
-     */
-    private function parseCoalStockDate(Request $request): CarbonInterface
-    {
-        $tz = config('app.timezone', 'UTC');
-        $parsed = $this->parseRequestDate($request, 'coal_stock_date', $tz);
-
-        return $parsed ?? now($tz)->startOfDay();
-    }
-
-    /**
-     * SQL fragment for date-only range (whole days) in app timezone. Use with bindings: [$from->toDateString(), $to->toDateString()].
-     *
-     * @param  bool  $columnIsPostgresDate  When true and driver is pgsql, the column is a PostgreSQL date type (calendar only). The
-     *                                      AT TIME ZONE UTC → app pattern must not be used — it shifts calendar days (e.g. 19th → 18th in IST).
-     */
-    private function dateOnlyBetweenSql(string $column, bool $columnIsPostgresDate = false): string
-    {
-        $driver = DB::getDriverName();
-
-        if ($driver === 'pgsql') {
-            if ($columnIsPostgresDate) {
-                return "({$column})::date BETWEEN ? AND ?";
-            }
-
-            $tz = config('app.timezone', 'UTC');
-            $tzEscaped = str_replace("'", "''", $tz);
-
-            return "(({$column} AT TIME ZONE 'UTC' AT TIME ZONE '{$tzEscaped}')::date) BETWEEN ? AND ?";
-        }
-
-        return "DATE({$column}) BETWEEN ? AND ?";
-    }
-
-    /**
-     * SQL fragment for rake "business date" in range: use loading_date when set, else created_at (app timezone).
-     * Use with bindings: [$fromDate, $toDate]. Table prefix e.g. "rakes" for rakes.loading_date / rakes.created_at.
-     */
-    private function rakeBusinessDateBetweenSql(string $tablePrefix = 'rakes'): string
-    {
-        $driver = DB::getDriverName();
-        $loadingDate = "{$tablePrefix}.loading_date";
-        $createdAt = "{$tablePrefix}.created_at";
-
-        if ($driver === 'pgsql') {
-            $tz = config('app.timezone', 'UTC');
-            $tzEscaped = str_replace("'", "''", $tz);
-            $createdAtDate = "(({$createdAt} AT TIME ZONE 'UTC' AT TIME ZONE '{$tzEscaped}')::date)";
-
-            return "(COALESCE({$loadingDate}, {$createdAtDate}) BETWEEN ? AND ?)";
-        }
-
-        return "COALESCE(DATE({$loadingDate}), DATE({$createdAt})) BETWEEN ? AND ?";
     }
 
     /**
@@ -284,7 +109,7 @@ final class ExecutiveDashboardController extends Controller
      * @param  array<int>  $sidingIds
      * @return array{powerPlants: array<int, array{value: string, label: string}>, loaders: array<int, array{id: int, name: string, siding_name: string}>, shifts: array<int, array{value: string, label: string}>}
      */
-    private function buildFilterOptions(array $sidingIds): array
+    public function buildFilterOptions(array $sidingIds): array
     {
         $powerPlants = [];
         if ($sidingIds !== []) {
@@ -340,25 +165,6 @@ final class ExecutiveDashboardController extends Controller
     }
 
     /**
-     * Rake IDs matching siding + optional rake_number and power_plant filters (no date).
-     *
-     * @param  array<int>  $sidingIds
-     * @return array<int>
-     */
-    private function getFilteredRakeIds(array $sidingIds, array $filterContext): array
-    {
-        $q = Rake::query()->whereIn('siding_id', $sidingIds);
-        if (! empty($filterContext['rake_number'])) {
-            $q->where('rake_number', 'like', '%'.$filterContext['rake_number'].'%');
-        }
-        if (! empty($filterContext['power_plant'])) {
-            $q->whereIn('id', RakeWeighment::query()->where('to_station', $filterContext['power_plant'])->select('rake_id'));
-        }
-
-        return $q->pluck('id')->all();
-    }
-
-    /**
      * Top KPI tiles for Executive Overview (PDF).
      *
      * KPIs for the selected date range ($from/$to). Rake-based metrics use loading_date (business date).
@@ -367,7 +173,7 @@ final class ExecutiveDashboardController extends Controller
      * @param  array{period: string, power_plant: string|null, rake_number: string|null, loader_id: int|null, shift: string|null}  $filterContext
      * @return array{rakesDispatchedToday: int, coalDispatchedToday: float, totalPenaltyThisMonth: float, predictedPenaltyRisk: float, avgLoadingTimeMinutes: float|null, trucksReceivedToday: int}
      */
-    private function buildKpis(array $sidingIds, CarbonInterface $from, CarbonInterface $to, array $filterContext = []): array
+    public function buildKpis(array $sidingIds, CarbonInterface $from, CarbonInterface $to, array $filterContext = []): array
     {
         $from = Carbon::parse($from)->startOfDay();
         $to = Carbon::parse($to)->endOfDay();
@@ -457,7 +263,7 @@ final class ExecutiveDashboardController extends Controller
      * @param  array<int>  $sidingIds
      * @return array<string, mixed>
      */
-    private function buildSummary(array $sidingIds): array
+    public function buildSummary(array $sidingIds): array
     {
         if ($sidingIds === []) {
             return [
@@ -518,7 +324,7 @@ final class ExecutiveDashboardController extends Controller
      * @param  array{period: string, power_plant: string|null, rake_number: string|null, loader_id: int|null, shift: string|null}  $filterContext
      * @return array<int, array{date: string, total: float, label: string}>
      */
-    private function buildPenaltyTrendDaily(array $sidingIds, CarbonInterface $from, CarbonInterface $to, array $filterContext = []): array
+    public function buildPenaltyTrendDaily(array $sidingIds, CarbonInterface $from, CarbonInterface $to, array $filterContext = []): array
     {
 
         $start = Carbon::parse($from)->startOfDay();
@@ -612,7 +418,7 @@ final class ExecutiveDashboardController extends Controller
      * @param  array<int>|null  $rakeIds
      * @return array<int, array{date: string, label: string, total: float}>
      */
-    private function buildPenaltyTrendMonthly(array $sidingIds, Carbon $start, Carbon $end, ?array $rakeIds, string $driver, string $tz): array
+    public function buildPenaltyTrendMonthly(array $sidingIds, Carbon $start, Carbon $end, ?array $rakeIds, string $driver, string $tz): array
     {
         $months = [];
         $cursor = $start->copy()->startOfMonth();
@@ -677,7 +483,7 @@ final class ExecutiveDashboardController extends Controller
      * @param  array<int>  $sidingIds
      * @return array<int, array{siding_id: int, siding_name: string, rakes: array<int, array{rake_id: int, rake_number: string, total_penalty: float, penalties: array<int, array{type_code: string, type_name: string, amount: float}>}>}>
      */
-    private function buildYesterdayPredictedPenalties(array $sidingIds): array
+    public function buildYesterdayPredictedPenalties(array $sidingIds): array
     {
         if ($sidingIds === []) {
             return [];
@@ -761,12 +567,12 @@ final class ExecutiveDashboardController extends Controller
     /**
      * Siding stock from stock_ledger only (no date filter).
      * Receipts (daily_vehicle_entry_id) increase stock; dispatches (rake_id) decrease it.
-     * Stock = latest ledger row's closing_balance_mt per siding (as of $asOfDate when provided).
+     * Stock = latest ledger row's closing_balance_mt per siding as of the current request time (live).
      *
      * @param  array<int>  $sidingIds
      * @return array<int, array{siding_id: int, opening_balance_mt: float, closing_balance_mt: float, total_rakes: int, received_mt: float, dispatched_mt: float}>
      */
-    private function buildSidingStocks(array $sidingIds, CarbonInterface $from, CarbonInterface $to, CarbonInterface $asOfDate): array
+    public function buildSidingStocks(array $sidingIds, CarbonInterface $from, CarbonInterface $to): array
     {
         if ($sidingIds === []) {
             return [];
@@ -774,11 +580,11 @@ final class ExecutiveDashboardController extends Controller
 
         $fromDate = $from->toDateString();
         $toDate = $to->toDateString();
-        $asOfEnd = $asOfDate->copy()->endOfDay();
+        $asOf = now();
 
         $latestLedgerIds = StockLedger::query()
             ->whereIn('siding_id', $sidingIds)
-            ->where('created_at', '<=', $asOfEnd)
+            ->where('created_at', '<=', $asOf)
             ->selectRaw('max(id) as id')
             ->groupBy('siding_id')
             ->pluck('id')
@@ -841,7 +647,7 @@ final class ExecutiveDashboardController extends Controller
      * @param  array<int>  $sidingIds
      * @return array<int, array<string, mixed>>
      */
-    private function buildActiveRakes(array $sidingIds): array
+    public function buildActiveRakes(array $sidingIds): array
     {
         if ($sidingIds === []) {
             return [];
@@ -878,7 +684,7 @@ final class ExecutiveDashboardController extends Controller
      * @param  array<int>  $sidingIds
      * @return array<int, array{id: int, type: string, title: string, severity: string, rake_id: int|null, siding_id: int|null, created_at: string}>
      */
-    private function buildAlerts(array $sidingIds): array
+    public function buildAlerts(array $sidingIds): array
     {
         if ($sidingIds === []) {
             return [];
@@ -915,7 +721,7 @@ final class ExecutiveDashboardController extends Controller
      * @param  array{power_plant: string|null, rake_number: string|null, loader_id: int|null, shift: string|null}  $filterContext
      * @return array<int, array{rake_number: string, siding_name: string, state: string, workflow_steps: array{txr_done: bool, wagon_loading_done: bool, guard_done: bool, weighment_done: bool, rr_done: bool}, time_elapsed: string, risk: string}>
      */
-    private function buildLiveRakeStatus(array $sidingIds, array $filterContext = []): array
+    public function buildLiveRakeStatus(array $sidingIds, array $filterContext = []): array
     {
         if ($sidingIds === []) {
             return [];
@@ -994,7 +800,7 @@ final class ExecutiveDashboardController extends Controller
      * @param  array<int>  $sidingIds
      * @return array{date: string, rows: array<int, array{sl_no: int, siding_name: string, day_rakes: int, day_qty: float, month_rakes: int, month_qty: float, rake_day_avg: float, remarks: string}>, totals: array{day_rakes: int, day_qty: float, month_rakes: int, month_qty: float, rake_day_avg: float}}
      */
-    private function buildDailyRakeDetails(array $sidingIds, CarbonInterface $date): array
+    public function buildDailyRakeDetails(array $sidingIds, CarbonInterface $date): array
     {
         $dateStr = $date->toDateString();
         $monthStart = $date->copy()->startOfMonth()->toDateString();
@@ -1083,7 +889,7 @@ final class ExecutiveDashboardController extends Controller
      * @param  array{power_plant: string|null, rake_number: string|null, loader_id: int|null, shift: string|null}  $filterContext
      * @return array<int, array{hour: string, label: string, count: int}>
      */
-    private function buildTruckReceiptTrend(array $sidingIds, array $filterContext = []): array
+    public function buildTruckReceiptTrend(array $sidingIds, array $filterContext = []): array
     {
         $hours = [];
         for ($h = 0; $h < 24; $h++) {
@@ -1134,7 +940,7 @@ final class ExecutiveDashboardController extends Controller
      * @param  string|null  $shiftFilter  '1'|'2'|'3' to show one shift, null for all
      * @return array<int, array{shift_label: string, ...array<string, int>}>
      */
-    private function buildShiftWiseVehicleReceipt(array $sidingIds, ?string $shiftFilter): array
+    public function buildShiftWiseVehicleReceipt(array $sidingIds, ?string $shiftFilter): array
     {
         if ($sidingIds === []) {
             return [];
@@ -1198,7 +1004,7 @@ final class ExecutiveDashboardController extends Controller
      * @param  string|null  $shiftFilter  '1'|'2'|'3' to show one shift, null for all
      * @return array{date: string, sidings: array<int, array{id: int, name: string}>, rows: array<int, array{sl_no: int, shift_label: string, siding_metrics: array<int, array{siding_name: string, trips: int, qty: float}>, total_trips: int, total_qty: float}>, totals: array{siding_metrics: array<int, array{siding_name: string, trips: int, qty: float}>, total_trips: int, total_qty: float}}
      */
-    private function buildCoalTransportReport(array $sidingIds, CarbonInterface $date, ?string $shiftFilter): array
+    public function buildCoalTransportReport(array $sidingIds, CarbonInterface $date, ?string $shiftFilter): array
     {
         $dateStr = $date->toDateString();
         if ($sidingIds === []) {
@@ -1303,7 +1109,7 @@ final class ExecutiveDashboardController extends Controller
      * @param  array<int>  $sidingIds
      * @return array<int, array{siding_id: int, siding_name: string, stock_available_mt: float, rake_required_mt: float, status: string}>
      */
-    private function buildStockGauge(array $sidingIds, CarbonInterface $to): array
+    public function buildStockGauge(array $sidingIds, CarbonInterface $to): array
     {
         if ($sidingIds === []) {
             return [];
@@ -1355,7 +1161,7 @@ final class ExecutiveDashboardController extends Controller
      * @param  array{power_plant: string|null, rake_number: string|null, loader_id: int|null, shift: string|null, penalty_type_id: int|null}  $filterContext
      * @return array{predicted: float, actual: float, bySiding: array<int, array{name: string, predicted: float, actual: float}>}
      */
-    private function buildPredictedVsActualPenalty(array $sidingIds, CarbonInterface $from, CarbonInterface $to, array $filterContext = []): array
+    public function buildPredictedVsActualPenalty(array $sidingIds, CarbonInterface $from, CarbonInterface $to, array $filterContext = []): array
     {
         if ($sidingIds === []) {
             return ['predicted' => 0.0, 'actual' => 0.0, 'bySiding' => []];
@@ -1461,7 +1267,7 @@ final class ExecutiveDashboardController extends Controller
      * @param  array<int>  $sidingIds
      * @return array<int, array{month: string, total: float, count: int}>
      */
-    private function buildPenaltyChartData(array $sidingIds): array
+    public function buildPenaltyChartData(array $sidingIds): array
     {
         $months = [];
         for ($i = 11; $i >= 0; $i--) {
@@ -1507,7 +1313,7 @@ final class ExecutiveDashboardController extends Controller
      * @param  array<int>  $sidingIds
      * @return array<int, array{name: string, value: float}>
      */
-    private function buildPenaltyByType(array $sidingIds, CarbonInterface $from, CarbonInterface $to, array $filterContext = []): array
+    public function buildPenaltyByType(array $sidingIds, CarbonInterface $from, CarbonInterface $to, array $filterContext = []): array
     {
         if ($sidingIds === []) {
             return [];
@@ -1561,7 +1367,7 @@ final class ExecutiveDashboardController extends Controller
      * @param  array<int>  $sidingIds
      * @return array<int, array{name: string, total: float}>
      */
-    private function buildPenaltyBySiding(array $sidingIds, CarbonInterface $from, CarbonInterface $to, array $filterContext = []): array
+    public function buildPenaltyBySiding(array $sidingIds, CarbonInterface $from, CarbonInterface $to, array $filterContext = []): array
     {
         if ($sidingIds === []) {
             return [];
@@ -1634,7 +1440,7 @@ final class ExecutiveDashboardController extends Controller
      * @param  array<int>  $sidingIds
      * @return array{rakes_within_free_time: int, rakes_with_penalties: int, money_saved: float, money_lost: float}
      */
-    private function buildCostAvoidance(array $sidingIds): array
+    public function buildCostAvoidance(array $sidingIds): array
     {
         if ($sidingIds === []) {
             return ['rakes_within_free_time' => 0, 'rakes_with_penalties' => 0, 'money_saved' => 0, 'money_lost' => 0];
@@ -1682,7 +1488,7 @@ final class ExecutiveDashboardController extends Controller
      * @param  array<int>  $sidingIds
      * @return array{ytd_total: float, projected_annual: float, cost_per_rake: float, worst_siding: string|null, trend_direction: string}
      */
-    private function buildFinancialImpact(array $sidingIds): array
+    public function buildFinancialImpact(array $sidingIds): array
     {
         if ($sidingIds === []) {
             return ['ytd_total' => 0, 'projected_annual' => 0, 'cost_per_rake' => 0, 'worst_siding' => null, 'trend_direction' => 'flat'];
@@ -1747,7 +1553,7 @@ final class ExecutiveDashboardController extends Controller
      * @param  array<int>  $sidingIds
      * @return array<int, array{name: string, value: int}>
      */
-    private function buildRakeStateChart(array $sidingIds): array
+    public function buildRakeStateChart(array $sidingIds): array
     {
         if ($sidingIds === []) {
             return [];
@@ -1773,7 +1579,7 @@ final class ExecutiveDashboardController extends Controller
      * @param  array<int>  $sidingIds
      * @return array<int, array{name: string, value: int}>
      */
-    private function buildIndentPipeline(array $sidingIds): array
+    public function buildIndentPipeline(array $sidingIds): array
     {
         if ($sidingIds === []) {
             return [];
@@ -1799,7 +1605,7 @@ final class ExecutiveDashboardController extends Controller
      * @param  array<int>  $sidingIds
      * @return array<int, array{name: string, value: float, count: int}>
      */
-    private function buildPenaltyStatusBreakdown(array $sidingIds): array
+    public function buildPenaltyStatusBreakdown(array $sidingIds): array
     {
         if ($sidingIds === []) {
             return [];
@@ -1827,7 +1633,7 @@ final class ExecutiveDashboardController extends Controller
      * @param  array<int>  $sidingIds
      * @return array<int, array{name: string, value: float, count: int}>
      */
-    private function buildResponsiblePartyBreakdown(array $sidingIds): array
+    public function buildResponsiblePartyBreakdown(array $sidingIds): array
     {
         if ($sidingIds === []) {
             return [];
@@ -1857,7 +1663,7 @@ final class ExecutiveDashboardController extends Controller
      * @param  array{period: string, power_plant: string|null, rake_number: string|null, loader_id: int|null, shift: string|null}  $filterContext
      * @return array<int, array{name: string, rakes: int, penalties: int, penalty_amount: float, penalty_rate: float}>
      */
-    private function buildSidingPerformance(array $sidingIds, CarbonInterface $from, CarbonInterface $to, array $filterContext = []): array
+    public function buildSidingPerformance(array $sidingIds, CarbonInterface $from, CarbonInterface $to, array $filterContext = []): array
     {
         if ($sidingIds === []) {
             return [];
@@ -1939,7 +1745,7 @@ final class ExecutiveDashboardController extends Controller
      * @param  array<int>  $sidingIds
      * @return array{potential_savings: float, undisputed_count: int}
      */
-    private function buildDisputeOpportunity(array $sidingIds): array
+    public function buildDisputeOpportunity(array $sidingIds): array
     {
         if ($sidingIds === []) {
             return ['potential_savings' => 0, 'undisputed_count' => 0];
@@ -1975,7 +1781,7 @@ final class ExecutiveDashboardController extends Controller
      * @param  array<int>  $sidingIds
      * @return array{sidingNames: array<int, string>, dates: list<array<string, mixed>>}
      */
-    private function buildDateWiseDispatch(array $sidingIds, CarbonInterface $from, CarbonInterface $to): array
+    public function buildDateWiseDispatch(array $sidingIds, CarbonInterface $from, CarbonInterface $to): array
     {
         $sidingMap = Siding::query()
             ->whereIn('id', $sidingIds)
@@ -2049,7 +1855,7 @@ final class ExecutiveDashboardController extends Controller
      * @param  array{power_plant: string|null, rake_number: string|null, loader_id: int|null, shift: string|null}  $filterContext
      * @return array<int, array<string, mixed>>
      */
-    private function buildRakePerformance(array $sidingIds, CarbonInterface $from, CarbonInterface $to, array $filterContext = []): array
+    public function buildRakePerformance(array $sidingIds, CarbonInterface $from, CarbonInterface $to, array $filterContext = []): array
     {
         if ($sidingIds === []) {
             return [];
@@ -2154,7 +1960,7 @@ final class ExecutiveDashboardController extends Controller
      * @param  array{power_plant: string|null, rake_number: string|null, loader_id: int|null, shift: string|null}  $filterContext
      * @return array{loaders: array<int, array{id: int, name: string, siding: string}>, monthly: array<int, array<string, mixed>>}
      */
-    private function buildLoaderOverloadTrends(array $sidingIds, CarbonInterface $from, CarbonInterface $to, array $filterContext = []): array
+    public function buildLoaderOverloadTrends(array $sidingIds, CarbonInterface $from, CarbonInterface $to, array $filterContext = []): array
     {
         if ($sidingIds === []) {
             return ['loaders' => [], 'monthly' => []];
@@ -2233,7 +2039,7 @@ final class ExecutiveDashboardController extends Controller
      * @param  array{power_plant?: string|null}|array<string, mixed>  $filterContext
      * @return array<int, array{name: string, rakes: int, weight_mt: float, sidings: array<string, array{rakes: int, weight_mt: float}>}>
      */
-    private function buildPowerPlantDispatch(array $sidingIds, CarbonInterface $from, CarbonInterface $to, array $filterContext = []): array
+    public function buildPowerPlantDispatch(array $sidingIds, CarbonInterface $from, CarbonInterface $to, array $filterContext = []): array
     {
         if ($sidingIds === []) {
             return [];
@@ -2300,7 +2106,7 @@ final class ExecutiveDashboardController extends Controller
      * @param  array<int>  $sidingIds
      * @return array<int, array<string, mixed>>
      */
-    private function buildSidingWiseMonthly(array $sidingIds, CarbonInterface $from, CarbonInterface $to): array
+    public function buildSidingWiseMonthly(array $sidingIds, CarbonInterface $from, CarbonInterface $to): array
     {
         if ($sidingIds === []) {
             return [];
@@ -2362,7 +2168,7 @@ final class ExecutiveDashboardController extends Controller
      * @param  array<int>  $sidingIds
      * @return array<string, array<int, array{name: string, rakes_dispatched: int, on_time_pct: float, vehicles: int, penalty_amount: float}>>
      */
-    private function buildSidingRadar(array $sidingIds, CarbonInterface $from, CarbonInterface $to): array
+    public function buildSidingRadar(array $sidingIds, CarbonInterface $from, CarbonInterface $to): array
     {
         if ($sidingIds === []) {
             return ['sidings' => []];
@@ -2437,7 +2243,7 @@ final class ExecutiveDashboardController extends Controller
      * @param  array<int>  $sidingIds
      * @return array<int, array{name: string, value: float}>
      */
-    private function buildLoaderGauges(array $sidingIds, CarbonInterface $from, CarbonInterface $to): array
+    public function buildLoaderGauges(array $sidingIds, CarbonInterface $from, CarbonInterface $to): array
     {
         if ($sidingIds === []) {
             return [];
@@ -2480,5 +2286,138 @@ final class ExecutiveDashboardController extends Controller
                 'value' => $rate,
             ];
         })->values()->all();
+    }
+
+    /**
+     * Resolve date range from request. For GET/dashboard, from/to come from query string when period=custom.
+     *
+     * @return array{0: CarbonInterface, 1: CarbonInterface}
+     */
+    private function resolveDateRange(Request $request): array
+    {
+        $period = (string) $request->input('period', 'today');
+        $tz = config('app.timezone', 'UTC');
+        $to = now($tz)->endOfDay();
+
+        $from = match ($period) {
+            'today' => now($tz)->startOfDay(),
+            'week' => now($tz)->startOfWeek(),
+            'month' => now($tz)->startOfMonth(),
+            'quarter' => now($tz)->startOfQuarter(),
+            'year' => now($tz)->startOfYear(),
+            'custom' => $this->parseRequestDate($request, 'from', $tz) ?? now($tz)->startOfMonth(),
+            default => now($tz)->startOfMonth(),
+        };
+
+        if ($period === 'custom') {
+            $parsedTo = $this->parseRequestDate($request, 'to', $tz);
+            if ($parsedTo !== null) {
+                $to = $parsedTo->copy()->endOfDay();
+            }
+        }
+
+        return [$from, $to];
+    }
+
+    /**
+     * Parse a date from request (query or input) in the given timezone.
+     */
+    private function parseRequestDate(Request $request, string $key, string $tz): ?Carbon
+    {
+        $value = $request->query($key) ?? $request->input($key);
+        if ($value === null || $value === '') {
+            return null;
+        }
+        if ($value instanceof CarbonInterface) {
+            return Carbon::parse($value->format('Y-m-d'), $tz)->startOfDay();
+        }
+
+        return Carbon::parse($value, $tz)->startOfDay();
+    }
+
+    /**
+     * Single date for Daily Rake Details section (default: yesterday).
+     */
+    private function parseDailyRakeDate(Request $request): CarbonInterface
+    {
+        $tz = config('app.timezone', 'UTC');
+        $parsed = $this->parseRequestDate($request, 'daily_rake_date', $tz);
+
+        return $parsed ?? now($tz)->subDay()->startOfDay();
+    }
+
+    /**
+     * Single date for Coal Transport Report section only (default: yesterday). Does not affect Daily Rake or any other section.
+     */
+    private function parseCoalTransportDate(Request $request): CarbonInterface
+    {
+        $tz = config('app.timezone', 'UTC');
+        $parsed = $this->parseRequestDate($request, 'coal_transport_date', $tz);
+
+        return $parsed ?? now($tz)->subDay()->startOfDay();
+    }
+
+    /**
+     * SQL fragment for date-only range (whole days) in app timezone. Use with bindings: [$from->toDateString(), $to->toDateString()].
+     *
+     * @param  bool  $columnIsPostgresDate  When true and driver is pgsql, the column is a PostgreSQL date type (calendar only). The
+     *                                      AT TIME ZONE UTC → app pattern must not be used — it shifts calendar days (e.g. 19th → 18th in IST).
+     */
+    private function dateOnlyBetweenSql(string $column, bool $columnIsPostgresDate = false): string
+    {
+        $driver = DB::getDriverName();
+
+        if ($driver === 'pgsql') {
+            if ($columnIsPostgresDate) {
+                return "({$column})::date BETWEEN ? AND ?";
+            }
+
+            $tz = config('app.timezone', 'UTC');
+            $tzEscaped = str_replace("'", "''", $tz);
+
+            return "(({$column} AT TIME ZONE 'UTC' AT TIME ZONE '{$tzEscaped}')::date) BETWEEN ? AND ?";
+        }
+
+        return "DATE({$column}) BETWEEN ? AND ?";
+    }
+
+    /**
+     * SQL fragment for rake "business date" in range: use loading_date when set, else created_at (app timezone).
+     * Use with bindings: [$fromDate, $toDate]. Table prefix e.g. "rakes" for rakes.loading_date / rakes.created_at.
+     */
+    private function rakeBusinessDateBetweenSql(string $tablePrefix = 'rakes'): string
+    {
+        $driver = DB::getDriverName();
+        $loadingDate = "{$tablePrefix}.loading_date";
+        $createdAt = "{$tablePrefix}.created_at";
+
+        if ($driver === 'pgsql') {
+            $tz = config('app.timezone', 'UTC');
+            $tzEscaped = str_replace("'", "''", $tz);
+            $createdAtDate = "(({$createdAt} AT TIME ZONE 'UTC' AT TIME ZONE '{$tzEscaped}')::date)";
+
+            return "(COALESCE({$loadingDate}, {$createdAtDate}) BETWEEN ? AND ?)";
+        }
+
+        return "COALESCE(DATE({$loadingDate}), DATE({$createdAt})) BETWEEN ? AND ?";
+    }
+
+    /**
+     * Rake IDs matching siding + optional rake_number and power_plant filters (no date).
+     *
+     * @param  array<int>  $sidingIds
+     * @return array<int>
+     */
+    private function getFilteredRakeIds(array $sidingIds, array $filterContext): array
+    {
+        $q = Rake::query()->whereIn('siding_id', $sidingIds);
+        if (! empty($filterContext['rake_number'])) {
+            $q->where('rake_number', 'like', '%'.$filterContext['rake_number'].'%');
+        }
+        if (! empty($filterContext['power_plant'])) {
+            $q->whereIn('id', RakeWeighment::query()->where('to_station', $filterContext['power_plant'])->select('rake_id'));
+        }
+
+        return $q->pluck('id')->all();
     }
 }
