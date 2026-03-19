@@ -78,6 +78,7 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:60,1')->group(functio
         // Management dashboard (mobile)
         Route::prefix('dashboard')->name('dashboard.')->group(function (): void {
             Route::get('filter-options', [MobileDashboardController::class, 'filterOptions'])->name('filter-options');
+            Route::get('admin-kpis', [MobileDashboardController::class, 'adminKpis'])->name('admin-kpis');
             Route::get('executive-overview', [MobileDashboardController::class, 'executiveOverview'])->name('executive-overview');
             Route::get('operations', [MobileDashboardController::class, 'operations'])->name('operations');
             Route::get('penalty-control', [MobileDashboardController::class, 'penaltyControl'])->name('penalty-control');

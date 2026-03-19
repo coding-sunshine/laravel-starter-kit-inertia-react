@@ -52,6 +52,54 @@ final class MobileDashboardController extends Controller
     }
 
     /**
+     * Mobile-only KPIs for Admin/Superadmin dashboard (today only, IST).
+     *
+     * - Date is always today (`filters.date`); no period/from/to query params.
+     * - Superadmin: optional `siding_ids` / `siding_id` to narrow; default = all sidings.
+     * - Admin (and others): scoped to `users.siding_id` when set; else pivot-assigned sidings. Request siding params only intersect.
+     */
+    public function adminKpis(Request $request): JsonResponse
+    {
+        $sidingScope = $this->filters->resolveAdminKpiSidings($request);
+        $sidingIds = $sidingScope['filteredSidingIds'];
+
+        $tz = config('app.timezone', 'UTC');
+        $from = now($tz)->startOfDay();
+        $to = now($tz)->endOfDay();
+
+        $filterContext = [
+            'period' => 'today',
+            'power_plant' => null,
+            'rake_number' => null,
+            'loader_id' => null,
+            'shift' => null,
+            'penalty_type_id' => null,
+        ];
+
+        $kpis = $this->dashboard->buildKpis($sidingIds, $from, $to, $filterContext);
+        $activeRakes = $this->dashboard->buildLiveRakeStatus($sidingIds, $filterContext);
+        $sidingStocks = $this->dashboard->buildSidingStocks($sidingIds, $from, $to);
+
+        $coalBalanceMt = 0.0;
+        foreach ($sidingStocks as $stock) {
+            $coalBalanceMt += (float) ($stock['closing_balance_mt'] ?? 0);
+        }
+
+        return response()->json([
+            'filters' => [
+                'date' => $from->toDateString(),
+                'siding_ids' => array_values($sidingIds),
+            ],
+            'data' => [
+                'active_rakes' => count($activeRakes),
+                'coal_dispatched_mt' => (float) ($kpis['coalDispatchedToday'] ?? 0),
+                'coal_balance_mt' => $coalBalanceMt,
+                'penalty_risk' => (float) ($kpis['predictedPenaltyRisk'] ?? 0),
+            ],
+        ]);
+    }
+
+    /**
      * Same widgets as web "Executive overview" section, plus KPI strip and coal-stock cards (shown above all sections on web).
      */
     public function executiveOverview(Request $request): JsonResponse
@@ -140,14 +188,15 @@ final class MobileDashboardController extends Controller
     {
         $resolved = $this->filters->resolve($request);
 
-        $trends = $this->dashboard->buildLoaderOverloadTrends($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']);
-        $gauges = $this->dashboard->buildLoaderGauges($resolved['filteredSidingIds'], $resolved['from'], $resolved['to']);
-
         return response()->json([
             'filters' => $this->serializeFilters($resolved),
             'data' => [
-                'trends' => $trends,
-                'gauges' => $gauges,
+                'loaderOverloadTrends' => $this->dashboard->buildLoaderOverloadTrends(
+                    $resolved['filteredSidingIds'],
+                    $resolved['from'],
+                    $resolved['to'],
+                    $resolved['filterContext'],
+                ),
             ],
         ]);
     }

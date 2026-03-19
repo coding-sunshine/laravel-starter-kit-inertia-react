@@ -44,19 +44,7 @@ final class DashboardFilterResolver
 
         [$from, $to] = $this->resolveDateRange($request);
 
-        $rawSidingIds = $request->has('siding_ids')
-            ? $request->input('siding_ids')
-            : ($request->has('siding_id') ? $request->input('siding_id') : null);
-
-        $parsedSidingIds = [];
-        if (is_string($rawSidingIds)) {
-            $parsedSidingIds = array_filter(
-                array_map('intval', preg_split('/\s*,\s*/', $rawSidingIds) ?: []),
-                static fn (int $v): bool => $v > 0,
-            );
-        } elseif ($rawSidingIds !== null) {
-            $parsedSidingIds = array_map('intval', (array) $rawSidingIds);
-        }
+        $parsedSidingIds = $this->parseRequestedSidingIds($request);
 
         $filteredSidingIds = $parsedSidingIds !== []
             ? array_values(array_intersect($allSidingIds, $parsedSidingIds))
@@ -103,6 +91,40 @@ final class DashboardFilterResolver
     }
 
     /**
+     * Siding scope for mobile admin KPIs (today-only dashboard).
+     *
+     * - Superadmin: all sidings; optional `siding_ids` / `siding_id` narrows the selection.
+     * - Other users: if `users.siding_id` is set, only that siding (request siding filter still intersects).
+     * - Otherwise: same as dashboard (`accessibleSidings` / `siding_user` pivot).
+     *
+     * @return array{allSidingIds: array<int>, filteredSidingIds: array<int>}
+     */
+    public function resolveAdminKpiSidings(Request $request): array
+    {
+        $user = $request->user();
+
+        if ($user->isSuperAdmin()) {
+            $allSidingIds = Siding::query()->pluck('id')->all();
+        } elseif ($user->siding_id !== null && (int) $user->siding_id > 0) {
+            $sid = (int) $user->siding_id;
+            $allSidingIds = Siding::query()->whereKey($sid)->exists() ? [$sid] : [];
+        } else {
+            $allSidingIds = $user->accessibleSidings()->get()->pluck('id')->all();
+        }
+
+        $parsedSidingIds = $this->parseRequestedSidingIds($request);
+
+        $filteredSidingIds = $parsedSidingIds !== []
+            ? array_values(array_intersect($allSidingIds, $parsedSidingIds))
+            : $allSidingIds;
+
+        return [
+            'allSidingIds' => $allSidingIds,
+            'filteredSidingIds' => $filteredSidingIds,
+        ];
+    }
+
+    /**
      * Re-expose the SQL helper so API can share logic if needed.
      */
     public function dateOnlyBetweenSql(string $column, bool $columnIsPostgresDate = false): string
@@ -121,6 +143,32 @@ final class DashboardFilterResolver
         }
 
         return "DATE({$column}) BETWEEN ? AND ?";
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function parseRequestedSidingIds(Request $request): array
+    {
+        $rawSidingIds = $request->has('siding_ids')
+            ? $request->input('siding_ids')
+            : ($request->has('siding_id') ? $request->input('siding_id') : null);
+
+        if ($rawSidingIds === null) {
+            return [];
+        }
+
+        if (is_string($rawSidingIds)) {
+            return array_values(array_filter(
+                array_map('intval', preg_split('/\s*,\s*/', $rawSidingIds) ?: []),
+                static fn (int $v): bool => $v > 0,
+            ));
+        }
+
+        return array_values(array_filter(
+            array_map('intval', (array) $rawSidingIds),
+            static fn (int $v): bool => $v > 0,
+        ));
     }
 
     /**
