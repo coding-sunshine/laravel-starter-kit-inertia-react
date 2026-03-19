@@ -36,7 +36,7 @@ final class RakeDataTable extends AbstractDataTable
 
     public static function fromModel(Rake $model): self
     {
-        $steps = self::computeWorkflowSteps($model);
+        $steps = self::workflowStepsForRake($model);
 
         return new self(
             id: $model->id,
@@ -139,6 +139,16 @@ final class RakeDataTable extends AbstractDataTable
     public static function tableAllowedSorts(): array
     {
         return ['rake_number', 'rake_type', 'wagon_count', 'state', 'placement_time'];
+    }
+
+    /**
+     * Workflow step completion flags (same logic as the rakes table progress column).
+     *
+     * @return array{txr_done: bool, wagon_loading_done: bool, guard_done: bool, weighment_done: bool, rr_done: bool}
+     */
+    public static function workflowStepsForRake(Rake $model): array
+    {
+        return self::computeWorkflowSteps($model);
     }
 
     /**

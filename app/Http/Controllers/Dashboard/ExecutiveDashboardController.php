@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Dashboard;
 
+use App\DataTables\RakeDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\Alert;
 use App\Models\AppliedPenalty;
@@ -35,12 +36,20 @@ use function in_array;
 final class ExecutiveDashboardController extends Controller
 {
     /** Minimum stock required for one rake (MT). */
-    private const STOCK_GAUGE_RAKE_REQUIREMENT_MT = 3800;
+    private const STOCK_GAUGE_RAKE_REQUIREMENT_MT = 3500;
+
+    /**
+     * Operational rakes shown on /rakes (excludes historical imports, RR snapshots, etc.).
+     * Aligned with {@see RakeDataTable}.
+     *
+     * @var list<string>
+     */
+    private const OPERATIONAL_RAKE_DATA_SOURCES = ['system', 'manual'];
 
     public function __invoke(Request $request): Response
     {
         $user = $request->user();
-        $period = $request->input('period', 'month');
+        $period = $request->input('period', 'today');
 
         // When period is not custom, ignore any from/to in the request so shared links or history don't show stale range.
         if ($period !== 'custom') {
@@ -137,7 +146,7 @@ final class ExecutiveDashboardController extends Controller
      */
     private function resolveDateRange(Request $request): array
     {
-        $period = (string) $request->input('period', 'month');
+        $period = (string) $request->input('period', 'today');
         $tz = config('app.timezone', 'UTC');
         $to = now($tz)->endOfDay();
 
@@ -212,12 +221,19 @@ final class ExecutiveDashboardController extends Controller
 
     /**
      * SQL fragment for date-only range (whole days) in app timezone. Use with bindings: [$from->toDateString(), $to->toDateString()].
+     *
+     * @param  bool  $columnIsPostgresDate  When true and driver is pgsql, the column is a PostgreSQL date type (calendar only). The
+     *                                      AT TIME ZONE UTC → app pattern must not be used — it shifts calendar days (e.g. 19th → 18th in IST).
      */
-    private function dateOnlyBetweenSql(string $column): string
+    private function dateOnlyBetweenSql(string $column, bool $columnIsPostgresDate = false): string
     {
         $driver = DB::getDriverName();
 
         if ($driver === 'pgsql') {
+            if ($columnIsPostgresDate) {
+                return "({$column})::date BETWEEN ? AND ?";
+            }
+
             $tz = config('app.timezone', 'UTC');
             $tzEscaped = str_replace("'", "''", $tz);
 
@@ -359,7 +375,7 @@ final class ExecutiveDashboardController extends Controller
         $rakeIdsInRange = Rake::query()
             ->whereIn('siding_id', $sidingIds)
             ->whereNotNull('loading_date')
-            ->whereRaw($this->dateOnlyBetweenSql('loading_date'), [$fromDate, $toDate]);
+            ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$fromDate, $toDate]);
         if (! empty($filterContext['rake_number'])) {
             $rakeIdsInRange->where('rake_number', 'like', '%'.$filterContext['rake_number'].'%');
         }
@@ -386,12 +402,12 @@ final class ExecutiveDashboardController extends Controller
             ->join('rakes', 'applied_penalties.rake_id', '=', 'rakes.id')
             ->whereIn('rakes.siding_id', $sidingIds)
             ->whereNotNull('rakes.loading_date')
-            ->whereRaw($this->dateOnlyBetweenSql('rakes.loading_date'), [$fromDate, $toDate])
+            ->whereRaw($this->dateOnlyBetweenSql('rakes.loading_date', true), [$fromDate, $toDate])
             ->sum(DB::raw('(applied_penalties.amount + (applied_penalties.amount * 0.05))'));
 
         $predictedPenaltyRisk = (float) PenaltyPrediction::query()
             ->whereIn('siding_id', $sidingIds)
-            ->whereRaw($this->dateOnlyBetweenSql('prediction_date'), [$fromDate, $toDate])
+            ->whereRaw($this->dateOnlyBetweenSql('prediction_date', true), [$fromDate, $toDate])
             ->sum('predicted_amount_max');
 
         $loadingMinutes = Rake::query()
@@ -399,7 +415,7 @@ final class ExecutiveDashboardController extends Controller
             ->whereNotNull('loading_start_time')
             ->whereNotNull('loading_end_time')
             ->whereNotNull('loading_date')
-            ->whereRaw($this->dateOnlyBetweenSql('loading_date'), [$fromDate, $toDate])
+            ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$fromDate, $toDate])
             ->get()
             ->map(fn (Rake $r): int => (int) $r->loading_start_time->diffInMinutes($r->loading_end_time));
 
@@ -543,7 +559,7 @@ final class ExecutiveDashboardController extends Controller
         $penaltyQuery = RrPenaltySnapshot::query()
             ->join('rakes', 'rr_penalty_snapshots.rake_id', '=', 'rakes.id')
             ->whereNotNull('rakes.loading_date')
-            ->whereRaw($this->dateOnlyBetweenSql('rakes.loading_date'), [$startDate, $endDate]);
+            ->whereRaw($this->dateOnlyBetweenSql('rakes.loading_date', true), [$startDate, $endDate]);
         if ($rakeIds !== null) {
             $penaltyQuery->whereIn('rr_penalty_snapshots.rake_id', $rakeIds);
         } else {
@@ -611,7 +627,7 @@ final class ExecutiveDashboardController extends Controller
         $penaltyQuery = RrPenaltySnapshot::query()
             ->join('rakes', 'rr_penalty_snapshots.rake_id', '=', 'rakes.id')
             ->whereNotNull('rakes.loading_date')
-            ->whereRaw($this->dateOnlyBetweenSql('rakes.loading_date'), [$startDate, $endDate]);
+            ->whereRaw($this->dateOnlyBetweenSql('rakes.loading_date', true), [$startDate, $endDate]);
         if ($rakeIds !== null) {
             $penaltyQuery->whereIn('rr_penalty_snapshots.rake_id', $rakeIds);
         } else {
@@ -874,11 +890,16 @@ final class ExecutiveDashboardController extends Controller
     }
 
     /**
-     * Live rake status: active rakes (not yet dispatched) with state and time elapsed.
+     * Live rake status: operational rakes still on the siding (pending, no weighment receipt yet).
+     *
+     * Workflow steps on the rake page are filled in when data exists; {@see Rake::$state} alone is not reliable.
+     * Business rule: once a {@see RakeWeighment} exists (receipt/slip captured), the rake is treated as dispatched
+     * from the siding for this widget. {@see self::OPERATIONAL_RAKE_DATA_SOURCES} matches the main rakes list (excludes historical).
+     * Risk compares {@see Rake::$loading_free_minutes} to the recorded window {@see Rake::$loading_start_time}→{@see Rake::$loading_end_time} (not “now”).
      *
      * @param  array<int>  $sidingIds
      * @param  array{power_plant: string|null, rake_number: string|null, loader_id: int|null, shift: string|null}  $filterContext
-     * @return array<int, array{rake_number: string, siding_name: string, state: string, time_elapsed: string, risk: string}>
+     * @return array<int, array{rake_number: string, siding_name: string, state: string, workflow_steps: array{txr_done: bool, wagon_loading_done: bool, guard_done: bool, weighment_done: bool, rr_done: bool}, time_elapsed: string, risk: string}>
      */
     private function buildLiveRakeStatus(array $sidingIds, array $filterContext = []): array
     {
@@ -887,42 +908,64 @@ final class ExecutiveDashboardController extends Controller
         }
 
         $rakeQuery = Rake::query()
-            ->with('siding:id,name')
+            ->with([
+                'siding:id,name',
+                'txr:id,rake_id,status',
+                'wagons:id,rake_id,is_unfit',
+                'wagonLoadings:id,rake_id,wagon_id,loaded_quantity_mt',
+                'guardInspections:id,rake_id,is_approved',
+                'rakeWeighments:id,rake_id,pdf_file_path,status',
+                'rrDocument:id,rake_id',
+            ])
             ->whereIn('siding_id', $sidingIds)
-            ->whereNull('dispatch_time')
-            ->whereNotNull('state');
+            ->where('state', 'pending')
+            ->where(function ($q): void {
+                $q->whereNull('data_source')
+                    ->orWhereIn('data_source', self::OPERATIONAL_RAKE_DATA_SOURCES);
+            })
+            ->whereDoesntHave('rakeWeighments');
         if (! empty($filterContext['rake_number'])) {
             $rakeQuery->where('rake_number', 'like', '%'.$filterContext['rake_number'].'%');
         }
-        if (! empty($filterContext['power_plant'])) {
-            $rakeQuery->whereIn('id', RakeWeighment::query()->where('to_station', $filterContext['power_plant'])->select('rake_id'));
-        }
+
         // Show only the most recent few rakes on the dashboard card.
         // Full list is available on the rakes index page.
         $rakes = $rakeQuery
             ->orderByDesc('placement_time')
+            ->orderByDesc('id')
             ->limit(5)
-            ->get(['id', 'rake_number', 'siding_id', 'state', 'placement_time', 'loading_start_time', 'loading_free_minutes']);
+            ->get(['id', 'rake_number', 'siding_id', 'state', 'placement_time', 'loading_start_time', 'loading_end_time', 'loading_free_minutes']);
 
         $list = [];
         foreach ($rakes as $rake) {
-            $elapsed = '—';
+            $loadingDuration = '—';
+            if ($rake->loading_start_time !== null && $rake->loading_end_time !== null) {
+                $loadMins = (int) $rake->loading_start_time->diffInMinutes($rake->loading_end_time);
+                $loadingDuration = $loadMins < 60
+                    ? "{$loadMins}m"
+                    : sprintf('%dh %dm', (int) floor($loadMins / 60), $loadMins % 60);
+            }
+
+            // Risk uses recorded loading window only (start → end), not wall-clock "now". Operators backfill times.
             $risk = 'normal';
-            $ref = $rake->loading_start_time ?? $rake->placement_time;
-            if ($ref) {
-                $mins = (int) $ref->diffInMinutes(now());
-                $elapsed = $mins < 60 ? "{$mins}m" : sprintf('%dh %dm', (int) floor($mins / 60), $mins % 60);
-                if ($rake->loading_free_minutes && $mins >= (int) $rake->loading_free_minutes) {
+            if ($rake->loading_start_time !== null
+                && $rake->loading_end_time !== null
+                && $rake->loading_free_minutes) {
+                $loadMinsForRisk = (int) $rake->loading_start_time->diffInMinutes($rake->loading_end_time);
+                $free = (int) $rake->loading_free_minutes;
+                if ($loadMinsForRisk >= $free) {
                     $risk = 'penalty_risk';
-                } elseif ($rake->loading_free_minutes && $mins >= (int) $rake->loading_free_minutes * 0.75) {
+                } elseif ($loadMinsForRisk >= (int) ($free * 0.75)) {
                     $risk = 'attention';
                 }
             }
+
             $list[] = [
                 'rake_number' => $rake->rake_number ?? "Rake {$rake->id}",
                 'siding_name' => $rake->siding?->name ?? '—',
                 'state' => $rake->state ?? '—',
-                'time_elapsed' => $elapsed,
+                'workflow_steps' => RakeDataTable::workflowStepsForRake($rake),
+                'time_elapsed' => $loadingDuration,
                 'risk' => $risk,
             ];
         }
@@ -962,7 +1005,7 @@ final class ExecutiveDashboardController extends Controller
             ->orderBy('name')
             ->get(['id', 'name']);
 
-        $daySql = $this->dateOnlyBetweenSql('loading_date');
+        $daySql = $this->dateOnlyBetweenSql('loading_date', true);
         $dayRows = Rake::query()
             ->whereIn('siding_id', $sidingIds)
             ->whereNotNull('loading_date')
@@ -1290,7 +1333,9 @@ final class ExecutiveDashboardController extends Controller
     }
 
     /**
-     * Predicted vs actual penalty for period, with per-siding breakdown for grouped bar chart.
+     * Applied vs RR snapshot penalty for period, with per-siding breakdown for grouped bar chart.
+     * "Predicted" series in the UI payload uses {@see AppliedPenalty} (sum of `amount` per siding via rake `loading_date`).
+     * "Actual" series uses {@see RrPenaltySnapshot} amounts (same date window on `rakes.loading_date`).
      *
      * @param  array<int>  $sidingIds
      * @param  array{power_plant: string|null, rake_number: string|null, loader_id: int|null, shift: string|null, penalty_type_id: int|null}  $filterContext
@@ -1305,23 +1350,45 @@ final class ExecutiveDashboardController extends Controller
         $fromDate = $from->toDateString();
         $toDate = $to->toDateString();
 
-        $predictedBySiding = PenaltyPrediction::query()
-            ->whereIn('siding_id', $sidingIds)
-            ->whereRaw($this->dateOnlyBetweenSql('prediction_date'), [$fromDate, $toDate])
-            ->selectRaw('siding_id, sum(predicted_amount_max) as total')
-            ->groupBy('siding_id')
-            ->get()
-            ->keyBy('siding_id');
-
         $rakeIds = null;
         if (! empty($filterContext['rake_number']) || ! empty($filterContext['power_plant'])) {
             $rakeIds = $this->getFilteredRakeIds($sidingIds, $filterContext);
         }
 
+        $appliedPenaltyBySidingQuery = function () use ($fromDate, $toDate, $filterContext): \Illuminate\Database\Eloquent\Builder {
+            $q = AppliedPenalty::query()
+                ->join('rakes', 'applied_penalties.rake_id', '=', 'rakes.id')
+                ->whereNotNull('rakes.loading_date')
+                ->whereRaw($this->dateOnlyBetweenSql('rakes.loading_date', true), [$fromDate, $toDate]);
+            if (! empty($filterContext['penalty_type_id'])) {
+                $q->where('applied_penalties.penalty_type_id', (int) $filterContext['penalty_type_id']);
+            }
+
+            return $q;
+        };
+
+        if ($rakeIds !== null) {
+            $predictedBySiding = $rakeIds === []
+                ? collect()
+                : $appliedPenaltyBySidingQuery()
+                    ->whereIn('rakes.id', $rakeIds)
+                    ->selectRaw('rakes.siding_id, sum(applied_penalties.amount) as total')
+                    ->groupBy('rakes.siding_id')
+                    ->get()
+                    ->keyBy('siding_id');
+        } else {
+            $predictedBySiding = $appliedPenaltyBySidingQuery()
+                ->whereIn('rakes.siding_id', $sidingIds)
+                ->selectRaw('rakes.siding_id, sum(applied_penalties.amount) as total')
+                ->groupBy('rakes.siding_id')
+                ->get()
+                ->keyBy('siding_id');
+        }
+
         $actualQuery = RrPenaltySnapshot::query()
             ->join('rakes', 'rr_penalty_snapshots.rake_id', '=', 'rakes.id')
             ->whereNotNull('rakes.loading_date')
-            ->whereRaw($this->dateOnlyBetweenSql('rakes.loading_date'), [$fromDate, $toDate]);
+            ->whereRaw($this->dateOnlyBetweenSql('rakes.loading_date', true), [$fromDate, $toDate]);
 
         if (! empty($filterContext['penalty_type_id'])) {
             $code = PenaltyType::query()
@@ -1445,7 +1512,7 @@ final class ExecutiveDashboardController extends Controller
             ->join('penalty_types', 'rr_penalty_snapshots.penalty_code', '=', 'penalty_types.code')
             ->join('rakes', 'rr_penalty_snapshots.rake_id', '=', 'rakes.id')
             ->whereNotNull('rakes.loading_date')
-            ->whereRaw($this->dateOnlyBetweenSql('rakes.loading_date'), [$fromDate, $toDate]);
+            ->whereRaw($this->dateOnlyBetweenSql('rakes.loading_date', true), [$fromDate, $toDate]);
         if (! empty($filterContext['penalty_type_id'])) {
             $code = PenaltyType::query()
                 ->whereKey($filterContext['penalty_type_id'])
@@ -1502,7 +1569,7 @@ final class ExecutiveDashboardController extends Controller
             ->join('rakes', 'rr_penalty_snapshots.rake_id', '=', 'rakes.id')
             ->join('sidings', 'rakes.siding_id', '=', 'sidings.id')
             ->whereNotNull('rakes.loading_date')
-            ->whereRaw($this->dateOnlyBetweenSql('rakes.loading_date'), [$fromDate, $toDate]);
+            ->whereRaw($this->dateOnlyBetweenSql('rakes.loading_date', true), [$fromDate, $toDate]);
         if (! empty($filterContext['penalty_type_id'])) {
             $code = PenaltyType::query()
                 ->whereKey($filterContext['penalty_type_id'])
@@ -1797,7 +1864,7 @@ final class ExecutiveDashboardController extends Controller
             ->join('sidings', 'rakes.siding_id', '=', 'sidings.id')
             ->whereIn('rakes.siding_id', $sidingIds)
             ->whereNotNull('rakes.loading_date')
-            ->whereRaw($this->dateOnlyBetweenSql('rakes.loading_date'), [$fromDate, $toDate]);
+            ->whereRaw($this->dateOnlyBetweenSql('rakes.loading_date', true), [$fromDate, $toDate]);
         if ($rakeIds !== null) {
             $rakeQuery->whereIn('rakes.id', $rakeIds);
         }
@@ -1812,7 +1879,7 @@ final class ExecutiveDashboardController extends Controller
             ->join('rakes', 'rr_penalty_snapshots.rake_id', '=', 'rakes.id')
             ->join('sidings', 'rakes.siding_id', '=', 'sidings.id')
             ->whereNotNull('rakes.loading_date')
-            ->whereRaw($this->dateOnlyBetweenSql('rakes.loading_date'), [$fromDate, $toDate]);
+            ->whereRaw($this->dateOnlyBetweenSql('rakes.loading_date', true), [$fromDate, $toDate]);
         if ($rakeIds !== null) {
             $penaltyQuery->whereIn('rakes.id', $rakeIds);
         } else {
@@ -2172,7 +2239,7 @@ final class ExecutiveDashboardController extends Controller
                     ->orWhereNotNull('destination_code');
             })
             ->whereNotNull('loading_date')
-            ->whereRaw($this->dateOnlyBetweenSql('loading_date'), [$fromDate, $toDate])
+            ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$fromDate, $toDate])
             ->selectRaw(
                 "COALESCE(destination, destination_code, 'Unknown') as power_plant_name, ".
                 'siding_id, count(*) as rakes, coalesce(sum(loaded_weight_mt), 0) as weight_mt'

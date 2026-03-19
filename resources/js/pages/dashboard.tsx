@@ -28,8 +28,6 @@ import {
     Check,
     CheckCircle,
     ChevronDown,
-    ChevronLeft,
-    ChevronRight,
     ChevronUp,
     Factory,
     Filter,
@@ -66,6 +64,8 @@ import {
 import { PieChart } from '@/components/charts/pie-chart';
 import SpeedometerGauge from '@/Components/Charts/SpeedometerGauge';
 import { SlidingNumber } from '@/components/SlidingNumber';
+import type { WorkflowSteps } from '@/components/rake-workflow-progress';
+import { RakeWorkflowProgressCell } from '@/components/rake-workflow-progress';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: dashboard().url },
@@ -308,10 +308,19 @@ interface DashboardAlert {
     created_at: string;
 }
 
+const DEFAULT_LIVE_RAKE_WORKFLOW_STEPS: WorkflowSteps = {
+    txr_done: false,
+    wagon_loading_done: false,
+    guard_done: false,
+    weighment_done: false,
+    rr_done: false,
+};
+
 interface LiveRakeStatusRow {
     rake_number: string;
     siding_name: string;
     state: string;
+    workflow_steps?: WorkflowSteps;
     time_elapsed: string;
     risk: string;
 }
@@ -492,32 +501,25 @@ const SIDING_PERF_COLORS = [
 
 function SidingPerformanceSection({ data }: { data: SidingPerformanceItem[] }) {
     const chartData = useMemo(
-        () => data.map((s) => ({ ...s, name: s.name, rakes: s.rakes, penalties: s.penalties, penalty_amount: s.penalty_amount, penalty_rate: s.penalty_rate })),
-        [data],
-    );
-
-    const maxPenaltyAmount = useMemo(
-        () => Math.max(...data.map((s) => s.penalty_amount ?? 0), 1),
+        () => data.map((s) => ({ ...s, name: s.name, rakes: s.rakes, penalty_amount: s.penalty_amount, penalty_rate: s.penalty_rate })),
         [data],
     );
 
     return (
         <div className="dashboard-card rounded-xl border-0 p-6">
-            <SectionHeader icon={BarChart3} title="Siding performance" subtitle="Rakes, penalties & penalty rate" />
+            <SectionHeader icon={BarChart3} title="Siding performance" subtitle="Rakes dispatched & penalty amount by siding" />
 
             <div className="mt-5 grid gap-6 lg:grid-cols-2">
                 <div>
-                    <p className="mb-2 text-xs font-medium text-gray-600">Rakes dispatched vs penalties</p>
+                    <p className="mb-2 text-xs font-medium text-gray-600">Rakes dispatched</p>
                     <ResponsiveContainer width="100%" height={260}>
                         <RechartsBarChart data={chartData} layout="horizontal" margin={{ top: 8, right: 16, bottom: 0, left: 16 }}>
                             <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
                             <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                             <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
                             <Tooltip formatter={(value: number | string | undefined) => Number(value ?? 0).toLocaleString()} />
-                            <Legend />
-                            <Bar dataKey="rakes" name="Rakes dispatched" fill="#3B82F6" barSize={14} radius={[4, 4, 0, 0]} isAnimationActive />
-                            <Bar dataKey="penalties" name="Penalties" fill="#EF4444" barSize={14} radius={[4, 4, 0, 0]} isAnimationActive>
-                                <LabelList dataKey="penalties" position="right" />
+                            <Bar dataKey="rakes" name="Rakes dispatched" fill="#3B82F6" barSize={14} radius={[4, 4, 0, 0]} isAnimationActive>
+                                <LabelList dataKey="rakes" position="right" />
                             </Bar>
                         </RechartsBarChart>
                     </ResponsiveContainer>
@@ -1247,7 +1249,7 @@ function DashboardFiltersBar({
             params.from = overrides.from ?? customFrom;
             params.to = overrides.to ?? customTo;
         } else {
-            // Never send date range when period is not custom, so backend uses its default (e.g. current month).
+            // Never send date range when period is not custom, so backend uses its default range for the period.
             delete params.from;
             delete params.to;
         }
@@ -1583,12 +1585,11 @@ export default function Dashboard() {
     const sidings = props.sidings ?? [];
     const allSidingIds = useMemo(() => sidings.map((s) => s.id), [sidings]);
     const [stockOverrides, setStockOverrides] = useState<Record<number, number>>({});
-    const [yesterdayPenaltyHeatmapPage, setYesterdayPenaltyHeatmapPage] = useState(1);
     useSidingStockBroadcast(allSidingIds, (sidingId, closingBalanceMt) => {
         setStockOverrides((prev) => ({ ...prev, [sidingId]: closingBalanceMt }));
     });
     const defaultFilters: DashboardFilters = {
-        period: 'month',
+        period: 'today',
         from: '',
         to: '',
         siding_ids: [],
@@ -1625,7 +1626,7 @@ export default function Dashboard() {
             case 'custom':
                 return 'selected period';
             default:
-                return 'this month';
+                return 'today';
         }
     }, [filters.period, filters.from, filters.to]);
 
@@ -1700,7 +1701,7 @@ export default function Dashboard() {
         };
         if (date !== '') params.coal_stock_date = date;
         if (filters.siding_ids.length > 0 && filters.siding_ids.length < allSidingIds.length) {
-            params.siding_ids = filters.siding_ids;S
+            params.siding_ids = filters.siding_ids;
         }
         if (filters.power_plant) params.power_plant = filters.power_plant;
         if (filters.rake_number) params.rake_number = filters.rake_number;
@@ -1777,13 +1778,6 @@ export default function Dashboard() {
     const loaderOverloadTrends = props.loaderOverloadTrends ?? { loaders: [], monthly: [] };
     const powerPlantDispatch = props.powerPlantDispatch ?? [];
     const yesterdayPredictedPenalties = props.yesterdayPredictedPenalties ?? [];
-    const yesterdayPenaltyTotalRakes = useMemo(
-        () => yesterdayPredictedPenalties.reduce((s, sid) => s + sid.rakes.length, 0),
-        [yesterdayPredictedPenalties],
-    );
-    useEffect(() => {
-        setYesterdayPenaltyHeatmapPage(1);
-    }, [yesterdayPenaltyTotalRakes]);
 
     const filteredSidings = useMemo(() => {
         if (filters.siding_ids.length === 0 || filters.siding_ids.length === sidings.length) {
@@ -1794,7 +1788,7 @@ export default function Dashboard() {
     }, [sidings, filters.siding_ids]);
 
     const hasActiveFilters = useMemo(() => {
-        if (filters.period !== 'month') return true;
+        if (filters.period !== 'today') return true;
         if (filters.power_plant) return true;
         if (filters.rake_number?.trim()) return true;
         if (filters.loader_id != null) return true;
@@ -1806,7 +1800,7 @@ export default function Dashboard() {
 
     const activeFilterCount = useMemo(() => {
         let n = 0;
-        if (filters.period !== 'month') n += 1;
+        if (filters.period !== 'today') n += 1;
         if (filters.power_plant) n += 1;
         if (filters.rake_number?.trim()) n += 1;
         if (filters.loader_id != null) n += 1;
@@ -2271,7 +2265,7 @@ export default function Dashboard() {
                                 */}
                                  <div className="dashboard-card rounded-xl border-0 p-5">
                                         <div className="flex flex-wrap items-center justify-between gap-3">
-                                            <SectionHeader icon={Train} title="Live rake status" subtitle="Active rakes (not yet dispatched)" />
+                                            <SectionHeader icon={Train} title="Live rake status" subtitle="Pending on siding — no weighment receipt yet" />
                                             <Button variant="outline" size="sm" className="rounded-lg" asChild>
                                                 <Link href={rakesIndex().url} data-pan="dashboard-live-rakes-view-all">
                                                     View all
@@ -2305,19 +2299,13 @@ export default function Dashboard() {
                                                             </th>
                                                             <th className="group cursor-pointer pb-3 px-2 pt-2 font-medium">
                                                                 <span className="inline-flex items-center gap-1">
-                                                                    Status
+                                                                    Progress
                                                                     <ArrowUp className="size-3.5 opacity-0 group-hover:opacity-50" />
                                                                 </span>
                                                             </th>
                                                             <th className="group cursor-pointer pb-3 px-2 pt-2 font-medium">
                                                                 <span className="inline-flex items-center gap-1">
-                                                                    Time elapsed
-                                                                    <ArrowUp className="size-3.5 opacity-0 group-hover:opacity-50" />
-                                                                </span>
-                                                            </th>
-                                                            <th className="group cursor-pointer pb-3 pr-4 pl-2 pt-2 font-medium">
-                                                                <span className="inline-flex items-center gap-1">
-                                                                    Risk
+                                                                    Loading time
                                                                     <ArrowUp className="size-3.5 opacity-0 group-hover:opacity-50" />
                                                                 </span>
                                                             </th>
@@ -2325,12 +2313,6 @@ export default function Dashboard() {
                                                     </thead>
                                                     <tbody>
                                                         {liveRakeStatus.map((row, i) => {
-                                                            const statusVariant =
-                                                                row.state === 'completed'
-                                                                    ? 'completed'
-                                                                    : row.state === 'loading' || row.state === 'in-progress'
-                                                                        ? 'in-progress'
-                                                                        : 'pending';
                                                             const riskVariant =
                                                                 row.risk === 'penalty_risk'
                                                                     ? 'high'
@@ -2364,36 +2346,14 @@ export default function Dashboard() {
                                                                     </td>
                                                                     <td className="py-3 px-2">{row.siding_name}</td>
                                                                     <td className="py-3 px-2">
-                                                                        <span
-                                                                            className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                                                                                statusVariant === 'completed'
-                                                                                    ? 'bg-[#DCFCE7] text-[#16A34A]'
-                                                                                    : statusVariant === 'in-progress'
-                                                                                        ? 'bg-amber-100 text-amber-800'
-                                                                                        : 'bg-gray-100 text-gray-600'
-                                                                            }`}
-                                                                        >
-                                                                            {statusVariant === 'completed'
-                                                                                ? 'Completed'
-                                                                                : statusVariant === 'in-progress'
-                                                                                    ? 'In progress'
-                                                                                    : row.state || 'Pending'}
-                                                                        </span>
+                                                                        <RakeWorkflowProgressCell
+                                                                            steps={
+                                                                                row.workflow_steps ??
+                                                                                DEFAULT_LIVE_RAKE_WORKFLOW_STEPS
+                                                                            }
+                                                                        />
                                                                     </td>
                                                                     <td className="py-3 tabular-nums px-2">{row.time_elapsed}</td>
-                                                                    <td className="py-3 pr-4 pl-2">
-                                                                        {riskVariant === 'high' ? (
-                                                                            <span className="inline-flex rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700">
-                                                                                High
-                                                                            </span>
-                                                                        ) : riskVariant === 'medium' ? (
-                                                                            <span className="inline-flex rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">
-                                                                                Medium
-                                                                            </span>
-                                                                        ) : (
-                                                                            <span className="text-gray-600">Normal</span>
-                                                                        )}
-                                                                    </td>
                                                                 </tr>
                                                             );
                                                         })}
@@ -2409,7 +2369,7 @@ export default function Dashboard() {
 
                         {activeSection === 'penalty-control' && (
                             <div className="space-y-6">
-                                {/* Penalty type distribution (left) + Yesterday predicted penalties (right) */}
+                                {/* Penalty type distribution (left) + Yesterday predicted penalties by siding (right) */}
                                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                                     <div className="dashboard-card min-w-0 rounded-xl border-0 p-6">
                                         <SectionHeader icon={AlertTriangle} title="Penalty type distribution" subtitle="Overloading, demurrage, wharfage, etc." />
@@ -2476,135 +2436,110 @@ export default function Dashboard() {
                                     </div>
                                     <div className="dashboard-card min-w-0 rounded-xl border-0 p-5" style={{ padding: '1rem' }}>
                                         <div className="flex flex-wrap items-center justify-between gap-3">
-                                            <SectionHeader icon={Calendar} title="Yesterday predicted penalties" subtitle="Penalty heatmap by siding and rake (yesterday's loading date)" />
+                                            <SectionHeader icon={Calendar} title="Yesterday predicted penalties" subtitle="Siding-wise total (all sidings listed; ₹0 when no data)" />
                                             <Button variant="outline" size="sm" className="rounded-lg" asChild>
                                                 <Link href={rakesIndex().url} data-pan="dashboard-yesterday-penalties-view-all">View all rakes</Link>
                                             </Button>
                                         </div>
                                         {(() => {
-                                            const RAKES_PER_PAGE = 6;
-                                            const HEATMAP_COLORS = {
-                                                dark: { bg: '#E24B4A', text: '#fff' },      // ₹11K+
-                                                medium: { bg: '#F09595', text: '#fff' },   // ₹8–11K
-                                                light: { bg: '#F7C1C1', text: '#991B1B' },  // ₹5–8K
-                                                lightest: { bg: '#FCEBEB', text: '#991B1B' }, // ₹0–5K
-                                            };
-                                            const getCellStyle = (amount: number) => {
-                                                if (amount >= 11000) return HEATMAP_COLORS.dark;
-                                                if (amount >= 8000) return HEATMAP_COLORS.medium;
-                                                if (amount >= 5000) return HEATMAP_COLORS.light;
-                                                return HEATMAP_COLORS.lightest;
-                                            };
-                                            const allRakes = yesterdayPredictedPenalties.flatMap((s) =>
-                                                s.rakes.map((r) => ({ ...r, siding_name: s.siding_name })),
-                                            );
-                                            const sidings = [...new Set(yesterdayPredictedPenalties.map((s) => s.siding_name))];
-                                            const totalRakes = allRakes.length;
-                                            const totalPages = Math.max(1, Math.ceil(totalRakes / RAKES_PER_PAGE));
-                                            const page = Math.min(Math.max(1, yesterdayPenaltyHeatmapPage), totalPages);
-                                            const start = (page - 1) * RAKES_PER_PAGE;
-                                            const pageRakes = allRakes.slice(start, start + RAKES_PER_PAGE);
-                                            const getAmount = (sidingName: string, rake: { siding_name: string; total_penalty: number }) =>
-                                                rake.siding_name === sidingName ? rake.total_penalty : 0;
+                                            const seen = new Set<string>();
+                                            const sidingOrder: string[] = [];
+                                            for (const s of filteredSidings) {
+                                                if (!seen.has(s.name)) {
+                                                    seen.add(s.name);
+                                                    sidingOrder.push(s.name);
+                                                }
+                                            }
+                                            for (const block of yesterdayPredictedPenalties) {
+                                                if (!seen.has(block.siding_name)) {
+                                                    seen.add(block.siding_name);
+                                                    sidingOrder.push(block.siding_name);
+                                                }
+                                            }
 
-                                            if (totalRakes === 0) {
+                                            const bySiding = new Map<string, { rakesWithPenalty: number; totalPenalty: number }>();
+                                            for (const s of yesterdayPredictedPenalties) {
+                                                const totalPenalty = s.rakes.reduce((sum, r) => sum + (r.total_penalty ?? 0), 0);
+                                                bySiding.set(s.siding_name, { rakesWithPenalty: s.rakes.length, totalPenalty });
+                                            }
+
+                                            const rows = sidingOrder.map((name) => {
+                                                const hit = bySiding.get(name);
+                                                return {
+                                                    siding_name: name,
+                                                    rakes_with_penalty: hit?.rakesWithPenalty ?? 0,
+                                                    total_penalty: hit?.totalPenalty ?? 0,
+                                                };
+                                            });
+
+                                            const totalRakesWithPenalty = rows.reduce((sum, r) => sum + r.rakes_with_penalty, 0);
+                                            const grandTotal = rows.reduce((sum, r) => sum + r.total_penalty, 0);
+                                            const anyPenalty = totalRakesWithPenalty > 0 || grandTotal > 0;
+                                            const chartData = [...rows].sort((a, b) => b.total_penalty - a.total_penalty);
+                                            const chartHeight = Math.min(420, Math.max(220, chartData.length * 36));
+
+                                            if (rows.length === 0) {
                                                 return (
-                                                    <div className="mt-4 py-8 text-center text-sm text-gray-600">No predicted penalties for yesterday's rakes.</div>
+                                                    <div className="mt-4 py-8 text-center text-sm text-gray-600">
+                                                        No sidings in scope for this dashboard.
+                                                    </div>
                                                 );
                                             }
+
                                             return (
                                                 <div className="mt-4 space-y-4">
                                                     <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-600">
-                                                        <span>{totalRakes} rake{totalRakes === 1 ? '' : 's'} with predicted penalties</span>
-                                                        <div className="flex items-center gap-3">
-                                                            <span className="flex items-center gap-2">
-                                                                <span className="text-[10px] font-medium text-gray-500">Low</span>
-                                                                <span className="flex h-4 w-24 rounded overflow-hidden border border-gray-200" style={{ borderRadius: 'var(--radius-md, 0.375rem)' }}>
-                                                                    <span className="flex-1" style={{ backgroundColor: '#FCEBEB' }} />
-                                                                    <span className="flex-1" style={{ backgroundColor: '#F7C1C1' }} />
-                                                                    <span className="flex-1" style={{ backgroundColor: '#F09595' }} />
-                                                                    <span className="flex-1" style={{ backgroundColor: '#E24B4A' }} />
-                                                                </span>
-                                                                <span className="text-[10px] font-medium text-gray-500">High</span>
-                                                            </span>
-                                                        </div>
+                                                        <span>
+                                                            {totalRakesWithPenalty} rake{totalRakesWithPenalty === 1 ? '' : 's'} with predicted penalties
+                                                        </span>
+                                                        <span className="font-medium text-gray-600">
+                                                            Total: {formatCurrency(grandTotal)}
+                                                        </span>
                                                     </div>
-                                                    <div className="overflow-x-auto -mx-1" style={{ borderRadius: 'var(--radius-md, 0.5rem)' }}>
-                                                        <table className="w-full border-collapse text-[12px]" style={{ fontSize: '12px' }}>
-                                                            <thead>
-                                                                <tr className="border-b border-gray-200 bg-gray-50">
-                                                                    <th className="sticky left-0 z-10 min-w-[100px] bg-gray-50 px-3 py-2 text-left font-semibold text-gray-700">Siding</th>
-                                                                    {pageRakes.map((rake) => (
-                                                                        <th key={rake.rake_id} className="min-w-[80px] px-3 py-2 text-center font-semibold text-gray-700">
-                                                                            <Link href={`/rakes/${rake.rake_id}`} className="text-primary hover:underline">
-                                                                                {rake.rake_number}
-                                                                            </Link>
-                                                                        </th>
-                                                                    ))}
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                {sidings.map((sidingName) => (
-                                                                    <tr key={sidingName} className="border-b border-gray-100 last:border-0">
-                                                                        <td className="sticky left-0 z-10 bg-white px-3 py-2 font-medium text-gray-800 border-r border-gray-100">
-                                                                            {sidingName}
-                                                                        </td>
-                                                                        {pageRakes.map((rake) => {
-                                                                            const amount = getAmount(sidingName, rake);
-                                                                            const style = getCellStyle(amount);
-                                                                            return (
-                                                                                <td
-                                                                                    key={`${sidingName}-${rake.rake_id}`}
-                                                                                    className="min-w-[80px] px-3 py-2 text-center tabular-nums font-medium border-r border-gray-100 last:border-r-0"
-                                                                                    style={{
-                                                                                        backgroundColor: style.bg,
-                                                                                        color: style.text,
-                                                                                        borderRadius: 'var(--radius-md, 0.375rem)',
-                                                                                    }}
-                                                                                >
-                                                                                    {amount > 0 ? formatCurrency(amount) : '—'}
-                                                                                </td>
-                                                                            );
-                                                                        })}
-                                                                    </tr>
-                                                                ))}
-                                                            </tbody>
-                                                        </table>
+
+                                                    <div className="rounded-lg border bg-white p-3">
+                                                        {anyPenalty ? (
+                                                            <ResponsiveContainer width="100%" height={chartHeight}>
+                                                                <RechartsBarChart
+                                                                    data={chartData}
+                                                                    layout="vertical"
+                                                                    margin={{ top: 8, right: 24, bottom: 8, left: 8 }}
+                                                                >
+                                                                    <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.25} horizontal />
+                                                                    <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={(v) => formatCurrency(v)} />
+                                                                    <YAxis
+                                                                        type="category"
+                                                                        dataKey="siding_name"
+                                                                        width={100}
+                                                                        tick={{ fontSize: 11 }}
+                                                                    />
+                                                                    <Tooltip formatter={(v: number | string | undefined) => formatCurrency(Number(v ?? 0))} />
+                                                                    <Bar dataKey="total_penalty" name="Predicted (₹)" fill="#DC2626" radius={[0, 4, 4, 0]} barSize={18} isAnimationActive>
+                                                                        <LabelList dataKey="total_penalty" position="right" formatter={(v: unknown) => formatCurrency(Number(v ?? 0))} />
+                                                                    </Bar>
+                                                                </RechartsBarChart>
+                                                            </ResponsiveContainer>
+                                                        ) : (
+                                                            <div className="py-8 text-center text-sm text-gray-600">
+                                                                No predicted penalties for yesterday&apos;s loading date.
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                    <div className="flex flex-wrap items-center justify-between gap-2">
-                                                        <p className="text-xs text-gray-500">
-                                                            Page {page} of {totalPages}
-                                                            {totalRakes > 0 && (
-                                                                <span className="ml-2">
-                                                                    (Rakes {start + 1}–{Math.min(start + RAKES_PER_PAGE, totalRakes)} of {totalRakes})
+
+                                                    <div className="grid grid-cols-1 gap-2">
+                                                        {rows.map((r) => (
+                                                            <div key={r.siding_name} className="flex items-center justify-between rounded-lg border bg-white px-3 py-2 text-sm">
+                                                                <span className="font-medium text-gray-800">{r.siding_name}</span>
+                                                                <span className="flex items-center gap-3 text-xs text-gray-600">
+                                                                    <span className="tabular-nums">
+                                                                        {r.rakes_with_penalty} rake{r.rakes_with_penalty === 1 ? '' : 's'}
+                                                                    </span>
+                                                                    <span className={`tabular-nums font-semibold ${r.total_penalty > 0 ? 'text-red-700' : 'text-gray-600'}`}>
+                                                                        {formatCurrency(r.total_penalty)}
+                                                                    </span>
                                                                 </span>
-                                                            )}
-                                                        </p>
-                                                        <div className="flex items-center gap-2">
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                className="h-8 rounded-lg"
-                                                                disabled={page <= 1}
-                                                                onClick={() => setYesterdayPenaltyHeatmapPage((p) => Math.max(1, p - 1))}
-                                                            >
-                                                                <ChevronLeft className="size-4" />
-                                                                <span className="sr-only">Previous</span>
-                                                            </Button>
-                                                            <span className="text-xs font-medium text-gray-600 min-w-[80px] text-center">
-                                                                {page} / {totalPages}
-                                                            </span>
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                className="h-8 rounded-lg"
-                                                                disabled={page >= totalPages}
-                                                                onClick={() => setYesterdayPenaltyHeatmapPage((p) => Math.min(totalPages, p + 1))}
-                                                            >
-                                                                <ChevronRight className="size-4" />
-                                                                <span className="sr-only">Next</span>
-                                                            </Button>
-                                                        </div>
+                                                            </div>
+                                                        ))}
                                                     </div>
                                                 </div>
                                             );
@@ -2647,14 +2582,14 @@ export default function Dashboard() {
                                     <div className="grid grid-cols-1 gap-6">
                                    
                                     <div className="dashboard-card min-w-0 rounded-xl border-0 p-6">
-                                        <SectionHeader icon={BarChart3} title="Predicted vs actual penalty" subtitle="All sidings comparison" />
+                                        <SectionHeader icon={BarChart3} title="Applied vs RR penalty" subtitle="Applied penalties vs railway receipt snapshot, by siding" />
                                     <div className="mt-3 flex flex-wrap items-center justify-center gap-4 rounded-lg border border-gray-200 bg-gray-50/80 px-4 py-2 text-sm">
                                         <span className="flex items-center gap-2">
-                                            <span className="font-medium text-gray-600">Total Predicted:</span>
+                                            <span className="font-medium text-gray-600">Total applied:</span>
                                             <span className="tabular-nums font-bold text-blue-700">{formatCurrency(predictedVsActualPenalty.predicted)}</span>
                                         </span>
                                         <span className="flex items-center gap-2">
-                                            <span className="font-medium text-gray-600">Total Actual:</span>
+                                            <span className="font-medium text-gray-600">Total RR snapshot:</span>
                                             <span className="tabular-nums font-bold text-red-700">{formatCurrency(predictedVsActualPenalty.actual)}</span>
                                         </span>
                                     </div>
@@ -2670,8 +2605,8 @@ export default function Dashboard() {
                                                     <YAxis type="number" tickFormatter={(v: number) => formatCurrency(v)} width={72} tick={{ fontSize: 11 }} label={{ value: 'Penalty amount (₹)', angle: -90, position: 'insideLeft', style: { fontSize: 11 } }} />
                                                     <Tooltip formatter={(v: number | string | undefined) => formatCurrency(Number(v ?? 0))} />
                                                     <Legend verticalAlign="bottom" height={28} />
-                                                    <Bar dataKey="predicted" name="Predicted" fill="#3B82F6" radius={[4, 4, 0, 0]} barSize={28} isAnimationActive />
-                                                    <Bar dataKey="actual" name="Actual" fill="#DC2626" radius={[4, 4, 0, 0]} barSize={28} isAnimationActive />
+                                                    <Bar dataKey="predicted" name="Applied penalties" fill="#3B82F6" radius={[4, 4, 0, 0]} barSize={28} isAnimationActive />
+                                                    <Bar dataKey="actual" name="RR snapshot" fill="#DC2626" radius={[4, 4, 0, 0]} barSize={28} isAnimationActive />
                                                 </RechartsBarChart>
                                             </ResponsiveContainer>
                                         </div>
@@ -2704,7 +2639,7 @@ export default function Dashboard() {
                                 <SidingPerformanceSection data={sidingPerformance} />
                             ) : (
                                     <div className="dashboard-card rounded-xl border-0 p-6">
-                                        <SectionHeader icon={BarChart3} title="Siding performance" subtitle="Rakes, penalties & penalty rate" />
+                                        <SectionHeader icon={BarChart3} title="Siding performance" subtitle="Rakes dispatched & penalty amount by siding" />
                                         <div className="mt-6 flex flex-col items-center justify-center py-10 text-center text-gray-600">
                                             <BarChart3 className="mb-3 h-10 w-10 opacity-30" />
                                             <p className="text-sm font-medium">No data available</p>
