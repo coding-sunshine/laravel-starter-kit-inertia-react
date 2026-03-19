@@ -33,11 +33,14 @@ final readonly class RakeWeighmentPdfImporter
             'user_id' => $userId,
         ]);
 
-        $parsed = $this->importer->parsePdfForRake($pdf);
+        if ($rake->rakeWeighments()->exists()) {
+            throw new InvalidArgumentException('A weighment has already been uploaded for this rake.');
+        }
+
+        $parsed = $this->importer->parsePdfForRake($rake, $pdf);
         $header = $parsed['header'];
         $totals = $parsed['totals'];
         $wagonRows = $parsed['wagon_rows'];
-        $storedPath = $parsed['stored_path'];
 
         $rake->load(['wagons' => fn ($q) => $q->orderBy('wagon_sequence')]);
         $wagons = $rake->wagons;
@@ -46,10 +49,12 @@ final readonly class RakeWeighmentPdfImporter
             throw new InvalidArgumentException('This rake has no wagons. Add wagons before uploading a weighment PDF.');
         }
 
-        $attemptNo = (int) ($rake->rakeWeighments()->max('attempt_no') ?? 0) + 1;
+        $attemptNo = 1;
 
         try {
-            return DB::transaction(function () use ($rake, $header, $totals, $wagonRows, $storedPath, $userId, $attemptNo, $wagons): RakeWeighment {
+            return DB::transaction(function () use ($rake, $header, $totals, $wagonRows, $pdf, $userId, $attemptNo, $wagons): RakeWeighment {
+                $storedPath = $pdf->store('weighment-pdfs', 'public');
+
                 $weighment = RakeWeighment::query()->create([
                     'rake_id' => $rake->id,
                     'attempt_no' => $attemptNo,

@@ -89,9 +89,9 @@ final class WeighmentUploadController extends Controller
                 ],
             ], 201);
         } catch (InvalidArgumentException $e) {
-            return response()->json([
-                'message' => $e->getMessage(),
-            ], 422);
+            throw ValidationException::withMessages([
+                'pdf' => [$e->getMessage()],
+            ]);
         } catch (Throwable $e) {
             report($e);
 

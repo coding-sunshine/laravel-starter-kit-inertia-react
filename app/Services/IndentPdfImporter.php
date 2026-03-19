@@ -42,7 +42,19 @@ final readonly class IndentPdfImporter
      */
     public function importFromText(string $text, UploadedFile $pdf, int $userId, array $allowedSidingIds = []): Indent
     {
+        $this->assertIndentPdfDocument($text);
+
         $parsed = $this->parsePdfText($text);
+
+        $eDemandRef = isset($parsed['e_demand_reference_id']) ? mb_trim((string) $parsed['e_demand_reference_id']) : '';
+        if ($eDemandRef === '') {
+            throw new InvalidArgumentException('This does not appear to be an indent PDF. e-Demand Reference Id could not be found.');
+        }
+
+        if (Indent::query()->where('e_demand_reference_id', $eDemandRef)->exists()) {
+            throw new InvalidArgumentException('This e-Demand reference has already been imported.');
+        }
+
         $siding = $this->detectSiding($text, $parsed);
         if (! $siding) {
             throw new InvalidArgumentException(
@@ -104,6 +116,13 @@ final readonly class IndentPdfImporter
             ]);
 
             throw $e;
+        }
+    }
+
+    private function assertIndentPdfDocument(string $text): void
+    {
+        if (! str_contains(mb_strtolower($text), 'e-demand confirmation slip')) {
+            throw new InvalidArgumentException('This does not appear to be an indent PDF.');
         }
     }
 
