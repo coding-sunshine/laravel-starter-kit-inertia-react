@@ -108,7 +108,16 @@
             "default": null
         }
     },
-    "relationships": [],
+    "relationships": {
+        "siding": {
+            "type": "belongsTo",
+            "model": "Siding"
+        },
+        "creator": {
+            "type": "belongsTo",
+            "model": "Creator"
+        }
+    },
     "value_hints": [],
     "scenarios": []
 }

@@ -1,0 +1,59 @@
+{
+    "model": "DiverrtDestination",
+    "table": "diverrt_destination",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "rake_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "location": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "rr_number": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "stt_no": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "srr_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "data_source": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "rake": {
+            "type": "belongsTo",
+            "model": "Rake"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

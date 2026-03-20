@@ -201,6 +201,51 @@
             "type": "text",
             "nullable": true,
             "default": null
+        },
+        "chargeable_weight": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "e_mining_chalan": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "weighment_place": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "arrival_time": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "drawn_out": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "out_ward_wt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "invoice_no": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "invoice_date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "is_diverted": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {
@@ -247,6 +292,14 @@
         "appliedPenalties": {
             "type": "hasMany",
             "model": "AppliedPenalty"
+        },
+        "rakeCharges": {
+            "type": "hasMany",
+            "model": "RakeCharge"
+        },
+        "diverrtDestinations": {
+            "type": "hasMany",
+            "model": "DiverrtDestination"
         },
         "createdBy": {
             "type": "belongsTo",
