@@ -31,10 +31,12 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:60,1')->group(functio
     ]))->name('info');
 
     Route::post('auth/login', [AuthController::class, 'login'])->name('auth.login');
+    Route::post('auth/register', [AuthController::class, 'register'])->name('auth.register');
 
     Route::middleware(['auth:sanctum', 'feature:api_access'])->group(function (): void {
         Route::post('auth/refresh', [AuthController::class, 'refresh'])->name('auth.refresh');
         Route::post('auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
+        Route::delete('auth/me', [AuthController::class, 'deleteMe'])->name('auth.me.delete');
 
         Route::get('users', [UserController::class, 'index'])->name('users.index');
         Route::post('users/batch', [UserController::class, 'batch'])->name('users.batch');

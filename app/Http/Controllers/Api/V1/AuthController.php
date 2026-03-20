@@ -4,11 +4,16 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Actions\CreateApiUser;
+use App\Actions\DeleteUser;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\DeleteMeRequest;
+use App\Http\Requests\Api\V1\RegisterApiUserRequest;
 use App\Http\Requests\CreateSessionRequest;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Spatie\Permission\Models\Role;
 
 final class AuthController extends Controller
@@ -74,6 +79,81 @@ final class AuthController extends Controller
             ],
             'message' => 'Login successful.',
         ]);
+    }
+
+    public function register(RegisterApiUserRequest $request, CreateApiUser $action): JsonResponse
+    {
+        /** @var array<string, mixed> $validated */
+        $validated = $request->validated();
+        $password = (string) $validated['password'];
+        unset($validated['password'], $validated['password_confirmation']);
+
+        $user = $action->handle($validated, $password);
+
+        $accessTokenTtlMinutes = 15;
+        $refreshTokenTtlDays = 30;
+
+        $accessToken = $user->createTokenWithPermissionAbilities(
+            'mobile-access',
+            now()->addMinutes($accessTokenTtlMinutes),
+        );
+
+        $refreshToken = $user->createToken(
+            'mobile-refresh',
+            ['refresh-access-token'],
+            now()->addDays($refreshTokenTtlDays),
+        );
+
+        /** @var Role|null $primaryRole */
+        $primaryRole = $user->roles()->select('id', 'name')->first();
+        $roles = $user->roles()->select('id', 'name')->get();
+        $primarySiding = $user->getPrimarySiding();
+
+        return response()->json([
+            'data' => [
+                'access_token' => $accessToken->plainTextToken,
+                'refresh_token' => $refreshToken->plainTextToken,
+                'token_type' => 'Bearer',
+                'expires_in' => $accessTokenTtlMinutes * 60,
+                'refresh_expires_in' => $refreshTokenTtlDays * 24 * 60 * 60,
+                'user' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'siding_id' => $primarySiding?->id,
+                    'siding' => $primarySiding !== null ? [
+                        'id' => $primarySiding->id,
+                        'name' => $primarySiding->name,
+                        'code' => $primarySiding->code,
+                    ] : null,
+                    'role' => $primaryRole !== null ? [
+                        'id' => $primaryRole->id,
+                        'name' => $primaryRole->name,
+                    ] : null,
+                    'roles' => $roles,
+                ],
+            ],
+            'message' => 'Registration successful.',
+        ]);
+    }
+
+    public function deleteMe(DeleteMeRequest $request, DeleteUser $action): Response
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $currentToken = $user->currentAccessToken();
+        if ($currentToken !== null) {
+            $currentToken->delete();
+        }
+
+        $user->tokens()
+            ->whereIn('name', ['mobile-access', 'mobile-refresh'])
+            ->delete();
+
+        $action->handle($user);
+
+        return response()->noContent();
     }
 
     public function refresh(Request $request): JsonResponse
