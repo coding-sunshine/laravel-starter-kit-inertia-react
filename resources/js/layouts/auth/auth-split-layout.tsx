@@ -1,3 +1,4 @@
+import AppLogo from '@/components/app-logo';
 import { home } from '@/routes';
 import { type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
@@ -21,10 +22,13 @@ export default function AuthSplitLayout({
                 <div className="absolute inset-0 bg-zinc-900" />
                 <Link
                     href={home()}
-                    className="relative z-20 flex items-center text-lg font-medium"
+                    className="relative z-20 flex items-center gap-3 text-lg font-medium"
                 >
-                    <span className="mr-2 text-xl font-bold text-white">RMMS</span>
-                    {name}
+                    <AppLogo
+                        className="flex-none text-base"
+                        wordmarkClassName="text-xl font-bold text-white"
+                    />
+                    <span className="text-white">{name}</span>
                 </Link>
                 {quote && (
                     <div className="relative z-20 mt-auto">
@@ -45,7 +49,7 @@ export default function AuthSplitLayout({
                         href={home()}
                         className="relative z-20 flex items-center justify-center lg:hidden"
                     >
-                        <span className="h-10 text-2xl font-bold text-black sm:h-12">RMMS</span>
+                        <AppLogo className="flex-none [&_img]:h-10 [&_img]:w-10 sm:[&_img]:h-12 sm:[&_img]:w-12 [&_span]:text-2xl [&_span]:font-bold [&_span]:text-black" />
                     </Link>
                     <div className="flex flex-col items-start gap-2 text-left sm:items-center sm:text-center">
                         <h1 className="text-xl font-medium">{title}</h1>

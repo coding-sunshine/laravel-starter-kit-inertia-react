@@ -116,6 +116,11 @@
             "type": "bigint",
             "nullable": true,
             "default": null
+        },
+        "destination": {
+            "type": "string",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {

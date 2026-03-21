@@ -1,3 +1,4 @@
+import AppLogo from '@/components/app-logo';
 import { home } from '@/routes';
 import { Link } from '@inertiajs/react';
 import { type PropsWithChildren } from 'react';
@@ -22,9 +23,7 @@ export default function AuthSimpleLayout({
                             href={home()}
                             className="flex flex-col items-center gap-2 font-medium"
                         >
-                            <div className="mb-1 flex h-9 w-9 items-center justify-center rounded-md">
-                                <span className="text-lg font-bold text-[var(--foreground)] dark:text-white">RMMS</span>
-                            </div>
+                            <AppLogo className="mb-1 flex-none justify-center [&_span]:text-lg [&_span]:font-bold [&_span]:text-[var(--foreground)] dark:[&_span]:text-white" />
                             <span className="sr-only">{title}</span>
                         </Link>
 

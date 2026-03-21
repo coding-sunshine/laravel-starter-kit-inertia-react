@@ -126,12 +126,21 @@
             "type": "numeric",
             "nullable": true,
             "default": null
+        },
+        "diverrt_destination_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {
         "rake": {
             "type": "belongsTo",
             "model": "Rake"
+        },
+        "diverrtDestination": {
+            "type": "belongsTo",
+            "model": "DiverrtDestination"
         },
         "rrCharges": {
             "type": "hasMany",
