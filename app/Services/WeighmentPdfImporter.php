@@ -54,6 +54,18 @@ final readonly class WeighmentPdfImporter
     public function parsePdfForRake(Rake $rake, UploadedFile $pdf): array
     {
         $text = $this->extractPdfText($pdf);
+
+        return $this->parsePdfTextForRake($rake, $text);
+    }
+
+    /**
+     * Parse extracted weighment slip text for an existing rake (same rules as {@see parsePdfForRake}).
+     * Exposed for tests and callers that already have PDF text.
+     *
+     * @return array{header: array<string, mixed>, totals: array<string, float|null>, wagon_rows: array<int, array<string, mixed>>}
+     */
+    public function parsePdfTextForRake(Rake $rake, string $text): array
+    {
         $this->assertWeighmentPdfDocumentShape($text);
 
         $lines = preg_split("/\r\n|\r|\n/", $text) ?: [];
@@ -76,11 +88,32 @@ final readonly class WeighmentPdfImporter
             ]);
         }
 
+        $pdfSiding = $this->detectSidingFromWeighmentText($text);
+        $this->ensureSidingFound($pdfSiding);
+        if ((int) $pdfSiding->id !== (int) $rake->siding_id) {
+            $rake->loadMissing('siding');
+            $expectedLabel = $rake->siding !== null
+                ? $rake->siding->name.($rake->siding->station_code ? " ({$rake->siding->station_code})" : '')
+                : 'this rake\'s siding';
+
+            throw new InvalidArgumentException(
+                'The weighment PDF appears to be for a different siding than this rake. Expected siding: '.$expectedLabel.'.'
+            );
+        }
+
         return [
             'header' => $header,
             'totals' => $totals,
             'wagon_rows' => $wagonRows,
         ];
+    }
+
+    /**
+     * Detect siding from weighment PDF text (station keywords and siding names).
+     */
+    public function detectSidingFromWeighmentText(string $text): ?Siding
+    {
+        return $this->detectSiding($text);
     }
 
     /**

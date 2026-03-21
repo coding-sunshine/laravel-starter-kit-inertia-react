@@ -13,6 +13,7 @@ final class RakeCharge extends Model
 
     protected $fillable = [
         'rake_id',
+        'diverrt_destination_id',
         'charge_type',
         'amount',
         'data_source',
@@ -28,5 +29,10 @@ final class RakeCharge extends Model
     public function rake(): BelongsTo
     {
         return $this->belongsTo(Rake::class);
+    }
+
+    public function diverrtDestination(): BelongsTo
+    {
+        return $this->belongsTo(DiverrtDestination::class, 'diverrt_destination_id');
     }
 }

@@ -7,17 +7,18 @@ import AppLayout from '@/layouts/app-layout';
 
 interface Distance {
   id: number;
-  power_plant: {
+  /** Laravel serializes relation keys as snake_case (powerPlant → power_plant). */
+  power_plant?: {
     id: number;
     name: string;
     code: string;
-  };
-  siding: {
+  } | null;
+  siding?: {
     id: number;
     name: string;
     code: string;
-  };
-  distance_km: number;
+  } | null;
+  distance_km: number | string;
   created_at: string;
   updated_at: string;
 }
@@ -57,13 +58,22 @@ export default function Index({ distances }: Props) {
                 </TableRow>
               </TableHeader>
               <TableBody>
+                {distances.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center text-muted-foreground">
+                      No distance rows yet. Add a power plant–siding pair to get started.
+                    </TableCell>
+                  </TableRow>
+                )}
                 {distances.map((distance) => (
                   <TableRow key={distance.id}>
                     <TableCell className="font-medium">
-                      {distance.power_plant.name} ({distance.power_plant.code})
+                      {distance.power_plant
+                        ? `${distance.power_plant.name} (${distance.power_plant.code})`
+                        : '-'}
                     </TableCell>
                     <TableCell>
-                      {distance.siding.name} ({distance.siding.code})
+                      {distance.siding ? `${distance.siding.name} (${distance.siding.code})` : '-'}
                     </TableCell>
                     <TableCell>{distance.distance_km}</TableCell>
                     <TableCell>

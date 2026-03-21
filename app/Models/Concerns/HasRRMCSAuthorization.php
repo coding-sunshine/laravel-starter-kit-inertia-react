@@ -20,7 +20,7 @@ trait HasRRMCSAuthorization
      */
     public function isSuperAdmin(): bool
     {
-        return $this->hasRole('super_admin');
+        return $this->hasRole('super_admin') || $this->hasRole('super-admin');
     }
 
     /**

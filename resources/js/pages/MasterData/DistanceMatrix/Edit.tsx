@@ -19,31 +19,39 @@ interface Siding {
   code: string;
 }
 
+interface Distance {
+  id: number;
+  power_plant_id: number;
+  siding_id: number;
+  distance_km: number | string;
+}
+
 interface Props {
+  distance: Distance;
   powerPlants: PowerPlant[];
   sidings: Siding[];
 }
 
-export default function Create({ powerPlants, sidings }: Props) {
-  const { data, setData, post, processing, errors } = useForm({
-    power_plant_id: '',
-    siding_id: '',
-    distance_km: '',
+export default function Edit({ distance, powerPlants, sidings }: Props) {
+  const { data, setData, put, processing, errors } = useForm({
+    power_plant_id: distance.power_plant_id.toString(),
+    siding_id: distance.siding_id.toString(),
+    distance_km: String(distance.distance_km),
   });
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    post('/master-data/distance-matrix');
+    put(`/master-data/distance-matrix/${distance.id}`);
   }
 
   return (
     <AppLayout>
-      <Head title="Create Distance" />
-      
+      <Head title="Edit Distance" />
+
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">Create Distance</h1>
-          <p className="text-muted-foreground">Add distance between power plant and siding</p>
+          <h1 className="text-3xl font-bold">Edit Distance</h1>
+          <p className="text-muted-foreground">Update power plant to siding distance</p>
         </div>
 
         <Card>
@@ -74,7 +82,9 @@ export default function Create({ powerPlants, sidings }: Props) {
                       ))}
                     </SelectContent>
                   </Select>
-                  {errors.power_plant_id && <p className="text-sm text-red-600 mt-1">{errors.power_plant_id}</p>}
+                  {errors.power_plant_id && (
+                    <p className="text-sm text-red-600 mt-1">{errors.power_plant_id}</p>
+                  )}
                 </div>
 
                 <div>
@@ -94,7 +104,9 @@ export default function Create({ powerPlants, sidings }: Props) {
                       ))}
                     </SelectContent>
                   </Select>
-                  {errors.siding_id && <p className="text-sm text-red-600 mt-1">{errors.siding_id}</p>}
+                  {errors.siding_id && (
+                    <p className="text-sm text-red-600 mt-1">{errors.siding_id}</p>
+                  )}
                 </div>
 
                 <div>
@@ -108,7 +120,9 @@ export default function Create({ powerPlants, sidings }: Props) {
                     placeholder="e.g., 25.50"
                     required
                   />
-                  {errors.distance_km && <p className="text-sm text-red-600 mt-1">{errors.distance_km}</p>}
+                  {errors.distance_km && (
+                    <p className="text-sm text-red-600 mt-1">{errors.distance_km}</p>
+                  )}
                 </div>
               </div>
 
@@ -117,7 +131,7 @@ export default function Create({ powerPlants, sidings }: Props) {
                   Cancel
                 </Button>
                 <Button type="submit" disabled={processing}>
-                  Create Distance
+                  Update Distance
                 </Button>
               </div>
             </form>
@@ -127,3 +141,4 @@ export default function Create({ powerPlants, sidings }: Props) {
     </AppLayout>
   );
 }
+

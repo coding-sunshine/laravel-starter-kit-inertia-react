@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Indents;
 
 use App\Http\Controllers\Controller;
 use App\Models\Indent;
+use App\Models\PowerPlant;
 use App\Models\Rake;
 use App\Models\Siding;
 use App\Models\Wagon;
@@ -14,6 +15,7 @@ use Closure;
 use DateTimeImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use InvalidArgumentException;
@@ -260,10 +262,16 @@ final class IndentsController extends Controller
 
         $nextPriorityNumber = (int) $maxPriorityThisMonthOnSiding + 1;
 
+        $powerPlants = PowerPlant::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['name', 'code']);
+
         return Inertia::render('rakes/create-from-indent', [
             'indent' => $indent->load('siding:id,name,code'),
             'sidings' => $sidings,
             'next_priority_number' => $nextPriorityNumber,
+            'power_plants' => $powerPlants,
         ]);
     }
 
@@ -323,6 +331,12 @@ final class IndentsController extends Controller
             'loading_date' => ['required', 'date'],
             'rake_type' => ['required', 'string', 'max:50'],
             'wagon_count' => ['required', 'integer', 'min:0'],
+            'destination_code' => [
+                'required',
+                'string',
+                'max:20',
+                Rule::exists('power_plants', 'code')->where('is_active', true),
+            ],
             'rr_expected_date' => ['nullable', 'date'],
             'placement_time' => ['nullable', 'date'],
             'remarks' => ['nullable', 'string', 'max:1000'],
@@ -342,7 +356,17 @@ final class IndentsController extends Controller
         $rake->state = 'pending';
         $rake->loading_free_minutes = (int) config('rrmcs.default_free_time_minutes', 180);
         $rake->rr_expected_date = $validated['rr_expected_date'] ?? null;
-        $rake->placement_time = $validated['placement_time'] ? new DateTimeImmutable($validated['placement_time']) : null;
+        $rake->placement_time = ! empty($validated['placement_time'] ?? null)
+            ? new DateTimeImmutable($validated['placement_time'])
+            : null;
+
+        $powerPlant = PowerPlant::query()
+            ->where('code', $validated['destination_code'])
+            ->where('is_active', true)
+            ->firstOrFail();
+        $rake->destination = $powerPlant->name;
+        $rake->destination_code = $powerPlant->code;
+
         $rake->created_by = $request->user()->id;
         $rake->updated_by = $request->user()->id;
         $rake->save();

@@ -34,6 +34,7 @@ final class Indent extends Model implements HasMedia
         'demanded_stock',
         'total_units',
         'railway_reference_no',
+        'destination',
         'created_by',
         'updated_by',
         'deleted_by',

@@ -58,6 +58,10 @@ final readonly class RrImportService
         $userId = $request->user()->id;
 
         return DB::transaction(function () use ($parsed, $validated, $userId, $rake, $request) {
+            if ($rake !== null) {
+                $this->validateParsedRailwayReceiptAgainstRake($parsed, $rake);
+            }
+
             if ($rake !== null && RrDocument::query()->where('rake_id', $rake->id)->exists()) {
                 throw new InvalidArgumentException('Railway Receipt has already been uploaded for this rake.');
             }
@@ -100,6 +104,69 @@ final readonly class RrImportService
             throw new InvalidArgumentException("Railway Receipt number '{$rrNumber}' already exists.");
         }
 
+    }
+
+    /**
+     * Rake-linked RR: enforce Station To vs rake.destination_code always; Station From only for configured sidings (e.g. Dumka).
+     *
+     * @param  array<string, mixed>  $parsed
+     */
+    private function validateParsedRailwayReceiptAgainstRake(array $parsed, Rake $rake): void
+    {
+        $rake->loadMissing('siding');
+        $siding = $rake->siding;
+        if ($siding === null) {
+            throw new InvalidArgumentException('Rake has no siding assigned; cannot validate Railway Receipt.');
+        }
+
+        $strictStationCodes = array_map(
+            static fn (string $c): string => mb_strtoupper(mb_trim($c)),
+            config('rrmcs.rr_strict_from_station_station_codes', [])
+        );
+        $aliases = config('rrmcs.rr_from_station_pdf_code_aliases', []);
+        if (! is_array($aliases)) {
+            $aliases = [];
+        }
+
+        $sidingStationUpper = mb_strtoupper(mb_trim((string) $siding->station_code));
+        if ($sidingStationUpper !== '' && in_array($sidingStationUpper, $strictStationCodes, true)) {
+            $fromRaw = $parsed['from_station_code'] ?? null;
+            if ($fromRaw === null || mb_trim((string) $fromRaw) === '') {
+                throw new InvalidArgumentException('Railway Receipt PDF is missing Station From code (required for this siding).');
+            }
+            $fromNorm = mb_strtoupper(mb_trim((string) $fromRaw));
+            if (isset($aliases[$fromNorm]) && is_string($aliases[$fromNorm])) {
+                $fromNorm = mb_strtoupper(mb_trim($aliases[$fromNorm]));
+            }
+            $sidingCodeUpper = mb_strtoupper(mb_trim((string) $siding->code));
+            if ($fromNorm !== $sidingStationUpper && $fromNorm !== $sidingCodeUpper) {
+                throw new InvalidArgumentException(
+                    sprintf(
+                        'Railway Receipt Station From (%s) does not match this rake\'s siding (%s).',
+                        mb_trim((string) $fromRaw),
+                        $siding->name
+                    )
+                );
+            }
+        }
+
+        $rakeDest = $rake->destination_code;
+        if ($rakeDest === null || mb_trim((string) $rakeDest) === '') {
+            throw new InvalidArgumentException('Set destination code on the rake before uploading the Railway Receipt.');
+        }
+        $toRaw = $parsed['to_station_code'] ?? null;
+        if ($toRaw === null || mb_trim((string) $toRaw) === '') {
+            throw new InvalidArgumentException('Railway Receipt PDF is missing Station To code.');
+        }
+        if (mb_strtoupper(mb_trim((string) $toRaw)) !== mb_strtoupper(mb_trim((string) $rakeDest))) {
+            throw new InvalidArgumentException(
+                sprintf(
+                    'Railway Receipt Station To (%s) does not match the rake destination code (%s).',
+                    mb_trim((string) $toRaw),
+                    mb_trim((string) $rakeDest)
+                )
+            );
+        }
     }
 
     private function createSnapshotRrDocument(

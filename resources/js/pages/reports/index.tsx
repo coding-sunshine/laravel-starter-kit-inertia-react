@@ -42,21 +42,17 @@ interface Props {
 
 type ReportData = Record<string, unknown>[];
 
-const REPORT_CATEGORIES: Record<string, string[]> = {
-    'Operations': ['siding_coal_receipt', 'daily_operations', 'rake_movement', 'rake_lifecycle'],
-    'Stock & Weighment': ['weighment', 'wagon_loading', 'loader_vs_weighment', 'unfit_wagon'],
-    'Penalties & Finance': ['penalty_register', 'demurrage_analysis', 'financial_impact'],
-    'Indents & RR': ['rake_indent', 'indent_fulfillment', 'txr', 'rr_summary'],
-};
-
 const RAKE_MANAGEMENT_REPORTS: string[] = [
+    'siding_coal_receipt',
+    'rake_indent',
+    'txr',
+    'unfit_wagon',
     'wagon_loading',
     'weighment',
     'loader_vs_weighment',
     'rake_movement',
     'rr_summary',
-    'penalty_register_rr_snapshot',
-    'penalty_register_applied',
+    'penalty_register',
 ];
 
 /** Determine the best chart for a given report key. */
@@ -298,7 +294,7 @@ export default function ReportsIndex({ reports, sidings }: Props) {
                         <CardContent className="space-y-4 p-3 pt-0">
                             <div>
                                 <p className="mb-1 px-2 text-xs font-medium text-muted-foreground uppercase">
-                                    Rake Management Reports
+                                    Reports
                                 </p>
                                 <div className="space-y-0.5">
                                     {RAKE_MANAGEMENT_REPORTS
@@ -324,37 +320,6 @@ export default function ReportsIndex({ reports, sidings }: Props) {
                                         ))}
                                 </div>
                             </div>
-
-                            {Object.entries(REPORT_CATEGORIES).map(([category, keys]) => (
-                                <div key={category}>
-                                    <p className="mb-1 px-2 text-xs font-medium text-muted-foreground uppercase">
-                                        {category}
-                                    </p>
-                                    <div className="space-y-0.5">
-                                        {keys
-                                            .filter((k) => reports[k])
-                                            .map((k) => (
-                                                <button
-                                                    key={k}
-                                                    onClick={() => {
-                                                        setActiveKey(k);
-                                                        setData(null);
-                                                        setError(null);
-                                                    }}
-                                                    className={`w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors ${
-                                                        activeKey === k
-                                                            ? 'bg-primary text-primary-foreground'
-                                                            : 'hover:bg-muted'
-                                                    }`}
-                                                    data-pan="report-select-type"
-                                                    type="button"
-                                                >
-                                                    {reports[k].name}
-                                                </button>
-                                            ))}
-                                    </div>
-                                </div>
-                            ))}
                         </CardContent>
                     </Card>
 

@@ -330,7 +330,9 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 
     // Vehicle Work Orders
     Route::get('vehicle-workorders', [VehicleWorkorderController::class, 'index'])->name('vehicle-workorders.index');
+    Route::get('vehicle-workorders/create', [VehicleWorkorderController::class, 'create'])->name('vehicle-workorders.create');
     Route::get('vehicle-workorders/{vehicle_workorder}/edit', [VehicleWorkorderController::class, 'edit'])->name('vehicle-workorders.edit');
+    Route::post('vehicle-workorders', [VehicleWorkorderController::class, 'store'])->name('vehicle-workorders.store');
     Route::put('vehicle-workorders/{vehicle_workorder}', [VehicleWorkorderController::class, 'update'])->name('vehicle-workorders.update');
 
     // Railway Receipts (RR) and Penalties

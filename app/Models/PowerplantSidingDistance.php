@@ -6,8 +6,10 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class PowerplantSidingDistance extends Model
+final class PowerplantSidingDistance extends Model
 {
+    protected $table = 'powerplant_siding_distances';
+
     protected $fillable = [
         'power_plant_id',
         'siding_id',

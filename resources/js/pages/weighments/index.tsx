@@ -1,13 +1,29 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router, usePage } from '@inertiajs/react';
-import { Upload, Scale, Eye } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { CalendarDays, Eye, Scale, Upload } from 'lucide-react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 
-interface RakeWeighmentData {
+interface WeighmentRow {
     id: number;
     rake_id: number;
     attempt_no: number;
@@ -26,8 +42,26 @@ interface RakeWeighmentData {
     updated_at: string;
 }
 
+interface RakeOption {
+    id: number;
+    rake_number: string;
+    rr_actual_date?: string | null;
+    siding?: {
+        name: string;
+        code: string;
+    } | null;
+}
+
 interface Props {
-    weighments?: RakeWeighmentData[];
+    weighments?: WeighmentRow[];
+}
+
+function getCurrentMonthValue(): string {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+
+    return `${year}-${month}`;
 }
 
 export default function WeighmentsIndex({ weighments = [] }: Props) {
@@ -38,6 +72,13 @@ export default function WeighmentsIndex({ weighments = [] }: Props) {
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [uploading, setUploading] = useState(false);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [month, setMonth] = useState<string>(getCurrentMonthValue);
+    const [rakes, setRakes] = useState<RakeOption[]>([]);
+    const [rakesLoading, setRakesLoading] = useState(false);
+    const [rakesError, setRakesError] = useState<string | null>(null);
+    const [selectedRakeId, setSelectedRakeId] = useState<string>('');
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard().url },
@@ -48,24 +89,111 @@ export default function WeighmentsIndex({ weighments = [] }: Props) {
         fileInputRef.current?.click();
     };
 
+    const resetDialogState = useCallback(() => {
+        setIsDialogOpen(false);
+        setSelectedFile(null);
+        setSelectedRakeId('');
+        setRakes([]);
+        setRakesError(null);
+        setMonth(getCurrentMonthValue());
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+    }, []);
+
+    const fetchRakesForMonth = useCallback(async (monthValue: string) => {
+        setRakesLoading(true);
+        setRakesError(null);
+        try {
+            const response = await fetch(
+                `/railway-receipts/rakes?month=${encodeURIComponent(monthValue)}`,
+                {
+                    headers: {
+                        Accept: 'application/json',
+                    },
+                },
+            );
+
+            if (!response.ok) {
+                throw new Error(`Failed to load rakes (${response.status})`);
+            }
+
+            const json = (await response.json()) as {
+                data?: RakeOption[];
+            };
+
+            setRakes(Array.isArray(json.data) ? json.data : []);
+        } catch (error) {
+            console.error(error);
+            setRakes([]);
+            setRakesError(
+                'Could not load rakes for the selected month. You can still upload without selecting a rake.',
+            );
+        } finally {
+            setRakesLoading(false);
+        }
+    }, []);
+
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) {
             return;
         }
 
+        setSelectedFile(file);
+        setIsDialogOpen(true);
+        void fetchRakesForMonth(month);
+    };
+
+    const submitUpload = useCallback(() => {
+        if (!selectedFile) {
+            return;
+        }
+
         setUploading(true);
+
         const formData = new FormData();
-        formData.append('pdf', file);
+        formData.append('pdf', selectedFile);
+
+        if (selectedRakeId) {
+            const rakeId = Number.parseInt(selectedRakeId, 10);
+            if (!Number.isNaN(rakeId)) {
+                formData.append('rake_id', String(rakeId));
+            }
+        }
 
         router.post('/weighments/import', formData, {
             forceFormData: true,
             onFinish: () => {
                 setUploading(false);
-                e.target.value = '';
+                resetDialogState();
             },
         });
-    };
+    }, [resetDialogState, selectedFile, selectedRakeId]);
+
+    const rakeLabel = useCallback((rake: RakeOption): string => {
+        const parts: string[] = [rake.rake_number];
+
+        if (rake.siding?.name) {
+            parts.push(`– ${rake.siding.name}`);
+        } else if (rake.siding?.code) {
+            parts.push(`– ${rake.siding.code}`);
+        }
+
+        if (rake.rr_actual_date) {
+            parts.push(`(${rake.rr_actual_date})`);
+        }
+
+        return parts.join(' ');
+    }, []);
+
+    const dialogTitle = useMemo(() => {
+        if (!selectedFile) {
+            return 'Upload weighment PDF';
+        }
+
+        return `Upload “${selectedFile.name}”`;
+    }, [selectedFile]);
 
     const handleView = (id: number) => {
         router.visit(`/weighments/${id}`);
@@ -127,14 +255,18 @@ export default function WeighmentsIndex({ weighments = [] }: Props) {
                     </CardHeader>
                     <CardContent>
                         {weighments.length === 0 ? (
-                            <div className="text-center py-8">
-                                <Scale className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                                <h3 className="text-lg font-medium mb-2">No weighment data</h3>
-                                <p className="text-muted-foreground mb-4">
+                            <div className="py-8 text-center">
+                                <Scale className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+                                <h3 className="mb-2 text-lg font-medium">No weighment data</h3>
+                                <p className="mb-4 text-muted-foreground">
                                     Upload a document to start viewing weighment data
                                 </p>
-                                <Button onClick={handleUploadClick} variant="outline">
-                                    <Upload className="h-4 w-4 mr-2" />
+                                <Button
+                                    onClick={handleUploadClick}
+                                    variant="outline"
+                                    data-pan="weighments-upload-first-document"
+                                >
+                                    <Upload className="mr-2 h-4 w-4" />
                                     Upload First Document
                                 </Button>
                             </div>
@@ -143,18 +275,18 @@ export default function WeighmentsIndex({ weighments = [] }: Props) {
                                 <table className="w-full border-collapse">
                                     <thead>
                                         <tr className="border-b">
-                                            <th className="text-left p-2">Train Name</th>
-                                            <th className="text-left p-2">Direction</th>
-                                            <th className="text-left p-2">Commodity</th>
-                                            <th className="text-left p-2">From Station</th>
-                                            <th className="text-left p-2">To Station</th>
-                                            <th className="text-left p-2">Priority Number</th>
-                                            <th className="text-left p-2">Gross Weighment</th>
-                                            <th className="text-left p-2">Tare Weighment</th>
-                                            <th className="text-left p-2">Attempt No</th>
-                                            <th className="text-left p-2">Status</th>
-                                            <th className="text-left p-2">Created At</th>
-                                            <th className="text-left p-2">Actions</th>
+                                            <th className="p-2 text-left">Train Name</th>
+                                            <th className="p-2 text-left">Direction</th>
+                                            <th className="p-2 text-left">Commodity</th>
+                                            <th className="p-2 text-left">From Station</th>
+                                            <th className="p-2 text-left">To Station</th>
+                                            <th className="p-2 text-left">Priority Number</th>
+                                            <th className="p-2 text-left">Gross Weighment</th>
+                                            <th className="p-2 text-left">Tare Weighment</th>
+                                            <th className="p-2 text-left">Attempt No</th>
+                                            <th className="p-2 text-left">Status</th>
+                                            <th className="p-2 text-left">Created At</th>
+                                            <th className="p-2 text-left">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -168,21 +300,27 @@ export default function WeighmentsIndex({ weighments = [] }: Props) {
                                                 <td className="p-2">{weighment.priority_number || '-'}</td>
                                                 <td className="p-2">
                                                     {weighment.gross_weighment_datetime
-                                                        ? new Date(weighment.gross_weighment_datetime).toLocaleString()
+                                                        ? new Date(
+                                                              weighment.gross_weighment_datetime,
+                                                          ).toLocaleString()
                                                         : '-'}
                                                 </td>
                                                 <td className="p-2">
                                                     {weighment.tare_weighment_datetime
-                                                        ? new Date(weighment.tare_weighment_datetime).toLocaleString()
+                                                        ? new Date(
+                                                              weighment.tare_weighment_datetime,
+                                                          ).toLocaleString()
                                                         : '-'}
                                                 </td>
                                                 <td className="p-2">{weighment.attempt_no}</td>
                                                 <td className="p-2">
-                                                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                                        weighment.status === 'success' 
-                                                            ? 'bg-green-100 text-green-800' 
-                                                            : 'bg-red-100 text-red-800'
-                                                    }`}>
+                                                    <span
+                                                        className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                                                            weighment.status === 'success'
+                                                                ? 'bg-green-100 text-green-800'
+                                                                : 'bg-red-100 text-red-800'
+                                                        }`}
+                                                    >
                                                         {weighment.status}
                                                     </span>
                                                 </td>
@@ -209,6 +347,96 @@ export default function WeighmentsIndex({ weighments = [] }: Props) {
                     </CardContent>
                 </Card>
             </div>
+
+            <Dialog
+                open={isDialogOpen}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        resetDialogState();
+                    }
+                }}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{dialogTitle}</DialogTitle>
+                        <DialogDescription>
+                            Optionally select a rake to attach this weighment to. If you skip this step, the PDF
+                            is imported as a historical weighment (same as before).
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="weighment-month">Rake month (filter)</Label>
+                            <div className="flex items-center gap-2">
+                                <div className="relative inline-flex items-center">
+                                    <CalendarDays className="pointer-events-none absolute left-2 size-4 text-muted-foreground" />
+                                    <input
+                                        id="weighment-month"
+                                        type="month"
+                                        className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 flex h-9 w-[11rem] rounded-md border pl-8 pr-3 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
+                                        value={month}
+                                        onChange={(event) => {
+                                            const value = event.target.value || getCurrentMonthValue();
+                                            setMonth(value);
+                                            void fetchRakesForMonth(value);
+                                        }}
+                                    />
+                                </div>
+                                {rakesLoading && (
+                                    <span className="text-xs text-muted-foreground">Loading rakes…</span>
+                                )}
+                            </div>
+                            {rakesError ? <p className="text-xs text-destructive">{rakesError}</p> : null}
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="weighment-rake-select">Attach to rake (optional)</Label>
+                            <Select
+                                value={selectedRakeId || undefined}
+                                onValueChange={setSelectedRakeId}
+                            >
+                                <SelectTrigger id="weighment-rake-select" className="min-w-[260px]">
+                                    <SelectValue placeholder="No rake selected" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {rakes.length === 0 ? (
+                                        <SelectItem value="__none" disabled>
+                                            No rakes found for this month
+                                        </SelectItem>
+                                    ) : (
+                                        rakes.map((rake) => (
+                                            <SelectItem key={rake.id} value={String(rake.id)}>
+                                                {rakeLabel(rake)}
+                                            </SelectItem>
+                                        ))
+                                    )}
+                                </SelectContent>
+                            </Select>
+                            <p className="text-xs text-muted-foreground">
+                                Leaving this blank imports the PDF without linking to an existing rake workflow.
+                            </p>
+                        </div>
+                    </div>
+                    <DialogFooter className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={resetDialogState}
+                            disabled={uploading}
+                            data-pan="weighments-upload-dialog-cancel"
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="button"
+                            onClick={submitUpload}
+                            disabled={uploading || !selectedFile}
+                            data-pan="weighments-upload-with-rake-button"
+                        >
+                            {uploading ? 'Uploading…' : 'Upload'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </AppLayout>
     );
 }
