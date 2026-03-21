@@ -139,11 +139,9 @@ export function WagonLoadingWorkflowNew({ rake, disabled }: WagonLoadingWorkflow
         });
     };
 
-    // Get available wagons (excluding already loaded and unfit wagons)
+    // Get available wagons (excluding rows already chosen; unfit wagons remain selectable)
     const loadedWagonIds = loadingRows.map(row => row.wagon_id).filter(id => id > 0);
-    const availableWagons = rake.wagons.filter(wagon => 
-        !loadedWagonIds.includes(wagon.id) && !wagon.is_unfit
-    );
+    const availableWagons = rake.wagons.filter(wagon => !loadedWagonIds.includes(wagon.id));
 
     const isCompleted = availableWagons.length === 0 && loadingRows.length > 0;
 

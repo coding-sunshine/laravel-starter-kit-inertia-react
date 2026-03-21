@@ -156,7 +156,7 @@ final class RakeLoadController extends Controller
             'loadings.*.remarks' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $rakeWagonIds = $rake->wagons()->where('is_unfit', false)->pluck('id')->all();
+        $rakeWagonIds = $rake->wagons()->pluck('id')->all();
         $seenWagonIds = [];
 
         foreach ($validated['loadings'] as $loading) {
@@ -225,6 +225,48 @@ final class RakeLoadController extends Controller
             ->with('success', 'Wagon loadings saved.');
     }
 
+    /**
+     * JSON list of wagon loading rows for the rake workflow (hydrate UI when Inertia props are empty).
+     */
+    public function indexWagonLoadings(Rake $rake): JsonResponse
+    {
+        $rake->load([
+            'wagonLoadings.wagon:id,wagon_number,wagon_sequence,wagon_type,tare_weight_mt,pcc_weight_mt,is_unfit',
+            'wagonLoadings.loader:id,loader_name,code',
+        ]);
+
+        $wagonLoadings = $rake->wagonLoadings
+            ->sortBy(static fn (RakeWagonLoading $l): int => $l->wagon?->wagon_sequence ?? $l->id)
+            ->values()
+            ->map(static function (RakeWagonLoading $loading): array {
+                return [
+                    'id' => $loading->id,
+                    'wagon_id' => $loading->wagon_id,
+                    'loader_id' => $loading->loader_id,
+                    'loaded_quantity_mt' => $loading->loaded_quantity_mt !== null ? (string) $loading->loaded_quantity_mt : '',
+                    'loading_time' => $loading->loading_time?->toIso8601String(),
+                    'remarks' => $loading->remarks,
+                    'wagon' => $loading->wagon ? [
+                        'id' => $loading->wagon->id,
+                        'wagon_number' => $loading->wagon->wagon_number,
+                        'wagon_sequence' => $loading->wagon->wagon_sequence,
+                        'wagon_type' => $loading->wagon->wagon_type,
+                        'tare_weight_mt' => $loading->wagon->tare_weight_mt,
+                        'pcc_weight_mt' => $loading->wagon->pcc_weight_mt,
+                    ] : null,
+                    'loader' => $loading->loader ? [
+                        'id' => $loading->loader->id,
+                        'loader_name' => $loading->loader->loader_name,
+                        'code' => $loading->loader->code,
+                    ] : null,
+                ];
+            });
+
+        return response()->json([
+            'wagonLoadings' => $wagonLoadings,
+        ]);
+    }
+
     public function storeWagonRow(Request $request, Rake $rake): JsonResponse
     {
         $validated = $request->validate([
@@ -233,7 +275,6 @@ final class RakeLoadController extends Controller
 
         $wagon = $rake->wagons()
             ->where('id', $validated['wagon_id'])
-            ->where('is_unfit', false)
             ->firstOrFail();
 
         $exists = $rake->wagonLoadings()

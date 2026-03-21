@@ -253,6 +253,7 @@ return [
         'rakes.load.confirm-placement' => 'sections.rakes.update',
         'rakes.load.wagon' => 'sections.rakes.update',
         'rakes.load.wagons' => 'sections.rakes.update',
+        'rakes.load.wagon-loadings' => 'sections.rakes.update',
         'rakes.load.wagon-rows.store' => 'sections.rakes.update',
         'rakes.load.wagon-rows.update' => 'sections.rakes.update',
         'rakes.load.wagon-rows.destroy' => 'sections.rakes.update',

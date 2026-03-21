@@ -33,9 +33,7 @@ final readonly class RakeLoadStateResolver
         }
 
         $attemptNo = $this->currentAttemptNo($rakeLoad);
-        $loadedCount = $rakeLoad->wagonLoadings()->where('attempt_no', $attemptNo)->count();
-        $totalWagons = $rake->wagons()->where('is_unfit', false)->count();
-        $loadingComplete = $totalWagons > 0 && $loadedCount >= $totalWagons;
+        $loadingComplete = $this->allFitWagonsHavePositiveLoadingForAttempt($rake, $rakeLoad, $attemptNo);
 
         $latestApprovedInspection = $rakeLoad->guardInspections()
             ->where('is_approved', true)
@@ -82,5 +80,26 @@ final readonly class RakeLoadStateResolver
         $maxWagonAttempt = $rakeLoad->wagonLoadings()->max('attempt_no');
 
         return max(1, (int) $maxWagonAttempt);
+    }
+
+    /**
+     * Legacy rake load flow: status uses fit wagons only, each with quantity > 0 for the attempt.
+     */
+    private function allFitWagonsHavePositiveLoadingForAttempt(Rake $rake, RakeLoad $rakeLoad, int $attemptNo): bool
+    {
+        $fitWagonIds = $rake->wagons()->where('is_unfit', false)->pluck('id')->map(static fn ($id): int => (int) $id);
+        if ($fitWagonIds->isEmpty()) {
+            return false;
+        }
+
+        $loadedFitIds = $rakeLoad->wagonLoadings()
+            ->where('attempt_no', $attemptNo)
+            ->whereIn('wagon_id', $fitWagonIds)
+            ->where('loaded_quantity_mt', '>', 0)
+            ->pluck('wagon_id')
+            ->map(static fn ($id): int => (int) $id)
+            ->unique();
+
+        return $fitWagonIds->every(static fn (int $id): bool => $loadedFitIds->contains($id));
     }
 }

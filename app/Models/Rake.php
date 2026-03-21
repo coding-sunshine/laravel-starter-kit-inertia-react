@@ -130,6 +130,27 @@ final class Rake extends Model
         return $this->hasMany(RakeWagonLoading::class);
     }
 
+    /**
+     * Workflow status: every fit wagon has at least one loading row with quantity > 0.
+     * Unfit wagons are ignored (may stay 0 or be filled only for audit).
+     */
+    public function allFitWagonsHavePositiveLoading(): bool
+    {
+        $fitWagonIds = $this->wagons()->where('is_unfit', false)->pluck('id')->map(static fn ($id): int => (int) $id);
+        if ($fitWagonIds->isEmpty()) {
+            return false;
+        }
+
+        $loadedFitIds = $this->wagonLoadings()
+            ->whereIn('wagon_id', $fitWagonIds)
+            ->where('loaded_quantity_mt', '>', 0)
+            ->pluck('wagon_id')
+            ->map(static fn ($id): int => (int) $id)
+            ->unique();
+
+        return $fitWagonIds->every(static fn (int $id): bool => $loadedFitIds->contains($id));
+    }
+
     public function rakeLoad(): HasOne
     {
         return $this->hasOne(RakeLoad::class);

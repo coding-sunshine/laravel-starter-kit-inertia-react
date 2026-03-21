@@ -283,12 +283,12 @@ export function RakeWorkflow({
     const isTxrTimesRecorded =
         Boolean(rakeData.txr?.inspection_time) && Boolean(rakeData.txr?.inspection_end_time);
     const wagonLoadings = rakeData.wagonLoadings ?? [];
-    const fitWagons = rakeData.wagons.filter(w => !w.is_unfit);
     const positivelyLoadedWagonIds = new Set(
         wagonLoadings
             .filter(l => Number(l.loaded_quantity_mt) > 0)
             .map(l => l.wagon_id),
     );
+    const fitWagons = rakeData.wagons.filter(w => !w.is_unfit);
     const isWagonLoadingCompleted =
         fitWagons.length > 0 &&
         fitWagons.every(w => positivelyLoadedWagonIds.has(w.id));
@@ -327,7 +327,7 @@ export function RakeWorkflow({
         {
             id: 'loading',
             label: 'Wagon loading',
-            description: 'All fit wagons have loading records.',
+            description: 'All fit wagons have quantity recorded (unfit rows are optional).',
             status: isWagonLoadingCompleted ? 'completed' : 'pending',
         },
         {

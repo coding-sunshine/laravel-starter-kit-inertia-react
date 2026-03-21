@@ -215,6 +215,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::post('rakes/{rake}/load/confirm-placement', [RakeLoadController::class, 'confirmPlacement'])->name('rakes.load.confirm-placement');
     Route::post('rakes/{rake}/load/wagon', [RakeLoadController::class, 'loadWagon'])->name('rakes.load.wagon');
     Route::post('rakes/{rake}/load/wagons', [RakeLoadController::class, 'storeWagonLoadings'])->name('rakes.load.wagons');
+    Route::get('rakes/{rake}/load/wagon-loadings', [RakeLoadController::class, 'indexWagonLoadings'])->name('rakes.load.wagon-loadings');
     Route::post('rakes/{rake}/load/wagon-rows', [RakeLoadController::class, 'storeWagonRow'])->name('rakes.load.wagon-rows.store');
     Route::patch('rakes/{rake}/load/wagon-rows/{loading}', [RakeLoadController::class, 'updateWagonRow'])->name('rakes.load.wagon-rows.update');
     Route::delete('rakes/{rake}/load/wagon-rows/{loading}', [RakeLoadController::class, 'destroyWagonRow'])->name('rakes.load.wagon-rows.destroy');

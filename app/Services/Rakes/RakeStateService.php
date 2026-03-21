@@ -130,7 +130,7 @@ final readonly class RakeStateService
             'txr_in_progress' => 'Train examination is in progress',
             'txr_completed' => 'Train examination completed successfully',
             'loading' => 'Wagons are being loaded',
-            'loading_completed' => 'All wagons loaded successfully',
+            'loading_completed' => 'All fit wagons loaded (quantity recorded)',
             'guard_approved' => 'Guard has approved for movement',
             'guard_rejected' => 'Guard rejected - workflow blocked',
             'weighment_completed' => 'Rake weighment completed',
@@ -143,9 +143,6 @@ final readonly class RakeStateService
 
     private function isAllWagonsLoaded(Rake $rake): bool
     {
-        $fitWagonsCount = $rake->wagons()->where('is_unfit', false)->count();
-        $loadedWagonsCount = $rake->wagonLoadings()->count();
-
-        return $fitWagonsCount > 0 && $loadedWagonsCount >= $fitWagonsCount;
+        return $rake->allFitWagonsHavePositiveLoading();
     }
 }
