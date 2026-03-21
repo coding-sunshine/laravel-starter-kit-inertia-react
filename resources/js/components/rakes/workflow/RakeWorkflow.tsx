@@ -245,6 +245,7 @@ function LoadingTimesForm({ rakeId, loadingStart, loadingEnd }: LoadingTimesForm
 
 export function RakeWorkflow({ rake, demurrage_rate_per_mt_hour }: RakeWorkflowProps) {
     const [rakeData, setRakeData] = useState(rake);
+    const [workflowGateError, setWorkflowGateError] = useState<string | null>(null);
     useEffect(() => {
         setRakeData(rake);
     }, [rake]);
@@ -261,6 +262,10 @@ export function RakeWorkflow({ rake, demurrage_rate_per_mt_hour }: RakeWorkflowP
     const isWagonLoadingCompleted =
         fitWagons.length > 0 &&
         fitWagons.every(w => positivelyLoadedWagonIds.has(w.id));
+    const missingWagonNumberCount = rakeData.wagons.filter(
+        (wagon) => (wagon.wagon_number ?? '').trim().length <= 4
+    ).length;
+    const hasMissingWagonNumbers = missingWagonNumberCount > 0;
     const isGuardApproved = rakeData.guardInspections?.[0]?.is_approved;
     const isWeighmentCompleted = rakeData.weighments?.[0]?.status === 'success';
     const hasRrDocument = !!rakeData.rrDocuments?.length;
@@ -315,16 +320,8 @@ export function RakeWorkflow({ rake, demurrage_rate_per_mt_hour }: RakeWorkflowP
         },
     ];
 
-    // Disable logic based on workflow
-    // const disableWagonLoading = !isTxrCompleted;
-    // const disableGuardInspection = !isWagonLoadingCompleted;
-    // const disableWeighment = !isGuardApproved;
-    // const disableComparison = !isWeighmentCompleted;
-    // const disableRrDocument = !isWeighmentCompleted;
-    // const disablePenalties = !isWeighmentCompleted;
-    
-    // Temporarily disable all step requirements
-    const disableWagonLoading = false;
+    const disableTxr = hasMissingWagonNumbers;
+    const disableWagonLoading = hasMissingWagonNumbers;
     const disableGuardInspection = false;
     const disableWeighment = false;
     const disableComparison = false;
@@ -379,21 +376,39 @@ export function RakeWorkflow({ rake, demurrage_rate_per_mt_hour }: RakeWorkflowP
                 </ol>
             </div>
 
+            {workflowGateError && (
+                <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                    {workflowGateError}
+                </div>
+            )}
+
             <Accordion type="multiple" /* defaultValue={['txr']} */ className="w-full">
                 {/* 1. TXR */}
                 <AccordionItem value="txr">
-                    <AccordionTrigger>
+                    <AccordionTrigger
+                        onClick={(event) => {
+                            if (disableTxr) {
+                                event.preventDefault();
+                                setWorkflowGateError('Please add all wagon numbers for this rake.');
+                            } else {
+                                setWorkflowGateError(null);
+                            }
+                        }}
+                    >
                         <div className="flex items-center gap-2 text-left">
                             <span className="font-medium">1. TXR - Train Examination Report</span>
                             {isTxrCompleted && (
                                 <span className="text-green-600 text-sm">✓ Completed</span>
+                            )}
+                            {disableTxr && !isTxrCompleted && (
+                                <span className="text-gray-400 text-sm">🔒 Locked</span>
                             )}
                         </div>
                     </AccordionTrigger>
                     <AccordionContent>
                         <TxrWorkflow
                             rake={rakeData}
-                            disabled={false}
+                            disabled={disableTxr}
                             onUnfitLogsSaved={(logs) =>
                                 setRakeData((prev) => ({
                                     ...prev,
@@ -414,7 +429,16 @@ export function RakeWorkflow({ rake, demurrage_rate_per_mt_hour }: RakeWorkflowP
 
                 {/* 2. Wagon Loading */}
                 <AccordionItem value="wagon-loading">
-                    <AccordionTrigger disabled={disableWagonLoading}>
+                    <AccordionTrigger
+                        onClick={(event) => {
+                            if (disableWagonLoading) {
+                                event.preventDefault();
+                                setWorkflowGateError('Please add all wagon numbers for this rake.');
+                            } else {
+                                setWorkflowGateError(null);
+                            }
+                        }}
+                    >
                         <div className="flex items-center gap-2 text-left">
                             <span className="font-medium">2. Wagon Loading</span>
                             {isWagonLoadingCompleted && (

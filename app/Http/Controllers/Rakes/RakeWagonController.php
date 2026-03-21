@@ -27,7 +27,7 @@ final class RakeWagonController extends Controller
         }
 
         $validated = $request->validate([
-            'wagon_number' => ['nullable', 'string', 'max:20'],
+            'wagon_number' => ['nullable', 'string', 'min:5', 'max:20'],
             'wagon_type' => ['nullable', 'string', 'max:50'],
             'tare_weight_mt' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
             'pcc_weight_mt' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
@@ -60,7 +60,7 @@ final class RakeWagonController extends Controller
         $validated = $request->validate([
             'wagons' => ['required', 'array', 'min:1'],
             'wagons.*.id' => ['required', 'integer', Rule::exists('wagons', 'id')],
-            'wagons.*.wagon_number' => ['nullable', 'string', 'max:20'],
+            'wagons.*.wagon_number' => ['nullable', 'string', 'min:5', 'max:20'],
             'wagons.*.wagon_type' => ['nullable', 'string', 'max:50'],
             'wagons.*.tare_weight_mt' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
             'wagons.*.pcc_weight_mt' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],

@@ -14,10 +14,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router, usePage, useForm } from '@inertiajs/react';
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Clock, FileText, Scale, Train, Edit, Trash2 } from 'lucide-react';
 import { RakeWorkflow } from '@/components/rakes/workflow/RakeWorkflow';
 import { WagonOverviewDialog } from '@/components/rakes/WagonOverviewDialog';
+import { EditWagonsDialog } from '@/components/rakes/EditWagonsDialog';
 
 interface Siding {
     id: number;
@@ -741,6 +742,18 @@ export default function RakesShow({
         demurrageRemainingMinutes !== null && demurrageRemainingMinutes <= 30;
     const isCritical =
         demurrageRemainingMinutes !== null && demurrageRemainingMinutes <= 0;
+    const missingWagonNumberCount = wagons.filter(
+        (wagon) => (wagon.wagon_number ?? '').trim().length <= 4
+    ).length;
+    const missingWagonTypeCount = wagons.filter(
+        (wagon) => (wagon.wagon_type ?? '').trim() === ''
+    ).length;
+    const hasWagonDataGaps = missingWagonNumberCount > 0 || missingWagonTypeCount > 0;
+
+    const rakeForWorkflow = useMemo(
+        () => ({ ...rake, wagons }),
+        [rake, wagons],
+    );
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -758,17 +771,6 @@ export default function RakesShow({
                     <div className="flex gap-2">
                         <WagonOverviewDialog
                             wagons={wagons}
-                            wagonTypes={wagonTypes}
-                            rakeId={rake.id}
-                            onWagonSaved={(updatedWagon) =>
-                                setWagons((prev) =>
-                                    prev.map((w) =>
-                                        w.id === updatedWagon.id
-                                            ? { ...w, ...updatedWagon }
-                                            : w
-                                    )
-                                )
-                            }
                         />
                         <Link
                             href="/rakes"
@@ -794,14 +796,42 @@ export default function RakesShow({
                             <CardTitle className="text-lg">
                                 {rake.wagon_count ?? 0}
                             </CardTitle>
+                            <div className="pt-2">
+                                <EditWagonsDialog
+                                    wagons={wagons}
+                                    wagonTypes={wagonTypes}
+                                    rakeId={rake.id}
+                                    onWagonSaved={(updatedWagon) =>
+                                        setWagons((prev) =>
+                                            prev.map((wagon) =>
+                                                wagon.id === updatedWagon.id
+                                                    ? { ...wagon, ...updatedWagon }
+                                                    : wagon
+                                            )
+                                        )
+                                    }
+                                />
+                            </div>
+                            {hasWagonDataGaps ? (
+                                <p className="text-xs text-amber-600 dark:text-amber-400 pt-2">
+                                    {missingWagonNumberCount} wagon numbers or {missingWagonTypeCount} wagon types missing. Please update wagons.
+                                </p>
+                            ) : (
+                                <p className="text-xs text-emerald-600 dark:text-emerald-400 pt-2">
+                                    All wagon numbers and wagon types are updated.
+                                </p>
+                            )}
                         </CardHeader>
                     </Card>
                 </div>
 
                 {/* Workflow steps (TXR, Loading, Guard, Weighment, etc.) */}
-                <RakeWorkflow rake={rake} demurrage_rate_per_mt_hour={demurrage_rate_per_mt_hour} />
+                <RakeWorkflow
+                    rake={rakeForWorkflow}
+                    demurrage_rate_per_mt_hour={demurrage_rate_per_mt_hour}
+                />
 
-                {!rake.txr && rake.wagons.length === 0 && (
+                {!rake.txr && wagons.length === 0 && (
                     <Card>
                         <CardContent className="p-8 text-center text-sm text-muted-foreground">
                             No TXR or wagon data yet. Use the rail dispatch
