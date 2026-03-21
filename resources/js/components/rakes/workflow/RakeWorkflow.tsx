@@ -95,12 +95,18 @@ interface RakeData {
             };
         }>;
     }>;
+    is_diverted?: boolean;
+    diverrtDestinations?: Array<{
+        id: number;
+        location: string;
+    }>;
     rrDocuments?: Array<{
         id: number;
         rr_number: string;
         rr_received_date: string;
         rr_weight_mt: string | null;
         document_status: string;
+        diverrt_destination_id?: number | null;
     }>;
     penalties?: Array<{
         id: number;
@@ -298,7 +304,21 @@ export function RakeWorkflow({
     const hasMissingWagonNumbers = missingWagonNumberCount > 0;
     const isGuardApproved = rakeData.guardInspections?.[0]?.is_approved;
     const isWeighmentCompleted = rakeData.weighments?.[0]?.status === 'success';
-    const hasRrDocument = !!rakeData.rrDocuments?.length;
+    const hasRrDocument = ((): boolean => {
+        const docs = rakeData.rrDocuments ?? [];
+        if (!rakeData.is_diverted) {
+            return docs.length > 0;
+        }
+        const primary = docs.some((d) => d.diverrt_destination_id == null);
+        if (!primary) {
+            return false;
+        }
+        const legs = rakeData.diverrtDestinations ?? [];
+        if (legs.length === 0) {
+            return true;
+        }
+        return legs.every((leg) => docs.some((d) => d.diverrt_destination_id === leg.id));
+    })();
 
     const progressSteps: Array<{
         id: string;

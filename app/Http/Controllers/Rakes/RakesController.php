@@ -135,11 +135,25 @@ final class RakesController extends Controller
             $rakeArray['wagonLoadings'] = $rakeArray['wagon_loadings'];
         }
 
-        if (array_key_exists('rr_document', $rakeArray) && $rakeArray['rr_document'] !== null) {
-            $rakeArray['rrDocuments'] = [$rakeArray['rr_document']];
-        } else {
-            $rakeArray['rrDocuments'] = [];
-        }
+        $rakeArray['rrDocuments'] = collect($rake->rrDocuments ?? [])->map(static function ($doc): array {
+            return [
+                'id' => $doc->id,
+                'rr_number' => $doc->rr_number,
+                'rr_received_date' => $doc->rr_received_date?->toIso8601String() ?? '',
+                'rr_weight_mt' => $doc->rr_weight_mt,
+                'document_status' => $doc->document_status,
+                'diverrt_destination_id' => $doc->diverrt_destination_id,
+            ];
+        })->values()->all();
+
+        $rakeArray['diverrtDestinations'] = collect($rake->diverrtDestinations ?? [])->map(static function ($row): array {
+            return [
+                'id' => $row->id,
+                'location' => $row->location,
+            ];
+        })->values()->all();
+
+        unset($rakeArray['rr_document'], $rakeArray['rr_documents'], $rakeArray['diverrt_destinations']);
 
         if (array_key_exists('applied_penalties', $rakeArray)) {
             $rakeArray['appliedPenalties'] = $rakeArray['applied_penalties'];

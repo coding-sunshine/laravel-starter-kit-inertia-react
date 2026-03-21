@@ -161,9 +161,17 @@ final class Rake extends Model
         return $this->hasMany(GuardInspection::class);
     }
 
+    /**
+     * Primary Railway Receipt for this rake (original destination; not a diversion leg).
+     */
     public function rrDocument(): HasOne
     {
-        return $this->hasOne(RrDocument::class);
+        return $this->hasOne(RrDocument::class)->whereNull('diverrt_destination_id');
+    }
+
+    public function rrDocuments(): HasMany
+    {
+        return $this->hasMany(RrDocument::class);
     }
 
     public function penalties(): HasMany

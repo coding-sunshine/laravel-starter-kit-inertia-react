@@ -234,6 +234,9 @@ return [
         // Rakes
         'rakes.index' => 'sections.rakes.view',
         'rakes.show' => 'sections.rakes.view',
+        'rakes.diversion-mode.update' => 'sections.rakes.update',
+        'rakes.diverrt-destinations.store' => 'sections.rakes.update',
+        'rakes.diverrt-destinations.destroy' => 'sections.rakes.update',
         'rakes.edit' => 'sections.rakes.update',
         'rakes.update' => 'sections.rakes.update',
         'rakes.destroy' => 'sections.rakes.delete',

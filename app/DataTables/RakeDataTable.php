@@ -103,8 +103,10 @@ final class RakeDataTable extends AbstractDataTable
     {
         $query = Rake::query()->with([
             'siding:id,code,name',
-            'rrDocument:id,rake_id',
+            'rrDocument:id,rake_id,diverrt_destination_id',
             'rrDocument.media',
+            'rrDocuments:id,rake_id,diverrt_destination_id',
+            'diverrtDestinations:id,rake_id',
             'txr:id,rake_id,status,inspection_time,inspection_end_time',
             'wagons:id,rake_id,is_unfit',
             'wagonLoadings:id,rake_id,wagon_id,loaded_quantity_mt',
@@ -156,6 +158,39 @@ final class RakeDataTable extends AbstractDataTable
      *
      * @return array{txr_done: bool, wagon_loading_done: bool, guard_done: bool, weighment_done: bool, rr_done: bool}
      */
+    public static function rakeRrWorkflowIsComplete(Rake $model): bool
+    {
+        if (! $model->is_diverted) {
+            return $model->relationLoaded('rrDocument')
+                ? $model->rrDocument !== null
+                : $model->rrDocument()->exists();
+        }
+
+        $primaryExists = $model->relationLoaded('rrDocuments')
+            ? $model->rrDocuments->contains(fn ($d) => $d->diverrt_destination_id === null)
+            : $model->rrDocuments()->whereNull('diverrt_destination_id')->exists();
+
+        if (! $primaryExists) {
+            return false;
+        }
+
+        $destIds = $model->relationLoaded('diverrtDestinations')
+            ? $model->diverrtDestinations->pluck('id')
+            : $model->diverrtDestinations()->pluck('id');
+
+        if ($destIds->isEmpty()) {
+            return true;
+        }
+
+        $covered = $model->rrDocuments()
+            ->whereIn('diverrt_destination_id', $destIds)
+            ->pluck('diverrt_destination_id')
+            ->unique()
+            ->filter();
+
+        return $covered->count() === $destIds->count();
+    }
+
     private static function computeWorkflowSteps(Rake $model): array
     {
         $txr = $model->txr;

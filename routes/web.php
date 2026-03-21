@@ -44,6 +44,8 @@ use App\Http\Controllers\ProductionEntryController;
 use App\Http\Controllers\RailwayReceipts\PenaltyController;
 use App\Http\Controllers\RailwayReceipts\RrDocumentController;
 use App\Http\Controllers\RailwaySidingEmptyWeighmentController;
+use App\Http\Controllers\Rakes\RakeDiverrtDestinationController;
+use App\Http\Controllers\Rakes\RakeDiversionModeController;
 use App\Http\Controllers\Rakes\RakeGuardInspectionController;
 use App\Http\Controllers\Rakes\RakeLoadController;
 use App\Http\Controllers\Rakes\RakesController;
@@ -194,6 +196,9 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     // RRMCS Routes (Railway Rake Management Control System)
     Route::get('rakes', [RakesController::class, 'index'])->name('rakes.index');
     Route::get('rakes/{rake}', [RakesController::class, 'show'])->name('rakes.show');
+    Route::patch('rakes/{rake}/diversion-mode', RakeDiversionModeController::class)->name('rakes.diversion-mode.update');
+    Route::post('rakes/{rake}/diverrt-destinations', [RakeDiverrtDestinationController::class, 'store'])->name('rakes.diverrt-destinations.store');
+    Route::delete('rakes/{rake}/diverrt-destinations/{diverrtDestination}', [RakeDiverrtDestinationController::class, 'destroy'])->name('rakes.diverrt-destinations.destroy');
     Route::get('rakes/{rake}/edit', [RakesController::class, 'edit'])->name('rakes.edit');
     Route::put('rakes/{rake}', [RakesController::class, 'update'])->name('rakes.update');
     Route::delete('rakes/{rake}', [RakesController::class, 'destroy'])->name('rakes.destroy');

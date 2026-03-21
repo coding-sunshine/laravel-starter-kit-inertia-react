@@ -85,7 +85,7 @@ final class RrDocumentController extends Controller
                 'siding_id' => $sidingId,
                 'power_plant_id' => $powerPlantId,
             ];
-            $rrDocument = $rrImportService->importSnapshotOnly($parsed, $request, $validated, $rake);
+            $rrDocument = $rrImportService->importSnapshotOnly($parsed, $request, $validated, $rake, null);
 
             return to_route('railway-receipts.show', $rrDocument)
                 ->with('success', 'RR document uploaded and parsed successfully.');

@@ -6,6 +6,7 @@ namespace App\Services\Railway;
 
 use App\Http\Requests\StoreRrUploadRequest;
 use App\Models\AppliedPenalty;
+use App\Models\DiverrtDestination;
 use App\Models\PenaltyType;
 use App\Models\Rake;
 use App\Models\RrCharge;
@@ -25,7 +26,7 @@ final readonly class RrImportService
 
     public function import(array $parsed, StoreRrUploadRequest $request): RrDocument
     {
-        return $this->importSnapshotOnly($parsed, $request, $request->validated(), null);
+        return $this->importSnapshotOnly($parsed, $request, $request->validated(), null, null);
     }
 
     /**
@@ -38,8 +39,8 @@ final readonly class RrImportService
         $userId = $request->user()->id;
 
         try {
-            return DB::transaction(function () use ($parsed, $validated) {
-                return $this->importSnapshotOnly($parsed, $request, $validated, null);
+            return DB::transaction(function () use ($parsed, $validated, $request) {
+                return $this->importSnapshotOnly($parsed, $request, $validated, null, null);
             });
         } catch (Throwable $e) {
             Log::error('RR import: transaction rolled back', [
@@ -53,17 +54,23 @@ final readonly class RrImportService
         }
     }
 
-    public function importSnapshotOnly(array $parsed, Request $request, array $validated, ?Rake $rake = null): RrDocument
-    {
+    public function importSnapshotOnly(
+        array $parsed,
+        Request $request,
+        array $validated,
+        ?Rake $rake = null,
+        ?DiverrtDestination $diverrtDestination = null,
+    ): RrDocument {
         $userId = $request->user()->id;
 
-        return DB::transaction(function () use ($parsed, $validated, $userId, $rake, $request) {
-            if ($rake !== null) {
-                $this->validateParsedRailwayReceiptAgainstRake($parsed, $rake);
+        return DB::transaction(function () use ($parsed, $validated, $userId, $rake, $request, $diverrtDestination) {
+            if ($diverrtDestination !== null && $rake === null) {
+                throw new InvalidArgumentException('A rake is required when uploading a diversion Railway Receipt.');
             }
 
-            if ($rake !== null && RrDocument::query()->where('rake_id', $rake->id)->exists()) {
-                throw new InvalidArgumentException('Railway Receipt has already been uploaded for this rake.');
+            if ($rake !== null) {
+                $this->assertRrUploadSlotAvailable($rake, $diverrtDestination);
+                $this->validateParsedRailwayReceiptAgainstRake($parsed, $rake, $diverrtDestination);
             }
 
             $this->validateNoDuplicates($parsed);
@@ -71,7 +78,8 @@ final readonly class RrImportService
             $rrDate = $this->parseDate($parsed['rr_date'] ?? $parsed['rr_received_date'] ?? null);
 
             Log::debug('RR import (snapshot): creating document');
-            $rrDocument = $this->createSnapshotRrDocument($rake, $parsed, $validated, $userId, $rrDate);
+            $diverrtDestinationId = $diverrtDestination?->id;
+            $rrDocument = $this->createSnapshotRrDocument($rake, $parsed, $validated, $userId, $rrDate, $diverrtDestinationId);
 
             $pdfFile = $validated['pdf'] ?? $request->file('pdf');
             if ($pdfFile) {
@@ -93,6 +101,43 @@ final readonly class RrImportService
         });
     }
 
+    private function assertRrUploadSlotAvailable(Rake $rake, ?DiverrtDestination $diverrtDestination): void
+    {
+        if ($diverrtDestination !== null) {
+            if (! $rake->is_diverted) {
+                throw new InvalidArgumentException('This rake is not marked as diverted; diversion Railway Receipt uploads are not allowed.');
+            }
+            if ((int) $diverrtDestination->rake_id !== (int) $rake->id) {
+                throw new InvalidArgumentException('The selected diversion destination does not belong to this rake.');
+            }
+            $exists = RrDocument::query()
+                ->where('rake_id', $rake->id)
+                ->where('diverrt_destination_id', $diverrtDestination->id)
+                ->exists();
+            if ($exists) {
+                throw new InvalidArgumentException('A Railway Receipt has already been uploaded for this diversion destination.');
+            }
+
+            return;
+        }
+
+        if ($rake->is_diverted) {
+            $primaryTaken = RrDocument::query()
+                ->where('rake_id', $rake->id)
+                ->whereNull('diverrt_destination_id')
+                ->exists();
+            if ($primaryTaken) {
+                throw new InvalidArgumentException('The primary Railway Receipt for this rake has already been uploaded.');
+            }
+
+            return;
+        }
+
+        if (RrDocument::query()->where('rake_id', $rake->id)->exists()) {
+            throw new InvalidArgumentException('Railway Receipt has already been uploaded for this rake.');
+        }
+    }
+
     private function validateNoDuplicates(array $parsed): void
     {
         $rrNumber = $parsed['rr_number'] ?? null;
@@ -107,11 +152,11 @@ final readonly class RrImportService
     }
 
     /**
-     * Rake-linked RR: enforce Station To vs rake.destination_code always; Station From only for configured sidings (e.g. Dumka).
+     * Rake-linked RR: enforce Station To vs rake.destination_code (primary) or diverrt_destination.location (diversion); Station From only for configured sidings (e.g. Dumka).
      *
      * @param  array<string, mixed>  $parsed
      */
-    private function validateParsedRailwayReceiptAgainstRake(array $parsed, Rake $rake): void
+    private function validateParsedRailwayReceiptAgainstRake(array $parsed, Rake $rake, ?DiverrtDestination $diverrtDestination = null): void
     {
         $rake->loadMissing('siding');
         $siding = $rake->siding;
@@ -150,15 +195,35 @@ final readonly class RrImportService
             }
         }
 
-        $rakeDest = $rake->destination_code;
-        if ($rakeDest === null || mb_trim((string) $rakeDest) === '') {
-            throw new InvalidArgumentException('Set destination code on the rake before uploading the Railway Receipt.');
-        }
         $toRaw = $parsed['to_station_code'] ?? null;
         if ($toRaw === null || mb_trim((string) $toRaw) === '') {
             throw new InvalidArgumentException('Railway Receipt PDF is missing Station To code.');
         }
-        if (mb_strtoupper(mb_trim((string) $toRaw)) !== mb_strtoupper(mb_trim((string) $rakeDest))) {
+        $toNorm = mb_strtoupper(mb_trim((string) $toRaw));
+
+        if ($diverrtDestination !== null) {
+            $legLocation = $diverrtDestination->location;
+            if ($legLocation === null || mb_trim((string) $legLocation) === '') {
+                throw new InvalidArgumentException('Diversion destination has no location (station code) set; cannot validate Railway Receipt.');
+            }
+            if ($toNorm !== mb_strtoupper(mb_trim((string) $legLocation))) {
+                throw new InvalidArgumentException(
+                    sprintf(
+                        'Railway Receipt Station To (%s) does not match this diversion leg (%s).',
+                        mb_trim((string) $toRaw),
+                        mb_trim((string) $legLocation)
+                    )
+                );
+            }
+
+            return;
+        }
+
+        $rakeDest = $rake->destination_code;
+        if ($rakeDest === null || mb_trim((string) $rakeDest) === '') {
+            throw new InvalidArgumentException('Set destination code on the rake before uploading the Railway Receipt.');
+        }
+        if ($toNorm !== mb_strtoupper(mb_trim((string) $rakeDest))) {
             throw new InvalidArgumentException(
                 sprintf(
                     'Railway Receipt Station To (%s) does not match the rake destination code (%s).',
@@ -175,9 +240,11 @@ final readonly class RrImportService
         array $validated,
         int $userId,
         \Carbon\CarbonInterface $rrDate,
+        ?int $diverrtDestinationId = null,
     ): RrDocument {
         return RrDocument::query()->create([
             'rake_id' => $rake?->id,
+            'diverrt_destination_id' => $diverrtDestinationId,
             'rr_number' => $parsed['rr_number'],
             'fnr' => $parsed['fnr'] ?? null,
             'rr_received_date' => $rrDate,

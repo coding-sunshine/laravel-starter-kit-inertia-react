@@ -101,6 +101,7 @@ interface RrDocumentRecord {
     rr_received_date: string;
     rr_weight_mt: string | null;
     document_status: string;
+    diverrt_destination_id?: number | null;
 }
 
 interface PenaltyBreakdown {
@@ -140,12 +141,16 @@ interface RakeData {
     placement_time: string | null;
     dispatch_time: string | null;
     loading_free_minutes: number | null;
+    is_diverted?: boolean;
+    destination_code?: string | null;
     siding?: Siding | null;
     wagons: Wagon[];
     txr: TxrRecord | null;
     wagonLoadings?: RakeWagonLoading[];
     guardInspections?: GuardInspectionRecord[];
     weighments?: WeighmentRecord[];
+    rrDocuments?: RrDocumentRecord[];
+    diverrtDestinations?: Array<{ id: number; location: string }>;
     penalties?: PenaltyRecord[];
     appliedPenalties?: AppliedPenaltyRecord[];
 }
