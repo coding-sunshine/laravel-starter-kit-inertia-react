@@ -45,7 +45,8 @@ final readonly class WeighmentPdfImporter
 
     /**
      * Parse a weighment PDF for use with an existing rake (no Rake/Wagon creation).
-     * Validates document shape and that the parsed rake number matches the given rake.
+     * Validates document shape. The FOIS / slip rake number may differ from {@see Rake::$rake_number}
+     * in the application; we still attach the weighment to the rake the user is on and only log a warning.
      * Does not persist the file; call {@see UploadedFile::store()} after validation succeeds.
      *
      * @return array{header: array<string, mixed>, totals: array<string, float|null>, wagon_rows: array<int, array<string, mixed>>}
@@ -68,7 +69,11 @@ final readonly class WeighmentPdfImporter
         }
 
         if (! $this->rakeNumbersMatch((string) $header['rake_number'], (string) $rake->rake_number)) {
-            throw new InvalidArgumentException('Weighment PDF is for a different rake.');
+            Log::warning('Weighment PDF rake number differs from application rake; attaching to current rake anyway.', [
+                'rake_id' => $rake->id,
+                'application_rake_number' => $rake->rake_number,
+                'pdf_rake_number' => $header['rake_number'],
+            ]);
         }
 
         return [
