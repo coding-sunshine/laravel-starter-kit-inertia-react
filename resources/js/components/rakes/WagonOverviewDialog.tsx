@@ -14,6 +14,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
 import { Eye } from 'lucide-react';
 
 export interface WagonOverviewWagon {
@@ -50,7 +51,7 @@ export function WagonOverviewDialog({
                     className="flex-1 min-h-0 overflow-auto border rounded-md"
                     style={{ height: 'min(70vh, 600px)' }}
                 >
-                    <div className="inline-block min-w-[900px] align-top">
+                    <div className="inline-block min-w-[1000px] align-top">
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -59,12 +60,20 @@ export function WagonOverviewDialog({
                                 <TableHead>Wagon Type</TableHead>
                                 <TableHead>Tare (MT)</TableHead>
                                 <TableHead>PCC (MT)</TableHead>
+                                <TableHead>TXR / fitness</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {wagons.map((wagon) => {
                                 return (
-                                <TableRow key={wagon.id}>
+                                <TableRow
+                                    key={wagon.id}
+                                    className={
+                                        wagon.is_unfit
+                                            ? 'bg-red-950/35 dark:bg-red-950/45 border-red-900/40'
+                                            : undefined
+                                    }
+                                >
                                         <TableCell>
                                             {wagon.wagon_number || '—'}
                                         </TableCell>
@@ -79,6 +88,20 @@ export function WagonOverviewDialog({
                                         </TableCell>
                                     <TableCell>
                                             {wagon.pcc_weight_mt ?? '—'}
+                                    </TableCell>
+                                    <TableCell>
+                                        {wagon.is_unfit ? (
+                                            <Badge
+                                                variant="destructive"
+                                                className="whitespace-nowrap bg-red-900 text-white hover:bg-red-900 dark:bg-red-950"
+                                            >
+                                                Marked unfit (TXR)
+                                            </Badge>
+                                        ) : (
+                                            <span className="text-sm text-muted-foreground">
+                                                Fit
+                                            </span>
+                                        )}
                                     </TableCell>
                                 </TableRow>
                                 );

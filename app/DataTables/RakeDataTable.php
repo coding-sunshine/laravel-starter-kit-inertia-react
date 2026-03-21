@@ -105,7 +105,7 @@ final class RakeDataTable extends AbstractDataTable
             'siding:id,code,name',
             'rrDocument:id,rake_id',
             'rrDocument.media',
-            'txr:id,rake_id,status',
+            'txr:id,rake_id,status,inspection_time,inspection_end_time',
             'wagons:id,rake_id,is_unfit',
             'wagonLoadings:id,rake_id,wagon_id,loaded_quantity_mt',
             'guardInspections:id,rake_id,is_approved',
@@ -158,7 +158,27 @@ final class RakeDataTable extends AbstractDataTable
      */
     private static function computeWorkflowSteps(Rake $model): array
     {
-        $isTxrCompleted = $model->txr?->status === 'completed';
+        $txr = $model->txr;
+        // Match web RakeWorkflow TXR step: done when start + end times are saved. Keep
+        // status=completed as true so legacy rows and mobile integrations stay consistent.
+        // Use getAttributes() for times so partial eager-loads (missing columns) do not throw
+        // MissingAttributeException on __get().
+        $isTxrDone = false;
+        if ($txr !== null) {
+            if ($txr->status === 'completed') {
+                $isTxrDone = true;
+            } else {
+                $attrs = $txr->getAttributes();
+                if (
+                    array_key_exists('inspection_time', $attrs)
+                    && array_key_exists('inspection_end_time', $attrs)
+                    && $attrs['inspection_time'] !== null
+                    && $attrs['inspection_end_time'] !== null
+                ) {
+                    $isTxrDone = true;
+                }
+            }
+        }
         $wagons = $model->relationLoaded('wagons') ? $model->wagons : $model->wagons()->get();
         $fitWagons = $wagons->filter(fn ($w) => ! $w->is_unfit);
         $wagonLoadings = $model->relationLoaded('wagonLoadings') ? $model->wagonLoadings : $model->wagonLoadings()->get();
@@ -179,7 +199,7 @@ final class RakeDataTable extends AbstractDataTable
             : $model->rrDocument()->exists();
 
         return [
-            'txr_done' => $isTxrCompleted,
+            'txr_done' => $isTxrDone,
             'wagon_loading_done' => $isWagonLoadingCompleted,
             'guard_done' => $isGuardApproved,
             'weighment_done' => $isWeighmentCompleted,

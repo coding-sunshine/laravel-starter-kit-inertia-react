@@ -130,6 +130,31 @@ interface RakeData {
 interface RakeWorkflowProps {
     rake: RakeData;
     demurrage_rate_per_mt_hour: number;
+    /** Keeps parent wagon list (e.g. View Wagons dialog) in sync after unfit logs save */
+    onUnfitWagonIdsSynced?: (unfitWagonIds: number[]) => void;
+}
+
+function mergeTxrAfterHeaderSave(
+    prev: RakeData['txr'],
+    incoming: Record<string, unknown>,
+): NonNullable<RakeData['txr']> {
+    const prevLogs = prev?.wagonUnfitLogs;
+    const incomingLogs = incoming.wagonUnfitLogs ?? incoming.wagon_unfit_logs;
+    const wagonUnfitLogs = Array.isArray(incomingLogs) ? incomingLogs : (prevLogs ?? []);
+
+    return {
+        ...(prev ?? {}),
+        id: Number(incoming.id),
+        inspection_time: String(incoming.inspection_time ?? ''),
+        inspection_end_time: (incoming.inspection_end_time as string | null | undefined) ?? null,
+        status: String(incoming.status ?? 'in_progress'),
+        remarks: (incoming.remarks as string | null) ?? null,
+        handwritten_note_url:
+            (incoming.handwritten_note_url as string | null | undefined) ??
+            prev?.handwritten_note_url ??
+            null,
+        wagonUnfitLogs,
+    } as NonNullable<RakeData['txr']>;
 }
 
 interface LoadingTimesFormProps {
@@ -243,15 +268,20 @@ function LoadingTimesForm({ rakeId, loadingStart, loadingEnd }: LoadingTimesForm
     );
 }
 
-export function RakeWorkflow({ rake, demurrage_rate_per_mt_hour }: RakeWorkflowProps) {
+export function RakeWorkflow({
+    rake,
+    demurrage_rate_per_mt_hour,
+    onUnfitWagonIdsSynced,
+}: RakeWorkflowProps) {
     const [rakeData, setRakeData] = useState(rake);
     const [workflowGateError, setWorkflowGateError] = useState<string | null>(null);
     useEffect(() => {
         setRakeData(rake);
     }, [rake]);
 
-    // Workflow step completion checks
-    const isTxrCompleted = rakeData.txr?.status === 'completed';
+    // Workflow step completion checks — TXR checklist reflects saved start/end times (not only status=completed)
+    const isTxrTimesRecorded =
+        Boolean(rakeData.txr?.inspection_time) && Boolean(rakeData.txr?.inspection_end_time);
     const wagonLoadings = rakeData.wagonLoadings ?? [];
     const fitWagons = rakeData.wagons.filter(w => !w.is_unfit);
     const positivelyLoadedWagonIds = new Set(
@@ -291,8 +321,8 @@ export function RakeWorkflow({ rake, demurrage_rate_per_mt_hour }: RakeWorkflowP
         {
             id: 'txr',
             label: 'TXR',
-            description: 'Train Examination Report recorded for this rake.',
-            status: isTxrCompleted ? 'completed' : 'pending',
+            description: 'Train Examination Report: start and end inspection times saved.',
+            status: isTxrTimesRecorded ? 'completed' : 'pending',
         },
         {
             id: 'loading',
@@ -397,10 +427,10 @@ export function RakeWorkflow({ rake, demurrage_rate_per_mt_hour }: RakeWorkflowP
                     >
                         <div className="flex items-center gap-2 text-left">
                             <span className="font-medium">1. TXR - Train Examination Report</span>
-                            {isTxrCompleted && (
+                            {isTxrTimesRecorded && (
                                 <span className="text-green-600 text-sm">✓ Completed</span>
                             )}
-                            {disableTxr && !isTxrCompleted && (
+                            {disableTxr && !isTxrTimesRecorded && (
                                 <span className="text-gray-400 text-sm">🔒 Locked</span>
                             )}
                         </div>
@@ -409,14 +439,38 @@ export function RakeWorkflow({ rake, demurrage_rate_per_mt_hour }: RakeWorkflowP
                         <TxrWorkflow
                             rake={rakeData}
                             disabled={disableTxr}
-                            onUnfitLogsSaved={(logs) =>
+                            onTxrHeaderSaved={(incoming) => {
                                 setRakeData((prev) => ({
                                     ...prev,
-                                    txr: prev.txr
-                                        ? { ...prev.txr, wagonUnfitLogs: logs }
-                                        : null,
-                                }))
-                            }
+                                    txr: mergeTxrAfterHeaderSave(
+                                        prev.txr,
+                                        incoming as Record<string, unknown>,
+                                    ),
+                                }));
+                            }}
+                            onUnfitLogsSaved={(logs) => {
+                                const unfitIds = [
+                                    ...new Set(
+                                        logs
+                                            .map((l) => Number(l.wagon_id))
+                                            .filter((id) => Number.isFinite(id) && id > 0),
+                                    ),
+                                ];
+                                onUnfitWagonIdsSynced?.(unfitIds);
+                                setRakeData((prev) => {
+                                    const unfitSet = new Set(unfitIds);
+                                    return {
+                                        ...prev,
+                                        txr: prev.txr
+                                            ? { ...prev.txr, wagonUnfitLogs: logs }
+                                            : null,
+                                        wagons: prev.wagons.map((w) => ({
+                                            ...w,
+                                            is_unfit: unfitSet.has(w.id),
+                                        })),
+                                    };
+                                });
+                            }}
                             onTxrNoteUploaded={(url) =>
                                 setRakeData((prev) => ({
                                     ...prev,

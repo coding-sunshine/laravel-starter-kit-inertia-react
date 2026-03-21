@@ -396,10 +396,28 @@ export function WagonLoadingWorkflow({
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {rows.map((row) => (
-                                            <TableRow key={row.key}>
+                                        {rows.map((row) => {
+                                            const wagonForRow = rake.wagons.find(
+                                                (w) => String(w.id) === row.wagon_id
+                                            );
+                                            const isUnfitRow = wagonForRow?.is_unfit === true;
+
+                                            return (
+                                            <TableRow
+                                                key={row.key}
+                                                className={
+                                                    isUnfitRow
+                                                        ? 'bg-red-950/40 dark:bg-red-950/50 border-b border-red-900/55'
+                                                        : undefined
+                                                }
+                                            >
                                                 <TableCell className="min-w-[140px]">
                                                     <div className="flex flex-col gap-1">
+                                                        {isUnfitRow && (
+                                                            <span className="text-xs font-semibold uppercase tracking-wide text-red-950 dark:text-red-100">
+                                                                Unfit wagon
+                                                            </span>
+                                                        )}
                                                         <Input
                                                             value={row.wagon_number}
                                                             onChange={(e) =>
@@ -408,7 +426,7 @@ export function WagonLoadingWorkflow({
                                                             onBlur={async (e) => {
                                                                 const value = e.target.value.trim();
                                                                 const currentRow = rows.find((r) => r.key === row.key);
-                                                                if (!currentRow?.wagon_id || value === (fitWagons.find((w) => String(w.id) === currentRow.wagon_id)?.wagon_number ?? '')) {
+                                                                if (!currentRow?.wagon_id || value === (rake.wagons.find((w) => String(w.id) === currentRow.wagon_id)?.wagon_number ?? '')) {
                                                                     return;
                                                                 }
                                                                 setError(null);
@@ -451,7 +469,7 @@ export function WagonLoadingWorkflow({
                                                         />
                                                         {row.wagon_id && (
                                                             <span className="text-xs text-muted-foreground">
-                                                                Pos {fitWagons.find((w) => String(w.id) === row.wagon_id)?.wagon_sequence ?? '-'}
+                                                                Pos {rake.wagons.find((w) => String(w.id) === row.wagon_id)?.wagon_sequence ?? '-'}
                                                             </span>
                                                         )}
                                                     </div>
@@ -619,7 +637,8 @@ export function WagonLoadingWorkflow({
                                                     </Button>
                                                 </TableCell>
                                             </TableRow>
-                                        ))}
+                                            );
+                                        })}
                                     </TableBody>
                                 </Table>
                             </div>

@@ -10,6 +10,10 @@ use Illuminate\Support\Facades\DB;
 
 final readonly class UpdateTxrHeaderAction
 {
+    public function __construct(
+        private SyncTxrUnfitFlagsToWagonsAction $syncTxrUnfitFlagsToWagons,
+    ) {}
+
     /**
      * Create or update the TXR header (inspection times, status, remarks).
      * If no TXR exists, creates one; otherwise updates.
@@ -29,10 +33,16 @@ final readonly class UpdateTxrHeaderAction
             ];
 
             if ($txr === null) {
-                return $rake->txr()->create([
+                $created = $rake->txr()->create([
                     ...$payload,
                     'created_by' => $userId,
                 ]);
+
+                if ($data['status'] === 'completed') {
+                    $this->syncTxrUnfitFlagsToWagons->handle($rake, $created);
+                }
+
+                return $created;
             }
 
             $txr->update([
@@ -40,7 +50,13 @@ final readonly class UpdateTxrHeaderAction
                 'updated_by' => $userId,
             ]);
 
-            return $txr->fresh();
+            $txr->refresh();
+
+            if ($data['status'] === 'completed') {
+                $this->syncTxrUnfitFlagsToWagons->handle($rake, $txr);
+            }
+
+            return $txr;
         });
     }
 }

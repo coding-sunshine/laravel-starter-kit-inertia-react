@@ -730,7 +730,7 @@ final class ExecutiveDashboardController extends Controller
         $rakeQuery = Rake::query()
             ->with([
                 'siding:id,name',
-                'txr:id,rake_id,status',
+                'txr:id,rake_id,status,inspection_time,inspection_end_time',
                 'wagons:id,rake_id,is_unfit',
                 'wagonLoadings:id,rake_id,wagon_id,loaded_quantity_mt',
                 'guardInspections:id,rake_id,is_approved',

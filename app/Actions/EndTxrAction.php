@@ -6,12 +6,15 @@ namespace App\Actions;
 
 use App\Models\Rake;
 use App\Models\Txr;
-use App\Models\Wagon;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
 final readonly class EndTxrAction
 {
+    public function __construct(
+        private SyncTxrUnfitFlagsToWagonsAction $syncTxrUnfitFlagsToWagons,
+    ) {}
+
     /**
      * End the TXR for the given rake: sync wagon is_unfit from unfit logs,
      * set inspection_end_time and status completed.
@@ -32,12 +35,7 @@ final readonly class EndTxrAction
                 throw new InvalidArgumentException('TXR has already been ended.');
             }
 
-            $unfitWagonIds = $txr->wagonUnfitLogs()->pluck('wagon_id')->all();
-
-            Wagon::where('rake_id', $rake->id)->update(['is_unfit' => false]);
-            if (! empty($unfitWagonIds)) {
-                Wagon::whereIn('id', $unfitWagonIds)->update(['is_unfit' => true]);
-            }
+            $this->syncTxrUnfitFlagsToWagons->handle($rake, $txr);
 
             $txr->update([
                 'inspection_end_time' => now(),

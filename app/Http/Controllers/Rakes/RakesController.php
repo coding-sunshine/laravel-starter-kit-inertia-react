@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Rakes;
 
+use App\Actions\SyncTxrUnfitFlagsToWagonsAction;
 use App\DataTables\RakeDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\Rake;
@@ -22,6 +23,10 @@ use Inertia\Response;
 
 final class RakesController extends Controller
 {
+    public function __construct(
+        private readonly SyncTxrUnfitFlagsToWagonsAction $syncTxrUnfitFlagsToWagons,
+    ) {}
+
     public function index(Request $request): Response
     {
         return Inertia::render('rakes/index', [
@@ -47,6 +52,26 @@ final class RakesController extends Controller
             'appliedPenalties.penaltyType',
             'appliedPenalties.wagon',
         ]);
+
+        if ($rake->txr !== null) {
+            $expectedUnfitIds = $rake->txr->wagonUnfitLogs
+                ->pluck('wagon_id')
+                ->unique()
+                ->sort()
+                ->values()
+                ->all();
+            $actualUnfitIds = $rake->wagons
+                ->where('is_unfit', true)
+                ->pluck('id')
+                ->sort()
+                ->values()
+                ->all();
+            if ($expectedUnfitIds !== $actualUnfitIds) {
+                $this->syncTxrUnfitFlagsToWagons->handle($rake, $rake->txr);
+                $rake->unsetRelation('wagons');
+                $rake->load('wagons');
+            }
+        }
 
         if ($rake->state !== 'completed' && self::rakeWorkflowCoreComplete($rake)) {
             $rake->update(['state' => 'completed']);

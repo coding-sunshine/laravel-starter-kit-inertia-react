@@ -829,6 +829,15 @@ export default function RakesShow({
                 <RakeWorkflow
                     rake={rakeForWorkflow}
                     demurrage_rate_per_mt_hour={demurrage_rate_per_mt_hour}
+                    onUnfitWagonIdsSynced={(unfitWagonIds) => {
+                        const set = new Set(unfitWagonIds);
+                        setWagons((prev) =>
+                            prev.map((w) => ({
+                                ...w,
+                                is_unfit: set.has(w.id),
+                            })),
+                        );
+                    }}
                 />
 
                 {!rake.txr && wagons.length === 0 && (
