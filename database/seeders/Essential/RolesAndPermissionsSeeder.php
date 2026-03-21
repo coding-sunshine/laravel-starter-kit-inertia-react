@@ -68,6 +68,7 @@ final class RolesAndPermissionsSeeder extends Seeder
         $dispatchManageAdmin->syncPermissions([
             'sections.mines_dispatch_data.view',
             'sections.mines_dispatch_data.upload',
+            'sections.transport.create',
             'sections.transport.update',
             'sections.railway_siding_record_data.view',
             'sections.railway_siding_empty_weighment.view',

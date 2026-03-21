@@ -67,7 +67,7 @@ final class RailwayReceiptUploadController extends Controller
                     'power_plant_id' => $powerPlantId,
                 ];
 
-                $rrDocument = $rrImportService->importSnapshotOnly($parsed, $request, $importValidated, $rake);
+                $rrDocument = $rrImportService->importSnapshotOnly($parsed, $request, $importValidated, $rake, null);
 
                 return response()->json([
                     'data' => [
@@ -103,7 +103,7 @@ final class RailwayReceiptUploadController extends Controller
                 'power_plant_id' => $powerPlantId,
             ];
 
-            $rrDocument = $rrImportService->importSnapshotOnly($parsed, $request, $importValidated, null);
+            $rrDocument = $rrImportService->importSnapshotOnly($parsed, $request, $importValidated, null, null);
 
             return response()->json([
                 'data' => [

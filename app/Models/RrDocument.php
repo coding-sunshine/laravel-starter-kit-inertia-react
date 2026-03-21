@@ -18,6 +18,7 @@ final class RrDocument extends Model implements HasMedia
 
     protected $fillable = [
         'rake_id',
+        'diverrt_destination_id',
         'rr_number',
         'rr_received_date',
         'rr_weight_mt',
@@ -51,6 +52,11 @@ final class RrDocument extends Model implements HasMedia
     public function rake(): BelongsTo
     {
         return $this->belongsTo(Rake::class);
+    }
+
+    public function diverrtDestination(): BelongsTo
+    {
+        return $this->belongsTo(DiverrtDestination::class, 'diverrt_destination_id');
     }
 
     public function rrCharges(): HasMany

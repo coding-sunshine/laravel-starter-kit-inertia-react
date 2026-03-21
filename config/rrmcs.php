@@ -51,4 +51,25 @@ return [
     |--------------------------------------------------------------------------
     */
     'imwb_default_siding_code' => env('RRMCS_IMWB_DEFAULT_SIDING', 'DUMK'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Railway Receipt: strict Station From validation (rake-linked uploads)
+    |--------------------------------------------------------------------------
+    | When a rake's siding uses one of these station_code values (uppercase in
+    | DB, compared case-insensitively), the parsed PDF must include Station From
+    | and it must match that siding's station_code or code after alias mapping.
+    | Other sidings (e.g. Kurwa, Pakur) skip "from" validation — PDF headers are
+    | not reliable enough there yet.
+    */
+    'rr_strict_from_station_station_codes' => ['DMK'],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Map PDF/header station tokens to canonical codes (uppercase keys)
+    |--------------------------------------------------------------------------
+    */
+    'rr_from_station_pdf_code_aliases' => [
+        'DUMK' => 'DMK',
+    ],
 ];

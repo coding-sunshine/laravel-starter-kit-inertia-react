@@ -6,6 +6,7 @@ namespace App\Http\Controllers\RR;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreRrUploadRequest;
+use App\Models\DiverrtDestination;
 use App\Models\Rake;
 use App\Services\Railway\RrImportService;
 use App\Services\Railway\RrParserService;
@@ -36,7 +37,12 @@ final class RrUploadController extends Controller
                 }
             }
 
-            $rrDocument = $this->rrImportService->importSnapshotOnly($parsed, $request, $validated, $rake);
+            $diverrtDestination = null;
+            if (! empty($validated['diverrt_destination_id'])) {
+                $diverrtDestination = DiverrtDestination::query()->find((int) $validated['diverrt_destination_id']);
+            }
+
+            $rrDocument = $this->rrImportService->importSnapshotOnly($parsed, $request, $validated, $rake, $diverrtDestination);
 
             if ($rake !== null) {
                 return redirect()->route('rakes.show', $rake)

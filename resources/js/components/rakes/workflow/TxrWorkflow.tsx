@@ -1,20 +1,8 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
-import { SearchableSelect, type SearchableSelectOption } from '@/components/ui/searchable-select';
-import { Train, CheckCircle, Clock, AlertTriangle, Plus, Trash2 } from 'lucide-react';
-import { useForm, router } from '@inertiajs/react';
-import { useMemo, useRef, useState } from 'react';
+import { Train, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
+import { useRef, useState } from 'react';
 import { TxrTable } from './TxrTable';
 import { UnfitWagonTable } from './UnfitWagonTable';
 
@@ -69,21 +57,19 @@ interface TxrWorkflowProps {
     disabled: boolean;
     onUnfitLogsSaved?: (logs: WagonUnfitLog[]) => void;
     onTxrNoteUploaded?: (url: string | null) => void;
+    onTxrHeaderSaved?: (txr: Record<string, unknown>) => void;
 }
 
-export function TxrWorkflow({ rake, disabled, onUnfitLogsSaved, onTxrNoteUploaded }: TxrWorkflowProps) {
+export function TxrWorkflow({
+    rake,
+    disabled,
+    onUnfitLogsSaved,
+    onTxrNoteUploaded,
+    onTxrHeaderSaved,
+}: TxrWorkflowProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [uploadingNote, setUploadingNote] = useState(false);
     const [noteError, setNoteError] = useState<string | null>(null);
-
-    const handleStartTxr = () => {
-        router.post(`/rakes/${rake.id}/txr/start`, {}, { preserveScroll: true });
-    };
-
-    const handleEndTxr = (e: React.FormEvent) => {
-        e.preventDefault();
-        router.post(`/rakes/${rake.id}/txr/end`, { remarks: '' }, { preserveScroll: true });
-    };
 
     const getStatusIcon = () => {
         if (!rake.txr) return <Clock className="h-4 w-4" />;
@@ -93,7 +79,7 @@ export function TxrWorkflow({ rake, disabled, onUnfitLogsSaved, onTxrNoteUploade
     };
 
     const getStatusText = () => {
-        if (!rake.txr) return 'Not Started';
+        if (!rake.txr) return 'Not saved';
         return rake.txr.status.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase());
     };
 
@@ -163,83 +149,68 @@ export function TxrWorkflow({ rake, disabled, onUnfitLogsSaved, onTxrNoteUploade
                 <CardDescription>Train examination and wagon fitness check</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-                {!rake.txr ? (
-                    <div className="text-center py-8">
-                        <Button onClick={handleStartTxr} disabled={disabled} size="lg">
-                            <Train className="mr-2 h-4 w-4" />
-                            Start TXR Inspection
-                        </Button>
-                    </div>
-                ) : (
-                    <>
-                        <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border bg-muted/20 p-3">
-                            <div className="space-y-1">
-                                <div className="text-sm font-medium">Railway officer’s handwritten note</div>
-                                {handwrittenNoteUrl ? (
-                                    <a
-                                        href={handwrittenNoteUrl}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="text-sm text-primary underline underline-offset-4"
-                                    >
-                                        View / Download uploaded note
-                                    </a>
-                                ) : (
-                                    <div className="text-sm text-muted-foreground">No file uploaded</div>
-                                )}
-                                {noteError && (
-                                    <div className="text-sm text-destructive">{noteError}</div>
-                                )}
-                            </div>
+                <TxrTable rake={rake} disabled={disabled} onTxrHeaderSaved={onTxrHeaderSaved} />
 
-                            <div className="flex items-center gap-2">
-                                <input
-                                    ref={fileInputRef}
-                                    type="file"
-                                    accept=".pdf,image/jpeg,image/png"
-                                    className="hidden"
-                                    onChange={handleNoteFileChange}
-                                />
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={handleUploadNoteClick}
-                                    disabled={disabled || uploadingNote}
-                                    data-pan="txr-upload-note-button"
+                {!rake.txr && (
+                    <div className="rounded-md border border-dashed bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+                        Save the TXR header above to enable note upload and unfit wagon saves.
+                    </div>
+                )}
+
+                <div
+                    className={
+                        !rake.txr ? 'space-y-6 opacity-60' : 'space-y-6'
+                    }
+                >
+                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border bg-muted/20 p-3">
+                        <div className="space-y-1">
+                            <div className="text-sm font-medium">Railway officer’s handwritten note</div>
+                            {handwrittenNoteUrl ? (
+                                <a
+                                    href={handwrittenNoteUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-sm text-primary underline underline-offset-4"
                                 >
-                                    {uploadingNote ? 'Uploading…' : 'Upload note'}
-                                </Button>
-                            </div>
+                                    View / Download uploaded note
+                                </a>
+                            ) : (
+                                <div className="text-sm text-muted-foreground">No file uploaded</div>
+                            )}
+                            {noteError && (
+                                <div className="text-sm text-destructive">{noteError}</div>
+                            )}
                         </div>
 
-                        {/* TXR Header Table */}
-                        <TxrTable rake={rake} disabled={disabled} />
+                        <div className="flex items-center gap-2">
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept=".pdf,image/jpeg,image/png"
+                                className="hidden"
+                                onChange={handleNoteFileChange}
+                            />
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={handleUploadNoteClick}
+                                disabled={disabled || !rake.txr || uploadingNote}
+                                data-pan="txr-upload-note-button"
+                            >
+                                {uploadingNote ? 'Uploading…' : 'Upload note'}
+                            </Button>
+                        </div>
+                    </div>
 
-                        {/* Unfit Wagon Details Table */}
-                        <UnfitWagonTable
-                            rake={rake}
-                            disabled={disabled}
-                            onUnfitLogsSaved={onUnfitLogsSaved}
-                        />
+                    <UnfitWagonTable rake={rake} disabled={disabled} onUnfitLogsSaved={onUnfitLogsSaved} />
 
-                        {rake.txr.status === 'in_progress' && (
-                            <form onSubmit={handleEndTxr}>
-                                <div className="flex justify-end">
-                                    <Button type="submit" variant="destructive">
-                                        End TXR
-                                    </Button>
-                                </div>
-                            </form>
-                        )}
-
-                        {isCompleted && (
-                            <div className="flex items-center gap-2 text-sm text-green-600">
-                                <CheckCircle className="h-4 w-4" />
-                                TXR completed successfully
-                            </div>
-                        )}
-                    </>
-                )}
+                    {isCompleted && (
+                        <div className="flex items-center gap-2 text-sm text-green-600">
+                            <CheckCircle className="h-4 w-4" />
+                            TXR completed successfully
+                        </div>
+                    )}
+                </div>
             </CardContent>
         </Card>
     );

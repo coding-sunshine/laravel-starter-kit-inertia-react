@@ -37,7 +37,7 @@ interface Wagon {
     wagon_number: string;
     tare_weight_mt: string | null;
     pcc_weight_mt: string | null;
-    is_unfit?: boolean;
+    is_unfit: boolean;
 }
 
 interface TxrRecord {
@@ -331,8 +331,12 @@ function WagonLoadingStep({
     const wagonLoadings = load.wagon_loadings ?? load.wagonLoadings ?? [];
     const currentLoadings = wagonLoadings.filter((l) => l.attempt_no === attemptNo);
     const previousAttempts = [...new Set(wagonLoadings.map((l) => l.attempt_no))].filter((a) => a < attemptNo).sort((a, b) => b - a);
-    const fitWagons = rake.wagons.filter(wagon => !wagon.is_unfit);
-    const totalFitWagons = fitWagons.length;
+    const wagonsOrdered = [...rake.wagons].sort((a, b) => a.wagon_sequence - b.wagon_sequence);
+    const fitWagons = wagonsOrdered.filter((w) => !w.is_unfit);
+    const fitWithPositiveQty = fitWagons.filter((w) => {
+        const l = currentLoadings.find((cl) => cl.wagon_id === w.id);
+        return l !== undefined && Number(l.loaded_quantity_mt) > 0;
+    }).length;
 
     const getLoadingForWagon = (wagonId: number) =>
         currentLoadings.find((l) => l.wagon_id === wagonId);
@@ -345,13 +349,10 @@ function WagonLoadingStep({
                     Wagon Loading
                 </CardTitle>
                 <CardDescription>
-                    Record loader and quantity for each wagon. Attempt #{attemptNo}.{' '}
-                    {currentLoadings.length}/{totalFitWagons} loaded.
-                    {rake.wagons.filter(wagon => wagon.is_unfit).length > 0 && (
-                        <span className="text-amber-600 ml-2">
-                            ({rake.wagons.filter(wagon => wagon.is_unfit).length} unfit wagons excluded)
-                        </span>
-                    )}
+                    Record loader and quantity for any wagon (unfit wagons optional for audit). Workflow
+                    advances when every <strong>fit</strong> wagon has quantity &gt; 0. Attempt #{attemptNo}:{' '}
+                    {fitWithPositiveQty}/{fitWagons.length} fit wagons with quantity; {currentLoadings.length}{' '}
+                    total row(s) this attempt.
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -401,7 +402,7 @@ function WagonLoadingStep({
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {rake.wagons.filter(wagon => !wagon.is_unfit).map((wagon) => {
+                            {wagonsOrdered.map((wagon) => {
                                 const loading = getLoadingForWagon(wagon.id);
                                 return (
                                     <WagonLoadingRow
@@ -415,15 +416,6 @@ function WagonLoadingStep({
                                     />
                                 );
                             })}
-                            {rake.wagons.filter(wagon => wagon.is_unfit).length > 0 && (
-                                <TableRow>
-                                    <TableCell colSpan={8} className="text-center text-muted-foreground py-4">
-                                        <div className="text-sm">
-                                            {rake.wagons.filter(wagon => wagon.is_unfit).length} wagon(s) marked as unfit and excluded from loading
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            )}
                         </TableBody>
                     </Table>
                 </div>
@@ -453,10 +445,22 @@ function WagonLoadingRow({
         loaded_quantity_mt: '',
     });
 
+    const unfitRowClass =
+        wagon.is_unfit === true
+            ? 'bg-red-950/40 dark:bg-red-950/50 border-b border-red-900/55'
+            : undefined;
+
     if (loading) {
         return (
-            <TableRow>
-                <TableCell className="font-medium">{wagon.wagon_number}</TableCell>
+            <TableRow className={unfitRowClass}>
+                <TableCell className="font-medium">
+                    {wagon.is_unfit && (
+                        <span className="mr-2 text-xs font-semibold uppercase text-red-800 dark:text-red-200">
+                            Unfit
+                        </span>
+                    )}
+                    {wagon.wagon_number}
+                </TableCell>
                 <TableCell>{wagon.tare_weight_mt ?? '–'}</TableCell>
                 <TableCell>{wagon.pcc_weight_mt ?? '–'}</TableCell>
                 <TableCell>{loading.loader?.loader_name ?? '–'}</TableCell>
@@ -478,8 +482,15 @@ function WagonLoadingRow({
     };
 
     return (
-        <TableRow>
-            <TableCell className="font-medium">{wagon.wagon_number}</TableCell>
+        <TableRow className={unfitRowClass}>
+            <TableCell className="font-medium">
+                {wagon.is_unfit && (
+                    <span className="mr-2 text-xs font-semibold uppercase text-red-800 dark:text-red-200">
+                        Unfit
+                    </span>
+                )}
+                {wagon.wagon_number}
+            </TableCell>
             <TableCell>{wagon.tare_weight_mt ?? '–'}</TableCell>
             <TableCell>{wagon.pcc_weight_mt ?? '–'}</TableCell>
             <TableCell>

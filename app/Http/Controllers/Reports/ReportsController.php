@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Reports;
 
 use App\Actions\RunReportAction;
+use App\Exports\ReportArrayExport;
 use App\Http\Controllers\Controller;
 use App\Models\Siding;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Maatwebsite\Excel\Facades\Excel;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class ReportsController extends Controller
@@ -26,19 +29,29 @@ final class ReportsController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'code']);
 
+        $reports = [];
+        foreach (RunReportAction::RAKE_MANAGEMENT_REPORT_KEYS as $key) {
+            if (isset(RunReportAction::REPORT_KEYS[$key])) {
+                $reports[$key] = RunReportAction::REPORT_KEYS[$key];
+            }
+        }
+
         return Inertia::render('reports/index', [
-            'reports' => RunReportAction::REPORT_KEYS,
+            'reports' => $reports,
             'sidings' => $sidings,
         ]);
     }
 
-    public function generate(Request $request): JsonResponse|StreamedResponse
+    public function generate(Request $request): JsonResponse|StreamedResponse|BinaryFileResponse
     {
         $validated = $request->validate([
-            'key' => ['required', 'string', 'in:'.implode(',', array_keys(RunReportAction::REPORT_KEYS))],
+            'key' => ['required', 'string', 'in:'.implode(',', RunReportAction::RAKE_MANAGEMENT_REPORT_KEYS)],
             'siding_id' => ['nullable', 'integer', 'exists:sidings,id'],
             'date_from' => ['nullable', 'date'],
             'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
+            'preview' => ['nullable', 'boolean'],
+            'preview_limit' => ['nullable', 'integer', 'min:1', 'max:200'],
+            'export_xlsx' => ['nullable', 'boolean'],
         ]);
 
         $user = $request->user();
@@ -56,10 +69,30 @@ final class ReportsController extends Controller
             'date_to' => $validated['date_to'] ?? null,
         ]);
 
+        $preview = $request->boolean('preview');
+        $previewLimit = (int) ($validated['preview_limit'] ?? 25);
+        $exportXlsx = $request->boolean('export_xlsx');
+
+        if ($preview) {
+            $params['limit'] = $previewLimit > 0 ? $previewLimit : 25;
+        }
+
+        if ($exportXlsx || $request->boolean('export_csv')) {
+            // Exports should return full dataset.
+            $params['no_limit'] = true;
+        }
+
         $data = resolve(RunReportAction::class)->handle($validated['key'], $sidingIds, $params);
 
         if ($request->boolean('export_csv')) {
             return $this->exportCsv($validated['key'], $data);
+        }
+
+        if ($exportXlsx) {
+            $name = RunReportAction::REPORT_KEYS[$validated['key']]['name'] ?? $validated['key'];
+            $filename = str_replace(' ', '_', $name).'_'.date('Y-m-d').'.xlsx';
+
+            return Excel::download(new ReportArrayExport($data), $filename);
         }
 
         return response()->json(['data' => $data]);

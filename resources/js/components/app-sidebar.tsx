@@ -385,7 +385,7 @@ export function AppSidebar() {
             <SidebarHeader>
                 <SidebarMenu>
                     <SidebarMenuItem>
-                        <SidebarMenuButton size="lg" asChild>
+                        <SidebarMenuButton size="lg" asChild tooltip="RMMS">
                             <Link href={dashboard().url} prefetch>
                                 <AppLogo />
                             </Link>

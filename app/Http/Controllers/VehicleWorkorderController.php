@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreVehicleWorkorderRequest;
 use App\Http\Requests\UpdateVehicleWorkorderRequest;
 use App\Models\Siding;
 use App\Models\VehicleWorkorder;
@@ -48,6 +49,24 @@ final class VehicleWorkorderController extends Controller
         ]);
     }
 
+    public function create(): Response
+    {
+        $user = Auth::user();
+
+        $sidingIds = $user->isSuperAdmin()
+            ? Siding::query()->pluck('id')->all()
+            : $user->accessibleSidings()->get()->pluck('id')->all();
+
+        $sidings = Siding::query()
+            ->whereIn('id', $sidingIds)
+            ->orderBy('name')
+            ->get(['id', 'name', 'code']);
+
+        return Inertia::render('VehicleWorkorders/Create', [
+            'sidings' => $sidings,
+        ]);
+    }
+
     public function edit(VehicleWorkorder $vehicleWorkorder): Response|RedirectResponse
     {
         $user = Auth::user();
@@ -60,6 +79,15 @@ final class VehicleWorkorderController extends Controller
         return Inertia::render('VehicleWorkorders/Edit', [
             'vehicleWorkorder' => $vehicleWorkorder,
         ]);
+    }
+
+    public function store(StoreVehicleWorkorderRequest $request): RedirectResponse
+    {
+        VehicleWorkorder::query()->create($request->validated());
+
+        return redirect()
+            ->route('vehicle-workorders.index')
+            ->with('success', 'Vehicle work order created successfully.');
     }
 
     public function update(UpdateVehicleWorkorderRequest $request, VehicleWorkorder $vehicleWorkorder): RedirectResponse

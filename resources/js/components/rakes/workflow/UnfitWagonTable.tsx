@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { SearchableSelect, type SearchableSelectOption } from '@/components/ui/searchable-select';
 import InputError from '@/components/input-error';
 import { Plus, Trash2, AlertTriangle, Loader2 } from 'lucide-react';
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 
 function getCsrfHeaders(): Record<string, string> {
     const cookieMatch = document.cookie.match(/\bXSRF-TOKEN=([^;]+)/);
@@ -84,6 +84,9 @@ function newUnfitWagonRow(): UnfitWagonRow {
 }
 
 export function UnfitWagonTable({ rake, disabled, onUnfitLogsSaved }: UnfitWagonTableProps) {
+    const needsTxrSave = rake.txr === null;
+    const rowDisabled = disabled || needsTxrSave;
+
     const logsSource =
         rake.wagonUnfitLogs ??
         rake.txr?.wagonUnfitLogs ??
@@ -110,6 +113,12 @@ export function UnfitWagonTable({ rake, disabled, onUnfitLogsSaved }: UnfitWagon
     const [unfitRows, setUnfitRows] = useState<UnfitWagonRow[]>(initialUnfitRows);
     const [saving, setSaving] = useState(false);
     const [formError, setFormError] = useState<string | null>(null);
+
+    useEffect(() => {
+        setUnfitRows(initialUnfitRows);
+        // Intentionally only when TXR row is created/switched — avoid wiping rows when `initialUnfitRows` is a new empty-array reference each render.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [rake.txr?.id]);
 
     const wagonOptions: SearchableSelectOption[] = useMemo(
         () =>
@@ -200,23 +209,12 @@ export function UnfitWagonTable({ rake, disabled, onUnfitLogsSaved }: UnfitWagon
         setFormError(null);
     };
 
-    if (!rake.txr) {
-        return (
-            <Card>
-                <CardContent className="p-8 text-center text-sm text-muted-foreground">
-                    <AlertTriangle className="mx-auto h-8 w-8 mb-2" />
-                    TXR must be started before adding unfit wagon details.
-                </CardContent>
-            </Card>
-        );
-    }
-
     return (
         <Card>
             <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                     <div>Unfit Wagon Details</div>
-                    <Button type="button" variant="outline" size="sm" onClick={addUnfitRow} disabled={disabled}>
+                    <Button type="button" variant="outline" size="sm" onClick={addUnfitRow} disabled={rowDisabled}>
                         <Plus className="mr-1 h-4 w-4" />
                         Add Row
                     </Button>
@@ -226,6 +224,12 @@ export function UnfitWagonTable({ rake, disabled, onUnfitLogsSaved }: UnfitWagon
                 </CardDescription>
             </CardHeader>
             <CardContent>
+                {needsTxrSave && (
+                    <div className="mb-4 flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-900 dark:text-amber-100">
+                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                        <span>Save the TXR header first to add or save unfit wagon details.</span>
+                    </div>
+                )}
                 <form onSubmit={handleSubmit} className="space-y-4">
                     {formError && (
                         <div className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
@@ -258,7 +262,7 @@ export function UnfitWagonTable({ rake, disabled, onUnfitLogsSaved }: UnfitWagon
                                                 value={row.wagon_id}
                                                 onValueChange={(v) => updateUnfitRow(row.key, 'wagon_id', v)}
                                                 placeholder="Select wagon"
-                                                disabled={disabled}
+                                                disabled={rowDisabled}
                                                 renderOption={(o) => (
                                                     <span>
                                                         {o.label} - {o.meta}
@@ -281,7 +285,7 @@ export function UnfitWagonTable({ rake, disabled, onUnfitLogsSaved }: UnfitWagon
                                                     updateUnfitRow(row.key, 'reason_unfit', e.target.value)
                                                 }
                                                 placeholder="Reason for unfit"
-                                                disabled={disabled}
+                                                disabled={rowDisabled}
                                             />
                                             <InputError message={null} />
                                         </TableCell>
@@ -292,7 +296,7 @@ export function UnfitWagonTable({ rake, disabled, onUnfitLogsSaved }: UnfitWagon
                                                     updateUnfitRow(row.key, 'marked_by', e.target.value)
                                                 }
                                                 placeholder="Marked by"
-                                                disabled={disabled}
+                                                disabled={rowDisabled}
                                             />
                                             <InputError message={null} />
                                         </TableCell>
@@ -302,7 +306,7 @@ export function UnfitWagonTable({ rake, disabled, onUnfitLogsSaved }: UnfitWagon
                                                 onChange={(e) =>
                                                     updateUnfitRow(row.key, 'marking_method', e.target.value)
                                                 }
-                                                disabled={disabled}
+                                                disabled={rowDisabled}
                                                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                                             >
                                                 <option value="">Select</option>
@@ -321,7 +325,7 @@ export function UnfitWagonTable({ rake, disabled, onUnfitLogsSaved }: UnfitWagon
                                                 onChange={(e) =>
                                                     updateUnfitRow(row.key, 'marked_at', e.target.value)
                                                 }
-                                                disabled={disabled}
+                                                disabled={rowDisabled}
                                             />
                                             <InputError message={null} />
                                         </TableCell>
@@ -331,7 +335,7 @@ export function UnfitWagonTable({ rake, disabled, onUnfitLogsSaved }: UnfitWagon
                                                 variant="ghost"
                                                 size="icon"
                                                 onClick={() => removeUnfitRow(row.key)}
-                                                disabled={disabled}
+                                                disabled={rowDisabled}
                                             >
                                                 <Trash2 className="h-4 w-4 text-destructive" />
                                             </Button>
@@ -347,11 +351,11 @@ export function UnfitWagonTable({ rake, disabled, onUnfitLogsSaved }: UnfitWagon
                             type="button"
                             variant="outline"
                             onClick={handleReset}
-                            disabled={disabled}
+                            disabled={rowDisabled}
                         >
                             Reset
                         </Button>
-                        <Button type="submit" disabled={disabled || saving}>
+                        <Button type="submit" disabled={rowDisabled || saving}>
                             {saving ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

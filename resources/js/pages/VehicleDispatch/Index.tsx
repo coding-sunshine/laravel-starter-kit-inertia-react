@@ -773,8 +773,8 @@ export default function VehicleDispatchIndex({
                             </div>
                             <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
                                 <p className="text-sm text-blue-800">
-                                    <strong>Note:</strong> Siding will be automatically determined based on the distance value in each record. 
-                                    Make sure your data includes accurate distance values (e.g., 55.000 for Pakur Siding, 71.000 for Dumka Goods Shed).
+                                    <strong>Note:</strong> Siding is inferred from fixed coal-mine-to-siding distances (km) in each row:
+                                    55 Pakur (PKUR), 71 Dumka (DUMK), 73 Kurwa (KURWA). Values within 1 km of these resolve to the nearest siding.
                                 </p>
                             </div>
                             <div>

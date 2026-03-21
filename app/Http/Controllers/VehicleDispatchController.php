@@ -6,7 +6,6 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateVehicleDispatchRequest;
 use App\Models\DispatchReport;
-use App\Models\PowerplantSidingDistance;
 use App\Models\Siding;
 use App\Models\VehicleDispatch;
 use App\Services\SidingContext;
@@ -26,6 +25,18 @@ use Throwable;
 
 final class VehicleDispatchController extends Controller
 {
+    /**
+     * Fixed coal-mine → siding distances (km). Used when importing DPR/dispatch paste data
+     * where the distance column reflects mine-to-siding haul, not power-plant-to-siding.
+     *
+     * @var list<array{km: float, siding_code: string}>
+     */
+    private const COAL_MINE_TO_SIDING_KM = [
+        ['km' => 71.0, 'siding_code' => 'DUMK'],
+        ['km' => 55.0, 'siding_code' => 'PKUR'],
+        ['km' => 73.0, 'siding_code' => 'KURWA'],
+    ];
+
     public function index(Request $request): Response|RedirectResponse
     {
         $user = Auth::user();
@@ -68,7 +79,7 @@ final class VehicleDispatchController extends Controller
             ->whereIn('id', $sidingIds)
             ->orderBy('name')
             ->get(['id', 'name', 'code']);
-        
+
         $dispatchReportsQuery = DispatchReport::with('siding')
             // ->when($currentSiding, fn ($q) => $q->where('siding_id', $currentSiding->id), fn ($q) => $q->whereIn('siding_id', $sidingIds))
             ->when($request->date_from, fn ($q) => $q->where('issued_on', '>=', $request->date_from))
@@ -78,6 +89,7 @@ final class VehicleDispatchController extends Controller
             ->orderBy('id', 'asc');
 
         $dispatchReports = $dispatchReportsQuery->get();
+
         // dd($dispatchReports);
         return Inertia::render('VehicleDispatch/Index', [
             'vehicleDispatches' => $vehicleDispatches,
@@ -151,16 +163,16 @@ final class VehicleDispatchController extends Controller
         foreach ($rows as $index => $row) {
             try {
                 $parsedData = $this->parseVehicleDispatchRow($row);
-                 
+
                 // Check for unique Pass No during import preview
-                if (!empty($parsedData['pass_no'])) {
+                if (! empty($parsedData['pass_no'])) {
                     $existingPass = VehicleDispatch::where('pass_no', $parsedData['pass_no'])->first();
                     if ($existingPass) {
                         // Stop immediately and throw error for duplicate Pass No
                         throw new InvalidArgumentException("Pass No '{$parsedData['pass_no']}' already exists. Import stopped.");
                     }
                 }
-                
+
                 $parsedRows[] = $parsedData;
             } catch (Exception $e) {
                 // Stop processing on first error
@@ -302,7 +314,7 @@ final class VehicleDispatchController extends Controller
     }
 
     /**
-     * Find siding ID based on distance from powerplant_siding_distances table
+     * Resolve siding from coal-mine-to-siding distance using fixed km → siding code mapping.
      */
     private function findSidingByDistance(?float $distance): ?int
     {
@@ -310,21 +322,28 @@ final class VehicleDispatchController extends Controller
             return null;
         }
 
-        // Look for exact match first (within 0.01 tolerance for floating point comparison)
-        $exactMatch = PowerplantSidingDistance::whereRaw('ABS(distance_km - ?) < 0.01', [$distance])
-            ->first();
-
-        if ($exactMatch) {
-            return $exactMatch->siding_id;
+        foreach (self::COAL_MINE_TO_SIDING_KM as $row) {
+            if (abs($row['km'] - $distance) < 0.01) {
+                return $this->sidingIdForDispatchCode($row['siding_code']);
+            }
         }
 
-        // If no exact match, try to find the closest distance (within 1 km tolerance)
-        $closestMatch = PowerplantSidingDistance::select('siding_id', 'distance_km')
-            ->whereRaw('ABS(distance_km - ?) <= 1', [$distance])
-            ->orderByRaw('ABS(distance_km - ?) ASC', [$distance])
-            ->first();
+        $bestCode = null;
+        $bestDiff = null;
+        foreach (self::COAL_MINE_TO_SIDING_KM as $row) {
+            $diff = abs($row['km'] - $distance);
+            if ($diff <= 1.0 && ($bestDiff === null || $diff < $bestDiff)) {
+                $bestDiff = $diff;
+                $bestCode = $row['siding_code'];
+            }
+        }
 
-        return $closestMatch?->siding_id;
+        return $bestCode !== null ? $this->sidingIdForDispatchCode($bestCode) : null;
+    }
+
+    private function sidingIdForDispatchCode(string $sidingCode): ?int
+    {
+        return Siding::query()->where('code', $sidingCode)->value('id');
     }
 
     /**
@@ -512,7 +531,7 @@ final class VehicleDispatchController extends Controller
         if (count($row) >= 14) {
             $formatD = $this->mapFormatD($row);
             if ($this->hasValidRequiredFields($formatD)) {
-               
+
                 $data = $formatD;
             }
         }
@@ -664,7 +683,7 @@ final class VehicleDispatchController extends Controller
         $distance = $this->parseNullableInt($row[13] ?? null);
         $sidingId = $this->findSidingByDistance($distance);
         $sidingInfo = $this->getSidingInfo($sidingId);
-        
+
         return [
             'siding_id' => $sidingId,
             'siding' => $sidingInfo,

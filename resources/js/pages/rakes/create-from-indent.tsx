@@ -20,6 +20,11 @@ interface Siding {
     code: string;
 }
 
+interface PowerPlantOption {
+    name: string;
+    code: string;
+}
+
 interface Indent {
     id: number;
     indent_number: string | null;
@@ -49,7 +54,13 @@ type InertiaPageProps = {
     errors?: FormErrors;
 };
 
-export default function CreateRakeFromIndent({ indent, sidings, next_priority_number, flash }: Props) {
+export default function CreateRakeFromIndent({
+    indent,
+    sidings,
+    next_priority_number,
+    power_plants,
+    flash,
+}: Props) {
     const page = usePage<InertiaPageProps>();
 
     const breadcrumbs: BreadcrumbItem[] = [
@@ -69,6 +80,7 @@ export default function CreateRakeFromIndent({ indent, sidings, next_priority_nu
             : '',
         rake_type: indent.demanded_stock || '',
         wagon_count: totalUnits != null ? String(totalUnits) : '',
+        destination_code: '',
         rr_expected_date: '',
         placement_time: '',
         remarks: '',
@@ -294,6 +306,39 @@ export default function CreateRakeFromIndent({ indent, sidings, next_priority_nu
                                         disabled
                                         className="bg-muted"
                                     />
+                                </div>
+
+                                <div>
+                                    <Label htmlFor="destination_code" className="flex items-center gap-1">
+                                        Destination
+                                        {hasError('destination_code') && (
+                                            <span className="text-destructive text-lg leading-none">*</span>
+                                        )}
+                                    </Label>
+                                    <select
+                                        id="destination_code"
+                                        value={data.destination_code}
+                                        onChange={(e) => setData('destination_code', e.target.value)}
+                                        required
+                                        className={`h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                                            hasError('destination_code')
+                                                ? 'border-destructive focus-visible:ring-destructive'
+                                                : ''
+                                        }`}
+                                    >
+                                        <option value="">Select power plant</option>
+                                        {power_plants.map((p) => (
+                                            <option key={p.code} value={p.code}>
+                                                {p.name} ({p.code})
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {hasError('destination_code') && (
+                                        <p className="mt-1.5 flex items-center gap-1.5 text-sm text-destructive">
+                                            <span className="text-lg leading-none">⚠</span>
+                                            {getErrorMessage(errors.destination_code)}
+                                        </p>
+                                    )}
                                 </div>
                             </div>
 

@@ -52,6 +52,14 @@
         "rake": {
             "type": "belongsTo",
             "model": "Rake"
+        },
+        "rrDocuments": {
+            "type": "hasMany",
+            "model": "RrDocument"
+        },
+        "rakeCharges": {
+            "type": "hasMany",
+            "model": "RakeCharge"
         }
     },
     "value_hints": [],

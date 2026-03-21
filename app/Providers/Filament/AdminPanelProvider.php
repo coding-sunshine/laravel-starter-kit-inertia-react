@@ -38,7 +38,9 @@ final class AdminPanelProvider extends PanelProvider
             ->authGuard('web')
             ->login()
             ->brandName('RMMS')
-            ->favicon(asset('favicon.svg'))
+            ->brandLogo(asset('logo.png'))
+            ->brandLogoHeight('2rem')
+            ->favicon(asset('logo.png'))
             ->font('Inter Variable', null, null, [])
             ->colors([
                 'primary' => Color::Amber,

@@ -95,12 +95,18 @@ interface RakeData {
             };
         }>;
     }>;
+    is_diverted?: boolean;
+    diverrtDestinations?: Array<{
+        id: number;
+        location: string;
+    }>;
     rrDocuments?: Array<{
         id: number;
         rr_number: string;
         rr_received_date: string;
         rr_weight_mt: string | null;
         document_status: string;
+        diverrt_destination_id?: number | null;
     }>;
     penalties?: Array<{
         id: number;
@@ -130,6 +136,31 @@ interface RakeData {
 interface RakeWorkflowProps {
     rake: RakeData;
     demurrage_rate_per_mt_hour: number;
+    /** Keeps parent wagon list (e.g. View Wagons dialog) in sync after unfit logs save */
+    onUnfitWagonIdsSynced?: (unfitWagonIds: number[]) => void;
+}
+
+function mergeTxrAfterHeaderSave(
+    prev: RakeData['txr'],
+    incoming: Record<string, unknown>,
+): NonNullable<RakeData['txr']> {
+    const prevLogs = prev?.wagonUnfitLogs;
+    const incomingLogs = incoming.wagonUnfitLogs ?? incoming.wagon_unfit_logs;
+    const wagonUnfitLogs = Array.isArray(incomingLogs) ? incomingLogs : (prevLogs ?? []);
+
+    return {
+        ...(prev ?? {}),
+        id: Number(incoming.id),
+        inspection_time: String(incoming.inspection_time ?? ''),
+        inspection_end_time: (incoming.inspection_end_time as string | null | undefined) ?? null,
+        status: String(incoming.status ?? 'in_progress'),
+        remarks: (incoming.remarks as string | null) ?? null,
+        handwritten_note_url:
+            (incoming.handwritten_note_url as string | null | undefined) ??
+            prev?.handwritten_note_url ??
+            null,
+        wagonUnfitLogs,
+    } as NonNullable<RakeData['txr']>;
 }
 
 interface LoadingTimesFormProps {
@@ -243,27 +274,51 @@ function LoadingTimesForm({ rakeId, loadingStart, loadingEnd }: LoadingTimesForm
     );
 }
 
-export function RakeWorkflow({ rake, demurrage_rate_per_mt_hour }: RakeWorkflowProps) {
+export function RakeWorkflow({
+    rake,
+    demurrage_rate_per_mt_hour,
+    onUnfitWagonIdsSynced,
+}: RakeWorkflowProps) {
     const [rakeData, setRakeData] = useState(rake);
+    const [workflowGateError, setWorkflowGateError] = useState<string | null>(null);
     useEffect(() => {
         setRakeData(rake);
     }, [rake]);
 
-    // Workflow step completion checks
-    const isTxrCompleted = rakeData.txr?.status === 'completed';
+    // Workflow step completion checks — TXR checklist reflects saved start/end times (not only status=completed)
+    const isTxrTimesRecorded =
+        Boolean(rakeData.txr?.inspection_time) && Boolean(rakeData.txr?.inspection_end_time);
     const wagonLoadings = rakeData.wagonLoadings ?? [];
-    const fitWagons = rakeData.wagons.filter(w => !w.is_unfit);
     const positivelyLoadedWagonIds = new Set(
         wagonLoadings
             .filter(l => Number(l.loaded_quantity_mt) > 0)
             .map(l => l.wagon_id),
     );
+    const fitWagons = rakeData.wagons.filter(w => !w.is_unfit);
     const isWagonLoadingCompleted =
         fitWagons.length > 0 &&
         fitWagons.every(w => positivelyLoadedWagonIds.has(w.id));
+    const missingWagonNumberCount = rakeData.wagons.filter(
+        (wagon) => (wagon.wagon_number ?? '').trim().length <= 4
+    ).length;
+    const hasMissingWagonNumbers = missingWagonNumberCount > 0;
     const isGuardApproved = rakeData.guardInspections?.[0]?.is_approved;
     const isWeighmentCompleted = rakeData.weighments?.[0]?.status === 'success';
-    const hasRrDocument = !!rakeData.rrDocuments?.length;
+    const hasRrDocument = ((): boolean => {
+        const docs = rakeData.rrDocuments ?? [];
+        if (!rakeData.is_diverted) {
+            return docs.length > 0;
+        }
+        const primary = docs.some((d) => d.diverrt_destination_id == null);
+        if (!primary) {
+            return false;
+        }
+        const legs = rakeData.diverrtDestinations ?? [];
+        if (legs.length === 0) {
+            return true;
+        }
+        return legs.every((leg) => docs.some((d) => d.diverrt_destination_id === leg.id));
+    })();
 
     const progressSteps: Array<{
         id: string;
@@ -286,13 +341,13 @@ export function RakeWorkflow({ rake, demurrage_rate_per_mt_hour }: RakeWorkflowP
         {
             id: 'txr',
             label: 'TXR',
-            description: 'Train Examination Report recorded for this rake.',
-            status: isTxrCompleted ? 'completed' : 'pending',
+            description: 'Train Examination Report: start and end inspection times saved.',
+            status: isTxrTimesRecorded ? 'completed' : 'pending',
         },
         {
             id: 'loading',
             label: 'Wagon loading',
-            description: 'All fit wagons have loading records.',
+            description: 'All fit wagons have quantity recorded (unfit rows are optional).',
             status: isWagonLoadingCompleted ? 'completed' : 'pending',
         },
         {
@@ -315,16 +370,8 @@ export function RakeWorkflow({ rake, demurrage_rate_per_mt_hour }: RakeWorkflowP
         },
     ];
 
-    // Disable logic based on workflow
-    // const disableWagonLoading = !isTxrCompleted;
-    // const disableGuardInspection = !isWagonLoadingCompleted;
-    // const disableWeighment = !isGuardApproved;
-    // const disableComparison = !isWeighmentCompleted;
-    // const disableRrDocument = !isWeighmentCompleted;
-    // const disablePenalties = !isWeighmentCompleted;
-    
-    // Temporarily disable all step requirements
-    const disableWagonLoading = false;
+    const disableTxr = hasMissingWagonNumbers;
+    const disableWagonLoading = hasMissingWagonNumbers;
     const disableGuardInspection = false;
     const disableWeighment = false;
     const disableComparison = false;
@@ -379,29 +426,71 @@ export function RakeWorkflow({ rake, demurrage_rate_per_mt_hour }: RakeWorkflowP
                 </ol>
             </div>
 
+            {workflowGateError && (
+                <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                    {workflowGateError}
+                </div>
+            )}
+
             <Accordion type="multiple" /* defaultValue={['txr']} */ className="w-full">
                 {/* 1. TXR */}
                 <AccordionItem value="txr">
-                    <AccordionTrigger>
+                    <AccordionTrigger
+                        onClick={(event) => {
+                            if (disableTxr) {
+                                event.preventDefault();
+                                setWorkflowGateError('Please add all wagon numbers for this rake.');
+                            } else {
+                                setWorkflowGateError(null);
+                            }
+                        }}
+                    >
                         <div className="flex items-center gap-2 text-left">
                             <span className="font-medium">1. TXR - Train Examination Report</span>
-                            {isTxrCompleted && (
+                            {isTxrTimesRecorded && (
                                 <span className="text-green-600 text-sm">✓ Completed</span>
+                            )}
+                            {disableTxr && !isTxrTimesRecorded && (
+                                <span className="text-gray-400 text-sm">🔒 Locked</span>
                             )}
                         </div>
                     </AccordionTrigger>
                     <AccordionContent>
                         <TxrWorkflow
                             rake={rakeData}
-                            disabled={false}
-                            onUnfitLogsSaved={(logs) =>
+                            disabled={disableTxr}
+                            onTxrHeaderSaved={(incoming) => {
                                 setRakeData((prev) => ({
                                     ...prev,
-                                    txr: prev.txr
-                                        ? { ...prev.txr, wagonUnfitLogs: logs }
-                                        : null,
-                                }))
-                            }
+                                    txr: mergeTxrAfterHeaderSave(
+                                        prev.txr,
+                                        incoming as Record<string, unknown>,
+                                    ),
+                                }));
+                            }}
+                            onUnfitLogsSaved={(logs) => {
+                                const unfitIds = [
+                                    ...new Set(
+                                        logs
+                                            .map((l) => Number(l.wagon_id))
+                                            .filter((id) => Number.isFinite(id) && id > 0),
+                                    ),
+                                ];
+                                onUnfitWagonIdsSynced?.(unfitIds);
+                                setRakeData((prev) => {
+                                    const unfitSet = new Set(unfitIds);
+                                    return {
+                                        ...prev,
+                                        txr: prev.txr
+                                            ? { ...prev.txr, wagonUnfitLogs: logs }
+                                            : null,
+                                        wagons: prev.wagons.map((w) => ({
+                                            ...w,
+                                            is_unfit: unfitSet.has(w.id),
+                                        })),
+                                    };
+                                });
+                            }}
                             onTxrNoteUploaded={(url) =>
                                 setRakeData((prev) => ({
                                     ...prev,
@@ -414,7 +503,16 @@ export function RakeWorkflow({ rake, demurrage_rate_per_mt_hour }: RakeWorkflowP
 
                 {/* 2. Wagon Loading */}
                 <AccordionItem value="wagon-loading">
-                    <AccordionTrigger disabled={disableWagonLoading}>
+                    <AccordionTrigger
+                        onClick={(event) => {
+                            if (disableWagonLoading) {
+                                event.preventDefault();
+                                setWorkflowGateError('Please add all wagon numbers for this rake.');
+                            } else {
+                                setWorkflowGateError(null);
+                            }
+                        }}
+                    >
                         <div className="flex items-center gap-2 text-left">
                             <span className="font-medium">2. Wagon Loading</span>
                             {isWagonLoadingCompleted && (

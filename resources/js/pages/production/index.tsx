@@ -86,8 +86,14 @@ export default function ProductionIndex({ entries, type }: Props) {
                         onClick={() => setShowForm((v) => !v)}
                         data-pan="production-add-entry"
                     >
-                        <Plus className="mr-2 size-4" />
-                        Add entry
+                        {showForm ? (
+                            <>Hide form</>
+                        ) : (
+                            <>
+                                <Plus className="mr-2 size-4" />
+                                Add entry
+                            </>
+                        )}
                     </Button>
                 </div>
 
@@ -157,59 +163,76 @@ export default function ProductionIndex({ entries, type }: Props) {
                     </Card>
                 )}
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Entries</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        {entries.length === 0 ? (
-                            <p className="text-muted-foreground text-sm">
-                                No entries yet. Click &quot;Add entry&quot; to create one.
-                            </p>
-                        ) : (
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-sm">
-                                    <thead>
-                                        <tr className="border-b">
-                                            <th className="px-4 py-2 text-left font-medium">Date</th>
-                                            <th className="px-4 py-2 text-left font-medium">Trip</th>
-                                            <th className="px-4 py-2 text-left font-medium">Qty</th>
-                                            <th className="px-4 py-2 text-right font-medium">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {entries.map((entry) => (
-                                            <tr key={entry.id} className="border-b last:border-0">
-                                                <td className="px-4 py-2">{formatDateOnly(entry.date)}</td>
-                                                <td className="px-4 py-2">{entry.trip}</td>
-                                                <td className="px-4 py-2">{entry.qty}</td>
-                                                <td className="px-4 py-2 text-right">
-                                                    <Link
-                                                        href={`${basePath}/${entry.id}/edit`}
-                                                        className="text-primary hover:underline inline-flex items-center gap-1 mr-2"
-                                                        data-pan="production-edit-entry"
-                                                    >
-                                                        <Pencil className="size-4" />
-                                                        Edit
-                                                    </Link>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleDelete(entry.id)}
-                                                        className="text-destructive hover:underline inline-flex items-center gap-1"
-                                                        data-pan="production-delete-entry"
-                                                    >
-                                                        <Trash2 className="size-4" />
-                                                        Delete
-                                                    </button>
-                                                </td>
+                {!showForm && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Entries</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            {entries.length === 0 ? (
+                                <p className="text-muted-foreground text-sm">
+                                    No entries yet. Click &quot;Add entry&quot; to create one.
+                                </p>
+                            ) : (
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm">
+                                        <thead>
+                                            <tr className="border-b">
+                                                <th className="px-4 py-2 text-left font-medium">
+                                                    Date
+                                                </th>
+                                                <th className="px-4 py-2 text-left font-medium">
+                                                    Trip
+                                                </th>
+                                                <th className="px-4 py-2 text-left font-medium">
+                                                    Qty
+                                                </th>
+                                                <th className="px-4 py-2 text-right font-medium">
+                                                    Actions
+                                                </th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
+                                        </thead>
+                                        <tbody>
+                                            {entries.map((entry) => (
+                                                <tr
+                                                    key={entry.id}
+                                                    className="border-b last:border-0"
+                                                >
+                                                    <td className="px-4 py-2">
+                                                        {formatDateOnly(entry.date)}
+                                                    </td>
+                                                    <td className="px-4 py-2">{entry.trip}</td>
+                                                    <td className="px-4 py-2">{entry.qty}</td>
+                                                    <td className="px-4 py-2 text-right">
+                                                        <Link
+                                                            href={`${basePath}/${entry.id}/edit`}
+                                                            className="text-primary hover:underline inline-flex items-center gap-1 mr-2"
+                                                            data-pan="production-edit-entry"
+                                                        >
+                                                            <Pencil className="size-4" />
+                                                            Edit
+                                                        </Link>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                handleDelete(entry.id)
+                                                            }
+                                                            className="text-destructive hover:underline inline-flex items-center gap-1"
+                                                            data-pan="production-delete-entry"
+                                                        >
+                                                            <Trash2 className="size-4" />
+                                                            Delete
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                )}
             </div>
         </AppLayout>
     );

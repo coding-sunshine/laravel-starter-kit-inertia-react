@@ -52,10 +52,17 @@ export default function Create({ powerPlants, sidings }: Props) {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
+              {errors.combination && (
+                <p className="text-sm text-red-600">{errors.combination}</p>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                   <Label htmlFor="power_plant_id">Power Plant</Label>
-                  <Select value={data.power_plant_id} onValueChange={(value) => setData('power_plant_id', value)}>
+                  <Select
+                    value={data.power_plant_id === '' ? undefined : data.power_plant_id}
+                    onValueChange={(value) => setData('power_plant_id', value)}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select power plant" />
                     </SelectTrigger>
@@ -72,7 +79,10 @@ export default function Create({ powerPlants, sidings }: Props) {
 
                 <div>
                   <Label htmlFor="siding_id">Siding</Label>
-                  <Select value={data.siding_id} onValueChange={(value) => setData('siding_id', value)}>
+                  <Select
+                    value={data.siding_id === '' ? undefined : data.siding_id}
+                    onValueChange={(value) => setData('siding_id', value)}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select siding" />
                     </SelectTrigger>

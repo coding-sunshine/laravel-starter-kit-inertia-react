@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Models\PowerplantSidingDistance;
 use App\Models\PowerPlant;
+use App\Models\PowerplantSidingDistance;
 use App\Models\Siding;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
-class PowerplantSidingDistancesController extends Controller
+final class PowerplantSidingDistancesController extends Controller
 {
     /**
      * Display a listing of the resource.
@@ -65,33 +65,33 @@ class PowerplantSidingDistancesController extends Controller
 
         PowerplantSidingDistance::create($validated);
 
-        return redirect()->route('master-data.distance-matrix.index')
+        return redirect()->route('master-data.master-data.distance-matrix.index')
             ->with('success', 'Distance created successfully.');
     }
 
     /**
      * Display the specified resource.
      */
-    public function show(PowerplantSidingDistance $distance)
+    public function show(PowerplantSidingDistance $distance_matrix)
     {
-        $distance->load(['powerPlant', 'siding']);
+        $distance_matrix->load(['powerPlant', 'siding']);
 
         return Inertia::render('MasterData/DistanceMatrix/Show', [
-            'distance' => $distance,
+            'distance' => $distance_matrix,
         ]);
     }
 
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(PowerplantSidingDistance $distance)
+    public function edit(PowerplantSidingDistance $distance_matrix)
     {
         $powerPlants = PowerPlant::orderBy('name')->get();
         $sidings = Siding::orderBy('name')->get();
-        $distance->load(['powerPlant', 'siding']);
+        $distance_matrix->load(['powerPlant', 'siding']);
 
         return Inertia::render('MasterData/DistanceMatrix/Edit', [
-            'distance' => $distance,
+            'distance' => $distance_matrix,
             'powerPlants' => $powerPlants,
             'sidings' => $sidings,
         ]);
@@ -100,7 +100,7 @@ class PowerplantSidingDistancesController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, PowerplantSidingDistance $distance)
+    public function update(Request $request, PowerplantSidingDistance $distance_matrix)
     {
         $validated = $request->validate([
             'power_plant_id' => 'required|exists:power_plants,id',
@@ -111,7 +111,7 @@ class PowerplantSidingDistancesController extends Controller
         // Check for unique constraint (excluding current record)
         $existing = PowerplantSidingDistance::where('power_plant_id', $validated['power_plant_id'])
             ->where('siding_id', $validated['siding_id'])
-            ->where('id', '!=', $distance->id)
+            ->where('id', '!=', $distance_matrix->id)
             ->first();
 
         if ($existing) {
@@ -120,20 +120,20 @@ class PowerplantSidingDistancesController extends Controller
             ]);
         }
 
-        $distance->update($validated);
+        $distance_matrix->update($validated);
 
-        return redirect()->route('master-data.distance-matrix.index')
+        return redirect()->route('master-data.master-data.distance-matrix.index')
             ->with('success', 'Distance updated successfully.');
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(PowerplantSidingDistance $distance)
+    public function destroy(PowerplantSidingDistance $distance_matrix)
     {
-        $distance->delete();
+        $distance_matrix->delete();
 
-        return redirect()->route('master-data.distance-matrix.index')
+        return redirect()->route('master-data.master-data.distance-matrix.index')
             ->with('success', 'Distance deleted successfully.');
     }
 }

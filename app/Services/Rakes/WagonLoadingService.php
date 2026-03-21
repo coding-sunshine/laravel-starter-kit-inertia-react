@@ -21,10 +21,9 @@ final readonly class WagonLoadingService
                 throw new Exception('TXR must be completed before loading wagons');
             }
 
-            // Ensure wagon exists and is not unfit
+            // Ensure wagon exists on this rake (unfit wagons may still be recorded)
             $wagon = Wagon::where('id', $data['wagon_id'])
                 ->where('rake_id', $rake->id)
-                ->where('is_unfit', false)
                 ->firstOrFail();
 
             // Ensure wagon is not already loaded
@@ -60,10 +59,7 @@ final readonly class WagonLoadingService
 
     public function isAllWagonsLoaded(Rake $rake): bool
     {
-        $fitWagonsCount = $rake->wagons()->where('is_unfit', false)->count();
-        $loadedWagonsCount = $rake->wagonLoadings()->count();
-
-        return $fitWagonsCount > 0 && $loadedWagonsCount >= $fitWagonsCount;
+        return $rake->allFitWagonsHavePositiveLoading();
     }
 
     private function getOrCreateRakeLoad(Rake $rake): RakeLoad

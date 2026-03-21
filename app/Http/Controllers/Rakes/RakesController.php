@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Rakes;
 
+use App\Actions\SyncTxrUnfitFlagsToWagonsAction;
 use App\DataTables\RakeDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\Rake;
@@ -22,6 +23,10 @@ use Inertia\Response;
 
 final class RakesController extends Controller
 {
+    public function __construct(
+        private readonly SyncTxrUnfitFlagsToWagonsAction $syncTxrUnfitFlagsToWagons,
+    ) {}
+
     public function index(Request $request): Response
     {
         return Inertia::render('rakes/index', [
@@ -47,6 +52,26 @@ final class RakesController extends Controller
             'appliedPenalties.penaltyType',
             'appliedPenalties.wagon',
         ]);
+
+        if ($rake->txr !== null) {
+            $expectedUnfitIds = $rake->txr->wagonUnfitLogs
+                ->pluck('wagon_id')
+                ->unique()
+                ->sort()
+                ->values()
+                ->all();
+            $actualUnfitIds = $rake->wagons
+                ->where('is_unfit', true)
+                ->pluck('id')
+                ->sort()
+                ->values()
+                ->all();
+            if ($expectedUnfitIds !== $actualUnfitIds) {
+                $this->syncTxrUnfitFlagsToWagons->handle($rake, $rake->txr);
+                $rake->unsetRelation('wagons');
+                $rake->load('wagons');
+            }
+        }
 
         if ($rake->state !== 'completed' && self::rakeWorkflowCoreComplete($rake)) {
             $rake->update(['state' => 'completed']);
@@ -110,11 +135,25 @@ final class RakesController extends Controller
             $rakeArray['wagonLoadings'] = $rakeArray['wagon_loadings'];
         }
 
-        if (array_key_exists('rr_document', $rakeArray) && $rakeArray['rr_document'] !== null) {
-            $rakeArray['rrDocuments'] = [$rakeArray['rr_document']];
-        } else {
-            $rakeArray['rrDocuments'] = [];
-        }
+        $rakeArray['rrDocuments'] = collect($rake->rrDocuments ?? [])->map(static function ($doc): array {
+            return [
+                'id' => $doc->id,
+                'rr_number' => $doc->rr_number,
+                'rr_received_date' => $doc->rr_received_date?->toIso8601String() ?? '',
+                'rr_weight_mt' => $doc->rr_weight_mt,
+                'document_status' => $doc->document_status,
+                'diverrt_destination_id' => $doc->diverrt_destination_id,
+            ];
+        })->values()->all();
+
+        $rakeArray['diverrtDestinations'] = collect($rake->diverrtDestinations ?? [])->map(static function ($row): array {
+            return [
+                'id' => $row->id,
+                'location' => $row->location,
+            ];
+        })->values()->all();
+
+        unset($rakeArray['rr_document'], $rakeArray['rr_documents'], $rakeArray['diverrt_destinations']);
 
         if (array_key_exists('applied_penalties', $rakeArray)) {
             $rakeArray['appliedPenalties'] = $rakeArray['applied_penalties'];

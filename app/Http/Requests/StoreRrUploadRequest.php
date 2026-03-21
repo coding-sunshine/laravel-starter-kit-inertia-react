@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use App\Models\DiverrtDestination;
+use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 
 final class StoreRrUploadRequest extends FormRequest
@@ -23,6 +25,28 @@ final class StoreRrUploadRequest extends FormRequest
             'rake_id' => ['nullable', 'integer', 'exists:rakes,id'],
             'siding_id' => ['required_without:rake_id', 'integer', 'exists:sidings,id'],
             'power_plant_id' => ['required_without:rake_id', 'integer', 'exists:power_plants,id'],
+            'diverrt_destination_id' => [
+                'nullable',
+                'integer',
+                function (string $attribute, mixed $value, Closure $fail): void {
+                    if ($value === null || $value === '') {
+                        return;
+                    }
+                    $rakeId = $this->input('rake_id');
+                    if ($rakeId === null || $rakeId === '') {
+                        $fail('A rake must be selected when uploading a diversion Railway Receipt.');
+
+                        return;
+                    }
+                    $exists = DiverrtDestination::query()
+                        ->where('id', (int) $value)
+                        ->where('rake_id', (int) $rakeId)
+                        ->exists();
+                    if (! $exists) {
+                        $fail('The selected diversion destination is invalid for this rake.');
+                    }
+                },
+            ],
         ];
     }
 

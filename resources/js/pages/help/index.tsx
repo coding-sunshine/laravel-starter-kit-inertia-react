@@ -1,6 +1,7 @@
+import AppLogo from '@/components/app-logo';
 import TextLink from '@/components/text-link';
 import { home } from '@/routes';
-import { index as helpIndex, show as helpShow } from '@/routes/help';
+import { show as helpShow } from '@/routes/help';
 import { Head, Link } from '@inertiajs/react';
 
 interface HelpArticle {
@@ -27,7 +28,7 @@ export default function HelpIndex({ featured, byCategory }: Props) {
                             href={home()}
                             className="flex items-center gap-2 font-medium text-foreground"
                         >
-                            <span className="text-lg font-bold">RMMS</span>
+                            <AppLogo className="flex-none [&_span]:text-lg [&_span]:font-bold" />
                             <span className="sr-only">Home</span>
                         </Link>
                         <TextLink href={home()}>Back to home</TextLink>

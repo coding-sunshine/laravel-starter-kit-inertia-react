@@ -63,10 +63,7 @@ final readonly class GuardInspectionService
 
     private function isLoadingCompleted(Rake $rake): bool
     {
-        $fitWagonsCount = $rake->wagons()->where('is_unfit', false)->count();
-        $loadedWagonsCount = $rake->wagonLoadings()->count();
-
-        return $fitWagonsCount > 0 && $loadedWagonsCount >= $fitWagonsCount;
+        return $rake->allFitWagonsHavePositiveLoading();
     }
 
     private function updateRakeState(Rake $rake, string $state): void

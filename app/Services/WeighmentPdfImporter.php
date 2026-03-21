@@ -45,7 +45,8 @@ final readonly class WeighmentPdfImporter
 
     /**
      * Parse a weighment PDF for use with an existing rake (no Rake/Wagon creation).
-     * Validates document shape and that the parsed rake number matches the given rake.
+     * Validates document shape. The FOIS / slip rake number may differ from {@see Rake::$rake_number}
+     * in the application; we still attach the weighment to the rake the user is on and only log a warning.
      * Does not persist the file; call {@see UploadedFile::store()} after validation succeeds.
      *
      * @return array{header: array<string, mixed>, totals: array<string, float|null>, wagon_rows: array<int, array<string, mixed>>}
@@ -53,6 +54,18 @@ final readonly class WeighmentPdfImporter
     public function parsePdfForRake(Rake $rake, UploadedFile $pdf): array
     {
         $text = $this->extractPdfText($pdf);
+
+        return $this->parsePdfTextForRake($rake, $text);
+    }
+
+    /**
+     * Parse extracted weighment slip text for an existing rake (same rules as {@see parsePdfForRake}).
+     * Exposed for tests and callers that already have PDF text.
+     *
+     * @return array{header: array<string, mixed>, totals: array<string, float|null>, wagon_rows: array<int, array<string, mixed>>}
+     */
+    public function parsePdfTextForRake(Rake $rake, string $text): array
+    {
         $this->assertWeighmentPdfDocumentShape($text);
 
         $lines = preg_split("/\r\n|\r|\n/", $text) ?: [];
@@ -68,7 +81,24 @@ final readonly class WeighmentPdfImporter
         }
 
         if (! $this->rakeNumbersMatch((string) $header['rake_number'], (string) $rake->rake_number)) {
-            throw new InvalidArgumentException('Weighment PDF is for a different rake.');
+            Log::warning('Weighment PDF rake number differs from application rake; attaching to current rake anyway.', [
+                'rake_id' => $rake->id,
+                'application_rake_number' => $rake->rake_number,
+                'pdf_rake_number' => $header['rake_number'],
+            ]);
+        }
+
+        $pdfSiding = $this->detectSidingFromWeighmentText($text);
+        $this->ensureSidingFound($pdfSiding);
+        if ((int) $pdfSiding->id !== (int) $rake->siding_id) {
+            $rake->loadMissing('siding');
+            $expectedLabel = $rake->siding !== null
+                ? $rake->siding->name.($rake->siding->station_code ? " ({$rake->siding->station_code})" : '')
+                : 'this rake\'s siding';
+
+            throw new InvalidArgumentException(
+                'The weighment PDF appears to be for a different siding than this rake. Expected siding: '.$expectedLabel.'.'
+            );
         }
 
         return [
@@ -76,6 +106,14 @@ final readonly class WeighmentPdfImporter
             'totals' => $totals,
             'wagon_rows' => $wagonRows,
         ];
+    }
+
+    /**
+     * Detect siding from weighment PDF text (station keywords and siding names).
+     */
+    public function detectSidingFromWeighmentText(string $text): ?Siding
+    {
+        return $this->detectSiding($text);
     }
 
     /**

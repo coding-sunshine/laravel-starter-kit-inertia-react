@@ -6,6 +6,13 @@ import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import InputError from '@/components/input-error';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { Train, Clock, Save, CalendarClock } from 'lucide-react';
 import { useForm, usePage } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
@@ -38,9 +45,10 @@ interface RakeData {
 interface TxrTableProps {
     rake: RakeData;
     disabled: boolean;
+    onTxrHeaderSaved?: (txr: Record<string, unknown>) => void;
 }
 
-export function TxrTable({ rake, disabled }: TxrTableProps) {
+export function TxrTable({ rake, disabled, onTxrHeaderSaved }: TxrTableProps) {
     const { errors } = usePage<{ errors?: Record<string, string> }>().props;
     const [duration, setDuration] = useState<number>(0);
     
@@ -51,10 +59,25 @@ export function TxrTable({ rake, disabled }: TxrTableProps) {
         remarks: rake.txr?.remarks || '',
     });
 
-    const inspectionTimeDate = data.inspection_time ? data.inspection_time.slice(0, 10) : '';
-    const inspectionTimeTime = data.inspection_time ? data.inspection_time.slice(11, 16) : '';
-    const inspectionEndTimeDate = data.inspection_end_time ? data.inspection_end_time.slice(0, 10) : '';
-    const inspectionEndTimeTime = data.inspection_end_time ? data.inspection_end_time.slice(11, 16) : '';
+    useEffect(() => {
+        setData({
+            inspection_time: rake.txr?.inspection_time
+                ? new Date(rake.txr.inspection_time).toISOString().slice(0, 16)
+                : '',
+            inspection_end_time: rake.txr?.inspection_end_time
+                ? new Date(rake.txr.inspection_end_time).toISOString().slice(0, 16)
+                : '',
+            status: rake.txr?.status ?? 'in_progress',
+            remarks: rake.txr?.remarks || '',
+        });
+    }, [
+        rake.txr?.id,
+        rake.txr?.inspection_time,
+        rake.txr?.inspection_end_time,
+        rake.txr?.status,
+        rake.txr?.remarks,
+        setData,
+    ]);
 
     const setInspectionTime = (date: string, time: string) => {
         const d = date || (time ? new Date().toISOString().slice(0, 10) : '');
@@ -148,10 +171,15 @@ export function TxrTable({ rake, disabled }: TxrTableProps) {
 
     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        if (!rake.txr) return;
         put(`/rakes/${rake.id}/txr`, {
             preserveScroll: true,
-            onSuccess: () => {},
+            onSuccess: (page) => {
+                const props = page.props as { rake?: { txr?: Record<string, unknown> | null } };
+                const nextTxr = props.rake?.txr;
+                if (nextTxr) {
+                    onTxrHeaderSaved?.(nextTxr);
+                }
+            },
         });
     };
 
@@ -181,6 +209,7 @@ export function TxrTable({ rake, disabled }: TxrTableProps) {
                                 <TableHead>Rake Placement Time</TableHead>
                                 <TableHead>TXR Start Time</TableHead>
                                 <TableHead>TXR End Time</TableHead>
+                                <TableHead>Status</TableHead>
                                 <TableHead>TXR Duration (Min)</TableHead>
                                 <TableHead>No of Unfit Wagons</TableHead>
                                 <TableHead>Remarks</TableHead>
@@ -209,7 +238,7 @@ export function TxrTable({ rake, disabled }: TxrTableProps) {
                                             type="hidden"
                                             name="inspection_time"
                                             value={data.inspection_time}
-                                            required={!!rake.txr}
+                                            required
                                         />
                                     </div>
                                     <InputError message={errors?.inspection_time} />
@@ -225,6 +254,25 @@ export function TxrTable({ rake, disabled }: TxrTableProps) {
                                         <input type="hidden" name="inspection_end_time" value={data.inspection_end_time} />
                                     </div>
                                     <InputError message={errors?.inspection_end_time} />
+                                </TableCell>
+                                <TableCell>
+                                    <Select
+                                        value={data.status}
+                                        onValueChange={(value) => setData('status', value)}
+                                        disabled={disabled}
+                                    >
+                                        <SelectTrigger className="h-9 w-[140px]">
+                                            <SelectValue placeholder="Status" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="pending">Pending</SelectItem>
+                                            <SelectItem value="in_progress">In progress</SelectItem>
+                                            <SelectItem value="completed">Completed</SelectItem>
+                                            <SelectItem value="approved">Approved</SelectItem>
+                                            <SelectItem value="rejected">Rejected</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <InputError message={errors?.status} />
                                 </TableCell>
                                 <TableCell>
                                     <div className="flex items-center gap-2">
@@ -264,11 +312,11 @@ export function TxrTable({ rake, disabled }: TxrTableProps) {
                         </Button>
                         <Button
                             type="submit"
-                            disabled={disabled || processing || !rake.txr}
+                            disabled={disabled || processing}
                             className="flex items-center gap-2"
                         >
                             <Save className="h-4 w-4" />
-                            {rake.txr ? 'Update TXR' : 'Start TXR first to save header'}
+                            {rake.txr ? 'Update TXR' : 'Save TXR'}
                         </Button>
                     </div>
                 </form>

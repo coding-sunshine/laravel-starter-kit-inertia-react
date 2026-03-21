@@ -127,6 +127,12 @@ export default function VehicleWorkordersIndex({
                     description="Manage vehicle work order records from workload data"
                 />
 
+                <div className="flex justify-end">
+                    <Link href="/vehicle-workorders/create">
+                        <Button>Add Work Order</Button>
+                    </Link>
+                </div>
+
                 {flash?.success && (
                     <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800 dark:border-green-800 dark:bg-green-950 dark:text-green-200">
                         {flash.success}

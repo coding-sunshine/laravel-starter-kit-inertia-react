@@ -44,6 +44,8 @@ use App\Http\Controllers\ProductionEntryController;
 use App\Http\Controllers\RailwayReceipts\PenaltyController;
 use App\Http\Controllers\RailwayReceipts\RrDocumentController;
 use App\Http\Controllers\RailwaySidingEmptyWeighmentController;
+use App\Http\Controllers\Rakes\RakeDiverrtDestinationController;
+use App\Http\Controllers\Rakes\RakeDiversionModeController;
 use App\Http\Controllers\Rakes\RakeGuardInspectionController;
 use App\Http\Controllers\Rakes\RakeLoadController;
 use App\Http\Controllers\Rakes\RakesController;
@@ -194,6 +196,9 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     // RRMCS Routes (Railway Rake Management Control System)
     Route::get('rakes', [RakesController::class, 'index'])->name('rakes.index');
     Route::get('rakes/{rake}', [RakesController::class, 'show'])->name('rakes.show');
+    Route::patch('rakes/{rake}/diversion-mode', RakeDiversionModeController::class)->name('rakes.diversion-mode.update');
+    Route::post('rakes/{rake}/diverrt-destinations', [RakeDiverrtDestinationController::class, 'store'])->name('rakes.diverrt-destinations.store');
+    Route::delete('rakes/{rake}/diverrt-destinations/{diverrtDestination}', [RakeDiverrtDestinationController::class, 'destroy'])->name('rakes.diverrt-destinations.destroy');
     Route::get('rakes/{rake}/edit', [RakesController::class, 'edit'])->name('rakes.edit');
     Route::put('rakes/{rake}', [RakesController::class, 'update'])->name('rakes.update');
     Route::delete('rakes/{rake}', [RakesController::class, 'destroy'])->name('rakes.destroy');
@@ -215,6 +220,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::post('rakes/{rake}/load/confirm-placement', [RakeLoadController::class, 'confirmPlacement'])->name('rakes.load.confirm-placement');
     Route::post('rakes/{rake}/load/wagon', [RakeLoadController::class, 'loadWagon'])->name('rakes.load.wagon');
     Route::post('rakes/{rake}/load/wagons', [RakeLoadController::class, 'storeWagonLoadings'])->name('rakes.load.wagons');
+    Route::get('rakes/{rake}/load/wagon-loadings', [RakeLoadController::class, 'indexWagonLoadings'])->name('rakes.load.wagon-loadings');
     Route::post('rakes/{rake}/load/wagon-rows', [RakeLoadController::class, 'storeWagonRow'])->name('rakes.load.wagon-rows.store');
     Route::patch('rakes/{rake}/load/wagon-rows/{loading}', [RakeLoadController::class, 'updateWagonRow'])->name('rakes.load.wagon-rows.update');
     Route::delete('rakes/{rake}/load/wagon-rows/{loading}', [RakeLoadController::class, 'destroyWagonRow'])->name('rakes.load.wagon-rows.destroy');
@@ -329,7 +335,9 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 
     // Vehicle Work Orders
     Route::get('vehicle-workorders', [VehicleWorkorderController::class, 'index'])->name('vehicle-workorders.index');
+    Route::get('vehicle-workorders/create', [VehicleWorkorderController::class, 'create'])->name('vehicle-workorders.create');
     Route::get('vehicle-workorders/{vehicle_workorder}/edit', [VehicleWorkorderController::class, 'edit'])->name('vehicle-workorders.edit');
+    Route::post('vehicle-workorders', [VehicleWorkorderController::class, 'store'])->name('vehicle-workorders.store');
     Route::put('vehicle-workorders/{vehicle_workorder}', [VehicleWorkorderController::class, 'update'])->name('vehicle-workorders.update');
 
     // Railway Receipts (RR) and Penalties

@@ -19,7 +19,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Package, CheckCircle, Clock, Loader, Plus, Trash2 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 function getCsrfHeaders(): Record<string, string> {
     const cookieMatch = document.cookie.match(/\bXSRF-TOKEN=([^;]+)/);
@@ -114,19 +114,38 @@ export function WagonLoadingWorkflow({
     onWagonUpdated,
 }: WagonLoadingWorkflowProps) {
     const existingLoadings = rake.wagonLoadings ?? rake.wagon_loadings ?? EMPTY_LOADINGS;
-    const fitWagons = rake.wagons.filter((w) => !w.is_unfit);
+    /** All wagons on the rake (including unfit — loaders may still record quantities). */
+    const rakeWagonsOrdered = useMemo(
+        () =>
+            [...rake.wagons].sort(
+                (a, b) => (a.wagon_sequence ?? 0) - (b.wagon_sequence ?? 0)
+            ),
+        [rake.wagons]
+    );
 
     const [rows, setRows] = useState<LoadingRow[]>([]);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const isStopped = false;
+    const onWagonLoadingsSavedRef = useRef(onWagonLoadingsSaved);
+    onWagonLoadingsSavedRef.current = onWagonLoadingsSaved;
+
+    const loadingsSyncKey = useMemo(() => {
+        const list = rake.wagonLoadings ?? rake.wagon_loadings ?? EMPTY_LOADINGS;
+        return list
+            .map(
+                (l) =>
+                    `${l.id ?? 'n'}:${l.wagon_id}:${String(l.loaded_quantity_mt ?? '')}:${l.loader_id ?? ''}:${l.loading_time ?? ''}`,
+            )
+            .join('|');
+    }, [rake.wagonLoadings, rake.wagon_loadings]);
 
     useEffect(() => {
+        const list = rake.wagonLoadings ?? rake.wagon_loadings ?? EMPTY_LOADINGS;
         const nextRows: LoadingRow[] =
-            existingLoadings.length === 0
+            list.length === 0
                 ? []
-                : existingLoadings.map((l) => ({
+                : list.map((l) => ({
                       id: l.id,
                       key: `load-${l.wagon_id}-${l.id ?? Date.now()}`,
                       wagon_id: String(l.wagon_id),
@@ -141,7 +160,48 @@ export function WagonLoadingWorkflow({
                       remarks: l.remarks ?? '',
                   }));
         setRows(nextRows);
-    }, [rake.id, existingLoadings]);
+    }, [rake.id, loadingsSyncKey]);
+
+    const wagonLoadingsFetchStartedRef = useRef(false);
+    useEffect(() => {
+        wagonLoadingsFetchStartedRef.current = false;
+    }, [rake.id]);
+
+    useEffect(() => {
+        const propCount =
+            rake.wagonLoadings?.length ?? rake.wagon_loadings?.length ?? 0;
+        if (propCount > 0) {
+            return;
+        }
+        if (wagonLoadingsFetchStartedRef.current) {
+            return;
+        }
+        wagonLoadingsFetchStartedRef.current = true;
+        let cancelled = false;
+        void (async () => {
+            try {
+                const response = await fetch(`/rakes/${rake.id}/load/wagon-loadings`, {
+                    headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    credentials: 'same-origin',
+                });
+                if (!response.ok || cancelled) {
+                    return;
+                }
+                const data = (await response.json()) as {
+                    wagonLoadings?: WagonLoadingRecord[];
+                };
+                if (cancelled || !data.wagonLoadings?.length) {
+                    return;
+                }
+                onWagonLoadingsSavedRef.current?.(data.wagonLoadings);
+            } catch {
+                //
+            }
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, [rake.id, rake.wagonLoadings, rake.wagon_loadings]);
 
     const loaders = useMemo(() => rake.siding?.loaders ?? [], [rake.siding?.loaders]);
 
@@ -154,8 +214,31 @@ export function WagonLoadingWorkflow({
             ),
         [existingLoadings]
     );
-    const unloadedWagons = fitWagons.filter((w) => !positivelyLoadedWagonIds.has(w.id));
-    const isCompleted = fitWagons.length > 0 && unloadedWagons.length === 0;
+    /** Status / “Completed” uses fit wagons only; unfit wagons may stay at 0 for audit. */
+    const fitWagonsOrdered = useMemo(
+        () => rakeWagonsOrdered.filter((w) => !w.is_unfit),
+        [rakeWagonsOrdered]
+    );
+    const unloadedFitWagons = fitWagonsOrdered.filter((w) => !positivelyLoadedWagonIds.has(w.id));
+    const isCompleted =
+        fitWagonsOrdered.length > 0 && unloadedFitWagons.length === 0;
+
+    const occupiedWagonIds = useMemo(() => {
+        const ids = new Set<number>();
+        existingLoadings.forEach((l) => ids.add(l.wagon_id));
+        rows.forEach((r) => {
+            const id = Number(r.wagon_id);
+            if (Number.isFinite(id) && id > 0) {
+                ids.add(id);
+            }
+        });
+        return ids;
+    }, [existingLoadings, rows]);
+
+    const canAddMoreWagons = useMemo(
+        () => rakeWagonsOrdered.some((w) => !occupiedWagonIds.has(w.id)),
+        [rakeWagonsOrdered, occupiedWagonIds],
+    );
 
     const [editMode, setEditMode] = useState(!isCompleted);
 
@@ -234,12 +317,10 @@ export function WagonLoadingWorkflow({
     const addRow = async () => {
         setError(null);
 
-        const fitWagonsOrdered = [...fitWagons].sort((a, b) => a.wagon_sequence - b.wagon_sequence);
-        const loadedIds = new Set(existingLoadings.map((l) => l.wagon_id));
-        const nextWagon = fitWagonsOrdered.find((w) => !loadedIds.has(w.id));
+        const nextWagon = rakeWagonsOrdered.find((w) => !occupiedWagonIds.has(w.id));
 
         if (!nextWagon) {
-            setError('All fit wagons are already loaded.');
+            setError('All wagons are already in the loading list.');
             return;
         }
 
@@ -326,6 +407,9 @@ export function WagonLoadingWorkflow({
         return 'Not Started';
     };
 
+    const showWorkflowPanel = editMode || rows.length > 0;
+    const tableReadOnly = !editMode;
+
     return (
         <Card>
             <CardHeader>
@@ -356,21 +440,31 @@ export function WagonLoadingWorkflow({
                 <CardDescription>Load each wagon with specified quantity</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-                {editMode && (
+                {showWorkflowPanel && (
                     <div>
-                        <div className="flex items-center justify-between mb-2">
-                            <Label className="text-base font-medium">Add Wagon Loadings</Label>
-                            <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={addRow}
-                                disabled={disabled || saving}
-                            >
-                                <Plus className="mr-1 h-4 w-4" />
-                                Add Row
-                            </Button>
-                        </div>
+                        {editMode && (
+                            <div className="flex items-center justify-between mb-2">
+                                <Label className="text-base font-medium">Wagon loadings</Label>
+                                {canAddMoreWagons && (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={addRow}
+                                        disabled={disabled || saving}
+                                    >
+                                        <Plus className="mr-1 h-4 w-4" />
+                                        Add row
+                                    </Button>
+                                )}
+                            </div>
+                        )}
+                        {editMode && !isCompleted && rows.length === 0 && (
+                            <p className="mb-3 text-sm text-muted-foreground">
+                                No loading rows yet. Use <strong>Add row</strong> to create the next
+                                wagon line (wagons already in the table are skipped).
+                            </p>
+                        )}
                         <form
                             onSubmit={(e) => {
                                 e.preventDefault();
@@ -396,10 +490,28 @@ export function WagonLoadingWorkflow({
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {rows.map((row) => (
-                                            <TableRow key={row.key}>
+                                        {rows.map((row) => {
+                                            const wagonForRow = rake.wagons.find(
+                                                (w) => String(w.id) === row.wagon_id
+                                            );
+                                            const isUnfitRow = wagonForRow?.is_unfit === true;
+
+                                            return (
+                                            <TableRow
+                                                key={row.key}
+                                                className={
+                                                    isUnfitRow
+                                                        ? 'bg-red-950/40 dark:bg-red-950/50 border-b border-red-900/55'
+                                                        : undefined
+                                                }
+                                            >
                                                 <TableCell className="min-w-[140px]">
                                                     <div className="flex flex-col gap-1">
+                                                        {isUnfitRow && (
+                                                            <span className="text-xs font-semibold uppercase tracking-wide text-red-950 dark:text-red-100">
+                                                                Unfit wagon
+                                                            </span>
+                                                        )}
                                                         <Input
                                                             value={row.wagon_number}
                                                             onChange={(e) =>
@@ -408,7 +520,7 @@ export function WagonLoadingWorkflow({
                                                             onBlur={async (e) => {
                                                                 const value = e.target.value.trim();
                                                                 const currentRow = rows.find((r) => r.key === row.key);
-                                                                if (!currentRow?.wagon_id || value === (fitWagons.find((w) => String(w.id) === currentRow.wagon_id)?.wagon_number ?? '')) {
+                                                                if (!currentRow?.wagon_id || value === (rake.wagons.find((w) => String(w.id) === currentRow.wagon_id)?.wagon_number ?? '')) {
                                                                     return;
                                                                 }
                                                                 setError(null);
@@ -446,12 +558,12 @@ export function WagonLoadingWorkflow({
                                                                 }
                                                             }}
                                                             placeholder="Wagon number"
-                                                            disabled={disabled}
+                                                            disabled={disabled || tableReadOnly}
                                                             className="w-full"
                                                         />
                                                         {row.wagon_id && (
                                                             <span className="text-xs text-muted-foreground">
-                                                                Pos {fitWagons.find((w) => String(w.id) === row.wagon_id)?.wagon_sequence ?? '-'}
+                                                                Pos {rake.wagons.find((w) => String(w.id) === row.wagon_id)?.wagon_sequence ?? '-'}
                                                             </span>
                                                         )}
                                                     </div>
@@ -498,7 +610,7 @@ export function WagonLoadingWorkflow({
                                                                 setSaving(false);
                                                             }
                                                         }}
-                                                        disabled={disabled}
+                                                        disabled={disabled || tableReadOnly}
                                                     >
                                                         <SelectTrigger className="w-full min-w-[140px]">
                                                             <SelectValue placeholder="No loader" />
@@ -583,7 +695,7 @@ export function WagonLoadingWorkflow({
                                                             }
                                                         }}
                                                         placeholder="0"
-                                                        disabled={disabled}
+                                                        disabled={disabled || tableReadOnly}
                                                         className="w-24"
                                                     />
                                                 </TableCell>
@@ -594,7 +706,7 @@ export function WagonLoadingWorkflow({
                                                         onChange={(e) =>
                                                             updateRow(row.key, 'loading_time', e.target.value)
                                                         }
-                                                        disabled={disabled}
+                                                        disabled={disabled || tableReadOnly}
                                                         className="w-40"
                                                     />
                                                 </TableCell>
@@ -603,7 +715,7 @@ export function WagonLoadingWorkflow({
                                                         value={row.remarks}
                                                         onChange={(e) => updateRow(row.key, 'remarks', e.target.value)}
                                                         placeholder="Remarks"
-                                                        disabled={disabled}
+                                                        disabled={disabled || tableReadOnly}
                                                         className="min-w-[100px]"
                                                     />
                                                 </TableCell>
@@ -613,13 +725,14 @@ export function WagonLoadingWorkflow({
                                                         variant="ghost"
                                                         size="icon"
                                                         onClick={() => removeRow(row.key)}
-                                                        disabled={disabled || saving}
+                                                        disabled={disabled || saving || tableReadOnly}
                                                     >
                                                         <Trash2 className="h-4 w-4 text-destructive" />
                                                     </Button>
                                                 </TableCell>
                                             </TableRow>
-                                        ))}
+                                            );
+                                        })}
                                     </TableBody>
                                 </Table>
                             </div>

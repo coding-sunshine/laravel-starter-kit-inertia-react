@@ -1,3 +1,4 @@
+import AppLogo from '@/components/app-logo';
 import {
     Card,
     CardContent,
@@ -25,9 +26,7 @@ export default function AuthCardLayout({
                     href={home()}
                     className="flex items-center gap-2 self-center font-medium"
                 >
-                    <div className="flex h-9 w-9 items-center justify-center">
-                        <span className="text-lg font-bold text-black dark:text-white">RMMS</span>
-                    </div>
+                    <AppLogo className="flex-none justify-center [&_span]:text-lg [&_span]:font-bold [&_span]:text-black dark:[&_span]:text-white" />
                 </Link>
 
                 <div className="flex flex-col gap-6">

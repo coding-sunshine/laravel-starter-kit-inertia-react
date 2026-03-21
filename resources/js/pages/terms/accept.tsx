@@ -1,4 +1,5 @@
 import TermsAcceptController from '@/actions/App/Http/Controllers/TermsAcceptController';
+import AppLogo from '@/components/app-logo';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { home } from '@/routes';
@@ -48,7 +49,7 @@ export default function TermsAccept({
                         href={home()}
                         className="flex items-center gap-2 font-medium text-foreground"
                     >
-                        <span className="text-lg font-bold">RMMS</span>
+                        <AppLogo className="flex-none [&_span]:text-lg [&_span]:font-bold" />
                         <span className="sr-only">Home</span>
                     </Link>
                 </div>

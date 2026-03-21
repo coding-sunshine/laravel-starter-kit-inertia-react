@@ -98,7 +98,7 @@ return [
         [
             'slug' => 'transport',
             'label' => 'Transport',
-            'actions' => ['view', 'update'],
+            'actions' => ['view', 'create', 'update'],
         ],
         [
             'slug' => 'railway_receipts',
@@ -215,13 +215,13 @@ return [
         'master-data.opening-coal-stock.edit' => 'sections.opening_coal_stock.update',
         'master-data.opening-coal-stock.update' => 'sections.opening_coal_stock.update',
 
-        'master-data.distance-matrix.index' => 'sections.distance_matrix.view',
-        'master-data.distance-matrix.show' => 'sections.distance_matrix.view',
-        'master-data.distance-matrix.create' => 'sections.distance_matrix.create',
-        'master-data.distance-matrix.store' => 'sections.distance_matrix.create',
-        'master-data.distance-matrix.edit' => 'sections.distance_matrix.update',
-        'master-data.distance-matrix.update' => 'sections.distance_matrix.update',
-        'master-data.distance-matrix.destroy' => 'sections.distance_matrix.delete',
+        'master-data.master-data.distance-matrix.index' => 'sections.distance_matrix.view',
+        'master-data.master-data.distance-matrix.show' => 'sections.distance_matrix.view',
+        'master-data.master-data.distance-matrix.create' => 'sections.distance_matrix.create',
+        'master-data.master-data.distance-matrix.store' => 'sections.distance_matrix.create',
+        'master-data.master-data.distance-matrix.edit' => 'sections.distance_matrix.update',
+        'master-data.master-data.distance-matrix.update' => 'sections.distance_matrix.update',
+        'master-data.master-data.distance-matrix.destroy' => 'sections.distance_matrix.delete',
 
         // Billing
         'billing.index' => 'sections.billing.view',
@@ -234,6 +234,9 @@ return [
         // Rakes
         'rakes.index' => 'sections.rakes.view',
         'rakes.show' => 'sections.rakes.view',
+        'rakes.diversion-mode.update' => 'sections.rakes.update',
+        'rakes.diverrt-destinations.store' => 'sections.rakes.update',
+        'rakes.diverrt-destinations.destroy' => 'sections.rakes.update',
         'rakes.edit' => 'sections.rakes.update',
         'rakes.update' => 'sections.rakes.update',
         'rakes.destroy' => 'sections.rakes.delete',
@@ -253,6 +256,7 @@ return [
         'rakes.load.confirm-placement' => 'sections.rakes.update',
         'rakes.load.wagon' => 'sections.rakes.update',
         'rakes.load.wagons' => 'sections.rakes.update',
+        'rakes.load.wagon-loadings' => 'sections.rakes.update',
         'rakes.load.wagon-rows.store' => 'sections.rakes.update',
         'rakes.load.wagon-rows.update' => 'sections.rakes.update',
         'rakes.load.wagon-rows.destroy' => 'sections.rakes.update',
@@ -328,6 +332,8 @@ return [
 
         // Transport (Vehicle Workorders)
         'vehicle-workorders.index' => 'sections.transport.view',
+        'vehicle-workorders.create' => 'sections.transport.create',
+        'vehicle-workorders.store' => 'sections.transport.create',
         'vehicle-workorders.edit' => 'sections.transport.update',
         'vehicle-workorders.update' => 'sections.transport.update',
 

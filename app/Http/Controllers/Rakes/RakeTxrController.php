@@ -127,10 +127,10 @@ final class RakeTxrController extends Controller
     {
         if (! $rake->txr) {
             if ($request->wantsJson()) {
-                return response()->json(['message' => 'Start TXR first before uploading the note.'], 400);
+                return response()->json(['message' => 'Save the TXR header first before uploading the note.'], 400);
             }
 
-            return to_route('rakes.show', $rake)->with('error', 'Start TXR first before uploading the note.');
+            return to_route('rakes.show', $rake)->with('error', 'Save the TXR header first before uploading the note.');
         }
 
         $validated = $request->validate([
