@@ -150,6 +150,8 @@ final readonly class DailyVehicleEntryService
         $netWeight = round($grossWt - $tareWt, 2);
 
         if ($netWeight <= 0) {
+            DailyVehicleEntry::query()->whereKey($entry->id)->update(['net_wt' => null]);
+
             return;
         }
 
@@ -176,6 +178,8 @@ final readonly class DailyVehicleEntryService
             'remarks' => "Vehicle {$entry->vehicle_no} — Daily entry #{$entry->id}, Shift {$entry->shift}",
             'created_by' => auth()->id(),
         ]);
+
+        DailyVehicleEntry::query()->whereKey($entry->id)->update(['net_wt' => $netWeight]);
     }
 
     private function shouldAutoComplete(array $data, DailyVehicleEntry $entry): bool
@@ -217,6 +221,10 @@ final readonly class DailyVehicleEntryService
         });
 
         $query->delete();
+
+        if ($entry->entry_type === DailyVehicleEntry::ENTRY_TYPE_ROAD_DISPATCH) {
+            DailyVehicleEntry::query()->whereKey($entry->id)->update(['net_wt' => null]);
+        }
     }
 
     private function exportAllShifts(string $date, Siding $siding, ?string $entryType = null): string

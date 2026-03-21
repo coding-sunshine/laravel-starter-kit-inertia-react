@@ -37,6 +37,7 @@ interface Indent {
     expected_loading_date: string | null;
     required_by_date: string | null;
     railway_reference_no: string | null;
+    destination?: string | null;
     e_demand_reference_id: string | null;
     fnr_number: string | null;
     state: string;
@@ -234,6 +235,12 @@ export default function IndentsShow({ indent, rake }: Props) {
                                 <dd>
                                     {indent.railway_reference_no ?? '—'}
                                 </dd>
+                            </div>
+                            <div>
+                                <dt className="text-muted-foreground">
+                                    Destination
+                                </dt>
+                                <dd>{indent.destination ?? '—'}</dd>
                             </div>
                             <div>
                                 <dt className="text-muted-foreground">

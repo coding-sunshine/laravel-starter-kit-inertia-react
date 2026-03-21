@@ -114,6 +114,7 @@ final class DailyVehicleEntryController extends Controller
             'wb_no' => 'nullable|string|max:255',
             'd_challan_no' => 'nullable|string|max:255',
             'challan_mode' => 'nullable|in:offline,online',
+            'remarks' => 'nullable|string|max:2000',
         ]);
 
         if ($assignedShift !== null) {
@@ -160,6 +161,7 @@ final class DailyVehicleEntryController extends Controller
             'd_challan_no' => 'nullable|string|max:255',
             'challan_mode' => 'nullable|in:offline,online',
             'status' => 'nullable|in:draft,completed',
+            'remarks' => 'nullable|string|max:2000',
         ]);
 
         $this->service->updateEntry($entry, $data);

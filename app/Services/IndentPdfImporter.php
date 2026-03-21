@@ -44,8 +44,8 @@ final readonly class IndentPdfImporter
     {
         $this->assertIndentPdfDocument($text);
 
+        // dd($text);
         $parsed = $this->parsePdfText($text);
-
         $eDemandRef = isset($parsed['e_demand_reference_id']) ? mb_trim((string) $parsed['e_demand_reference_id']) : '';
         if ($eDemandRef === '') {
             throw new InvalidArgumentException('This does not appear to be an indent PDF. e-Demand Reference Id could not be found.');
@@ -174,8 +174,9 @@ final readonly class IndentPdfImporter
             $out['total_units'] = (int) $unitsMatches[count($unitsMatches) - 1];
         }
 
-        if (preg_match_all('/Weight\s*\(In\s*Tonnes\)\s*[:\-]?\s*[\r\n\s]*([\d.,]+)/i', $text, $m)) {
-            $out['target_quantity_mt'] = $this->toFloat($m[1][count($m[1]) - 1]);
+        $weightMt = $this->extractWeightInTonnesMt($text);
+        if ($weightMt !== null) {
+            $out['target_quantity_mt'] = $weightMt;
         }
 
         if (preg_match('/Demand\s+Date\/Time\s*[:\-]\s*([0-9\-:\s]+)/i', $text, $m)) {
@@ -207,6 +208,47 @@ final readonly class IndentPdfImporter
         $out['remarks'] = implode(' ', $remarks) ?: null;
 
         return $out;
+    }
+
+    /**
+     * e-Demand PDFs often lay out "Weight (In Tonnes):" on the header row and put the value on the
+     * next line as the last column (e.g. "BOBRN                        60                   3960").
+     */
+    private function extractWeightInTonnesMt(string $text): ?float
+    {
+        if (preg_match_all(
+            '/Weight\s*\(\s*In\s*Tonne?s?\s*\)\s*[:\-]?\s*[^\r\n]*\R+([^\r\n]+)/iu',
+            $text,
+            $m
+        )) {
+            foreach (array_reverse($m[1]) as $rawLine) {
+                $line = mb_trim($rawLine);
+                if ($line === '' || preg_match('/page\s+\d+\s+of\s+\d+/i', $line)) {
+                    continue;
+                }
+
+                if (preg_match_all('/\d[\d.,]*/', $line, $nums) && $nums[0] !== []) {
+                    if (count($nums[0]) >= 2) {
+                        return $this->toFloat($nums[0][array_key_last($nums[0])]);
+                    }
+
+                    $single = $this->toFloat($nums[0][0]);
+                    if ($single !== null) {
+                        return $single;
+                    }
+                }
+            }
+        }
+
+        if (preg_match_all(
+            '/Weight\s*\(\s*In\s*Tonne?s?\s*\)\s*[:\-]?\s*([\d.,]+)/iu',
+            $text,
+            $m
+        )) {
+            return $this->toFloat($m[1][array_key_last($m[1])]);
+        }
+
+        return null;
     }
 
     private function detectSiding(string $text, array $parsed): ?Siding

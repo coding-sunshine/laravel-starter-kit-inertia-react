@@ -38,6 +38,8 @@ final class DailyVehicleEntry extends Model
         'updated_by',
         'trip_id_no',
         'transport_name',
+        'remarks',
+        'net_wt',
     ];
 
     /**
@@ -49,6 +51,7 @@ final class DailyVehicleEntry extends Model
         'gross_wt' => 'decimal:2',
         'tare_wt' => 'decimal:2',
         'tare_wt_two' => 'decimal:2',
+        'net_wt' => 'decimal:2',
         'shift' => 'integer',
         'vehicle_no' => 'string',
         'entry_type' => 'string',

@@ -1,6 +1,3 @@
-import { AreaChart } from '@/components/charts/area-chart';
-import { BarChart } from '@/components/charts/bar-chart';
-import { PieChart } from '@/components/charts/pie-chart';
 import Heading from '@/components/heading';
 import { RrmcsGuidance } from '@/components/rrmcs-guidance';
 import { Button } from '@/components/ui/button';
@@ -18,10 +15,16 @@ import axios from 'axios';
 import {
     BarChart3,
     CalendarRange,
+    ChevronDown,
     Download,
     FileSpreadsheet,
     Loader2,
 } from 'lucide-react';
+import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import { useCallback, useMemo, useState } from 'react';
 
 interface Siding {
@@ -41,6 +44,39 @@ interface Props {
 }
 
 type ReportData = Record<string, unknown>[];
+
+/** Report header → DB source (Siding Coal Receipt only; `daily_vehicle_entries` + `sidings`). */
+const SIDING_COAL_RECEIPT_COLUMN_SOURCES: { column: string; source: string }[] = [
+    {
+        column: 'Date',
+        source: 'date(daily_vehicle_entries.reached_at) — grouping key',
+    },
+    {
+        column: 'Shift',
+        source: 'daily_vehicle_entries.shift (shown as 1st / 2nd / 3rd)',
+    },
+    {
+        column: 'Siding (Pakur/Dumka/Kurwa)',
+        source: 'sidings.name',
+    },
+    { column: 'Vehicle No', source: 'daily_vehicle_entries.vehicle_no' },
+    {
+        column: 'Trips Received',
+        source: 'COUNT(*) — rows sharing same siding, date(reached_at), shift, vehicle',
+    },
+    {
+        column: 'Quantity Received (MT)',
+        source: 'SUM(daily_vehicle_entries.net_wt)',
+    },
+    {
+        column: 'Receipt Time',
+        source: 'MIN(daily_vehicle_entries.reached_at), app timezone',
+    },
+    {
+        column: 'Remarks',
+        source: 'Aggregated non-empty daily_vehicle_entries.remarks per group',
+    },
+];
 
 const RAKE_MANAGEMENT_REPORTS: string[] = [
     'siding_coal_receipt',
@@ -82,8 +118,9 @@ function extractChartData(key: string, data: ReportData): { chartData: Record<st
     if (key === 'siding_coal_receipt') {
         const grouped: Record<string, number> = {};
         data.forEach((r) => {
-            const dt = String(r.date ?? 'Unknown');
-            grouped[dt] = (grouped[dt] ?? 0) + Number(r.received_qty_mt ?? 0);
+            const dt = String(r['Date'] ?? 'Unknown');
+            grouped[dt] =
+                (grouped[dt] ?? 0) + Number(r['Quantity Received (MT)'] ?? 0);
         });
         const chartData = Object.entries(grouped).map(([date, total_mt]) => ({ date, total_mt }));
         return { chartData, xKey: 'date', yKey: 'total_mt' };
@@ -123,6 +160,7 @@ function extractChartData(key: string, data: ReportData): { chartData: Record<st
 
 /** Render the summary section for delegated reports. */
 function ReportSummary({ data, reportKey }: { data: ReportData; reportKey: string }) {
+    void reportKey;
     const first = data[0];
     if (!first) return null;
 
@@ -157,6 +195,7 @@ export default function ReportsIndex({ reports, sidings }: Props) {
     const [loading, setLoading] = useState(false);
     const [data, setData] = useState<ReportData | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [columnSourcesOpen, setColumnSourcesOpen] = useState(false);
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: '/dashboard' },
@@ -325,6 +364,10 @@ export default function ReportsIndex({ reports, sidings }: Props) {
 
                     {/* Main area */}
                     <div className="space-y-4">
+                        <span className="sr-only" aria-hidden>
+                            {chartType}
+                            {chartInfo ? '1' : '0'}
+                        </span>
                         {/* Controls bar */}
                         <Card>
                             <CardHeader className="pb-3">
@@ -335,6 +378,50 @@ export default function ReportsIndex({ reports, sidings }: Props) {
                                 <CardDescription>
                                     {activeReport?.description}
                                 </CardDescription>
+                                {activeKey === 'siding_coal_receipt' && (
+                                    <Collapsible
+                                        open={columnSourcesOpen}
+                                        onOpenChange={setColumnSourcesOpen}
+                                        className="mt-3 rounded-md border bg-muted/20"
+                                    >
+                                        <CollapsibleTrigger
+                                            className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm font-medium hover:bg-muted/40"
+                                            data-pan="report-siding-coal-column-sources"
+                                            type="button"
+                                        >
+                                            Where this data comes from (column → database)
+                                            <ChevronDown
+                                                className={`h-4 w-4 shrink-0 transition-transform ${columnSourcesOpen ? 'rotate-180' : ''}`}
+                                            />
+                                        </CollapsibleTrigger>
+                                        <CollapsibleContent>
+                                            <div className="overflow-x-auto border-t px-3 py-2">
+                                                <table className="w-full text-xs">
+                                                    <thead>
+                                                        <tr className="border-b text-left text-muted-foreground">
+                                                            <th className="py-1.5 pr-4 font-medium">
+                                                                Report column
+                                                            </th>
+                                                            <th className="py-1.5 font-medium">Source</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {SIDING_COAL_RECEIPT_COLUMN_SOURCES.map((row) => (
+                                                            <tr key={row.column} className="border-b border-muted/50 last:border-0">
+                                                                <td className="whitespace-nowrap py-1.5 pr-4 align-top font-medium">
+                                                                    {row.column}
+                                                                </td>
+                                                                <td className="py-1.5 align-top text-muted-foreground">
+                                                                    {row.source}
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </CollapsibleContent>
+                                    </Collapsible>
+                                )}
                             </CardHeader>
                             <CardContent>
                                 <div className="flex flex-wrap items-end gap-3">
@@ -515,13 +602,14 @@ export default function ReportsIndex({ reports, sidings }: Props) {
                                                             {tableColumns.map((col) => {
                                                                 const val = row[col];
                                                                 const isNumber = typeof val === 'number';
-                                                                const isCurrency = isNumber && (
-                                                                    col.includes('amount') ||
-                                                                    col.includes('total') ||
-                                                                    col.includes('penalty') ||
-                                                                    col.includes('weight') ||
-                                                                    col.includes('_mt')
-                                                                );
+                                                                const isCurrency =
+                                                                    isNumber &&
+                                                                    (col.includes('amount') ||
+                                                                        col.includes('total') ||
+                                                                        col.includes('penalty') ||
+                                                                        col.includes('weight') ||
+                                                                        col.includes('_mt') ||
+                                                                        col === 'Quantity Received (MT)');
                                                                 return (
                                                                     <td
                                                                         key={col}
