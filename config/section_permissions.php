@@ -103,7 +103,7 @@ return [
         [
             'slug' => 'railway_receipts',
             'label' => 'Railway Receipts',
-            'actions' => ['view', 'upload'],
+            'actions' => ['view', 'upload', 'delete'],
         ],
         [
             'slug' => 'penalties',
@@ -123,7 +123,7 @@ return [
         [
             'slug' => 'weighments',
             'label' => 'Weighments',
-            'actions' => ['view', 'upload'],
+            'actions' => ['view', 'upload', 'delete'],
         ],
         [
             'slug' => 'historical_mines',
@@ -279,6 +279,7 @@ return [
         'indents.pdf' => 'sections.indents.view',
         'indents.create-rake' => 'sections.indents.create',
         'indents.store-rake' => 'sections.indents.create',
+        'indents.destroy' => 'sections.indents.delete',
 
         // Railway Siding Record Data (Road Dispatch)
         'road-dispatch.daily-vehicle-entries.index' => 'sections.railway_siding_record_data.view',
@@ -346,6 +347,7 @@ return [
         'railway-receipts.show' => 'sections.railway_receipts.view',
         'railway-receipts.pdf' => 'sections.railway_receipts.view',
         'railway-receipts.update' => 'sections.railway_receipts.upload',
+        'railway-receipts.destroy' => 'sections.railway_receipts.delete',
         'railway-receipts.rakes' => 'sections.railway_receipts.view',
 
         // Penalties
@@ -373,6 +375,7 @@ return [
         'weighments.index' => 'sections.weighments.view',
         'weighments.show' => 'sections.weighments.view',
         'weighments.import' => 'sections.weighments.upload',
+        'weighments.destroy' => 'sections.weighments.delete',
 
         // Historical Mines (monthly mines data)
         'historical.mines.index' => 'sections.historical_mines.view',
