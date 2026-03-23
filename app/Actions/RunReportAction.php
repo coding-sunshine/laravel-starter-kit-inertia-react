@@ -7,14 +7,14 @@ namespace App\Actions;
 use App\Models\AppliedPenalty;
 use App\Models\DailyVehicleEntry;
 use App\Models\Indent;
-use App\Models\Penalty;
 use App\Models\Rake;
+use App\Models\RakeCharge;
 use App\Models\RakeWagonWeighment;
 use App\Models\RrDocument;
 use App\Models\RrPenaltySnapshot;
 use App\Models\Txr;
-use App\Models\Wagon;
 use App\Models\WagonLoading;
+use App\Models\WagonUnfitLog;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -60,7 +60,7 @@ final readonly class RunReportAction
 
     /**
      * @param  array<int>  $sidingIds
-     * @param  array{siding_id?: int, date_from?: string, date_to?: string}  $params
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader?: string}  $params
      * @return array<int, array<string, mixed>>
      */
     public function handle(string $key, array $sidingIds, array $params = []): array
@@ -85,7 +85,7 @@ final readonly class RunReportAction
 
     /**
      * @param  array<int>  $sidingIds
-     * @param  array{siding_id?: int, date_from?: string, date_to?: string}  $params
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader?: string}  $params
      * @return array<int, array<string, mixed>>
      */
     private function sidingCoalReceipt(array $sidingIds, array $params): array
@@ -176,18 +176,28 @@ final readonly class RunReportAction
      */
     private function rakeIndent(array $sidingIds, array $params): array
     {
-        $query = Indent::query()->with('siding:id,name')->whereIn('siding_id', $sidingIds);
-        $this->applyDateFilter($query, $params, 'created_at');
+        $query = Indent::query()
+            ->with(['siding:id,name', 'createdBy:id,name'])
+            ->whereIn('siding_id', $sidingIds);
+        $this->applyDateFilter($query, $params, 'indent_date', 'created_at');
         if (! empty($params['siding_id'])) {
             $query->where('siding_id', $params['siding_id']);
         }
-        $rows = $query->latest()->limit(500)->get();
+        $limit = $this->resolveLimit($params);
+        if ($limit !== null) {
+            $query->limit($limit);
+        }
+        $rows = $query->latest('indent_date')->latest()->get();
 
         return $rows->map(fn ($r): array => [
-            'id' => $r->id,
-            'siding' => $r->siding?->name,
-            'state' => $r->state,
-            'created_at' => $r->created_at->toIso8601String(),
+            'Indent Date' => $r->indent_date?->toDateString(),
+            'Siding' => $r->siding?->name,
+            'Available Stock (MT)' => $r->available_stock_mt !== null ? (float) $r->available_stock_mt : null,
+            'Rake Target Qty (MT)' => $r->target_quantity_mt !== null ? (float) $r->target_quantity_mt : null,
+            'Indent Raised By' => $r->createdBy?->name,
+            'Indent Time' => $r->indent_time?->format('Y-m-d H:i'),
+            'Railway Reference No' => $r->railway_reference_no,
+            'Remarks' => $r->remarks,
         ])->values()->all();
     }
 
@@ -200,48 +210,91 @@ final readonly class RunReportAction
     {
         $query = Txr::query()
             ->with('rake.siding:id,name')
+            ->withCount('wagonUnfitLogs')
             ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
-        $this->applyDateFilter($query, $params, 'inspection_time');
+        if (! empty($params['date_from'])) {
+            $query->whereHas('rake', fn ($q) => $q->whereDate('loading_date', '>=', $params['date_from']));
+        }
+        if (! empty($params['date_to'])) {
+            $query->whereHas('rake', fn ($q) => $q->whereDate('loading_date', '<=', $params['date_to']));
+        }
         if (! empty($params['siding_id'])) {
             $query->whereHas('rake', fn ($q) => $q->where('siding_id', $params['siding_id']));
         }
-        $rows = $query->orderByDesc('inspection_time')->limit(500)->get();
+        if (! empty($params['rake_number'])) {
+            $query->whereHas('rake', fn ($q) => $q->where('rake_number', 'like', '%'.$params['rake_number'].'%'));
+        }
+        $limit = $this->resolveLimit($params);
+        if ($limit !== null) {
+            $query->limit($limit);
+        }
+        $rows = $query->orderByDesc('inspection_time')->latest()->get();
 
-        return $rows->map(fn ($r): array => [
-            'rake_number' => $r->rake?->rake_number,
-            'siding' => $r->rake?->siding?->name,
-            'inspection_time' => $r->inspection_time?->toIso8601String(),
-            'state' => $r->state,
-            'unfit_wagons_count' => $r->unfit_wagons_count,
-        ])->values()->all();
+        return $rows->map(function (Txr $r): array {
+            $durationMin = null;
+            if ($r->inspection_time !== null && $r->inspection_end_time !== null) {
+                $durationMin = $r->inspection_time->diffInMinutes($r->inspection_end_time);
+            }
+
+            return [
+                'Rake No' => $r->rake?->rake_number,
+                'Siding' => $r->rake?->siding?->name,
+                'Rake Placement Time' => $r->rake?->placement_time?->format('Y-m-d H:i'),
+                'TXR Start Time' => $r->inspection_time?->format('Y-m-d H:i'),
+                'TXR End Time' => $r->inspection_end_time?->format('Y-m-d H:i'),
+                'TXR Duration (Min)' => $durationMin,
+                'No of Unfit Wagons' => $r->wagon_unfit_logs_count,
+                'Remarks' => '',
+            ];
+        })->values()->all();
     }
 
     /**
      * @param  array<int>  $sidingIds
-     * @param  array{siding_id?: int, date_from?: string, date_to?: string}  $params
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader?: string}  $params
      * @return array<int, array<string, mixed>>
      */
     private function unfitWagon(array $sidingIds, array $params): array
     {
-        $query = Wagon::query()
-            ->with('rake.siding:id,name')
-            ->where('is_unfit', true)
-            ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
-        if (! empty($params['siding_id'])) {
-            $query->whereHas('rake', fn ($q) => $q->where('siding_id', $params['siding_id']));
+        $query = WagonUnfitLog::query()
+            ->with(['wagon:id,wagon_number,wagon_type', 'txr.rake:id,rake_number,siding_id', 'txr.rake.siding:id,name'])
+            ->whereHas('txr.rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
+
+        if (! empty($params['date_from'])) {
+            $query->whereHas('txr.rake', fn ($q) => $q->whereDate('loading_date', '>=', $params['date_from']));
         }
-        $rows = $query->latest()->limit(500)->get();
+        if (! empty($params['date_to'])) {
+            $query->whereHas('txr.rake', fn ($q) => $q->whereDate('loading_date', '<=', $params['date_to']));
+        }
+
+        if (! empty($params['siding_id'])) {
+            $query->whereHas('txr.rake', fn ($q) => $q->where('siding_id', $params['siding_id']));
+        }
+        if (! empty($params['rake_number'])) {
+            $query->whereHas('txr.rake', fn ($q) => $q->where('rake_number', 'like', '%'.$params['rake_number'].'%'));
+        }
+
+        $limit = $this->resolveLimit($params);
+        if ($limit !== null) {
+            $query->limit($limit);
+        }
+
+        $rows = $query->orderByDesc('marked_at')->latest()->get();
 
         return $rows->map(fn ($r): array => [
-            'wagon_number' => $r->wagon_number,
-            'rake_number' => $r->rake?->rake_number,
-            'siding' => $r->rake?->siding?->name,
+            'Rake No' => $r->txr?->rake?->rake_number,
+            'Wagon No' => $r->wagon?->wagon_number,
+            'Wagon Type' => $r->wagon?->wagon_type,
+            'Reason Unfit' => $r->reason,
+            'Marked By' => '',
+            'Marking Method (Flag/Light)' => $r->marking_method,
+            'Time' => $r->marked_at?->format('Y-m-d H:i'),
         ])->values()->all();
     }
 
     /**
      * @param  array<int>  $sidingIds
-     * @param  array{siding_id?: int, date_from?: string, date_to?: string}  $params
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader?: string}  $params
      * @return array<int, array<string, mixed>>
      */
     private function wagonLoading(array $sidingIds, array $params): array
@@ -250,10 +303,37 @@ final readonly class RunReportAction
             ->with(['rake.siding:id,name,code', 'wagon:id,wagon_number'])
             ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
 
-        $this->applyDateFilter($query, $params, 'loading_time', 'created_at');
+        if (! empty($params['date_from'])) {
+            $query->whereHas('rake', fn ($q) => $q->whereDate('loading_date', '>=', $params['date_from']));
+        }
+        if (! empty($params['date_to'])) {
+            $query->whereHas('rake', fn ($q) => $q->whereDate('loading_date', '<=', $params['date_to']));
+        }
 
         if (! empty($params['siding_id'])) {
             $query->whereHas('rake', fn ($q) => $q->where('siding_id', $params['siding_id']));
+        }
+        if (! empty($params['rake_number'])) {
+            $query->whereHas('rake', fn ($q) => $q->where('rake_number', 'like', '%'.$params['rake_number'].'%'));
+        }
+        if (! empty($params['loader'])) {
+            $loaderFilter = mb_trim((string) $params['loader']);
+            $query->where(function ($q) use ($loaderFilter): void {
+                if (is_numeric($loaderFilter)) {
+                    $q->where('loader_id', (int) $loaderFilter)
+                        ->orWhereHas('loader', function ($loaderQuery) use ($loaderFilter): void {
+                            $loaderQuery
+                                ->where('loader_name', 'like', '%'.$loaderFilter.'%')
+                                ->orWhere('code', 'like', '%'.$loaderFilter.'%');
+                        });
+                } else {
+                    $q->whereHas('loader', function ($loaderQuery) use ($loaderFilter): void {
+                        $loaderQuery
+                            ->where('loader_name', 'like', '%'.$loaderFilter.'%')
+                            ->orWhere('code', 'like', '%'.$loaderFilter.'%');
+                    });
+                }
+            });
         }
 
         $limit = $this->resolveLimit($params);
@@ -278,7 +358,7 @@ final readonly class RunReportAction
 
     /**
      * @param  array<int>  $sidingIds
-     * @param  array{siding_id?: int, date_from?: string, date_to?: string}  $params
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader?: string}  $params
      * @return array<int, array<string, mixed>>
      */
     private function weighmentReport(array $sidingIds, array $params): array
@@ -287,10 +367,18 @@ final readonly class RunReportAction
             ->with('rakeWeighment.rake.siding:id,name')
             ->whereHas('rakeWeighment.rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
 
-        $this->applyDateFilter($query, $params, 'weighment_time', 'created_at');
+        if (! empty($params['date_from'])) {
+            $query->whereHas('rakeWeighment.rake', fn ($q) => $q->whereDate('loading_date', '>=', $params['date_from']));
+        }
+        if (! empty($params['date_to'])) {
+            $query->whereHas('rakeWeighment.rake', fn ($q) => $q->whereDate('loading_date', '<=', $params['date_to']));
+        }
 
         if (! empty($params['siding_id'])) {
             $query->whereHas('rakeWeighment.rake', fn ($q) => $q->where('siding_id', $params['siding_id']));
+        }
+        if (! empty($params['rake_number'])) {
+            $query->whereHas('rakeWeighment.rake', fn ($q) => $q->where('rake_number', 'like', '%'.$params['rake_number'].'%'));
         }
 
         $limit = $this->resolveLimit($params);
@@ -301,19 +389,19 @@ final readonly class RunReportAction
         $rows = $query->orderByDesc('weighment_time')->latest()->get();
 
         return $rows->map(fn ($r): array => [
-            'rake_no' => $r->rakeWeighment?->rake?->rake_number,
-            'wagon_no' => $r->wagon_number,
-            'inmotion_gross_mt' => $r->actual_gross_mt,
-            'inmotion_tare_mt' => $r->actual_tare_mt,
-            'inmotion_net_mt' => $r->net_weight_mt,
-            'weighment_time' => $r->weighment_time?->toIso8601String(),
-            'slip_no' => $r->slip_number,
+            'Rake No' => $r->rakeWeighment?->rake?->rake_number,
+            'Wagon No' => $r->wagon_number,
+            'Inmotion Gross (MT)' => $r->actual_gross_mt !== null ? (float) $r->actual_gross_mt : null,
+            'Inmotion Tare (MT)' => $r->actual_tare_mt !== null ? (float) $r->actual_tare_mt : null,
+            'Inmotion Net (MT)' => $r->net_weight_mt !== null ? (float) $r->net_weight_mt : null,
+            'Weighment Time' => $r->weighment_time?->format('Y-m-d H:i'),
+            'Slip No' => $r->slip_number,
         ])->values()->all();
     }
 
     /**
      * @param  array<int>  $sidingIds
-     * @param  array{siding_id?: int, date_from?: string, date_to?: string}  $params
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader?: string}  $params
      * @return array<int, array<string, mixed>>
      */
     private function loaderVsWeighment(array $sidingIds, array $params): array
@@ -338,10 +426,13 @@ final readonly class RunReportAction
         }
 
         if (! empty($params['date_from'])) {
-            $query->where('wl.loading_time', '>=', $params['date_from']);
+            $query->whereDate('r.loading_date', '>=', $params['date_from']);
         }
         if (! empty($params['date_to'])) {
-            $query->where('wl.loading_time', '<=', $params['date_to'].' 23:59:59');
+            $query->whereDate('r.loading_date', '<=', $params['date_to']);
+        }
+        if (! empty($params['rake_number'])) {
+            $query->where('r.rake_number', 'like', '%'.$params['rake_number'].'%');
         }
 
         $query->select([
@@ -371,20 +462,20 @@ final readonly class RunReportAction
             }
 
             return [
-                'rake_no' => $r->rake_no,
-                'wagon_no' => $r->weighment_wagon_no,
-                'loader_qty_mt' => $loader,
-                'inmotion_qty_mt' => $inmotion,
-                'difference_mt' => $difference,
-                'overload_underload_flag' => $flag,
-                'action_taken' => $r->action_taken,
+                'Rake No' => $r->rake_no,
+                'Wagon No' => $r->weighment_wagon_no,
+                'Loader Qty (MT)' => $loader,
+                'Inmotion Qty (MT)' => $inmotion,
+                'Difference (MT)' => $difference,
+                'Overload/Underload Flag' => $flag,
+                'Action Taken' => '',
             ];
         })->values()->all();
     }
 
     /**
      * @param  array<int>  $sidingIds
-     * @param  array{siding_id?: int, date_from?: string, date_to?: string}  $params
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader?: string}  $params
      * @return array<int, array<string, mixed>>
      */
     private function rakeMovement(array $sidingIds, array $params): array
@@ -394,7 +485,12 @@ final readonly class RunReportAction
             ->whereIn('siding_id', $sidingIds)
             ->whereNotNull('placement_time')
             ->whereNotNull('dispatch_time');
-        $this->applyDateFilter($query, $params, 'dispatch_time');
+        if (! empty($params['date_from'])) {
+            $query->whereDate('loading_date', '>=', $params['date_from']);
+        }
+        if (! empty($params['date_to'])) {
+            $query->whereDate('loading_date', '<=', $params['date_to']);
+        }
         if (! empty($params['siding_id'])) {
             $query->where('siding_id', $params['siding_id']);
         }
@@ -430,11 +526,19 @@ final readonly class RunReportAction
     private function rrSummary(array $sidingIds, array $params): array
     {
         $query = RrDocument::query()
-            ->with(['rake.siding:id,name', 'rrCharges:id,rr_document_id,charge_code,charge_name,amount', 'penaltySnapshots:id,rr_document_id,rake_id,penalty_code,amount'])
+            ->with(['rake.siding:id,name', 'rake.rakeCharges:id,rake_id,diverrt_destination_id,charge_type,amount,is_actual_charges'])
             ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
-        $this->applyDateFilter($query, $params, 'rr_received_date');
+        if (! empty($params['date_from'])) {
+            $query->whereHas('rake', fn ($q) => $q->whereDate('loading_date', '>=', $params['date_from']));
+        }
+        if (! empty($params['date_to'])) {
+            $query->whereHas('rake', fn ($q) => $q->whereDate('loading_date', '<=', $params['date_to']));
+        }
         if (! empty($params['siding_id'])) {
             $query->whereHas('rake', fn ($q) => $q->where('siding_id', $params['siding_id']));
+        }
+        if (! empty($params['rake_number'])) {
+            $query->whereHas('rake', fn ($q) => $q->where('rake_number', 'like', '%'.$params['rake_number'].'%'));
         }
         $limit = $this->resolveLimit($params);
         if ($limit !== null) {
@@ -444,58 +548,101 @@ final readonly class RunReportAction
         $rows = $query->latest('rr_received_date')->get();
 
         return $rows->map(function (RrDocument $r): array {
-            $penaltyAmount = $r->penaltySnapshots->sum(fn (RrPenaltySnapshot $p): float => (float) $p->amount);
-            $gstAmount = $r->rrCharges
-                ->filter(fn ($c): bool => str_contains(mb_strtolower((string) $c->charge_code), 'gst') || str_contains(mb_strtolower((string) $c->charge_name), 'gst'))
-                ->sum(fn ($c): float => (float) $c->amount);
+            $chargeScope = $r->rake?->rakeCharges
+                ?->filter(function (RakeCharge $charge) use ($r): bool {
+                    return $charge->is_actual_charges
+                        && (int) $charge->diverrt_destination_id === (int) $r->diverrt_destination_id;
+                });
 
-            $freight = $r->freight_total !== null ? (float) $r->freight_total : 0.0;
-            $total = $freight + (float) $penaltyAmount + (float) $gstAmount;
+            $freight = (float) ($chargeScope?->firstWhere('charge_type', 'FREIGHT')?->amount ?? 0.0);
+            $penaltyAmount = (float) ($chargeScope?->firstWhere('charge_type', 'PENALTY')?->amount ?? 0.0);
+            $gstAmount = (float) ($chargeScope?->firstWhere('charge_type', 'GST')?->amount ?? 0.0);
+            $otherChargesAmount = (float) ($chargeScope?->firstWhere('charge_type', 'OTHER_CHARGE')?->amount ?? 0.0);
+            $total = $freight + $penaltyAmount + $gstAmount + $otherChargesAmount;
 
             return [
-                'rake_no' => $r->rake?->rake_number,
-                'rr_no' => $r->rr_number,
-                'rr_date' => $r->rr_received_date?->toDateString(),
-                'from_siding' => $r->rake?->siding?->name,
-                'to_power_plant' => $r->to_station_code,
-                'charged_weight_mt' => $r->rr_weight_mt,
-                'freight_amount' => $r->freight_total,
-                'penalty_amount' => round($penaltyAmount, 2),
-                'gst_amount' => round($gstAmount, 2),
-                'total_amount' => round($total, 2),
+                'Rake No' => $r->rake?->rake_number,
+                'RR No' => $r->rr_number,
+                'RR Date' => $r->rr_received_date?->toDateString(),
+                'From Siding' => $r->rake?->siding?->name,
+                'To Power Plant' => $r->to_station_code,
+                'Charged Weight (MT)' => $r->rr_weight_mt !== null ? (float) $r->rr_weight_mt : null,
+                'Freight Amount' => round($freight, 2),
+                'Penalty Amount' => round($penaltyAmount, 2),
+                'GST Amount' => round($gstAmount, 2),
+                'Other Charges Amount' => round($otherChargesAmount, 2),
+                'Total Amount' => round($total, 2),
             ];
         })->values()->all();
     }
 
     /**
      * @param  array<int>  $sidingIds
-     * @param  array{siding_id?: int, date_from?: string, date_to?: string}  $params
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader?: string}  $params
      * @return array<int, array<string, mixed>>
      */
     private function penaltyRegister(array $sidingIds, array $params): array
     {
-        $query = Penalty::query()
-            ->with('rake.siding:id,name')
+        $appliedQuery = AppliedPenalty::query()
+            ->with(['rake.siding:id,name', 'penaltyType:id,code,name'])
             ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
-        $this->applyDateFilter($query, $params, 'penalty_date');
-        if (! empty($params['siding_id'])) {
-            $query->whereHas('rake', fn ($q) => $q->where('siding_id', $params['siding_id']));
+
+        $snapshotQuery = RrPenaltySnapshot::query()
+            ->with(['rake.siding:id,name'])
+            ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
+
+        // Use rake loading_date as business date for report filtering.
+        if (! empty($params['date_from'])) {
+            $appliedQuery->whereHas('rake', fn ($q) => $q->whereDate('loading_date', '>=', $params['date_from']));
+            $snapshotQuery->whereHas('rake', fn ($q) => $q->whereDate('loading_date', '>=', $params['date_from']));
         }
+        if (! empty($params['date_to'])) {
+            $appliedQuery->whereHas('rake', fn ($q) => $q->whereDate('loading_date', '<=', $params['date_to']));
+            $snapshotQuery->whereHas('rake', fn ($q) => $q->whereDate('loading_date', '<=', $params['date_to']));
+        }
+
+        if (! empty($params['siding_id'])) {
+            $appliedQuery->whereHas('rake', fn ($q) => $q->where('siding_id', $params['siding_id']));
+            $snapshotQuery->whereHas('rake', fn ($q) => $q->where('siding_id', $params['siding_id']));
+        }
+        if (! empty($params['rake_number'])) {
+            $appliedQuery->whereHas('rake', fn ($q) => $q->where('rake_number', 'like', '%'.$params['rake_number'].'%'));
+            $snapshotQuery->whereHas('rake', fn ($q) => $q->where('rake_number', 'like', '%'.$params['rake_number'].'%'));
+        }
+
         $limit = $this->resolveLimit($params);
         if ($limit !== null) {
-            $query->limit($limit);
+            $appliedQuery->limit($limit);
+            $snapshotQuery->limit($limit);
         }
 
-        $rows = $query->latest('penalty_date')->get();
+        $appliedRows = $appliedQuery->latest()->get()->map(fn (AppliedPenalty $p): array => [
+            'Date' => $p->rake?->created_at?->toDateString(),
+            'Siding' => $p->rake?->siding?->name,
+            'Rake No' => $p->rake?->rake_number,
+            'Penalty Type' => $p->penaltyType?->code ?? $p->penaltyType?->name,
+            'Reason' => '',
+            'Amount' => $p->amount !== null ? (float) $p->amount : null,
+            'Stage Detected (Pre-RR/Post-RR)' => 'Pre-RR',
+            'Remarks' => '',
+        ]);
 
-        return $rows->map(fn ($r): array => [
-            'rake_number' => $r->rake?->rake_number,
-            'siding' => $r->rake?->siding?->name,
-            'penalty_type' => $r->penalty_type,
-            'penalty_amount' => $r->penalty_amount,
-            'penalty_status' => $r->penalty_status,
-            'penalty_date' => $r->penalty_date?->toDateString(),
-        ])->values()->all();
+        $snapshotRows = $snapshotQuery->latest()->get()->map(fn (RrPenaltySnapshot $p): array => [
+            'Date' => $p->rake?->created_at?->toDateString(),
+            'Siding' => $p->rake?->siding?->name,
+            'Rake No' => $p->rake?->rake_number,
+            'Penalty Type' => $p->penalty_code,
+            'Reason' => '',
+            'Amount' => $p->amount !== null ? (float) $p->amount : null,
+            'Stage Detected (Pre-RR/Post-RR)' => 'Post-RR',
+            'Remarks' => '',
+        ]);
+
+        return $appliedRows
+            ->concat($snapshotRows)
+            ->sortByDesc('Date')
+            ->values()
+            ->all();
     }
 
     /**

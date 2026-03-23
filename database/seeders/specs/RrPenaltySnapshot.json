@@ -51,6 +51,11 @@
             "type": "timestamp",
             "nullable": true,
             "default": null
+        },
+        "rake_charge_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {
@@ -61,6 +66,10 @@
         "rake": {
             "type": "belongsTo",
             "model": "Rake"
+        },
+        "rakeCharge": {
+            "type": "belongsTo",
+            "model": "RakeCharge"
         }
     },
     "value_hints": [],

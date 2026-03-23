@@ -13,7 +13,6 @@ import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
 import axios from 'axios';
 import {
-    BarChart3,
     CalendarRange,
     ChevronDown,
     Download,
@@ -78,6 +77,90 @@ const SIDING_COAL_RECEIPT_COLUMN_SOURCES: { column: string; source: string }[] =
     },
 ];
 
+/** Report header -> DB source (Rake Indent only; `indents` + `sidings` + `users`). */
+const RAKE_INDENT_COLUMN_SOURCES: { column: string; source: string }[] = [
+    { column: 'Indent Date', source: 'indents.indent_date' },
+    { column: 'Siding', source: 'sidings.name via indents.siding_id' },
+    { column: 'Available Stock (MT)', source: 'indents.available_stock_mt' },
+    { column: 'Rake Target Qty (MT)', source: 'indents.target_quantity_mt' },
+    { column: 'Indent Raised By', source: 'users.name via indents.created_by' },
+    { column: 'Indent Time', source: 'indents.indent_time' },
+    { column: 'Railway Reference No', source: 'indents.railway_reference_no' },
+    { column: 'Remarks', source: 'indents.remarks' },
+];
+
+/** Report header -> DB source (TXR only; `txr` + `rakes` + `sidings` + `wagon_unfit_logs`). */
+const TXR_COLUMN_SOURCES: { column: string; source: string }[] = [
+    { column: 'Rake No', source: 'rakes.rake_number' },
+    { column: 'Siding', source: 'sidings.name via rakes.siding_id' },
+    { column: 'Rake Placement Time', source: 'rakes.placement_time' },
+    { column: 'TXR Start Time', source: 'txr.inspection_time' },
+    { column: 'TXR End Time', source: 'txr.inspection_end_time' },
+    { column: 'TXR Duration (Min)', source: 'computed from inspection start/end time' },
+    { column: 'No of Unfit Wagons', source: 'COUNT(wagon_unfit_logs.id) grouped by txr_id' },
+    { column: 'Remarks', source: 'always empty as requested' },
+];
+
+/** Report header -> DB source (Unfit Wagon only; `wagon_unfit_logs` + `wagons` + `rakes`). */
+const UNFIT_WAGON_COLUMN_SOURCES: { column: string; source: string }[] = [
+    { column: 'Rake No', source: 'rakes.rake_number via wagon_unfit_logs.txr_id -> txr.rake_id' },
+    { column: 'Wagon No', source: 'wagons.wagon_number via wagon_unfit_logs.wagon_id' },
+    { column: 'Wagon Type', source: 'wagons.wagon_type via wagon_unfit_logs.wagon_id' },
+    { column: 'Reason Unfit', source: 'wagon_unfit_logs.reason' },
+    { column: 'Marked By', source: 'always empty as requested' },
+    { column: 'Marking Method (Flag/Light)', source: 'wagon_unfit_logs.marking_method' },
+    { column: 'Time', source: 'wagon_unfit_logs.marked_at' },
+];
+
+/** Report header -> DB source (Inmotion Weighment; `rake_wagon_weighments` + related rake). */
+const WEIGHMENT_COLUMN_SOURCES: { column: string; source: string }[] = [
+    { column: 'Rake No', source: 'rakes.rake_number via rake_wagon_weighments.rake_weighment_id' },
+    { column: 'Wagon No', source: 'rake_wagon_weighments.wagon_number (from wagon_id -> wagons.wagon_number)' },
+    { column: 'Inmotion Gross (MT)', source: 'rake_wagon_weighments.actual_gross_mt' },
+    { column: 'Inmotion Tare (MT)', source: 'rake_wagon_weighments.actual_tare_mt' },
+    { column: 'Inmotion Net (MT)', source: 'rake_wagon_weighments.net_weight_mt' },
+    { column: 'Weighment Time', source: 'rake_wagon_weighments.weighment_time' },
+    { column: 'Slip No', source: 'rake_wagon_weighments.slip_number' },
+];
+
+/** Report header -> DB source (Loader vs Weighment; `wagon_loading` + `rake_wagon_weighments` + `wagons`). */
+const LOADER_VS_WEIGHMENT_COLUMN_SOURCES: { column: string; source: string }[] = [
+    { column: 'Rake No', source: 'rakes.rake_number via wagon_loading.rake_id' },
+    { column: 'Wagon No', source: 'rake_wagon_weighments.wagon_number via wagon_loading.wagon_id -> wagons.wagon_number' },
+    { column: 'Loader Qty (MT)', source: 'wagon_loading.loaded_quantity_mt' },
+    { column: 'Inmotion Qty (MT)', source: 'rake_wagon_weighments.net_weight_mt' },
+    { column: 'Difference (MT)', source: 'computed as Loader Qty - Inmotion Qty' },
+    { column: 'Overload/Underload Flag', source: 'computed as OVER / UNDER / OK from Difference' },
+    { column: 'Action Taken', source: 'always empty as requested' },
+];
+
+/** Report header -> DB source (Penalty Register; `applied_penalties` + `rr_penalty_snapshots`). */
+const PENALTY_REGISTER_COLUMN_SOURCES: { column: string; source: string }[] = [
+    { column: 'Date', source: 'rakes.created_at (as requested)' },
+    { column: 'Siding', source: 'sidings.name via rakes.siding_id' },
+    { column: 'Rake No', source: 'rakes.rake_number' },
+    { column: 'Penalty Type', source: 'applied_penalties.penalty_type OR rr_penalty_snapshots.penalty_code' },
+    { column: 'Reason', source: 'always empty as requested' },
+    { column: 'Amount', source: 'applied_penalties.amount OR rr_penalty_snapshots.amount' },
+    { column: 'Stage Detected (Pre-RR/Post-RR)', source: "'Pre-RR' for applied_penalties, 'Post-RR' for rr_penalty_snapshots" },
+    { column: 'Remarks', source: 'always empty as requested' },
+];
+
+/** Report header -> DB source (RR Summary; `rr_documents` + canonical `rake_charges`). */
+const RR_SUMMARY_COLUMN_SOURCES: { column: string; source: string }[] = [
+    { column: 'Rake No', source: 'rakes.rake_number via rr_documents.rake_id' },
+    { column: 'RR No', source: 'rr_documents.rr_number' },
+    { column: 'RR Date', source: 'rr_documents.rr_received_date' },
+    { column: 'From Siding', source: 'sidings.name via rr_documents.rake_id -> rakes.siding_id' },
+    { column: 'To Power Plant', source: 'rr_documents.to_station_code' },
+    { column: 'Charged Weight (MT)', source: 'rr_documents.rr_weight_mt' },
+    { column: 'Freight Amount', source: "rake_charges.amount where charge_type='FREIGHT' and is_actual_charges=true (scoped by rr diverrt_destination_id)" },
+    { column: 'Penalty Amount', source: "rake_charges.amount where charge_type='PENALTY' and is_actual_charges=true (scoped by rr diverrt_destination_id)" },
+    { column: 'GST Amount', source: "rake_charges.amount where charge_type='GST' and is_actual_charges=true (scoped by rr diverrt_destination_id)" },
+    { column: 'Other Charges Amount', source: "rake_charges.amount where charge_type='OTHER_CHARGE' and is_actual_charges=true (scoped by rr diverrt_destination_id)" },
+    { column: 'Total Amount', source: 'Freight Amount + Penalty Amount + GST Amount + Other Charges Amount' },
+];
+
 const RAKE_MANAGEMENT_REPORTS: string[] = [
     'siding_coal_receipt',
     'rake_indent',
@@ -90,6 +173,16 @@ const RAKE_MANAGEMENT_REPORTS: string[] = [
     'rr_summary',
     'penalty_register',
 ];
+
+const RAKE_NUMBER_FILTER_REPORTS = new Set([
+    'txr',
+    'unfit_wagon',
+    'wagon_loading',
+    'weighment',
+    'loader_vs_weighment',
+    'rr_summary',
+    'penalty_register',
+]);
 
 /** Determine the best chart for a given report key. */
 function getChartType(key: string): 'area' | 'bar' | 'pie' | 'table' {
@@ -129,8 +222,8 @@ function extractChartData(key: string, data: ReportData): { chartData: Record<st
         // Group by penalty_type for bar
         const grouped: Record<string, number> = {};
         data.forEach((r) => {
-            const t = String(r.penalty_type ?? 'Unknown');
-            grouped[t] = (grouped[t] ?? 0) + Number(r.penalty_amount ?? 0);
+            const t = String(r['Penalty Type'] ?? 'Unknown');
+            grouped[t] = (grouped[t] ?? 0) + Number(r['Amount'] ?? 0);
         });
         const chartData = Object.entries(grouped).map(([name, total]) => ({ name, total }));
         return { chartData, xKey: 'name', yKey: 'total' };
@@ -152,7 +245,7 @@ function extractChartData(key: string, data: ReportData): { chartData: Record<st
         return { chartData: data.slice(0, 20), xKey: 'wagon_number', yKey: 'loader_qty_mt' };
     }
     if (key === 'loader_vs_weighment') {
-        return { chartData: data.slice(0, 20), xKey: 'wagon_number', yKey: 'variance' };
+        return { chartData: data.slice(0, 20), xKey: 'Wagon No', yKey: 'Difference (MT)' };
     }
 
     return null;
@@ -187,11 +280,24 @@ function ReportSummary({ data, reportKey }: { data: ReportData; reportKey: strin
     );
 }
 
+function toLocalDateInput(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+}
+
 export default function ReportsIndex({ reports, sidings }: Props) {
     const [activeKey, setActiveKey] = useState<string>(Object.keys(reports)[0] ?? 'siding_coal_receipt');
     const [sidingId, setSidingId] = useState<string>('');
-    const [dateFrom, setDateFrom] = useState<string>('');
-    const [dateTo, setDateTo] = useState<string>('');
+    const [dateFrom, setDateFrom] = useState<string>(() => {
+        const now = new Date();
+        return toLocalDateInput(new Date(now.getFullYear(), now.getMonth(), 1));
+    });
+    const [dateTo, setDateTo] = useState<string>(() => toLocalDateInput(new Date()));
+    const [rakeNumber, setRakeNumber] = useState<string>('');
+    const [loader, setLoader] = useState<string>('');
     const [loading, setLoading] = useState(false);
     const [data, setData] = useState<ReportData | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -203,6 +309,19 @@ export default function ReportsIndex({ reports, sidings }: Props) {
     ];
 
     const activeReport = reports[activeKey];
+    const showsRakeNumberFilter = RAKE_NUMBER_FILTER_REPORTS.has(activeKey);
+    const showsLoaderFilter = activeKey === 'wagon_loading';
+    const requestPayload = useMemo(
+        () => ({
+            key: activeKey,
+            siding_id: sidingId || undefined,
+            date_from: dateFrom || undefined,
+            date_to: dateTo || undefined,
+            rake_number: showsRakeNumberFilter ? rakeNumber || undefined : undefined,
+            loader: showsLoaderFilter ? loader || undefined : undefined,
+        }),
+        [activeKey, sidingId, dateFrom, dateTo, rakeNumber, loader, showsRakeNumberFilter, showsLoaderFilter],
+    );
 
     const generate = useCallback(async () => {
         setLoading(true);
@@ -210,10 +329,7 @@ export default function ReportsIndex({ reports, sidings }: Props) {
         setData(null);
         try {
             const resp = await axios.post('/reports/generate', {
-                key: activeKey,
-                siding_id: sidingId || undefined,
-                date_from: dateFrom || undefined,
-                date_to: dateTo || undefined,
+                ...requestPayload,
                 preview: true,
                 preview_limit: 25,
             });
@@ -224,43 +340,14 @@ export default function ReportsIndex({ reports, sidings }: Props) {
         } finally {
             setLoading(false);
         }
-    }, [activeKey, sidingId, dateFrom, dateTo]);
-
-    const downloadCsv = useCallback(async () => {
-        try {
-            const resp = await axios.post(
-                '/reports/generate',
-                {
-                    key: activeKey,
-                    siding_id: sidingId || undefined,
-                    date_from: dateFrom || undefined,
-                    date_to: dateTo || undefined,
-                    export_csv: true,
-                },
-                { responseType: 'blob' },
-            );
-            const url = window.URL.createObjectURL(new Blob([resp.data]));
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${activeReport?.name ?? activeKey}_${new Date().toISOString().slice(0, 10)}.csv`;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            window.URL.revokeObjectURL(url);
-        } catch {
-            setError('CSV download failed');
-        }
-    }, [activeKey, sidingId, dateFrom, dateTo, activeReport]);
+    }, [requestPayload]);
 
     const downloadXlsx = useCallback(async () => {
         try {
             const resp = await axios.post(
                 '/reports/generate',
                 {
-                    key: activeKey,
-                    siding_id: sidingId || undefined,
-                    date_from: dateFrom || undefined,
-                    date_to: dateTo || undefined,
+                    ...requestPayload,
                     export_xlsx: true,
                 },
                 { responseType: 'blob' },
@@ -276,7 +363,7 @@ export default function ReportsIndex({ reports, sidings }: Props) {
         } catch {
             setError('XLSX download failed');
         }
-    }, [activeKey, sidingId, dateFrom, dateTo, activeReport]);
+    }, [requestPayload, activeReport, activeKey]);
 
     const chartInfo = useMemo(() => {
         if (!data) return null;
@@ -320,8 +407,8 @@ export default function ReportsIndex({ reports, sidings }: Props) {
                 />
                 <RrmcsGuidance
                     title="What this section is for"
-                    before="Reports extracted manually from different registers and Excel files — takes hours and is error-prone."
-                    after="One-click report generation with charts and CSV export for all siding operations, penalties, indents, and financial data."
+                    before="Reports extracted manually from different registers and Excel files — takes hours."
+                    after="One-click report generation with Excel export for all siding operations, penalties, indents, and financial data."
                 />
 
                 <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
@@ -345,6 +432,12 @@ export default function ReportsIndex({ reports, sidings }: Props) {
                                                     setActiveKey(k);
                                                     setData(null);
                                                     setError(null);
+                                                    if (!RAKE_NUMBER_FILTER_REPORTS.has(k)) {
+                                                        setRakeNumber('');
+                                                    }
+                                                    if (k !== 'wagon_loading') {
+                                                        setLoader('');
+                                                    }
                                                 }}
                                                 className={`w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors ${
                                                     activeKey === k
@@ -364,10 +457,6 @@ export default function ReportsIndex({ reports, sidings }: Props) {
 
                     {/* Main area */}
                     <div className="space-y-4">
-                        <span className="sr-only" aria-hidden>
-                            {chartType}
-                            {chartInfo ? '1' : '0'}
-                        </span>
                         {/* Controls bar */}
                         <Card>
                             <CardHeader className="pb-3">
@@ -378,7 +467,7 @@ export default function ReportsIndex({ reports, sidings }: Props) {
                                 <CardDescription>
                                     {activeReport?.description}
                                 </CardDescription>
-                                {activeKey === 'siding_coal_receipt' && (
+                                {false && (activeKey === 'siding_coal_receipt' || activeKey === 'rake_indent' || activeKey === 'txr' || activeKey === 'unfit_wagon' || activeKey === 'weighment' || activeKey === 'loader_vs_weighment' || activeKey === 'penalty_register' || activeKey === 'rr_summary') && (
                                     <Collapsible
                                         open={columnSourcesOpen}
                                         onOpenChange={setColumnSourcesOpen}
@@ -406,7 +495,22 @@ export default function ReportsIndex({ reports, sidings }: Props) {
                                                         </tr>
                                                     </thead>
                                                     <tbody>
-                                                        {SIDING_COAL_RECEIPT_COLUMN_SOURCES.map((row) => (
+                                                        {(activeKey === 'rake_indent'
+                                                            ? RAKE_INDENT_COLUMN_SOURCES
+                                                            : activeKey === 'txr'
+                                                              ? TXR_COLUMN_SOURCES
+                                                              : activeKey === 'unfit_wagon'
+                                                                ? UNFIT_WAGON_COLUMN_SOURCES
+                                                                : activeKey === 'weighment'
+                                                                  ? WEIGHMENT_COLUMN_SOURCES
+                                                                  : activeKey === 'loader_vs_weighment'
+                                                                    ? LOADER_VS_WEIGHMENT_COLUMN_SOURCES
+                                                                    : activeKey === 'penalty_register'
+                                                                      ? PENALTY_REGISTER_COLUMN_SOURCES
+                                                                  : activeKey === 'rr_summary'
+                                                                    ? RR_SUMMARY_COLUMN_SOURCES
+                                                              : SIDING_COAL_RECEIPT_COLUMN_SOURCES
+                                                        ).map((row) => (
                                                             <tr key={row.column} className="border-b border-muted/50 last:border-0">
                                                                 <td className="whitespace-nowrap py-1.5 pr-4 align-top font-medium">
                                                                     {row.column}
@@ -461,6 +565,30 @@ export default function ReportsIndex({ reports, sidings }: Props) {
                                             className="rounded-md border border-input bg-background px-3 py-2 text-sm"
                                         />
                                     </div>
+                                    {showsRakeNumberFilter && (
+                                        <div className="grid gap-1.5">
+                                            <label className="text-xs font-medium">Rake Number</label>
+                                            <input
+                                                type="text"
+                                                value={rakeNumber}
+                                                onChange={(e) => setRakeNumber(e.target.value)}
+                                                placeholder="Search rake number"
+                                                className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                            />
+                                        </div>
+                                    )}
+                                    {showsLoaderFilter && (
+                                        <div className="grid gap-1.5">
+                                            <label className="text-xs font-medium">Loader</label>
+                                            <input
+                                                type="text"
+                                                value={loader}
+                                                onChange={(e) => setLoader(e.target.value)}
+                                                placeholder="Loader id, name, or code"
+                                                className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                            />
+                                        </div>
+                                    )}
                                     <Button
                                         onClick={generate}
                                         disabled={loading}
@@ -469,20 +597,10 @@ export default function ReportsIndex({ reports, sidings }: Props) {
                                         {loading ? (
                                             <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
                                         ) : (
-                                            <BarChart3 className="mr-1.5 h-4 w-4" />
+                                            <FileSpreadsheet className="mr-1.5 h-4 w-4" />
                                         )}
                                         Generate
                                     </Button>
-                                    {data && data.length > 0 && (
-                                        <Button
-                                            variant="outline"
-                                            onClick={downloadCsv}
-                                            data-pan="report-download-csv"
-                                        >
-                                            <Download className="mr-1.5 h-4 w-4" />
-                                            CSV
-                                        </Button>
-                                    )}
                                     {data && data.length > 0 && (
                                         <Button
                                             variant="outline"
@@ -516,62 +634,6 @@ export default function ReportsIndex({ reports, sidings }: Props) {
                                 <CardContent className="space-y-4">
                                     {/* Summary cards for delegated reports */}
                                     <ReportSummary data={data} reportKey={activeKey} />
-
-                                    {/* Chart */}
-                                    {/*
-                                      Chart preview is intentionally hidden for now.
-                                      Re-enable by uncommenting this block.
-                                    */}
-                                    {/*
-                                    {chartInfo && chartInfo.chartData.length > 0 && (
-                                        <div className="rounded-lg border bg-muted/20 p-4">
-                                            {chartType === 'area' && (
-                                                <AreaChart
-                                                    data={chartInfo.chartData}
-                                                    xKey={chartInfo.xKey}
-                                                    yKey={chartInfo.yKey}
-                                                    height={280}
-                                                    formatY={
-                                                        chartInfo.yKey === 'total'
-                                                            ? formatCurrency
-                                                            : undefined
-                                                    }
-                                                    formatTooltip={
-                                                        chartInfo.yKey === 'total'
-                                                            ? formatCurrency
-                                                            : undefined
-                                                    }
-                                                />
-                                            )}
-                                            {chartType === 'bar' && (
-                                                <BarChart
-                                                    data={chartInfo.chartData}
-                                                    xKey={chartInfo.xKey}
-                                                    yKey={chartInfo.yKey}
-                                                    height={280}
-                                                    formatY={
-                                                        chartInfo.yKey === 'total'
-                                                            ? formatCurrency
-                                                            : undefined
-                                                    }
-                                                    formatTooltip={
-                                                        chartInfo.yKey === 'total'
-                                                            ? formatCurrency
-                                                            : undefined
-                                                    }
-                                                />
-                                            )}
-                                            {chartType === 'pie' && chartInfo.nameKey && (
-                                                <PieChart
-                                                    data={chartInfo.chartData}
-                                                    nameKey={chartInfo.nameKey}
-                                                    valueKey={chartInfo.yKey}
-                                                    height={280}
-                                                />
-                                            )}
-                                        </div>
-                                    )}
-                                    */}
 
                                     {/* Data table */}
                                     {tableRows.length > 0 && tableColumns.length > 0 ? (
@@ -635,7 +697,7 @@ export default function ReportsIndex({ reports, sidings }: Props) {
                                             </table>
                                             {tableRows.length > 100 && (
                                                 <div className="border-t px-4 py-2 text-center text-xs text-muted-foreground">
-                                                    Showing first 100 of {tableRows.length} records. Export CSV for full data.
+                                                    Showing first 100 of {tableRows.length} records. Export XLSX for full data.
                                                 </div>
                                             )}
                                         </div>
@@ -654,7 +716,7 @@ export default function ReportsIndex({ reports, sidings }: Props) {
                             <Card>
                                 <CardContent className="py-12">
                                     <div className="text-center text-sm text-muted-foreground">
-                                        <BarChart3 className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+                                        <FileSpreadsheet className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
                                         <p className="mb-1 font-medium text-foreground">
                                             Select a report and click Generate
                                         </p>

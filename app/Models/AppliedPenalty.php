@@ -14,6 +14,7 @@ final class AppliedPenalty extends Model
     protected $fillable = [
         'penalty_type_id',
         'rake_id',
+        'rake_charge_id',
         'wagon_id',
         'wagon_number',
         'quantity',
@@ -39,6 +40,11 @@ final class AppliedPenalty extends Model
     public function rake(): BelongsTo
     {
         return $this->belongsTo(Rake::class);
+    }
+
+    public function rakeCharge(): BelongsTo
+    {
+        return $this->belongsTo(RakeCharge::class);
     }
 
     public function wagon(): BelongsTo

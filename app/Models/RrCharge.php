@@ -11,6 +11,7 @@ final class RrCharge extends Model
 {
     protected $fillable = [
         'rr_document_id',
+        'rake_charge_id',
         'charge_code',
         'charge_name',
         'amount',
@@ -20,6 +21,11 @@ final class RrCharge extends Model
     public function rrDocument(): BelongsTo
     {
         return $this->belongsTo(RrDocument::class);
+    }
+
+    public function rakeCharge(): BelongsTo
+    {
+        return $this->belongsTo(RakeCharge::class);
     }
 
     protected function casts(): array

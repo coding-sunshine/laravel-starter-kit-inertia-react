@@ -86,12 +86,13 @@ interface RakeData {
         attempt_no: number;
         wagonWeights?: Array<{
             wagon_id: number;
-            gross_weight_mt: string;
-            net_weight_mt: string;
+            gross_weight_mt: number;
+            net_weight_mt: number;
             wagon: {
                 id: number;
                 wagon_number: string;
                 wagon_sequence: number;
+                pcc_weight_mt?: string | number | null;
             };
         }>;
     }>;

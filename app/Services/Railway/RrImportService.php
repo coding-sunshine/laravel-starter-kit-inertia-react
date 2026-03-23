@@ -9,6 +9,7 @@ use App\Models\AppliedPenalty;
 use App\Models\DiverrtDestination;
 use App\Models\PenaltyType;
 use App\Models\Rake;
+use App\Models\RakeCharge;
 use App\Models\RrCharge;
 use App\Models\RrDocument;
 use App\Models\RrPenaltySnapshot;
@@ -307,17 +308,25 @@ final readonly class RrImportService
      */
     private function insertPenaltySnapshots(RrDocument $rrDocument, ?Rake $rake, array $charges): void
     {
+        $penaltyCharge = $this->resolveOrCreatePenaltyCharge(
+            $rake,
+            $rrDocument->diverrt_destination_id,
+            true,
+            $this->sumPenaltyAmount($charges)
+        );
+
         foreach ($charges as $c) {
             $code = $c['code'] ?? $c['charge_code'] ?? '';
             $amount = (float) ($c['amount'] ?? 0);
 
-            if ($code === '' || $amount <= 0) {
+            if ($code === '' || $amount <= 0 || ! $this->isPenaltyCode($code)) {
                 continue;
             }
 
             RrPenaltySnapshot::query()->create([
                 'rr_document_id' => $rrDocument->id,
                 'rake_id' => $rake?->id,
+                'rake_charge_id' => $penaltyCharge?->id,
                 'penalty_code' => $code,
                 'amount' => $amount,
                 'meta' => [
@@ -468,13 +477,18 @@ final readonly class RrImportService
      */
     private function insertRrCharges(RrDocument $rrDocument, array $charges): void
     {
+        $canonicalByType = $this->upsertCanonicalRakeCharges($rrDocument, $charges);
+
         foreach ($charges as $c) {
             $code = $c['code'] ?? $c['charge_code'] ?? '';
             $name = $c['name'] ?? $c['charge_name'] ?? null;
             $amount = (float) ($c['amount'] ?? 0);
+            $chargeType = $this->resolveChargeType($code, $name, $amount);
+            $rakeChargeId = $canonicalByType[$chargeType]?->id ?? null;
 
             RrCharge::query()->create([
                 'rr_document_id' => $rrDocument->id,
+                'rake_charge_id' => $rakeChargeId,
                 'charge_code' => $code,
                 'charge_name' => $name,
                 'amount' => $amount,
@@ -491,6 +505,13 @@ final readonly class RrImportService
      */
     private function applyPenaltiesFromCharges(Rake $rake, array $charges): void
     {
+        $predictedPenaltyCharge = $this->resolveOrCreatePenaltyCharge(
+            $rake,
+            null,
+            false,
+            $this->sumPenaltyAmount($charges)
+        );
+
         $overloadedWagons = $rake->wagons()
             ->where('overload_weight_mt', '>', 0)
             ->orderBy('wagon_sequence')
@@ -524,6 +545,7 @@ final readonly class RrImportService
                         AppliedPenalty::query()->create([
                             'penalty_type_id' => $penaltyType->id,
                             'rake_id' => $rake->id,
+                            'rake_charge_id' => $predictedPenaltyCharge?->id,
                             'wagon_id' => $wagon->id,
                             'quantity' => $wagon->overload_weight_mt,
                             'amount' => $wagonAmount,
@@ -541,11 +563,135 @@ final readonly class RrImportService
             AppliedPenalty::query()->create([
                 'penalty_type_id' => $penaltyType->id,
                 'rake_id' => $rake->id,
+                'rake_charge_id' => $predictedPenaltyCharge?->id,
                 'wagon_id' => null,
                 'amount' => $amount,
                 'meta' => ['source' => 'rr_charge'],
             ]);
         }
+    }
+
+    /**
+     * @param  array<int, array{code?: string, charge_code?: string, name?: string|null, charge_name?: string|null, amount?: float}>  $charges
+     * @return array<string, RakeCharge>
+     */
+    private function upsertCanonicalRakeCharges(RrDocument $rrDocument, array $charges): array
+    {
+        if ($rrDocument->rake_id === null) {
+            return [];
+        }
+
+        $totalsByType = [];
+
+        foreach ($charges as $chargeLine) {
+            $code = (string) ($chargeLine['code'] ?? $chargeLine['charge_code'] ?? '');
+            $name = (string) ($chargeLine['name'] ?? $chargeLine['charge_name'] ?? '');
+            $amount = (float) ($chargeLine['amount'] ?? 0);
+            $type = $this->resolveChargeType($code, $name, $amount);
+            $totalsByType[$type] = (float) ($totalsByType[$type] ?? 0.0) + $amount;
+        }
+
+        $canonical = [];
+
+        foreach ($totalsByType as $type => $amount) {
+            $canonical[$type] = RakeCharge::query()->updateOrCreate(
+                [
+                    'rake_id' => $rrDocument->rake_id,
+                    'diverrt_destination_id' => $rrDocument->diverrt_destination_id,
+                    'charge_type' => $type,
+                    'is_actual_charges' => true,
+                ],
+                [
+                    'amount' => round($amount, 2),
+                    'data_source' => 'rr_import',
+                    'remarks' => 'RR '.$rrDocument->rr_number,
+                ]
+            );
+        }
+
+        return $canonical;
+    }
+
+    private function resolveOrCreatePenaltyCharge(
+        ?Rake $rake,
+        ?int $diverrtDestinationId,
+        bool $isActual,
+        float $amount = 0
+    ): ?RakeCharge {
+        if ($rake === null) {
+            return null;
+        }
+
+        return RakeCharge::query()->updateOrCreate(
+            [
+                'rake_id' => $rake->id,
+                'diverrt_destination_id' => $diverrtDestinationId,
+                'charge_type' => 'PENALTY',
+                'is_actual_charges' => $isActual,
+            ],
+            [
+                'amount' => round($amount, 2),
+                'data_source' => $isActual ? 'rr_import' : 'predicted_penalty',
+                'remarks' => $isActual ? 'RR penalty aggregate' : 'Predicted penalty aggregate',
+            ]
+        );
+    }
+
+    private function resolveChargeType(string $code, ?string $name, float $amount): string
+    {
+        $normalizedCode = mb_strtoupper(mb_trim($code));
+        $normalizedName = mb_strtoupper(mb_trim((string) $name));
+
+        if ($this->isPenaltyCode($normalizedCode)) {
+            return 'PENALTY';
+        }
+
+        if (str_contains($normalizedCode, 'GST') || str_contains($normalizedName, 'GST')) {
+            return 'GST';
+        }
+
+        if (
+            $normalizedCode === 'FREIGHT'
+            || str_contains($normalizedCode, 'FRT')
+            || str_contains($normalizedName, 'FREIGHT')
+        ) {
+            return 'FREIGHT';
+        }
+
+        if ($normalizedCode === 'REBATE' || $amount < 0) {
+            return 'REBATE';
+        }
+
+        return 'OTHER_CHARGE';
+    }
+
+    private function isPenaltyCode(string $code): bool
+    {
+        $normalized = mb_strtoupper(mb_trim($code));
+
+        if (in_array($normalized, ['POL1', 'POLA', 'DEM'], true)) {
+            return true;
+        }
+
+        return PenaltyType::query()->where('code', $normalized)->exists();
+    }
+
+    /**
+     * @param  array<int, array{code?: string, charge_code?: string, amount?: float}>  $charges
+     */
+    private function sumPenaltyAmount(array $charges): float
+    {
+        $sum = 0.0;
+
+        foreach ($charges as $charge) {
+            $code = (string) ($charge['code'] ?? $charge['charge_code'] ?? '');
+            if (! $this->isPenaltyCode($code)) {
+                continue;
+            }
+            $sum += (float) ($charge['amount'] ?? 0);
+        }
+
+        return round($sum, 2);
     }
 
     private function updateRakeSummary(Rake $rake, array $parsed, \Carbon\CarbonInterface $rrDate): void
