@@ -82,9 +82,9 @@ final class VehicleDispatchController extends Controller
 
         $dispatchReportsQuery = DispatchReport::with('siding')
             // ->when($currentSiding, fn ($q) => $q->where('siding_id', $currentSiding->id), fn ($q) => $q->whereIn('siding_id', $sidingIds))
-            ->when($request->date_from, fn ($q) => $q->where('issued_on', '>=', $request->date_from))
-            ->when($request->date_to, fn ($q) => $q->where('issued_on', '<=', $request->date_to))
-            ->when($request->get('date') && ! $request->date_from && ! $request->date_to, fn ($q) => $q->where('issued_on', $request->get('date')))
+            ->when($request->date_from, fn ($q) => $q->whereDate('issued_on', '>=', $request->date_from))
+            ->when($request->date_to, fn ($q) => $q->whereDate('issued_on', '<=', $request->date_to))
+            ->when($request->get('date') && ! $request->date_from && ! $request->date_to, fn ($q) => $q->whereDate('issued_on', $request->get('date')))
             ->orderBy('issued_on', 'desc')
             ->orderBy('id', 'asc');
 
