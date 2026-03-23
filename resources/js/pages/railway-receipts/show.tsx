@@ -6,9 +6,11 @@ import type {
     PenaltyRow,
     WagonRow,
 } from '@/components/RR/types';
+import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
+import { Trash2 } from 'lucide-react';
 
 interface Wagon {
     id: number;
@@ -101,6 +103,7 @@ interface Props {
     rrDocument: RrDocument;
     fromSiding?: FromSiding | null;
     toPowerPlant?: ToPowerPlant | null;
+    can_delete_rr?: boolean;
 }
 
 function mapStatus(
@@ -402,6 +405,7 @@ export default function RailwayReceiptShow({
     rrDocument,
     fromSiding,
     toPowerPlant,
+    can_delete_rr = false,
 }: Props) {
     const hasData = rrDocument?.id;
 
@@ -436,13 +440,37 @@ export default function RailwayReceiptShow({
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Railway Receipt Details" />
             <div className="space-y-6">
-                <div>
-                    <h1 className="text-2xl font-semibold tracking-tight">
-                        Railway Receipt Details
-                    </h1>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                        View RR document details, wagons, charges, and penalties
-                    </p>
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                        <h1 className="text-2xl font-semibold tracking-tight">
+                            Railway Receipt Details
+                        </h1>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                            View RR document details, wagons, charges, and penalties
+                        </p>
+                    </div>
+                    {can_delete_rr && hasData && (
+                        <Button
+                            variant="destructive"
+                            size="sm"
+                            type="button"
+                            onClick={() => {
+                                if (
+                                    !window.confirm(
+                                        'Delete this railway receipt? Related charges and snapshot rows will be removed. This cannot be undone.',
+                                    )
+                                ) {
+                                    return;
+                                }
+                                router.delete(
+                                    `/railway-receipts/${rrDocument.id}`,
+                                );
+                            }}
+                        >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete receipt
+                        </Button>
+                    )}
                 </div>
 
                 <RRHeader {...headerData} />

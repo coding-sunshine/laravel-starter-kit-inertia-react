@@ -26,8 +26,10 @@ final readonly class WeighmentPdfImporter
 {
     /**
      * Import a historical rake weighment from an uploaded PDF.
+     *
+     * @param  list<int>|null  $allowedSidingIds  When non-null, the PDF-detected siding must be in this list (web/API enforcement).
      */
-    public function import(UploadedFile $pdf, int $userId): Weighment
+    public function import(UploadedFile $pdf, int $userId, ?array $allowedSidingIds = null): Weighment
     {
         Log::info('Weighment PDF import: starting', [
             'user_id' => $userId,
@@ -37,6 +39,7 @@ final readonly class WeighmentPdfImporter
 
         $text = $this->extractPdfText($pdf);
         $validated = $this->validateHistoricalWeighmentText($text);
+        $this->assertDetectedSidingAllowed($validated['siding'], $allowedSidingIds);
 
         $storedPath = $pdf->store('weighment-pdfs', 'public');
 
@@ -121,9 +124,13 @@ final readonly class WeighmentPdfImporter
      *
      * Exposed primarily for testing so we can bypass the external PDF binary.
      */
-    public function importFromText(string $text, string $storedPdfPath, int $userId): Weighment
+    /**
+     * @param  list<int>|null  $allowedSidingIds
+     */
+    public function importFromText(string $text, string $storedPdfPath, int $userId, ?array $allowedSidingIds = null): Weighment
     {
         $validated = $this->validateHistoricalWeighmentText($text);
+        $this->assertDetectedSidingAllowed($validated['siding'], $allowedSidingIds);
 
         return $this->persistHistoricalWeighment($validated, $storedPdfPath, $userId);
     }
@@ -158,6 +165,24 @@ final readonly class WeighmentPdfImporter
         }
 
         return $text;
+    }
+
+    /**
+     * @param  list<int>|null  $allowedSidingIds
+     */
+    private function assertDetectedSidingAllowed(Siding $siding, ?array $allowedSidingIds): void
+    {
+        if ($allowedSidingIds === null) {
+            return;
+        }
+
+        if ($allowedSidingIds === []) {
+            throw new InvalidArgumentException('You have no assigned sidings for weighment import.');
+        }
+
+        if (! in_array((int) $siding->id, $allowedSidingIds, true)) {
+            throw new InvalidArgumentException('You are not allowed to import weighments for this siding.');
+        }
     }
 
     private function assertWeighmentPdfDocumentShape(string $text): void

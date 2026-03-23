@@ -13,6 +13,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Throwable;
 
 final class WeighmentUploadController extends Controller
@@ -76,7 +77,13 @@ final class WeighmentUploadController extends Controller
                 ], 201);
             }
 
-            $weighment = $historicalImporter->import($pdf, (int) $user->id);
+            $sidingIds = $user->isSuperAdmin()
+                ? Siding::query()->pluck('id')->all()
+                : $user->accessibleSidings()->get()->pluck('id')->all();
+
+            abort_if($sidingIds === [], 403, 'You have no assigned sidings for weighment import.');
+
+            $weighment = $historicalImporter->import($pdf, (int) $user->id, $sidingIds);
 
             return response()->json([
                 'data' => [
@@ -92,6 +99,8 @@ final class WeighmentUploadController extends Controller
             throw ValidationException::withMessages([
                 'pdf' => [$e->getMessage()],
             ]);
+        } catch (HttpException $e) {
+            throw $e;
         } catch (Throwable $e) {
             report($e);
 
