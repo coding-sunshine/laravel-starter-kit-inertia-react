@@ -124,6 +124,29 @@ const WEIGHMENT_COLUMN_SOURCES: { column: string; source: string }[] = [
     { column: 'Slip No', source: 'rake_wagon_weighments.slip_number' },
 ];
 
+/** Report header -> DB source (Loader vs Weighment; `wagon_loading` + `rake_wagon_weighments` + `wagons`). */
+const LOADER_VS_WEIGHMENT_COLUMN_SOURCES: { column: string; source: string }[] = [
+    { column: 'Rake No', source: 'rakes.rake_number via wagon_loading.rake_id' },
+    { column: 'Wagon No', source: 'rake_wagon_weighments.wagon_number via wagon_loading.wagon_id -> wagons.wagon_number' },
+    { column: 'Loader Qty (MT)', source: 'wagon_loading.loaded_quantity_mt' },
+    { column: 'Inmotion Qty (MT)', source: 'rake_wagon_weighments.net_weight_mt' },
+    { column: 'Difference (MT)', source: 'computed as Loader Qty - Inmotion Qty' },
+    { column: 'Overload/Underload Flag', source: 'computed as OVER / UNDER / OK from Difference' },
+    { column: 'Action Taken', source: 'always empty as requested' },
+];
+
+/** Report header -> DB source (Penalty Register; `applied_penalties` + `rr_penalty_snapshots`). */
+const PENALTY_REGISTER_COLUMN_SOURCES: { column: string; source: string }[] = [
+    { column: 'Date', source: 'rakes.created_at (as requested)' },
+    { column: 'Siding', source: 'sidings.name via rakes.siding_id' },
+    { column: 'Rake No', source: 'rakes.rake_number' },
+    { column: 'Penalty Type', source: 'applied_penalties.penalty_type OR rr_penalty_snapshots.penalty_code' },
+    { column: 'Reason', source: 'always empty as requested' },
+    { column: 'Amount', source: 'applied_penalties.amount OR rr_penalty_snapshots.amount' },
+    { column: 'Stage Detected (Pre-RR/Post-RR)', source: "'Pre-RR' for applied_penalties, 'Post-RR' for rr_penalty_snapshots" },
+    { column: 'Remarks', source: 'always empty as requested' },
+];
+
 /** Report header -> DB source (RR Summary; `rr_documents` + canonical `rake_charges`). */
 const RR_SUMMARY_COLUMN_SOURCES: { column: string; source: string }[] = [
     { column: 'Rake No', source: 'rakes.rake_number via rr_documents.rake_id' },
@@ -190,8 +213,8 @@ function extractChartData(key: string, data: ReportData): { chartData: Record<st
         // Group by penalty_type for bar
         const grouped: Record<string, number> = {};
         data.forEach((r) => {
-            const t = String(r.penalty_type ?? 'Unknown');
-            grouped[t] = (grouped[t] ?? 0) + Number(r.penalty_amount ?? 0);
+            const t = String(r['Penalty Type'] ?? 'Unknown');
+            grouped[t] = (grouped[t] ?? 0) + Number(r['Amount'] ?? 0);
         });
         const chartData = Object.entries(grouped).map(([name, total]) => ({ name, total }));
         return { chartData, xKey: 'name', yKey: 'total' };
@@ -213,7 +236,7 @@ function extractChartData(key: string, data: ReportData): { chartData: Record<st
         return { chartData: data.slice(0, 20), xKey: 'wagon_number', yKey: 'loader_qty_mt' };
     }
     if (key === 'loader_vs_weighment') {
-        return { chartData: data.slice(0, 20), xKey: 'wagon_number', yKey: 'variance' };
+        return { chartData: data.slice(0, 20), xKey: 'Wagon No', yKey: 'Difference (MT)' };
     }
 
     return null;
@@ -439,7 +462,7 @@ export default function ReportsIndex({ reports, sidings }: Props) {
                                 <CardDescription>
                                     {activeReport?.description}
                                 </CardDescription>
-                                {(activeKey === 'siding_coal_receipt' || activeKey === 'rake_indent' || activeKey === 'txr' || activeKey === 'unfit_wagon' || activeKey === 'weighment' || activeKey === 'rr_summary') && (
+                                {(activeKey === 'siding_coal_receipt' || activeKey === 'rake_indent' || activeKey === 'txr' || activeKey === 'unfit_wagon' || activeKey === 'weighment' || activeKey === 'loader_vs_weighment' || activeKey === 'penalty_register' || activeKey === 'rr_summary') && (
                                     <Collapsible
                                         open={columnSourcesOpen}
                                         onOpenChange={setColumnSourcesOpen}
@@ -475,6 +498,10 @@ export default function ReportsIndex({ reports, sidings }: Props) {
                                                                 ? UNFIT_WAGON_COLUMN_SOURCES
                                                                 : activeKey === 'weighment'
                                                                   ? WEIGHMENT_COLUMN_SOURCES
+                                                                  : activeKey === 'loader_vs_weighment'
+                                                                    ? LOADER_VS_WEIGHMENT_COLUMN_SOURCES
+                                                                    : activeKey === 'penalty_register'
+                                                                      ? PENALTY_REGISTER_COLUMN_SOURCES
                                                                   : activeKey === 'rr_summary'
                                                                     ? RR_SUMMARY_COLUMN_SOURCES
                                                               : SIDING_COAL_RECEIPT_COLUMN_SOURCES

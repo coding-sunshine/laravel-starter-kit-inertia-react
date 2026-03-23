@@ -7,7 +7,6 @@ namespace App\Actions;
 use App\Models\AppliedPenalty;
 use App\Models\DailyVehicleEntry;
 use App\Models\Indent;
-use App\Models\Penalty;
 use App\Models\Rake;
 use App\Models\RakeCharge;
 use App\Models\RakeWagonWeighment;
@@ -409,13 +408,13 @@ final readonly class RunReportAction
             }
 
             return [
-                'rake_no' => $r->rake_no,
-                'wagon_no' => $r->weighment_wagon_no,
-                'loader_qty_mt' => $loader,
-                'inmotion_qty_mt' => $inmotion,
-                'difference_mt' => $difference,
-                'overload_underload_flag' => $flag,
-                'action_taken' => $r->action_taken,
+                'Rake No' => $r->rake_no,
+                'Wagon No' => $r->weighment_wagon_no,
+                'Loader Qty (MT)' => $loader,
+                'Inmotion Qty (MT)' => $inmotion,
+                'Difference (MT)' => $difference,
+                'Overload/Underload Flag' => $flag,
+                'Action Taken' => '',
             ];
         })->values()->all();
     }
@@ -517,28 +516,63 @@ final readonly class RunReportAction
      */
     private function penaltyRegister(array $sidingIds, array $params): array
     {
-        $query = Penalty::query()
-            ->with('rake.siding:id,name')
+        $appliedQuery = AppliedPenalty::query()
+            ->with(['rake.siding:id,name', 'penaltyType:id,code,name'])
             ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
-        $this->applyDateFilter($query, $params, 'penalty_date');
-        if (! empty($params['siding_id'])) {
-            $query->whereHas('rake', fn ($q) => $q->where('siding_id', $params['siding_id']));
+
+        $snapshotQuery = RrPenaltySnapshot::query()
+            ->with(['rake.siding:id,name'])
+            ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
+
+        // Requested source for Date: rake.created_at.
+        if (! empty($params['date_from'])) {
+            $appliedQuery->whereHas('rake', fn ($q) => $q->where('created_at', '>=', $params['date_from']));
+            $snapshotQuery->whereHas('rake', fn ($q) => $q->where('created_at', '>=', $params['date_from']));
         }
+        if (! empty($params['date_to'])) {
+            $end = $params['date_to'].' 23:59:59';
+            $appliedQuery->whereHas('rake', fn ($q) => $q->where('created_at', '<=', $end));
+            $snapshotQuery->whereHas('rake', fn ($q) => $q->where('created_at', '<=', $end));
+        }
+
+        if (! empty($params['siding_id'])) {
+            $appliedQuery->whereHas('rake', fn ($q) => $q->where('siding_id', $params['siding_id']));
+            $snapshotQuery->whereHas('rake', fn ($q) => $q->where('siding_id', $params['siding_id']));
+        }
+
         $limit = $this->resolveLimit($params);
         if ($limit !== null) {
-            $query->limit($limit);
+            $appliedQuery->limit($limit);
+            $snapshotQuery->limit($limit);
         }
 
-        $rows = $query->latest('penalty_date')->get();
+        $appliedRows = $appliedQuery->latest()->get()->map(fn (AppliedPenalty $p): array => [
+            'Date' => $p->rake?->created_at?->toDateString(),
+            'Siding' => $p->rake?->siding?->name,
+            'Rake No' => $p->rake?->rake_number,
+            'Penalty Type' => $p->penaltyType?->code ?? $p->penaltyType?->name,
+            'Reason' => '',
+            'Amount' => $p->amount !== null ? (float) $p->amount : null,
+            'Stage Detected (Pre-RR/Post-RR)' => 'Pre-RR',
+            'Remarks' => '',
+        ]);
 
-        return $rows->map(fn ($r): array => [
-            'rake_number' => $r->rake?->rake_number,
-            'siding' => $r->rake?->siding?->name,
-            'penalty_type' => $r->penalty_type,
-            'penalty_amount' => $r->penalty_amount,
-            'penalty_status' => $r->penalty_status,
-            'penalty_date' => $r->penalty_date?->toDateString(),
-        ])->values()->all();
+        $snapshotRows = $snapshotQuery->latest()->get()->map(fn (RrPenaltySnapshot $p): array => [
+            'Date' => $p->rake?->created_at?->toDateString(),
+            'Siding' => $p->rake?->siding?->name,
+            'Rake No' => $p->rake?->rake_number,
+            'Penalty Type' => $p->penalty_code,
+            'Reason' => '',
+            'Amount' => $p->amount !== null ? (float) $p->amount : null,
+            'Stage Detected (Pre-RR/Post-RR)' => 'Post-RR',
+            'Remarks' => '',
+        ]);
+
+        return $appliedRows
+            ->concat($snapshotRows)
+            ->sortByDesc('Date')
+            ->values()
+            ->all();
     }
 
     /**
