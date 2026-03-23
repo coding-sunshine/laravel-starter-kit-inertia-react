@@ -15,6 +15,7 @@ use Closure;
 use DateTimeImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Date;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -23,6 +24,20 @@ use Throwable;
 
 final class IndentsController extends Controller
 {
+    /** @var list<string> */
+    private const INDENT_STATE_VALUES = [
+        'pending',
+        'allocated',
+        'partial',
+        'completed',
+        'cancelled',
+        'historical_import',
+        'submitted',
+        'acknowledged',
+        'fulfilled',
+        'closed',
+    ];
+
     public function import(Request $request): RedirectResponse
     {
         $validated = $request->validate([
@@ -105,13 +120,20 @@ final class IndentsController extends Controller
         $validated = $request->validate([
             'siding_id' => ['required', 'integer', 'exists:sidings,id'],
             'indent_number' => ['nullable', 'string', 'max:20', 'unique:indents,indent_number'],
-            'state' => ['nullable', 'string', 'in:pending,allocated,partial,completed,cancelled'],
-            'remarks' => ['nullable', 'string', 'max:1000'],
+            'state' => ['nullable', 'string', Rule::in(self::INDENT_STATE_VALUES)],
+            'remarks' => ['nullable', 'string', 'max:65535'],
             'e_demand_reference_id' => ['nullable', 'string', 'max:100'],
             'fnr_number' => ['nullable', 'string', 'max:50'],
+            'railway_reference_no' => ['nullable', 'string', 'max:100'],
+            'destination' => ['nullable', 'string', 'max:100'],
             'expected_loading_date' => ['nullable', 'date'],
-            'demanded_stock' => ['nullable', 'string', 'max:255'],
-            'total_units' => ['nullable', 'string', 'max:255'],
+            'required_by_date' => ['nullable', 'date'],
+            'indent_at' => ['nullable', 'date'],
+            'demanded_stock' => ['nullable', 'string', 'max:100'],
+            'total_units' => ['nullable', 'integer', 'min:0', 'max:999999'],
+            'target_quantity_mt' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99'],
+            'allocated_quantity_mt' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99'],
+            'available_stock_mt' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99'],
             'pdf' => ['nullable', 'file', 'mimes:pdf', 'max:10240'],
         ]);
 
@@ -122,9 +144,16 @@ final class IndentsController extends Controller
         $indent->remarks = $validated['remarks'] ?? null;
         $indent->e_demand_reference_id = $validated['e_demand_reference_id'] ?? null;
         $indent->fnr_number = $validated['fnr_number'] ?? null;
+        $indent->railway_reference_no = $validated['railway_reference_no'] ?? null;
+        $indent->destination = $validated['destination'] ?? null;
         $indent->expected_loading_date = $validated['expected_loading_date'] ?? null;
+        $indent->required_by_date = $validated['required_by_date'] ?? null;
         $indent->demanded_stock = $validated['demanded_stock'] ?? null;
         $indent->total_units = $validated['total_units'] ?? null;
+        $indent->target_quantity_mt = $validated['target_quantity_mt'] ?? null;
+        $indent->allocated_quantity_mt = $validated['allocated_quantity_mt'] ?? null;
+        $indent->available_stock_mt = $validated['available_stock_mt'] ?? null;
+        $this->applyIndentAt($indent, $validated['indent_at'] ?? null);
         $indent->created_by = $request->user()->id;
         $indent->updated_by = $request->user()->id;
         $indent->save();
@@ -187,6 +216,10 @@ final class IndentsController extends Controller
 
         $indent->load('siding:id,name,code');
 
+        $hasPdf = $indent->getFirstMedia('indent_pdf')
+            || $indent->getFirstMedia('indent_confirmation_pdf');
+        $indent->setAttribute('indent_pdf_download_url', $hasPdf ? route('indents.pdf', $indent) : null);
+
         return Inertia::render('indents/edit', [
             'indent' => $indent,
             'sidings' => $sidings,
@@ -199,15 +232,21 @@ final class IndentsController extends Controller
 
         $validated = $request->validate([
             'siding_id' => ['required', 'integer', 'exists:sidings,id'],
-            'indent_number' => ['nullable', 'string', 'max:20', 'unique:indents,indent_number,'.$indent->id],
-            'state' => ['nullable', 'string', 'in:pending,allocated,partial,completed,cancelled'],
-            'remarks' => ['nullable', 'string', 'max:1000'],
+            'indent_number' => ['nullable', 'string', 'max:20', Rule::unique('indents', 'indent_number')->ignore($indent->id)],
+            'state' => ['nullable', 'string', Rule::in(self::INDENT_STATE_VALUES)],
+            'remarks' => ['nullable', 'string', 'max:65535'],
             'e_demand_reference_id' => ['nullable', 'string', 'max:100'],
             'fnr_number' => ['nullable', 'string', 'max:50'],
+            'railway_reference_no' => ['nullable', 'string', 'max:100'],
+            'destination' => ['nullable', 'string', 'max:100'],
             'expected_loading_date' => ['nullable', 'date'],
-            'demanded_stock' => ['nullable', 'string', 'max:255'],
-            'total_units' => ['nullable', 'string', 'max:255'],
-            'pdf' => ['nullable', 'file', 'mimes:pdf', 'max:10240'],
+            'required_by_date' => ['nullable', 'date'],
+            'indent_at' => ['nullable', 'date'],
+            'demanded_stock' => ['nullable', 'string', 'max:100'],
+            'total_units' => ['nullable', 'integer', 'min:0', 'max:999999'],
+            'target_quantity_mt' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99'],
+            'allocated_quantity_mt' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99'],
+            'available_stock_mt' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99'],
         ]);
 
         $indent->siding_id = $validated['siding_id'];
@@ -216,16 +255,18 @@ final class IndentsController extends Controller
         $indent->remarks = $validated['remarks'] ?? null;
         $indent->e_demand_reference_id = $validated['e_demand_reference_id'] ?? null;
         $indent->fnr_number = $validated['fnr_number'] ?? null;
+        $indent->railway_reference_no = $validated['railway_reference_no'] ?? null;
+        $indent->destination = $validated['destination'] ?? null;
         $indent->expected_loading_date = $validated['expected_loading_date'] ?? null;
+        $indent->required_by_date = $validated['required_by_date'] ?? null;
         $indent->demanded_stock = $validated['demanded_stock'] ?? null;
         $indent->total_units = $validated['total_units'] ?? null;
+        $indent->target_quantity_mt = $validated['target_quantity_mt'] ?? null;
+        $indent->allocated_quantity_mt = $validated['allocated_quantity_mt'] ?? null;
+        $indent->available_stock_mt = $validated['available_stock_mt'] ?? null;
+        $this->applyIndentAt($indent, $validated['indent_at'] ?? null);
         $indent->updated_by = $request->user()->id;
         $indent->save();
-
-        if ($request->hasFile('pdf')) {
-            $indent->clearMediaCollection('indent_confirmation_pdf');
-            $indent->addMediaFromRequest('pdf')->toMediaCollection('indent_confirmation_pdf');
-        }
 
         return to_route('indents.show', $indent)
             ->with('success', 'Indent updated.');
@@ -386,5 +427,19 @@ final class IndentsController extends Controller
 
         return to_route('rakes.show', $rake)
             ->with('success', 'Rake created from completed indent successfully.');
+    }
+
+    private function applyIndentAt(Indent $indent, mixed $value): void
+    {
+        if ($value === null || $value === '') {
+            $indent->indent_date = null;
+            $indent->indent_time = null;
+
+            return;
+        }
+
+        $parsed = Date::parse($value);
+        $indent->indent_date = $parsed;
+        $indent->indent_time = $parsed;
     }
 }

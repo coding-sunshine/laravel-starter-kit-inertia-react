@@ -238,6 +238,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('indents/{indent}', [IndentsController::class, 'show'])->name('indents.show');
     Route::get('indents/{indent}/edit', [IndentsController::class, 'edit'])->name('indents.edit');
     Route::put('indents/{indent}', [IndentsController::class, 'update'])->name('indents.update');
+    Route::delete('indents/{indent}', [IndentsController::class, 'destroy'])->name('indents.destroy');
     Route::get('indents/{indent}/create-rake', [IndentsController::class, 'createRake'])->name('indents.create-rake');
     Route::post('indents/{indent}/store-rake', [IndentsController::class, 'storeRakeFromIndent'])->name('indents.store-rake');
 
@@ -350,6 +351,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('railway-receipts/{rrDocument}', [RrDocumentController::class, 'show'])->name('railway-receipts.show');
     Route::get('railway-receipts/{rrDocument}/pdf', [RrDocumentController::class, 'downloadPdf'])->name('railway-receipts.pdf');
     Route::put('railway-receipts/{rrDocument}', [RrDocumentController::class, 'update'])->name('railway-receipts.update');
+    Route::delete('railway-receipts/{rrDocument}', [RrDocumentController::class, 'destroy'])->name('railway-receipts.destroy');
     Route::get('penalties', [PenaltyController::class, 'index'])->name('penalties.index');
     Route::get('penalties/analytics', [PenaltyController::class, 'analytics'])->name('penalties.analytics');
     Route::patch('penalties/{penalty}', [PenaltyController::class, 'update'])->name('penalties.update');
@@ -373,6 +375,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     // Weighments (historical rake weighment imports)
     Route::get('weighments', [WeighmentsController::class, 'index'])->name('weighments.index');
     Route::get('weighments/{weighment}', [WeighmentsController::class, 'show'])->name('weighments.show');
+    Route::delete('weighments/{weighment}', [WeighmentsController::class, 'destroy'])->name('weighments.destroy');
     Route::post('weighments/import', [WeighmentsController::class, 'store'])->name('weighments.import');
 
     // AI Chatbot

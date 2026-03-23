@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions;
 
 use App\Models\AppliedPenalty;
+use App\Models\DailyVehicleEntry;
 use App\Models\Indent;
 use App\Models\Penalty;
 use App\Models\Rake;
@@ -14,6 +15,7 @@ use App\Models\RrPenaltySnapshot;
 use App\Models\Txr;
 use App\Models\Wagon;
 use App\Models\WagonLoading;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 final readonly class RunReportAction
@@ -88,36 +90,39 @@ final readonly class RunReportAction
      */
     private function sidingCoalReceipt(array $sidingIds, array $params): array
     {
-        $query = DB::table('stock_ledgers as sl')
-            ->leftJoin('daily_vehicle_entries as dve', 'dve.id', '=', 'sl.daily_vehicle_entry_id')
-            ->leftJoin('sidings as s', 's.id', '=', 'sl.siding_id')
-            ->where('sl.transaction_type', '=', 'receipt')
-            ->whereIn('sl.siding_id', $sidingIds)
-            // This report is meant to describe trips/vehicles/shifts, which come from daily_vehicle_entries
-            ->whereNotNull('sl.daily_vehicle_entry_id');
+        $remarksExpr = $this->sidingCoalReceiptRemarksAggregateSql('dve.remarks');
+
+        $query = DB::table('daily_vehicle_entries as dve')
+            ->join('sidings as s', 's.id', '=', 'dve.siding_id')
+            ->whereIn('dve.siding_id', $sidingIds)
+            ->where('dve.entry_type', '=', DailyVehicleEntry::ENTRY_TYPE_ROAD_DISPATCH)
+            ->whereNotNull('dve.net_wt')
+            ->whereNotNull('dve.reached_at');
 
         if (! empty($params['siding_id'])) {
-            $query->where('sl.siding_id', '=', $params['siding_id']);
+            $query->where('dve.siding_id', '=', $params['siding_id']);
         }
 
         if (! empty($params['date_from'])) {
-            $query->whereRaw('COALESCE(dve.entry_date, sl.created_at::date) >= ?', [$params['date_from']]);
+            $query->whereRaw('date(dve.reached_at) >= ?', [$params['date_from']]);
         }
         if (! empty($params['date_to'])) {
-            $query->whereRaw('COALESCE(dve.entry_date, sl.created_at::date) <= ?', [$params['date_to']]);
+            $query->whereRaw('date(dve.reached_at) <= ?', [$params['date_to']]);
         }
 
-        $query->selectRaw('
-            s.name as siding,
-            COALESCE(dve.entry_date, sl.created_at::date) as date,
-            dve.shift as shift,
+        $query->selectRaw("
+            s.name as siding_name,
+            date(dve.reached_at) as receipt_date,
+            dve.shift as shift_num,
             dve.vehicle_no as vehicle_no,
-            COUNT(DISTINCT sl.daily_vehicle_entry_id) as total_trips,
-            SUM(COALESCE(sl.quantity_mt, 0)) as received_qty_mt
-        ');
+            count(*) as trip_count,
+            sum(dve.net_wt) as qty_mt,
+            min(dve.reached_at) as first_reached,
+            {$remarksExpr} as remarks_agg
+        ");
 
-        $query->groupByRaw('s.name, COALESCE(dve.entry_date, sl.created_at::date), dve.shift, dve.vehicle_no');
-        $query->orderByRaw('COALESCE(dve.entry_date, sl.created_at::date) desc');
+        $query->groupByRaw('s.name, date(dve.reached_at), dve.shift, dve.vehicle_no');
+        $query->orderByRaw('date(dve.reached_at) desc');
         $query->orderBy('s.name');
         $query->orderBy('dve.shift');
         $query->orderBy('dve.vehicle_no');
@@ -128,15 +133,40 @@ final readonly class RunReportAction
         }
 
         $rows = $query->get();
+        $tz = config('app.timezone') ?? 'UTC';
 
-        return collect($rows)->map(fn ($r): array => [
-            'siding' => $r->siding,
-            'date' => (string) $r->date,
-            'shift' => $r->shift !== null ? (int) $r->shift : null,
-            'vehicle_no' => $r->vehicle_no,
-            'total_trips' => (int) $r->total_trips,
-            'received_qty_mt' => round((float) $r->received_qty_mt, 2),
-        ])->values()->all();
+        return collect($rows)->map(function ($r) use ($tz): array {
+            $firstReached = Carbon::parse($r->first_reached)->timezone($tz);
+
+            return [
+                'Date' => (string) $r->receipt_date,
+                'Shift' => $this->formatSidingCoalReceiptShift($r->shift_num !== null ? (int) $r->shift_num : null),
+                'Siding (Pakur/Dumka/Kurwa)' => (string) $r->siding_name,
+                'Vehicle No' => $r->vehicle_no !== null ? (string) $r->vehicle_no : '',
+                'Trips Received' => (int) $r->trip_count,
+                'Quantity Received (MT)' => round((float) $r->qty_mt, 2),
+                'Receipt Time' => $firstReached->format('Y-m-d H:i'),
+                'Remarks' => $r->remarks_agg !== null && $r->remarks_agg !== '' ? (string) $r->remarks_agg : '',
+            ];
+        })->values()->all();
+    }
+
+    private function sidingCoalReceiptRemarksAggregateSql(string $qualifiedColumn): string
+    {
+        return match (DB::connection()->getDriverName()) {
+            'pgsql' => "nullif(string_agg(nullif(trim(both from {$qualifiedColumn}), ''), '; '), '')",
+            default => "nullif(group_concat(nullif(trim({$qualifiedColumn}), ''), '; '), '')",
+        };
+    }
+
+    private function formatSidingCoalReceiptShift(?int $shift): string
+    {
+        return match ($shift) {
+            1 => '1st',
+            2 => '2nd',
+            3 => '3rd',
+            default => $shift !== null ? (string) $shift : '',
+        };
     }
 
     /**

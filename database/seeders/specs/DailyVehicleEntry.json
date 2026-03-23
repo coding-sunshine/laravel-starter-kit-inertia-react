@@ -106,6 +106,16 @@
             "type": "string",
             "nullable": true,
             "default": null
+        },
+        "remarks": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "net_wt": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {

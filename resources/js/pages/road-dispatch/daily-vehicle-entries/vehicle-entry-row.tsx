@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Check, Loader2, MoreHorizontal, Trash2, Edit, X } from 'lucide-react';
+import { Loader2, MoreHorizontal, Trash2, Edit, X } from 'lucide-react';
 
 interface DailyVehicleEntry {
   id: number;
@@ -27,6 +27,8 @@ interface DailyVehicleEntry {
   d_challan_no: string | null;
   challan_mode: 'offline' | 'online' | null;
   status: 'draft' | 'completed';
+  remarks?: string | null;
+  net_wt?: number | null;
   created_by: number;
   updated_by: number | null;
   created_at: string;
@@ -57,13 +59,15 @@ interface VehicleEntryRowProps {
 export default function VehicleEntryRow({
   entry,
   serialNumber,
-  date,
-  shift,
+  date: _date,
+  shift: _shift,
   onEntryUpdated,
   onEntryDeleted,
 }: VehicleEntryRowProps) {
+  void _date;
+  void _shift;
   const [isSaving, setIsSaving] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
+  const [, setShowSuccess] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showContextMenu, setShowContextMenu] = useState(false);
@@ -79,6 +83,7 @@ export default function VehicleEntryRow({
     d_challan_no: entry.d_challan_no || '',
     challan_mode: entry.challan_mode || '',
     status: entry.status || 'draft',
+    remarks: entry.remarks || '',
   });
 
   const formDataRef = useRef(formData);
@@ -86,8 +91,26 @@ export default function VehicleEntryRow({
     formDataRef.current = formData;
   }, [formData]);
 
+  useEffect(() => {
+    // Sync from server after PATCH / parent refresh (same pattern as other fields).
+    // eslint-disable-next-line @eslint-react/hooks-extra/no-direct-set-state-in-use-effect -- controlled reset when entry.updated_at changes
+    setFormData({
+      e_challan_no: entry.e_challan_no || '',
+      vehicle_no: entry.vehicle_no || '',
+      trip_id_no: entry.trip_id_no || '',
+      transport_name: entry.transport_name || '',
+      gross_wt: entry.gross_wt?.toString() || '',
+      tare_wt: entry.tare_wt?.toString() || '',
+      wb_no: entry.wb_no || '',
+      d_challan_no: entry.d_challan_no || '',
+      challan_mode: entry.challan_mode || '',
+      status: entry.status || 'draft',
+      remarks: entry.remarks || '',
+    });
+  }, [entry.id, entry.updated_at]);
+
   const updateField = (field: keyof typeof formData, value: string) => {
-    setFormData((prev: any) => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   // Single stable ref for the debounce timer
@@ -212,40 +235,6 @@ export default function VehicleEntryRow({
     }
   };
 
-  const handleMarkCompleted = async () => {
-    setIsSaving(true);
-    setSaveError(null);
-    try {
-      const res = await fetch(`/road-dispatch/daily-vehicle-entries/${entry.id}/complete`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-          'X-Requested-With': 'XMLHttpRequest',
-          ...getCsrfHeaders(),
-        },
-        body: JSON.stringify({}),
-        credentials: 'include',
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        const msg =
-          (data as { message?: string }).message ??
-          (res.status === 419 ? 'Session expired. Please refresh the page.' : 'Failed to mark completed.');
-        setSaveError(msg);
-        return;
-      }
-      const updated = (data as { entry?: DailyVehicleEntry }).entry;
-      if (updated) onEntryUpdated?.(updated);
-      setShowSuccess(true);
-      setTimeout(() => setShowSuccess(false), 2000);
-    } catch {
-      setSaveError('Network error. Please try again.');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   const formatDateTime = (dateTime: string) => {
     return new Date(dateTime).toLocaleString('en-IN', {
       day: '2-digit',
@@ -260,6 +249,13 @@ export default function VehicleEntryRow({
     const gross = parseFloat(formData.gross_wt) || 0;
     const tare = parseFloat(formData.tare_wt) || 0;
     return (gross - tare).toFixed(2);
+  };
+
+  const displayNetMt = () => {
+    if (entry.net_wt != null && entry.net_wt !== undefined) {
+      return Number(entry.net_wt).toFixed(2);
+    }
+    return calculateNetWeight();
   };
 
   return (
@@ -409,7 +405,7 @@ export default function VehicleEntryRow({
       </TableCell>
 
       <TableCell className="px-2 py-3 font-medium text-blue-600 text-right text-xs border-t border-r border-gray-300 min-h-[4rem]">
-        {calculateNetWeight()}
+        {displayNetMt()}
       </TableCell>
 
       <TableCell className="px-2 py-3 text-xs text-gray-600 border-t border-r border-gray-300 min-h-[4rem]">
@@ -524,11 +520,25 @@ export default function VehicleEntryRow({
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Net Weight</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Net Weight (MT)</label>
                 <Input
-                  value={calculateNetWeight()}
+                  value={displayNetMt()}
                   disabled
                   className="bg-gray-50"
+                  title={entry.net_wt != null ? 'Stored on completion (same as stock ledger qty)' : 'Gross − Tare'}
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Remarks</label>
+                <textarea
+                  value={formData.remarks}
+                  onChange={(e) => {
+                    updateField('remarks', e.target.value);
+                    debouncedSave();
+                  }}
+                  rows={3}
+                  className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  placeholder="Optional notes for reports"
                 />
               </div>
               <div>
