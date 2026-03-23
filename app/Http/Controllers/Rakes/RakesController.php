@@ -43,6 +43,7 @@ final class RakesController extends Controller
             'siding.loaders:id,siding_id,loader_name,code',
             'wagons',
             'rakeWeighments' => fn ($q) => $q->whereNotNull('pdf_file_path'),
+            'rakeWeighments.rakeWagonWeighments.wagon:id,wagon_number,wagon_sequence,pcc_weight_mt',
             'txr.wagonUnfitLogs.wagon:id,wagon_number,wagon_sequence,wagon_type',
             'wagonLoadings.wagon:id,wagon_number,wagon_sequence,wagon_type,pcc_weight_mt',
             'wagonLoadings.loader:id,loader_name,code',
@@ -113,7 +114,26 @@ final class RakesController extends Controller
         // from load flow are not shown here; full wagon data is on /weighments/{id})
         $rakeArray['weighments'] = collect($rake->rakeWeighments ?? [])
             ->filter(fn ($rw) => ! empty($rw->pdf_file_path))
-            ->map(function ($rw) {
+            ->sortByDesc('attempt_no')
+            ->map(function ($rw): array {
+                $wagonWeights = collect($rw->rakeWagonWeighments ?? [])
+                    ->sortBy('wagon_sequence')
+                    ->map(function ($ww): array {
+                        return [
+                            'wagon_id' => (int) ($ww->wagon_id ?? $ww->wagon?->id ?? 0),
+                            'gross_weight_mt' => (float) ($ww->actual_gross_mt ?? 0),
+                            'net_weight_mt' => (float) ($ww->net_weight_mt ?? 0),
+                            'wagon' => [
+                                'id' => (int) ($ww->wagon?->id ?? $ww->wagon_id ?? 0),
+                                'wagon_number' => (string) ($ww->wagon?->wagon_number ?? $ww->wagon_number ?? '-'),
+                                'wagon_sequence' => (int) ($ww->wagon?->wagon_sequence ?? $ww->wagon_sequence ?? 0),
+                                'pcc_weight_mt' => $ww->wagon?->pcc_weight_mt,
+                            ],
+                        ];
+                    })
+                    ->values()
+                    ->all();
+
                 return [
                     'id' => $rw->id,
                     'weighment_time' => $rw->gross_weighment_datetime?->toIso8601String(),
@@ -121,6 +141,7 @@ final class RakesController extends Controller
                     'status' => $rw->status,
                     'train_speed_kmph' => $rw->maximum_train_speed_kmph,
                     'attempt_no' => $rw->attempt_no,
+                    'wagonWeights' => $wagonWeights,
                 ];
             })
             ->values()

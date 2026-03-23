@@ -1,11 +1,8 @@
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertTriangle, CheckCircle, Clock, TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { useState } from 'react';
 
 interface WagonLoading {
     id: number;
@@ -21,12 +18,13 @@ interface WagonLoading {
 interface WeighmentRecord {
     wagonWeights?: Array<{
         wagon_id: number;
-        gross_weight_mt: string;
-        net_weight_mt: string;
+        gross_weight_mt: number;
+        net_weight_mt: number;
         wagon: {
             id: number;
             wagon_number: string;
             wagon_sequence: number;
+            pcc_weight_mt?: number | null;
         };
     }>;
 }
@@ -44,67 +42,78 @@ interface ComparisonWorkflowProps {
 interface ComparisonData {
     wagon_number: string;
     wagon_sequence: number;
-    loaded_quantity_mt: number;
-    net_weight_mt: number;
-    difference_mt: number;
-    difference_percent: number;
-    status: 'overload' | 'underload' | 'normal';
+    loader_qty_mt: number | null;
+    inmotion_qty_mt: number;
+    difference_mt: number | null;
+    flag: 'OVER' | 'UNDER' | 'OK' | 'N/A';
     action_taken: string;
 }
 
 export function ComparisonWorkflow({ rake, disabled }: ComparisonWorkflowProps) {
-    const [actionTaken, setActionTaken] = useState<{ [key: number]: string }>({});
-
     // Calculate comparison data dynamically
     const getComparisonData = (): ComparisonData[] => {
-        if (!rake.wagonLoadings?.length || !rake.weighments?.[0]?.wagonWeights?.length) {
+        const weighmentWagons = rake.weighments?.[0]?.wagonWeights ?? [];
+        if (weighmentWagons.length === 0) {
             return [];
         }
 
-        const weighmentData = rake.weighments[0].wagonWeights;
-        
-        return rake.wagonLoadings.map((loading) => {
-            const weighment = weighmentData.find(w => w.wagon_id === loading.wagon_id);
-            
-            if (!weighment) {
+        const loaderLoadings = rake.wagonLoadings ?? [];
+
+        const loaderById = new Map<number, WagonLoading>();
+        loaderLoadings.forEach((l) => loaderById.set(l.wagon_id, l));
+
+        const loaderByNumber = new Map<string, WagonLoading>();
+        loaderLoadings.forEach((l) => {
+            const wagonNumber = l.wagon?.wagon_number;
+            if (!wagonNumber) return;
+            loaderByNumber.set(wagonNumber, l);
+        });
+
+        // Base set: all weighment wagons.
+        return weighmentWagons.map((weighment) => {
+            const inmotionQty = Number(weighment.net_weight_mt);
+
+            const loaderByIdHit = weighment.wagon_id ? loaderById.get(weighment.wagon_id) : undefined;
+            const loaderByNumberHit =
+                weighment.wagon?.wagon_number && loaderByNumber.has(weighment.wagon.wagon_number)
+                    ? loaderByNumber.get(weighment.wagon.wagon_number)
+                    : undefined;
+
+            const loading = loaderByIdHit ?? loaderByNumberHit;
+
+            if (!loading) {
                 return {
-                    wagon_number: loading.wagon.wagon_number,
-                    wagon_sequence: loading.wagon.wagon_sequence,
-                    loaded_quantity_mt: parseFloat(loading.loaded_quantity_mt),
-                    net_weight_mt: 0,
-                    difference_mt: 0,
-                    difference_percent: 0,
-                    status: 'normal' as const,
-                    action_taken: actionTaken[loading.wagon_id] || '',
+                    wagon_number: weighment.wagon.wagon_number,
+                    wagon_sequence: weighment.wagon.wagon_sequence,
+                    loader_qty_mt: null,
+                    inmotion_qty_mt: inmotionQty,
+                    difference_mt: null,
+                    flag: 'N/A',
+                    action_taken: '-',
                 };
             }
 
-            const loadedQty = parseFloat(loading.loaded_quantity_mt);
-            const netWeight = parseFloat(weighment.net_weight_mt);
-            const difference = loadedQty - netWeight;
-            const differencePercent = netWeight > 0 ? (difference / netWeight) * 100 : 0;
-
-            let status: 'overload' | 'underload' | 'normal' = 'normal';
-            if (Math.abs(differencePercent) > 5) {
-                status = difference > 0 ? 'overload' : 'underload';
-            }
+            const loaderQty = Number(loading.loaded_quantity_mt);
+            const difference = loaderQty - inmotionQty;
+            const flag: 'OVER' | 'UNDER' | 'OK' =
+                difference > 0 ? 'OVER' : difference < 0 ? 'UNDER' : 'OK';
 
             return {
-                wagon_number: loading.wagon.wagon_number,
-                wagon_sequence: loading.wagon.wagon_sequence,
-                loaded_quantity_mt: loadedQty,
-                net_weight_mt: netWeight,
+                wagon_number: weighment.wagon.wagon_number,
+                wagon_sequence: weighment.wagon.wagon_sequence,
+                loader_qty_mt: loaderQty,
+                inmotion_qty_mt: inmotionQty,
                 difference_mt: difference,
-                difference_percent: differencePercent,
-                status,
-                action_taken: actionTaken[loading.wagon_id] || '',
+                flag,
+                action_taken: '-',
             };
         });
     };
 
     const comparisonData = getComparisonData();
     const hasData = comparisonData.length > 0;
-    const hasIssues = comparisonData.some(d => d.status !== 'normal');
+    const hasIssues = comparisonData.some((d) => d.flag === 'OVER' || d.flag === 'UNDER');
+    const incompleteRowsCount = comparisonData.filter((d) => d.difference_mt === null).length;
 
     const getStatusIcon = () => {
         if (!hasData) return <Clock className="h-4 w-4" />;
@@ -124,38 +133,35 @@ export function ComparisonWorkflow({ rake, disabled }: ComparisonWorkflowProps) 
         return "default";
     };
 
-    const getDifferenceIcon = (status: string) => {
-        switch (status) {
-            case 'overload':
+    const getFlagIcon = (flag: ComparisonData['flag']) => {
+        switch (flag) {
+            case 'OVER':
                 return <TrendingUp className="h-4 w-4 text-red-600" />;
-            case 'underload':
+            case 'UNDER':
                 return <TrendingDown className="h-4 w-4 text-blue-600" />;
-            default:
+            case 'OK':
                 return <Minus className="h-4 w-4 text-green-600" />;
-        }
-    };
-
-    const getDifferenceColor = (status: string) => {
-        switch (status) {
-            case 'overload':
-                return 'text-red-600';
-            case 'underload':
-                return 'text-blue-600';
             default:
-                return 'text-green-600';
+                return <Clock className="h-4 w-4 text-muted-foreground" />;
         }
     };
 
-    const handleActionChange = (wagonId: number, action: string) => {
-        setActionTaken((prev: { [key: number]: string }) => ({
-            ...prev,
-            [wagonId]: action,
-        }));
+    const getFlagColor = (flag: ComparisonData['flag']) => {
+        switch (flag) {
+            case 'OVER':
+                return 'text-red-600';
+            case 'UNDER':
+                return 'text-blue-600';
+            case 'OK':
+                return 'text-green-600';
+            default:
+                return 'text-muted-foreground';
+        }
     };
 
-    const totalLoaded = comparisonData.reduce((sum, d) => sum + d.loaded_quantity_mt, 0);
-    const totalWeighed = comparisonData.reduce((sum, d) => sum + d.net_weight_mt, 0);
-    const totalDifference = totalLoaded - totalWeighed;
+    const totalLoaded = comparisonData.reduce((sum, d) => sum + (d.loader_qty_mt ?? 0), 0);
+    const totalWeighed = comparisonData.reduce((sum, d) => sum + d.inmotion_qty_mt, 0);
+    const totalDifference = comparisonData.reduce((sum, d) => sum + (d.difference_mt ?? 0), 0);
 
     return (
         <Card>
@@ -190,11 +196,20 @@ export function ComparisonWorkflow({ rake, disabled }: ComparisonWorkflowProps) 
                             </div>
                             <div>
                                 <Label>Difference</Label>
-                                <p className={`text-lg font-bold ${
-                                    totalDifference > 0 ? 'text-red-600' : 
-                                    totalDifference < 0 ? 'text-blue-600' : 'text-green-600'
-                                }`}>
-                                    {totalDifference > 0 ? '+' : ''}{totalDifference.toFixed(2)} MT
+                                <p
+                                    className={`text-lg font-bold ${
+                                        incompleteRowsCount > 0
+                                            ? 'text-muted-foreground'
+                                            : totalDifference > 0
+                                                ? 'text-red-600'
+                                                : totalDifference < 0
+                                                    ? 'text-blue-600'
+                                                    : 'text-green-600'
+                                    }`}
+                                >
+                                    {incompleteRowsCount > 0
+                                        ? 'N/A'
+                                        : `${totalDifference > 0 ? '+' : ''}${totalDifference.toFixed(2)} MT`}
                                 </p>
                             </div>
                         </div>
@@ -205,10 +220,10 @@ export function ComparisonWorkflow({ rake, disabled }: ComparisonWorkflowProps) 
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Wagon</TableHead>
-                                        <TableHead>Loaded (MT)</TableHead>
-                                        <TableHead>Weighed (MT)</TableHead>
-                                        <TableHead>Difference</TableHead>
-                                        <TableHead>Status</TableHead>
+                                        <TableHead>Loader Qty (MT)</TableHead>
+                                        <TableHead>Inmotion Qty (MT)</TableHead>
+                                        <TableHead>Difference (MT)</TableHead>
+                                        <TableHead>Overload/Underload Flag</TableHead>
                                         <TableHead>Action Taken</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -218,34 +233,28 @@ export function ComparisonWorkflow({ rake, disabled }: ComparisonWorkflowProps) 
                                             <TableCell>
                                                 {data.wagon_number} (Pos {data.wagon_sequence})
                                             </TableCell>
-                                            <TableCell>{data.loaded_quantity_mt.toFixed(2)}</TableCell>
-                                            <TableCell>{data.net_weight_mt.toFixed(2)}</TableCell>
-                                            <TableCell className={getDifferenceColor(data.status)}>
+                                            <TableCell>
+                                                {data.loader_qty_mt === null ? 'N/A' : data.loader_qty_mt.toFixed(2)}
+                                            </TableCell>
+                                            <TableCell>{data.inmotion_qty_mt.toFixed(2)}</TableCell>
+                                            <TableCell className={getFlagColor(data.flag)}>
                                                 <div className="flex items-center gap-1">
-                                                    {getDifferenceIcon(data.status)}
-                                                    {data.difference_mt > 0 ? '+' : ''}{data.difference_mt.toFixed(2)} MT
-                                                    ({data.difference_percent.toFixed(1)}%)
+                                                    {getFlagIcon(data.flag)}
+                                                    {data.difference_mt === null
+                                                        ? 'N/A'
+                                                        : `${data.difference_mt > 0 ? '+' : ''}${data.difference_mt.toFixed(2)} MT`}
                                                 </div>
                                             </TableCell>
                                             <TableCell>
-                                                <Badge variant={
-                                                    data.status === 'normal' ? 'default' : 'destructive'
-                                                }>
-                                                    {data.status.toUpperCase()}
-                                                </Badge>
+                                                {data.flag === 'N/A' ? (
+                                                    <Badge variant="secondary">N/A</Badge>
+                                                ) : (
+                                                    <Badge variant={data.flag === 'OK' ? 'default' : 'destructive'}>
+                                                        {data.flag}
+                                                    </Badge>
+                                                )}
                                             </TableCell>
-                                            <TableCell>
-                                                <Input
-                                                    value={data.action_taken}
-                                                    onChange={(e) => handleActionChange(
-                                                        comparisonData.find(d => d.wagon_sequence === data.wagon_sequence)?.wagon_sequence || 0, 
-                                                        e.target.value
-                                                    )}
-                                                    placeholder="Enter action..."
-                                                    className="text-sm"
-                                                    disabled={disabled}
-                                                />
-                                            </TableCell>
+                                            <TableCell>{data.action_taken}</TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>
@@ -255,10 +264,10 @@ export function ComparisonWorkflow({ rake, disabled }: ComparisonWorkflowProps) 
                         <div className="p-4 bg-gray-50 rounded-lg">
                             <h4 className="font-medium mb-2">Summary</h4>
                             <div className="text-sm space-y-1">
-                                <p>• Normal wagons: {comparisonData.filter(d => d.status === 'normal').length}</p>
-                                <p>• Overloaded wagons: {comparisonData.filter(d => d.status === 'overload').length}</p>
-                                <p>• Underloaded wagons: {comparisonData.filter(d => d.status === 'underload').length}</p>
-                                <p>• Total variance: {Math.abs(totalDifference).toFixed(2)} MT</p>
+                                <p>• OK wagons: {comparisonData.filter((d) => d.flag === 'OK').length}</p>
+                                <p>• Overloaded wagons: {comparisonData.filter((d) => d.flag === 'OVER').length}</p>
+                                <p>• Underloaded wagons: {comparisonData.filter((d) => d.flag === 'UNDER').length}</p>
+                                <p>• Total variance: {incompleteRowsCount > 0 ? 'N/A' : `${Math.abs(totalDifference).toFixed(2)} MT`}</p>
                             </div>
                         </div>
                     </>
