@@ -49,6 +49,8 @@ final class ReportsController extends Controller
             'siding_id' => ['nullable', 'integer', 'exists:sidings,id'],
             'date_from' => ['nullable', 'date'],
             'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
+            'rake_number' => ['nullable', 'string', 'max:255'],
+            'loader' => ['nullable', 'string', 'max:255'],
             'preview' => ['nullable', 'boolean'],
             'preview_limit' => ['nullable', 'integer', 'min:1', 'max:200'],
             'export_xlsx' => ['nullable', 'boolean'],
@@ -67,6 +69,8 @@ final class ReportsController extends Controller
             'siding_id' => $validated['siding_id'] ?? null,
             'date_from' => $validated['date_from'] ?? null,
             'date_to' => $validated['date_to'] ?? null,
+            'rake_number' => $validated['rake_number'] ?? null,
+            'loader' => $validated['loader'] ?? null,
         ]);
 
         $preview = $request->boolean('preview');

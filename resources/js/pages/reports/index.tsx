@@ -13,7 +13,6 @@ import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
 import axios from 'axios';
 import {
-    BarChart3,
     CalendarRange,
     ChevronDown,
     Download,
@@ -175,6 +174,16 @@ const RAKE_MANAGEMENT_REPORTS: string[] = [
     'penalty_register',
 ];
 
+const RAKE_NUMBER_FILTER_REPORTS = new Set([
+    'txr',
+    'unfit_wagon',
+    'wagon_loading',
+    'weighment',
+    'loader_vs_weighment',
+    'rr_summary',
+    'penalty_register',
+]);
+
 /** Determine the best chart for a given report key. */
 function getChartType(key: string): 'area' | 'bar' | 'pie' | 'table' {
     if (['demurrage_analysis', 'siding_coal_receipt'].includes(key)) return 'area';
@@ -271,11 +280,24 @@ function ReportSummary({ data, reportKey }: { data: ReportData; reportKey: strin
     );
 }
 
+function toLocalDateInput(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+}
+
 export default function ReportsIndex({ reports, sidings }: Props) {
     const [activeKey, setActiveKey] = useState<string>(Object.keys(reports)[0] ?? 'siding_coal_receipt');
     const [sidingId, setSidingId] = useState<string>('');
-    const [dateFrom, setDateFrom] = useState<string>('');
-    const [dateTo, setDateTo] = useState<string>('');
+    const [dateFrom, setDateFrom] = useState<string>(() => {
+        const now = new Date();
+        return toLocalDateInput(new Date(now.getFullYear(), now.getMonth(), 1));
+    });
+    const [dateTo, setDateTo] = useState<string>(() => toLocalDateInput(new Date()));
+    const [rakeNumber, setRakeNumber] = useState<string>('');
+    const [loader, setLoader] = useState<string>('');
     const [loading, setLoading] = useState(false);
     const [data, setData] = useState<ReportData | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -287,6 +309,19 @@ export default function ReportsIndex({ reports, sidings }: Props) {
     ];
 
     const activeReport = reports[activeKey];
+    const showsRakeNumberFilter = RAKE_NUMBER_FILTER_REPORTS.has(activeKey);
+    const showsLoaderFilter = activeKey === 'wagon_loading';
+    const requestPayload = useMemo(
+        () => ({
+            key: activeKey,
+            siding_id: sidingId || undefined,
+            date_from: dateFrom || undefined,
+            date_to: dateTo || undefined,
+            rake_number: showsRakeNumberFilter ? rakeNumber || undefined : undefined,
+            loader: showsLoaderFilter ? loader || undefined : undefined,
+        }),
+        [activeKey, sidingId, dateFrom, dateTo, rakeNumber, loader, showsRakeNumberFilter, showsLoaderFilter],
+    );
 
     const generate = useCallback(async () => {
         setLoading(true);
@@ -294,10 +329,7 @@ export default function ReportsIndex({ reports, sidings }: Props) {
         setData(null);
         try {
             const resp = await axios.post('/reports/generate', {
-                key: activeKey,
-                siding_id: sidingId || undefined,
-                date_from: dateFrom || undefined,
-                date_to: dateTo || undefined,
+                ...requestPayload,
                 preview: true,
                 preview_limit: 25,
             });
@@ -308,43 +340,14 @@ export default function ReportsIndex({ reports, sidings }: Props) {
         } finally {
             setLoading(false);
         }
-    }, [activeKey, sidingId, dateFrom, dateTo]);
-
-    const downloadCsv = useCallback(async () => {
-        try {
-            const resp = await axios.post(
-                '/reports/generate',
-                {
-                    key: activeKey,
-                    siding_id: sidingId || undefined,
-                    date_from: dateFrom || undefined,
-                    date_to: dateTo || undefined,
-                    export_csv: true,
-                },
-                { responseType: 'blob' },
-            );
-            const url = window.URL.createObjectURL(new Blob([resp.data]));
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${activeReport?.name ?? activeKey}_${new Date().toISOString().slice(0, 10)}.csv`;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            window.URL.revokeObjectURL(url);
-        } catch {
-            setError('CSV download failed');
-        }
-    }, [activeKey, sidingId, dateFrom, dateTo, activeReport]);
+    }, [requestPayload]);
 
     const downloadXlsx = useCallback(async () => {
         try {
             const resp = await axios.post(
                 '/reports/generate',
                 {
-                    key: activeKey,
-                    siding_id: sidingId || undefined,
-                    date_from: dateFrom || undefined,
-                    date_to: dateTo || undefined,
+                    ...requestPayload,
                     export_xlsx: true,
                 },
                 { responseType: 'blob' },
@@ -360,7 +363,7 @@ export default function ReportsIndex({ reports, sidings }: Props) {
         } catch {
             setError('XLSX download failed');
         }
-    }, [activeKey, sidingId, dateFrom, dateTo, activeReport]);
+    }, [requestPayload, activeReport, activeKey]);
 
     const chartInfo = useMemo(() => {
         if (!data) return null;
@@ -404,8 +407,8 @@ export default function ReportsIndex({ reports, sidings }: Props) {
                 />
                 <RrmcsGuidance
                     title="What this section is for"
-                    before="Reports extracted manually from different registers and Excel files — takes hours and is error-prone."
-                    after="One-click report generation with charts and CSV export for all siding operations, penalties, indents, and financial data."
+                    before="Reports extracted manually from different registers and Excel files — takes hours."
+                    after="One-click report generation with Excel export for all siding operations, penalties, indents, and financial data."
                 />
 
                 <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
@@ -429,6 +432,12 @@ export default function ReportsIndex({ reports, sidings }: Props) {
                                                     setActiveKey(k);
                                                     setData(null);
                                                     setError(null);
+                                                    if (!RAKE_NUMBER_FILTER_REPORTS.has(k)) {
+                                                        setRakeNumber('');
+                                                    }
+                                                    if (k !== 'wagon_loading') {
+                                                        setLoader('');
+                                                    }
                                                 }}
                                                 className={`w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors ${
                                                     activeKey === k
@@ -448,10 +457,6 @@ export default function ReportsIndex({ reports, sidings }: Props) {
 
                     {/* Main area */}
                     <div className="space-y-4">
-                        <span className="sr-only" aria-hidden>
-                            {chartType}
-                            {chartInfo ? '1' : '0'}
-                        </span>
                         {/* Controls bar */}
                         <Card>
                             <CardHeader className="pb-3">
@@ -462,7 +467,7 @@ export default function ReportsIndex({ reports, sidings }: Props) {
                                 <CardDescription>
                                     {activeReport?.description}
                                 </CardDescription>
-                                {(activeKey === 'siding_coal_receipt' || activeKey === 'rake_indent' || activeKey === 'txr' || activeKey === 'unfit_wagon' || activeKey === 'weighment' || activeKey === 'loader_vs_weighment' || activeKey === 'penalty_register' || activeKey === 'rr_summary') && (
+                                {false && (activeKey === 'siding_coal_receipt' || activeKey === 'rake_indent' || activeKey === 'txr' || activeKey === 'unfit_wagon' || activeKey === 'weighment' || activeKey === 'loader_vs_weighment' || activeKey === 'penalty_register' || activeKey === 'rr_summary') && (
                                     <Collapsible
                                         open={columnSourcesOpen}
                                         onOpenChange={setColumnSourcesOpen}
@@ -560,6 +565,30 @@ export default function ReportsIndex({ reports, sidings }: Props) {
                                             className="rounded-md border border-input bg-background px-3 py-2 text-sm"
                                         />
                                     </div>
+                                    {showsRakeNumberFilter && (
+                                        <div className="grid gap-1.5">
+                                            <label className="text-xs font-medium">Rake Number</label>
+                                            <input
+                                                type="text"
+                                                value={rakeNumber}
+                                                onChange={(e) => setRakeNumber(e.target.value)}
+                                                placeholder="Search rake number"
+                                                className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                            />
+                                        </div>
+                                    )}
+                                    {showsLoaderFilter && (
+                                        <div className="grid gap-1.5">
+                                            <label className="text-xs font-medium">Loader</label>
+                                            <input
+                                                type="text"
+                                                value={loader}
+                                                onChange={(e) => setLoader(e.target.value)}
+                                                placeholder="Loader id, name, or code"
+                                                className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                            />
+                                        </div>
+                                    )}
                                     <Button
                                         onClick={generate}
                                         disabled={loading}
@@ -568,20 +597,10 @@ export default function ReportsIndex({ reports, sidings }: Props) {
                                         {loading ? (
                                             <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
                                         ) : (
-                                            <BarChart3 className="mr-1.5 h-4 w-4" />
+                                            <FileSpreadsheet className="mr-1.5 h-4 w-4" />
                                         )}
                                         Generate
                                     </Button>
-                                    {data && data.length > 0 && (
-                                        <Button
-                                            variant="outline"
-                                            onClick={downloadCsv}
-                                            data-pan="report-download-csv"
-                                        >
-                                            <Download className="mr-1.5 h-4 w-4" />
-                                            CSV
-                                        </Button>
-                                    )}
                                     {data && data.length > 0 && (
                                         <Button
                                             variant="outline"
@@ -615,62 +634,6 @@ export default function ReportsIndex({ reports, sidings }: Props) {
                                 <CardContent className="space-y-4">
                                     {/* Summary cards for delegated reports */}
                                     <ReportSummary data={data} reportKey={activeKey} />
-
-                                    {/* Chart */}
-                                    {/*
-                                      Chart preview is intentionally hidden for now.
-                                      Re-enable by uncommenting this block.
-                                    */}
-                                    {/*
-                                    {chartInfo && chartInfo.chartData.length > 0 && (
-                                        <div className="rounded-lg border bg-muted/20 p-4">
-                                            {chartType === 'area' && (
-                                                <AreaChart
-                                                    data={chartInfo.chartData}
-                                                    xKey={chartInfo.xKey}
-                                                    yKey={chartInfo.yKey}
-                                                    height={280}
-                                                    formatY={
-                                                        chartInfo.yKey === 'total'
-                                                            ? formatCurrency
-                                                            : undefined
-                                                    }
-                                                    formatTooltip={
-                                                        chartInfo.yKey === 'total'
-                                                            ? formatCurrency
-                                                            : undefined
-                                                    }
-                                                />
-                                            )}
-                                            {chartType === 'bar' && (
-                                                <BarChart
-                                                    data={chartInfo.chartData}
-                                                    xKey={chartInfo.xKey}
-                                                    yKey={chartInfo.yKey}
-                                                    height={280}
-                                                    formatY={
-                                                        chartInfo.yKey === 'total'
-                                                            ? formatCurrency
-                                                            : undefined
-                                                    }
-                                                    formatTooltip={
-                                                        chartInfo.yKey === 'total'
-                                                            ? formatCurrency
-                                                            : undefined
-                                                    }
-                                                />
-                                            )}
-                                            {chartType === 'pie' && chartInfo.nameKey && (
-                                                <PieChart
-                                                    data={chartInfo.chartData}
-                                                    nameKey={chartInfo.nameKey}
-                                                    valueKey={chartInfo.yKey}
-                                                    height={280}
-                                                />
-                                            )}
-                                        </div>
-                                    )}
-                                    */}
 
                                     {/* Data table */}
                                     {tableRows.length > 0 && tableColumns.length > 0 ? (
@@ -734,7 +697,7 @@ export default function ReportsIndex({ reports, sidings }: Props) {
                                             </table>
                                             {tableRows.length > 100 && (
                                                 <div className="border-t px-4 py-2 text-center text-xs text-muted-foreground">
-                                                    Showing first 100 of {tableRows.length} records. Export CSV for full data.
+                                                    Showing first 100 of {tableRows.length} records. Export XLSX for full data.
                                                 </div>
                                             )}
                                         </div>
@@ -753,7 +716,7 @@ export default function ReportsIndex({ reports, sidings }: Props) {
                             <Card>
                                 <CardContent className="py-12">
                                     <div className="text-center text-sm text-muted-foreground">
-                                        <BarChart3 className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+                                        <FileSpreadsheet className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
                                         <p className="mb-1 font-medium text-foreground">
                                             Select a report and click Generate
                                         </p>

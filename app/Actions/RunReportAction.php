@@ -60,7 +60,7 @@ final readonly class RunReportAction
 
     /**
      * @param  array<int>  $sidingIds
-     * @param  array{siding_id?: int, date_from?: string, date_to?: string}  $params
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader?: string}  $params
      * @return array<int, array<string, mixed>>
      */
     public function handle(string $key, array $sidingIds, array $params = []): array
@@ -85,7 +85,7 @@ final readonly class RunReportAction
 
     /**
      * @param  array<int>  $sidingIds
-     * @param  array{siding_id?: int, date_from?: string, date_to?: string}  $params
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader?: string}  $params
      * @return array<int, array<string, mixed>>
      */
     private function sidingCoalReceipt(array $sidingIds, array $params): array
@@ -212,9 +212,17 @@ final readonly class RunReportAction
             ->with('rake.siding:id,name')
             ->withCount('wagonUnfitLogs')
             ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
-        $this->applyDateFilter($query, $params, 'inspection_time');
+        if (! empty($params['date_from'])) {
+            $query->whereHas('rake', fn ($q) => $q->whereDate('loading_date', '>=', $params['date_from']));
+        }
+        if (! empty($params['date_to'])) {
+            $query->whereHas('rake', fn ($q) => $q->whereDate('loading_date', '<=', $params['date_to']));
+        }
         if (! empty($params['siding_id'])) {
             $query->whereHas('rake', fn ($q) => $q->where('siding_id', $params['siding_id']));
+        }
+        if (! empty($params['rake_number'])) {
+            $query->whereHas('rake', fn ($q) => $q->where('rake_number', 'like', '%'.$params['rake_number'].'%'));
         }
         $limit = $this->resolveLimit($params);
         if ($limit !== null) {
@@ -243,7 +251,7 @@ final readonly class RunReportAction
 
     /**
      * @param  array<int>  $sidingIds
-     * @param  array{siding_id?: int, date_from?: string, date_to?: string}  $params
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader?: string}  $params
      * @return array<int, array<string, mixed>>
      */
     private function unfitWagon(array $sidingIds, array $params): array
@@ -252,10 +260,18 @@ final readonly class RunReportAction
             ->with(['wagon:id,wagon_number,wagon_type', 'txr.rake:id,rake_number,siding_id', 'txr.rake.siding:id,name'])
             ->whereHas('txr.rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
 
-        $this->applyDateFilter($query, $params, 'marked_at', 'created_at');
+        if (! empty($params['date_from'])) {
+            $query->whereHas('txr.rake', fn ($q) => $q->whereDate('loading_date', '>=', $params['date_from']));
+        }
+        if (! empty($params['date_to'])) {
+            $query->whereHas('txr.rake', fn ($q) => $q->whereDate('loading_date', '<=', $params['date_to']));
+        }
 
         if (! empty($params['siding_id'])) {
             $query->whereHas('txr.rake', fn ($q) => $q->where('siding_id', $params['siding_id']));
+        }
+        if (! empty($params['rake_number'])) {
+            $query->whereHas('txr.rake', fn ($q) => $q->where('rake_number', 'like', '%'.$params['rake_number'].'%'));
         }
 
         $limit = $this->resolveLimit($params);
@@ -278,7 +294,7 @@ final readonly class RunReportAction
 
     /**
      * @param  array<int>  $sidingIds
-     * @param  array{siding_id?: int, date_from?: string, date_to?: string}  $params
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader?: string}  $params
      * @return array<int, array<string, mixed>>
      */
     private function wagonLoading(array $sidingIds, array $params): array
@@ -287,10 +303,37 @@ final readonly class RunReportAction
             ->with(['rake.siding:id,name,code', 'wagon:id,wagon_number'])
             ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
 
-        $this->applyDateFilter($query, $params, 'loading_time', 'created_at');
+        if (! empty($params['date_from'])) {
+            $query->whereHas('rake', fn ($q) => $q->whereDate('loading_date', '>=', $params['date_from']));
+        }
+        if (! empty($params['date_to'])) {
+            $query->whereHas('rake', fn ($q) => $q->whereDate('loading_date', '<=', $params['date_to']));
+        }
 
         if (! empty($params['siding_id'])) {
             $query->whereHas('rake', fn ($q) => $q->where('siding_id', $params['siding_id']));
+        }
+        if (! empty($params['rake_number'])) {
+            $query->whereHas('rake', fn ($q) => $q->where('rake_number', 'like', '%'.$params['rake_number'].'%'));
+        }
+        if (! empty($params['loader'])) {
+            $loaderFilter = mb_trim((string) $params['loader']);
+            $query->where(function ($q) use ($loaderFilter): void {
+                if (is_numeric($loaderFilter)) {
+                    $q->where('loader_id', (int) $loaderFilter)
+                        ->orWhereHas('loader', function ($loaderQuery) use ($loaderFilter): void {
+                            $loaderQuery
+                                ->where('loader_name', 'like', '%'.$loaderFilter.'%')
+                                ->orWhere('code', 'like', '%'.$loaderFilter.'%');
+                        });
+                } else {
+                    $q->whereHas('loader', function ($loaderQuery) use ($loaderFilter): void {
+                        $loaderQuery
+                            ->where('loader_name', 'like', '%'.$loaderFilter.'%')
+                            ->orWhere('code', 'like', '%'.$loaderFilter.'%');
+                    });
+                }
+            });
         }
 
         $limit = $this->resolveLimit($params);
@@ -315,7 +358,7 @@ final readonly class RunReportAction
 
     /**
      * @param  array<int>  $sidingIds
-     * @param  array{siding_id?: int, date_from?: string, date_to?: string}  $params
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader?: string}  $params
      * @return array<int, array<string, mixed>>
      */
     private function weighmentReport(array $sidingIds, array $params): array
@@ -324,10 +367,18 @@ final readonly class RunReportAction
             ->with('rakeWeighment.rake.siding:id,name')
             ->whereHas('rakeWeighment.rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
 
-        $this->applyDateFilter($query, $params, 'weighment_time', 'created_at');
+        if (! empty($params['date_from'])) {
+            $query->whereHas('rakeWeighment.rake', fn ($q) => $q->whereDate('loading_date', '>=', $params['date_from']));
+        }
+        if (! empty($params['date_to'])) {
+            $query->whereHas('rakeWeighment.rake', fn ($q) => $q->whereDate('loading_date', '<=', $params['date_to']));
+        }
 
         if (! empty($params['siding_id'])) {
             $query->whereHas('rakeWeighment.rake', fn ($q) => $q->where('siding_id', $params['siding_id']));
+        }
+        if (! empty($params['rake_number'])) {
+            $query->whereHas('rakeWeighment.rake', fn ($q) => $q->where('rake_number', 'like', '%'.$params['rake_number'].'%'));
         }
 
         $limit = $this->resolveLimit($params);
@@ -350,7 +401,7 @@ final readonly class RunReportAction
 
     /**
      * @param  array<int>  $sidingIds
-     * @param  array{siding_id?: int, date_from?: string, date_to?: string}  $params
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader?: string}  $params
      * @return array<int, array<string, mixed>>
      */
     private function loaderVsWeighment(array $sidingIds, array $params): array
@@ -375,10 +426,13 @@ final readonly class RunReportAction
         }
 
         if (! empty($params['date_from'])) {
-            $query->where('wl.loading_time', '>=', $params['date_from']);
+            $query->whereDate('r.loading_date', '>=', $params['date_from']);
         }
         if (! empty($params['date_to'])) {
-            $query->where('wl.loading_time', '<=', $params['date_to'].' 23:59:59');
+            $query->whereDate('r.loading_date', '<=', $params['date_to']);
+        }
+        if (! empty($params['rake_number'])) {
+            $query->where('r.rake_number', 'like', '%'.$params['rake_number'].'%');
         }
 
         $query->select([
@@ -421,7 +475,7 @@ final readonly class RunReportAction
 
     /**
      * @param  array<int>  $sidingIds
-     * @param  array{siding_id?: int, date_from?: string, date_to?: string}  $params
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader?: string}  $params
      * @return array<int, array<string, mixed>>
      */
     private function rakeMovement(array $sidingIds, array $params): array
@@ -431,7 +485,12 @@ final readonly class RunReportAction
             ->whereIn('siding_id', $sidingIds)
             ->whereNotNull('placement_time')
             ->whereNotNull('dispatch_time');
-        $this->applyDateFilter($query, $params, 'dispatch_time');
+        if (! empty($params['date_from'])) {
+            $query->whereDate('loading_date', '>=', $params['date_from']);
+        }
+        if (! empty($params['date_to'])) {
+            $query->whereDate('loading_date', '<=', $params['date_to']);
+        }
         if (! empty($params['siding_id'])) {
             $query->where('siding_id', $params['siding_id']);
         }
@@ -469,9 +528,17 @@ final readonly class RunReportAction
         $query = RrDocument::query()
             ->with(['rake.siding:id,name', 'rake.rakeCharges:id,rake_id,diverrt_destination_id,charge_type,amount,is_actual_charges'])
             ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
-        $this->applyDateFilter($query, $params, 'rr_received_date');
+        if (! empty($params['date_from'])) {
+            $query->whereHas('rake', fn ($q) => $q->whereDate('loading_date', '>=', $params['date_from']));
+        }
+        if (! empty($params['date_to'])) {
+            $query->whereHas('rake', fn ($q) => $q->whereDate('loading_date', '<=', $params['date_to']));
+        }
         if (! empty($params['siding_id'])) {
             $query->whereHas('rake', fn ($q) => $q->where('siding_id', $params['siding_id']));
+        }
+        if (! empty($params['rake_number'])) {
+            $query->whereHas('rake', fn ($q) => $q->where('rake_number', 'like', '%'.$params['rake_number'].'%'));
         }
         $limit = $this->resolveLimit($params);
         if ($limit !== null) {
@@ -511,7 +578,7 @@ final readonly class RunReportAction
 
     /**
      * @param  array<int>  $sidingIds
-     * @param  array{siding_id?: int, date_from?: string, date_to?: string}  $params
+     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader?: string}  $params
      * @return array<int, array<string, mixed>>
      */
     private function penaltyRegister(array $sidingIds, array $params): array
@@ -524,20 +591,23 @@ final readonly class RunReportAction
             ->with(['rake.siding:id,name'])
             ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
 
-        // Requested source for Date: rake.created_at.
+        // Use rake loading_date as business date for report filtering.
         if (! empty($params['date_from'])) {
-            $appliedQuery->whereHas('rake', fn ($q) => $q->where('created_at', '>=', $params['date_from']));
-            $snapshotQuery->whereHas('rake', fn ($q) => $q->where('created_at', '>=', $params['date_from']));
+            $appliedQuery->whereHas('rake', fn ($q) => $q->whereDate('loading_date', '>=', $params['date_from']));
+            $snapshotQuery->whereHas('rake', fn ($q) => $q->whereDate('loading_date', '>=', $params['date_from']));
         }
         if (! empty($params['date_to'])) {
-            $end = $params['date_to'].' 23:59:59';
-            $appliedQuery->whereHas('rake', fn ($q) => $q->where('created_at', '<=', $end));
-            $snapshotQuery->whereHas('rake', fn ($q) => $q->where('created_at', '<=', $end));
+            $appliedQuery->whereHas('rake', fn ($q) => $q->whereDate('loading_date', '<=', $params['date_to']));
+            $snapshotQuery->whereHas('rake', fn ($q) => $q->whereDate('loading_date', '<=', $params['date_to']));
         }
 
         if (! empty($params['siding_id'])) {
             $appliedQuery->whereHas('rake', fn ($q) => $q->where('siding_id', $params['siding_id']));
             $snapshotQuery->whereHas('rake', fn ($q) => $q->where('siding_id', $params['siding_id']));
+        }
+        if (! empty($params['rake_number'])) {
+            $appliedQuery->whereHas('rake', fn ($q) => $q->where('rake_number', 'like', '%'.$params['rake_number'].'%'));
+            $snapshotQuery->whereHas('rake', fn ($q) => $q->where('rake_number', 'like', '%'.$params['rake_number'].'%'));
         }
 
         $limit = $this->resolveLimit($params);
