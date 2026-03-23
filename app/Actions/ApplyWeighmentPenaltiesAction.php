@@ -7,9 +7,11 @@ namespace App\Actions;
 use App\Models\AppliedPenalty;
 use App\Models\PenaltyType;
 use App\Models\Rake;
+use App\Models\RakeCharge;
 use App\Models\RakeWagonWeighment;
 use App\Models\RakeWeighment;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
 
 final readonly class ApplyWeighmentPenaltiesAction
 {
@@ -25,45 +27,69 @@ final readonly class ApplyWeighmentPenaltiesAction
             return;
         }
 
-        // Remove previous weighment-derived penalties for this rake
-        AppliedPenalty::query()
-            ->where('rake_id', $rake->id)
-            ->where('meta->source', 'weighment')
-            ->delete();
-
         /** @var Collection<int, RakeWagonWeighment> $wagonWeighments */
         $wagonWeighments = $weighment->rakeWagonWeighments()
             ->with('wagon')
             ->get();
 
-        if ($wagonWeighments->isEmpty()) {
-            return;
-        }
+        $penaltyRows = [
+            ...$this->buildPol1PenaltyRows($rake, $weighment, $wagonWeighments, $penaltyTypes),
+            ...$this->buildPolaPenaltyRows($rake, $weighment, $wagonWeighments, $penaltyTypes),
+        ];
 
-        $this->applyPol1Penalties($rake, $weighment, $wagonWeighments, $penaltyTypes);
-        $this->applyPolaPenalty($rake, $weighment, $wagonWeighments, $penaltyTypes);
+        DB::transaction(function () use ($rake, $penaltyRows): void {
+            AppliedPenalty::query()
+                ->where('rake_id', $rake->id)
+                ->where('meta->source', 'weighment')
+                ->delete();
+
+            $totalAmount = collect($penaltyRows)->sum(static function (array $row): float {
+                return (float) ($row['amount'] ?? 0.0);
+            });
+
+            $canonicalPenaltyCharge = RakeCharge::query()->updateOrCreate(
+                [
+                    'rake_id' => $rake->id,
+                    'diverrt_destination_id' => null,
+                    'charge_type' => 'PENALTY',
+                    'is_actual_charges' => false,
+                ],
+                [
+                    'amount' => round($totalAmount, 2),
+                    'data_source' => 'predicted_penalty',
+                    'remarks' => 'Predicted penalty aggregate from weighment',
+                ],
+            );
+
+            foreach ($penaltyRows as $row) {
+                $row['rake_charge_id'] = $canonicalPenaltyCharge->id;
+                AppliedPenalty::query()->create($row);
+            }
+        });
     }
 
     /**
-     * Create POL1 (individual wagon punitive overloading) penalties.
+     * Build POL1 (individual wagon punitive overloading) penalties.
      *
      * @param  Collection<int, RakeWagonWeighment>  $wagonWeighments
      * @param  Collection<string, PenaltyType>  $penaltyTypes
+     * @return list<array<string, mixed>>
      */
-    private function applyPol1Penalties(
+    private function buildPol1PenaltyRows(
         Rake $rake,
         RakeWeighment $weighment,
         Collection $wagonWeighments,
         Collection $penaltyTypes,
-    ): void {
+    ): array {
         /** @var PenaltyType|null $pol1Type */
         $pol1Type = $penaltyTypes->get('POL1');
 
         if (! $pol1Type) {
-            return;
+            return [];
         }
 
         $rate = (float) ($pol1Type->default_rate ?? 0.0);
+        $rows = [];
 
         foreach ($wagonWeighments as $row) {
             $excessMt = (float) ($row->over_load_mt ?? 0.0);
@@ -76,7 +102,7 @@ final readonly class ApplyWeighmentPenaltiesAction
                 ? $rate * $excessMt
                 : 0.0;
 
-            AppliedPenalty::query()->create([
+            $rows[] = [
                 'penalty_type_id' => $pol1Type->id,
                 'rake_id' => $rake->id,
                 'wagon_id' => $row->wagon_id,
@@ -91,33 +117,36 @@ final readonly class ApplyWeighmentPenaltiesAction
                     'rake_wagon_weighment_id' => $row->id,
                     'overload_mt' => $excessMt,
                 ],
-            ]);
+            ];
         }
+
+        return $rows;
     }
 
     /**
-     * Create a POLA (average rake punitive overloading) penalty when applicable.
+     * Build a POLA (average rake punitive overloading) penalty when applicable.
      *
      * @param  Collection<int, RakeWagonWeighment>  $wagonWeighments
      * @param  Collection<string, PenaltyType>  $penaltyTypes
+     * @return list<array<string, mixed>>
      */
-    private function applyPolaPenalty(
+    private function buildPolaPenaltyRows(
         Rake $rake,
         RakeWeighment $weighment,
         Collection $wagonWeighments,
         Collection $penaltyTypes,
-    ): void {
+    ): array {
         /** @var PenaltyType|null $polaType */
         $polaType = $penaltyTypes->get('POLA');
 
         if (! $polaType) {
-            return;
+            return [];
         }
 
         $totalNetWeight = (float) ($weighment->total_net_weight_mt ?? 0.0);
 
         if ($totalNetWeight <= 0.0) {
-            return;
+            return [];
         }
 
         $totalPcc = $wagonWeighments
@@ -125,13 +154,13 @@ final readonly class ApplyWeighmentPenaltiesAction
             ->sum();
 
         if ($totalPcc <= 0.0) {
-            return;
+            return [];
         }
 
         $excessTotalMt = $totalNetWeight - $totalPcc;
 
         if ($excessTotalMt <= 0.0) {
-            return;
+            return [];
         }
 
         $rate = (float) ($polaType->default_rate ?? 0.0);
@@ -144,7 +173,7 @@ final readonly class ApplyWeighmentPenaltiesAction
         $averageActual = $wagonCount > 0 ? $totalNetWeight / $wagonCount : null;
         $averagePcc = $wagonCount > 0 ? $totalPcc / $wagonCount : null;
 
-        AppliedPenalty::query()->create([
+        return [[
             'penalty_type_id' => $polaType->id,
             'rake_id' => $rake->id,
             'wagon_id' => null,
@@ -163,6 +192,6 @@ final readonly class ApplyWeighmentPenaltiesAction
                 'average_actual_mt' => $averageActual,
                 'average_pcc_mt' => $averagePcc,
             ],
-        ]);
+        ]];
     }
 }

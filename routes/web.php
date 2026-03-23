@@ -8,6 +8,7 @@ declare(strict_types=1);
  * after adding or changing routes.
  */
 
+use App\Http\Controllers\AccountDeletionRequestController;
 use App\Http\Controllers\Alerts\AlertController;
 use App\Http\Controllers\Billing\BillingDashboardController;
 use App\Http\Controllers\Billing\CreditController;
@@ -130,6 +131,8 @@ Route::get('cookie-consent/accept', CookieConsentController::class)
 
 Route::get('legal/terms', fn () => Inertia::render('legal/terms'))->name('legal.terms');
 Route::get('legal/privacy', fn () => Inertia::render('legal/privacy'))->name('legal.privacy');
+Route::get('account/request-deletion', [AccountDeletionRequestController::class, 'show'])->name('account.request-deletion.show');
+Route::post('account/request-deletion', [AccountDeletionRequestController::class, 'store'])->name('account.request-deletion.store');
 
 Route::prefix('blog')->name('blog.')->middleware('feature:blog')->group(function (): void {
     Route::get('/', [BlogController::class, 'index'])->name('index');
