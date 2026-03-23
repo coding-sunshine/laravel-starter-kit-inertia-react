@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Actions\GenerateDispatchReport;
+use App\Jobs\GenerateDispatchReportJob;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -21,10 +22,12 @@ final class GenerateDispatchReportController extends Controller
     {
         $currentSiding = \App\Services\SidingContext::get();
         $sidingId = $currentSiding?->id;
-
-        $count = $this->generateDispatchReport->handle($sidingId);
-
         $filters = $request->input('_filters', []);
+        $filters = is_array($filters) ? $filters : [];
+        $mode = in_array($request->input('mode'), ['sync', 'queue'], true)
+            ? (string) $request->input('mode')
+            : 'sync';
+
         $query = array_filter([
             'tab' => 'dpr',
             'date_from' => $filters['date_from'] ?? null,
@@ -34,6 +37,16 @@ final class GenerateDispatchReportController extends Controller
             'permit_no' => $filters['permit_no'] ?? null,
             'truck_regd_no' => $filters['truck_regd_no'] ?? null,
         ]);
+
+        if ($mode === 'queue') {
+            GenerateDispatchReportJob::dispatch($sidingId, $filters);
+
+            return redirect()
+                ->route('vehicle-dispatch.index', $query)
+                ->with('success', 'DPR generation queued successfully. Please refresh in a moment.');
+        }
+
+        $count = $this->generateDispatchReport->handle($sidingId, $filters);
 
         if ($count === 0) {
             return redirect()

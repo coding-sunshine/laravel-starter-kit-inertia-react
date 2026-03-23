@@ -2,6 +2,7 @@ import { router } from '@inertiajs/react';
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
     Table,
     TableBody,
@@ -39,11 +40,13 @@ function formatDateTime(value: string | null): string {
 
 export default function DPRTab({ dispatchReports, filters, flashSuccess }: DPRTabProps) {
     const [isGenerating, setIsGenerating] = useState(false);
+    const [generationMode, setGenerationMode] = useState<'sync' | 'queue'>('sync');
 
     const handleGenerate = () => {
         setIsGenerating(true);
         const payload: Record<string, unknown> = {
             _filters: filters,
+            mode: generationMode,
         };
         router.post('/dispatch-reports/generate', payload, {
             preserveScroll: true,
@@ -82,14 +85,30 @@ export default function DPRTab({ dispatchReports, filters, flashSuccess }: DPRTa
                             records.
                         </CardDescription>
                     </div>
-                    <Button
-                        onClick={handleGenerate}
-                        disabled={isGenerating}
-                        data-pan="vehicle-dispatch-generate-dpr"
-                    >
-                        <RefreshCw className={`h-4 w-4 mr-2 ${isGenerating ? 'animate-spin' : ''}`} />
-                        {isGenerating ? 'Generating...' : 'Generate DPR'}
-                    </Button>
+                    <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+                        <Button
+                            onClick={handleGenerate}
+                            disabled={isGenerating}
+                            data-pan="vehicle-dispatch-generate-dpr"
+                        >
+                            <RefreshCw className={`h-4 w-4 mr-2 ${isGenerating ? 'animate-spin' : ''}`} />
+                            {isGenerating ? 'Generating...' : 'Generate DPR'}
+                        </Button>
+                        <div className="w-full sm:w-56">
+                            <Select
+                                value={generationMode}
+                                onValueChange={(value: 'sync' | 'queue') => setGenerationMode(value)}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Generation mode" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="sync">Generate now (Sync)</SelectItem>
+                                    <SelectItem value="queue">Generate in background (Queue)</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
                 </div>
             </CardHeader>
             <CardContent className="space-y-4">

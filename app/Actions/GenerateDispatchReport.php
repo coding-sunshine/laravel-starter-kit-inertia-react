@@ -6,7 +6,9 @@ namespace App\Actions;
 
 use App\Models\DispatchReport;
 use App\Models\VehicleDispatch;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Log;
 
 final readonly class GenerateDispatchReport
 {
@@ -17,9 +19,9 @@ final readonly class GenerateDispatchReport
      *
      * @return int Number of records inserted or updated
      */
-    public function handle(?int $sidingId = null): int
+    public function handle(?int $sidingId = null, array $filters = []): int
     {
-        return DB::transaction(function () use ($sidingId): int {
+        return DB::transaction(function () use ($sidingId, $filters): int {
             // First try the original query with siding_id condition
             $query = VehicleDispatch::query()
                 ->join(
@@ -29,6 +31,12 @@ final readonly class GenerateDispatchReport
                         ->on('dve.siding_id', '=', 'siding_vehicle_dispatches.siding_id')
                 )
                 ->when($sidingId, fn ($q) => $q->where('siding_vehicle_dispatches.siding_id', $sidingId))
+                ->when($filters['date_from'] ?? null, fn ($q, $value) => $q->whereDate('siding_vehicle_dispatches.issued_on', '>=', (string) $value))
+                ->when($filters['date_to'] ?? null, fn ($q, $value) => $q->whereDate('siding_vehicle_dispatches.issued_on', '<=', (string) $value))
+                ->when(
+                    ($filters['date'] ?? null) && ! ($filters['date_from'] ?? null) && ! ($filters['date_to'] ?? null),
+                    fn ($q) => $q->whereDate('siding_vehicle_dispatches.issued_on', (string) $filters['date'])
+                )
                 ->select([
                     'siding_vehicle_dispatches.id as dispatch_id',
                     'siding_vehicle_dispatches.siding_id',
@@ -49,19 +57,25 @@ final readonly class GenerateDispatchReport
                 ]);
 
             $rows = $query->get();
-            
-            \Log::info('DPR Generation - Original query results', [
+
+            Log::info('DPR Generation - Original query results', [
                 'rows_found' => $rows->count(),
                 'siding_id_filter' => $sidingId,
             ]);
 
             // If no rows found with siding_id condition, try without it
             if ($rows->count() === 0) {
-                \Log::info('DPR Generation - Trying without siding_id condition');
-                
+                Log::info('DPR Generation - Trying without siding_id condition');
+
                 $query = VehicleDispatch::query()
                     ->join('daily_vehicle_entries as dve', 'dve.e_challan_no', '=', 'siding_vehicle_dispatches.pass_no')
                     ->when($sidingId, fn ($q) => $q->where('siding_vehicle_dispatches.siding_id', $sidingId))
+                    ->when($filters['date_from'] ?? null, fn ($q, $value) => $q->whereDate('siding_vehicle_dispatches.issued_on', '>=', (string) $value))
+                    ->when($filters['date_to'] ?? null, fn ($q, $value) => $q->whereDate('siding_vehicle_dispatches.issued_on', '<=', (string) $value))
+                    ->when(
+                        ($filters['date'] ?? null) && ! ($filters['date_from'] ?? null) && ! ($filters['date_to'] ?? null),
+                        fn ($q) => $q->whereDate('siding_vehicle_dispatches.issued_on', (string) $filters['date'])
+                    )
                     ->select([
                         'siding_vehicle_dispatches.id as dispatch_id',
                         'siding_vehicle_dispatches.siding_id',
@@ -82,14 +96,15 @@ final readonly class GenerateDispatchReport
                     ]);
 
                 $rows = $query->get();
-                
-                \Log::info('DPR Generation - Query without siding condition results', [
+
+                Log::info('DPR Generation - Query without siding condition results', [
                     'rows_found' => $rows->count(),
                 ]);
             }
 
             if ($rows->count() === 0) {
-                \Log::warning('DPR Generation - No matching records found with either method');
+                Log::warning('DPR Generation - No matching records found with either method');
+
                 return 0;
             }
 
@@ -111,7 +126,12 @@ final readonly class GenerateDispatchReport
                     $coalTonVariation = $netWt - $mineralWt;
                 }
 
-                $issuedOn = $row->issued_on ? \Carbon\Carbon::parse($row->issued_on) : null;
+                $issuedOn = $this->normalizeIssuedOn($row->issued_on);
+                $reachedAt = $row->reached_at ? Carbon::parse($row->reached_at) : null;
+                $timeTakenTrip = null;
+                if ($issuedOn !== null && $reachedAt !== null && $reachedAt->greaterThanOrEqualTo($issuedOn)) {
+                    $timeTakenTrip = (string) $issuedOn->diffInMinutes($reachedAt);
+                }
 
                 $dispatchReportData = [
                     'siding_id' => $row->siding_id,
@@ -131,7 +151,7 @@ final readonly class GenerateDispatchReport
                     'tyres' => null,
                     'coal_ton_variation' => $coalTonVariation,
                     'reached_datetime' => $row->reached_at,
-                    'time_taken_trip' => null,
+                    'time_taken_trip' => $timeTakenTrip,
                     'remarks' => null,
                     'wb' => $row->wb_no,
                     'trip_id_no' => $row->trip_id_no,
@@ -144,17 +164,31 @@ final readonly class GenerateDispatchReport
                     ],
                     $dispatchReportData
                 );
-                
+
                 $insertedData[] = $dispatchReportData;
                 $count++;
             }
 
-            \Log::info('DPR Generation - Success', [
+            Log::info('DPR Generation - Success', [
                 'records_processed' => $count,
                 'sample_data' => array_slice($insertedData, 0, 2),
             ]);
 
             return $count;
         });
+    }
+
+    private function normalizeIssuedOn(mixed $issuedOn): ?Carbon
+    {
+        if ($issuedOn === null || $issuedOn === '') {
+            return null;
+        }
+
+        $timezone = config('app.timezone');
+        if (is_numeric($issuedOn)) {
+            return Carbon::createFromTimestamp((int) $issuedOn, $timezone);
+        }
+
+        return Carbon::parse((string) $issuedOn, $timezone)->setTimezone($timezone);
     }
 }
