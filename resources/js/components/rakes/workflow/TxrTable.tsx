@@ -51,22 +51,37 @@ interface TxrTableProps {
 export function TxrTable({ rake, disabled, onTxrHeaderSaved }: TxrTableProps) {
     const { errors } = usePage<{ errors?: Record<string, string> }>().props;
     const [duration, setDuration] = useState<number>(0);
-    
+
+    const toLocalDateTimeInput = (dateTime: string | null | undefined): string => {
+        if (!dateTime) {
+            return '';
+        }
+
+        const date = new Date(dateTime);
+        if (Number.isNaN(date.getTime())) {
+            return '';
+        }
+
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    };
+
     const { data, setData, put, processing, reset } = useForm({
-        inspection_time: rake.txr?.inspection_time ? new Date(rake.txr.inspection_time).toISOString().slice(0, 16) : '',
-        inspection_end_time: rake.txr?.inspection_end_time ? new Date(rake.txr.inspection_end_time).toISOString().slice(0, 16) : '',
+        inspection_time: toLocalDateTimeInput(rake.txr?.inspection_time),
+        inspection_end_time: toLocalDateTimeInput(rake.txr?.inspection_end_time),
         status: rake.txr?.status ?? 'in_progress',
         remarks: rake.txr?.remarks || '',
     });
 
     useEffect(() => {
         setData({
-            inspection_time: rake.txr?.inspection_time
-                ? new Date(rake.txr.inspection_time).toISOString().slice(0, 16)
-                : '',
-            inspection_end_time: rake.txr?.inspection_end_time
-                ? new Date(rake.txr.inspection_end_time).toISOString().slice(0, 16)
-                : '',
+            inspection_time: toLocalDateTimeInput(rake.txr?.inspection_time),
+            inspection_end_time: toLocalDateTimeInput(rake.txr?.inspection_end_time),
             status: rake.txr?.status ?? 'in_progress',
             remarks: rake.txr?.remarks || '',
         });
@@ -80,11 +95,11 @@ export function TxrTable({ rake, disabled, onTxrHeaderSaved }: TxrTableProps) {
     ]);
 
     const setInspectionTime = (date: string, time: string) => {
-        const d = date || (time ? new Date().toISOString().slice(0, 10) : '');
+        const d = date || (time ? format(new Date(), 'yyyy-MM-dd') : '');
         setData('inspection_time', d ? `${d}T${time || '00:00'}` : '');
     };
     const setInspectionEndTime = (date: string, time: string) => {
-        const d = date || (time ? new Date().toISOString().slice(0, 10) : '');
+        const d = date || (time ? format(new Date(), 'yyyy-MM-dd') : '');
         setData('inspection_end_time', d ? `${d}T${time || '00:00'}` : '');
     };
 
@@ -101,7 +116,7 @@ export function TxrTable({ rake, disabled, onTxrHeaderSaved }: TxrTableProps) {
     }) {
         const datePart = value ? value.slice(0, 10) : '';
         const timePart = value ? value.slice(11, 16) : '';
-        const displayDate = datePart ? new Date(value) : null;
+        const displayDate = datePart ? new Date(`${datePart}T00:00:00`) : null;
 
         return (
             <Popover>
@@ -129,8 +144,8 @@ export function TxrTable({ rake, disabled, onTxrHeaderSaved }: TxrTableProps) {
                     <div className="p-3 border-b">
                         <Calendar
                             mode="single"
-                            selected={datePart ? new Date(datePart) : undefined}
-                            onSelect={(d) => onChange(d ? d.toISOString().slice(0, 10) : '', timePart)}
+                            selected={datePart ? new Date(`${datePart}T00:00:00`) : undefined}
+                            onSelect={(d) => onChange(d ? format(d, 'yyyy-MM-dd') : '', timePart)}
                             initialFocus
                             disabled={disabled}
                         />
@@ -141,7 +156,7 @@ export function TxrTable({ rake, disabled, onTxrHeaderSaved }: TxrTableProps) {
                             type="time"
                             value={timePart}
                             onChange={(e) =>
-                                onChange(datePart || new Date().toISOString().slice(0, 10), e.target.value)
+                                onChange(datePart || format(new Date(), 'yyyy-MM-dd'), e.target.value)
                             }
                             disabled={disabled}
                             className="w-full"

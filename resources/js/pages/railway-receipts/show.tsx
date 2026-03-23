@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/react';
-import { Trash2 } from 'lucide-react';
+import { Download, Trash2 } from 'lucide-react';
 
 interface Wagon {
     id: number;
@@ -28,6 +28,14 @@ interface RrCharge {
     charge_code: string;
     charge_name: string | null;
     amount: string | number;
+}
+
+interface RakeChargeLedger {
+    id: number;
+    charge_type: 'FREIGHT' | 'OTHER_CHARGE' | 'PENALTY' | 'GST' | 'REBATE';
+    amount: string | number;
+    data_source?: string | null;
+    remarks?: string | null;
 }
 
 interface AppliedPenalty {
@@ -67,6 +75,8 @@ interface RrDocument {
     rr_details: Record<string, unknown> | null;
     rake?: Rake;
     rr_charges?: RrCharge[];
+    rake_charges_ledger?: RakeChargeLedger[];
+    rr_pdf_download_url?: string | null;
     // Snapshot relations from backend (snake_case when serialized)
     wagon_snapshots?: Array<{
         id: number;
@@ -243,6 +253,27 @@ function buildWagonsData(doc: RrDocument): WagonRow[] {
 }
 
 function buildChargesData(doc: RrDocument): ChargeRow[] {
+    const rakeChargesLedger =
+        (doc as Record<string, unknown>).rake_charges_ledger as
+            | RakeChargeLedger[]
+            | undefined;
+
+    if (Array.isArray(rakeChargesLedger) && rakeChargesLedger.length > 0) {
+        const labelByType: Record<RakeChargeLedger['charge_type'], string> = {
+            FREIGHT: 'Freight',
+            OTHER_CHARGE: 'Other Charges',
+            PENALTY: 'Penalty',
+            GST: 'GST',
+            REBATE: 'Rebate',
+        };
+
+        return rakeChargesLedger.map((c) => ({
+            chargeCode: c.charge_type,
+            chargeName: labelByType[c.charge_type] ?? c.charge_type,
+            amount: `₹${Number(c.amount ?? 0).toLocaleString('en-IN')}`,
+        }));
+    }
+
     const rrCharges =
         (doc as Record<string, unknown>).rr_charges ??
         (doc as Record<string, unknown>).rrCharges;
@@ -449,28 +480,42 @@ export default function RailwayReceiptShow({
                             View RR document details, wagons, charges, and penalties
                         </p>
                     </div>
-                    {can_delete_rr && hasData && (
-                        <Button
-                            variant="destructive"
-                            size="sm"
-                            type="button"
-                            onClick={() => {
-                                if (
-                                    !window.confirm(
-                                        'Delete this railway receipt? Related charges and snapshot rows will be removed. This cannot be undone.',
-                                    )
-                                ) {
-                                    return;
-                                }
-                                router.delete(
-                                    `/railway-receipts/${rrDocument.id}`,
-                                );
-                            }}
-                        >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete receipt
-                        </Button>
-                    )}
+                    <div className="flex items-center gap-2">
+                        {hasData && rrDocument.rr_pdf_download_url && (
+                            <a
+                                href={rrDocument.rr_pdf_download_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+                                <Button variant="outline" size="sm" type="button">
+                                    <Download className="mr-2 h-4 w-4" />
+                                    Download PDF
+                                </Button>
+                            </a>
+                        )}
+                        {can_delete_rr && hasData && (
+                            <Button
+                                variant="destructive"
+                                size="sm"
+                                type="button"
+                                onClick={() => {
+                                    if (
+                                        !window.confirm(
+                                            'Delete this railway receipt? Related charges and snapshot rows will be removed. This cannot be undone.',
+                                        )
+                                    ) {
+                                        return;
+                                    }
+                                    router.delete(
+                                        `/railway-receipts/${rrDocument.id}`,
+                                    );
+                                }}
+                            >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete receipt
+                            </Button>
+                        )}
+                    </div>
                 </div>
 
                 <RRHeader {...headerData} />

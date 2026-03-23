@@ -9,12 +9,13 @@ use App\Models\DailyVehicleEntry;
 use App\Models\Indent;
 use App\Models\Penalty;
 use App\Models\Rake;
+use App\Models\RakeCharge;
 use App\Models\RakeWagonWeighment;
 use App\Models\RrDocument;
 use App\Models\RrPenaltySnapshot;
 use App\Models\Txr;
-use App\Models\Wagon;
 use App\Models\WagonLoading;
+use App\Models\WagonUnfitLog;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -176,18 +177,28 @@ final readonly class RunReportAction
      */
     private function rakeIndent(array $sidingIds, array $params): array
     {
-        $query = Indent::query()->with('siding:id,name')->whereIn('siding_id', $sidingIds);
-        $this->applyDateFilter($query, $params, 'created_at');
+        $query = Indent::query()
+            ->with(['siding:id,name', 'createdBy:id,name'])
+            ->whereIn('siding_id', $sidingIds);
+        $this->applyDateFilter($query, $params, 'indent_date', 'created_at');
         if (! empty($params['siding_id'])) {
             $query->where('siding_id', $params['siding_id']);
         }
-        $rows = $query->latest()->limit(500)->get();
+        $limit = $this->resolveLimit($params);
+        if ($limit !== null) {
+            $query->limit($limit);
+        }
+        $rows = $query->latest('indent_date')->latest()->get();
 
         return $rows->map(fn ($r): array => [
-            'id' => $r->id,
-            'siding' => $r->siding?->name,
-            'state' => $r->state,
-            'created_at' => $r->created_at->toIso8601String(),
+            'Indent Date' => $r->indent_date?->toDateString(),
+            'Siding' => $r->siding?->name,
+            'Available Stock (MT)' => $r->available_stock_mt !== null ? (float) $r->available_stock_mt : null,
+            'Rake Target Qty (MT)' => $r->target_quantity_mt !== null ? (float) $r->target_quantity_mt : null,
+            'Indent Raised By' => $r->createdBy?->name,
+            'Indent Time' => $r->indent_time?->format('Y-m-d H:i'),
+            'Railway Reference No' => $r->railway_reference_no,
+            'Remarks' => $r->remarks,
         ])->values()->all();
     }
 
@@ -200,20 +211,35 @@ final readonly class RunReportAction
     {
         $query = Txr::query()
             ->with('rake.siding:id,name')
+            ->withCount('wagonUnfitLogs')
             ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
         $this->applyDateFilter($query, $params, 'inspection_time');
         if (! empty($params['siding_id'])) {
             $query->whereHas('rake', fn ($q) => $q->where('siding_id', $params['siding_id']));
         }
-        $rows = $query->orderByDesc('inspection_time')->limit(500)->get();
+        $limit = $this->resolveLimit($params);
+        if ($limit !== null) {
+            $query->limit($limit);
+        }
+        $rows = $query->orderByDesc('inspection_time')->latest()->get();
 
-        return $rows->map(fn ($r): array => [
-            'rake_number' => $r->rake?->rake_number,
-            'siding' => $r->rake?->siding?->name,
-            'inspection_time' => $r->inspection_time?->toIso8601String(),
-            'state' => $r->state,
-            'unfit_wagons_count' => $r->unfit_wagons_count,
-        ])->values()->all();
+        return $rows->map(function (Txr $r): array {
+            $durationMin = null;
+            if ($r->inspection_time !== null && $r->inspection_end_time !== null) {
+                $durationMin = $r->inspection_time->diffInMinutes($r->inspection_end_time);
+            }
+
+            return [
+                'Rake No' => $r->rake?->rake_number,
+                'Siding' => $r->rake?->siding?->name,
+                'Rake Placement Time' => $r->rake?->placement_time?->format('Y-m-d H:i'),
+                'TXR Start Time' => $r->inspection_time?->format('Y-m-d H:i'),
+                'TXR End Time' => $r->inspection_end_time?->format('Y-m-d H:i'),
+                'TXR Duration (Min)' => $durationMin,
+                'No of Unfit Wagons' => $r->wagon_unfit_logs_count,
+                'Remarks' => '',
+            ];
+        })->values()->all();
     }
 
     /**
@@ -223,19 +249,31 @@ final readonly class RunReportAction
      */
     private function unfitWagon(array $sidingIds, array $params): array
     {
-        $query = Wagon::query()
-            ->with('rake.siding:id,name')
-            ->where('is_unfit', true)
-            ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
+        $query = WagonUnfitLog::query()
+            ->with(['wagon:id,wagon_number,wagon_type', 'txr.rake:id,rake_number,siding_id', 'txr.rake.siding:id,name'])
+            ->whereHas('txr.rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
+
+        $this->applyDateFilter($query, $params, 'marked_at', 'created_at');
+
         if (! empty($params['siding_id'])) {
-            $query->whereHas('rake', fn ($q) => $q->where('siding_id', $params['siding_id']));
+            $query->whereHas('txr.rake', fn ($q) => $q->where('siding_id', $params['siding_id']));
         }
-        $rows = $query->latest()->limit(500)->get();
+
+        $limit = $this->resolveLimit($params);
+        if ($limit !== null) {
+            $query->limit($limit);
+        }
+
+        $rows = $query->orderByDesc('marked_at')->latest()->get();
 
         return $rows->map(fn ($r): array => [
-            'wagon_number' => $r->wagon_number,
-            'rake_number' => $r->rake?->rake_number,
-            'siding' => $r->rake?->siding?->name,
+            'Rake No' => $r->txr?->rake?->rake_number,
+            'Wagon No' => $r->wagon?->wagon_number,
+            'Wagon Type' => $r->wagon?->wagon_type,
+            'Reason Unfit' => $r->reason,
+            'Marked By' => '',
+            'Marking Method (Flag/Light)' => $r->marking_method,
+            'Time' => $r->marked_at?->format('Y-m-d H:i'),
         ])->values()->all();
     }
 
@@ -301,13 +339,13 @@ final readonly class RunReportAction
         $rows = $query->orderByDesc('weighment_time')->latest()->get();
 
         return $rows->map(fn ($r): array => [
-            'rake_no' => $r->rakeWeighment?->rake?->rake_number,
-            'wagon_no' => $r->wagon_number,
-            'inmotion_gross_mt' => $r->actual_gross_mt,
-            'inmotion_tare_mt' => $r->actual_tare_mt,
-            'inmotion_net_mt' => $r->net_weight_mt,
-            'weighment_time' => $r->weighment_time?->toIso8601String(),
-            'slip_no' => $r->slip_number,
+            'Rake No' => $r->rakeWeighment?->rake?->rake_number,
+            'Wagon No' => $r->wagon_number,
+            'Inmotion Gross (MT)' => $r->actual_gross_mt !== null ? (float) $r->actual_gross_mt : null,
+            'Inmotion Tare (MT)' => $r->actual_tare_mt !== null ? (float) $r->actual_tare_mt : null,
+            'Inmotion Net (MT)' => $r->net_weight_mt !== null ? (float) $r->net_weight_mt : null,
+            'Weighment Time' => $r->weighment_time?->format('Y-m-d H:i'),
+            'Slip No' => $r->slip_number,
         ])->values()->all();
     }
 
@@ -430,7 +468,7 @@ final readonly class RunReportAction
     private function rrSummary(array $sidingIds, array $params): array
     {
         $query = RrDocument::query()
-            ->with(['rake.siding:id,name', 'rrCharges:id,rr_document_id,charge_code,charge_name,amount', 'penaltySnapshots:id,rr_document_id,rake_id,penalty_code,amount'])
+            ->with(['rake.siding:id,name', 'rake.rakeCharges:id,rake_id,diverrt_destination_id,charge_type,amount,is_actual_charges'])
             ->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
         $this->applyDateFilter($query, $params, 'rr_received_date');
         if (! empty($params['siding_id'])) {
@@ -444,25 +482,30 @@ final readonly class RunReportAction
         $rows = $query->latest('rr_received_date')->get();
 
         return $rows->map(function (RrDocument $r): array {
-            $penaltyAmount = $r->penaltySnapshots->sum(fn (RrPenaltySnapshot $p): float => (float) $p->amount);
-            $gstAmount = $r->rrCharges
-                ->filter(fn ($c): bool => str_contains(mb_strtolower((string) $c->charge_code), 'gst') || str_contains(mb_strtolower((string) $c->charge_name), 'gst'))
-                ->sum(fn ($c): float => (float) $c->amount);
+            $chargeScope = $r->rake?->rakeCharges
+                ?->filter(function (RakeCharge $charge) use ($r): bool {
+                    return $charge->is_actual_charges
+                        && (int) $charge->diverrt_destination_id === (int) $r->diverrt_destination_id;
+                });
 
-            $freight = $r->freight_total !== null ? (float) $r->freight_total : 0.0;
-            $total = $freight + (float) $penaltyAmount + (float) $gstAmount;
+            $freight = (float) ($chargeScope?->firstWhere('charge_type', 'FREIGHT')?->amount ?? 0.0);
+            $penaltyAmount = (float) ($chargeScope?->firstWhere('charge_type', 'PENALTY')?->amount ?? 0.0);
+            $gstAmount = (float) ($chargeScope?->firstWhere('charge_type', 'GST')?->amount ?? 0.0);
+            $otherChargesAmount = (float) ($chargeScope?->firstWhere('charge_type', 'OTHER_CHARGE')?->amount ?? 0.0);
+            $total = $freight + $penaltyAmount + $gstAmount + $otherChargesAmount;
 
             return [
-                'rake_no' => $r->rake?->rake_number,
-                'rr_no' => $r->rr_number,
-                'rr_date' => $r->rr_received_date?->toDateString(),
-                'from_siding' => $r->rake?->siding?->name,
-                'to_power_plant' => $r->to_station_code,
-                'charged_weight_mt' => $r->rr_weight_mt,
-                'freight_amount' => $r->freight_total,
-                'penalty_amount' => round($penaltyAmount, 2),
-                'gst_amount' => round($gstAmount, 2),
-                'total_amount' => round($total, 2),
+                'Rake No' => $r->rake?->rake_number,
+                'RR No' => $r->rr_number,
+                'RR Date' => $r->rr_received_date?->toDateString(),
+                'From Siding' => $r->rake?->siding?->name,
+                'To Power Plant' => $r->to_station_code,
+                'Charged Weight (MT)' => $r->rr_weight_mt !== null ? (float) $r->rr_weight_mt : null,
+                'Freight Amount' => round($freight, 2),
+                'Penalty Amount' => round($penaltyAmount, 2),
+                'GST Amount' => round($gstAmount, 2),
+                'Other Charges Amount' => round($otherChargesAmount, 2),
+                'Total Amount' => round($total, 2),
             ];
         })->values()->all();
     }

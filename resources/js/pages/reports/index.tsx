@@ -78,6 +78,67 @@ const SIDING_COAL_RECEIPT_COLUMN_SOURCES: { column: string; source: string }[] =
     },
 ];
 
+/** Report header -> DB source (Rake Indent only; `indents` + `sidings` + `users`). */
+const RAKE_INDENT_COLUMN_SOURCES: { column: string; source: string }[] = [
+    { column: 'Indent Date', source: 'indents.indent_date' },
+    { column: 'Siding', source: 'sidings.name via indents.siding_id' },
+    { column: 'Available Stock (MT)', source: 'indents.available_stock_mt' },
+    { column: 'Rake Target Qty (MT)', source: 'indents.target_quantity_mt' },
+    { column: 'Indent Raised By', source: 'users.name via indents.created_by' },
+    { column: 'Indent Time', source: 'indents.indent_time' },
+    { column: 'Railway Reference No', source: 'indents.railway_reference_no' },
+    { column: 'Remarks', source: 'indents.remarks' },
+];
+
+/** Report header -> DB source (TXR only; `txr` + `rakes` + `sidings` + `wagon_unfit_logs`). */
+const TXR_COLUMN_SOURCES: { column: string; source: string }[] = [
+    { column: 'Rake No', source: 'rakes.rake_number' },
+    { column: 'Siding', source: 'sidings.name via rakes.siding_id' },
+    { column: 'Rake Placement Time', source: 'rakes.placement_time' },
+    { column: 'TXR Start Time', source: 'txr.inspection_time' },
+    { column: 'TXR End Time', source: 'txr.inspection_end_time' },
+    { column: 'TXR Duration (Min)', source: 'computed from inspection start/end time' },
+    { column: 'No of Unfit Wagons', source: 'COUNT(wagon_unfit_logs.id) grouped by txr_id' },
+    { column: 'Remarks', source: 'always empty as requested' },
+];
+
+/** Report header -> DB source (Unfit Wagon only; `wagon_unfit_logs` + `wagons` + `rakes`). */
+const UNFIT_WAGON_COLUMN_SOURCES: { column: string; source: string }[] = [
+    { column: 'Rake No', source: 'rakes.rake_number via wagon_unfit_logs.txr_id -> txr.rake_id' },
+    { column: 'Wagon No', source: 'wagons.wagon_number via wagon_unfit_logs.wagon_id' },
+    { column: 'Wagon Type', source: 'wagons.wagon_type via wagon_unfit_logs.wagon_id' },
+    { column: 'Reason Unfit', source: 'wagon_unfit_logs.reason' },
+    { column: 'Marked By', source: 'always empty as requested' },
+    { column: 'Marking Method (Flag/Light)', source: 'wagon_unfit_logs.marking_method' },
+    { column: 'Time', source: 'wagon_unfit_logs.marked_at' },
+];
+
+/** Report header -> DB source (Inmotion Weighment; `rake_wagon_weighments` + related rake). */
+const WEIGHMENT_COLUMN_SOURCES: { column: string; source: string }[] = [
+    { column: 'Rake No', source: 'rakes.rake_number via rake_wagon_weighments.rake_weighment_id' },
+    { column: 'Wagon No', source: 'rake_wagon_weighments.wagon_number (from wagon_id -> wagons.wagon_number)' },
+    { column: 'Inmotion Gross (MT)', source: 'rake_wagon_weighments.actual_gross_mt' },
+    { column: 'Inmotion Tare (MT)', source: 'rake_wagon_weighments.actual_tare_mt' },
+    { column: 'Inmotion Net (MT)', source: 'rake_wagon_weighments.net_weight_mt' },
+    { column: 'Weighment Time', source: 'rake_wagon_weighments.weighment_time' },
+    { column: 'Slip No', source: 'rake_wagon_weighments.slip_number' },
+];
+
+/** Report header -> DB source (RR Summary; `rr_documents` + canonical `rake_charges`). */
+const RR_SUMMARY_COLUMN_SOURCES: { column: string; source: string }[] = [
+    { column: 'Rake No', source: 'rakes.rake_number via rr_documents.rake_id' },
+    { column: 'RR No', source: 'rr_documents.rr_number' },
+    { column: 'RR Date', source: 'rr_documents.rr_received_date' },
+    { column: 'From Siding', source: 'sidings.name via rr_documents.rake_id -> rakes.siding_id' },
+    { column: 'To Power Plant', source: 'rr_documents.to_station_code' },
+    { column: 'Charged Weight (MT)', source: 'rr_documents.rr_weight_mt' },
+    { column: 'Freight Amount', source: "rake_charges.amount where charge_type='FREIGHT' and is_actual_charges=true (scoped by rr diverrt_destination_id)" },
+    { column: 'Penalty Amount', source: "rake_charges.amount where charge_type='PENALTY' and is_actual_charges=true (scoped by rr diverrt_destination_id)" },
+    { column: 'GST Amount', source: "rake_charges.amount where charge_type='GST' and is_actual_charges=true (scoped by rr diverrt_destination_id)" },
+    { column: 'Other Charges Amount', source: "rake_charges.amount where charge_type='OTHER_CHARGE' and is_actual_charges=true (scoped by rr diverrt_destination_id)" },
+    { column: 'Total Amount', source: 'Freight Amount + Penalty Amount + GST Amount + Other Charges Amount' },
+];
+
 const RAKE_MANAGEMENT_REPORTS: string[] = [
     'siding_coal_receipt',
     'rake_indent',
@@ -378,7 +439,7 @@ export default function ReportsIndex({ reports, sidings }: Props) {
                                 <CardDescription>
                                     {activeReport?.description}
                                 </CardDescription>
-                                {activeKey === 'siding_coal_receipt' && (
+                                {(activeKey === 'siding_coal_receipt' || activeKey === 'rake_indent' || activeKey === 'txr' || activeKey === 'unfit_wagon' || activeKey === 'weighment' || activeKey === 'rr_summary') && (
                                     <Collapsible
                                         open={columnSourcesOpen}
                                         onOpenChange={setColumnSourcesOpen}
@@ -406,7 +467,18 @@ export default function ReportsIndex({ reports, sidings }: Props) {
                                                         </tr>
                                                     </thead>
                                                     <tbody>
-                                                        {SIDING_COAL_RECEIPT_COLUMN_SOURCES.map((row) => (
+                                                        {(activeKey === 'rake_indent'
+                                                            ? RAKE_INDENT_COLUMN_SOURCES
+                                                            : activeKey === 'txr'
+                                                              ? TXR_COLUMN_SOURCES
+                                                              : activeKey === 'unfit_wagon'
+                                                                ? UNFIT_WAGON_COLUMN_SOURCES
+                                                                : activeKey === 'weighment'
+                                                                  ? WEIGHMENT_COLUMN_SOURCES
+                                                                  : activeKey === 'rr_summary'
+                                                                    ? RR_SUMMARY_COLUMN_SOURCES
+                                                              : SIDING_COAL_RECEIPT_COLUMN_SOURCES
+                                                        ).map((row) => (
                                                             <tr key={row.column} className="border-b border-muted/50 last:border-0">
                                                                 <td className="whitespace-nowrap py-1.5 pr-4 align-top font-medium">
                                                                     {row.column}

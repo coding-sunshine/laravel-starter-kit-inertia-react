@@ -41,12 +41,21 @@
             "type": "timestamp",
             "nullable": true,
             "default": null
+        },
+        "rake_charge_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {
         "rrDocument": {
             "type": "belongsTo",
             "model": "RrDocument"
+        },
+        "rakeCharge": {
+            "type": "belongsTo",
+            "model": "RakeCharge"
         }
     },
     "value_hints": {

@@ -12,6 +12,7 @@ final class RrPenaltySnapshot extends Model
     protected $fillable = [
         'rr_document_id',
         'rake_id',
+        'rake_charge_id',
         'penalty_code',
         'amount',
         'wagon_number',
@@ -27,6 +28,11 @@ final class RrPenaltySnapshot extends Model
     public function rake(): BelongsTo
     {
         return $this->belongsTo(Rake::class);
+    }
+
+    public function rakeCharge(): BelongsTo
+    {
+        return $this->belongsTo(RakeCharge::class);
     }
 
     protected function casts(): array

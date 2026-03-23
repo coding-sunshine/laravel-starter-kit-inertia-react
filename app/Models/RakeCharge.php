@@ -6,6 +6,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 final class RakeCharge extends Model
 {
@@ -34,5 +35,20 @@ final class RakeCharge extends Model
     public function diverrtDestination(): BelongsTo
     {
         return $this->belongsTo(DiverrtDestination::class, 'diverrt_destination_id');
+    }
+
+    public function rrCharges(): HasMany
+    {
+        return $this->hasMany(RrCharge::class);
+    }
+
+    public function rrPenaltySnapshots(): HasMany
+    {
+        return $this->hasMany(RrPenaltySnapshot::class);
+    }
+
+    public function appliedPenalties(): HasMany
+    {
+        return $this->hasMany(AppliedPenalty::class);
     }
 }

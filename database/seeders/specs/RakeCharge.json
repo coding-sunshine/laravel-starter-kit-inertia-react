@@ -61,6 +61,18 @@
         "diverrtDestination": {
             "type": "belongsTo",
             "model": "DiverrtDestination"
+        },
+        "rrCharges": {
+            "type": "hasMany",
+            "model": "RrCharge"
+        },
+        "rrPenaltySnapshots": {
+            "type": "hasMany",
+            "model": "RrPenaltySnapshot"
+        },
+        "appliedPenalties": {
+            "type": "hasMany",
+            "model": "AppliedPenalty"
         }
     },
     "value_hints": [],
