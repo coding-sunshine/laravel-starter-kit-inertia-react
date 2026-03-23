@@ -8,8 +8,8 @@ import {
 } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link } from '@inertiajs/react';
-import { Download, FileText, Train, Plus } from 'lucide-react';
+import { Head, Link, router } from '@inertiajs/react';
+import { Download, FileText, Train, Plus, Trash2 } from 'lucide-react';
 
 interface Siding {
     id: number;
@@ -54,9 +54,14 @@ interface Indent {
 interface Props {
     indent: Indent;
     rake?: Rake | null;
+    can_delete_indent?: boolean;
 }
 
-export default function IndentsShow({ indent, rake }: Props) {
+export default function IndentsShow({
+    indent,
+    rake,
+    can_delete_indent = false,
+}: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: '/dashboard' },
         { title: 'Indents', href: '/indents' },
@@ -92,6 +97,26 @@ export default function IndentsShow({ indent, rake }: Props) {
                                 Edit
                             </Button>
                         </Link>
+                        {can_delete_indent && (
+                            <Button
+                                variant="destructive"
+                                size="sm"
+                                type="button"
+                                onClick={() => {
+                                    if (
+                                        !window.confirm(
+                                            'Delete this indent? This cannot be undone.',
+                                        )
+                                    ) {
+                                        return;
+                                    }
+                                    router.delete(`/indents/${indent.id}`);
+                                }}
+                            >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                            </Button>
+                        )}
                     </div>
                 </div>
 

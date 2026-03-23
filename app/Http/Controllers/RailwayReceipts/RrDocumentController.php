@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\RailwayReceipts;
 
+use App\Actions\DeleteRrDocumentAction;
 use App\DataTables\RrDocumentDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\PowerPlant;
@@ -132,10 +133,17 @@ final class RrDocumentController extends Controller
             ? PowerPlant::query()->where('code', $rrDocument->to_station_code)->first(['id', 'name', 'code'])
             : null;
 
+        $user = $request->user();
+        $canDeleteRr = $user !== null && (
+            $user->can('bypass-permissions')
+            || $user->hasPermissionTo('sections.railway_receipts.delete')
+        );
+
         return Inertia::render('railway-receipts/show', [
             'rrDocument' => $rrDocument,
             'fromSiding' => $fromSiding,
             'toPowerPlant' => $toPowerPlant,
+            'can_delete_rr' => $canDeleteRr,
         ]);
     }
 
@@ -306,5 +314,13 @@ final class RrDocumentController extends Controller
 
         return back()
             ->with('success', 'RR document updated.');
+    }
+
+    public function destroy(RrDocument $rrDocument, DeleteRrDocumentAction $deleteRrDocument): RedirectResponse
+    {
+        $deleteRrDocument->handle($rrDocument);
+
+        return to_route('railway-receipts.index')
+            ->with('success', 'Railway receipt deleted.');
     }
 }

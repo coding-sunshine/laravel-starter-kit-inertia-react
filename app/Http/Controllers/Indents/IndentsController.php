@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Indents;
 
+use App\Actions\DeleteIndentAction;
 use App\Http\Controllers\Controller;
 use App\Models\Indent;
 use App\Models\PowerPlant;
@@ -194,9 +195,16 @@ final class IndentsController extends Controller
             || $indent->getFirstMedia('indent_confirmation_pdf');
         $indent->setAttribute('indent_pdf_download_url', $hasPdf ? route('indents.pdf', $indent) : null);
 
+        $user = $request->user();
+        $canDeleteIndent = $rake === null && $user !== null && (
+            $user->can('bypass-permissions')
+            || $user->hasPermissionTo('sections.indents.delete')
+        );
+
         return Inertia::render('indents/show', [
             'indent' => $indent,
             'rake' => $rake,
+            'can_delete_indent' => $canDeleteIndent,
         ]);
     }
 
@@ -427,6 +435,18 @@ final class IndentsController extends Controller
 
         return to_route('rakes.show', $rake)
             ->with('success', 'Rake created from completed indent successfully.');
+    }
+
+    public function destroy(Request $request, Indent $indent, DeleteIndentAction $deleteIndent): RedirectResponse
+    {
+        try {
+            $deleteIndent->handle($indent);
+        } catch (InvalidArgumentException $e) {
+            return back()->withErrors(['delete' => $e->getMessage()]);
+        }
+
+        return to_route('indents.index')
+            ->with('success', 'Indent deleted.');
     }
 
     private function applyIndentAt(Indent $indent, mixed $value): void

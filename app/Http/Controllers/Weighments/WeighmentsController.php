@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Weighments;
 
+use App\Actions\DeleteStandaloneHistoricalWeighmentAction;
 use App\Http\Controllers\Controller;
 use App\Models\Rake;
 use App\Models\Siding;
+use App\Models\User;
 use App\Models\Weighment;
 use App\Services\RakeWeighmentPdfImporter;
 use App\Services\WeighmentPdfImporter;
+use App\Support\RrmcsDeletionRules;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -22,27 +25,52 @@ final class WeighmentsController extends Controller
 {
     public function index(Request $request): Response
     {
-        $weighments = Weighment::query()
+        /** @var User $user */
+        $user = $request->user();
+
+        $sidingIds = $user->isSuperAdmin()
+            ? Siding::query()->pluck('id')->all()
+            : $user->accessibleSidings()->get()->pluck('id')->all();
+
+        $query = Weighment::query()
             ->with('rake')
-            ->orderByDesc('created_at')
-            ->limit(100)
-            ->get();
+            ->orderByDesc('created_at');
+
+        if ($sidingIds === []) {
+            $query->whereRaw('0 = 1');
+        } else {
+            $query->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
+        }
+
+        $weighments = $query->limit(100)->get();
 
         return Inertia::render('weighments/index', [
             'weighments' => $weighments,
         ]);
     }
 
-    public function show(Weighment $weighment): Response
+    public function show(Request $request, Weighment $weighment): Response
     {
+        /** @var User $user */
+        $user = $request->user();
+
         $weighment->load([
             'rake.siding',
             'rake.wagons',
             'rakeWagonWeighments.wagon',
         ]);
 
+        $this->assertUserCanAccessWeighmentRakeSiding($user, $weighment);
+
+        $canDeleteWeighment = RrmcsDeletionRules::isWeighmentDeletableFromStandaloneModule($weighment)
+            && (
+                $user->can('bypass-permissions')
+                || $user->hasPermissionTo('sections.weighments.delete')
+            );
+
         return Inertia::render('weighments/show', [
             'weighment' => $weighment,
+            'can_delete_weighment' => $canDeleteWeighment,
         ]);
     }
 
@@ -56,6 +84,7 @@ final class WeighmentsController extends Controller
             'rake_id' => ['nullable', 'integer', 'exists:rakes,id'],
         ]);
 
+        /** @var User $user */
         $user = $request->user();
         $userId = (int) $user->id;
         $pdf = $validated['pdf'];
@@ -110,6 +139,16 @@ final class WeighmentsController extends Controller
                 ->with('success', 'Weighment recorded.');
         }
 
+        $sidingIds = $user->isSuperAdmin()
+            ? Siding::query()->pluck('id')->all()
+            : $user->accessibleSidings()->get()->pluck('id')->all();
+
+        if ($sidingIds === []) {
+            return back()
+                ->withErrors(['pdf' => 'You have no assigned sidings for weighment import.'])
+                ->withInput();
+        }
+
         try {
             Log::info('WeighmentsController: received PDF upload for import', [
                 'user_id' => $userId,
@@ -119,7 +158,8 @@ final class WeighmentsController extends Controller
 
             $weighment = $historicalImporter->import(
                 $pdf,
-                $userId
+                $userId,
+                $sidingIds
             );
         } catch (InvalidArgumentException $e) {
             Log::warning('WeighmentsController: import failed with validation error', [
@@ -144,5 +184,31 @@ final class WeighmentsController extends Controller
 
         return to_route('weighments.show', $weighment)
             ->with('success', 'Weighment PDF imported successfully.');
+    }
+
+    public function destroy(Request $request, Weighment $weighment, DeleteStandaloneHistoricalWeighmentAction $action): RedirectResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $weighment->loadMissing('rake');
+        $this->assertUserCanAccessWeighmentRakeSiding($user, $weighment);
+
+        try {
+            $action->handle($weighment);
+        } catch (InvalidArgumentException $e) {
+            return back()->withErrors(['delete' => $e->getMessage()]);
+        }
+
+        return to_route('weighments.index')
+            ->with('success', 'Historical weighment and related rake data removed.');
+    }
+
+    private function assertUserCanAccessWeighmentRakeSiding(User $user, Weighment $weighment): void
+    {
+        $rake = $weighment->rake;
+        abort_if($rake === null, 404);
+
+        abort_unless($user->canAccessSiding((int) $rake->siding_id), 403);
     }
 }

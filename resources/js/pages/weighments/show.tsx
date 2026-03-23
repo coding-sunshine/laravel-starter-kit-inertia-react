@@ -1,7 +1,9 @@
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, usePage } from '@inertiajs/react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Head, router, usePage } from '@inertiajs/react';
+import { Trash2 } from 'lucide-react';
 
 interface Siding {
     id: number;
@@ -67,9 +69,13 @@ interface Weighment {
 
 interface Props {
     weighment: Weighment;
+    can_delete_weighment?: boolean;
 }
 
-export default function WeighmentShow({ weighment }: Props) {
+export default function WeighmentShow({
+    weighment,
+    can_delete_weighment = false,
+}: Props) {
     const { flash } = usePage<{ flash?: { success?: string } }>().props;
 
     const breadcrumbs: BreadcrumbItem[] = [
@@ -92,7 +98,29 @@ export default function WeighmentShow({ weighment }: Props) {
                     </div>
                 )}
 
-                <h1 className="text-3xl font-bold">Weighment details</h1>
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                    <h1 className="text-3xl font-bold">Weighment details</h1>
+                    {can_delete_weighment && (
+                        <Button
+                            variant="destructive"
+                            size="sm"
+                            type="button"
+                            onClick={() => {
+                                if (
+                                    !window.confirm(
+                                        'Remove this historical weighment import? The associated rake and wagon data created from this PDF will be deleted. This cannot be undone.',
+                                    )
+                                ) {
+                                    return;
+                                }
+                                router.delete(`/weighments/${weighment.id}`);
+                            }}
+                        >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete import
+                        </Button>
+                    )}
+                </div>
 
                 <div className="grid gap-4 md:grid-cols-2">
                     <Card>
