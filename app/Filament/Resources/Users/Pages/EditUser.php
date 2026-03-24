@@ -40,23 +40,44 @@ final class EditUser extends EditRecord
     private ?string $pendingRoleName = null;
 
     /**
+     * @var list<int>
+     */
+    private array $pendingSidingIds = [];
+
+    /**
+     * @var list<int>
+     */
+    private array $pendingShiftIds = [];
+
+    private bool $usesSectionAssignments = false;
+
+    /**
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
     public function mutateFormDataBeforeFill(array $data): array
     {
-        $primary = DB::table('user_siding')
-            ->where('user_id', $this->getRecord()->getKey())
-            ->where('is_primary', true)
-            ->first();
-        $data['siding_id'] = $this->getRecord()->siding_id ?? $primary?->siding_id;
-        $data['siding_shifts'] = $this->getRecord()->sidingShifts()->value('siding_shifts.id');
-
         $roleTeamKey = config('permission.column_names.team_foreign_key', 'organization_id');
         $data['roles'] = $this->getRecord()
             ->roles()
             ->wherePivot($roleTeamKey, 0)
             ->value('id');
+
+        $usesSectionAssignments = $this->roleUsesSectionAssignments($data['roles'] !== null ? (int) $data['roles'] : null);
+        if ($usesSectionAssignments) {
+            $data['siding_ids_multi'] = DB::table('user_siding')
+                ->where('user_id', $this->getRecord()->getKey())
+                ->orderByDesc('is_primary')
+                ->orderBy('siding_id')
+                ->pluck('siding_id')
+                ->all();
+            $data['siding_shifts_multi'] = $this->getRecord()->sidingShifts()->pluck('siding_shifts.id')->all();
+            $data['siding_id_single'] = null;
+        } else {
+            $data['siding_id_single'] = $this->getRecord()->siding_id;
+            $data['siding_ids_multi'] = [];
+            $data['siding_shifts_multi'] = [];
+        }
 
         return $data;
     }
@@ -108,28 +129,41 @@ final class EditUser extends EditRecord
      */
     protected function mutateFormDataBeforeSave(array $data): array
     {
-        $this->pendingSidingId = isset($data['siding_id']) ? (int) $data['siding_id'] : null;
-        unset($data['siding_id']);
-
-        $this->pendingSidingShiftsPivot = [];
-        $shiftId = isset($data['siding_shifts']) && $data['siding_shifts'] !== ''
-            ? (int) $data['siding_shifts']
-            : null;
-        if ($shiftId !== null) {
-            $this->pendingSidingShiftsPivot[$shiftId] = [
-                'assigned_at' => now(),
-                'is_active' => true,
-            ];
-        }
-        unset($data['siding_shifts']);
-
         $this->pendingRoleId = isset($data['roles']) && $data['roles'] !== ''
             ? (int) $data['roles']
             : null;
         $this->pendingRoleName = $this->pendingRoleId !== null
             ? Role::query()->whereKey($this->pendingRoleId)->value('name')
             : null;
+        $this->usesSectionAssignments = $this->roleUsesSectionAssignments($this->pendingRoleId);
         unset($data['roles']);
+
+        $this->pendingSidingShiftsPivot = [];
+        $this->pendingSidingIds = [];
+        $this->pendingShiftIds = [];
+
+        if ($this->usesSectionAssignments) {
+            $this->pendingSidingIds = array_values(array_filter(array_map(
+                intval(...),
+                (array) ($data['siding_ids_multi'] ?? [])
+            )));
+            $this->pendingShiftIds = array_values(array_filter(array_map(
+                intval(...),
+                (array) ($data['siding_shifts_multi'] ?? [])
+            )));
+            foreach ($this->pendingShiftIds as $shiftId) {
+                $this->pendingSidingShiftsPivot[$shiftId] = [
+                    'assigned_at' => now(),
+                    'is_active' => true,
+                ];
+            }
+            $this->pendingSidingId = null;
+        } else {
+            $this->pendingSidingId = isset($data['siding_id_single']) && $data['siding_id_single'] !== ''
+                ? (int) $data['siding_id_single']
+                : null;
+        }
+        unset($data['siding_ids_multi'], $data['siding_id_single'], $data['siding_shifts_multi']);
 
         $user = $this->getRecord();
         if (! $user->isLastSuperAdmin() || ! $user->hasRole('super-admin')) {
@@ -158,35 +192,30 @@ final class EditUser extends EditRecord
 
     protected function afterSave(): void
     {
-        if ($this->pendingRoleName === 'admin') {
+        if (! $this->usesSectionAssignments) {
             $this->record->forceFill(['siding_id' => $this->pendingSidingId])->save();
             DB::table('user_siding')->where('user_id', $this->record->getKey())->delete();
             $this->record->sidingShifts()->sync([]);
         }
 
-        if (in_array($this->pendingRoleName, ['user', 'empty-weighment-shift'], true) && $this->pendingSidingId !== null) {
+        if ($this->usesSectionAssignments) {
             $this->record->forceFill(['siding_id' => null])->save();
-            DB::table('user_siding')->updateOrInsert(
-                [
-                    'user_id' => $this->record->getKey(),
-                    'siding_id' => $this->pendingSidingId,
-                ],
-                [
-                    'is_primary' => true,
-                    'updated_at' => now(),
-                    'created_at' => now(),
-                ]
-            );
 
-            DB::table('user_siding')
-                ->where('user_id', $this->record->getKey())
-                ->where('siding_id', '!=', $this->pendingSidingId)
-                ->delete();
+            DB::table('user_siding')->where('user_id', $this->record->getKey())->delete();
+            foreach ($this->pendingSidingIds as $index => $sidingId) {
+                DB::table('user_siding')->insert([
+                    'user_id' => $this->record->getKey(),
+                    'siding_id' => $sidingId,
+                    'is_primary' => $index === 0,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
         }
 
-        if (in_array($this->pendingRoleName, ['user', 'empty-weighment-shift'], true) && $this->pendingSidingShiftsPivot !== []) {
+        if ($this->usesSectionAssignments) {
             $this->record->sidingShifts()->sync($this->pendingSidingShiftsPivot);
-        } elseif (! in_array($this->pendingRoleName, ['user', 'empty-weighment-shift'], true)) {
+        } else {
             $this->record->sidingShifts()->sync([]);
         }
 
@@ -199,5 +228,21 @@ final class EditUser extends EditRecord
             $this->previousRoleNames,
             ActivityLogRbac::roleNamesFrom($this->record)
         );
+    }
+
+    private function roleUsesSectionAssignments(?int $roleId): bool
+    {
+        if ($roleId === null) {
+            return false;
+        }
+
+        return Role::query()
+            ->whereKey($roleId)
+            ->where(function ($query): void {
+                $query
+                    ->whereHas('permissions', fn ($q) => $q->where('name', 'like', 'sections.railway_siding_record_data.%'))
+                    ->orWhereHas('permissions', fn ($q) => $q->where('name', 'like', 'sections.railway_siding_empty_weighment.%'));
+            })
+            ->exists();
     }
 }
