@@ -11,6 +11,7 @@ import { type BreadcrumbItem } from '@/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import ShiftTabs from './shift-tabs';
 import VehicleEntryTable from './vehicle-entry-table';
+import { useCan } from '@/hooks/use-can';
 
 interface DailyVehicleEntry {
   id: number;
@@ -72,6 +73,7 @@ interface Props {
   shiftTimes: Record<number, ShiftTime>;
   sidings: Siding[];
   sidingId?: number | null;
+  allowedShifts?: number[];
   /** When true, user only sees their assigned shift; hide shift/siding switchers. */
   restrictToAssignedShift?: boolean;
 }
@@ -85,8 +87,14 @@ export default function DailyVehicleEntriesIndex({
   shiftTimes,
   sidings,
   sidingId: sidingIdProp,
+  allowedShifts = [1, 2, 3],
   restrictToAssignedShift = false,
 }: Props) {
+  const canCreate = useCan('sections.railway_siding_record_data.create');
+  const canUpdate = useCan('sections.railway_siding_record_data.update');
+  const canDelete = useCan('sections.railway_siding_record_data.delete');
+  const canExport = useCan('sections.railway_siding_record_data.view');
+
   const [entries, setEntries] = useState(() =>
     Array.isArray(entriesProp) ? entriesProp : []
   );
@@ -123,6 +131,14 @@ export default function DailyVehicleEntriesIndex({
       setSelectedSidingId(firstSidingId);
     }
   }, [sidingIdProp, firstSidingId]);
+
+  useEffect(() => {
+    if (!allowedShifts.includes(activeShiftState)) {
+      const fallbackShift = allowedShifts[0] ?? 1;
+      setActiveShiftState(fallbackShift);
+      setExportShift(String(fallbackShift));
+    }
+  }, [allowedShifts, activeShiftState]);
 
   const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -341,20 +357,24 @@ export default function DailyVehicleEntriesIndex({
                     <SelectValue placeholder="Export" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="1">Shift 1</SelectItem>
-                    <SelectItem value="2">Shift 2</SelectItem>
-                    <SelectItem value="3">Shift 3</SelectItem>
+                    {allowedShifts.map((shift) => (
+                      <SelectItem key={shift} value={String(shift)}>
+                        Shift {shift}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
-                <Button
-                  onClick={handleExport}
-                  disabled={isExporting}
-                  variant="outline"
-                  className="flex items-center gap-2"
-                >
-                  <Download className="h-4 w-4" />
-                  {isExporting ? 'Exporting...' : 'Export'}
-                </Button>
+                {canExport && (
+                  <Button
+                    onClick={handleExport}
+                    disabled={isExporting}
+                    variant="outline"
+                    className="flex items-center gap-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    {isExporting ? 'Exporting...' : 'Export'}
+                  </Button>
+                )}
               </div>
             )}
             {restrictToAssignedShift && (
@@ -362,15 +382,17 @@ export default function DailyVehicleEntriesIndex({
                 <span className="text-sm text-muted-foreground">
                   Your shift: {sidings.find((s) => s.id === effectiveSidingId)?.name ?? '—'} · Shift {activeShiftState}
                 </span>
-                <Button
-                  onClick={handleExport}
-                  disabled={isExporting}
-                  variant="outline"
-                  className="flex items-center gap-2"
-                >
-                  <Download className="h-4 w-4" />
-                  {isExporting ? 'Exporting...' : 'Export'}
-                </Button>
+                {canExport && (
+                  <Button
+                    onClick={handleExport}
+                    disabled={isExporting}
+                    variant="outline"
+                    className="flex items-center gap-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    {isExporting ? 'Exporting...' : 'Export'}
+                  </Button>
+                )}
               </div>
             )}
           </div>
@@ -392,7 +414,7 @@ export default function DailyVehicleEntriesIndex({
                 />
               </div>
               <div className="flex gap-2 ml-auto">
-                {[1, 2, 3].map((shift) => (
+                {allowedShifts.map((shift) => (
                   <Badge
                     key={shift}
                     variant={activeShiftState === shift ? "default" : "secondary"}
@@ -418,6 +440,7 @@ export default function DailyVehicleEntriesIndex({
             shiftSummary={shiftSummary}
             shiftStatus={shiftStatus}
             shiftTimes={shiftTimes}
+            allowedShifts={allowedShifts}
           />
           </>
         )}
@@ -430,20 +453,25 @@ export default function DailyVehicleEntriesIndex({
           entries={entriesForSiding}
           date={selectedDate}
           shift={activeShiftState}
+          canCreate={canCreate}
+          canUpdate={canUpdate}
+          canDelete={canDelete}
           onEntryUpdated={handleEntryUpdated}
           onEntryDeleted={handleEntryDeleted}
           onAddRow={handleAddRow}
           isAddingRow={isAddingRow}
           addRowButton={
             <>
-              <Button
-                onClick={() => handleAddRow(5)}
-                disabled={isAddingRow}
-                className="flex items-center gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                {isAddingRow ? 'Adding...' : 'Add 5 Rows'}
-              </Button>
+              {canCreate && (
+                <Button
+                  onClick={() => handleAddRow(5)}
+                  disabled={isAddingRow}
+                  className="flex items-center gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  {isAddingRow ? 'Adding...' : 'Add 5 Rows'}
+                </Button>
+              )}
               {addRowError && (
                 <span className="text-sm text-destructive">{addRowError}</span>
               )}

@@ -62,6 +62,7 @@ interface Props {
   shiftTimes: Record<number, ShiftTime>;
   sidings: Siding[];
   sidingId?: number | null;
+  allowedShifts?: number[];
   restrictToAssignedShift?: boolean;
 }
 
@@ -74,6 +75,7 @@ export default function RailwaySidingEmptyWeighmentIndex({
   shiftTimes,
   sidings,
   sidingId: sidingIdProp,
+  allowedShifts = [1, 2, 3],
   restrictToAssignedShift = false,
 }: Props) {
   const [entries, setEntries] = useState(() =>
@@ -108,6 +110,14 @@ export default function RailwaySidingEmptyWeighmentIndex({
       setSelectedSidingId(firstSidingId);
     }
   }, [sidingIdProp, firstSidingId]);
+
+  useEffect(() => {
+    if (!allowedShifts.includes(activeShiftState)) {
+      const fallbackShift = allowedShifts[0] ?? 1;
+      setActiveShiftState(fallbackShift);
+      setExportShift(String(fallbackShift));
+    }
+  }, [allowedShifts, activeShiftState]);
 
   const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -317,9 +327,11 @@ export default function RailwaySidingEmptyWeighmentIndex({
                     <SelectValue placeholder="Export" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="1">Shift 1</SelectItem>
-                    <SelectItem value="2">Shift 2</SelectItem>
-                    <SelectItem value="3">Shift 3</SelectItem>
+                    {allowedShifts.map((shift) => (
+                      <SelectItem key={shift} value={String(shift)}>
+                        Shift {shift}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <Button
@@ -367,7 +379,7 @@ export default function RailwaySidingEmptyWeighmentIndex({
                     />
                   </div>
                   <div className="flex gap-2 ml-auto">
-                    {[1, 2, 3].map((shift) => (
+                    {allowedShifts.map((shift) => (
                       <Badge
                         key={shift}
                         variant={activeShiftState === shift ? 'default' : 'secondary'}
@@ -393,6 +405,7 @@ export default function RailwaySidingEmptyWeighmentIndex({
               shiftSummary={shiftSummary}
               shiftStatus={shiftStatus}
               shiftTimes={shiftTimes}
+              allowedShifts={allowedShifts}
             />
           </>
         )}

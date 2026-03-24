@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Models\DailyVehicleEntry;
 use App\Models\Siding;
+use App\Models\SidingShift;
 use App\Models\VehicleWorkorder;
 use App\Services\DailyVehicleEntryService;
 use App\Services\ShiftValidationService;
@@ -29,38 +30,65 @@ final class DailyVehicleEntryController extends Controller
     public function index(Request $request): InertiaResponse|RedirectResponse
     {
         $user = Auth::user();
-        $assignedShift = $user?->getAssignedRoadDispatchShift();
+        $assignedShifts = $user?->activeSidingShifts()->with('siding:id,name')->get();
+        if ($assignedShifts === null || $assignedShifts->isEmpty()) {
+            abort(403, 'No shift and siding assignment found for your account.');
+        }
+        $allowedSidingIds = $assignedShifts->pluck('siding_id')->unique()->values();
+        $sidingShiftPairs = $assignedShifts->map(
+            fn (SidingShift $shift): string => $shift->siding_id.'|'.((int) $shift->sort_order)
+        )->values();
+        $firstAssignment = $assignedShifts->first();
+        $restrictToAssignedShift = $assignedShifts->count() === 1 && $firstAssignment !== null;
 
         $entryType = DailyVehicleEntry::ENTRY_TYPE_ROAD_DISPATCH;
 
         $date = $request->get('date', now()->format('Y-m-d'));
-        $sidingsOrdered = Siding::query()->orderBy('name')->get(['id', 'name']);
+        $sidingsOrdered = Siding::query()
+            ->whereIn('id', $allowedSidingIds->all())
+            ->orderBy('name')
+            ->get(['id', 'name']);
+        if ($sidingsOrdered->isEmpty()) {
+            abort(403, 'No siding access found for your account.');
+        }
         $firstSidingId = $sidingsOrdered->first()?->id;
 
         $sidingId = $request->has('siding_id') ? (int) $request->get('siding_id') : $firstSidingId;
-        $sidingIdForShifts = $sidingId ?? $firstSidingId;
-
-        $restrictToAssignedShift = false;
-        if ($assignedShift !== null) {
-            $restrictToAssignedShift = true;
-            $sidingId = $assignedShift['siding_id'];
+        if (! $allowedSidingIds->contains($sidingId)) {
+            abort(403, 'You are not allowed to access this siding.');
         }
+        if ($restrictToAssignedShift) {
+            $sidingId = $firstAssignment->siding_id;
+        }
+        $sidingIdForShifts = $sidingId ?? $firstSidingId;
 
         $isToday = $date === now()->format('Y-m-d');
         if ($isToday) {
             $runningShift = $this->shiftValidation->getCurrentActiveShift(null, $sidingIdForShifts);
             $activeShift = $request->has('shift')
                 ? (int) $request->get('shift')
-                : ($assignedShift['shift'] ?? $runningShift);
+                : ($restrictToAssignedShift ? (int) $firstAssignment->sort_order : $runningShift);
         } else {
             $activeShift = (int) $request->get('shift', 1);
-            if ($assignedShift !== null) {
-                $activeShift = $assignedShift['shift'];
+            if ($restrictToAssignedShift) {
+                $activeShift = (int) $firstAssignment->sort_order;
             }
         }
 
-        if ($assignedShift !== null) {
-            $activeShift = $assignedShift['shift'];
+        if ($restrictToAssignedShift) {
+            $activeShift = (int) $firstAssignment->sort_order;
+        }
+
+        $allowedShifts = $assignedShifts
+            ->where('siding_id', $sidingId)
+            ->pluck('sort_order')
+            ->map(fn (mixed $shift): int => (int) $shift)
+            ->unique()
+            ->sort()
+            ->values();
+
+        if (! $sidingShiftPairs->contains($sidingId.'|'.$activeShift)) {
+            abort(403, 'You are not allowed to access this shift for the selected siding.');
         }
 
         if ($isToday && ! $restrictToAssignedShift) {
@@ -92,6 +120,7 @@ final class DailyVehicleEntryController extends Controller
             'shiftTimes' => $shiftTimes,
             'sidings' => $sidings,
             'sidingId' => $sidingId,
+            'allowedShifts' => $allowedShifts->all(),
             'restrictToAssignedShift' => $restrictToAssignedShift,
         ]);
     }
@@ -99,7 +128,15 @@ final class DailyVehicleEntryController extends Controller
     public function store(Request $request): RedirectResponse|JsonResponse
     {
         $user = Auth::user();
-        $assignedShift = $user?->getAssignedRoadDispatchShift();
+        $assignedShifts = $user?->activeSidingShifts()->get(['siding_id', 'sort_order']);
+        if ($assignedShifts === null || $assignedShifts->isEmpty()) {
+            abort(403, 'No shift and siding assignment found for your account.');
+        }
+        $firstAssignment = $assignedShifts->first();
+        $isShiftRestrictedUser = $assignedShifts->count() === 1 && $firstAssignment !== null;
+        $sidingShiftPairs = $assignedShifts->map(
+            fn (SidingShift $shift): string => $shift->siding_id.'|'.((int) $shift->sort_order)
+        )->values();
 
         $data = $request->validate([
             'siding_id' => 'required|exists:sidings,id',
@@ -117,9 +154,11 @@ final class DailyVehicleEntryController extends Controller
             'remarks' => 'nullable|string|max:2000',
         ]);
 
-        if ($assignedShift !== null) {
-            $data['siding_id'] = $assignedShift['siding_id'];
-            $data['shift'] = $assignedShift['shift'];
+        if ($isShiftRestrictedUser) {
+            $data['siding_id'] = $firstAssignment->siding_id;
+            $data['shift'] = (int) $firstAssignment->sort_order;
+        } elseif (! $sidingShiftPairs->contains(((int) $data['siding_id']).'|'.((int) $data['shift']))) {
+            abort(403, 'You are not allowed to access this shift for the selected siding.');
         }
 
         if ($data['entry_date'] === now()->format('Y-m-d')) {
@@ -264,7 +303,16 @@ final class DailyVehicleEntryController extends Controller
     public function export(Request $request): Response|RedirectResponse
     {
         $user = Auth::user();
-        $assignedShift = $user?->getAssignedRoadDispatchShift();
+        $assignedShifts = $user?->activeSidingShifts()->get(['siding_id', 'sort_order']);
+        if ($assignedShifts === null || $assignedShifts->isEmpty()) {
+            abort(403, 'No shift and siding assignment found for your account.');
+        }
+        $firstAssignment = $assignedShifts->first();
+        $isShiftRestrictedUser = $assignedShifts->count() === 1 && $firstAssignment !== null;
+        $allowedSidingIds = $assignedShifts->pluck('siding_id')->unique()->values();
+        $sidingShiftPairs = $assignedShifts->map(
+            fn (SidingShift $shift): string => $shift->siding_id.'|'.((int) $shift->sort_order)
+        )->values();
 
         $data = $request->validate([
             'date' => 'required|date_format:Y-m-d',
@@ -272,9 +320,15 @@ final class DailyVehicleEntryController extends Controller
             'shift' => 'required|in:all,1,2,3',
         ]);
 
-        if ($assignedShift !== null) {
-            $data['siding'] = $assignedShift['siding_id'];
-            $data['shift'] = (string) $assignedShift['shift'];
+        if ($isShiftRestrictedUser) {
+            $data['siding'] = $firstAssignment->siding_id;
+            $data['shift'] = (string) $firstAssignment->sort_order;
+        }
+        if (! $allowedSidingIds->contains((int) $data['siding'])) {
+            abort(403, 'You are not allowed to access this siding.');
+        }
+        if ($data['shift'] !== 'all' && ! $sidingShiftPairs->contains(((int) $data['siding']).'|'.((int) $data['shift']))) {
+            abort(403, 'You are not allowed to access this shift for the selected siding.');
         }
 
         try {
@@ -301,11 +355,16 @@ final class DailyVehicleEntryController extends Controller
      */
     private function authorizeEntryForShiftUser(DailyVehicleEntry $entry): void
     {
-        $assigned = Auth::user()?->getAssignedRoadDispatchShift();
-        if ($assigned === null) {
-            return;
+        $user = Auth::user();
+        $assignedShifts = $user?->activeSidingShifts()->get(['siding_id', 'sort_order']);
+        if ($assignedShifts === null || $assignedShifts->isEmpty()) {
+            abort(403, 'No shift and siding assignment found for your account.');
         }
-        if ($entry->siding_id !== $assigned['siding_id'] || (int) $entry->shift !== $assigned['shift']) {
+        $pair = $entry->siding_id.'|'.((int) $entry->shift);
+        $allowedPairs = $assignedShifts->map(
+            fn (SidingShift $shift): string => $shift->siding_id.'|'.((int) $shift->sort_order)
+        )->values();
+        if (! $allowedPairs->contains($pair)) {
             abort(403, 'You can only manage entries for your assigned shift.');
         }
     }

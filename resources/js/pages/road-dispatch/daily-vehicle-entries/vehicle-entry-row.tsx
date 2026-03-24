@@ -52,6 +52,8 @@ interface VehicleEntryRowProps {
   serialNumber: number;
   date: string;
   shift: number;
+  canUpdate?: boolean;
+  canDelete?: boolean;
   onEntryUpdated?: (entry: DailyVehicleEntry) => void;
   onEntryDeleted?: (id: number) => void;
 }
@@ -61,6 +63,8 @@ export default function VehicleEntryRow({
   serialNumber,
   date: _date,
   shift: _shift,
+  canUpdate = false,
+  canDelete = false,
   onEntryUpdated,
   onEntryDeleted,
 }: VehicleEntryRowProps) {
@@ -117,6 +121,9 @@ export default function VehicleEntryRow({
   const debounceTimerRef = useRef<NodeJS.Timeout>();
 
   const save = useCallback(async () => {
+    if (!canUpdate) {
+      return;
+    }
     const dataToSave = formDataRef.current;
     setIsSaving(true);
     setShowSuccess(false);
@@ -158,7 +165,7 @@ export default function VehicleEntryRow({
     } finally {
       setIsSaving(false);
     }
-  }, [entry.id, entry, onEntryUpdated, onEntryDeleted]);
+  }, [canUpdate, entry.id, entry, onEntryUpdated, onEntryDeleted]);
 
   const debouncedSave = useCallback(() => {
     clearTimeout(debounceTimerRef.current);
@@ -199,6 +206,9 @@ export default function VehicleEntryRow({
   };
 
   const handleDelete = async () => {
+    if (!canDelete) {
+      return;
+    }
     setShowDetailModal(false);
     if (!confirm('Are you sure you want to delete this entry? This action cannot be undone.')) {
       return;
@@ -267,17 +277,19 @@ export default function VehicleEntryRow({
       >
         <TableCell className="px-2 py-3 font-medium border-t border-r border-gray-300 min-h-[4rem]">
           <div className="flex items-center gap-2">
-            <div className={`opacity-0 group-hover:opacity-100 transition-opacity duration-200 ${showContextMenu ? 'opacity-100' : ''}`}>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => setShowDetailModal(true)}
-                className="h-9 w-9 p-0 min-w-0"
-                title="More options"
-              >
-                <MoreHorizontal className="h-3 w-3" />
-              </Button>
-            </div>
+            {(canUpdate || canDelete) && (
+              <div className={`opacity-0 group-hover:opacity-100 transition-opacity duration-200 ${showContextMenu ? 'opacity-100' : ''}`}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setShowDetailModal(true)}
+                  className="h-9 w-9 p-0 min-w-0"
+                  title="More options"
+                >
+                  <MoreHorizontal className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
             {serialNumber}
           </div>
         </TableCell>
@@ -289,6 +301,7 @@ export default function VehicleEntryRow({
       <TableCell className="px-2 py-3 border-t border-r border-gray-300 min-h-[4rem]">
         <Input
           value={formData.e_challan_no}
+          disabled={!canUpdate}
           onChange={(e) => {
             updateField('e_challan_no', e.target.value);
             debouncedSave();
@@ -301,6 +314,7 @@ export default function VehicleEntryRow({
       <TableCell className="px-2 py-3 border-t border-r border-gray-300 min-h-[4rem]">
         <Input
           value={formData.vehicle_no}
+          disabled={!canUpdate}
           onChange={(e) => {
             updateField('vehicle_no', e.target.value);
           }}
@@ -355,6 +369,7 @@ export default function VehicleEntryRow({
       <TableCell className="px-2 py-3 border-t border-r border-gray-300 min-h-[4rem]">
         <Input
           value={formData.trip_id_no}
+          disabled={!canUpdate}
           onChange={(e) => {
             updateField('trip_id_no', e.target.value);
             debouncedSave();
@@ -367,6 +382,7 @@ export default function VehicleEntryRow({
       <TableCell className="px-2 py-3 border-t border-r border-gray-300 min-h-[4rem]">
         <Input
           value={formData.transport_name}
+          disabled={!canUpdate}
           onChange={(e) => {
             updateField('transport_name', e.target.value);
             debouncedSave();
@@ -381,6 +397,7 @@ export default function VehicleEntryRow({
           type="number"
           step="0.01"
           value={formData.gross_wt}
+          disabled={!canUpdate}
           onChange={(e) => {
             updateField('gross_wt', e.target.value);
             debouncedSave();
@@ -395,6 +412,7 @@ export default function VehicleEntryRow({
           type="number"
           step="0.01"
           value={formData.tare_wt}
+          disabled={!canUpdate}
           onChange={(e) => {
             updateField('tare_wt', e.target.value);
             debouncedSave();
@@ -415,6 +433,7 @@ export default function VehicleEntryRow({
       <TableCell className="px-2 py-3 border-t border-r border-gray-300 min-h-[4rem]">
         <Input
           value={formData.wb_no}
+          disabled={!canUpdate}
           onChange={(e) => {
             updateField('wb_no', e.target.value);
             debouncedSave();
@@ -427,6 +446,7 @@ export default function VehicleEntryRow({
       <TableCell className="px-2 py-3 border-t border-r border-gray-300 min-h-[4rem]">
         <Input
           value={formData.d_challan_no}
+          disabled={!canUpdate}
           onChange={(e) => {
             updateField('d_challan_no', e.target.value);
             debouncedSave();
@@ -439,6 +459,7 @@ export default function VehicleEntryRow({
       <TableCell className="px-2 py-3 border-t border-r border-gray-300 min-h-[4rem]">
         <Select
           value={formData.challan_mode}
+          disabled={!canUpdate}
           onValueChange={(value) => {
             updateField('challan_mode', value as 'offline' | 'online');
             clearTimeout(debounceTimerRef.current);
@@ -487,6 +508,7 @@ export default function VehicleEntryRow({
                 <label className="block text-sm font-medium text-gray-700 mb-1">E Challan No</label>
                 <Input
                   value={formData.e_challan_no}
+                  disabled={!canUpdate}
                   onChange={(e) => updateField('e_challan_no', e.target.value)}
                   placeholder="E Challan No"
                 />
@@ -495,6 +517,7 @@ export default function VehicleEntryRow({
                 <label className="block text-sm font-medium text-gray-700 mb-1">Vehicle No</label>
                 <Input
                   value={formData.vehicle_no}
+                  disabled={!canUpdate}
                   onChange={(e) => updateField('vehicle_no', e.target.value)}
                   placeholder="Vehicle No"
                 />
@@ -505,6 +528,7 @@ export default function VehicleEntryRow({
                   type="number"
                   step="0.01"
                   value={formData.gross_wt}
+                  disabled={!canUpdate}
                   onChange={(e) => updateField('gross_wt', e.target.value)}
                   placeholder="Gross WT"
                 />
@@ -515,6 +539,7 @@ export default function VehicleEntryRow({
                   type="number"
                   step="0.01"
                   value={formData.tare_wt}
+                  disabled={!canUpdate}
                   onChange={(e) => updateField('tare_wt', e.target.value)}
                   placeholder="Tare WT"
                 />
@@ -532,6 +557,7 @@ export default function VehicleEntryRow({
                 <label className="block text-sm font-medium text-gray-700 mb-1">Remarks</label>
                 <textarea
                   value={formData.remarks}
+                  disabled={!canUpdate}
                   onChange={(e) => {
                     updateField('remarks', e.target.value);
                     debouncedSave();
@@ -545,6 +571,7 @@ export default function VehicleEntryRow({
                 <label className="block text-sm font-medium text-gray-700 mb-1">WB No</label>
                 <Input
                   value={formData.wb_no}
+                  disabled={!canUpdate}
                   onChange={(e) => updateField('wb_no', e.target.value)}
                   placeholder="WB No"
                 />
@@ -553,6 +580,7 @@ export default function VehicleEntryRow({
                 <label className="block text-sm font-medium text-gray-700 mb-1">D Challan No</label>
                 <Input
                   value={formData.d_challan_no}
+                  disabled={!canUpdate}
                   onChange={(e) => updateField('d_challan_no', e.target.value)}
                   placeholder="D Challan No"
                 />
@@ -561,6 +589,7 @@ export default function VehicleEntryRow({
                 <label className="block text-sm font-medium text-gray-700 mb-1">Challan Mode</label>
                 <Select
                   value={formData.challan_mode}
+                  disabled={!canUpdate}
                   onValueChange={(value) => updateField('challan_mode', value as 'offline' | 'online')}
                 >
                   <SelectTrigger>
@@ -579,6 +608,7 @@ export default function VehicleEntryRow({
                 <span className="text-sm font-medium text-gray-700">Status:</span>
                 <Select
                   value={formData.status}
+                  disabled={!canUpdate}
                   onValueChange={(value) => updateField('status', value)}
                 >
                   <SelectTrigger className="w-40">
@@ -607,16 +637,18 @@ export default function VehicleEntryRow({
                   Cancel
                 </Button>
 
-                <Button
-                  onClick={save}
-                  disabled={isSaving}
-                  className="min-w-[100px]"
-                >
-                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Edit className="h-4 w-4 mr-2" />}
-                  {isSaving ? 'Saving...' : 'Update'}
-                </Button>
+                {canUpdate && (
+                  <Button
+                    onClick={save}
+                    disabled={isSaving}
+                    className="min-w-[100px]"
+                  >
+                    {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Edit className="h-4 w-4 mr-2" />}
+                    {isSaving ? 'Saving...' : 'Update'}
+                  </Button>
+                )}
 
-                {shouldShowDeleteButton() && (
+                {canDelete && shouldShowDeleteButton() && (
                   <Button
                     variant="destructive"
                     onClick={handleDelete}
