@@ -7,6 +7,7 @@ namespace App\Providers\Filament;
 use A909M\FilamentStateFusion\FilamentStateFusionPlugin;
 use AlizHarb\ActivityLog\ActivityLogPlugin;
 use App\Filament\Pages\Dashboard;
+use App\Filament\Pages\ProductAnalytics;
 use App\Filament\Resources\Permissions\PermissionResource;
 use App\Filament\Resources\Roles\RoleResource;
 use App\Filament\Resources\Users\UserResource;
@@ -35,6 +36,7 @@ final class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
+            ->homeUrl(fn (): string => UserResource::getUrl('index', panel: 'admin'))
             ->authGuard('web')
             ->login()
             ->brandName('RMMS')
@@ -64,6 +66,7 @@ final class AdminPanelProvider extends PanelProvider
             ])
             ->pages([
                 Dashboard::class,
+                ProductAnalytics::class,
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([

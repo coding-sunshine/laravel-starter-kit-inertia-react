@@ -8,5 +8,8 @@ use Filament\Pages\Dashboard as BaseDashboard;
 
 final class Dashboard extends BaseDashboard
 {
+    /** Filament home route redirects to users; dashboard widgets live here. */
+    protected static string $routePath = '/dashboard';
+
     protected static bool $shouldRegisterNavigation = false;
 }
