@@ -40,7 +40,7 @@ final readonly class OptimizePerformance
         return Rake::query()->where('siding_id', $sidingId)
             ->with([
                 'guardInspection',           // One-to-one: no N+1
-                'weighments' => fn ($q) => $q->latest('weighment_time')->limit(3),
+                'rakeWeighments' => fn ($q) => $q->orderByDesc('attempt_no')->orderByDesc('gross_weighment_datetime')->limit(3),
                 'rrDocument' => fn ($q) => $q->latest('created_at'),
                 'penalties' => fn ($q) => $q->where('penalty_status', '!=', 'waived'),
                 'createdBy:id,name',         // Select only needed columns
@@ -114,7 +114,7 @@ final readonly class OptimizePerformance
 
         // Run common queries
         Siding::all();
-        Rake::with('weighments', 'guardInspection', 'penalties')->get();
+        Rake::with('rakeWeighments', 'guardInspection', 'penalties')->get();
         StockLedger::query()->latest('created_at')->limit(100)->get();
 
         $endTime = microtime(true);

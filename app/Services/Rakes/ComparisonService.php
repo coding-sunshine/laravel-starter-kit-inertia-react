@@ -16,7 +16,11 @@ final readonly class ComparisonService
         }
 
         $wagonLoadings = $rake->wagonLoadings()->with('wagon')->get();
-        $weighment = $rake->weighments()->where('status', 'success')->first();
+        $weighment = $rake->rakeWeighments()
+            ->where('status', 'success')
+            ->orderByDesc('attempt_no')
+            ->orderByDesc('gross_weighment_datetime')
+            ->first();
 
         if (! $weighment) {
             return collect();
@@ -93,7 +97,7 @@ final readonly class ComparisonService
     private function hasRequiredData(Rake $rake): bool
     {
         $hasLoadings = $rake->wagonLoadings()->exists();
-        $hasWeighment = $rake->weighments()->where('status', 'success')->exists();
+        $hasWeighment = $rake->rakeWeighments()->where('status', 'success')->exists();
 
         return $hasLoadings && $hasWeighment;
     }

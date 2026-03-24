@@ -117,9 +117,18 @@ final readonly class PenaltyService
     private function getTotalWeight(Rake $rake): float
     {
         // Try to get weight from weighment first
-        $weighment = $rake->weighments()->where('status', 'success')->first();
+        $weighment = $rake->rakeWeighments()
+            ->where('status', 'success')
+            ->orderByDesc('attempt_no')
+            ->orderByDesc('gross_weighment_datetime')
+            ->first();
         if ($weighment) {
-            return (float) $weighment->total_weight_mt;
+            $header = (float) ($weighment->total_net_weight_mt ?? 0);
+            if ($header > 0) {
+                return $header;
+            }
+
+            return (float) $weighment->rakeWagonWeighments()->sum('net_weight_mt');
         }
 
         // Fallback to loading data

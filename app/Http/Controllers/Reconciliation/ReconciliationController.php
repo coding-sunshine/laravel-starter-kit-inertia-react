@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Reconciliation;
 
+use App\Actions\ReconcileRakeAction;
 use App\DataTables\ReconciliationDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\Rake;
@@ -28,7 +29,10 @@ final class ReconciliationController extends Controller
 
         $pending = Rake::query()
             ->whereIn('siding_id', $sidingIds)
-            ->whereDoesntHave('weighments')
+            ->whereDoesntHave(
+                'rakeWeighments',
+                static fn ($q) => $q->where('status', 'success')
+            )
             ->count();
 
         return Inertia::render('reconciliation/index', [

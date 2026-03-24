@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Rakes;
 
 use App\Models\Rake;
+use App\Models\RakeWeighment;
 use App\Models\Wagon;
 use App\Models\WagonWeight;
 use App\Models\Weighment;
@@ -22,7 +23,7 @@ final readonly class WeighmentService
             }
 
             // Get latest attempt number
-            $latestAttempt = $rake->weighments()->max('attempt_no') ?? 0;
+            $latestAttempt = $rake->rakeWeighments()->max('attempt_no') ?? 0;
             $attemptNo = $latestAttempt + 1;
 
             // Store PDF if provided
@@ -62,12 +63,12 @@ final readonly class WeighmentService
 
     public function hasSuccessfulWeighment(Rake $rake): bool
     {
-        return $rake->weighments()->where('status', 'success')->exists();
+        return $rake->rakeWeighments()->where('status', 'success')->exists();
     }
 
-    public function getLatestWeighment(Rake $rake): ?Weighment
+    public function getLatestWeighment(Rake $rake): ?RakeWeighment
     {
-        return $rake->weighments()->latest()->first();
+        return $rake->rakeWeighments()->latest()->first();
     }
 
     private function processWeighmentPdf(Weighment $weighment, array $data): void
