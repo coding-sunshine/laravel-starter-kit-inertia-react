@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Users\Schemas;
 
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 
 final class UserForm
@@ -22,10 +22,10 @@ final class UserForm
                     ->email()
                     ->required(),
                 Select::make('roles')
-                    ->label('Roles')
-                    ->multiple()
+                    ->label('Role')
                     ->preload()
                     ->searchable()
+                    ->live()
                     ->options(function (): array {
                         $teamKey = config('permission.column_names.team_foreign_key', 'organization_id');
 
@@ -34,46 +34,38 @@ final class UserForm
                             ->pluck('name', 'id')
                             ->all();
                     }),
-                Select::make('sidings')
-                    ->relationship('sidings', 'name')
-                    ->multiple()
+                Select::make('siding_id')
+                    ->label('Siding')
                     ->preload()
                     ->searchable()
-                    ->live()
-                    ->helperText('RRMCS: Sidings this user can access.'),
-                Select::make('primary_siding_id')
-                    ->label('Primary siding')
-                    ->options(function ($get): array {
-                        $ids = $get('sidings') ?? [];
-                        if ($ids === [] || ! is_array($ids)) {
-                            return [];
-                        }
-
+                    ->options(function (): array {
                         return \App\Models\Siding::query()
-                            ->whereIn('id', $ids)
-                            ->when(tenant_id(), fn ($q) => $q->where('organization_id', tenant_id()))
+                            ->where('is_active', true)
+                            ->orderBy('name')
                             ->pluck('name', 'id')
                             ->all();
                     })
-                    ->searchable()
-                    ->helperText('Optional: default siding for this user.'),
+                    ->helperText('Select one siding.'),
                 Select::make('siding_shifts')
-                    ->label('Shifts')
+                    ->label('Shift')
                     ->relationship(
                         'sidingShifts',
                         'shift_name',
                         fn ($query) => $query->where('siding_shifts.is_active', true)->orderBy('siding_shifts.sort_order')
                     )
-                    ->multiple()
                     ->preload()
                     ->searchable()
-                    ->helperText('Optional: active shifts this user is assigned to.'),
-                TagsInput::make('tag_names')
-                    ->label('Tags')
-                    ->placeholder('Add a tag')
-                    ->suggestions(
-                        fn (): array => \Spatie\Tags\Tag::query()->pluck('name')->unique()->values()->all()
-                    ),
+                    ->visible(function (Get $get): bool {
+                        $roleId = $get('roles');
+                        if ($roleId === null || $roleId === '') {
+                            return false;
+                        }
+
+                        $role = \Spatie\Permission\Models\Role::query()->find((int) $roleId);
+
+                        return in_array($role?->name, ['user', 'empty-weighment-shift'], true);
+                    })
+                    ->helperText('Optional: active shift this user is assigned to.'),
                 TextInput::make('password')
                     ->password()
                     ->same('password_confirmation')
