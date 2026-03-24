@@ -192,15 +192,25 @@ final class EditUser extends EditRecord
 
     protected function afterSave(): void
     {
+        $this->record->forceFill([
+            'siding_id' => $this->usesSectionAssignments ? null : $this->pendingSidingId,
+        ])->save();
+
         if (! $this->usesSectionAssignments) {
-            $this->record->forceFill(['siding_id' => $this->pendingSidingId])->save();
             DB::table('user_siding')->where('user_id', $this->record->getKey())->delete();
+            if ($this->pendingSidingId !== null) {
+                DB::table('user_siding')->insert([
+                    'user_id' => $this->record->getKey(),
+                    'siding_id' => $this->pendingSidingId,
+                    'is_primary' => true,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
             $this->record->sidingShifts()->sync([]);
         }
 
         if ($this->usesSectionAssignments) {
-            $this->record->forceFill(['siding_id' => null])->save();
-
             DB::table('user_siding')->where('user_id', $this->record->getKey())->delete();
             foreach ($this->pendingSidingIds as $index => $sidingId) {
                 DB::table('user_siding')->insert([

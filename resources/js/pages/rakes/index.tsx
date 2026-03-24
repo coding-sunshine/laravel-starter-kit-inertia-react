@@ -24,6 +24,7 @@ interface RakeRow {
     rake_type: string | null;
     wagon_count: number | null;
     state: string | null;
+    loading_date: string | null;
     placement_time: string | null;
     dispatch_time: string | null;
     siding_code: string | null;
@@ -68,7 +69,7 @@ export default function RakesIndex({ tableData }: Props) {
                             Rakes
                         </CardTitle>
                         <CardDescription>
-                            All railway rakes you have access to
+                            Current-month railway rakes you have access to (use filters to change date range)
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -128,6 +129,11 @@ export default function RakesIndex({ tableData }: Props) {
                                 if (columnId === 'placement_time') {
                                     return row.placement_time
                                         ? new Date(row.placement_time).toLocaleString()
+                                        : '—';
+                                }
+                                if (columnId === 'loading_date') {
+                                    return row.loading_date
+                                        ? new Date(row.loading_date).toLocaleDateString()
                                         : '—';
                                 }
                                 return undefined;

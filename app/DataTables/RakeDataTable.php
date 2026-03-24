@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace App\DataTables;
 
 use App\Models\Rake;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Machour\DataTable\AbstractDataTable;
 use Machour\DataTable\Columns\Column;
+use Machour\DataTable\Filters\OperatorFilter;
 use Machour\DataTable\QuickView;
+use Spatie\QueryBuilder\AllowedFilter;
 
 final class RakeDataTable extends AbstractDataTable
 {
@@ -21,6 +24,7 @@ final class RakeDataTable extends AbstractDataTable
         public ?string $rake_type,
         public ?int $wagon_count,
         public ?string $state,
+        public ?string $loading_date,
         public ?string $placement_time,
         public ?string $dispatch_time,
         public ?int $siding_id,
@@ -44,6 +48,7 @@ final class RakeDataTable extends AbstractDataTable
             rake_type: $model->rake_type,
             wagon_count: $model->wagon_count,
             state: $model->state,
+            loading_date: $model->loading_date?->toDateString(),
             placement_time: $model->placement_time?->toIso8601String(),
             dispatch_time: $model->dispatch_time?->toIso8601String(),
             siding_id: $model->siding_id,
@@ -71,8 +76,9 @@ final class RakeDataTable extends AbstractDataTable
                 ['label' => 'Arrived', 'value' => 'arrived'],
                 ['label' => 'Completed', 'value' => 'completed'],
             ]),
+            new Column(id: 'loading_date', label: 'Loading date', type: 'date', sortable: true, filterable: true),
             new Column(id: 'progress', label: 'Progress', type: 'text', sortable: false, filterable: false),
-            new Column(id: 'placement_time', label: 'Loading window', type: 'date', sortable: true, filterable: true),
+            new Column(id: 'placement_time', label: 'Loading window', type: 'date', sortable: true, filterable: false),
         ];
     }
 
@@ -91,9 +97,9 @@ final class RakeDataTable extends AbstractDataTable
                 icon: 'clock',
             ),
             new QuickView(
-                id: 'recent',
-                label: 'Last 7 days',
-                params: ['filter[placement_time]' => 'after:'.now()->subDays(7)->toDateString()],
+                id: 'this_month',
+                label: 'This month',
+                params: ['filter[loading_date]' => 'after:'.now()->startOfMonth()->toDateString()],
                 icon: 'calendar',
             ),
         ];
@@ -125,6 +131,18 @@ final class RakeDataTable extends AbstractDataTable
             $query->whereIn('siding_id', $sidingIds);
         }
 
+        /** @var array<string, mixed> $filters */
+        $filters = request()->query('filter', []);
+        $hasExplicitDateFilter = array_key_exists('loading_date', $filters)
+            || array_key_exists('placement_time', $filters);
+
+        if (! $hasExplicitDateFilter) {
+            $monthStart = CarbonImmutable::now()->startOfMonth()->toDateString();
+            $monthEnd = CarbonImmutable::now()->endOfMonth()->toDateString();
+
+            $query->whereBetween('loading_date', [$monthStart, $monthEnd]);
+        }
+
         return $query;
     }
 
@@ -135,12 +153,17 @@ final class RakeDataTable extends AbstractDataTable
 
     public static function tableAllowedFilters(): array
     {
-        return ['rake_number', 'state', 'rake_type', 'siding_id', 'placement_time'];
+        return [
+            'rake_number',
+            'state',
+            'rake_type',
+            AllowedFilter::custom('loading_date', new OperatorFilter('date')),
+        ];
     }
 
     public static function tableAllowedSorts(): array
     {
-        return ['rake_number', 'rake_type', 'wagon_count', 'state', 'placement_time'];
+        return ['rake_number', 'rake_type', 'wagon_count', 'state', 'loading_date', 'placement_time'];
     }
 
     /**

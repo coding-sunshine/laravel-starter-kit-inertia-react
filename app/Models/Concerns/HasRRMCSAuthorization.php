@@ -93,7 +93,7 @@ trait HasRRMCSAuthorization
                 ->getModel()
                 ->newBelongsToMany(
                     Siding::class,
-                    'siding_user',
+                    'user_siding',
                     'user_id',
                     'siding_id'
                 );
@@ -126,8 +126,8 @@ trait HasRRMCSAuthorization
      */
     public function sidings(): BelongsToMany
     {
-        return $this->belongsToMany(Siding::class, 'siding_user')
-            ->withPivot(['assigned_at', 'is_primary'])
+        return $this->belongsToMany(Siding::class, 'user_siding')
+            ->withPivot(['is_primary'])
             ->withTimestamps();
     }
 
@@ -140,7 +140,7 @@ trait HasRRMCSAuthorization
 
         if (! $this->sidings()->where('siding_id', $sidingId)->exists()) {
             $this->sidings()->attach($sidingId, [
-                'assigned_at' => now(),
+                'is_primary' => false,
             ]);
         }
     }
@@ -164,7 +164,8 @@ trait HasRRMCSAuthorization
         }
 
         return $this->sidings()
-            ->orderByPivot('assigned_at', 'desc')
+            ->orderByPivot('is_primary', 'desc')
+            ->orderByPivot('updated_at', 'desc')
             ->first();
     }
 }

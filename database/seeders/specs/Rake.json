@@ -265,6 +265,10 @@
             "type": "hasMany",
             "model": "RakeWeighment"
         },
+        "weighments": {
+            "type": "hasMany",
+            "model": "Weighment"
+        },
         "txr": {
             "type": "hasOne",
             "model": "Txr"
@@ -288,6 +292,10 @@
         "rrDocuments": {
             "type": "hasMany",
             "model": "RrDocument"
+        },
+        "powerPlantReceipts": {
+            "type": "hasMany",
+            "model": "PowerPlantReceipt"
         },
         "penalties": {
             "type": "hasMany",
