@@ -26,6 +26,8 @@ final class RrDocumentController extends Controller
     public function index(Request $request): \Inertia\Response
     {
         $user = $request->user();
+        abort_unless($this->hasSectionPermission($user, 'sections.railway_receipts.view'), 403);
+
         $sidingIds = $user->isSuperAdmin()
             ? Siding::query()->pluck('id')->all()
             : $user->accessibleSidings()->get()->pluck('id')->all();
@@ -38,6 +40,7 @@ final class RrDocumentController extends Controller
         return Inertia::render('railway-receipts/index', [
             'tableData' => RrDocumentDataTable::makeTable($request),
             'sidings' => $sidings,
+            'can_upload_rr' => $this->hasSectionPermission($user, 'sections.railway_receipts.upload'),
         ]);
     }
 
@@ -46,6 +49,9 @@ final class RrDocumentController extends Controller
         RrParserService $parser,
         RrImportService $rrImportService,
     ): RedirectResponse {
+        $user = $request->user();
+        abort_unless($this->hasSectionPermission($user, 'sections.railway_receipts.upload'), 403);
+
         $request->validate([
             'pdf' => ['required', 'file', 'mimes:pdf', 'max:10240'],
             'siding_id' => ['nullable', 'integer', 'exists:sidings,id'],
@@ -53,7 +59,6 @@ final class RrDocumentController extends Controller
             'rake_id' => ['nullable', 'integer', 'exists:rakes,id'],
         ]);
 
-        $user = $request->user();
         $sidingIds = $user->isSuperAdmin()
             ? Siding::query()->pluck('id')->all()
             : $user->accessibleSidings()->get()->pluck('id')->all();
@@ -103,6 +108,10 @@ final class RrDocumentController extends Controller
 
     public function downloadPdf(RrDocument $rrDocument): \Illuminate\Contracts\Support\Responsable
     {
+        $user = request()->user();
+        abort_unless($this->hasSectionPermission($user, 'sections.railway_receipts.view'), 403);
+        abort_unless($this->canAccessRrDocument($user, $rrDocument), 403);
+
         $media = $rrDocument->getFirstMedia('rr_pdf');
         if (! $media) {
             abort(404, 'No PDF attached to this Railway Receipt.');
@@ -113,7 +122,9 @@ final class RrDocumentController extends Controller
 
     public function show(Request $request, RrDocument $rrDocument): \Inertia\Response
     {
-        // $this->authorize('view', $rrDocument);
+        $user = $request->user();
+        abort_unless($this->hasSectionPermission($user, 'sections.railway_receipts.view'), 403);
+        abort_unless($this->canAccessRrDocument($user, $rrDocument), 403);
 
         $rrDocument->load([
             'rake.siding:id,name,code',
@@ -134,11 +145,8 @@ final class RrDocumentController extends Controller
             ? PowerPlant::query()->where('code', $rrDocument->to_station_code)->first(['id', 'name', 'code'])
             : null;
 
-        $user = $request->user();
-        $canDeleteRr = $user !== null && (
-            $user->can('bypass-permissions')
-            || $user->hasPermissionTo('sections.railway_receipts.delete')
-        );
+        $canDeleteRr = $this->hasStrictSectionPermission($user, 'sections.railway_receipts.delete');
+        
         $hasPdf = $rrDocument->getFirstMedia('rr_pdf') !== null;
         $rrDocument->setAttribute('rr_pdf_download_url', $hasPdf ? route('railway-receipts.pdf', $rrDocument) : null);
         $ledgerCharges = $rrDocument->rake?->rakeCharges
@@ -159,12 +167,16 @@ final class RrDocumentController extends Controller
             'rrDocument' => $rrDocument,
             'fromSiding' => $fromSiding,
             'toPowerPlant' => $toPowerPlant,
+            'can_download_rr' => $this->hasSectionPermission($user, 'sections.railway_receipts.view'),
             'can_delete_rr' => $canDeleteRr,
         ]);
     }
 
     public function rakesForMonth(Request $request): JsonResponse
     {
+        $user = $request->user();
+        abort_unless($this->hasSectionPermission($user, 'sections.railway_receipts.view'), 403);
+
         $month = (string) $request->query('month', '');
 
         try {
@@ -177,7 +189,6 @@ final class RrDocumentController extends Controller
 
         $end = $start->copy()->endOfMonth();
 
-        $user = $request->user();
         $sidingIds = $user->isSuperAdmin()
             ? Siding::query()->pluck('id')->all()
             : $user->accessibleSidings()->get()->pluck('id')->all();
@@ -212,8 +223,9 @@ final class RrDocumentController extends Controller
 
     public function create(Request $request): \Inertia\Response
     {
-        // $this->authorize('create', RrDocument::class);
         $user = $request->user();
+        abort_unless($this->hasSectionPermission($user, 'sections.railway_receipts.upload'), 403);
+
         $sidingIds = $user->isSuperAdmin()
             ? Siding::query()->pluck('id')->all()
             : $user->accessibleSidings()->get()->pluck('id')->all();
@@ -236,6 +248,9 @@ final class RrDocumentController extends Controller
 
     public function store(Request $request, ProcessRrDocument $processRrDocument): RedirectResponse
     {
+        $user = $request->user();
+        abort_unless($this->hasSectionPermission($user, 'sections.railway_receipts.upload'), 403);
+
         $validated = $request->validate([
             'rake_id' => ['required', 'integer', 'exists:rakes,id'],
             'rr_number' => ['required', 'string', 'max:50', 'unique:rr_documents,rr_number'],
@@ -261,7 +276,7 @@ final class RrDocumentController extends Controller
             'to_station_code' => $validated['to_station_code'] ?? null,
             'freight_total' => $validated['freight_total'] ?? null,
             'document_status' => $validated['document_status'] ?? 'received',
-            'created_by' => $request->user()->id,
+            'created_by' => $user->id,
         ]);
         $message = 'RR document saved.';
         if ($request->hasFile('pdf')) {
@@ -308,7 +323,9 @@ final class RrDocumentController extends Controller
 
     public function update(Request $request, RrDocument $rrDocument): RedirectResponse
     {
-        // $this->authorize('update', $rrDocument->rake);
+        $user = $request->user();
+        abort_unless($this->hasSectionPermission($user, 'sections.railway_receipts.upload'), 403);
+        abort_unless($this->canAccessRrDocument($user, $rrDocument), 403);
 
         $validated = $request->validate([
             'rr_number' => ['required', 'string', 'max:50', 'unique:rr_documents,rr_number,'.$rrDocument->id],
@@ -325,18 +342,54 @@ final class RrDocumentController extends Controller
 
         $rrDocument->update([
             ...$validated,
-            'updated_by' => $request->user()->id,
+            'updated_by' => $user->id,
         ]);
 
         return back()
             ->with('success', 'RR document updated.');
     }
 
-    public function destroy(RrDocument $rrDocument, DeleteRrDocumentAction $deleteRrDocument): RedirectResponse
+    public function destroy(Request $request, RrDocument $rrDocument, DeleteRrDocumentAction $deleteRrDocument): RedirectResponse
     {
+        $user = $request->user();
+        abort_unless($this->hasStrictSectionPermission($user, 'sections.railway_receipts.delete'), 403);
+        abort_unless($this->canAccessRrDocument($user, $rrDocument), 403);
+
         $deleteRrDocument->handle($rrDocument);
 
         return to_route('railway-receipts.index')
             ->with('success', 'Railway receipt deleted.');
+    }
+
+    private function hasSectionPermission(\App\Models\User $user, string $permission): bool
+    {
+        if ($user->can('bypass-permissions')) {
+            return true;
+        }
+
+        if (\App\Services\TenantContext::check() && $user->canInCurrentOrganization($permission)) {
+            return true;
+        }
+
+        return $user->hasPermissionTo($permission);
+    }
+
+    private function hasStrictSectionPermission(\App\Models\User $user, string $permission): bool
+    {
+        return $user->hasPermissionTo($permission);
+    }
+
+    private function canAccessRrDocument(\App\Models\User $user, RrDocument $rrDocument): bool
+    {
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        $sidingId = $rrDocument->rake()->value('siding_id');
+        if ($sidingId === null) {
+            return false;
+        }
+
+        return $user->canAccessSiding((int) $sidingId);
     }
 }

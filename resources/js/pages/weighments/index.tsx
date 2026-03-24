@@ -19,6 +19,7 @@ import {
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
+import { useCan } from '@/hooks/use-can';
 import { Head, router, usePage } from '@inertiajs/react';
 import { CalendarDays, Eye, Scale, Upload } from 'lucide-react';
 import { useCallback, useMemo, useRef, useState } from 'react';
@@ -65,6 +66,7 @@ function getCurrentMonthValue(): string {
 }
 
 export default function WeighmentsIndex({ weighments = [] }: Props) {
+    const canUpload = useCan('sections.weighments.upload');
     const { flash, errors } = usePage<{
         flash?: { success?: string };
         errors?: { pdf?: string };
@@ -86,6 +88,9 @@ export default function WeighmentsIndex({ weighments = [] }: Props) {
     ];
 
     const handleUploadClick = () => {
+        if (!canUpload) {
+            return;
+        }
         fileInputRef.current?.click();
     };
 
@@ -146,6 +151,9 @@ export default function WeighmentsIndex({ weighments = [] }: Props) {
     };
 
     const submitUpload = useCallback(() => {
+        if (!canUpload) {
+            return;
+        }
         if (!selectedFile) {
             return;
         }
@@ -169,7 +177,7 @@ export default function WeighmentsIndex({ weighments = [] }: Props) {
                 resetDialogState();
             },
         });
-    }, [resetDialogState, selectedFile, selectedRakeId]);
+    }, [canUpload, resetDialogState, selectedFile, selectedRakeId]);
 
     const rakeLabel = useCallback((rake: RakeOption): string => {
         const parts: string[] = [rake.rake_number];
@@ -224,22 +232,26 @@ export default function WeighmentsIndex({ weighments = [] }: Props) {
                         </p>
                     </div>
                     <div className="flex items-center gap-3">
-                        <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept=".pdf"
-                            className="hidden"
-                            onChange={handleFileChange}
-                        />
-                        <Button
-                            onClick={handleUploadClick}
-                            disabled={uploading}
-                            data-pan="weighments-upload-pdf-button"
-                            className="flex items-center gap-2"
-                        >
-                            <Upload className="h-4 w-4" />
-                            {uploading ? 'Uploading…' : 'Upload Document'}
-                        </Button>
+                        {canUpload && (
+                            <>
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept=".pdf"
+                                    className="hidden"
+                                    onChange={handleFileChange}
+                                />
+                                <Button
+                                    onClick={handleUploadClick}
+                                    disabled={uploading}
+                                    data-pan="weighments-upload-pdf-button"
+                                    className="flex items-center gap-2"
+                                >
+                                    <Upload className="h-4 w-4" />
+                                    {uploading ? 'Uploading…' : 'Upload Document'}
+                                </Button>
+                            </>
+                        )}
                     </div>
                 </div>
 
@@ -261,14 +273,16 @@ export default function WeighmentsIndex({ weighments = [] }: Props) {
                                 <p className="mb-4 text-muted-foreground">
                                     Upload a document to start viewing weighment data
                                 </p>
-                                <Button
-                                    onClick={handleUploadClick}
-                                    variant="outline"
-                                    data-pan="weighments-upload-first-document"
-                                >
-                                    <Upload className="mr-2 h-4 w-4" />
-                                    Upload First Document
-                                </Button>
+                                {canUpload && (
+                                    <Button
+                                        onClick={handleUploadClick}
+                                        variant="outline"
+                                        data-pan="weighments-upload-first-document"
+                                    >
+                                        <Upload className="mr-2 h-4 w-4" />
+                                        Upload First Document
+                                    </Button>
+                                )}
                             </div>
                         ) : (
                             <div className="overflow-x-auto">
@@ -348,95 +362,97 @@ export default function WeighmentsIndex({ weighments = [] }: Props) {
                 </Card>
             </div>
 
-            <Dialog
-                open={isDialogOpen}
-                onOpenChange={(open) => {
-                    if (!open) {
-                        resetDialogState();
-                    }
-                }}
-            >
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>{dialogTitle}</DialogTitle>
-                        <DialogDescription>
-                            Optionally select a rake to attach this weighment to. If you skip this step, the PDF
-                            is imported as a historical weighment (same as before).
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="weighment-month">Rake month (filter)</Label>
-                            <div className="flex items-center gap-2">
-                                <div className="relative inline-flex items-center">
-                                    <CalendarDays className="pointer-events-none absolute left-2 size-4 text-muted-foreground" />
-                                    <input
-                                        id="weighment-month"
-                                        type="month"
-                                        className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 flex h-9 w-[11rem] rounded-md border pl-8 pr-3 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
-                                        value={month}
-                                        onChange={(event) => {
-                                            const value = event.target.value || getCurrentMonthValue();
-                                            setMonth(value);
-                                            void fetchRakesForMonth(value);
-                                        }}
-                                    />
-                                </div>
-                                {rakesLoading && (
-                                    <span className="text-xs text-muted-foreground">Loading rakes…</span>
-                                )}
-                            </div>
-                            {rakesError ? <p className="text-xs text-destructive">{rakesError}</p> : null}
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="weighment-rake-select">Attach to rake (optional)</Label>
-                            <Select
-                                value={selectedRakeId || undefined}
-                                onValueChange={setSelectedRakeId}
-                            >
-                                <SelectTrigger id="weighment-rake-select" className="min-w-[260px]">
-                                    <SelectValue placeholder="No rake selected" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {rakes.length === 0 ? (
-                                        <SelectItem value="__none" disabled>
-                                            No rakes found for this month
-                                        </SelectItem>
-                                    ) : (
-                                        rakes.map((rake) => (
-                                            <SelectItem key={rake.id} value={String(rake.id)}>
-                                                {rakeLabel(rake)}
-                                            </SelectItem>
-                                        ))
+            {canUpload && (
+                <Dialog
+                    open={isDialogOpen}
+                    onOpenChange={(open) => {
+                        if (!open) {
+                            resetDialogState();
+                        }
+                    }}
+                >
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>{dialogTitle}</DialogTitle>
+                            <DialogDescription>
+                                Optionally select a rake to attach this weighment to. If you skip this step, the PDF
+                                is imported as a historical weighment (same as before).
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="weighment-month">Rake month (filter)</Label>
+                                <div className="flex items-center gap-2">
+                                    <div className="relative inline-flex items-center">
+                                        <CalendarDays className="pointer-events-none absolute left-2 size-4 text-muted-foreground" />
+                                        <input
+                                            id="weighment-month"
+                                            type="month"
+                                            className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 flex h-9 w-[11rem] rounded-md border pl-8 pr-3 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
+                                            value={month}
+                                            onChange={(event) => {
+                                                const value = event.target.value || getCurrentMonthValue();
+                                                setMonth(value);
+                                                void fetchRakesForMonth(value);
+                                            }}
+                                        />
+                                    </div>
+                                    {rakesLoading && (
+                                        <span className="text-xs text-muted-foreground">Loading rakes…</span>
                                     )}
-                                </SelectContent>
-                            </Select>
-                            <p className="text-xs text-muted-foreground">
-                                Leaving this blank imports the PDF without linking to an existing rake workflow.
-                            </p>
+                                </div>
+                                {rakesError ? <p className="text-xs text-destructive">{rakesError}</p> : null}
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="weighment-rake-select">Attach to rake (optional)</Label>
+                                <Select
+                                    value={selectedRakeId || undefined}
+                                    onValueChange={setSelectedRakeId}
+                                >
+                                    <SelectTrigger id="weighment-rake-select" className="min-w-[260px]">
+                                        <SelectValue placeholder="No rake selected" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {rakes.length === 0 ? (
+                                            <SelectItem value="__none" disabled>
+                                                No rakes found for this month
+                                            </SelectItem>
+                                        ) : (
+                                            rakes.map((rake) => (
+                                                <SelectItem key={rake.id} value={String(rake.id)}>
+                                                    {rakeLabel(rake)}
+                                                </SelectItem>
+                                            ))
+                                        )}
+                                    </SelectContent>
+                                </Select>
+                                <p className="text-xs text-muted-foreground">
+                                    Leaving this blank imports the PDF without linking to an existing rake workflow.
+                                </p>
+                            </div>
                         </div>
-                    </div>
-                    <DialogFooter className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={resetDialogState}
-                            disabled={uploading}
-                            data-pan="weighments-upload-dialog-cancel"
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            type="button"
-                            onClick={submitUpload}
-                            disabled={uploading || !selectedFile}
-                            data-pan="weighments-upload-with-rake-button"
-                        >
-                            {uploading ? 'Uploading…' : 'Upload'}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                        <DialogFooter className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={resetDialogState}
+                                disabled={uploading}
+                                data-pan="weighments-upload-dialog-cancel"
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                type="button"
+                                onClick={submitUpload}
+                                disabled={uploading || !selectedFile}
+                                data-pan="weighments-upload-with-rake-button"
+                            >
+                                {uploading ? 'Uploading…' : 'Upload'}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+            )}
         </AppLayout>
     );
 }

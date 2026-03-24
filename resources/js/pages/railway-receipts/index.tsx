@@ -26,6 +26,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { useCan } from '@/hooks/use-can';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router, usePage } from '@inertiajs/react';
@@ -62,6 +63,7 @@ interface RakeOption {
 interface Props {
     tableData: DataTableResponse<RrDocumentRow>;
     sidings: Siding[];
+    can_upload_rr?: boolean;
 }
 
 function getCurrentMonthValue(): string {
@@ -72,7 +74,10 @@ function getCurrentMonthValue(): string {
     return `${year}-${month}`;
 }
 
-export default function RailwayReceiptsIndex({ tableData }: Props) {
+export default function RailwayReceiptsIndex({
+    tableData,
+    can_upload_rr = false,
+}: Props) {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [uploading, setUploading] = useState(false);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -86,6 +91,8 @@ export default function RailwayReceiptsIndex({ tableData }: Props) {
     const {
         props: { errors },
     } = usePage<{ errors: Record<string, string | undefined> }>();
+    const canUploadRr = useCan('sections.railway_receipts.upload');
+    const canUpload = can_upload_rr && canUploadRr;
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: '/dashboard' },
@@ -93,6 +100,9 @@ export default function RailwayReceiptsIndex({ tableData }: Props) {
     ];
 
     const handleUploadClick = () => {
+        if (!canUpload) {
+            return;
+        }
         fileInputRef.current?.click();
     };
 
@@ -142,6 +152,10 @@ export default function RailwayReceiptsIndex({ tableData }: Props) {
     }, []);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!canUpload) {
+            return;
+        }
+
         const file = e.target.files?.[0];
         if (!file) {
             return;
@@ -153,6 +167,10 @@ export default function RailwayReceiptsIndex({ tableData }: Props) {
     };
 
     const submitUpload = useCallback(() => {
+        if (!canUpload) {
+            return;
+        }
+
         if (!selectedFile) {
             return;
         }
@@ -178,7 +196,7 @@ export default function RailwayReceiptsIndex({ tableData }: Props) {
                 resetDialogState();
             },
         });
-    }, [resetDialogState, selectedFile, selectedRakeId]);
+    }, [canUpload, resetDialogState, selectedFile, selectedRakeId]);
 
     const rakeLabel = useCallback((rake: RakeOption): string => {
         const parts: string[] = [rake.rake_number];
@@ -220,14 +238,16 @@ export default function RailwayReceiptsIndex({ tableData }: Props) {
                         className="hidden"
                         onChange={handleFileChange}
                     />
-                    <Button
-                        onClick={handleUploadClick}
-                        disabled={uploading}
-                        data-pan="rr-upload-pdf-button"
-                    >
-                        <Upload className="mr-2 size-4" />
-                        {uploading ? 'Uploading…' : 'Upload RR PDF'}
-                    </Button>
+                    {canUpload && (
+                        <Button
+                            onClick={handleUploadClick}
+                            disabled={uploading}
+                            data-pan="rr-upload-pdf-button"
+                        >
+                            <Upload className="mr-2 size-4" />
+                            {uploading ? 'Uploading…' : 'Upload RR PDF'}
+                        </Button>
+                    )}
                     {errors?.pdf && (
                         <p className="text-sm text-destructive">
                             {errors.pdf}
@@ -276,15 +296,16 @@ export default function RailwayReceiptsIndex({ tableData }: Props) {
                     </CardContent>
                 </Card>
             </div>
-            <Dialog
-                open={isDialogOpen}
-                onOpenChange={(open) => {
-                    if (!open) {
-                        resetDialogState();
-                    }
-                }}
-            >
-                <DialogContent>
+            {canUpload && (
+                <Dialog
+                    open={isDialogOpen}
+                    onOpenChange={(open) => {
+                        if (!open) {
+                            resetDialogState();
+                        }
+                    }}
+                >
+                    <DialogContent>
                     <DialogHeader>
                         <DialogTitle>{dialogTitle}</DialogTitle>
                         <DialogDescription>
@@ -382,8 +403,9 @@ export default function RailwayReceiptsIndex({ tableData }: Props) {
                             {uploading ? 'Uploading…' : 'Upload'}
                         </Button>
                     </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                    </DialogContent>
+                </Dialog>
+            )}
         </AppLayout>
     );
 }
