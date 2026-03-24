@@ -7,6 +7,7 @@ namespace App\Filament\Resources\Users\Pages;
 use App\Filament\Resources\Users\UserResource;
 use App\Services\ActivityLogRbac;
 use Filament\Resources\Pages\CreateRecord;
+use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
 
 final class CreateUser extends CreateRecord
@@ -14,24 +15,27 @@ final class CreateUser extends CreateRecord
     protected static string $resource = UserResource::class;
 
     /**
-     * @var list<string>
-     */
-    private array $pendingTagNames = [];
-
-    /**
-     * @var array<int, array<string, mixed>>
-     */
-    private array $pendingSidingsPivot = [];
-
-    /**
      * @var array<int, array<string, mixed>>
      */
     private array $pendingSidingShiftsPivot = [];
 
+    private ?int $pendingRoleId = null;
+
+    private ?int $pendingSidingId = null;
+
+    private ?string $pendingRoleName = null;
+
     /**
      * @var list<int>
      */
-    private array $pendingRoleIds = [];
+    private array $pendingSidingIds = [];
+
+    /**
+     * @var list<int>
+     */
+    private array $pendingShiftIds = [];
+
+    private bool $usesSectionAssignments = false;
 
     /**
      * @param  array<string, mixed>  $data
@@ -39,44 +43,55 @@ final class CreateUser extends CreateRecord
      */
     protected function mutateFormDataBeforeCreate(array $data): array
     {
-        $this->pendingTagNames = array_values(array_filter(
-            is_array($data['tag_names'] ?? null) ? $data['tag_names'] : [],
-            fn ($v): bool => is_string($v) && $v !== ''
-        ));
-        unset($data['tag_names']);
+        unset($data['password_confirmation']);
 
-        $sidingIds = array_filter(array_map(intval(...), (array) ($data['sidings'] ?? [])));
-        $primaryId = isset($data['primary_siding_id']) ? (int) $data['primary_siding_id'] : null;
-        foreach ($sidingIds as $id) {
-            $this->pendingSidingsPivot[$id] = [
-                'is_primary' => $primaryId === $id,
-                'assigned_at' => now(),
-            ];
-        }
-        unset($data['sidings'], $data['primary_siding_id']);
+        $roleId = isset($data['roles']) && $data['roles'] !== ''
+            ? (int) $data['roles']
+            : null;
 
-        $sidingShiftIds = array_filter(array_map(intval(...), (array) ($data['siding_shifts'] ?? [])));
-        foreach ($sidingShiftIds as $shiftId) {
-            $this->pendingSidingShiftsPivot[$shiftId] = [
-                'assigned_at' => now(),
-                'is_active' => true,
-            ];
-        }
-        unset($data['siding_shifts'], $data['password_confirmation']);
-
-        $roles = (array) ($data['roles'] ?? []);
-        if ($roles === [] || $roles === null) {
+        if ($roleId === null) {
             $defaultRoleName = config('permission.default_role');
             if (is_string($defaultRoleName) && $defaultRoleName !== '') {
                 $defaultRole = Role::query()->where('name', $defaultRoleName)->first();
                 if ($defaultRole !== null) {
-                    $roles = [$defaultRole->getKey()];
+                    $roleId = (int) $defaultRole->getKey();
                 }
             }
         }
 
-        $this->pendingRoleIds = array_values(array_filter(array_map(intval(...), $roles)));
+        $this->pendingRoleId = $roleId;
+        $this->pendingRoleName = $roleId !== null
+            ? Role::query()->whereKey($roleId)->value('name')
+            : null;
+        $this->usesSectionAssignments = $this->roleUsesSectionAssignments($this->pendingRoleId);
         unset($data['roles']);
+
+        $this->pendingSidingShiftsPivot = [];
+        $this->pendingSidingIds = [];
+        $this->pendingShiftIds = [];
+
+        if ($this->usesSectionAssignments) {
+            $this->pendingSidingIds = array_values(array_filter(array_map(
+                intval(...),
+                (array) ($data['siding_ids_multi'] ?? [])
+            )));
+            $this->pendingShiftIds = array_values(array_filter(array_map(
+                intval(...),
+                (array) ($data['siding_shifts_multi'] ?? [])
+            )));
+            foreach ($this->pendingShiftIds as $shiftId) {
+                $this->pendingSidingShiftsPivot[$shiftId] = [
+                    'assigned_at' => now(),
+                    'is_active' => true,
+                ];
+            }
+            $this->pendingSidingId = null;
+        } else {
+            $this->pendingSidingId = isset($data['siding_id_single']) && $data['siding_id_single'] !== ''
+                ? (int) $data['siding_id_single']
+                : null;
+        }
+        unset($data['siding_ids_multi'], $data['siding_id_single'], $data['siding_shifts_multi']);
 
         // Users created by superadmin in Filament should be immediately active / verified.
         if (! array_key_exists('email_verified_at', $data) || $data['email_verified_at'] === null) {
@@ -93,21 +108,67 @@ final class CreateUser extends CreateRecord
 
     protected function afterCreate(): void
     {
+        $this->record->forceFill([
+            'siding_id' => $this->usesSectionAssignments ? null : $this->pendingSidingId,
+        ])->save();
 
-        $this->record->syncTags($this->pendingTagNames);
-        $this->record->sidings()->sync($this->pendingSidingsPivot);
-
-        if ($this->pendingSidingShiftsPivot !== []) {
-            $this->record->sidingShifts()->sync($this->pendingSidingShiftsPivot);
+        if (! $this->usesSectionAssignments) {
+            DB::table('user_siding')->where('user_id', $this->record->getKey())->delete();
+            if ($this->pendingSidingId !== null) {
+                DB::table('user_siding')->insert([
+                    'user_id' => $this->record->getKey(),
+                    'siding_id' => $this->pendingSidingId,
+                    'is_primary' => true,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+            $this->record->sidingShifts()->sync([]);
         }
-        if ($this->pendingRoleIds !== []) {
+
+        if ($this->usesSectionAssignments) {
+            DB::table('user_siding')->where('user_id', $this->record->getKey())->delete();
+            foreach ($this->pendingSidingIds as $index => $sidingId) {
+                DB::table('user_siding')->insert([
+                    'user_id' => $this->record->getKey(),
+                    'siding_id' => $sidingId,
+                    'is_primary' => $index === 0,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        }
+
+        if ($this->usesSectionAssignments) {
+            $this->record->sidingShifts()->sync($this->pendingSidingShiftsPivot);
+        } else {
+            $this->record->sidingShifts()->sync([]);
+        }
+
+        if ($this->pendingRoleId !== null) {
             // Assign roles for the global team (organization_id = 0).
-            $this->record->syncRoles($this->pendingRoleIds, 0);
+            $this->record->syncRoles([$this->pendingRoleId], 0);
         }
         $this->record->load('roles', 'sidings');
         resolve(ActivityLogRbac::class)->logRolesAssigned(
             $this->record,
             ActivityLogRbac::roleNamesFrom($this->record)
         );
+    }
+
+    private function roleUsesSectionAssignments(?int $roleId): bool
+    {
+        if ($roleId === null) {
+            return false;
+        }
+
+        return Role::query()
+            ->whereKey($roleId)
+            ->where(function ($query): void {
+                $query
+                    ->whereHas('permissions', fn ($q) => $q->where('name', 'like', 'sections.railway_siding_record_data.%'))
+                    ->orWhereHas('permissions', fn ($q) => $q->where('name', 'like', 'sections.railway_siding_empty_weighment.%'));
+            })
+            ->exists();
     }
 }

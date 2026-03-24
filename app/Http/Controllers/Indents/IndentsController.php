@@ -196,14 +196,17 @@ final class IndentsController extends Controller
         $indent->setAttribute('indent_pdf_download_url', $hasPdf ? route('indents.pdf', $indent) : null);
 
         $user = $request->user();
+        $canCreateRake = $rake === null
+            && $user !== null
+            && $this->hasStrictSectionPermission($user, 'sections.rakes.create');
         $canDeleteIndent = $rake === null && $user !== null && (
-            $user->can('bypass-permissions')
-            || $user->hasPermissionTo('sections.indents.delete')
+            $this->hasSectionPermission($user, 'sections.indents.delete')
         );
 
         return Inertia::render('indents/show', [
             'indent' => $indent,
             'rake' => $rake,
+            'can_create_rake' => $canCreateRake,
             'can_delete_indent' => $canDeleteIndent,
         ]);
     }
@@ -285,7 +288,12 @@ final class IndentsController extends Controller
      */
     public function createRake(Request $request, Indent $indent): Response
     {
-        // $this->authorize('createRake', $indent);
+        $user = $request->user();
+        abort_unless($this->hasStrictSectionPermission($user, 'sections.rakes.create'), 403);
+
+        if (! $user->isSuperAdmin() && ! $user->canAccessSiding($indent->siding_id)) {
+            abort(403);
+        }
 
         // Check if rake already exists for this indent
         if ($indent->rake) {
@@ -293,7 +301,6 @@ final class IndentsController extends Controller
                 ->with('error', 'A rake already exists for this indent.');
         }
 
-        $user = $request->user();
         $sidingIds = $user->isSuperAdmin()
             ? Siding::query()->pluck('id')->all()
             : $user->accessibleSidings()->get()->pluck('id')->all();
@@ -329,7 +336,12 @@ final class IndentsController extends Controller
      */
     public function storeRakeFromIndent(Request $request, Indent $indent): RedirectResponse
     {
-        // $this->authorize('createRake', $indent);
+        $user = $request->user();
+        abort_unless($this->hasStrictSectionPermission($user, 'sections.rakes.create'), 403);
+
+        if (! $user->isSuperAdmin() && ! $user->canAccessSiding($indent->siding_id)) {
+            abort(403);
+        }
 
         // Check if rake already exists for this indent
         if ($indent->rake) {
@@ -416,8 +428,8 @@ final class IndentsController extends Controller
         $rake->destination = $powerPlant->name;
         $rake->destination_code = $powerPlant->code;
 
-        $rake->created_by = $request->user()->id;
-        $rake->updated_by = $request->user()->id;
+        $rake->created_by = $user->id;
+        $rake->updated_by = $user->id;
         $rake->save();
 
         // Create wagons based on wagon count
@@ -461,5 +473,27 @@ final class IndentsController extends Controller
         $parsed = Date::parse($value);
         $indent->indent_date = $parsed;
         $indent->indent_time = $parsed;
+    }
+
+    private function hasSectionPermission(\App\Models\User $user, string $permission): bool
+    {
+        if ($user->can('bypass-permissions')) {
+            return true;
+        }
+
+        if (\App\Services\TenantContext::check() && $user->canInCurrentOrganization($permission)) {
+            return true;
+        }
+
+        return $user->hasPermissionTo($permission);
+    }
+
+    private function hasStrictSectionPermission(\App\Models\User $user, string $permission): bool
+    {
+        if (\App\Services\TenantContext::check() && $user->canInCurrentOrganization($permission)) {
+            return true;
+        }
+
+        return $user->hasPermissionTo($permission);
     }
 }

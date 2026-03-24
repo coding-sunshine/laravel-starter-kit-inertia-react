@@ -26,11 +26,8 @@ final readonly class ReconcileRakeAction
         $loadingStart = $rake->loading_start_time?->toDateTimeString();
         $loadingEnd = $rake->loading_end_time?->toDateTimeString();
 
-        $loaderTotal = (float) $rake->wagons()->sum('loader_recorded_qty_mt');
-        $weighmentTotal = (float) $rake->weighments()->orderByDesc('weighment_time')->value('total_weight_mt');
-        if ($weighmentTotal === 0.0) {
-            $weighmentTotal = (float) $rake->wagons()->sum('weighment_qty_mt');
-        }
+        $loaderTotal = (float) $rake->wagonLoadings()->sum('loaded_quantity_mt');
+        $weighmentTotal = $this->resolveSuccessfulRakeWeighmentNetMt($rake);
         $rrWeight = $rake->rrDocuments()->latest('rr_received_date')->value('rr_weight_mt');
         $rrWeight = $rrWeight !== null ? (float) $rrWeight : null;
         $ppReceipt = $rake->powerPlantReceipts()->latest('receipt_date')->first();
@@ -39,12 +36,35 @@ final readonly class ReconcileRakeAction
         $points = [];
 
         $points[] = $this->pointMineVsSiding($sidingId, $loadingStart, $loadingEnd);
-        $points[] = $this->pointSidingVsRake($sidingId, $loadingStart, $weighmentTotal);
+        $points[] = $this->pointSidingVsRake($sidingId, $loadingEnd, $loaderTotal);
         $points[] = $this->pointRakeVsWeighment($loaderTotal, $weighmentTotal);
         $points[] = $this->pointWeighmentVsRr($weighmentTotal, $rrWeight);
         $points[] = $this->pointRrVsPowerPlant($rrWeight, $ppWeight);
 
         return $points;
+    }
+
+    /**
+     * Net weight from the latest successful {@see RakeWeighment}: header `total_net_weight_mt`, or sum of per-wagon `net_weight_mt` when the header is empty/zero.
+     */
+    private function resolveSuccessfulRakeWeighmentNetMt(Rake $rake): float
+    {
+        $latest = $rake->rakeWeighments()
+            ->where('status', 'success')
+            ->orderByDesc('attempt_no')
+            ->orderByDesc('gross_weighment_datetime')
+            ->first();
+
+        if (! $latest) {
+            return 0.0;
+        }
+
+        $header = (float) ($latest->total_net_weight_mt ?? 0);
+        if ($header > 0.0) {
+            return $header;
+        }
+
+        return (float) $latest->rakeWagonWeighments()->sum('net_weight_mt');
     }
 
     /**

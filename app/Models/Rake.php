@@ -120,6 +120,14 @@ final class Rake extends Model
         return $this->hasMany(RakeWeighment::class);
     }
 
+    /**
+     * Same association as {@see rakeWeighments()}; used by eager loads and filters that expect the name `weighments`.
+     */
+    public function weighments(): HasMany
+    {
+        return $this->hasMany(RakeWeighment::class);
+    }
+
     public function txr(): HasOne
     {
         return $this->hasOne(Txr::class);
@@ -172,6 +180,11 @@ final class Rake extends Model
     public function rrDocuments(): HasMany
     {
         return $this->hasMany(RrDocument::class);
+    }
+
+    public function powerPlantReceipts(): HasMany
+    {
+        return $this->hasMany(PowerPlantReceipt::class);
     }
 
     public function penalties(): HasMany

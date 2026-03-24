@@ -107,7 +107,12 @@ final readonly class ProcessGuardInspection
     public function getInspectionStatus(Rake $rake): array
     {
         $inspection = $rake->guardInspection;
-        $weighments = $rake->weighments()->get();
+        $weighments = $rake->rakeWeighments()->orderBy('attempt_no')->get();
+
+        $lastRw = $weighments->last();
+        $netFromRw = $lastRw !== null
+            ? (float) ($lastRw->total_net_weight_mt ?? 0) ?: (float) $lastRw->rakeWagonWeighments()->sum('net_weight_mt')
+            : 0.0;
 
         return [
             'has_inspection' => $inspection !== null,
@@ -116,8 +121,8 @@ final readonly class ProcessGuardInspection
             'inspection_remarks' => $inspection?->remarks,
             'inspection_by' => $inspection?->createdBy->name,
             'weighment_count' => $weighments->count(),
-            'last_weighment' => $weighments->last()?->weighment_time,
-            'net_weight_mt' => (float) ($weighments->last()?->net_weight_mt ?? $rake->loaded_weight_mt ?? 0),
+            'last_weighment' => $lastRw?->gross_weighment_datetime,
+            'net_weight_mt' => $netFromRw > 0 ? $netFromRw : (float) ($rake->loaded_weight_mt ?? 0),
         ];
     }
 

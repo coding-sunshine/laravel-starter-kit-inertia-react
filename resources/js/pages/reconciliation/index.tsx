@@ -75,7 +75,7 @@ export default function ReconciliationIndex({
                     <Card>
                         <CardHeader className="pb-2">
                             <CardDescription>
-                                Pending (no weighment)
+                                Pending (no successful rake weighment)
                             </CardDescription>
                             <CardTitle className="text-lg">
                                 {summary.pending}
@@ -103,7 +103,7 @@ export default function ReconciliationIndex({
                 </div>
                 <Card>
                     <CardHeader>
-                        <CardTitle>Rakes with weighment</CardTitle>
+                        <CardTitle>Rakes with successful weighment</CardTitle>
                         <CardDescription>Filter by siding</CardDescription>
                     </CardHeader>
                     <CardContent>

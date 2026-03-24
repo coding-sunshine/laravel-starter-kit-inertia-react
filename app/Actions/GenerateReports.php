@@ -123,7 +123,7 @@ final readonly class GenerateReports
 
         $rakes = Rake::query()->where('siding_id', $sidingId)
             ->where('created_at', '>=', $fromDate)
-            ->with(['wagons', 'guardInspection', 'weighments', 'penalties'])
+            ->with(['wagons', 'guardInspection', 'rakeWeighments', 'penalties'])
             ->get();
 
         return [

@@ -10,6 +10,7 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
+import { useCan } from '@/hooks/use-can';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { FileText, Plus, Upload } from 'lucide-react';
@@ -54,6 +55,7 @@ interface Props {
 }
 
 export default function IndentsIndex({ indents }: Props) {
+    const canCreateIndent = useCan('sections.indents.create');
     const { flash, errors } = usePage<{
         flash?: { success?: string };
         errors?: { pdf?: string };
@@ -68,10 +70,16 @@ export default function IndentsIndex({ indents }: Props) {
     ];
 
     const handleUploadClick = () => {
+        if (!canCreateIndent) {
+            return;
+        }
         fileInputRef.current?.click();
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!canCreateIndent) {
+            return;
+        }
         const file = e.target.files?.[0];
         if (!file) return;
         setUploading(true);
@@ -109,29 +117,33 @@ export default function IndentsIndex({ indents }: Props) {
                         description="Manage rake orders and requests for the RRMCS system"
                     />
                     <div className="flex items-center gap-2">
-                        <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept=".pdf,application/pdf"
-                            className="hidden"
-                            onChange={handleFileChange}
-                        />
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleUploadClick}
-                            disabled={uploading}
-                            data-pan="indents-upload-pdf-button"
-                        >
-                            <Upload className="mr-2 size-4" />
-                            {uploading ? 'Uploading…' : 'Upload e-Demand PDF'}
-                        </Button>
-                        <Link href="/indents/create">
-                            <Button size="sm">
-                                <Plus className="mr-2 size-4" />
-                                Create indent
-                            </Button>
-                        </Link>
+                        {canCreateIndent && (
+                            <>
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept=".pdf,application/pdf"
+                                    className="hidden"
+                                    onChange={handleFileChange}
+                                />
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handleUploadClick}
+                                    disabled={uploading}
+                                    data-pan="indents-upload-pdf-button"
+                                >
+                                    <Upload className="mr-2 size-4" />
+                                    {uploading ? 'Uploading…' : 'Upload e-Demand PDF'}
+                                </Button>
+                                <Link href="/indents/create">
+                                    <Button size="sm">
+                                        <Plus className="mr-2 size-4" />
+                                        Create indent
+                                    </Button>
+                                </Link>
+                            </>
+                        )}
                     </div>
                 </div>
 
@@ -278,11 +290,13 @@ export default function IndentsIndex({ indents }: Props) {
                                 <p className="text-sm text-muted-foreground">
                                     No indents yet. Create one to get started.
                                 </p>
-                                <Link href="/indents/create">
-                                    <Button className="mt-4" size="sm">
-                                        Create indent
-                                    </Button>
-                                </Link>
+                                {canCreateIndent && (
+                                    <Link href="/indents/create">
+                                        <Button className="mt-4" size="sm">
+                                            Create indent
+                                        </Button>
+                                    </Link>
+                                )}
                             </div>
                         )}
                     </CardContent>

@@ -64,7 +64,10 @@ final class ReconciliationDataTable extends AbstractDataTable
         return Rake::query()
             ->with('siding:id,name,code')
             ->whereIn('siding_id', $sidingIds)
-            ->whereHas('weighments');
+            ->whereHas(
+                'rakeWeighments',
+                static fn ($q) => $q->where('status', 'success')
+            );
     }
 
     public static function tableDefaultSort(): string

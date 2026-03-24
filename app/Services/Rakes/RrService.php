@@ -76,7 +76,7 @@ final readonly class RrService
 
     private function hasSuccessfulWeighment(Rake $rake): bool
     {
-        return $rake->weighments()->where('status', 'success')->exists();
+        return $rake->rakeWeighments()->where('status', 'success')->exists();
     }
 
     private function updateRakeState(Rake $rake, string $state): void

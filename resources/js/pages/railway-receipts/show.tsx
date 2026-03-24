@@ -113,6 +113,7 @@ interface Props {
     rrDocument: RrDocument;
     fromSiding?: FromSiding | null;
     toPowerPlant?: ToPowerPlant | null;
+    can_download_rr?: boolean;
     can_delete_rr?: boolean;
 }
 
@@ -436,6 +437,7 @@ export default function RailwayReceiptShow({
     rrDocument,
     fromSiding,
     toPowerPlant,
+    can_download_rr = false,
     can_delete_rr = false,
 }: Props) {
     const hasData = rrDocument?.id;
@@ -481,7 +483,7 @@ export default function RailwayReceiptShow({
                         </p>
                     </div>
                     <div className="flex items-center gap-2">
-                        {hasData && rrDocument.rr_pdf_download_url && (
+                        {can_download_rr && hasData && rrDocument.rr_pdf_download_url && (
                             <a
                                 href={rrDocument.rr_pdf_download_url}
                                 target="_blank"

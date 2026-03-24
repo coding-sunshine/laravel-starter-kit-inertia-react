@@ -6,6 +6,7 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import { useCan } from '@/hooks/use-can';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
@@ -54,14 +55,18 @@ interface Indent {
 interface Props {
     indent: Indent;
     rake?: Rake | null;
+    can_create_rake?: boolean;
     can_delete_indent?: boolean;
 }
 
 export default function IndentsShow({
     indent,
     rake,
+    can_create_rake = false,
     can_delete_indent = false,
 }: Props) {
+    const canUpdateIndent = useCan('sections.indents.update');
+    const canViewIndent = useCan('sections.indents.view');
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: '/dashboard' },
         { title: 'Indents', href: '/indents' },
@@ -77,26 +82,28 @@ export default function IndentsShow({
                         Indent {indent.indent_number || 'N/A'}
                     </h2>
                     <div className="flex gap-2">
-                        {!rake ? (
+                        {!rake && can_create_rake ? (
                             <Link href={`/indents/${indent.id}/create-rake`}>
                                 <Button variant="default" size="sm">
                                     <Plus className="mr-2 h-4 w-4" />
                                     Create Rake
                                 </Button>
                             </Link>
-                        ) : (
+                        ) : rake ? (
                             <Link href={`/rakes/${rake.id}`}>
                                 <Button variant="outline" size="sm">
                                     <Train className="mr-2 h-4 w-4" />
                                     View Rake
                                 </Button>
                             </Link>
+                        ) : null}
+                        {canUpdateIndent && (
+                            <Link href={`/indents/${indent.id}/edit`}>
+                                <Button variant="outline" size="sm">
+                                    Edit
+                                </Button>
+                            </Link>
                         )}
-                        <Link href={`/indents/${indent.id}/edit`}>
-                            <Button variant="outline" size="sm">
-                                Edit
-                            </Button>
-                        </Link>
                         {can_delete_indent && (
                             <Button
                                 variant="destructive"
@@ -316,7 +323,8 @@ export default function IndentsShow({
                                 </p>
                             </div>
                         )}
-                        {(indent.indent_pdf_download_url ??
+                        {canViewIndent &&
+                            (indent.indent_pdf_download_url ??
                             indent.indent_pdf_url ??
                             indent.indent_confirmation_pdf_url) && (
                             <div className="mt-4">

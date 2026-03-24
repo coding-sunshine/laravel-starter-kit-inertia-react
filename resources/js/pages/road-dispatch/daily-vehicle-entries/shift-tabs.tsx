@@ -13,14 +13,16 @@ interface ShiftTabsProps {
   shiftSummary: Record<number, number>;
   shiftStatus?: Record<number, ShiftStatus>;
   shiftTimes?: Record<number, { start: string; end: string }>;
+  allowedShifts?: number[];
 }
 
-export default function ShiftTabs({ activeShift, onShiftChange, shiftSummary, shiftStatus, shiftTimes }: ShiftTabsProps) {
-  const shifts = [
+export default function ShiftTabs({ activeShift, onShiftChange, shiftSummary, shiftStatus, shiftTimes, allowedShifts = [1, 2, 3] }: ShiftTabsProps) {
+  const allShifts = [
     { id: 1, label: '1ST SHIFT' },
     { id: 2, label: '2ND SHIFT' },
     { id: 3, label: '3RD SHIFT' },
   ];
+  const shifts = allShifts.filter((shift) => allowedShifts.includes(shift.id));
 
   const getShiftVariant = (shiftId: number) => {
     if (activeShift === shiftId) return "default";

@@ -277,8 +277,8 @@ return [
         'indents.update' => 'sections.indents.update',
         'indents.import' => 'sections.indents.create',
         'indents.pdf' => 'sections.indents.view',
-        'indents.create-rake' => 'sections.indents.create',
-        'indents.store-rake' => 'sections.indents.create',
+        'indents.create-rake' => 'sections.rakes.create',
+        'indents.store-rake' => 'sections.rakes.create',
         'indents.destroy' => 'sections.indents.delete',
 
         // Railway Siding Record Data (Road Dispatch)

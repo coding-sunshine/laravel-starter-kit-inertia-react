@@ -33,6 +33,9 @@ interface VehicleEntryTableProps {
   entries: DailyVehicleEntry[];
   date: string;
   shift: number;
+  canCreate?: boolean;
+  canUpdate?: boolean;
+  canDelete?: boolean;
   onEntryUpdated?: (entry: DailyVehicleEntry) => void;
   onEntryDeleted?: (id: number) => void;
   addRowButton?: React.ReactNode;
@@ -44,6 +47,9 @@ export default function VehicleEntryTable({
   entries,
   date,
   shift,
+  canCreate = false,
+  canUpdate = false,
+  canDelete = false,
   onEntryUpdated,
   onEntryDeleted,
   addRowButton,
@@ -138,6 +144,8 @@ export default function VehicleEntryTable({
                   serialNumber={index + 1}
                   date={date}
                   shift={shift}
+                  canUpdate={canUpdate}
+                  canDelete={canDelete}
                   onEntryUpdated={onEntryUpdated}
                   onEntryDeleted={onEntryDeleted}
                 />
@@ -151,7 +159,7 @@ export default function VehicleEntryTable({
                 key={`empty-${index}`}
                 className={isAddingRow ? 'opacity-60' : 'cursor-pointer hover:bg-gray-50'}
                 onClick={() => {
-                  if (onAddRow && !isAddingRow) {
+                  if (canCreate && onAddRow && !isAddingRow) {
                     onAddRow(1);
                   }
                 }}
@@ -178,7 +186,7 @@ export default function VehicleEntryTable({
 
       {/* Add Row button at bottom */}
       <div className="border border-gray-300 border-t-0 px-2 py-2 flex items-center justify-center bg-white">
-        {addRowButton}
+        {canCreate ? addRowButton : null}
       </div>
     </div>
   );
