@@ -31,7 +31,13 @@ final class RakesIndexTool extends Tool
 
         $sidingIds = $user->isSuperAdmin()
             ? Siding::query()->pluck('id')->all()
-            : $user->accessibleSidings()->pluck('id')->all();
+            : $user->sidings()->get()->pluck('id')->all();
+
+        // Backward compatibility: some legacy users only have `users.siding_id`
+        // and no rows in the `user_siding` pivot table.
+        if (! $user->isSuperAdmin() && $sidingIds === [] && $user->siding_id !== null) {
+            $sidingIds = [(int) $user->siding_id];
+        }
 
         $query = Rake::query()
             ->with('siding:id,name,code')

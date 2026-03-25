@@ -29,6 +29,7 @@ final class RakesController extends Controller
 
     public function index(Request $request): Response
     {
+
         return Inertia::render('rakes/index', [
             'tableData' => RakeDataTable::makeTable($request),
         ]);

@@ -48,7 +48,13 @@ final class IndentsController extends Controller
         $user = $request->user();
         $sidingIds = $user->isSuperAdmin()
             ? Siding::query()->pluck('id')->all()
-            : $user->accessibleSidings()->get()->pluck('id')->all();
+            : $user->sidings()->get()->pluck('id')->all();
+
+        // Backward compatibility: some legacy users only have `users.siding_id`
+        // and no rows in the `user_siding` pivot table.
+        if (! $user->isSuperAdmin() && $sidingIds === [] && $user->siding_id !== null) {
+            $sidingIds = [(int) $user->siding_id];
+        }
 
         try {
             $indent = app(IndentPdfImporter::class)->import(
@@ -75,7 +81,13 @@ final class IndentsController extends Controller
         $user = $request->user();
         $sidingIds = $user->isSuperAdmin()
             ? Siding::query()->pluck('id')->all()
-            : $user->accessibleSidings()->get()->pluck('id')->all();
+            : $user->sidings()->get()->pluck('id')->all();
+
+        // Backward compatibility: some legacy users only have `users.siding_id`
+        // and no rows in the `user_siding` pivot table.
+        if (! $user->isSuperAdmin() && $sidingIds === [] && $user->siding_id !== null) {
+            $sidingIds = [(int) $user->siding_id];
+        }
 
         $indents = Indent::query()
             ->with('siding:id,name,code')
@@ -102,7 +114,13 @@ final class IndentsController extends Controller
         $user = $request->user();
         $sidingIds = $user->isSuperAdmin()
             ? Siding::query()->pluck('id')->all()
-            : $user->accessibleSidings()->get()->pluck('id')->all();
+            : $user->sidings()->get()->pluck('id')->all();
+
+        // Backward compatibility: some legacy users only have `users.siding_id`
+        // and no rows in the `user_siding` pivot table.
+        if (! $user->isSuperAdmin() && $sidingIds === [] && $user->siding_id !== null) {
+            $sidingIds = [(int) $user->siding_id];
+        }
 
         $sidings = Siding::query()
             ->whereIn('id', $sidingIds)
@@ -218,7 +236,13 @@ final class IndentsController extends Controller
         $user = $request->user();
         $sidingIds = $user->isSuperAdmin()
             ? Siding::query()->pluck('id')->all()
-            : $user->accessibleSidings()->get()->pluck('id')->all();
+            : $user->sidings()->get()->pluck('id')->all();
+
+        // Backward compatibility: some legacy users only have `users.siding_id`
+        // and no rows in the `user_siding` pivot table.
+        if (! $user->isSuperAdmin() && $sidingIds === [] && $user->siding_id !== null) {
+            $sidingIds = [(int) $user->siding_id];
+        }
 
         $sidings = Siding::query()
             ->whereIn('id', $sidingIds)
@@ -303,7 +327,13 @@ final class IndentsController extends Controller
 
         $sidingIds = $user->isSuperAdmin()
             ? Siding::query()->pluck('id')->all()
-            : $user->accessibleSidings()->get()->pluck('id')->all();
+            : $user->sidings()->get()->pluck('id')->all();
+
+        // Backward compatibility: some legacy users only have `users.siding_id`
+        // and no rows in the `user_siding` pivot table.
+        if (! $user->isSuperAdmin() && $sidingIds === [] && $user->siding_id !== null) {
+            $sidingIds = [(int) $user->siding_id];
+        }
 
         $sidings = Siding::query()
             ->whereIn('id', $sidingIds)

@@ -113,10 +113,20 @@ trait HasRRMCSAuthorization
             return true;
         }
 
-        // Check if user has explicit access to siding
-        return $this->sidings()
+        // Check if user has explicit access to siding (pivot table)
+        if ($this->sidings()
             ->where('siding_id', $sidingId)
-            ->exists();
+            ->exists()) {
+            return true;
+        }
+
+        // Backward compatibility: some legacy users only have `users.siding_id`
+        // and no rows in the `user_siding` pivot table.
+        if (property_exists($this, 'siding_id') && $this->siding_id !== null) {
+            return (int) $this->siding_id === $sidingId;
+        }
+
+        return false;
     }
 
     /**

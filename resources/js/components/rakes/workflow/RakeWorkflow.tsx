@@ -141,6 +141,25 @@ interface RakeWorkflowProps {
     onUnfitWagonIdsSynced?: (unfitWagonIds: number[]) => void;
 }
 
+interface PreRrEstimate {
+    available: boolean;
+    classCode: string;
+    distanceKm: number | null;
+    actualLoadedWeightMt: number | null;
+    sumPccWeightMt: number | null;
+    chargeableWeightMt: number | null;
+    ratePerMt: number | null;
+    freightAmount: number | null;
+    otherCharges: number | null;
+    penaltyAmount: number | null;
+    rebateAmount: number | null;
+    gstPercent: number;
+    gstAmount: number | null;
+    totalAmount: number | null;
+    formula: string;
+    warnings: string[];
+}
+
 function mergeTxrAfterHeaderSave(
     prev: RakeData['txr'],
     incoming: Record<string, unknown>,
@@ -280,11 +299,41 @@ export function RakeWorkflow({
     demurrage_rate_per_mt_hour,
     onUnfitWagonIdsSynced,
 }: RakeWorkflowProps) {
+    const { auth } = usePage().props as { auth?: { can_bypass?: boolean } };
+    const isSuperAdmin = auth?.can_bypass === true;
     const [rakeData, setRakeData] = useState(rake);
     const [workflowGateError, setWorkflowGateError] = useState<string | null>(null);
+    const [preRrEstimate, setPreRrEstimate] = useState<PreRrEstimate | null>(null);
+    const [preRrLoading, setPreRrLoading] = useState(false);
+
     useEffect(() => {
         setRakeData(rake);
     }, [rake]);
+
+    useEffect(() => {
+        if (!isSuperAdmin) {
+            setPreRrEstimate(null);
+            return;
+        }
+
+        setPreRrLoading(true);
+        fetch(`/rakes/${rake.id}/pre-rr`, {
+            headers: {
+                Accept: 'application/json',
+            },
+            credentials: 'same-origin',
+        })
+            .then(async (response) => {
+                if (!response.ok) {
+                    throw new Error('Failed to load PRE-RR estimate');
+                }
+
+                return (await response.json()) as PreRrEstimate;
+            })
+            .then((payload) => setPreRrEstimate(payload))
+            .catch(() => setPreRrEstimate(null))
+            .finally(() => setPreRrLoading(false));
+    }, [isSuperAdmin, rake.id]);
 
     // Workflow step completion checks — TXR checklist reflects saved start/end times (not only status=completed)
     const isTxrTimesRecorded =
@@ -638,6 +687,48 @@ export function RakeWorkflow({
                         />
                     </AccordionContent>
                 </AccordionItem>
+
+                {isSuperAdmin && (
+                    <AccordionItem value="pre-rr">
+                        <AccordionTrigger>
+                            <div className="flex items-center gap-2 text-left">
+                                <span className="font-medium">8. PRE-RR (Estimated Freight)</span>
+                            </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                            {preRrLoading ? (
+                                <div className="text-sm text-muted-foreground">Loading PRE-RR estimate...</div>
+                            ) : preRrEstimate === null ? (
+                                <div className="text-sm text-muted-foreground">
+                                    PRE-RR estimate is not available for this rake yet.
+                                </div>
+                            ) : (
+                                <div className="space-y-2 text-sm">
+                                    <div>Class Code: <span className="font-medium">{preRrEstimate.classCode}</span></div>
+                                    <div>Distance: <span className="font-medium">{preRrEstimate.distanceKm ?? '-'}</span> km</div>
+                                    <div>Actual Loaded Weight: <span className="font-medium">{preRrEstimate.actualLoadedWeightMt ?? '-'}</span> MT</div>
+                                    <div>Sum PCC Weight: <span className="font-medium">{preRrEstimate.sumPccWeightMt ?? '-'}</span> MT</div>
+                                    <div>Chargeable Weight: <span className="font-medium">{preRrEstimate.chargeableWeightMt ?? '-'}</span> MT</div>
+                                    <div>Rate: <span className="font-medium">{preRrEstimate.ratePerMt ?? '-'}</span> Rs/MT</div>
+                                    <div>Freight: <span className="font-medium">{preRrEstimate.freightAmount ?? '-'}</span></div>
+                                    <div>Other Charges: <span className="font-medium">{preRrEstimate.otherCharges ?? 0}</span></div>
+                                    <div>GST ({preRrEstimate.gstPercent}%): <span className="font-medium">{preRrEstimate.gstAmount ?? '-'}</span></div>
+                                    <div>Penalty: <span className="font-medium">{preRrEstimate.penaltyAmount ?? 0}</span></div>
+                                    <div>Rebate: <span className="font-medium">{preRrEstimate.rebateAmount ?? 0}</span></div>
+                                    <div className="pt-1 text-base font-semibold">
+                                        Estimated Total: {preRrEstimate.totalAmount ?? '-'}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">{preRrEstimate.formula}</div>
+                                    {preRrEstimate.warnings.length > 0 && (
+                                        <div className="rounded-md border border-amber-300 bg-amber-50 p-2 text-amber-800 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-300">
+                                            {preRrEstimate.warnings.join(' ')}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </AccordionContent>
+                    </AccordionItem>
+                )}
             </Accordion>
         </div>
     );

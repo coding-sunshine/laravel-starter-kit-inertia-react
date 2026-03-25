@@ -74,16 +74,27 @@ final class RrDocumentDataTable extends AbstractDataTable
         $user = request()->user();
         $sidingIds = $user && $user->isSuperAdmin()
             ? Siding::query()->pluck('id')->all()
-            : ($user ? $user->accessibleSidings()->get()->pluck('id')->all() : []);
+            : ($user ? $user->sidings()->get()->pluck('id')->all() : []);
+
+        // Backward compatibility: some legacy users only have `users.siding_id`
+        // and no rows in the `user_siding` pivot table.
+        if ($user && ! $user->isSuperAdmin() && $sidingIds === [] && $user->siding_id !== null) {
+            $sidingIds = [(int) $user->siding_id];
+        }
 
         return RrDocument::query()
             ->with('rake.siding:id,name,code')
             ->when(
-                $sidingIds !== [],
-                fn (Builder $query): Builder => $query->where(function (Builder $inner) use ($sidingIds): void {
-                    $inner
-                        ->whereHas('rake', fn (Builder $q): Builder => $q->whereIn('siding_id', $sidingIds))
-                        ->orWhereNull('rake_id');
+                $user && ! $user->isSuperAdmin(),
+                fn (Builder $query): Builder => $query->where(function (Builder $inner) use ($sidingIds, $user): void {
+                    $inner->whereHas('rake', fn (Builder $q): Builder => $q->whereIn('siding_id', $sidingIds));
+
+                    // Historical RR documents (no rake_id) should be visible only to the uploader.
+                    $inner->orWhere(function (Builder $historical) use ($user): void {
+                        $historical
+                            ->whereNull('rake_id')
+                            ->where('created_by', (int) $user->id);
+                    });
                 }),
             );
     }
