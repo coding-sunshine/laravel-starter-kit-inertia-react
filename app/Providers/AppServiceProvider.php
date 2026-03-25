@@ -238,6 +238,7 @@ final class AppServiceProvider extends ServiceProvider
             'production-add-entry',
             'production-edit-entry',
             'production-delete-entry',
+            'shift-lock-overlay',
         ]);
     }
 

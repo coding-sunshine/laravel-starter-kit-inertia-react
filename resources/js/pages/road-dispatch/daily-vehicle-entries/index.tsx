@@ -12,6 +12,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import ShiftTabs from './shift-tabs';
 import VehicleEntryTable from './vehicle-entry-table';
 import { useCan } from '@/hooks/use-can';
+import ShiftLockOverlay from '@/components/ShiftLockOverlay';
 
 interface DailyVehicleEntry {
   id: number;
@@ -76,6 +77,8 @@ interface Props {
   allowedShifts?: number[];
   /** When true, user only sees their assigned shift; hide shift/siding switchers. */
   restrictToAssignedShift?: boolean;
+  canBypassShiftLock?: boolean;
+  shiftLock?: { isLocked: boolean; message: string; nextShiftStartAt: string | null; now: string } | null;
 }
 
 export default function DailyVehicleEntriesIndex({
@@ -89,11 +92,15 @@ export default function DailyVehicleEntriesIndex({
   sidingId: sidingIdProp,
   allowedShifts = [1, 2, 3],
   restrictToAssignedShift = false,
+  canBypassShiftLock = false,
+  shiftLock = null,
 }: Props) {
   const canCreate = useCan('sections.railway_siding_record_data.create');
   const canUpdate = useCan('sections.railway_siding_record_data.update');
   const canDelete = useCan('sections.railway_siding_record_data.delete');
   const canExport = useCan('sections.railway_siding_record_data.view');
+
+  const isShiftLocked = !!shiftLock?.isLocked && !canBypassShiftLock;
 
   const [entries, setEntries] = useState(() =>
     Array.isArray(entriesProp) ? entriesProp : []
@@ -183,6 +190,11 @@ export default function DailyVehicleEntriesIndex({
   const handleAddRow = async (count: number = 1) => {
     if (addingRowRef.current) return;
     addingRowRef.current = true;
+    if (isShiftLocked) {
+      alert(shiftLock?.message || 'Your shift is not active yet (or has ended).');
+      addingRowRef.current = false;
+      return;
+    }
     if (shiftStatus && selectedDate === new Date().toISOString().split('T')[0]) {
       if (!shiftStatus[activeShiftState]?.is_available) {
         const messages = {
@@ -312,6 +324,14 @@ export default function DailyVehicleEntriesIndex({
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
       <Head title="Daily Vehicle Entries" />
+
+      <ShiftLockOverlay
+        shiftLock={shiftLock}
+        canBypass={canBypassShiftLock}
+        onUnlock={() => {
+          router.reload({ preserveState: true, preserveScroll: true });
+        }}
+      />
       
       <div className="space-y-6">
         {/* Header */}
@@ -401,26 +421,26 @@ export default function DailyVehicleEntriesIndex({
         {/* Date filter, shift summary, shift times, shift tabs: only for superadmin / dispatch-manage-admin */}
         {!restrictToAssignedShift && (
           <>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex gap-4 items-center">
+        <Card className="p-3 gap-3">
+          <CardContent className="mx-0 px-0 pb-0 pt-0">
+            <div className="flex flex-wrap items-center gap-3">
               <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-gray-500" />
+                <Calendar className="h-4 w-4 text-muted-foreground" />
                 <Input
                   type="date"
                   value={selectedDate}
                   onChange={(e) => handleDateChange(e.target.value)}
-                  className="w-auto"
+                  className="w-auto h-8"
                 />
               </div>
-              <div className="flex gap-2 ml-auto">
+              <div className="flex flex-wrap items-center gap-2 ml-auto">
                 {allowedShifts.map((shift) => (
                   <Badge
                     key={shift}
                     variant={activeShiftState === shift ? "default" : "secondary"}
-                    className="cursor-pointer"
+                    className="cursor-pointer text-[11px] px-2 py-0.5 leading-none"
                   >
-                    {shift === 1 ? '1ST' : shift === 2 ? '2ND' : '3RD'} SHIFT: {shiftSummary[shift] || 0}
+                    {shift === 1 ? '1ST' : shift === 2 ? '2ND' : '3RD'}: {shiftSummary[shift] || 0}
                   </Badge>
                 ))}
               </div>
@@ -428,11 +448,11 @@ export default function DailyVehicleEntriesIndex({
           </CardContent>
         </Card>
 
-        <p className="text-sm text-gray-500">
-          Shift 1: {shiftTimes[1]?.start ?? '00:01'}–{shiftTimes[1]?.end ?? '08:00'} &nbsp;|&nbsp;{' '}
-          Shift 2: {shiftTimes[2]?.start ?? '08:01'}–{shiftTimes[2]?.end ?? '16:00'} &nbsp;|&nbsp;{' '}
-          Shift 3: {shiftTimes[3]?.start ?? '16:01'}–{shiftTimes[3]?.end ?? '00:00'}
-        </p>
+        <div className="text-xs text-muted-foreground flex flex-wrap gap-x-4 gap-y-1">
+          <span>1st: {shiftTimes[1]?.start ?? '00:01'}–{shiftTimes[1]?.end ?? '08:00'}</span>
+          <span>2nd: {shiftTimes[2]?.start ?? '08:01'}–{shiftTimes[2]?.end ?? '16:00'}</span>
+          <span>3rd: {shiftTimes[3]?.start ?? '16:01'}–{shiftTimes[3]?.end ?? '00:00'}</span>
+        </div>
 
         <ShiftTabs
             activeShift={activeShiftState}
@@ -453,16 +473,16 @@ export default function DailyVehicleEntriesIndex({
           entries={entriesForSiding}
           date={selectedDate}
           shift={activeShiftState}
-          canCreate={canCreate}
-          canUpdate={canUpdate}
-          canDelete={canDelete}
+          canCreate={canCreate && !isShiftLocked}
+          canUpdate={canUpdate && !isShiftLocked}
+          canDelete={canDelete && !isShiftLocked}
           onEntryUpdated={handleEntryUpdated}
           onEntryDeleted={handleEntryDeleted}
           onAddRow={handleAddRow}
           isAddingRow={isAddingRow}
           addRowButton={
             <>
-              {canCreate && (
+              {canCreate && !isShiftLocked && (
                 <Button
                   onClick={() => handleAddRow(5)}
                   disabled={isAddingRow}

@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Rakes;
 
+use App\Actions\UpdateStockLedger;
 use App\Http\Controllers\Controller;
 use App\Models\AppliedPenalty;
 use App\Models\Rake;
+use App\Models\RakeCharge;
+use App\Models\StockLedger;
 use App\Services\RakeWeighmentPdfImporter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -14,12 +17,9 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
 use Throwable;
-use App\Actions\UpdateStockLedger;
-use App\Models\StockLedger;
 
 final class RakeWeighmentController extends Controller
 {
-    
     public function __construct(
         private UpdateStockLedger $updateStockLedger,
     ) {}
@@ -67,9 +67,9 @@ final class RakeWeighmentController extends Controller
 
         // 1) Reverse any dispatch ledgers for this rake
         $dispatchLedgers = StockLedger::query()
-        ->where('rake_id', $rake->id)
-        ->where('transaction_type', 'dispatch')
-        ->get();
+            ->where('rake_id', $rake->id)
+            ->where('transaction_type', 'dispatch')
+            ->get();
 
         $userId = (int) auth()->id();
 
@@ -109,15 +109,24 @@ final class RakeWeighmentController extends Controller
             $weighment->delete();
         }
 
-        // Delete penalties that were derived from rake weighment data,
-        // but keep demurrage and other non-weighment penalties intact.
         AppliedPenalty::query()
             ->where('rake_id', $rake->id)
             ->where('meta->source', 'weighment')
-            ->whereHas('penaltyType', function ($query): void {
-                $query->where('code', '!=', 'DEM');
-            })
             ->delete();
+
+        $penaltyCharge = RakeCharge::query()
+            ->where('rake_id', $rake->id)
+            ->where('charge_type', 'PENALTY')
+            ->where('is_actual_charges', false)
+            ->first();
+
+        if ($penaltyCharge) {
+            $total = AppliedPenalty::query()
+                ->where('rake_charge_id', $penaltyCharge->id)
+                ->sum('amount');
+
+            $penaltyCharge->update(['amount' => round((float) $total, 2)]);
+        }
 
         return to_route('rakes.show', $rake)
             ->with('success', 'Rake weighment data deleted.');

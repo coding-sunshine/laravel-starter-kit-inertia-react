@@ -47,6 +47,7 @@ interface RakeOption {
     id: number;
     rake_number: string;
     rr_actual_date?: string | null;
+    loading_date?: string | null;
     siding?: {
         name: string;
         code: string;
@@ -188,8 +189,8 @@ export default function WeighmentsIndex({ weighments = [] }: Props) {
             parts.push(`– ${rake.siding.code}`);
         }
 
-        if (rake.rr_actual_date) {
-            parts.push(`(${rake.rr_actual_date})`);
+        if (rake.loading_date) {
+            parts.push(`(${rake.loading_date})`);
         }
 
         return parts.join(' ');
@@ -381,7 +382,7 @@ export default function WeighmentsIndex({ weighments = [] }: Props) {
                         </DialogHeader>
                         <div className="space-y-4">
                             <div className="space-y-2">
-                                <Label htmlFor="weighment-month">Rake month (filter)</Label>
+                                <Label htmlFor="weighment-month">Loading month (filter)</Label>
                                 <div className="flex items-center gap-2">
                                     <div className="relative inline-flex items-center">
                                         <CalendarDays className="pointer-events-none absolute left-2 size-4 text-muted-foreground" />

@@ -54,6 +54,7 @@ interface RakeOption {
     id: number;
     rake_number: string;
     rr_actual_date?: string | null;
+    loading_date?: string | null;
     siding?: {
         name: string;
         code: string;
@@ -207,8 +208,8 @@ export default function RailwayReceiptsIndex({
             parts.push(`– ${rake.siding.code}`);
         }
 
-        if (rake.rr_actual_date) {
-            parts.push(`(${rake.rr_actual_date})`);
+        if (rake.loading_date) {
+            parts.push(`(${rake.loading_date})`);
         }
 
         return parts.join(' ');
@@ -317,7 +318,7 @@ export default function RailwayReceiptsIndex({
                     <div className="space-y-4">
                         <div className="space-y-2">
                             <Label htmlFor="rr-month">
-                                Rake month (filter)
+                                Loading month (filter)
                             </Label>
                             <div className="flex items-center gap-2">
                                 <div className="relative inline-flex items-center">

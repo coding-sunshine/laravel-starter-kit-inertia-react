@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Rakes;
 
+use App\Actions\ApplyDemurragePenaltyAction;
 use App\Actions\SyncTxrUnfitFlagsToWagonsAction;
 use App\DataTables\RakeDataTable;
 use App\Http\Controllers\Controller;
+use App\Models\AppliedPenalty;
 use App\Models\Rake;
+use App\Models\RakeCharge;
 use App\Models\SectionTimer;
 use App\Models\Siding;
 use App\Models\Wagon;
@@ -25,10 +28,12 @@ final class RakesController extends Controller
 {
     public function __construct(
         private readonly SyncTxrUnfitFlagsToWagonsAction $syncTxrUnfitFlagsToWagons,
+        private readonly ApplyDemurragePenaltyAction $applyDemurragePenalty,
     ) {}
 
     public function index(Request $request): Response
     {
+
         return Inertia::render('rakes/index', [
             'tableData' => RakeDataTable::makeTable($request),
         ]);
@@ -179,6 +184,8 @@ final class RakesController extends Controller
         if (array_key_exists('applied_penalties', $rakeArray)) {
             $rakeArray['appliedPenalties'] = $rakeArray['applied_penalties'];
         }
+
+        $this->reconcilePenaltyChargeTotal($rake);
 
         return Inertia::render('rakes/show', [
             'rake' => $rakeArray,
@@ -353,6 +360,8 @@ final class RakesController extends Controller
             'loading_free_minutes' => null,
         ]);
 
+        $this->applyDemurragePenalty->handle($rake);
+
         if ($request->wantsJson()) {
             return response()->json([
                 'loading_start_time' => null,
@@ -369,6 +378,8 @@ final class RakesController extends Controller
         $rake->update([
             'loading_end_time' => now(),
         ]);
+
+        $this->applyDemurragePenalty->handle($rake);
 
         if ($request->wantsJson()) {
             return response()->json([
@@ -412,6 +423,8 @@ final class RakesController extends Controller
             'loading_date' => $loadingDate,
             'loading_free_minutes' => $freeMinutes,
         ]);
+
+        $this->applyDemurragePenalty->handle($rake);
 
         if ($request->wantsJson()) {
             return response()->json([
@@ -470,5 +483,29 @@ final class RakesController extends Controller
         $weighmentSuccess = $rake->rakeWeighments->contains('status', 'success');
 
         return $weighmentSuccess;
+    }
+
+    /**
+     * Safety-net: ensure the PENALTY RakeCharge total matches the sum of all applied penalties.
+     */
+    private function reconcilePenaltyChargeTotal(Rake $rake): void
+    {
+        $penaltyCharge = RakeCharge::query()
+            ->where('rake_id', $rake->id)
+            ->where('charge_type', 'PENALTY')
+            ->where('is_actual_charges', false)
+            ->first();
+
+        if (! $penaltyCharge) {
+            return;
+        }
+
+        $actualTotal = round((float) AppliedPenalty::query()
+            ->where('rake_charge_id', $penaltyCharge->id)
+            ->sum('amount'), 2);
+
+        if ((float) $penaltyCharge->amount !== $actualTotal) {
+            $penaltyCharge->update(['amount' => $actualTotal]);
+        }
     }
 }

@@ -128,6 +128,12 @@ final class RakeDataTable extends AbstractDataTable
         $user = request()->user();
         if ($user && ! $user->isSuperAdmin()) {
             $sidingIds = $user->sidings()->get()->pluck('id')->all();
+
+            // Backward compatibility: some legacy users only have `users.siding_id`
+            // and no rows in the `user_siding` pivot table.
+            if ($sidingIds === [] && $user->siding_id !== null) {
+                $sidingIds = [(int) $user->siding_id];
+            }
             $query->whereIn('siding_id', $sidingIds);
         }
 

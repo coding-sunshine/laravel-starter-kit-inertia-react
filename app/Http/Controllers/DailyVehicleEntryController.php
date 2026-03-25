@@ -10,6 +10,7 @@ use App\Models\SidingShift;
 use App\Models\VehicleWorkorder;
 use App\Services\DailyVehicleEntryService;
 use App\Services\ShiftValidationService;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -48,6 +49,9 @@ final class DailyVehicleEntryController extends Controller
         $entryType = DailyVehicleEntry::ENTRY_TYPE_ROAD_DISPATCH;
 
         $date = $request->get('date', now()->format('Y-m-d'));
+        if ($restrictToAssignedShift) {
+            $date = now()->format('Y-m-d');
+        }
         $sidingsOrdered = Siding::query()
             ->whereIn('id', $allowedSidingIds->all())
             ->orderBy('name')
@@ -108,6 +112,14 @@ final class DailyVehicleEntryController extends Controller
         $shiftStatus = $this->shiftValidation->getShiftCompletionStatus($date, $sidingIdForShifts);
         $shiftTimes = $this->shiftValidation->getShiftTimesForSiding($sidingIdForShifts);
 
+        $canBypassShiftLock = $this->canBypassShiftLockForSiding((int) $sidingIdForShifts);
+        $shiftLock = $this->buildShiftLock(
+            date: (string) $date,
+            sidingId: (int) $sidingIdForShifts,
+            allowedShifts: $allowedShifts->all(),
+            canBypass: $canBypassShiftLock
+        );
+
         $sidings = $sidingsOrdered;
 
         return Inertia::render('road-dispatch/daily-vehicle-entries/index', [
@@ -121,6 +133,8 @@ final class DailyVehicleEntryController extends Controller
             'sidingId' => $sidingId,
             'allowedShifts' => $allowedShifts->all(),
             'restrictToAssignedShift' => $restrictToAssignedShift,
+            'canBypassShiftLock' => $canBypassShiftLock,
+            'shiftLock' => $shiftLock,
         ]);
     }
 
@@ -156,17 +170,18 @@ final class DailyVehicleEntryController extends Controller
         if ($isShiftRestrictedUser) {
             $data['siding_id'] = $firstAssignment->siding_id;
             $data['shift'] = (int) $firstAssignment->sort_order;
+            $data['entry_date'] = now()->format('Y-m-d');
         } elseif (! $sidingShiftPairs->contains(((int) $data['siding_id']).'|'.((int) $data['shift']))) {
             abort(403, 'You are not allowed to access this shift for the selected siding.');
         }
 
-        if ($data['entry_date'] === now()->format('Y-m-d')) {
-            $sidingIdForValidation = $data['siding_id'] ?? Siding::query()->orderBy('name')->value('id');
-            if (! $this->shiftValidation->canAccessShift($data['shift'], $data['entry_date'], null, $sidingIdForValidation)) {
-                throw ValidationException::withMessages([
-                    'shift' => 'This shift is not available at the current time. Please wait for the shift to become active.',
-                ]);
-            }
+        $sidingIdForValidation = (int) ($data['siding_id'] ?? 0);
+        if (! $this->canBypassShiftLockForSiding($sidingIdForValidation)) {
+            $this->enforceStrictActiveShift(
+                shift: (int) $data['shift'],
+                entryDate: (string) $data['entry_date'],
+                sidingId: $sidingIdForValidation
+            );
         }
 
         $entry = $this->service->createEntry($data);
@@ -186,6 +201,7 @@ final class DailyVehicleEntryController extends Controller
     {
         $entry = DailyVehicleEntry::findOrFail($id);
         $this->authorizeEntryForShiftUser($entry);
+        $this->enforceStrictActiveShiftForEntry($entry);
 
         $data = $request->validate([
             'e_challan_no' => 'nullable|string|max:255',
@@ -218,6 +234,7 @@ final class DailyVehicleEntryController extends Controller
     {
         $entry = DailyVehicleEntry::findOrFail($id);
         $this->authorizeEntryForShiftUser($entry);
+        $this->enforceStrictActiveShiftForEntry($entry);
         $updatedEntry = $this->service->markCompleted($entry);
 
         if ($request->wantsJson()) {
@@ -234,6 +251,7 @@ final class DailyVehicleEntryController extends Controller
     {
         $entry = DailyVehicleEntry::findOrFail($id);
         $this->authorizeEntryForShiftUser($entry);
+        $this->enforceStrictActiveShiftForEntry($entry);
 
         if ($entry->status !== 'draft') {
             if ($request->wantsJson()) {
@@ -366,5 +384,142 @@ final class DailyVehicleEntryController extends Controller
         if (! $allowedPairs->contains($pair)) {
             abort(403, 'You can only manage entries for your assigned shift.');
         }
+    }
+
+    private function canBypassShiftLockForSiding(int $sidingId): bool
+    {
+        $user = Auth::user();
+        $assignedShiftOrders = $user?->activeSidingShifts()
+            ->where('siding_id', $sidingId)
+            ->pluck('sort_order')
+            ->map(fn (mixed $shift): int => (int) $shift)
+            ->unique()
+            ->values();
+
+        if ($assignedShiftOrders === null) {
+            return false;
+        }
+
+        return $assignedShiftOrders->contains(1)
+            && $assignedShiftOrders->contains(2)
+            && $assignedShiftOrders->contains(3);
+    }
+
+    private function enforceStrictActiveShiftForEntry(DailyVehicleEntry $entry): void
+    {
+        if ($this->canBypassShiftLockForSiding((int) $entry->siding_id)) {
+            return;
+        }
+
+        $entryDate = $entry->entry_date instanceof Carbon
+            ? $entry->entry_date->format('Y-m-d')
+            : (string) $entry->entry_date;
+
+        $this->enforceStrictActiveShift(
+            shift: (int) $entry->shift,
+            entryDate: $entryDate,
+            sidingId: (int) $entry->siding_id
+        );
+    }
+
+    private function enforceStrictActiveShift(int $shift, string $entryDate, int $sidingId): void
+    {
+        $today = now()->format('Y-m-d');
+        try {
+            $normalizedEntryDate = Carbon::parse($entryDate)->format('Y-m-d');
+        } catch (Throwable) {
+            throw ValidationException::withMessages([
+                'entry_date' => 'Invalid entry date.',
+            ]);
+        }
+
+        if ($normalizedEntryDate !== $today) {
+            throw ValidationException::withMessages([
+                'entry_date' => 'You can only update entries for today during your active shift.',
+            ]);
+        }
+
+        if (! $this->shiftValidation->isShiftActive($shift, null, $sidingId)) {
+            throw ValidationException::withMessages([
+                'shift' => 'Your shift is not active yet (or has ended). Please wait for your shift to start.',
+            ]);
+        }
+    }
+
+    /**
+     * @param  array<int, int>  $allowedShifts
+     * @return array{isLocked: bool, message: string, nextShiftStartAt: string|null, now: string}
+     */
+    private function buildShiftLock(string $date, int $sidingId, array $allowedShifts, bool $canBypass): array
+    {
+        $now = Carbon::now();
+
+        if ($canBypass) {
+            return [
+                'isLocked' => false,
+                'message' => '',
+                'nextShiftStartAt' => null,
+                'now' => $now->toIso8601String(),
+            ];
+        }
+
+        if ($date !== $now->format('Y-m-d')) {
+            return [
+                'isLocked' => true,
+                'message' => 'You can only update entries for today during your active shift.',
+                'nextShiftStartAt' => null,
+                'now' => $now->toIso8601String(),
+            ];
+        }
+
+        $assignedShiftOrders = collect($allowedShifts)
+            ->map(fn (mixed $shift): int => (int) $shift)
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+
+        $isAnyAssignedShiftActive = collect($assignedShiftOrders)->contains(
+            fn (int $shift): bool => $this->shiftValidation->isShiftActive($shift, $now, $sidingId)
+        );
+
+        if ($isAnyAssignedShiftActive) {
+            return [
+                'isLocked' => false,
+                'message' => '',
+                'nextShiftStartAt' => null,
+                'now' => $now->toIso8601String(),
+            ];
+        }
+
+        $shiftTimes = $this->shiftValidation->getShiftTimesForSiding($sidingId);
+        $candidateStarts = collect($assignedShiftOrders)
+            ->filter(fn (int $shift): bool => isset($shiftTimes[$shift]))
+            ->map(function (int $shift) use ($now, $shiftTimes): Carbon {
+                $start = $shiftTimes[$shift]['start'];
+                $startParts = explode(':', $start);
+                $hour = (int) ($startParts[0] ?? 0);
+                $minute = (int) ($startParts[1] ?? 0);
+
+                return $now->copy()->startOfDay()->setTime($hour, $minute);
+            })
+            ->values();
+
+        $nextStart = $candidateStarts
+            ->filter(fn (Carbon $start): bool => $start->greaterThan($now))
+            ->sort()
+            ->first();
+
+        if (! $nextStart instanceof Carbon) {
+            $firstStart = $candidateStarts->sort()->first();
+            $nextStart = $firstStart instanceof Carbon ? $firstStart->copy()->addDay() : null;
+        }
+
+        return [
+            'isLocked' => true,
+            'message' => 'Your shift is not active yet (or has ended). You cannot update data right now.',
+            'nextShiftStartAt' => $nextStart?->toIso8601String(),
+            'now' => $now->toIso8601String(),
+        ];
     }
 }

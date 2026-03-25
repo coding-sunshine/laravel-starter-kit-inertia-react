@@ -30,7 +30,13 @@ final class RrDocumentController extends Controller
 
         $sidingIds = $user->isSuperAdmin()
             ? Siding::query()->pluck('id')->all()
-            : $user->accessibleSidings()->get()->pluck('id')->all();
+            : $user->sidings()->get()->pluck('id')->all();
+
+        // Backward compatibility: some legacy users only have `users.siding_id`
+        // and no rows in the `user_siding` pivot table.
+        if (! $user->isSuperAdmin() && $sidingIds === [] && $user->siding_id !== null) {
+            $sidingIds = [(int) $user->siding_id];
+        }
 
         $sidings = Siding::query()
             ->whereIn('id', $sidingIds)
@@ -61,7 +67,13 @@ final class RrDocumentController extends Controller
 
         $sidingIds = $user->isSuperAdmin()
             ? Siding::query()->pluck('id')->all()
-            : $user->accessibleSidings()->get()->pluck('id')->all();
+            : $user->sidings()->get()->pluck('id')->all();
+
+        // Backward compatibility: some legacy users only have `users.siding_id`
+        // and no rows in the `user_siding` pivot table.
+        if (! $user->isSuperAdmin() && $sidingIds === [] && $user->siding_id !== null) {
+            $sidingIds = [(int) $user->siding_id];
+        }
         $sidingId = $request->input('siding_id') ?? $sidingIds[0] ?? null;
         $powerPlantId = $request->input('power_plant_id') ?? PowerPlant::query()->orderBy('id')->value('id');
         $rakeId = $request->input('rake_id');
@@ -146,7 +158,7 @@ final class RrDocumentController extends Controller
             : null;
 
         $canDeleteRr = $this->hasStrictSectionPermission($user, 'sections.railway_receipts.delete');
-        
+
         $hasPdf = $rrDocument->getFirstMedia('rr_pdf') !== null;
         $rrDocument->setAttribute('rr_pdf_download_url', $hasPdf ? route('railway-receipts.pdf', $rrDocument) : null);
         $ledgerCharges = $rrDocument->rake?->rakeCharges
@@ -191,22 +203,35 @@ final class RrDocumentController extends Controller
 
         $sidingIds = $user->isSuperAdmin()
             ? Siding::query()->pluck('id')->all()
-            : $user->accessibleSidings()->get()->pluck('id')->all();
+            : $user->sidings()->get()->pluck('id')->all();
+
+        // Backward compatibility: some legacy users only have `users.siding_id`
+        // and no rows in the `user_siding` pivot table.
+        if (! $user->isSuperAdmin() && $sidingIds === [] && $user->siding_id !== null) {
+            $sidingIds = [(int) $user->siding_id];
+        }
 
         $rakes = Rake::query()
             ->whereIn('siding_id', $sidingIds)
-            ->whereBetween('created_at', [$start, $end])
+            ->where('data_source', 'system')
+            ->whereNotNull('loading_date')
+            ->whereBetween('loading_date', [$start->toDateString(), $end->toDateString()])
+            ->whereDoesntHave('rrDocument')
+            ->whereDoesntHave('rakeWeighments', static function ($query): void {
+                $query->whereNotNull('pdf_file_path');
+            })
             ->with('siding:id,name,code')
-            ->orderByDesc('created_at')
+            ->orderByDesc('loading_date')
             ->orderBy('rake_number')
-            ->get(['id', 'rake_number', 'rr_actual_date', 'created_at', 'siding_id']);
+            ->limit(500)
+            ->get(['id', 'rake_number', 'rr_actual_date', 'loading_date', 'siding_id']);
 
         $data = $rakes->map(static function (Rake $rake): array {
             return [
                 'id' => $rake->id,
                 'rake_number' => $rake->rake_number,
                 'rr_actual_date' => $rake->rr_actual_date?->toDateString(),
-                'created_at' => $rake->created_at?->toDateString(),
+                'loading_date' => $rake->loading_date?->toDateString(),
                 'siding' => $rake->siding
                     ? [
                         'name' => $rake->siding->name,
@@ -228,7 +253,13 @@ final class RrDocumentController extends Controller
 
         $sidingIds = $user->isSuperAdmin()
             ? Siding::query()->pluck('id')->all()
-            : $user->accessibleSidings()->get()->pluck('id')->all();
+            : $user->sidings()->get()->pluck('id')->all();
+
+        // Backward compatibility: some legacy users only have `users.siding_id`
+        // and no rows in the `user_siding` pivot table.
+        if (! $user->isSuperAdmin() && $sidingIds === [] && $user->siding_id !== null) {
+            $sidingIds = [(int) $user->siding_id];
+        }
         $rakes = Rake::query()
             ->whereIn('siding_id', $sidingIds)
             ->orderBy('rake_number')

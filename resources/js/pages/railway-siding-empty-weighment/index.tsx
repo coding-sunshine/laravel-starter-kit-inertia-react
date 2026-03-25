@@ -10,6 +10,7 @@ import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import ShiftTabs from './shift-tabs';
 import VehicleEntryTable from './vehicle-entry-table';
+import ShiftLockOverlay from '@/components/ShiftLockOverlay';
 
 interface EmptyWeighmentEntry {
   id: number;
@@ -64,6 +65,8 @@ interface Props {
   sidingId?: number | null;
   allowedShifts?: number[];
   restrictToAssignedShift?: boolean;
+  canBypassShiftLock?: boolean;
+  shiftLock?: { isLocked: boolean; message: string; nextShiftStartAt: string | null; now: string } | null;
 }
 
 export default function RailwaySidingEmptyWeighmentIndex({
@@ -77,6 +80,8 @@ export default function RailwaySidingEmptyWeighmentIndex({
   sidingId: sidingIdProp,
   allowedShifts = [1, 2, 3],
   restrictToAssignedShift = false,
+  canBypassShiftLock = false,
+  shiftLock = null,
 }: Props) {
   const [entries, setEntries] = useState(() =>
     Array.isArray(entriesProp) ? entriesProp : []
@@ -92,6 +97,8 @@ export default function RailwaySidingEmptyWeighmentIndex({
   const [isAddingRow, setIsAddingRow] = useState(false);
   const [addRowError, setAddRowError] = useState<string | null>(null);
   const addingRowRef = useRef(false);
+
+  const isShiftLocked = !!shiftLock?.isLocked && !canBypassShiftLock;
 
   const effectiveSidingId = selectedSidingId ?? firstSidingId;
   const entriesForSiding =
@@ -159,6 +166,11 @@ export default function RailwaySidingEmptyWeighmentIndex({
   const handleAddRow = async (count: number = 1) => {
     if (addingRowRef.current) return;
     addingRowRef.current = true;
+    if (isShiftLocked) {
+      alert(shiftLock?.message || 'Your shift is not active yet (or has ended).');
+      addingRowRef.current = false;
+      return;
+    }
     if (shiftStatus && selectedDate === new Date().toISOString().split('T')[0]) {
       if (!shiftStatus[activeShiftState]?.is_available) {
         const messages: Record<number, string> = {
@@ -281,6 +293,14 @@ export default function RailwaySidingEmptyWeighmentIndex({
     <AppLayout breadcrumbs={breadcrumbs}>
       <Head title="Railway Siding Empty Weighment" />
 
+      <ShiftLockOverlay
+        shiftLock={shiftLock}
+        canBypass={canBypassShiftLock}
+        onUnlock={() => {
+          router.reload({ preserveState: true, preserveScroll: true });
+        }}
+      />
+
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
@@ -366,26 +386,26 @@ export default function RailwaySidingEmptyWeighmentIndex({
 
         {!restrictToAssignedShift && (
           <>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex gap-4 items-center">
+            <Card className="p-3 gap-3">
+              <CardContent className="mx-0 px-0 pb-0 pt-0">
+                <div className="flex flex-wrap items-center gap-3">
                   <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-gray-500" />
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
                     <Input
                       type="date"
                       value={selectedDate}
                       onChange={(e) => handleDateChange(e.target.value)}
-                      className="w-auto"
+                      className="w-auto h-8"
                     />
                   </div>
-                  <div className="flex gap-2 ml-auto">
+                  <div className="flex flex-wrap items-center gap-2 ml-auto">
                     {allowedShifts.map((shift) => (
                       <Badge
                         key={shift}
                         variant={activeShiftState === shift ? 'default' : 'secondary'}
-                        className="cursor-pointer"
+                        className="cursor-pointer text-[11px] px-2 py-0.5 leading-none"
                       >
-                        {shift === 1 ? '1ST' : shift === 2 ? '2ND' : '3RD'} SHIFT: {shiftSummary[shift] || 0}
+                        {shift === 1 ? '1ST' : shift === 2 ? '2ND' : '3RD'}: {shiftSummary[shift] || 0}
                       </Badge>
                     ))}
                   </div>
@@ -393,11 +413,11 @@ export default function RailwaySidingEmptyWeighmentIndex({
               </CardContent>
             </Card>
 
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Shift 1: {shiftTimes[1]?.start ?? '00:01'}–{shiftTimes[1]?.end ?? '08:00'} &nbsp;|&nbsp; Shift 2:{' '}
-              {shiftTimes[2]?.start ?? '08:01'}–{shiftTimes[2]?.end ?? '16:00'} &nbsp;|&nbsp; Shift 3:{' '}
-              {shiftTimes[3]?.start ?? '16:01'}–{shiftTimes[3]?.end ?? '00:00'}
-            </p>
+            <div className="text-xs text-muted-foreground flex flex-wrap gap-x-4 gap-y-1">
+              <span>1st: {shiftTimes[1]?.start ?? '00:01'}–{shiftTimes[1]?.end ?? '08:00'}</span>
+              <span>2nd: {shiftTimes[2]?.start ?? '08:01'}–{shiftTimes[2]?.end ?? '16:00'}</span>
+              <span>3rd: {shiftTimes[3]?.start ?? '16:01'}–{shiftTimes[3]?.end ?? '00:00'}</span>
+            </div>
 
             <ShiftTabs
               activeShift={activeShiftState}
@@ -415,6 +435,7 @@ export default function RailwaySidingEmptyWeighmentIndex({
           entries={entriesForSiding}
           date={selectedDate}
           shift={activeShiftState}
+          isLocked={isShiftLocked}
           onEntryUpdated={handleEntryUpdated}
           onEntryDeleted={handleEntryDeleted}
           onAddRow={handleAddRow}
@@ -423,7 +444,7 @@ export default function RailwaySidingEmptyWeighmentIndex({
             <>
               <Button
                 onClick={() => handleAddRow(5)}
-                disabled={isAddingRow}
+                disabled={isAddingRow || isShiftLocked}
                 className="flex items-center gap-2"
               >
                 <Plus className="h-4 w-4" />

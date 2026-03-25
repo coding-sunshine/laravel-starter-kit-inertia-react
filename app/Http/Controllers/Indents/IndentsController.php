@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Indents;
 
 use App\Actions\DeleteIndentAction;
+use App\Actions\UpdateStockLedger;
 use App\Http\Controllers\Controller;
 use App\Models\Indent;
 use App\Models\PowerPlant;
@@ -48,7 +49,13 @@ final class IndentsController extends Controller
         $user = $request->user();
         $sidingIds = $user->isSuperAdmin()
             ? Siding::query()->pluck('id')->all()
-            : $user->accessibleSidings()->get()->pluck('id')->all();
+            : $user->sidings()->get()->pluck('id')->all();
+
+        // Backward compatibility: some legacy users only have `users.siding_id`
+        // and no rows in the `user_siding` pivot table.
+        if (! $user->isSuperAdmin() && $sidingIds === [] && $user->siding_id !== null) {
+            $sidingIds = [(int) $user->siding_id];
+        }
 
         try {
             $indent = app(IndentPdfImporter::class)->import(
@@ -57,8 +64,8 @@ final class IndentsController extends Controller
                 $sidingIds
             );
 
-            return to_route('indents.show', $indent)
-                ->with('success', 'Indent imported from PDF successfully.');
+            return to_route('indents.edit', $indent)
+                ->with('success', 'Indent imported from PDF. Please verify and update details.');
         } catch (InvalidArgumentException $e) {
             return back()->withErrors(['pdf' => $e->getMessage()]);
         } catch (Throwable $e) {
@@ -75,7 +82,13 @@ final class IndentsController extends Controller
         $user = $request->user();
         $sidingIds = $user->isSuperAdmin()
             ? Siding::query()->pluck('id')->all()
-            : $user->accessibleSidings()->get()->pluck('id')->all();
+            : $user->sidings()->get()->pluck('id')->all();
+
+        // Backward compatibility: some legacy users only have `users.siding_id`
+        // and no rows in the `user_siding` pivot table.
+        if (! $user->isSuperAdmin() && $sidingIds === [] && $user->siding_id !== null) {
+            $sidingIds = [(int) $user->siding_id];
+        }
 
         $indents = Indent::query()
             ->with('siding:id,name,code')
@@ -102,7 +115,13 @@ final class IndentsController extends Controller
         $user = $request->user();
         $sidingIds = $user->isSuperAdmin()
             ? Siding::query()->pluck('id')->all()
-            : $user->accessibleSidings()->get()->pluck('id')->all();
+            : $user->sidings()->get()->pluck('id')->all();
+
+        // Backward compatibility: some legacy users only have `users.siding_id`
+        // and no rows in the `user_siding` pivot table.
+        if (! $user->isSuperAdmin() && $sidingIds === [] && $user->siding_id !== null) {
+            $sidingIds = [(int) $user->siding_id];
+        }
 
         $sidings = Siding::query()
             ->whereIn('id', $sidingIds)
@@ -218,7 +237,13 @@ final class IndentsController extends Controller
         $user = $request->user();
         $sidingIds = $user->isSuperAdmin()
             ? Siding::query()->pluck('id')->all()
-            : $user->accessibleSidings()->get()->pluck('id')->all();
+            : $user->sidings()->get()->pluck('id')->all();
+
+        // Backward compatibility: some legacy users only have `users.siding_id`
+        // and no rows in the `user_siding` pivot table.
+        if (! $user->isSuperAdmin() && $sidingIds === [] && $user->siding_id !== null) {
+            $sidingIds = [(int) $user->siding_id];
+        }
 
         $sidings = Siding::query()
             ->whereIn('id', $sidingIds)
@@ -231,9 +256,12 @@ final class IndentsController extends Controller
             || $indent->getFirstMedia('indent_confirmation_pdf');
         $indent->setAttribute('indent_pdf_download_url', $hasPdf ? route('indents.pdf', $indent) : null);
 
+        $currentStockMt = app(UpdateStockLedger::class)->getCurrentBalance((int) $indent->siding_id);
+
         return Inertia::render('indents/edit', [
             'indent' => $indent,
             'sidings' => $sidings,
+            'currentStockMt' => $currentStockMt,
         ]);
     }
 
@@ -243,7 +271,11 @@ final class IndentsController extends Controller
 
         $validated = $request->validate([
             'siding_id' => ['required', 'integer', 'exists:sidings,id'],
-            'indent_number' => ['nullable', 'string', 'max:20', Rule::unique('indents', 'indent_number')->ignore($indent->id)],
+            'indent_number' => [
+                'required',
+                'string',
+                'max:20',
+            ],
             'state' => ['nullable', 'string', Rule::in(self::INDENT_STATE_VALUES)],
             'remarks' => ['nullable', 'string', 'max:65535'],
             'e_demand_reference_id' => ['nullable', 'string', 'max:100'],
@@ -261,7 +293,7 @@ final class IndentsController extends Controller
         ]);
 
         $indent->siding_id = $validated['siding_id'];
-        $indent->indent_number = $validated['indent_number'] ?? null;
+        $indent->indent_number = mb_trim((string) $validated['indent_number']) !== '' ? mb_trim((string) $validated['indent_number']) : null;
         $indent->state = $validated['state'] ?? $indent->state;
         $indent->remarks = $validated['remarks'] ?? null;
         $indent->e_demand_reference_id = $validated['e_demand_reference_id'] ?? null;
@@ -303,7 +335,13 @@ final class IndentsController extends Controller
 
         $sidingIds = $user->isSuperAdmin()
             ? Siding::query()->pluck('id')->all()
-            : $user->accessibleSidings()->get()->pluck('id')->all();
+            : $user->sidings()->get()->pluck('id')->all();
+
+        // Backward compatibility: some legacy users only have `users.siding_id`
+        // and no rows in the `user_siding` pivot table.
+        if (! $user->isSuperAdmin() && $sidingIds === [] && $user->siding_id !== null) {
+            $sidingIds = [(int) $user->siding_id];
+        }
 
         $sidings = Siding::query()
             ->whereIn('id', $sidingIds)

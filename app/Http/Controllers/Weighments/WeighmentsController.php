@@ -30,7 +30,13 @@ final class WeighmentsController extends Controller
 
         $sidingIds = $user->isSuperAdmin()
             ? Siding::query()->pluck('id')->all()
-            : $user->accessibleSidings()->get()->pluck('id')->all();
+            : $user->sidings()->get()->pluck('id')->all();
+
+        // Backward compatibility: some legacy users only have `users.siding_id`
+        // and no rows in the `user_siding` pivot table.
+        if (! $user->isSuperAdmin() && $sidingIds === [] && $user->siding_id !== null) {
+            $sidingIds = [(int) $user->siding_id];
+        }
 
         $query = Weighment::query()
             ->with('rake')
@@ -95,7 +101,13 @@ final class WeighmentsController extends Controller
 
             $sidingIds = $user->isSuperAdmin()
                 ? Siding::query()->pluck('id')->all()
-                : $user->accessibleSidings()->get()->pluck('id')->all();
+                : $user->sidings()->get()->pluck('id')->all();
+
+            // Backward compatibility: some legacy users only have `users.siding_id`
+            // and no rows in the `user_siding` pivot table.
+            if (! $user->isSuperAdmin() && $sidingIds === [] && $user->siding_id !== null) {
+                $sidingIds = [(int) $user->siding_id];
+            }
 
             if (! in_array($rake->siding_id, $sidingIds, true)) {
                 return back()
@@ -141,7 +153,13 @@ final class WeighmentsController extends Controller
 
         $sidingIds = $user->isSuperAdmin()
             ? Siding::query()->pluck('id')->all()
-            : $user->accessibleSidings()->get()->pluck('id')->all();
+            : $user->sidings()->get()->pluck('id')->all();
+
+        // Backward compatibility: some legacy users only have `users.siding_id`
+        // and no rows in the `user_siding` pivot table.
+        if (! $user->isSuperAdmin() && $sidingIds === [] && $user->siding_id !== null) {
+            $sidingIds = [(int) $user->siding_id];
+        }
 
         if ($sidingIds === []) {
             return back()

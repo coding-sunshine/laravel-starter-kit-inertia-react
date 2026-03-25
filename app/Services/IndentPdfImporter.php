@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\Indent;
+use App\Models\PowerPlant;
 use App\Models\Siding;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Date;
@@ -82,7 +83,7 @@ final readonly class IndentPdfImporter
                     'siding_id' => $siding->id,
                     'indent_number' => $parsed['indent_number'] ?? null,
                     'demanded_stock' => $parsed['demanded_stock'] ?? null,
-                    'total_units' => $parsed['total_units'] !== null ? (int) $parsed['total_units'] : null,
+                    'total_units' => ($parsed['total_units'] ?? null) !== null ? (int) $parsed['total_units'] : null,
                     'target_quantity_mt' => $parsed['target_quantity_mt'] ?? null,
                     'allocated_quantity_mt' => null,
                     'available_stock_mt' => null,
@@ -93,6 +94,7 @@ final readonly class IndentPdfImporter
                     'railway_reference_no' => $parsed['railway_reference_no'] ?? null,
                     'e_demand_reference_id' => $parsed['e_demand_reference_id'] ?? null,
                     'fnr_number' => $parsed['fnr_number'] ?? null,
+                    'destination' => $parsed['destination'] ?? null,
                     'state' => 'historical_import',
                     'remarks' => $parsed['remarks'] ?? null,
                     'created_by' => $userId,
@@ -192,16 +194,14 @@ final readonly class IndentPdfImporter
             $out['station_from'] = mb_trim($m[1]);
         }
         if (preg_match('/Destination\s*[:\-]\s*(.+?)(?=\s{2,}[A-Za-z]|\n\n|$)/s', $text, $m)) {
-            $out['destination'] = mb_trim($m[1]);
+            $raw = mb_trim($m[1]);
+            $out['destination'] = $this->normalizeDestinationToPowerPlantCode($raw);
         }
         if (preg_match('/Booking\s+Remark\s*[:\-]\s*(.+?)(?=\n\n|\n[A-Z][a-z]+[\s:]|$)/s', $text, $m)) {
             $out['booking_remark'] = mb_trim($m[1]);
         }
 
         $remarks = [];
-        if (! empty($out['destination'])) {
-            $remarks[] = 'Destination: '.$out['destination'];
-        }
         if (! empty($out['booking_remark'])) {
             $remarks[] = 'Booking Remark: '.$out['booking_remark'];
         }
@@ -210,38 +210,126 @@ final readonly class IndentPdfImporter
         return $out;
     }
 
+    private function normalizeDestinationToPowerPlantCode(string $raw): ?string
+    {
+        $raw = mb_trim(preg_replace('/\s+/', ' ', $raw) ?? $raw);
+        if ($raw === '') {
+            return null;
+        }
+
+        $upper = mb_strtoupper($raw);
+
+        $powerPlantCodes = PowerPlant::query()
+            ->pluck('code')
+            ->filter()
+            ->map(fn ($c) => mb_strtoupper(mb_trim((string) $c)))
+            ->filter(fn ($c) => $c !== '')
+            ->unique()
+            ->values()
+            ->all();
+
+        // If the destination includes something in parentheses, only trust it when it matches
+        // an existing power plant code (avoids false positives like "(Bihar)").
+        if ($powerPlantCodes !== [] && preg_match('/\(([^)]+)\)/', $upper, $m)) {
+            $inside = mb_trim($m[1]);
+            $insideUpper = mb_strtoupper($inside);
+
+            usort($powerPlantCodes, static fn (string $a, string $b): int => mb_strlen($b) <=> mb_strlen($a));
+            foreach ($powerPlantCodes as $code) {
+                if (mb_strlen($code) < 3) {
+                    continue;
+                }
+
+                if (mb_strpos($insideUpper, $code) !== false) {
+                    return $code;
+                }
+            }
+        }
+
+        if ($powerPlantCodes !== []) {
+            // Prefer longest codes first; match anywhere in the string.
+            usort($powerPlantCodes, static fn (string $a, string $b): int => mb_strlen($b) <=> mb_strlen($a));
+
+            foreach ($powerPlantCodes as $code) {
+                // Avoid very short codes causing false positives.
+                if (mb_strlen($code) < 3) {
+                    continue;
+                }
+
+                if (mb_strpos($upper, $code) !== false) {
+                    return $code;
+                }
+            }
+        }
+
+        if (preg_match('/^\s*([A-Z0-9]{2,10})\s*$/', $upper, $m)) {
+            return $m[1];
+        }
+
+        if (preg_match('/\b([A-Z0-9]{2,10})\b/', $upper, $m)) {
+            return $m[1];
+        }
+
+        return $raw;
+    }
+
     /**
      * e-Demand PDFs often lay out "Weight (In Tonnes):" on the header row and put the value on the
      * next line as the last column (e.g. "BOBRN                        60                   3960").
      */
     private function extractWeightInTonnesMt(string $text): ?float
     {
-        if (preg_match_all(
-            '/Weight\s*\(\s*In\s*Tonne?s?\s*\)\s*[:\-]?\s*[^\r\n]*\R+([^\r\n]+)/iu',
-            $text,
-            $m
-        )) {
-            foreach (array_reverse($m[1]) as $rawLine) {
-                $line = mb_trim($rawLine);
-                if ($line === '' || preg_match('/page\s+\d+\s+of\s+\d+/i', $line)) {
+        $lines = preg_split("/\r\n|\n|\r/", $text) ?: [];
+
+        // Prefer the structured stock table section:
+        // "Stock Demanded:  Units:  Weight (In Tonnes):" then the next row has "... 60 3960".
+        // In some extracted text, these header tokens may be split across multiple lines, so we
+        // check a small 3-line window.
+        for ($i = 0; $i < count($lines); $i++) {
+            $line = mb_trim((string) $lines[$i]);
+            if ($line === '') {
+                continue;
+            }
+
+            $window = $line;
+            if (isset($lines[$i + 1])) {
+                $window .= ' '.mb_trim((string) $lines[$i + 1]);
+            }
+            if (isset($lines[$i + 2])) {
+                $window .= ' '.mb_trim((string) $lines[$i + 2]);
+            }
+
+            $isHeader = preg_match('/Stock\s+D(?:emanded|emand)\s*:/iu', $window) === 1
+                && preg_match('/Units\s*:/iu', $window) === 1
+                && preg_match('/Weight\s*\(\s*In\s*Tonne?s?\s*\)/iu', $window) === 1;
+
+            if (! $isHeader) {
+                continue;
+            }
+
+            for ($j = $i + 1; $j < min($i + 10, count($lines)); $j++) {
+                $row = mb_trim((string) $lines[$j]);
+                if ($row === '' || preg_match('/page\s+\d+\s+of\s+\d+/i', $row)) {
                     continue;
                 }
 
-                if (preg_match_all('/\d[\d.,]*/', $line, $nums) && $nums[0] !== []) {
-                    if (count($nums[0]) >= 2) {
-                        return $this->toFloat($nums[0][array_key_last($nums[0])]);
-                    }
+                // OCR sometimes inserts spaces inside thousands (e.g. "3 960"). Only collapse the
+                // specific pattern "<1-2 digits> <3 digits>" to avoid merging table columns like "60 3960".
+                $row = preg_replace('/(?<!\d)(\d{1,2})\s+(\d{3})(?!\d)/u', '$1$2', $row) ?? $row;
 
-                    $single = $this->toFloat($nums[0][0]);
-                    if ($single !== null) {
-                        return $single;
+                if (preg_match_all('/\d[\d.,]*/', $row, $nums) && $nums[0] !== []) {
+                    $last = $nums[0][array_key_last($nums[0])];
+                    $weight = $this->toFloat($last);
+                    if ($weight !== null) {
+                        return $weight;
                     }
                 }
             }
         }
 
+        // Fallback: sometimes the text includes "Weight (In Tonnes): 3960" on the same line.
         if (preg_match_all(
-            '/Weight\s*\(\s*In\s*Tonne?s?\s*\)\s*[:\-]?\s*([\d.,]+)/iu',
+            '/Weight\s*\(\s*In\s*Tonne?s?\s*\)\s*[:\-]?\s*([\d., ]+)/iu',
             $text,
             $m
         )) {
@@ -318,7 +406,7 @@ final readonly class IndentPdfImporter
         if ($value === null) {
             return null;
         }
-        $value = str_replace([','], '', (string) $value);
+        $value = str_replace([',', ' '], '', (string) $value);
         if (! is_numeric($value)) {
             return null;
         }

@@ -20,39 +20,66 @@ final class PowerplantSidingDistanceSeeder extends Seeder
 
     /**
      * Run the database seeds.
-     * Seeds distance from a reference power plant (PSPM) to each siding so that
-     * vehicle dispatch import can resolve siding from distance_km.
      */
     public function run(): void
     {
-        $plant = PowerPlant::query()->where('code', 'PSPM')->first();
-        if (! $plant) {
-            $this->command?->warn('PSPM power plant not found. Run PowerPlantSeeder first.');
+        $sidingCodes = ['PKUR', 'DUMK', 'KURWA'];
+        $plantCodes = ['BTPC', 'BTMT', 'KPPS', 'PSPM', 'STPS'];
 
+        $sidings = Siding::query()
+            ->whereIn('code', $sidingCodes)
+            ->get()
+            ->keyBy('code');
+
+        $plants = PowerPlant::query()
+            ->whereIn('code', $plantCodes)
+            ->get()
+            ->keyBy('code');
+
+        $missingSidings = array_values(array_diff($sidingCodes, $sidings->keys()->all()));
+        $missingPlants = array_values(array_diff($plantCodes, $plants->keys()->all()));
+
+        foreach ($missingSidings as $code) {
+            $this->command?->warn("Siding with code {$code} not found. Run SidingSeeder first.");
+        }
+
+        foreach ($missingPlants as $code) {
+            $this->command?->warn("Power plant with code {$code} not found. Run PowerPlantSeeder first.");
+        }
+
+        if ($missingSidings !== [] || $missingPlants !== []) {
             return;
         }
 
-        $distances = [
-            [55.0, 'PKUR'],   // Pakur Siding
-            [71.0, 'DUMK'],   // Dumka (Goods Shed)
-            [73.05, 'KURWA'], // Kurwa Railway Siding
+        $distanceMatrix = [
+            'PKUR' => ['BTPC' => 130, 'BTMT' => 250, 'KPPS' => 300, 'PSPM' => 110, 'STPS' => 240],
+            'DUMK' => ['BTPC' => 130, 'BTMT' => 280, 'KPPS' => 340, 'PSPM' => 120, 'STPS' => 250],
+            'KURWA' => ['BTPC' => 125, 'BTMT' => 270, 'KPPS' => 330, 'PSPM' => 110, 'STPS' => 240],
         ];
 
-        foreach ($distances as [$distanceKm, $sidingCode]) {
-            $siding = Siding::query()->where('code', $sidingCode)->first();
-            if (! $siding) {
-                $this->command?->warn("Siding with code {$sidingCode} not found. Run SidingSeeder first.");
+        $now = now();
+        $rows = [];
 
-                continue;
-            }
+        foreach ($distanceMatrix as $sidingCode => $plantDistances) {
+            $siding = $sidings->get($sidingCode);
 
-            PowerplantSidingDistance::query()->updateOrCreate(
-                [
+            foreach ($plantDistances as $plantCode => $distanceKm) {
+                $plant = $plants->get($plantCode);
+
+                $rows[] = [
                     'power_plant_id' => $plant->id,
                     'siding_id' => $siding->id,
-                ],
-                ['distance_km' => $distanceKm]
-            );
+                    'distance_km' => $distanceKm,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            }
         }
+
+        PowerplantSidingDistance::query()->upsert(
+            $rows,
+            ['power_plant_id', 'siding_id'],
+            ['distance_km', 'updated_at']
+        );
     }
 }
