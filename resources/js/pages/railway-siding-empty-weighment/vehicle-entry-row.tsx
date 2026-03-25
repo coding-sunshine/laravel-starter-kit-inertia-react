@@ -34,6 +34,7 @@ function getCsrfHeaders(): Record<string, string> {
 interface VehicleEntryRowProps {
   entry: EmptyWeighmentEntry;
   serialNumber: number;
+  isLocked?: boolean;
   onEntryUpdated?: (entry: EmptyWeighmentEntry) => void;
   onEntryDeleted?: (id: number) => void;
 }
@@ -41,6 +42,7 @@ interface VehicleEntryRowProps {
 export default function VehicleEntryRow({
   entry,
   serialNumber,
+  isLocked = false,
   onEntryUpdated,
   onEntryDeleted,
 }: VehicleEntryRowProps) {
@@ -67,6 +69,9 @@ export default function VehicleEntryRow({
   const debounceTimerRef = useRef<NodeJS.Timeout>();
 
   const save = useCallback(async () => {
+    if (isLocked) {
+      return;
+    }
     const dataToSave = formDataRef.current;
     setIsSaving(true);
     setShowSuccess(false);
@@ -127,6 +132,9 @@ export default function VehicleEntryRow({
     !entry.vehicle_no?.trim() && !entry.transport_name?.trim() && !entry.tare_wt_two && entry.status === 'draft';
 
   const handleDelete = async () => {
+    if (isLocked) {
+      return;
+    }
     setShowDetailModal(false);
     if (!confirm('Are you sure you want to delete this entry? This action cannot be undone.')) {
       return;
@@ -164,6 +172,9 @@ export default function VehicleEntryRow({
   };
 
   const handleMarkCompleted = async () => {
+    if (isLocked) {
+      return;
+    }
     setIsSaving(true);
     setSaveError(null);
     try {
@@ -240,6 +251,7 @@ export default function VehicleEntryRow({
         <TableCell className="px-2 py-3 border-t border-r border-gray-300 min-h-[4rem]">
           <Input
             value={formData.vehicle_no}
+            disabled={isLocked}
             onChange={(e) => {
               updateField('vehicle_no', e.target.value);
               debouncedSave();
@@ -281,6 +293,7 @@ export default function VehicleEntryRow({
         <TableCell className="px-2 py-3 border-t border-r border-gray-300 min-h-[4rem]">
           <Input
             value={formData.transport_name}
+            disabled={isLocked}
             onChange={(e) => {
               updateField('transport_name', e.target.value);
               debouncedSave();
@@ -295,6 +308,7 @@ export default function VehicleEntryRow({
             type="number"
             step="0.01"
             value={formData.tare_wt_two}
+            disabled={isLocked}
             onChange={(e) => {
               updateField('tare_wt_two', e.target.value);
               debouncedSave();
@@ -393,18 +407,18 @@ export default function VehicleEntryRow({
               <Button variant="outline" onClick={() => setShowDetailModal(false)}>
                 Cancel
               </Button>
-              <Button onClick={save} disabled={isSaving} className="min-w-[100px]">
+              <Button onClick={save} disabled={isSaving || isLocked} className="min-w-[100px]">
                 {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
                 {isSaving ? 'Saving...' : 'Save'}
               </Button>
               {entry.status === 'draft' && (
-                <Button onClick={handleMarkCompleted} disabled={isSaving} className="min-w-[100px]">
+                <Button onClick={handleMarkCompleted} disabled={isSaving || isLocked} className="min-w-[100px]">
                   {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                   Mark completed
                 </Button>
               )}
               {shouldShowDeleteButton() && (
-                <Button variant="destructive" onClick={handleDelete} disabled={isSaving} className="min-w-[100px]">
+                <Button variant="destructive" onClick={handleDelete} disabled={isSaving || isLocked} className="min-w-[100px]">
                   <Trash2 className="h-4 w-4 mr-2" />
                   Delete
                 </Button>

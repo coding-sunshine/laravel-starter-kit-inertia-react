@@ -20,6 +20,7 @@ interface VehicleEntryTableProps {
   entries: EmptyWeighmentEntry[];
   date: string;
   shift: number;
+  isLocked?: boolean;
   onEntryUpdated?: (entry: EmptyWeighmentEntry) => void;
   onEntryDeleted?: (id: number) => void;
   addRowButton?: React.ReactNode;
@@ -31,6 +32,7 @@ export default function VehicleEntryTable({
   entries,
   date,
   shift,
+  isLocked = false,
   onEntryUpdated,
   onEntryDeleted,
   addRowButton,
@@ -81,6 +83,7 @@ export default function VehicleEntryTable({
                   key={entry.id}
                   entry={entry}
                   serialNumber={index + 1}
+                  isLocked={isLocked}
                   onEntryUpdated={onEntryUpdated}
                   onEntryDeleted={onEntryDeleted}
                 />
@@ -92,9 +95,9 @@ export default function VehicleEntryTable({
             return (
               <TableRow
                 key={`empty-${index}`}
-                className={isAddingRow ? 'opacity-60' : 'cursor-pointer hover:bg-gray-50'}
+                className={isAddingRow || isLocked ? 'opacity-60' : 'cursor-pointer hover:bg-gray-50'}
                 onClick={() => {
-                  if (onAddRow && !isAddingRow) {
+                  if (onAddRow && !isAddingRow && !isLocked) {
                     onAddRow(1);
                   }
                 }}
