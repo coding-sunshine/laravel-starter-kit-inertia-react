@@ -43,21 +43,16 @@ final readonly class ApplyWeighmentPenaltiesAction
                 ->where('meta->source', 'weighment')
                 ->delete();
 
-            $totalAmount = collect($penaltyRows)->sum(static function (array $row): float {
-                return (float) ($row['amount'] ?? 0.0);
-            });
-
-            $canonicalPenaltyCharge = RakeCharge::query()->updateOrCreate(
+            $canonicalPenaltyCharge = RakeCharge::query()->firstOrCreate(
                 [
                     'rake_id' => $rake->id,
-                    'diverrt_destination_id' => null,
                     'charge_type' => 'PENALTY',
                     'is_actual_charges' => false,
                 ],
                 [
-                    'amount' => round($totalAmount, 2),
+                    'amount' => 0,
                     'data_source' => 'predicted_penalty',
-                    'remarks' => 'Predicted penalty aggregate from weighment',
+                    'remarks' => 'Predicted penalty aggregate',
                 ],
             );
 
@@ -65,6 +60,12 @@ final readonly class ApplyWeighmentPenaltiesAction
                 $row['rake_charge_id'] = $canonicalPenaltyCharge->id;
                 AppliedPenalty::query()->create($row);
             }
+
+            $total = AppliedPenalty::query()
+                ->where('rake_charge_id', $canonicalPenaltyCharge->id)
+                ->sum('amount');
+
+            $canonicalPenaltyCharge->update(['amount' => round((float) $total, 2)]);
         });
     }
 

@@ -49,19 +49,13 @@ interface Indent {
 interface Props {
     indent: Indent;
     sidings: Siding[];
+    currentStockMt?: number;
 }
 
 const INDENT_STATES: { value: string; label: string }[] = [
-    { value: 'pending', label: 'Pending' },
-    { value: 'submitted', label: 'Submitted' },
-    { value: 'acknowledged', label: 'Acknowledged' },
-    { value: 'allocated', label: 'Allocated' },
-    { value: 'partial', label: 'Partial' },
-    { value: 'fulfilled', label: 'Fulfilled' },
-    { value: 'completed', label: 'Completed' },
-    { value: 'closed', label: 'Closed' },
-    { value: 'cancelled', label: 'Cancelled' },
     { value: 'historical_import', label: 'Historical import' },
+    { value: 'completed', label: 'Completed' },
+    { value: 'cancelled', label: 'Cancelled' },
 ];
 
 const selectClassName = cn(
@@ -96,15 +90,9 @@ function numOrEmpty(value: string | number | null | undefined): string {
     return String(value);
 }
 
-export default function IndentsEdit({ indent, sidings }: Props) {
+export default function IndentsEdit({ indent, sidings, currentStockMt }: Props) {
     const { errors } = usePage<{ errors?: Record<string, string> }>().props;
-    const stateOptions =
-        INDENT_STATES.some((s) => s.value === indent.state) || !indent.state
-            ? INDENT_STATES
-            : [
-                  ...INDENT_STATES,
-                  { value: indent.state, label: indent.state },
-              ];
+    const stateOptions = INDENT_STATES;
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: '/dashboard' },
         { title: 'Indents', href: '/indents' },
@@ -292,6 +280,11 @@ export default function IndentsEdit({ indent, sidings }: Props) {
                                 <Label htmlFor="available_stock_mt">
                                     Available stock (MT)
                                 </Label>
+                                {typeof currentStockMt === 'number' && (
+                                    <p className="text-xs text-muted-foreground">
+                                        Current stock for siding: {currentStockMt.toFixed(2)} MT
+                                    </p>
+                                )}
                                 <Input
                                     id="available_stock_mt"
                                     name="available_stock_mt"
@@ -299,7 +292,10 @@ export default function IndentsEdit({ indent, sidings }: Props) {
                                     min={0}
                                     step="0.01"
                                     defaultValue={numOrEmpty(
-                                        indent.available_stock_mt,
+                                        indent.available_stock_mt ??
+                                            (typeof currentStockMt === 'number'
+                                                ? currentStockMt
+                                                : null),
                                     )}
                                 />
                                 <InputError message={errors?.available_stock_mt} />

@@ -5,11 +5,15 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Rakes;
 
 use App\Http\Controllers\Controller;
+use App\Models\AppliedPenalty;
 use App\Models\FreightRateMaster;
+use App\Models\PenaltyType;
 use App\Models\PowerPlant;
 use App\Models\PowerplantSidingDistance;
 use App\Models\Rake;
+use App\Models\RakeCharge;
 use App\Models\RakeWeighment;
+use App\Models\SectionTimer;
 use Illuminate\Http\JsonResponse;
 
 final class PreRrController extends Controller
@@ -44,17 +48,23 @@ final class PreRrController extends Controller
         $hasFreightInputs = $distance !== null && $rate !== null && $chargeableWeight > 0;
         $freightAmount = $hasFreightInputs ? $chargeableWeight * $rate : null;
 
-        $otherCharges = 0.0;
-        $penaltyAmount = 0.0;
-        $rebateAmount = 0.0;
+        $charges = $this->resolveRakeCharges($rake);
+        $otherCharges = $charges['OTHER_CHARGE'];
+        $penaltyAmount = $charges['PENALTY'];
 
-        $gstAmount = $freightAmount === null
-            ? null
-            : (($freightAmount + $otherCharges) * (self::DEFAULT_GST_PERCENT / 100));
+        $demurrage = $this->resolveDemurrage($rake);
 
-        $totalAmount = $freightAmount === null || $gstAmount === null
-            ? null
-            : ($freightAmount + $otherCharges + $gstAmount + $penaltyAmount - $rebateAmount);
+        $subtotal = $freightAmount !== null
+            ? ($freightAmount + $otherCharges + $penaltyAmount)
+            : null;
+
+        $gstAmount = $subtotal !== null
+            ? ($subtotal * (self::DEFAULT_GST_PERCENT / 100))
+            : null;
+
+        $totalAmount = $subtotal !== null && $gstAmount !== null
+            ? ($subtotal + $gstAmount)
+            : null;
 
         return [
             'available' => $freightAmount !== null,
@@ -67,11 +77,12 @@ final class PreRrController extends Controller
             'freightAmount' => $this->roundOrNull($freightAmount),
             'otherCharges' => $this->roundOrNull($otherCharges),
             'penaltyAmount' => $this->roundOrNull($penaltyAmount),
-            'rebateAmount' => $this->roundOrNull($rebateAmount),
+            'penalties' => $this->resolvePenaltyBreakdown($rake),
             'gstPercent' => self::DEFAULT_GST_PERCENT,
             'gstAmount' => $this->roundOrNull($gstAmount),
             'totalAmount' => $this->roundOrNull($totalAmount),
-            'formula' => 'TOTAL = Freight + Other Charges + GST + Penalty - Rebate',
+            'demurrage' => $demurrage,
+            'formula' => 'TOTAL = (Freight + OTC + Penalty) + 5% GST',
             'warnings' => $this->buildWarnings($distance, $rate, $latestWeighment, $chargeableWeight),
         ];
     }
@@ -168,6 +179,118 @@ final class PreRrController extends Controller
             ->first();
 
         return $row !== null ? (float) $row->rate_per_mt : null;
+    }
+
+    /**
+     * @return array{PENALTY: float, OTHER_CHARGE: float}
+     */
+    private function resolveRakeCharges(Rake $rake): array
+    {
+        $charges = RakeCharge::query()
+            ->where('rake_id', $rake->id)
+            ->where('is_actual_charges', false)
+            ->whereIn('charge_type', ['PENALTY', 'OTHER_CHARGE'])
+            ->pluck('amount', 'charge_type');
+
+        return [
+            'PENALTY' => round((float) ($charges['PENALTY'] ?? 0), 2),
+            'OTHER_CHARGE' => round((float) ($charges['OTHER_CHARGE'] ?? 0), 2),
+        ];
+    }
+
+    /**
+     * @return list<array{code: string, name: string, amount: float, breakdown: string}>
+     */
+    private function resolvePenaltyBreakdown(Rake $rake): array
+    {
+        $penalties = AppliedPenalty::query()
+            ->where('rake_id', $rake->id)
+            ->with('penaltyType:id,code,name,calculation_type')
+            ->get();
+
+        return $penalties->map(function (AppliedPenalty $ap): array {
+            $code = $ap->penaltyType?->code ?? '-';
+            $name = $ap->penaltyType?->name ?? 'Unknown';
+            $amount = round((float) $ap->amount, 2);
+            $meta = $ap->meta ?? [];
+
+            $breakdown = match ($ap->penaltyType?->calculation_type) {
+                'per_hour' => sprintf(
+                    '%d min loaded, %d min free, %d min excess = %d hr × ₹%s/hr',
+                    $meta['total_loading_minutes'] ?? 0,
+                    $meta['free_minutes'] ?? 0,
+                    $meta['excess_minutes'] ?? 0,
+                    $meta['charged_hours'] ?? 0,
+                    number_format((float) ($ap->rate ?? 0), 2),
+                ),
+                default => sprintf(
+                    '%s × ₹%s/MT',
+                    number_format((float) ($ap->quantity ?? 0), 2),
+                    number_format((float) ($ap->rate ?? 0), 2),
+                ),
+            };
+
+            return [
+                'code' => $code,
+                'name' => $name,
+                'wagonNumber' => $ap->wagon_number ?? null,
+                'amount' => $amount,
+                'breakdown' => $breakdown,
+            ];
+        })->values()->all();
+    }
+
+    /**
+     * @return array{applied: bool, totalLoadingMinutes: int, freeMinutes: int, excessMinutes: int, chargedHours: int, ratePerHour: float, amount: float}
+     */
+    private function resolveDemurrage(Rake $rake): array
+    {
+        $empty = [
+            'applied' => false,
+            'totalLoadingMinutes' => 0,
+            'freeMinutes' => 0,
+            'excessMinutes' => 0,
+            'chargedHours' => 0,
+            'ratePerHour' => 0.0,
+            'amount' => 0.0,
+        ];
+
+        if ($rake->loading_start_time === null || $rake->loading_end_time === null) {
+            return $empty;
+        }
+
+        $totalLoadingMinutes = (int) $rake->loading_start_time->diffInMinutes($rake->loading_end_time);
+        $freeMinutes = (int) (SectionTimer::query()
+            ->where('section_name', 'loading')
+            ->value('free_minutes') ?? 180);
+
+        $excessMinutes = $totalLoadingMinutes - $freeMinutes;
+
+        if ($excessMinutes <= 0) {
+            return array_merge($empty, [
+                'totalLoadingMinutes' => $totalLoadingMinutes,
+                'freeMinutes' => $freeMinutes,
+            ]);
+        }
+
+        $penaltyType = PenaltyType::query()
+            ->where('code', 'DEM')
+            ->where('is_active', true)
+            ->first();
+
+        $rate = (float) ($penaltyType?->default_rate ?? 0.0);
+        $chargedHours = (int) ceil($excessMinutes / 60);
+        $amount = round($chargedHours * $rate, 2);
+
+        return [
+            'applied' => true,
+            'totalLoadingMinutes' => $totalLoadingMinutes,
+            'freeMinutes' => $freeMinutes,
+            'excessMinutes' => $excessMinutes,
+            'chargedHours' => $chargedHours,
+            'ratePerHour' => $rate,
+            'amount' => $amount,
+        ];
     }
 
     /**

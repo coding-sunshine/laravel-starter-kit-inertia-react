@@ -12,7 +12,9 @@ import { useForm, usePage } from '@inertiajs/react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import InputError from '@/components/input-error';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface RakeData {
     id: number;
@@ -141,6 +143,24 @@ interface RakeWorkflowProps {
     onUnfitWagonIdsSynced?: (unfitWagonIds: number[]) => void;
 }
 
+interface PreRrDemurrage {
+    applied: boolean;
+    totalLoadingMinutes: number;
+    freeMinutes: number;
+    excessMinutes: number;
+    chargedHours: number;
+    ratePerHour: number;
+    amount: number;
+}
+
+interface PreRrPenaltyRow {
+    code: string;
+    name: string;
+    wagonNumber: string | null;
+    amount: number;
+    breakdown: string;
+}
+
 interface PreRrEstimate {
     available: boolean;
     classCode: string;
@@ -152,10 +172,11 @@ interface PreRrEstimate {
     freightAmount: number | null;
     otherCharges: number | null;
     penaltyAmount: number | null;
-    rebateAmount: number | null;
+    penalties: PreRrPenaltyRow[];
     gstPercent: number;
     gstAmount: number | null;
     totalAmount: number | null;
+    demurrage: PreRrDemurrage;
     formula: string;
     warnings: string[];
 }
@@ -682,7 +703,6 @@ export function RakeWorkflow({
                     <AccordionContent>
                         <PenaltiesWorkflow
                             rake={rakeData}
-                            demurrage_rate_per_mt_hour={demurrage_rate_per_mt_hour}
                             disabled={disablePenalties}
                         />
                     </AccordionContent>
@@ -712,9 +732,33 @@ export function RakeWorkflow({
                                     <div>Rate: <span className="font-medium">{preRrEstimate.ratePerMt ?? '-'}</span> Rs/MT</div>
                                     <div>Freight: <span className="font-medium">{preRrEstimate.freightAmount ?? '-'}</span></div>
                                     <div>Other Charges: <span className="font-medium">{preRrEstimate.otherCharges ?? 0}</span></div>
+                                    <div>Penalty Total: <span className="font-medium">₹{preRrEstimate.penaltyAmount ?? 0}</span></div>
+                                    {preRrEstimate.penalties.length > 0 && (
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Type</TableHead>
+                                                    <TableHead>Wagon</TableHead>
+                                                    <TableHead>Amount</TableHead>
+                                                    <TableHead>Breakdown</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {preRrEstimate.penalties.map((p, idx) => (
+                                                    <TableRow key={idx}>
+                                                        <TableCell>
+                                                            <Badge variant="outline">{p.code}</Badge>
+                                                            <span className="ml-1 text-xs text-muted-foreground">{p.name}</span>
+                                                        </TableCell>
+                                                        <TableCell>{p.wagonNumber ?? 'Rake'}</TableCell>
+                                                        <TableCell className="font-medium">₹{p.amount.toFixed(2)}</TableCell>
+                                                        <TableCell className="text-xs text-muted-foreground">{p.breakdown}</TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    )}
                                     <div>GST ({preRrEstimate.gstPercent}%): <span className="font-medium">{preRrEstimate.gstAmount ?? '-'}</span></div>
-                                    <div>Penalty: <span className="font-medium">{preRrEstimate.penaltyAmount ?? 0}</span></div>
-                                    <div>Rebate: <span className="font-medium">{preRrEstimate.rebateAmount ?? 0}</span></div>
                                     <div className="pt-1 text-base font-semibold">
                                         Estimated Total: {preRrEstimate.totalAmount ?? '-'}
                                     </div>

@@ -7,26 +7,44 @@ namespace App\Actions;
 use App\Models\AppliedPenalty;
 use App\Models\PenaltyType;
 use App\Models\Rake;
-use App\Models\RakeLoad;
+use App\Models\RakeCharge;
+use App\Models\SectionTimer;
+use Illuminate\Support\Facades\DB;
 
 final readonly class ApplyDemurragePenaltyAction
 {
-    public function handle(Rake $rake, RakeLoad $rakeLoad, float $demurrageRatePerMtHour): void
+    /**
+     * Calculate and upsert the demurrage penalty for a rake based on loading times.
+     *
+     * @return array{applied: bool, chargedHours: int, excessMinutes: int, totalLoadingMinutes: int, freeMinutes: int, rate: float, amount: float}|null
+     */
+    public function handle(Rake $rake): ?array
     {
-        if (! $rakeLoad->placement_time || $rakeLoad->free_time_minutes <= 0) {
-            return;
+        if ($rake->loading_start_time === null || $rake->loading_end_time === null) {
+            $this->removeDemurragePenalty($rake);
+
+            return null;
         }
 
-        $freeWindowEnd = $rakeLoad->placement_time->copy()->addMinutes($rakeLoad->free_time_minutes);
-        $now = now();
+        $totalLoadingMinutes = (int) $rake->loading_start_time->diffInMinutes($rake->loading_end_time);
+        $freeMinutes = (int) (SectionTimer::query()
+            ->where('section_name', 'loading')
+            ->value('free_minutes') ?? 180);
 
-        if ($now->lessThanOrEqualTo($freeWindowEnd)) {
-            return;
-        }
+        $excessMinutes = $totalLoadingMinutes - $freeMinutes;
 
-        $minutesOver = (int) ceil($freeWindowEnd->diffInMinutes($now, false));
-        if ($minutesOver <= 0) {
-            return;
+        if ($excessMinutes <= 0) {
+            $this->removeDemurragePenalty($rake);
+
+            return [
+                'applied' => false,
+                'chargedHours' => 0,
+                'excessMinutes' => 0,
+                'totalLoadingMinutes' => $totalLoadingMinutes,
+                'freeMinutes' => $freeMinutes,
+                'rate' => 0.0,
+                'amount' => 0.0,
+            ];
         }
 
         $penaltyType = PenaltyType::query()
@@ -35,50 +53,93 @@ final readonly class ApplyDemurragePenaltyAction
             ->first();
 
         if (! $penaltyType) {
-            return;
+            return null;
         }
 
-        $existing = AppliedPenalty::query()
-            ->where('rake_id', $rake->id)
-            ->where('penalty_type_id', $penaltyType->id)
-            ->first();
+        $rate = (float) ($penaltyType->default_rate ?? 0.0);
+        $chargedHours = (int) ceil($excessMinutes / 60);
+        $amount = round($chargedHours * $rate, 2);
 
-        $weightMt = (float) ($rake->loaded_weight_mt ?? $rake->predicted_weight_mt ?? 0.0);
-        $hoursOver = $minutesOver / 60;
+        DB::transaction(function () use ($rake, $penaltyType, $chargedHours, $rate, $amount, $totalLoadingMinutes, $freeMinutes, $excessMinutes): void {
+            $rakeCharge = RakeCharge::query()->firstOrCreate(
+                [
+                    'rake_id' => $rake->id,
+                    'charge_type' => 'PENALTY',
+                    'is_actual_charges' => false,
+                ],
+                [
+                    'amount' => 0,
+                    'data_source' => 'predicted_penalty',
+                    'remarks' => 'Predicted penalty aggregate',
+                ],
+            );
 
-        $rate = $demurrageRatePerMtHour > 0.0
-            ? $demurrageRatePerMtHour
-            : (float) ($penaltyType->default_rate ?? 0.0);
+            AppliedPenalty::query()->updateOrCreate(
+                [
+                    'rake_id' => $rake->id,
+                    'penalty_type_id' => $penaltyType->id,
+                    'meta->source' => 'demurrage',
+                ],
+                [
+                    'rake_charge_id' => $rakeCharge->id,
+                    'wagon_id' => null,
+                    'wagon_number' => null,
+                    'quantity' => $chargedHours,
+                    'distance' => null,
+                    'rate' => $rate,
+                    'amount' => $amount,
+                    'meta' => [
+                        'source' => 'demurrage',
+                        'total_loading_minutes' => $totalLoadingMinutes,
+                        'free_minutes' => $freeMinutes,
+                        'excess_minutes' => $excessMinutes,
+                        'charged_hours' => $chargedHours,
+                        'loading_start_time' => $rake->loading_start_time->toIso8601String(),
+                        'loading_end_time' => $rake->loading_end_time->toIso8601String(),
+                    ],
+                ],
+            );
 
-        if ($rate <= 0.0 || $weightMt <= 0.0) {
-            return;
-        }
+            $this->recalculateChargeTotal($rakeCharge);
+        });
 
-        $amount = $rate * $weightMt * $hoursOver;
-
-        $payload = [
-            'penalty_type_id' => $penaltyType->id,
-            'rake_id' => $rake->id,
-            'wagon_id' => null,
-            'quantity' => $weightMt,
-            'distance' => null,
+        return [
+            'applied' => true,
+            'chargedHours' => $chargedHours,
+            'excessMinutes' => $excessMinutes,
+            'totalLoadingMinutes' => $totalLoadingMinutes,
+            'freeMinutes' => $freeMinutes,
             'rate' => $rate,
             'amount' => $amount,
-            'meta' => [
-                'minutes_over' => $minutesOver,
-                'hours_over' => $hoursOver,
-                'free_minutes' => $rakeLoad->free_time_minutes,
-                'placement_time' => $rakeLoad->placement_time->toIso8601String(),
-                'free_window_end' => $freeWindowEnd->toIso8601String(),
-            ],
         ];
+    }
 
-        if ($existing) {
-            $existing->update($payload);
+    private function removeDemurragePenalty(Rake $rake): void
+    {
+        DB::transaction(function () use ($rake): void {
+            AppliedPenalty::query()
+                ->where('rake_id', $rake->id)
+                ->where('meta->source', 'demurrage')
+                ->delete();
 
-            return;
-        }
+            $rakeCharge = RakeCharge::query()
+                ->where('rake_id', $rake->id)
+                ->where('charge_type', 'PENALTY')
+                ->where('is_actual_charges', false)
+                ->first();
 
-        AppliedPenalty::create($payload);
+            if ($rakeCharge) {
+                $this->recalculateChargeTotal($rakeCharge);
+            }
+        });
+    }
+
+    private function recalculateChargeTotal(RakeCharge $rakeCharge): void
+    {
+        $total = AppliedPenalty::query()
+            ->where('rake_charge_id', $rakeCharge->id)
+            ->sum('amount');
+
+        $rakeCharge->update(['amount' => round((float) $total, 2)]);
     }
 }
