@@ -213,18 +213,25 @@ final class RrDocumentController extends Controller
 
         $rakes = Rake::query()
             ->whereIn('siding_id', $sidingIds)
-            ->whereBetween('created_at', [$start, $end])
+            ->where('data_source', 'system')
+            ->whereNotNull('loading_date')
+            ->whereBetween('loading_date', [$start->toDateString(), $end->toDateString()])
+            ->whereDoesntHave('rrDocument')
+            ->whereDoesntHave('rakeWeighments', static function ($query): void {
+                $query->whereNotNull('pdf_file_path');
+            })
             ->with('siding:id,name,code')
-            ->orderByDesc('created_at')
+            ->orderByDesc('loading_date')
             ->orderBy('rake_number')
-            ->get(['id', 'rake_number', 'rr_actual_date', 'created_at', 'siding_id']);
+            ->limit(500)
+            ->get(['id', 'rake_number', 'rr_actual_date', 'loading_date', 'siding_id']);
 
         $data = $rakes->map(static function (Rake $rake): array {
             return [
                 'id' => $rake->id,
                 'rake_number' => $rake->rake_number,
                 'rr_actual_date' => $rake->rr_actual_date?->toDateString(),
-                'created_at' => $rake->created_at?->toDateString(),
+                'loading_date' => $rake->loading_date?->toDateString(),
                 'siding' => $rake->siding
                     ? [
                         'name' => $rake->siding->name,
