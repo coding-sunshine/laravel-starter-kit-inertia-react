@@ -3,26 +3,13 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        @isset($seo)
-        @if(!empty($seo['meta_description']))
-        <meta name="description" content="{{ $seo['meta_description'] }}">
-        @endif
+        <meta name="description" content="RMMS is a Railway Rake Management System for tracking stock, dispatch, weighment, RR uploads, and penalty workflows.">
         <meta property="og:type" content="website">
-        <meta property="og:title" content="{{ $seo['meta_title'] ?? config('app.name') }}">
-        @if(!empty($seo['meta_description']))
-        <meta property="og:description" content="{{ $seo['meta_description'] }}">
-        @endif
-        <meta property="og:url" content="{{ $seo['current_url'] ?? $seo['app_url'] ?? url()->current() }}">
-        @if(!empty($seo['og_image']))
-        <meta property="og:image" content="{{ $seo['og_image'] }}">
-        @endif
-        <meta name="twitter:card" content="summary_large_image">
-        <meta name="twitter:title" content="{{ $seo['meta_title'] ?? config('app.name') }}">
-        @if(!empty($seo['meta_description']))
-        <meta name="twitter:description" content="{{ $seo['meta_description'] }}">
-        @endif
-        @endisset
-
+        <meta property="og:title" content="RMMS | Railway Rake Management System">
+        <meta property="og:description" content="Manage railway rakes, coal stock, weighments, RR documents, and penalties in one operational dashboard.">
+        <meta property="og:url" content="{{ request()->fullUrl() }}">
+        <meta property="og:image" content="{{ url('/logo.png') }}">
+        
         {{-- Inline script to detect system dark mode preference and apply it immediately --}}
         <script>
             (function() {
@@ -52,12 +39,11 @@
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <title inertia>{{ config('app.name') }}</title>
 
-        <link rel="icon" href="/logo.png" type="image/png">
+        <link rel="icon" type="image/png" sizes="1024x1024" href="/logo.png">
+        <link rel="shortcut icon" type="image/png" href="/logo.png">
         <link rel="apple-touch-icon" href="/logo.png">
-
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />
-
         @viteReactRefresh
         @vite(['resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])
         @inertiaHead
