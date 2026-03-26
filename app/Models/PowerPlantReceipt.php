@@ -6,10 +6,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 
-final class PowerPlantReceipt extends Model
+final class PowerPlantReceipt extends Model implements HasMedia
 {
     use \Illuminate\Database\Eloquent\Factories\HasFactory;
+    use InteractsWithMedia;
 
     protected $fillable = [
         'rake_id',
@@ -22,6 +25,13 @@ final class PowerPlantReceipt extends Model
         'status',
         'created_by',
     ];
+
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('power_plant_receipt_pdf')
+            ->singleFile()
+            ->acceptsMimeTypes(['application/pdf']);
+    }
 
     public function rake(): BelongsTo
     {

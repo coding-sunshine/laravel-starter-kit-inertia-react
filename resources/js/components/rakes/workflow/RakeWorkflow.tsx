@@ -3,6 +3,7 @@ import { TxrWorkflow } from './TxrWorkflow';
 import { WagonLoadingWorkflow } from './WagonLoadingWorkflow';
 import { GuardInspectionWorkflow } from './GuardInspectionWorkflow';
 import { WeighmentWorkflow } from './WeighmentWorkflow';
+import { PowerPlantReceiptWorkflow } from './PowerPlantReceiptWorkflow';
 import { ComparisonWorkflow } from './ComparisonWorkflow';
 import { RrDocumentWorkflow } from './RrDocumentWorkflow';
 import { PenaltiesWorkflow } from './PenaltiesWorkflow';
@@ -22,6 +23,7 @@ interface RakeData {
     loading_start_time?: string | null;
     loading_end_time?: string | null;
     loading_free_minutes?: number | null;
+    destination_code?: string | null;
     wagons: Array<{
         id: number;
         wagon_number: string;
@@ -99,6 +101,17 @@ interface RakeData {
         }>;
     }>;
     is_diverted?: boolean;
+    powerPlantReceipts?: Array<{
+        id: number;
+        power_plant_id: number;
+        receipt_date: string | null;
+        weight_mt: string | number;
+        rr_reference: string | null;
+        status: string;
+        file_url: string | null;
+        file_name?: string | null;
+        powerPlant?: { id: number; name: string; code: string } | null;
+    }>;
     diverrtDestinations?: Array<{
         id: number;
         location: string;
@@ -138,6 +151,7 @@ interface RakeData {
 
 interface RakeWorkflowProps {
     rake: RakeData;
+    powerPlants: Array<{ id: number; name: string; code: string }>;
     demurrage_rate_per_mt_hour: number;
     /** Keeps parent wagon list (e.g. View Wagons dialog) in sync after unfit logs save */
     onUnfitWagonIdsSynced?: (unfitWagonIds: number[]) => void;
@@ -317,6 +331,7 @@ function LoadingTimesForm({ rakeId, loadingStart, loadingEnd }: LoadingTimesForm
 
 export function RakeWorkflow({
     rake,
+    powerPlants,
     demurrage_rate_per_mt_hour,
     onUnfitWagonIdsSynced,
 }: RakeWorkflowProps) {
@@ -375,6 +390,7 @@ export function RakeWorkflow({
     const hasMissingWagonNumbers = missingWagonNumberCount > 0;
     const isGuardApproved = rakeData.guardInspections?.[0]?.is_approved;
     const isWeighmentCompleted = rakeData.weighments?.[0]?.status === 'success';
+    const hasPowerPlantReceipt = (rakeData.powerPlantReceipts ?? []).length > 0;
     const hasRrDocument = ((): boolean => {
         const docs = rakeData.rrDocuments ?? [];
         if (!rakeData.is_diverted) {
@@ -432,6 +448,12 @@ export function RakeWorkflow({
             label: 'Rake weighment',
             description: 'At least one successful rake weighment exists.',
             status: isWeighmentCompleted ? 'completed' : 'pending',
+        },
+        {
+            id: 'power-plant-receipt',
+            label: 'Power plant receipt',
+            description: 'Receipt(s) recorded for destination power plant(s).',
+            status: hasPowerPlantReceipt ? 'completed' : 'pending',
         },
         {
             id: 'rr',
@@ -657,11 +679,30 @@ export function RakeWorkflow({
                     </AccordionContent>
                 </AccordionItem>
 
-                {/* 5. Loader vs Weighment Comparison */}
+                {/* 5. Power plant receipt */}
+                <AccordionItem value="power-plant-receipt">
+                    <AccordionTrigger>
+                        <div className="flex items-center gap-2 text-left">
+                            <span className="font-medium">5. Power Plant Receipt</span>
+                            {hasPowerPlantReceipt && (
+                                <span className="text-green-600 text-sm">✓ Recorded</span>
+                            )}
+                        </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                        <PowerPlantReceiptWorkflow
+                            rake={rakeData}
+                            powerPlants={powerPlants}
+                            disabled={false}
+                        />
+                    </AccordionContent>
+                </AccordionItem>
+
+                {/* 6. Loader vs Weighment Comparison */}
                 <AccordionItem value="comparison">
                     <AccordionTrigger disabled={disableComparison}>
                         <div className="flex items-center gap-2 text-left">
-                            <span className="font-medium">5. Loader vs Weighment Comparison</span>
+                            <span className="font-medium">6. Loader vs Weighment Comparison</span>
                             {disableComparison && (
                                 <span className="text-gray-400 text-sm">🔒 Locked</span>
                             )}
@@ -676,7 +717,7 @@ export function RakeWorkflow({
                 <AccordionItem value="rr-document">
                     <AccordionTrigger disabled={disableRrDocument}>
                         <div className="flex items-center gap-2 text-left">
-                            <span className="font-medium">6. Railway Receipt (RR) Document</span>
+                            <span className="font-medium">7. Railway Receipt (RR) Document</span>
                             {hasRrDocument && (
                                 <span className="text-green-600 text-sm">✓ Created</span>
                             )}
@@ -694,7 +735,7 @@ export function RakeWorkflow({
                 <AccordionItem value="penalties">
                     <AccordionTrigger disabled={disablePenalties}>
                         <div className="flex items-center gap-2 text-left">
-                            <span className="font-medium">7. Penalties</span>
+                            <span className="font-medium">8. Penalties</span>
                             {disablePenalties && (
                                 <span className="text-gray-400 text-sm">🔒 Locked</span>
                             )}
@@ -712,7 +753,7 @@ export function RakeWorkflow({
                     <AccordionItem value="pre-rr">
                         <AccordionTrigger>
                             <div className="flex items-center gap-2 text-left">
-                                <span className="font-medium">8. PRE-RR (Estimated Freight)</span>
+                                <span className="font-medium">9. PRE-RR (Estimated Freight)</span>
                             </div>
                         </AccordionTrigger>
                         <AccordionContent>

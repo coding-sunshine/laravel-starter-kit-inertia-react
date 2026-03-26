@@ -13,7 +13,7 @@ import AppLayout from '@/layouts/app-layout';
 import { useCan } from '@/hooks/use-can';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { FileText, Plus, Upload } from 'lucide-react';
+import { FileText, Upload } from 'lucide-react';
 import { useRef, useState } from 'react';
 
 interface Siding {
@@ -136,12 +136,6 @@ export default function IndentsIndex({ indents }: Props) {
                                     <Upload className="mr-2 size-4" />
                                     {uploading ? 'Uploading…' : 'Upload e-Demand PDF'}
                                 </Button>
-                                <Link href="/indents/create">
-                                    <Button size="sm">
-                                        <Plus className="mr-2 size-4" />
-                                        Create indent
-                                    </Button>
-                                </Link>
                             </>
                         )}
                     </div>
@@ -290,13 +284,6 @@ export default function IndentsIndex({ indents }: Props) {
                                 <p className="text-sm text-muted-foreground">
                                     No indents yet. Create one to get started.
                                 </p>
-                                {canCreateIndent && (
-                                    <Link href="/indents/create">
-                                        <Button className="mt-4" size="sm">
-                                            Create indent
-                                        </Button>
-                                    </Link>
-                                )}
                             </div>
                         )}
                     </CardContent>

@@ -132,6 +132,15 @@ interface AppliedPenaltyRecord {
     wagon?: { id: number; wagon_number: string; overload_weight_mt?: string | number | null };
 }
 
+interface RakeChargeRecord {
+    id: number;
+    charge_type: string;
+    is_actual_charges: boolean;
+    amount: string | number;
+    appliedPenalties?: Array<{ amount: string | number }>;
+    rrPenaltySnapshots?: Array<{ amount: string | number }>;
+}
+
 interface RakeData {
     id: number;
     rake_number: string;
@@ -140,9 +149,24 @@ interface RakeData {
     state: string;
     placement_time: string | null;
     dispatch_time: string | null;
+    rr_expected_date?: string | null;
+    remarks?: string | null;
+    destination?: string | null;
     loading_free_minutes: number | null;
     is_diverted?: boolean;
     destination_code?: string | null;
+    rakeCharges?: RakeChargeRecord[];
+    powerPlantReceipts?: Array<{
+        id: number;
+        power_plant_id: number;
+        receipt_date: string | null;
+        weight_mt: string | number;
+        rr_reference: string | null;
+        status: string;
+        file_url: string | null;
+        file_name?: string | null;
+        powerPlant?: { id: number; name: string; code: string } | null;
+    }>;
     siding?: Siding | null;
     wagons: Wagon[];
     txr: TxrRecord | null;
@@ -165,6 +189,11 @@ interface Props {
         carrying_capacity_max_mt: string | number;
         gross_tare_weight_mt: string | number;
         default_pcc_weight_mt: string | number | null;
+    }>;
+    powerPlants: Array<{
+        id: number;
+        name: string;
+        code: string;
     }>;
     demurrageRemainingMinutes: number | null;
     demurrage_rate_per_mt_hour: number;
@@ -700,20 +729,28 @@ function TxrEditForm({ rake }: { rake: RakeData }) {
 export default function RakesShow({
     rake,
     wagonTypes,
+    powerPlants,
     demurrageRemainingMinutes,
     demurrage_rate_per_mt_hour,
 }: Props) {
     const [selectedWagon, setSelectedWagon] = useState<Wagon | null>(null);
     const [wagonDialogOpen, setWagonDialogOpen] = useState(false);
     const [wagons, setWagons] = useState(rake.wagons);
-    const { data, setData, put, processing, errors, reset } = useForm({
-        wagon_type: '',
-        is_unfit: false,
-        tare_weight_mt: '',
-        loaded_weight_mt: '',
-        pcc_weight_mt: '',
-        loader_recorded_qty_mt: '',
-        weighment_qty_mt: '',
+    const [editRakeOpen, setEditRakeOpen] = useState(false);
+    const {
+        data: editData,
+        setData: setEditData,
+        put: putEdit,
+        processing: editProcessing,
+        errors: editErrors,
+    } = useForm({
+        rake_number: rake.rake_number ?? '',
+        rake_type: rake.rake_type ?? '',
+        dispatch_time: rake.dispatch_time ? new Date(rake.dispatch_time).toISOString().slice(0, 16) : '',
+        status: rake.state ?? 'pending',
+        rr_expected_date: rake.rr_expected_date ? new Date(rake.rr_expected_date).toISOString().slice(0, 10) : '',
+        placement_time: rake.placement_time ? new Date(rake.placement_time).toISOString().slice(0, 10) : '',
+        remarks: rake.remarks ?? '',
     });
 
     useEffect(() => {
@@ -728,15 +765,9 @@ export default function RakesShow({
 
     useEffect(() => {
         if (selectedWagon) {
-            setData((prev) => ({
-                ...prev,
-                wagon_type: selectedWagon.wagon_type ?? '',
-                tare_weight_mt: selectedWagon.tare_weight_mt ?? '',
-                pcc_weight_mt: selectedWagon.pcc_weight_mt ?? '',
-                is_unfit: selectedWagon.is_unfit ?? false,
-            }));
+            // no-op: wagon editing is handled in EditWagonsDialog
         }
-    }, [selectedWagon, setData]);
+    }, [selectedWagon]);
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: '/dashboard' },
@@ -760,6 +791,29 @@ export default function RakesShow({
         [rake, wagons],
     );
 
+    const latestWeighmentTotalMt = useMemo((): number | null => {
+        const latest = (rake.weighments ?? [])[0];
+        if (!latest || latest.total_weight_mt === null) {
+            return null;
+        }
+        const n = Number(latest.total_weight_mt);
+        return Number.isFinite(n) ? n : null;
+    }, [rake.weighments]);
+
+    const predictedPenaltyAmount = useMemo((): number => {
+        const predicted = (rake.rakeCharges ?? []).find(
+            (c) => c.charge_type === 'PENALTY' && !c.is_actual_charges,
+        );
+        return (predicted?.appliedPenalties ?? []).reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
+    }, [rake.rakeCharges]);
+
+    const actualPenaltyAmount = useMemo((): number => {
+        const actual = (rake.rakeCharges ?? []).find(
+            (c) => c.charge_type === 'PENALTY' && c.is_actual_charges,
+        );
+        return (actual?.rrPenaltySnapshots ?? []).reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
+    }, [rake.rakeCharges]);
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={`Rake ${rake.rake_number}`} />
@@ -777,6 +831,139 @@ export default function RakesShow({
                         <WagonOverviewDialog
                             wagons={wagons}
                         />
+                        <EditWagonsDialog
+                            wagons={wagons}
+                            wagonTypes={wagonTypes}
+                            rakeId={rake.id}
+                            onWagonSaved={(updatedWagon) =>
+                                setWagons((prev) =>
+                                    prev.map((wagon) =>
+                                        wagon.id === updatedWagon.id
+                                            ? { ...wagon, ...updatedWagon }
+                                            : wagon
+                                    )
+                                )
+                            }
+                        />
+                        <Dialog open={editRakeOpen} onOpenChange={setEditRakeOpen}>
+                            <DialogTrigger asChild>
+                                <Button variant="outline" size="sm">
+                                    <Edit className="mr-2 size-4" />
+                                    Edit rake
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-2xl">
+                                <DialogHeader>
+                                    <DialogTitle>Edit rake</DialogTitle>
+                                </DialogHeader>
+                                <form
+                                    className="grid gap-4 sm:grid-cols-2"
+                                    onSubmit={(event) => {
+                                        event.preventDefault();
+                                        putEdit(`/rakes/${rake.id}`, {
+                                            preserveScroll: true,
+                                            onSuccess: () => {
+                                                setEditRakeOpen(false);
+                                            },
+                                        });
+                                    }}
+                                >
+                                    <div>
+                                        <Label htmlFor="rake_number">Rake Number</Label>
+                                        <Input
+                                            id="rake_number"
+                                            value={editData.rake_number}
+                                            onChange={(e) => setEditData('rake_number', e.target.value)}
+                                        />
+                                        <InputError message={editErrors.rake_number} />
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="rake_type">Rake Type</Label>
+                                        <Input
+                                            id="rake_type"
+                                            value={editData.rake_type}
+                                            onChange={(e) => setEditData('rake_type', e.target.value)}
+                                        />
+                                        <InputError message={editErrors.rake_type} />
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="dispatch_time">Dispatch Time</Label>
+                                        <Input
+                                            id="dispatch_time"
+                                            type="datetime-local"
+                                            value={editData.dispatch_time}
+                                            onChange={(e) => setEditData('dispatch_time', e.target.value)}
+                                        />
+                                        <InputError message={editErrors.dispatch_time} />
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="status">Status</Label>
+                                        <select
+                                            id="status"
+                                            value={editData.status}
+                                            onChange={(e) => setEditData('status', e.target.value)}
+                                            className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                        >
+                                            <option value="pending">Pending</option>
+                                            <option value="txr_in_progress">TXR In Progress</option>
+                                            <option value="txr_completed">TXR Completed</option>
+                                            <option value="loading">Loading</option>
+                                            <option value="loading_completed">Loading Completed</option>
+                                            <option value="guard_approved">Guard Approved</option>
+                                            <option value="guard_rejected">Guard Rejected</option>
+                                            <option value="weighment_completed">Weighment Completed</option>
+                                            <option value="rr_generated">RR Generated</option>
+                                            <option value="closed">Closed</option>
+                                        </select>
+                                        <InputError message={editErrors.status} />
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="rr_expected_date">RR Expected Date</Label>
+                                        <Input
+                                            id="rr_expected_date"
+                                            type="date"
+                                            value={editData.rr_expected_date}
+                                            onChange={(e) => setEditData('rr_expected_date', e.target.value)}
+                                        />
+                                        <InputError message={editErrors.rr_expected_date} />
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="placement_time">Placement Date</Label>
+                                        <Input
+                                            id="placement_time"
+                                            type="date"
+                                            value={editData.placement_time}
+                                            onChange={(e) => setEditData('placement_time', e.target.value)}
+                                        />
+                                        <InputError message={editErrors.placement_time} />
+                                    </div>
+                                    <div className="sm:col-span-2">
+                                        <Label htmlFor="remarks">Remarks</Label>
+                                        <textarea
+                                            id="remarks"
+                                            value={editData.remarks}
+                                            onChange={(e) => setEditData('remarks', e.target.value)}
+                                            rows={3}
+                                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                        />
+                                        <InputError message={editErrors.remarks} />
+                                    </div>
+                                    <div className="sm:col-span-2 flex justify-end gap-2">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => setEditRakeOpen(false)}
+                                            disabled={editProcessing}
+                                        >
+                                            Cancel
+                                        </Button>
+                                        <Button type="submit" disabled={editProcessing}>
+                                            {editProcessing ? 'Saving...' : 'Save'}
+                                        </Button>
+                                    </div>
+                                </form>
+                            </DialogContent>
+                        </Dialog>
                         <Link
                             href="/rakes"
                             className="text-sm font-medium text-muted-foreground underline underline-offset-4"
@@ -786,46 +973,76 @@ export default function RakesShow({
                     </div>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
                     <Card>
-                        <CardHeader className="pb-2">
-                            <CardDescription>State</CardDescription>
-                            <CardTitle className="text-lg capitalize">
+                        <CardHeader className="py-3">
+                            <CardDescription className="text-[11px] uppercase tracking-wide">
+                                Status
+                            </CardDescription>
+                            <CardTitle className="text-sm font-semibold capitalize">
                                 {rake.state}
                             </CardTitle>
                         </CardHeader>
                     </Card>
                     <Card>
-                        <CardHeader className="pb-2">
-                            <CardDescription>Wagons</CardDescription>
-                            <CardTitle className="text-lg">
-                                {rake.wagon_count ?? 0}
-                            </CardTitle>
-                            <div className="pt-2">
-                                <EditWagonsDialog
-                                    wagons={wagons}
-                                    wagonTypes={wagonTypes}
-                                    rakeId={rake.id}
-                                    onWagonSaved={(updatedWagon) =>
-                                        setWagons((prev) =>
-                                            prev.map((wagon) =>
-                                                wagon.id === updatedWagon.id
-                                                    ? { ...wagon, ...updatedWagon }
-                                                    : wagon
-                                            )
-                                        )
-                                    }
-                                />
+                        <CardHeader className="py-3">
+                            <CardDescription className="text-[11px] uppercase tracking-wide">
+                                Wagons
+                            </CardDescription>
+                            <div className="flex items-end justify-between gap-2">
+                                <CardTitle className="text-sm font-semibold tabular-nums">
+                                    {rake.wagon_count ?? 0}
+                                </CardTitle>
+                                {hasWagonDataGaps ? (
+                                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-200">
+                                        Needs update
+                                    </span>
+                                ) : (
+                                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200">
+                                        OK
+                                    </span>
+                                )}
                             </div>
-                            {hasWagonDataGaps ? (
-                                <p className="text-xs text-amber-600 dark:text-amber-400 pt-2">
-                                    {missingWagonNumberCount} wagon numbers or {missingWagonTypeCount} wagon types missing. Please update wagons.
-                                </p>
-                            ) : (
-                                <p className="text-xs text-emerald-600 dark:text-emerald-400 pt-2">
-                                    All wagon numbers and wagon types are updated.
-                                </p>
-                            )}
+                        </CardHeader>
+                    </Card>
+                    <Card>
+                        <CardHeader className="py-3">
+                            <CardDescription className="text-[11px] uppercase tracking-wide">
+                                Destination
+                            </CardDescription>
+                            <CardTitle className="text-sm font-semibold">
+                                {rake.destination ?? rake.destination_code ?? '—'}
+                            </CardTitle>
+                        </CardHeader>
+                    </Card>
+                    <Card>
+                        <CardHeader className="py-3">
+                            <CardDescription className="text-[11px] uppercase tracking-wide">
+                                Coal (MT)
+                            </CardDescription>
+                            <CardTitle className="text-sm font-semibold tabular-nums">
+                                {latestWeighmentTotalMt !== null ? latestWeighmentTotalMt.toFixed(2) : '—'}
+                            </CardTitle>
+                        </CardHeader>
+                    </Card>
+                    <Card>
+                        <CardHeader className="py-3">
+                            <CardDescription className="text-[11px] uppercase tracking-wide">
+                                Predicted (₹)
+                            </CardDescription>
+                            <CardTitle className="text-sm font-semibold tabular-nums">
+                                {predictedPenaltyAmount.toFixed(2)}
+                            </CardTitle>
+                        </CardHeader>
+                    </Card>
+                    <Card>
+                        <CardHeader className="py-3">
+                            <CardDescription className="text-[11px] uppercase tracking-wide">
+                                Actual (₹)
+                            </CardDescription>
+                            <CardTitle className="text-sm font-semibold tabular-nums">
+                                {actualPenaltyAmount.toFixed(2)}
+                            </CardTitle>
                         </CardHeader>
                     </Card>
                 </div>
@@ -833,6 +1050,7 @@ export default function RakesShow({
                 {/* Workflow steps (TXR, Loading, Guard, Weighment, etc.) */}
                 <RakeWorkflow
                     rake={rakeForWorkflow}
+                    powerPlants={powerPlants}
                     demurrage_rate_per_mt_hour={demurrage_rate_per_mt_hour}
                     onUnfitWagonIdsSynced={(unfitWagonIds) => {
                         const set = new Set(unfitWagonIds);

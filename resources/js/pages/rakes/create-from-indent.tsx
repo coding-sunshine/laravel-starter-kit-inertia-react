@@ -40,6 +40,8 @@ interface Props {
     indent: Indent;
     sidings: Siding[];
     next_priority_number: number;
+    power_plants: PowerPlantOption[];
+    prefill_destination_code?: string | null;
     flash?: {
         success?: string;
         error?: string;
@@ -59,6 +61,7 @@ export default function CreateRakeFromIndent({
     sidings,
     next_priority_number,
     power_plants,
+    prefill_destination_code,
     flash,
 }: Props) {
     const page = usePage<InertiaPageProps>();
@@ -80,7 +83,7 @@ export default function CreateRakeFromIndent({
             : '',
         rake_type: indent.demanded_stock || '',
         wagon_count: totalUnits != null ? String(totalUnits) : '',
-        destination_code: '',
+        destination_code: prefill_destination_code ?? '',
         rr_expected_date: '',
         placement_time: '',
         remarks: '',

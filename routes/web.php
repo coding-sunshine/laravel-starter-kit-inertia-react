@@ -50,6 +50,7 @@ use App\Http\Controllers\Rakes\RakeDiverrtDestinationController;
 use App\Http\Controllers\Rakes\RakeDiversionModeController;
 use App\Http\Controllers\Rakes\RakeGuardInspectionController;
 use App\Http\Controllers\Rakes\RakeLoadController;
+use App\Http\Controllers\Rakes\RakePowerPlantReceiptController;
 use App\Http\Controllers\Rakes\RakesController;
 use App\Http\Controllers\Rakes\RakeTxrController;
 use App\Http\Controllers\Rakes\RakeWagonController;
@@ -233,6 +234,8 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::post('rakes/{rake}/load/confirm-dispatch', [RakeLoadController::class, 'confirmDispatch'])->name('rakes.load.confirm-dispatch');
     Route::post('rakes/{rake}/weighments', [RakeWeighmentController::class, 'store'])->name('rakes.weighments.store');
     Route::delete('rakes/{rake}/weighments', [RakeWeighmentController::class, 'destroy'])->name('rakes.weighments.destroy');
+    Route::post('rakes/{rake}/power-plant-receipts', [RakePowerPlantReceiptController::class, 'store'])->name('rakes.power-plant-receipts.store');
+    Route::delete('rakes/{rake}/power-plant-receipts/{receipt}', [RakePowerPlantReceiptController::class, 'destroy'])->name('rakes.power-plant-receipts.destroy')->scopeBindings();
     Route::get('rakes/{rake}/comparison', [RakesController::class, 'comparison'])->name('rakes.comparison');
     Route::post('rakes/{rake}/guard-inspection', [RakeGuardInspectionController::class, 'store'])->name('rakes.guard-inspection.store');
     Route::get('indents', [IndentsController::class, 'index'])->name('indents.index');

@@ -9,6 +9,7 @@ use App\Actions\SyncTxrUnfitFlagsToWagonsAction;
 use App\DataTables\RakeDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\AppliedPenalty;
+use App\Models\PowerPlant;
 use App\Models\Rake;
 use App\Models\RakeCharge;
 use App\Models\SectionTimer;
@@ -54,9 +55,13 @@ final class RakesController extends Controller
             'wagonLoadings.loader:id,loader_name,code',
             'guardInspections',
             'rrDocument',
+            'powerPlantReceipts.powerPlant:id,name,code',
+            'powerPlantReceipts.media',
             'penalties',
             'appliedPenalties.penaltyType',
             'appliedPenalties.wagon',
+            'rakeCharges.appliedPenalties:id,rake_charge_id,amount',
+            'rakeCharges.rrPenaltySnapshots:id,rake_charge_id,amount',
         ]);
 
         if ($rake->txr !== null) {
@@ -179,17 +184,64 @@ final class RakesController extends Controller
             ];
         })->values()->all();
 
+        $rakeArray['powerPlantReceipts'] = collect($rake->powerPlantReceipts ?? [])->map(static function ($receipt): array {
+            $media = $receipt->getFirstMedia('power_plant_receipt_pdf');
+
+            return [
+                'id' => $receipt->id,
+                'power_plant_id' => $receipt->power_plant_id,
+                'receipt_date' => $receipt->receipt_date?->toDateString(),
+                'weight_mt' => $receipt->weight_mt,
+                'rr_reference' => $receipt->rr_reference,
+                'status' => $receipt->status,
+                'file_url' => $receipt->getFirstMediaUrl('power_plant_receipt_pdf') ?: null,
+                'file_name' => $media?->file_name,
+                'powerPlant' => $receipt->relationLoaded('powerPlant') && $receipt->powerPlant
+                    ? [
+                        'id' => $receipt->powerPlant->id,
+                        'name' => $receipt->powerPlant->name,
+                        'code' => $receipt->powerPlant->code,
+                    ]
+                    : null,
+            ];
+        })->values()->all();
+
         unset($rakeArray['rr_document'], $rakeArray['rr_documents'], $rakeArray['diverrt_destinations']);
 
         if (array_key_exists('applied_penalties', $rakeArray)) {
             $rakeArray['appliedPenalties'] = $rakeArray['applied_penalties'];
         }
 
+        $rakeArray['rakeCharges'] = collect($rake->rakeCharges ?? [])->map(static function (RakeCharge $charge): array {
+            return [
+                'id' => $charge->id,
+                'charge_type' => $charge->charge_type,
+                'is_actual_charges' => (bool) $charge->is_actual_charges,
+                'amount' => $charge->amount,
+                'appliedPenalties' => collect($charge->appliedPenalties ?? [])->map(static function ($row): array {
+                    return [
+                        'amount' => (float) ($row->amount ?? 0),
+                    ];
+                })->values()->all(),
+                'rrPenaltySnapshots' => collect($charge->rrPenaltySnapshots ?? [])->map(static function ($row): array {
+                    return [
+                        'amount' => (float) ($row->amount ?? 0),
+                    ];
+                })->values()->all(),
+            ];
+        })->values()->all();
+
         $this->reconcilePenaltyChargeTotal($rake);
+
+        $powerPlants = PowerPlant::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name', 'code']);
 
         return Inertia::render('rakes/show', [
             'rake' => $rakeArray,
             'wagonTypes' => $wagonTypes,
+            'powerPlants' => $powerPlants,
             'demurrageRemainingMinutes' => $demurrageRemainingMinutes,
             'demurrage_rate_per_mt_hour' => config('rrmcs.demurrage_rate_per_mt_hour', 50),
         ]);
@@ -283,8 +335,8 @@ final class RakesController extends Controller
                 },
             ],
             'rake_type' => ['nullable', 'string', 'max:50'],
-            'wagon_count' => ['nullable', 'integer', 'min:0'],
-            'free_time_minutes' => ['nullable', 'integer', 'min:0'],
+            'dispatch_time' => ['nullable', 'date'],
+            'status' => ['nullable', 'string', 'in:pending,txr_in_progress,txr_completed,loading,loading_completed,guard_approved,guard_rejected,weighment_completed,rr_generated,closed'],
             'rr_expected_date' => ['nullable', 'date'],
             'placement_time' => ['nullable', 'date'],
             'remarks' => ['nullable', 'string', 'max:1000'],
@@ -295,24 +347,12 @@ final class RakesController extends Controller
                 ? mb_trim((string) $validated['rake_number'])
                 : $rake->rake_number,
             'rake_type' => $validated['rake_type'] ?? $rake->rake_type,
-            'wagon_count' => $validated['wagon_count'] ?? $rake->wagon_count,
-            'loading_free_minutes' => $validated['free_time_minutes'] ?? $rake->loading_free_minutes,
+            'dispatch_time' => $validated['dispatch_time'] ? new DateTimeImmutable($validated['dispatch_time']) : $rake->dispatch_time,
+            'state' => $validated['status'] ?? $rake->state,
             'rr_expected_date' => $validated['rr_expected_date'] ?? $rake->rr_expected_date,
             'placement_time' => $validated['placement_time'] ? new DateTimeImmutable($validated['placement_time']) : $rake->placement_time,
             'updated_by' => $request->user()->id,
         ]);
-
-        // Generate wagons if rake has no wagons and wagon_count is specified
-        if ($rake->wagons()->count() === 0 && $rake->wagon_count > 0) {
-            for ($i = 1; $i <= $rake->wagon_count; $i++) {
-                $wagon = new Wagon;
-                $wagon->rake_id = $rake->id;
-                $wagon->wagon_number = "W{$i}";
-                $wagon->wagon_sequence = $i;
-                $wagon->state = 'pending';
-                $wagon->save();
-            }
-        }
 
         return to_route('rakes.show', $rake)
             ->with('success', 'Rake updated successfully.');
