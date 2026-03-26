@@ -62,7 +62,7 @@ final class PowerPlantReceiptController extends Controller
             'receipt_date' => ['required', 'date'],
             'weight_mt' => ['required', 'numeric', 'min:0'],
             'rr_reference' => ['nullable', 'string', 'max:50'],
-            'status' => ['nullable', 'string', 'in:pending,verified,discrepancy'],
+            'status' => ['nullable', 'string', 'in:pending,reached,verified,discrepancy'],
         ]);
         $rake = Rake::query()->findOrFail($validated['rake_id']);
         // $this->authorize('view', $rake);

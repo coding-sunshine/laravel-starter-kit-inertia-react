@@ -361,11 +361,14 @@ final class IndentsController extends Controller
             ->orderBy('name')
             ->get(['name', 'code']);
 
+        $prefillDestinationCode = $this->resolveDestinationCodeFromIndent($indent->destination);
+
         return Inertia::render('rakes/create-from-indent', [
             'indent' => $indent->load('siding:id,name,code'),
             'sidings' => $sidings,
             'next_priority_number' => $nextPriorityNumber,
             'power_plants' => $powerPlants,
+            'prefill_destination_code' => $prefillDestinationCode,
         ]);
     }
 
@@ -483,6 +486,11 @@ final class IndentsController extends Controller
             }
         }
 
+        $indent->update([
+            'state' => 'completed',
+            'updated_by' => $user->id,
+        ]);
+
         return to_route('rakes.show', $rake)
             ->with('success', 'Rake created from completed indent successfully.');
     }
@@ -533,5 +541,43 @@ final class IndentsController extends Controller
         }
 
         return $user->hasPermissionTo($permission);
+    }
+
+    private function resolveDestinationCodeFromIndent(?string $destination): ?string
+    {
+        if ($destination === null || mb_trim($destination) === '') {
+            return null;
+        }
+
+        $normalized = mb_strtolower(mb_trim($destination));
+
+        $exactCode = PowerPlant::query()
+            ->where('is_active', true)
+            ->whereRaw('LOWER(code) = ?', [$normalized])
+            ->value('code');
+
+        if ($exactCode !== null) {
+            return (string) $exactCode;
+        }
+
+        $exactName = PowerPlant::query()
+            ->where('is_active', true)
+            ->whereRaw('LOWER(name) = ?', [$normalized])
+            ->value('code');
+
+        if ($exactName !== null) {
+            return (string) $exactName;
+        }
+
+        $likeMatch = PowerPlant::query()
+            ->where('is_active', true)
+            ->where(function ($query) use ($normalized): void {
+                $query->whereRaw('LOWER(name) LIKE ?', ['%'.$normalized.'%'])
+                    ->orWhereRaw('LOWER(code) LIKE ?', ['%'.$normalized.'%']);
+            })
+            ->orderBy('name')
+            ->value('code');
+
+        return $likeMatch !== null ? (string) $likeMatch : null;
     }
 }

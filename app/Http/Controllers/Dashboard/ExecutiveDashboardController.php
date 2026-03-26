@@ -218,17 +218,23 @@ final class ExecutiveDashboardController extends Controller
             }
         }
 
-        $totalPenaltyThisMonth = (float) AppliedPenalty::query()
+        $totalPenaltyThisMonth = (float) RrPenaltySnapshot::query()
+            ->join('rakes', 'rr_penalty_snapshots.rake_id', '=', 'rakes.id')
+            ->whereIn('rakes.siding_id', $sidingIds)
+            ->whereNotNull('rakes.loading_date')
+            ->whereRaw($this->dateOnlyBetweenSql('rakes.loading_date', true), [$fromDate, $toDate])
+            ->sum(DB::raw('(rr_penalty_snapshots.amount + (rr_penalty_snapshots.amount * 0.05))'));
+        $predictedPenaltyRisk = (float) AppliedPenalty::query()
             ->join('rakes', 'applied_penalties.rake_id', '=', 'rakes.id')
             ->whereIn('rakes.siding_id', $sidingIds)
             ->whereNotNull('rakes.loading_date')
             ->whereRaw($this->dateOnlyBetweenSql('rakes.loading_date', true), [$fromDate, $toDate])
             ->sum(DB::raw('(applied_penalties.amount + (applied_penalties.amount * 0.05))'));
 
-        $predictedPenaltyRisk = (float) PenaltyPrediction::query()
-            ->whereIn('siding_id', $sidingIds)
-            ->whereRaw($this->dateOnlyBetweenSql('prediction_date', true), [$fromDate, $toDate])
-            ->sum('predicted_amount_max');
+        // $predictedPenaltyRisk = (float) PenaltyPrediction::query()
+        //     ->whereIn('siding_id', $sidingIds)
+        //     ->whereRaw($this->dateOnlyBetweenSql('prediction_date', true), [$fromDate, $toDate])
+        //     ->sum('predicted_amount_max');
 
         $loadingMinutes = Rake::query()
             ->whereIn('siding_id', $sidingIds)
@@ -241,9 +247,9 @@ final class ExecutiveDashboardController extends Controller
 
         $avgLoadingTimeMinutes = $loadingMinutes->isEmpty() ? null : round($loadingMinutes->avg(), 0);
 
-        $trucksQuery = VehicleUnload::query()
+        $trucksQuery = DailyVehicleEntry::query()
             ->whereIn('siding_id', $sidingIds)
-            ->whereRaw($this->dateOnlyBetweenSql('COALESCE(unload_end_time, created_at)'), [$fromDate, $toDate]);
+            ->whereRaw($this->dateOnlyBetweenSql('COALESCE(created_at)'), [$fromDate, $toDate]);
         if (! empty($filterContext['shift'])) {
             $trucksQuery->where('shift', $filterContext['shift']);
         }
