@@ -31,10 +31,9 @@
 
     <title>Authorize Application - {{ config('app.name', 'MCP Server') }}</title>
 
-    <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="shortcut icon" href="/favicon.ico" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="1024x1024" href="/logo.png" />
+    <link rel="shortcut icon" type="image/png" href="/logo.png" />
+    <link rel="apple-touch-icon" href="/logo.png" />
     <meta name="apple-mobile-web-app-title" content="Authorize MCP" />
     <link rel="manifest" href="/site.webmanifest" />
 
