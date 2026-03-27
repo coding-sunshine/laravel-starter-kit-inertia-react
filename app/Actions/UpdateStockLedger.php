@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions;
 
 use App\Events\CoalStockUpdated;
+use App\Jobs\NotifySuperAdmins;
 use App\Models\Siding;
 use App\Models\SidingOpeningBalance;
 use App\Models\StockLedger;
@@ -23,6 +24,8 @@ use InvalidArgumentException;
  */
 final readonly class UpdateStockLedger
 {
+    private const STOCK_REQUIREMENT_MT_PER_RAKE = 3500;
+
     /**
      * Record a stock receipt (coal arrival)
      */
@@ -57,6 +60,8 @@ final readonly class UpdateStockLedger
 
             event(new CoalStockUpdated($siding->id, $newBalance));
 
+            $this->maybeNotifyCapacityIncrease($siding, $currentBalance, $newBalance);
+
             return $ledger;
         });
     }
@@ -90,6 +95,8 @@ final readonly class UpdateStockLedger
             $this->updateCoalStockBalance($siding->id, $newBalance);
 
             event(new CoalStockUpdated($siding->id, $newBalance));
+
+            $this->maybeNotifyCapacityIncrease($siding, $currentBalance, $newBalance);
 
             return $ledger;
         });
@@ -130,6 +137,8 @@ final readonly class UpdateStockLedger
 
             event(new CoalStockUpdated($siding->id, $newBalance));
 
+            $this->maybeNotifyCapacityIncrease($siding, $currentBalance, $newBalance);
+
             return $ledger;
         });
     }
@@ -163,6 +172,8 @@ final readonly class UpdateStockLedger
             $this->updateCoalStockBalance($siding->id, $newBalance);
 
             event(new CoalStockUpdated($siding->id, $newBalance));
+
+            $this->maybeNotifyCapacityIncrease($siding, $currentBalance, $newBalance);
 
             return $ledger;
         });
@@ -221,6 +232,27 @@ final readonly class UpdateStockLedger
             ->with('vehicleArrival.vehicle', 'rake', 'creator')
             ->latest('created_at')
             ->paginate($limit);
+    }
+
+    private function maybeNotifyCapacityIncrease(Siding $siding, float $oldBalance, float $newBalance): void
+    {
+        $req = self::STOCK_REQUIREMENT_MT_PER_RAKE;
+        $oldCapacity = $req > 0 ? (int) floor($oldBalance / $req) : 0;
+        $newCapacity = $req > 0 ? (int) floor($newBalance / $req) : 0;
+
+        if ($newCapacity <= 0 || $newCapacity <= $oldCapacity) {
+            return;
+        }
+
+        DB::afterCommit(function () use ($siding, $newBalance, $newCapacity, $req): void {
+            NotifySuperAdmins::dispatch(\App\Notifications\StockCapacityIncreasedNotification::class, [
+                'siding_id' => (int) $siding->id,
+                'siding_name' => $siding->name,
+                'closing_balance_mt' => round($newBalance, 2),
+                'capacity_rakes' => $newCapacity,
+                'requirement_mt' => $req,
+            ]);
+        });
     }
 
     /**

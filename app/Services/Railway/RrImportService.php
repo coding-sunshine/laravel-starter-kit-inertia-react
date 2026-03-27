@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Railway;
 
 use App\Http\Requests\StoreRrUploadRequest;
+use App\Jobs\NotifySuperAdmins;
 use App\Models\AppliedPenalty;
 use App\Models\DiverrtDestination;
 use App\Models\PenaltyType;
@@ -315,6 +316,9 @@ final readonly class RrImportService
             $this->sumPenaltyAmount($charges)
         );
 
+        $breakdown = [];
+        $total = 0.0;
+
         foreach ($charges as $c) {
             $code = $c['code'] ?? $c['charge_code'] ?? '';
             $amount = (float) ($c['amount'] ?? 0);
@@ -333,6 +337,28 @@ final readonly class RrImportService
                     'name' => $c['name'] ?? null,
                 ],
             ]);
+
+            $upper = mb_strtoupper((string) $code);
+            $breakdown[$upper] = (float) ($breakdown[$upper] ?? 0) + $amount;
+            $total += $amount;
+        }
+
+        if ($total > 0) {
+            DB::afterCommit(function () use ($rrDocument, $rake, $total, $breakdown): void {
+                NotifySuperAdmins::dispatch(\App\Notifications\PenaltyCreatedNotification::class, [
+                    'source' => 'rr_snapshot',
+                    'rr_document_id' => $rrDocument->id,
+                    'rake_id' => $rake?->id,
+                    'rake_number' => $rake?->rake_number,
+                    'siding_id' => $rake?->siding_id,
+                    'siding_name' => $rake?->siding?->name,
+                    'amount_total' => round($total, 2),
+                    'breakdown' => collect($breakdown)
+                        ->map(fn (float $amount, string $code): array => ['code' => $code, 'amount' => round($amount, 2)])
+                        ->values()
+                        ->all(),
+                ]);
+            });
         }
     }
 

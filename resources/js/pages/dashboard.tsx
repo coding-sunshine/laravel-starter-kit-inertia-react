@@ -317,6 +317,45 @@ interface YesterdayPredictedPenaltyItem {
     rakes: YesterdayPenaltyRake[];
 }
 
+interface ExecutiveTimelineValue {
+    trips: number | null;
+    qty: number | null;
+}
+
+interface ExecutiveTimelineSeries {
+    dateWise: ExecutiveTimelineValue;
+    monthWise: ExecutiveTimelineValue;
+    fyWise: ExecutiveTimelineValue;
+}
+
+interface ExecutiveSidingQtyRow {
+    sidingId: number;
+    sidingName: string;
+    dateWise: { qty: number | null };
+    monthWise: { qty: number };
+    fyWise: { qty: number };
+}
+
+interface ExecutiveSidingTripsRow {
+    sidingId: number;
+    sidingName: string;
+    dateWise: { trips: number; qty: number };
+    monthWise: { trips: number; qty: number };
+    fyWise: { trips: number; qty: number };
+}
+
+interface ExecutiveYesterdayData {
+    date: string;
+    monthLabel: string;
+    fyLabel: string;
+    obProduction: ExecutiveTimelineSeries;
+    coalProduction: ExecutiveTimelineSeries;
+    coalDispatch: ExecutiveTimelineSeries;
+    rakeDispatch: ExecutiveTimelineSeries;
+    coalDispatchBySiding: ExecutiveSidingQtyRow[];
+    rakeDispatchBySiding: ExecutiveSidingTripsRow[];
+}
+
 interface DashboardAlert {
     id: number;
     type: string;
@@ -375,7 +414,14 @@ type DashboardProps = SharedData & {
     penaltyTrendDaily?: PenaltyTrendPoint[];
     penaltyByType?: PenaltyByTypePoint[];
     penaltyBySiding?: PenaltyBySidingPoint[];
-    alerts?: DashboardAlert[];
+    notifications?: Array<{
+        id: string;
+        type: string;
+        data: Record<string, unknown>;
+        read_at: string | null;
+        created_at: string;
+    }>;
+    notificationsUnreadCount?: number;
     liveRakeStatus?: LiveRakeStatusRow[];
     dailyRakeDetails?: DailyRakeDetailsData;
     coalTransportReport?: CoalTransportReportData;
@@ -392,6 +438,7 @@ type DashboardProps = SharedData & {
     loaderOverloadTrends?: LoaderOverloadTrends;
     powerPlantDispatch?: PowerPlantDispatchItem[];
     yesterdayPredictedPenalties?: YesterdayPredictedPenaltyItem[];
+    executiveYesterday?: ExecutiveYesterdayData;
 };
 
 function formatCurrency(n: number): string {
@@ -424,6 +471,433 @@ function SectionHeader({ icon: Icon, title, subtitle, action, titleClassName }: 
                 </div>
             </div>
             {action}
+        </div>
+    );
+}
+
+function ExecutiveYesterdayTable({
+    title,
+    values,
+    dateLabel,
+    monthLabel,
+    fyLabel,
+}: {
+    title: string;
+    values: ExecutiveTimelineSeries;
+    dateLabel: string;
+    monthLabel: string;
+    fyLabel: string;
+}) {
+    const rows: Array<{ label: string; value: ExecutiveTimelineValue }> = [
+        { label: `Date wise (${dateLabel})`, value: values.dateWise },
+        { label: `Month wise (${monthLabel})`, value: values.monthWise },
+        { label: `FY wise (${fyLabel})`, value: values.fyWise },
+    ];
+
+    const formatQtyOrDash = (qty: number | null): string => {
+        if (qty == null) {
+            return '—';
+        }
+
+        return qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    };
+
+    const formatTripsOrDash = (trips: number | null): string => {
+        if (trips == null) {
+            return '—';
+        }
+
+        return trips.toLocaleString();
+    };
+
+    return (
+        <div className="dashboard-card rounded-xl border-0 p-5">
+            <SectionHeader icon={BarChart3} title={title} subtitle="Timeline" titleClassName="font-bold text-black" />
+            <div className="dashboard-table-scroll mt-3 overflow-x-auto">
+                <table className="w-full border-separate text-sm" style={{ borderSpacing: 0 }}>
+                    <thead className="bg-[#eef2f7] text-black">
+                        <tr>
+                            <th className="border border-[#d5dbe4] px-3 py-2 text-left font-medium">Period</th>
+                            <th className="border border-[#d5dbe4] px-3 py-2 text-right font-medium">Trips</th>
+                            <th className="border border-[#d5dbe4] px-3 py-2 text-right font-medium">Qty (MT)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {rows.map((row) => (
+                            <tr key={row.label} className="bg-white">
+                                <td className="border border-[#d5dbe4] px-3 py-2">{row.label}</td>
+                                <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{formatTripsOrDash(row.value.trips)}</td>
+                                <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{formatQtyOrDash(row.value.qty)}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+}
+
+function ExecutiveYesterdaySection({ data }: { data: ExecutiveYesterdayData }) {
+    const dayDate = new Date(`${data.date}T00:00:00`).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
+    const dayValue = data.date;
+    const [viewMode, setViewMode] = useState<'table' | 'charts'>('charts');
+
+    const fmtNumber = (n: number, fractionDigits = 0): string =>
+        n.toLocaleString(undefined, { minimumFractionDigits: fractionDigits, maximumFractionDigits: fractionDigits });
+
+    const fmtQtyOrDash = (n: number | null, fractionDigits = 2): string => {
+        if (n == null) {
+            return '—';
+        }
+
+        return fmtNumber(n, fractionDigits);
+    };
+
+    const periodDefs: Array<{
+        key: 'dateWise' | 'monthWise' | 'fyWise';
+        title: string;
+        subtitle: string;
+        headerClassName: string;
+        textClassName: string;
+    }> = [
+        {
+            key: 'dateWise',
+            title: `DATE WISE - ${dayDate}`,
+            subtitle: `Date Wise - ${dayDate}`,
+            headerClassName: 'bg-[#e8f0f8]',
+            textClassName: 'text-[#0C447C]',
+        },
+        {
+            key: 'monthWise',
+            title: `MONTH WISE - ${data.monthLabel}`,
+            subtitle: `Month Wise - ${data.monthLabel}`,
+            headerClassName: 'bg-[#f0f4f8]',
+            textClassName: 'text-[#444441]',
+        },
+        {
+            key: 'fyWise',
+            title: `FY YEAR WISE - ${data.fyLabel}`,
+            subtitle: `FY Wise - ${data.fyLabel}`,
+            headerClassName: 'bg-[#f8e8f0]',
+            textClassName: 'text-[#72243E]',
+        },
+    ];
+
+    const getPeriod = (key: 'dateWise' | 'monthWise' | 'fyWise') => ({
+        ob: data.obProduction[key],
+        coal: data.coalProduction[key],
+        coalDispatch: data.coalDispatch[key],
+        rakeDispatch: data.rakeDispatch[key],
+    });
+
+    const getSidingDispatchQty = (key: 'dateWise' | 'monthWise' | 'fyWise', sidingId: number): number | null => {
+        const row = data.coalDispatchBySiding.find((r) => r.sidingId === sidingId);
+        if (!row) {
+            return key === 'dateWise' ? null : 0;
+        }
+
+        if (key === 'dateWise') {
+            return row.dateWise.qty;
+        }
+
+        return key === 'monthWise' ? row.monthWise.qty : row.fyWise.qty;
+    };
+
+    const getSidingRakeTrips = (key: 'dateWise' | 'monthWise' | 'fyWise', sidingId: number): number => {
+        const row = data.rakeDispatchBySiding.find((r) => r.sidingId === sidingId);
+        if (!row) {
+            return 0;
+        }
+
+        if (key === 'dateWise') {
+            return row.dateWise.trips;
+        }
+
+        return key === 'monthWise' ? row.monthWise.trips : row.fyWise.trips;
+    };
+
+    const getSidingRakeQty = (key: 'dateWise' | 'monthWise' | 'fyWise', sidingId: number): number => {
+        const row = data.rakeDispatchBySiding.find((r) => r.sidingId === sidingId);
+        if (!row) {
+            return 0;
+        }
+
+        if (key === 'dateWise') {
+            return row.dateWise.qty;
+        }
+
+        return key === 'monthWise' ? row.monthWise.qty : row.fyWise.qty;
+    };
+
+    const chartRowsFor = (key: 'dateWise' | 'monthWise' | 'fyWise') => {
+        const p = getPeriod(key);
+
+        return [
+            { name: 'OB Production', value: p.ob.qty ?? 0 },
+            { name: 'Coal Production', value: p.coal.qty ?? 0 },
+            { name: 'Coal Dispatch', value: p.coalDispatch.qty ?? 0 },
+            { name: 'Rake Dispatch (Rakes)', value: p.rakeDispatch.trips ?? 0 },
+        ];
+    };
+
+    const TableView = (
+        <div className="space-y-6">
+            {periodDefs.map((period) => {
+                const p = getPeriod(period.key);
+                const sidingOrder = data.coalDispatchBySiding.map((r) => ({ id: r.sidingId, name: r.sidingName }));
+
+                return (
+                    <div key={period.key} className="overflow-hidden rounded-xl border border-[#d5dbe4] bg-white">
+                        <div className={`border-b border-[#d5dbe4] px-4 py-3 ${period.headerClassName}`}>
+                            <p className={`text-sm font-semibold ${period.textClassName}`}>{period.title}</p>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full border-collapse text-xs">
+                                <tbody>
+                                    <tr className="bg-[#f8fafc]">
+                                        <td className="border-b border-[#d5dbe4] px-3 py-2 font-semibold" style={{ width: '30%' }}>
+                                            Metric
+                                        </td>
+                                        <td className="border-b border-[#d5dbe4] px-3 py-2 text-center font-semibold">
+                                            Trips/Rake Dispatched
+                                        </td>
+                                        <td className="border-b border-[#d5dbe4] px-3 py-2 text-right font-semibold">
+                                            Qty
+                                        </td>
+                                        <td className="border-b border-[#d5dbe4] px-3 py-2 text-right font-semibold" style={{ width: '20%' }}>
+                                            Unit
+                                        </td>
+                                    </tr>
+
+                                    <tr className="border-b border-[#d5dbe4]">
+                                        <td className="px-3 py-2 font-medium">OB Production</td>
+                                        <td className="px-3 py-2 text-center tabular-nums">{p.ob.trips == null ? '—' : fmtNumber(p.ob.trips, 0)}</td>
+                                        <td className="px-3 py-2 text-right tabular-nums">{fmtQtyOrDash(p.ob.qty)}</td>
+                                        <td className="px-3 py-2 text-right text-muted-foreground">MT</td>
+                                    </tr>
+                                    <tr className="border-b border-[#d5dbe4]">
+                                        <td className="px-3 py-2 font-medium">Coal Production</td>
+                                        <td className="px-3 py-2 text-center tabular-nums">{p.coal.trips == null ? '—' : fmtNumber(p.coal.trips, 0)}</td>
+                                        <td className="px-3 py-2 text-right tabular-nums">{fmtQtyOrDash(p.coal.qty)}</td>
+                                        <td className="px-3 py-2 text-right text-muted-foreground">MT</td>
+                                    </tr>
+
+                                    <tr className="bg-[#f0f4f8]">
+                                        <td className="border-b border-[#d5dbe4] px-3 py-2 text-[11px] font-semibold" colSpan={4}>
+                                            Coal Dispatch to Sidings (Truck)
+                                        </td>
+                                    </tr>
+                                    {sidingOrder.map((s, idx) => {
+                                        const qty = getSidingDispatchQty(period.key, s.id);
+                                        const prefix = idx === sidingOrder.length - 1 ? '└─' : '├─';
+                                        const value = qty == null ? '—' : fmtNumber(qty, 2);
+
+                                        return (
+                                            <tr key={`${period.key}-dispatch-${s.id}`} className="border-b border-[#d5dbe4]">
+                                                <td className="px-3 py-2 text-muted-foreground">
+                                                    {prefix} {s.name}
+                                                </td>
+                                                <td className="px-3 py-2 text-center tabular-nums">—</td>
+                                                <td className="px-3 py-2 text-right tabular-nums">{value}</td>
+                                                <td className="px-3 py-2 text-right text-muted-foreground">MT</td>
+                                            </tr>
+                                        );
+                                    })}
+
+                                    <tr className="bg-[#f0f4f8]">
+                                        <td className="border-b border-[#d5dbe4] px-3 py-2 text-[11px] font-semibold" colSpan={4}>
+                                            Rake Dispatch from Sidings
+                                        </td>
+                                    </tr>
+                                    {sidingOrder.map((s, idx) => {
+                                        const trips = getSidingRakeTrips(period.key, s.id);
+                                        const qty = getSidingRakeQty(period.key, s.id);
+                                        const prefix = idx === sidingOrder.length - 1 ? '└─' : '├─';
+
+                                        return (
+                                            <tr
+                                                key={`${period.key}-rake-${s.id}`}
+                                                className={`border-b border-[#d5dbe4] ${idx === sidingOrder.length - 1 ? 'last:border-b-0' : ''}`}
+                                            >
+                                                <td className="px-3 py-2 text-muted-foreground">
+                                                    {prefix} {s.name}
+                                                </td>
+                                                <td className="px-3 py-2 text-center tabular-nums">{fmtNumber(trips, 0)}</td>
+                                                <td className="px-3 py-2 text-right tabular-nums">{fmtNumber(qty, 2)}</td>
+                                                <td className="px-3 py-2 text-right text-muted-foreground">MT</td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+
+    const groupedChartData = [
+        {
+            metric: 'OB Production (MT)',
+            dateWise: getPeriod('dateWise').ob.qty ?? 0,
+            monthWise: getPeriod('monthWise').ob.qty ?? 0,
+            fyWise: getPeriod('fyWise').ob.qty ?? 0,
+            unit: 'MT',
+        },
+        {
+            metric: 'Coal Production (MT)',
+            dateWise: getPeriod('dateWise').coal.qty ?? 0,
+            monthWise: getPeriod('monthWise').coal.qty ?? 0,
+            fyWise: getPeriod('fyWise').coal.qty ?? 0,
+            unit: 'MT',
+        },
+        {
+            metric: 'Coal Dispatch (MT)',
+            dateWise: getPeriod('dateWise').coalDispatch.qty ?? 0,
+            monthWise: getPeriod('monthWise').coalDispatch.qty ?? 0,
+            fyWise: getPeriod('fyWise').coalDispatch.qty ?? 0,
+            unit: 'MT',
+        },
+        {
+            metric: 'Rake Dispatch (MT)',
+            dateWise: getPeriod('dateWise').rakeDispatch.qty ?? 0,
+            monthWise: getPeriod('monthWise').rakeDispatch.qty ?? 0,
+            fyWise: getPeriod('fyWise').rakeDispatch.qty ?? 0,
+            unit: 'MT',
+        },
+    ];
+
+    const groupedMax = Math.max(
+        ...groupedChartData.flatMap((d) => [d.dateWise, d.monthWise, d.fyWise]).map((v) => Number(v) || 0),
+        1,
+    );
+
+    const ChartsView = (
+        <div className="dashboard-card overflow-hidden rounded-xl border-0 p-0">
+            <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <p className="text-sm font-semibold text-gray-900">Period-wise comparison</p>
+                        <p className="text-[11px] text-muted-foreground">Grouped bars (Date vs Month vs FY) per metric</p>
+                    </div>
+                    <div className="flex items-center gap-3 text-[11px] font-medium text-muted-foreground">
+                        <span className="inline-flex items-center gap-1.5">
+                            <span className="inline-block size-2.5 rounded-sm" style={{ backgroundColor: DASHBOARD_PALETTE.steelBlue }} />
+                            Date
+                        </span>
+                        <span className="inline-flex items-center gap-1.5">
+                            <span className="inline-block size-2.5 rounded-sm" style={{ backgroundColor: DASHBOARD_PALETTE.darkGrey }} />
+                            Month
+                        </span>
+                        <span className="inline-flex items-center gap-1.5">
+                            <span className="inline-block size-2.5 rounded-sm" style={{ backgroundColor: DASHBOARD_PALETTE.steelBlueLight }} />
+                            FY
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div className="bg-[#fbfbfc] p-4">
+                <ResponsiveContainer width="100%" height={280}>
+                    <RechartsBarChart data={groupedChartData} margin={{ top: 12, right: 16, bottom: 8, left: 8 }} barCategoryGap="30%">
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis dataKey="metric" tick={{ fontSize: 11 }} interval={0} height={44} />
+                        <YAxis tick={{ fontSize: 11 }} domain={[0, groupedMax * 1.12]} />
+                        <Tooltip
+                            content={(props: unknown) => {
+                                const { active, payload, label } = (props ?? {}) as {
+                                    active?: boolean;
+                                    payload?: ReadonlyArray<{ name?: string; value?: number | string; payload?: { unit?: string } }>;
+                                    label?: string;
+                                };
+                                if (!active || !payload?.length) {
+                                    return null;
+                                }
+
+                                const unit = String(payload[0]?.payload?.unit ?? '');
+
+                                return (
+                                    <div className="rounded-lg border bg-popover px-3 py-2 text-xs shadow-md">
+                                        <div className="font-semibold">{String(label ?? '')}</div>
+                                        <div className="mt-1 space-y-0.5">
+                                            {payload.map((p) => (
+                                                <div key={String(p.name)} className="flex items-center justify-between gap-4">
+                                                    <span className="text-muted-foreground">{String(p.name)}</span>
+                                                    <span className="tabular-nums font-semibold">
+                                                        {unit === 'Rakes' ? fmtNumber(Number(p.value ?? 0), 0) : fmtNumber(Number(p.value ?? 0), 2)}{' '}
+                                                        <span className="text-muted-foreground font-normal">{unit}</span>
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                            }}
+                        />
+                        <Bar name="Date" dataKey="dateWise" fill={DASHBOARD_PALETTE.steelBlue} radius={[6, 6, 0, 0]} barSize={18} />
+                        <Bar name="Month" dataKey="monthWise" fill={DASHBOARD_PALETTE.darkGrey} radius={[6, 6, 0, 0]} barSize={18} />
+                        <Bar name="FY" dataKey="fyWise" fill={DASHBOARD_PALETTE.steelBlueLight} radius={[6, 6, 0, 0]} barSize={18} />
+                    </RechartsBarChart>
+                </ResponsiveContainer>
+            </div>
+        </div>
+    );
+
+    return (
+        <div className="space-y-6">
+            <div className="dashboard-card rounded-xl border-0 p-5">
+                <SectionHeader
+                    icon={Calendar}
+                    title="Date based filtering"
+                    subtitle="Executive yesterday view (separate date filter)"
+                    action={(
+                        <div className="flex flex-wrap items-center justify-end gap-3">
+                            <div className="flex items-center gap-2">
+                                <label htmlFor="executive-yesterday-view" className="text-xs font-medium text-gray-600">View</label>
+                                <select
+                                    id="executive-yesterday-view"
+                                    value={viewMode}
+                                    onChange={(e) => setViewMode(e.target.value as 'table' | 'charts')}
+                                    className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
+                                >
+                                    <option value="table">Table View</option>
+                                    <option value="charts">Bar Chart View</option>
+                                </select>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <label htmlFor="executive-yesterday-date" className="text-xs font-medium text-gray-600">Select date</label>
+                                <input
+                                    id="executive-yesterday-date"
+                                    type="date"
+                                    value={dayValue}
+                                    onChange={(e) => {
+                                        const v = e.target.value;
+                                        const dashboardPath = dashboard().url.split('?')[0] || dashboard().url;
+                                        router.get(dashboardPath, { section: 'executive-overview', executive_yesterday_date: v }, {
+                                            preserveState: true,
+                                            preserveScroll: true,
+                                        });
+                                    }}
+                                    className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
+                                />
+                            </div>
+                        </div>
+                    )}
+                />
+                <p className="mt-2 text-sm text-gray-600">Selected date: <span className="font-semibold text-gray-900">{dayDate}</span></p>
+                <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="rounded-lg bg-[#f8fafc] p-4">
+                        <p className="text-xs text-gray-600">OB Production (Mine)</p>
+                        <p className="mt-1 text-2xl font-bold tabular-nums text-gray-900">{(data.obProduction.dateWise.qty ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    </div>
+                    <div className="rounded-lg bg-[#f8fafc] p-4">
+                        <p className="text-xs text-gray-600">Coal Production (Mine)</p>
+                        <p className="mt-1 text-2xl font-bold tabular-nums text-gray-900">{(data.coalProduction.dateWise.qty ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    </div>
+                </div>
+            </div>
+            {viewMode === 'table' ? TableView : ChartsView}
         </div>
     );
 }
@@ -1682,11 +2156,16 @@ function DashboardFiltersBar({
 
 export default function Dashboard() {
     const props = usePage<DashboardProps>().props;
+    const userId = props.auth?.user?.id as number | undefined;
     const [activeSection, setActiveSection] = useState<string>(() => {
         const s = props.section ?? DEFAULT_DASHBOARD_SECTION;
         return DASHBOARD_SECTIONS.some((sec) => sec.id === s) ? s : DEFAULT_DASHBOARD_SECTION;
     });
+    // Default: show Yesterday view on page load (Executive section only).
+    const [executiveTab, setExecutiveTab] = useState<'regular' | 'yesterday'>('yesterday');
     const [alertsOpen, setAlertsOpen] = useState(false);
+    const [notifications, setNotifications] = useState(props.notifications ?? []);
+    const [notificationsUnreadCount, setNotificationsUnreadCount] = useState(props.notificationsUnreadCount ?? 0);
     const [filtersExpanded, setFiltersExpanded] = useState(false);
     const sidings = props.sidings ?? [];
     const allSidingIds = useMemo(() => sidings.map((s) => s.id), [sidings]);
@@ -1694,6 +2173,56 @@ export default function Dashboard() {
     useSidingStockBroadcast(allSidingIds, (sidingId, closingBalanceMt) => {
         setStockOverrides((prev) => ({ ...prev, [sidingId]: closingBalanceMt }));
     });
+
+    useEffect(() => {
+        if (!userId || typeof window === 'undefined' || !window.Echo) return;
+        const channelName = `App.Models.User.${userId}`;
+        const channel = window.Echo.private(channelName);
+
+        channel.notification((notification: any) => {
+            setNotificationsUnreadCount((c) => c + 1);
+            setNotifications((prev) => [{ id: notification.id ?? crypto.randomUUID(), type: notification.type ?? 'notification', data: notification, read_at: null, created_at: new Date().toISOString() }, ...prev].slice(0, 20));
+        });
+
+        return () => {
+            window.Echo?.leaveChannel(channelName);
+        };
+    }, [userId]);
+
+    const csrfToken = useMemo(() => {
+        if (typeof document === 'undefined') return null;
+        return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? null;
+    }, []);
+
+    const markAllNotificationsRead = useCallback(async () => {
+        if (!csrfToken) return;
+        await fetch('/notifications/read-all', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({}),
+        });
+        setNotificationsUnreadCount(0);
+        setNotifications((prev) => prev.map((n) => (n.read_at ? n : { ...n, read_at: new Date().toISOString() })));
+    }, [csrfToken]);
+
+    const markOneNotificationRead = useCallback(async (id: string) => {
+        if (!csrfToken) return;
+        await fetch(`/notifications/${encodeURIComponent(id)}/read`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({}),
+        });
+        setNotificationsUnreadCount((c) => Math.max(0, c - 1));
+        setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read_at: n.read_at ?? new Date().toISOString() } : n)));
+    }, [csrfToken]);
     const defaultFilters: DashboardFilters = {
         period: 'today',
         from: '',
@@ -1863,6 +2392,7 @@ export default function Dashboard() {
     const loaderOverloadTrends = props.loaderOverloadTrends ?? { loaders: [], monthly: [] };
     const powerPlantDispatch = props.powerPlantDispatch ?? [];
     const yesterdayPredictedPenalties = props.yesterdayPredictedPenalties ?? [];
+    const executiveYesterday = props.executiveYesterday;
 
     const filteredSidings = useMemo(() => {
         if (filters.siding_ids.length === 0 || filters.siding_ids.length === sidings.length) {
@@ -1901,9 +2431,10 @@ export default function Dashboard() {
         { label: `Rakes dispatched ${periodLabel}`, value: String(kpis.rakesDispatchedToday), borderColor: '#3B82F6', Icon: Train },
         { label: `Coal dispatched ${periodLabel}`, value: formatWeight(kpis.coalDispatchedToday), borderColor: '#10B981', Icon: Flame },
         { label: `Penalty ${periodLabel}`, value: formatCurrency(kpis.totalPenaltyThisMonth), borderColor: '#EF4444', Icon: AlertTriangle },
-        { label: 'Predicted penalty risk', value: formatCurrency(kpis.predictedPenaltyRisk), borderColor: '#F59E0B', Icon: TrendingUp },
-        { label: `Avg loading time (${periodLabel})`, value: kpis.avgLoadingTimeMinutes != null ? `${Math.floor(kpis.avgLoadingTimeMinutes / 60)}h ${kpis.avgLoadingTimeMinutes % 60}m` : '—', borderColor: '#8B5CF6', Icon: Clock },
-        { label: `Trucks received ${periodLabel}`, value: String(kpis.trucksReceivedToday), borderColor: '#14B8A6', Icon: Truck },
+        // Temporarily hidden per client request:
+        // { label: 'Predicted penalty risk', value: formatCurrency(kpis.predictedPenaltyRisk), borderColor: '#F59E0B', Icon: TrendingUp },
+        // { label: `Avg loading time (${periodLabel})`, value: kpis.avgLoadingTimeMinutes != null ? `${Math.floor(kpis.avgLoadingTimeMinutes / 60)}h ${kpis.avgLoadingTimeMinutes % 60}m` : '—', borderColor: '#8B5CF6', Icon: Clock },
+        // { label: `Trucks received ${periodLabel}`, value: String(kpis.trucksReceivedToday), borderColor: '#14B8A6', Icon: Truck },
     ] : [];
 
     return (
@@ -2000,9 +2531,11 @@ export default function Dashboard() {
                 )}
 
                 {filteredSidings.length > 0 && (
-                    <div className="space-y-3">
-                        <p className="text-xs text-gray-600">Coal stock updates live from the ledger (and real-time events when connected).</p>
-                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                            <p className="text-[11px] text-gray-600">Coal stock updates live from the ledger (and real-time events when connected).</p>
+                        </div>
+                        <div className="flex gap-2 overflow-x-auto pb-1 lg:grid lg:grid-cols-3 lg:gap-3 lg:overflow-visible">
                             {filteredSidings.map((s) => {
                                 const stockMt = sidingStocks[s.id]?.closing_balance_mt ?? 0;
                                 const rakesLoadable = Math.floor(stockMt / MT_PER_RAKE_LOAD);
@@ -2010,27 +2543,27 @@ export default function Dashboard() {
                                 return (
                                     <div
                                         key={s.id}
-                                        className="dashboard-card flex min-w-[160px] flex-1 flex-col rounded-xl border-0 p-4 sm:min-w-0"
+                                        className="dashboard-card flex min-w-[220px] flex-1 flex-col rounded-lg border-0 p-2.5 sm:min-w-0"
                                         style={{ borderTop: `4px solid ${accent}` }}
                                     >
-                                        <div className="text-[0.7rem] font-semibold text-gray-600 leading-snug">
+                                        <div className="text-[11px] font-semibold leading-snug text-gray-600">
                                             {s.name}
                                         </div>
-                                        <div className="mt-2 flex items-baseline justify-between gap-4">
+                                        <div className="mt-1.5 flex items-baseline justify-between gap-3">
                                             <div>
-                                                <p className="text-[1.25rem] font-bold tabular-nums leading-tight text-gray-900">
+                                                <p className="text-base font-bold leading-tight tabular-nums text-gray-900">
                                                     <SlidingNumber
                                                         value={stockMt}
                                                         format={(v) => `${v.toLocaleString(undefined, { maximumFractionDigits: 0 })} MT`}
                                                     />
                                                 </p>
-                                                <p className="text-xs text-gray-600">Stock available</p>
+                                                <p className="text-[11px] text-gray-600">Stock available</p>
                                             </div>
                                             <div className="text-right">
-                                                <p className="text-[1.25rem] font-bold tabular-nums leading-tight text-gray-900">
+                                                <p className="text-base font-bold leading-tight tabular-nums text-gray-900">
                                                     {rakesLoadable}
                                                 </p>
-                                                <p className="text-xs text-gray-600">Rakes we can load</p>
+                                                <p className="text-[11px] text-gray-600">Rakes loadable</p>
                                             </div>
                                         </div>
                                     </div>
@@ -2049,78 +2582,110 @@ export default function Dashboard() {
                     <div className="min-w-0 space-y-6">
                         {activeSection === 'executive-overview' && (
                             <div className="space-y-6">
-                                {sidingPerformance.length > 0 ? (
-                                    <SidingPerformanceSection data={sidingPerformance} />
-                                ) : (
-                                    <div className="dashboard-card rounded-xl border-0 p-6">
-                                        <SectionHeader icon={BarChart3} title="Siding performance" subtitle="Rakes, coal & penalty by siding" />
-                                        <div className="mt-4 py-8 text-center text-sm text-gray-600">No performance data for selected filters.</div>
+                                <div className="dashboard-card rounded-xl border-0 p-3">
+                                    <div className="inline-flex items-center rounded-lg bg-[#f1f5f9] p-1">
+                                        <button
+                                            type="button"
+                                            onClick={() => setExecutiveTab('yesterday')}
+                                            className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
+                                                executiveTab === 'yesterday' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'
+                                            }`}
+                                        >
+                                            Yesterday
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setExecutiveTab('regular')}
+                                            className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
+                                                executiveTab === 'regular' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'
+                                            }`}
+                                        >
+                                            Regular
+                                        </button>
                                     </div>
-                                )}
-                                <div className="dashboard-card rounded-xl border-0 p-6">
-                                    <SectionHeader icon={Calendar} title="Penalty trend" subtitle="Date / month vs penalty amount" />
-                                    {penaltyTrendDaily.length > 0 ? (
-                                        <ResponsiveContainer width="100%" height={280}>
-                                            <RechartsAreaChart data={penaltyTrendDaily} margin={{ top: 8, right: 16, left: 8, bottom: 0 }}>
-                                                <defs>
-                                                    <linearGradient id="penalty-trend-gradient" x1="0" y1="0" x2="0" y2="1">
-                                                        <stop offset="0%" stopColor="#DC2626" stopOpacity={0.4} />
-                                                        <stop offset="100%" stopColor="#DC2626" stopOpacity={0} />
-                                                    </linearGradient>
-                                                </defs>
-                                                <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
-                                                <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-                                                <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => formatCurrency(v)} />
-                                                <Tooltip formatter={(v: number | string | undefined) => formatCurrency(Number(v ?? 0))} />
-                                                <Area type="monotone" dataKey="total" name="Penalty" stroke="#DC2626" strokeWidth={2} fill="url(#penalty-trend-gradient)" dot={false} activeDot={{ r: 4 }} isAnimationActive />
-                                            </RechartsAreaChart>
-                                        </ResponsiveContainer>
+                                </div>
+                                {executiveTab === 'yesterday' ? (
+                                    executiveYesterday ? (
+                                        <ExecutiveYesterdaySection data={executiveYesterday} />
                                     ) : (
-                                        <div className="mt-4 py-8 text-center text-sm text-gray-600">No penalty data for selected period.</div>
-                                    )}
-                                </div>
-                                <div className="dashboard-card rounded-xl border-0 p-6">
-                                    <SectionHeader icon={Factory} title="Power plant dispatch distribution" subtitle="Coal supply by destination" />
-                                    {powerPlantDispatch.length > 0 ? (() => {
-                                        const totalWeight = powerPlantDispatch.reduce((s, p) => s + p.weight_mt, 0);
-                                        const donutData = powerPlantDispatch.map((pp) => ({
-                                            name: pp.name,
-                                            value: Math.round((pp.weight_mt / Math.max(1, totalWeight)) * 100),
-                                            weightMt: pp.weight_mt,
-                                        }));
-                                        return (
-                                            <div className="relative">
-                                                <ResponsiveContainer width="100%" height={280}>
-                                                    <RechartsPieChart>
-                                                        <Pie
-                                                            data={donutData}
-                                                            dataKey="value"
-                                                            nameKey="name"
-                                                            cx="50%"
-                                                            cy="50%"
-                                                            innerRadius="65%"
-                                                            outerRadius="90%"
-                                                            paddingAngle={2}
-                                                            strokeWidth={0}
-                                                        >
-                                                            {donutData.map((_, i) => (
-                                                                <Cell key={i} fill={['#22c55e', '#3b82f6', '#f97316', '#eab308', '#a855f7'][i % 5]} />
-                                                            ))}
-                                                        </Pie>
-                                                        <Tooltip formatter={(v: number | undefined, _: unknown, props: { payload?: { weightMt: number } }) => [`${v ?? 0}%`, formatWeight(props.payload?.weightMt ?? 0)]} />
-                                                        <Legend layout="horizontal" align="center" verticalAlign="bottom" wrapperStyle={{ paddingTop: 16 }} formatter={(value, entry) => `${value} ${Number((entry as { payload?: { value: number } }).payload?.value ?? 0)}%`} />
-                                                    </RechartsPieChart>
-                                                </ResponsiveContainer>
-                                                <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center text-center">
-                                                    <span className="text-xs font-medium text-gray-600">Total</span>
-                                                    <span className="text-lg font-bold tabular-nums text-gray-800">{formatWeight(totalWeight)}</span>
-                                                </div>
+                                        <div className="dashboard-card rounded-xl border-0 p-6 text-sm text-gray-600">Yesterday data is not available.</div>
+                                    )
+                                ) : (
+                                    <>
+                                        {sidingPerformance.length > 0 ? (
+                                            <SidingPerformanceSection data={sidingPerformance} />
+                                        ) : (
+                                            <div className="dashboard-card rounded-xl border-0 p-6">
+                                                <SectionHeader icon={BarChart3} title="Siding performance" subtitle="Rakes, coal & penalty by siding" />
+                                                <div className="mt-4 py-8 text-center text-sm text-gray-600">No performance data for selected filters.</div>
                                             </div>
-                                        );
-                                    })() : (
-                                        <div className="mt-4 py-8 text-center text-sm text-gray-600">No power plant dispatch data.</div>
-                                    )}
-                                </div>
+                                        )}
+                                        <div className="dashboard-card rounded-xl border-0 p-6">
+                                            <SectionHeader icon={Calendar} title="Penalty trend" subtitle="Date / month vs penalty amount" />
+                                            {penaltyTrendDaily.length > 0 ? (
+                                                <ResponsiveContainer width="100%" height={280}>
+                                                    <RechartsAreaChart data={penaltyTrendDaily} margin={{ top: 8, right: 16, left: 8, bottom: 0 }}>
+                                                        <defs>
+                                                            <linearGradient id="penalty-trend-gradient" x1="0" y1="0" x2="0" y2="1">
+                                                                <stop offset="0%" stopColor="#DC2626" stopOpacity={0.4} />
+                                                                <stop offset="100%" stopColor="#DC2626" stopOpacity={0} />
+                                                            </linearGradient>
+                                                        </defs>
+                                                        <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
+                                                        <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                                                        <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => formatCurrency(v)} />
+                                                        <Tooltip formatter={(v: number | string | undefined) => formatCurrency(Number(v ?? 0))} />
+                                                        <Area type="monotone" dataKey="total" name="Penalty" stroke="#DC2626" strokeWidth={2} fill="url(#penalty-trend-gradient)" dot={false} activeDot={{ r: 4 }} isAnimationActive />
+                                                    </RechartsAreaChart>
+                                                </ResponsiveContainer>
+                                            ) : (
+                                                <div className="mt-4 py-8 text-center text-sm text-gray-600">No penalty data for selected period.</div>
+                                            )}
+                                        </div>
+                                        <div className="dashboard-card rounded-xl border-0 p-6">
+                                            <SectionHeader icon={Factory} title="Power plant dispatch distribution" subtitle="Coal supply by destination" />
+                                            {powerPlantDispatch.length > 0 ? (() => {
+                                                const totalWeight = powerPlantDispatch.reduce((s, p) => s + p.weight_mt, 0);
+                                                const donutData = powerPlantDispatch.map((pp) => ({
+                                                    name: pp.name,
+                                                    value: Math.round((pp.weight_mt / Math.max(1, totalWeight)) * 100),
+                                                    weightMt: pp.weight_mt,
+                                                }));
+                                                return (
+                                                    <div className="relative">
+                                                        <ResponsiveContainer width="100%" height={280}>
+                                                            <RechartsPieChart>
+                                                                <Pie
+                                                                    data={donutData}
+                                                                    dataKey="value"
+                                                                    nameKey="name"
+                                                                    cx="50%"
+                                                                    cy="50%"
+                                                                    innerRadius="65%"
+                                                                    outerRadius="90%"
+                                                                    paddingAngle={2}
+                                                                    strokeWidth={0}
+                                                                >
+                                                                    {donutData.map((_, i) => (
+                                                                        <Cell key={i} fill={['#22c55e', '#3b82f6', '#f97316', '#eab308', '#a855f7'][i % 5]} />
+                                                                    ))}
+                                                                </Pie>
+                                                                <Tooltip formatter={(v: number | undefined, _: unknown, props: { payload?: { weightMt: number } }) => [`${v ?? 0}%`, formatWeight(props.payload?.weightMt ?? 0)]} />
+                                                                <Legend layout="horizontal" align="center" verticalAlign="bottom" wrapperStyle={{ paddingTop: 16 }} formatter={(value, entry) => `${value} ${Number((entry as { payload?: { value: number } }).payload?.value ?? 0)}%`} />
+                                                            </RechartsPieChart>
+                                                        </ResponsiveContainer>
+                                                        <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center text-center">
+                                                            <span className="text-xs font-medium text-gray-600">Total</span>
+                                                            <span className="text-lg font-bold tabular-nums text-gray-800">{formatWeight(totalWeight)}</span>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })() : (
+                                                <div className="mt-4 py-8 text-center text-sm text-gray-600">No power plant dispatch data.</div>
+                                            )}
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         )}
 
@@ -2776,17 +3341,17 @@ export default function Dashboard() {
                     </>
                 )}
 
-                {/* Floating alerts button: always visible */}
+                {/* Floating notifications button: always visible (superadmin only) */}
                 <button
                     type="button"
                     onClick={() => setAlertsOpen(true)}
                     className="fixed bottom-24 right-6 z-40 flex size-14 items-center justify-center rounded-full bg-amber-500 shadow-lg ring-2 ring-amber-600/50 transition hover:bg-amber-600 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
-                    aria-label={`Alerts${alerts.length > 0 ? ` (${alerts.length})` : ''}`}
+                    aria-label={`Notifications${notificationsUnreadCount > 0 ? ` (${notificationsUnreadCount})` : ''}`}
                 >
                     <Bell className="size-6 text-white" />
-                    {alerts.length > 0 && (
+                    {notificationsUnreadCount > 0 && (
                         <span className="absolute -right-0.5 -top-0.5 flex size-5 min-w-5 items-center justify-center rounded-full bg-red-600 text-[10px] font-bold text-white shadow ring-2 ring-white">
-                            {alerts.length > 99 ? '99+' : alerts.length}
+                            {notificationsUnreadCount > 99 ? '99+' : notificationsUnreadCount}
                         </span>
                     )}
                 </button>
@@ -2795,27 +3360,46 @@ export default function Dashboard() {
                         <DialogHeader>
                             <DialogTitle className="flex items-center gap-2">
                                 <Bell className="size-5" />
-                                Live alerts
+                                Notifications
                             </DialogTitle>
                         </DialogHeader>
+                        <div className="flex items-center justify-between gap-2">
+                            <div className="text-xs text-muted-foreground">
+                                {notificationsUnreadCount > 0 ? `${notificationsUnreadCount} unread` : 'All caught up'}
+                            </div>
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-[11px]"
+                                disabled={notificationsUnreadCount === 0}
+                                onClick={markAllNotificationsRead}
+                            >
+                                Mark all read
+                            </Button>
+                        </div>
                         <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
-                            {alerts.length === 0 ? (
+                            {notifications.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center gap-2 rounded-lg bg-[#FEF3C7] py-8 text-center">
                                     <CheckCircle className="size-10 text-amber-600" aria-hidden />
-                                    <p className="text-sm font-medium text-amber-800">All systems normal</p>
+                                    <p className="text-sm font-medium text-amber-800">No notifications</p>
                                 </div>
                             ) : (
-                                alerts.map((a) => (
+                                notifications.map((n) => (
                                     <div
-                                        key={a.id}
-                                        className={`rounded-lg border p-2.5 text-xs ${
-                                            a.severity === 'critical' ? 'border-red-200 bg-red-50' :
-                                            a.severity === 'warning' ? 'border-amber-200 bg-amber-50' :
-                                            'border-gray-200 bg-gray-50'
-                                        }`}
+                                        key={n.id}
+                                        role="button"
+                                        tabIndex={0}
+                                        onClick={() => {
+                                            if (!n.read_at) void markOneNotificationRead(n.id);
+                                        }}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' && !n.read_at) void markOneNotificationRead(n.id);
+                                        }}
+                                        className={`cursor-pointer rounded-lg border p-2.5 text-xs ${n.read_at ? 'border-gray-200 bg-gray-50' : 'border-amber-200 bg-amber-50'}`}
                                     >
-                                        <span className="font-medium">⚠ {a.title}</span>
-                                        <div className="mt-0.5 text-gray-600">{new Date(a.created_at).toLocaleString()}</div>
+                                        <span className="font-medium">{(n.data?.title as string) ?? 'Notification'}</span>
+                                        <div className="mt-0.5 text-gray-700">{(n.data?.message as string) ?? ''}</div>
+                                        <div className="mt-1 text-gray-600">{new Date(n.created_at).toLocaleString()}</div>
                                     </div>
                                 ))
                             )}

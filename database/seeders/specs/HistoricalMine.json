@@ -56,9 +56,19 @@
             "type": "text",
             "nullable": true,
             "default": null
+        },
+        "siding_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
         }
     },
-    "relationships": [],
+    "relationships": {
+        "siding": {
+            "type": "belongsTo",
+            "model": "Siding"
+        }
+    },
     "value_hints": [],
     "scenarios": []
 }

@@ -20,6 +20,8 @@ function getCsrfHeaders(): Record<string, string> {
 interface HistoricalMine {
   id: number;
   month: string | null;
+  siding_id: number | null;
+  siding_name: string | null;
   trips_dispatched: number | null;
   dispatched_qty: string | number | null;
   trips_received: number | null;

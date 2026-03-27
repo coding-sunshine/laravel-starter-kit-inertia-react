@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Events\CoalStockUpdated;
+use App\Jobs\NotifySuperAdmins;
 use App\Models\DailyVehicleEntry;
 use App\Models\Siding;
 use App\Models\SidingOpeningBalance;
@@ -14,6 +15,8 @@ use Illuminate\Support\Facades\DB;
 
 final readonly class DailyVehicleEntryService
 {
+    private const STOCK_REQUIREMENT_MT_PER_RAKE = 3500;
+
     /**
      * @param  int|null  $sidingId  When set (e.g. from SidingContext), only entries for this siding are returned so the list matches the user's context.
      * @param  string|null  $entryType  When set, only entries of this type are returned (e.g. 'railway_siding_empty_weighment').
@@ -165,6 +168,8 @@ final readonly class DailyVehicleEntryService
             ? (float) $lastLedger->closing_balance_mt
             : SidingOpeningBalance::getOpeningBalanceForSiding($entry->siding_id);
 
+        $closingBalance = round($openingBalance + $netWeight, 2);
+
         StockLedger::create([
             'siding_id' => $entry->siding_id,
             'transaction_type' => 'receipt',
@@ -173,13 +178,31 @@ final readonly class DailyVehicleEntryService
             'daily_vehicle_entry_id' => $entry->id,
             'quantity_mt' => $netWeight,
             'opening_balance_mt' => $openingBalance,
-            'closing_balance_mt' => round($openingBalance + $netWeight, 2),
-            'reference_number' => $entry->e_challan_no ?? "DVE-{$entry->id}",
+            'closing_balance_mt' => $closingBalance,
+            'reference_number' => $entry->e_challan_no,
             'remarks' => "Vehicle {$entry->vehicle_no} — Daily entry #{$entry->id}, Shift {$entry->shift}",
             'created_by' => auth()->id(),
         ]);
 
         DailyVehicleEntry::query()->whereKey($entry->id)->update(['net_wt' => $netWeight]);
+
+        $req = self::STOCK_REQUIREMENT_MT_PER_RAKE;
+        $oldCapacity = $req > 0 ? (int) floor($openingBalance / $req) : 0;
+        $newCapacity = $req > 0 ? (int) floor($closingBalance / $req) : 0;
+
+        if ($newCapacity > 0 && $newCapacity > $oldCapacity) {
+            $sidingName = Siding::query()->whereKey($entry->siding_id)->value('name');
+
+            DB::afterCommit(function () use ($entry, $closingBalance, $newCapacity, $req, $sidingName): void {
+                NotifySuperAdmins::dispatch(\App\Notifications\StockCapacityIncreasedNotification::class, [
+                    'siding_id' => (int) $entry->siding_id,
+                    'siding_name' => $sidingName,
+                    'closing_balance_mt' => $closingBalance,
+                    'capacity_rakes' => $newCapacity,
+                    'requirement_mt' => $req,
+                ]);
+            });
+        }
     }
 
     private function shouldAutoComplete(array $data, DailyVehicleEntry $entry): bool
@@ -210,15 +233,9 @@ final readonly class DailyVehicleEntryService
     private function deleteStockLedgerEntry(DailyVehicleEntry $entry): void
     {
         $query = StockLedger::query()->where('siding_id', $entry->siding_id)
-            ->where('transaction_type', 'receipt');
-
-        $query->where(function ($q) use ($entry): void {
-            $q->where('daily_vehicle_entry_id', $entry->id)
-                ->orWhere(function ($q2) use ($entry): void {
-                    $q2->where('reference_number', $entry->e_challan_no ?? "DVE-{$entry->id}")
-                        ->where('remarks', 'LIKE', "%Daily entry #{$entry->id}%");
-                });
-        });
+            ->where('transaction_type', 'receipt')
+            ->where('daily_vehicle_entry_id', $entry->id)
+            ->orWhere('reference_number', $entry->e_challan_no);
 
         $query->delete();
 
