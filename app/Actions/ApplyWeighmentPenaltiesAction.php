@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
+use App\Jobs\NotifySuperAdmins;
 use App\Models\AppliedPenalty;
 use App\Models\PenaltyType;
 use App\Models\Rake;
@@ -37,6 +38,10 @@ final readonly class ApplyWeighmentPenaltiesAction
             ...$this->buildPolaPenaltyRows($rake, $weighment, $wagonWeighments, $penaltyTypes),
         ];
 
+        if ($penaltyRows === []) {
+            return;
+        }
+
         DB::transaction(function () use ($rake, $penaltyRows): void {
             AppliedPenalty::query()
                 ->where('rake_id', $rake->id)
@@ -66,6 +71,40 @@ final readonly class ApplyWeighmentPenaltiesAction
                 ->sum('amount');
 
             $canonicalPenaltyCharge->update(['amount' => round((float) $total, 2)]);
+        });
+
+        $totalAmount = (float) array_sum(array_map(static fn (array $row): float => (float) ($row['amount'] ?? 0), $penaltyRows));
+        $byCode = [];
+        foreach ($penaltyRows as $row) {
+            $code = (string) ($row['meta']['source_code'] ?? '');
+            if ($code === '' && isset($row['penalty_type_id'])) {
+                $code = ''; // filled below from loaded types when possible
+            }
+            $byCode[$code] = (float) ($byCode[$code] ?? 0) + (float) ($row['amount'] ?? 0);
+        }
+
+        // Best-effort: map penalty_type_id back to code for breakdown
+        $typeById = $penaltyTypes->mapWithKeys(static fn (PenaltyType $pt): array => [(int) $pt->id => (string) $pt->code])->all();
+        $breakdown = [];
+        foreach ($penaltyRows as $row) {
+            $pid = (int) ($row['penalty_type_id'] ?? 0);
+            $code = $typeById[$pid] ?? '—';
+            $breakdown[$code] = (float) ($breakdown[$code] ?? 0) + (float) ($row['amount'] ?? 0);
+        }
+
+        DB::afterCommit(function () use ($rake, $totalAmount, $breakdown): void {
+            NotifySuperAdmins::dispatch(\App\Notifications\PenaltyCreatedNotification::class, [
+                'source' => 'weighment',
+                'rake_id' => $rake->id,
+                'rake_number' => (string) $rake->rake_number,
+                'siding_id' => $rake->siding_id,
+                'siding_name' => $rake->siding?->name,
+                'amount_total' => round($totalAmount, 2),
+                'breakdown' => collect($breakdown)
+                    ->map(fn (float $amount, string $code): array => ['code' => $code, 'amount' => round($amount, 2)])
+                    ->values()
+                    ->all(),
+            ]);
         });
     }
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
+use App\Jobs\NotifySuperAdmins;
 use App\Models\AppliedPenalty;
 use App\Models\PenaltyType;
 use App\Models\Rake;
@@ -60,7 +61,9 @@ final readonly class ApplyDemurragePenaltyAction
         $chargedHours = (int) ceil($excessMinutes / 60);
         $amount = round($chargedHours * $rate, 2);
 
-        DB::transaction(function () use ($rake, $penaltyType, $chargedHours, $rate, $amount, $totalLoadingMinutes, $freeMinutes, $excessMinutes): void {
+        $created = false;
+
+        DB::transaction(function () use ($rake, $penaltyType, $chargedHours, $rate, $amount, $totalLoadingMinutes, $freeMinutes, $excessMinutes, &$created): void {
             $rakeCharge = RakeCharge::query()->firstOrCreate(
                 [
                     'rake_id' => $rake->id,
@@ -74,7 +77,7 @@ final readonly class ApplyDemurragePenaltyAction
                 ],
             );
 
-            AppliedPenalty::query()->updateOrCreate(
+            $applied = AppliedPenalty::query()->updateOrCreate(
                 [
                     'rake_id' => $rake->id,
                     'penalty_type_id' => $penaltyType->id,
@@ -100,8 +103,26 @@ final readonly class ApplyDemurragePenaltyAction
                 ],
             );
 
+            $created = $applied->wasRecentlyCreated;
+
             $this->recalculateChargeTotal($rakeCharge);
         });
+
+        if ($created) {
+            DB::afterCommit(function () use ($rake, $amount): void {
+                NotifySuperAdmins::dispatch(\App\Notifications\PenaltyCreatedNotification::class, [
+                    'source' => 'demurrage',
+                    'rake_id' => $rake->id,
+                    'rake_number' => (string) $rake->rake_number,
+                    'siding_id' => $rake->siding_id,
+                    'siding_name' => $rake->siding?->name,
+                    'amount_total' => $amount,
+                    'breakdown' => [
+                        ['code' => 'DEM', 'amount' => $amount],
+                    ],
+                ]);
+            });
+        }
 
         return [
             'applied' => true,
