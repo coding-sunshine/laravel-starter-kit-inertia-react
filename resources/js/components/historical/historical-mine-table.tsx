@@ -7,6 +7,8 @@ import { useCan } from '@/hooks/use-can';
 interface HistoricalMine {
   id: number;
   month: string | null;
+  siding_id: number | null;
+  siding_name: string | null;
   trips_dispatched: number | null;
   dispatched_qty: string | number | null;
   trips_received: number | null;
@@ -167,6 +169,9 @@ export default function HistoricalMineTable({
               Month
             </TableHead>
             <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">
+              Siding
+            </TableHead>
+            <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">
               Trips Dispatched
             </TableHead>
             <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">
@@ -210,6 +215,11 @@ export default function HistoricalMineTable({
                           className="w-full border border-gray-300 rounded px-1 py-0.5 text-xs"
                           defaultValue={mine.month ?? ''}
                         />
+                      </TableCell>
+                      <TableCell className={cellClass()}>
+                        <span className="text-muted-foreground">
+                          {mine.siding_name ? String(mine.siding_name) : '—'}
+                        </span>
                       </TableCell>
                       <TableCell className={cellClass()}>
                         <input
@@ -304,6 +314,9 @@ export default function HistoricalMineTable({
                   ) : (
                     <>
                       <TableCell className={cellClass()}>{formatCell(mine.month)}</TableCell>
+                      <TableCell className={cellClass()}>
+                        {mine.siding_name ? String(mine.siding_name) : '—'}
+                      </TableCell>
                       <TableCell className={`${cellClass()} text-right`}>
                         {formatCell(mine.trips_dispatched)}
                       </TableCell>
@@ -372,6 +385,7 @@ export default function HistoricalMineTable({
                 }}
               >
                 <TableCell className={`${emptyCellClass} text-center`} />
+                <TableCell className={emptyCellClass} />
                 <TableCell className={emptyCellClass} />
                 <TableCell className={emptyCellClass} />
                 <TableCell className={emptyCellClass} />

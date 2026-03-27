@@ -16,7 +16,9 @@ final class HistoricalMineController extends Controller
 {
     public function index(Request $request): InertiaResponse
     {
-        $query = HistoricalMine::query()->orderByDesc('id');
+        $query = HistoricalMine::query()
+            ->with('siding:id,name')
+            ->orderByDesc('id');
 
         $mines = $query
             ->paginate(250)
@@ -25,6 +27,8 @@ final class HistoricalMineController extends Controller
                 return [
                     'id' => $mine->id,
                     'month' => $mine->month?->format('Y-m'),
+                    'siding_id' => $mine->siding_id,
+                    'siding_name' => $mine->siding?->name,
                     'trips_dispatched' => $mine->trips_dispatched,
                     'dispatched_qty' => $mine->dispatched_qty,
                     'trips_received' => $mine->trips_received,
@@ -44,6 +48,7 @@ final class HistoricalMineController extends Controller
     {
         $data = $request->validate([
             'month' => ['nullable', 'string'],
+            'siding_id' => ['nullable', 'integer', 'exists:sidings,id'],
             'trips_dispatched' => 'nullable|integer',
             'dispatched_qty' => 'nullable|numeric',
             'trips_received' => 'nullable|integer',
@@ -58,11 +63,14 @@ final class HistoricalMineController extends Controller
         }
 
         $mine = HistoricalMine::query()->create($data);
+        $mine->load('siding:id,name');
 
         return response()->json([
             'mine' => [
                 'id' => $mine->id,
                 'month' => $mine->month?->format('Y-m'),
+                'siding_id' => $mine->siding_id,
+                'siding_name' => $mine->siding?->name,
                 'trips_dispatched' => $mine->trips_dispatched,
                 'dispatched_qty' => $mine->dispatched_qty,
                 'trips_received' => $mine->trips_received,
@@ -78,6 +86,7 @@ final class HistoricalMineController extends Controller
     {
         $data = $request->validate([
             'month' => ['nullable', 'string'],
+            'siding_id' => ['nullable', 'integer', 'exists:sidings,id'],
             'trips_dispatched' => 'nullable|integer',
             'dispatched_qty' => 'nullable|numeric',
             'trips_received' => 'nullable|integer',
@@ -93,11 +102,14 @@ final class HistoricalMineController extends Controller
 
         $mine->fill($data);
         $mine->save();
+        $mine->load('siding:id,name');
 
         return response()->json([
             'mine' => [
                 'id' => $mine->id,
                 'month' => $mine->month?->format('Y-m'),
+                'siding_id' => $mine->siding_id,
+                'siding_name' => $mine->siding?->name,
                 'trips_dispatched' => $mine->trips_dispatched,
                 'dispatched_qty' => $mine->dispatched_qty,
                 'trips_received' => $mine->trips_received,

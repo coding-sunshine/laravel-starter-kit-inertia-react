@@ -31,6 +31,7 @@ use App\Http\Controllers\HistoricalRakeController;
 use App\Http\Controllers\Indents\IndentsController;
 use App\Http\Controllers\InvitationAcceptController;
 use App\Http\Controllers\LoadersController;
+use App\Http\Controllers\Notifications\NotificationReadController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\OpeningCoalStockController;
 use App\Http\Controllers\OrganizationController;
@@ -171,6 +172,9 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::post('terms/accept', [TermsAcceptController::class, 'store'])->name('terms.accept.store');
 
     Route::get('dashboard', App\Http\Controllers\Dashboard\ExecutiveDashboardController::class)->name('dashboard');
+
+    Route::post('notifications/read-all', [NotificationReadController::class, 'markAll'])->name('notifications.read-all');
+    Route::post('notifications/{id}/read', [NotificationReadController::class, 'markOne'])->name('notifications.read-one');
 
     // Organizations (multi-tenancy; routes redirect to dashboard when tenancy disabled)
     Route::middleware('tenancy.enabled')->group(function (): void {

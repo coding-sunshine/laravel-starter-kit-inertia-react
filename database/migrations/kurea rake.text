@@ -1,0 +1,22 @@
+SL NO.	// ignore this from xcel if availble
+LOADING DATE =>rakes.loading_date
+RAKE NO.=>rakes.rake_number
+NO OF  WAGONS loaded=>rakes.wagon_count    
+WAGON TYPE=>rakes.wagon_type
+DESTINATION=>rakes.destination
+INV NO.=>rakes.invoice_no
+R R NUM=>rakes.rr_number
+R R DATE=>rakes.rr_date
+PRIORITY NO.=>rakes.priority_number
+OUT WARD WT=>rakes.out_ward_wt
+C. C. WT=>rakes.cc_wt
+NET WT=>rakes.net_wt
+LDR WT=>rakes.ldr_wt
+E. MINING CHALLAN=>rakes.e_mining_chalan
+PLACEMENT TIME=>rakes.placement_time
+LOADING COMPLETE=>rakes.loading_complete
+WEIGHMENT PLACE AND TIME=>rakes.weighment_place_and_time
+ARRIVAL TIME=>rakes.arrival_time
+DRAWN OUT=>rakes.drawn_out
+UNDER LOAD WT=>rakes.under_load_wt
+OVER LOAD WT=>rakes.over_load_wt
