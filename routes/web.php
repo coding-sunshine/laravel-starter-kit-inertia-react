@@ -19,10 +19,12 @@ use App\Http\Controllers\Billing\StripeWebhookController;
 use App\Http\Controllers\Blog\BlogController;
 use App\Http\Controllers\Changelog\ChangelogController;
 use App\Http\Controllers\ChatController;
+use App\Http\Controllers\CoalStockApproxDetailController;
 use App\Http\Controllers\ContactSubmissionController;
 use App\Http\Controllers\CookieConsentController;
 use App\Http\Controllers\DailyVehicleEntryController;
 use App\Http\Controllers\EnterpriseInquiryController;
+use App\Http\Controllers\Exports\CoalTransportReportExportController;
 use App\Http\Controllers\GenerateDispatchReportController;
 use App\Http\Controllers\HelpCenter\HelpCenterController;
 use App\Http\Controllers\HelpCenter\RateHelpArticleController;
@@ -173,6 +175,9 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 
     Route::get('dashboard', App\Http\Controllers\Dashboard\ExecutiveDashboardController::class)->name('dashboard');
 
+    Route::get('exports/coal-transport-report', CoalTransportReportExportController::class)
+        ->name('exports.coal-transport-report');
+
     Route::post('notifications/read-all', [NotificationReadController::class, 'markAll'])->name('notifications.read-all');
     Route::post('notifications/{id}/read', [NotificationReadController::class, 'markOne'])->name('notifications.read-one');
 
@@ -267,6 +272,12 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         Route::get('opening-coal-stock', [OpeningCoalStockController::class, 'index'])->name('opening-coal-stock.index');
         Route::get('opening-coal-stock/{siding}/edit', [OpeningCoalStockController::class, 'edit'])->name('opening-coal-stock.edit');
         Route::put('opening-coal-stock/{siding}', [OpeningCoalStockController::class, 'update'])->name('opening-coal-stock.update');
+        Route::get('daily-stock-details', [CoalStockApproxDetailController::class, 'index'])->name('daily-stock-details.index');
+        Route::get('daily-stock-details/create', [CoalStockApproxDetailController::class, 'create'])->name('daily-stock-details.create');
+        Route::post('daily-stock-details', [CoalStockApproxDetailController::class, 'store'])->name('daily-stock-details.store');
+        Route::get('daily-stock-details/{coalStockApproxDetail}/edit', [CoalStockApproxDetailController::class, 'edit'])->name('daily-stock-details.edit');
+        Route::put('daily-stock-details/{coalStockApproxDetail}', [CoalStockApproxDetailController::class, 'update'])->name('daily-stock-details.update');
+        Route::delete('daily-stock-details/{coalStockApproxDetail}', [CoalStockApproxDetailController::class, 'destroy'])->name('daily-stock-details.destroy');
         Route::resource('distance-matrix', PowerplantSidingDistancesController::class)->names([
             'index' => 'master-data.distance-matrix.index',
             'create' => 'master-data.distance-matrix.create',

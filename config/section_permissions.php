@@ -51,6 +51,11 @@ return [
             'actions' => ['view', 'update'],
         ],
         [
+            'slug' => 'daily_stock_details',
+            'label' => 'Daily Stock Details',
+            'actions' => ['view', 'create', 'update', 'delete'],
+        ],
+        [
             'slug' => 'distance_matrix',
             'label' => 'Distance Matrix',
             'actions' => ['view', 'create', 'update', 'delete'],

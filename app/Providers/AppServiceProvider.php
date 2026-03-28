@@ -202,6 +202,8 @@ final class AppServiceProvider extends ServiceProvider
             'vehicle-dispatch-tab-main-data',
             'vehicle-dispatch-tab-dpr',
             'vehicle-dispatch-generate-dpr',
+            'dashboard-coal-transport-export-xlsx',
+            'vehicle-dispatch-coal-transport-export',
             'nav-railway-siding-empty-weighment',
             'nav-shift-timings',
             'shift-timings-edit',

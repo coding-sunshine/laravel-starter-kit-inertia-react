@@ -380,6 +380,27 @@ final class User extends Authenticatable implements ExportsPersonalData, Filamen
     }
 
     /**
+     * Road dispatch daily vehicle entries: see every operator's rows (vs. only own {@see DailyVehicleEntry::$created_by}).
+     */
+    public function canViewAllRoadDispatchDailyVehicleEntries(): bool
+    {
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        $tableNames = config('permission.table_names');
+        $teamKey = config('permission.column_names.team_foreign_key');
+
+        return (bool) \Illuminate\Support\Facades\DB::table($tableNames['model_has_roles'])
+            ->join($tableNames['roles'], $tableNames['roles'].'.id', '=', $tableNames['model_has_roles'].'.role_id')
+            ->where($tableNames['model_has_roles'].'.model_id', $this->id)
+            ->where($tableNames['model_has_roles'].'.model_type', self::class)
+            ->where($tableNames['model_has_roles'].'.'.$teamKey, 0)
+            ->where($tableNames['roles'].'.name', 'dispatch-manage-admin')
+            ->exists();
+    }
+
+    /**
      * Avatar URL (thumb conversion) for nav/header, or null when no avatar.
      */
     protected function getAvatarAttribute(): ?string
