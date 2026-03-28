@@ -233,6 +233,7 @@ return [
         'storage.*',
         'boost.*',
         'scramble.*',
+        'exports.coal-transport-report',
     ],
 
     /*

@@ -20,8 +20,9 @@ final readonly class DailyVehicleEntryService
     /**
      * @param  int|null  $sidingId  When set (e.g. from SidingContext), only entries for this siding are returned so the list matches the user's context.
      * @param  string|null  $entryType  When set, only entries of this type are returned (e.g. 'railway_siding_empty_weighment').
+     * @param  int|null  $createdByUserId  When set, only entries created by this user (road dispatch operator scoping).
      */
-    public function getEntriesByDateAndShift(string $date, int $shift, ?int $sidingId = null, ?string $entryType = null): Collection
+    public function getEntriesByDateAndShift(string $date, int $shift, ?int $sidingId = null, ?string $entryType = null, ?int $createdByUserId = null): Collection
     {
         $query = DailyVehicleEntry::query()
             ->with(['siding', 'creator', 'updater'])
@@ -35,6 +36,10 @@ final readonly class DailyVehicleEntryService
 
         if ($entryType !== null) {
             $query->where('entry_type', $entryType);
+        }
+
+        if ($createdByUserId !== null) {
+            $query->where('created_by', $createdByUserId);
         }
 
         return $query->get();
@@ -102,8 +107,10 @@ final readonly class DailyVehicleEntryService
 
     /**
      * @param  string|null  $entryType  When set, count only entries of this type.
+     * @param  int|null  $sidingId  When set, restrict counts to this siding.
+     * @param  int|null  $createdByUserId  When set, count only rows created by this user.
      */
-    public function getShiftSummary(string $date, ?string $entryType = null): array
+    public function getShiftSummary(string $date, ?string $entryType = null, ?int $sidingId = null, ?int $createdByUserId = null): array
     {
         $summary = [];
 
@@ -116,6 +123,14 @@ final readonly class DailyVehicleEntryService
                 $query->where('entry_type', $entryType);
             }
 
+            if ($sidingId !== null) {
+                $query->where('siding_id', $sidingId);
+            }
+
+            if ($createdByUserId !== null) {
+                $query->where('created_by', $createdByUserId);
+            }
+
             $summary[$shift] = $query->count();
         }
 
@@ -125,15 +140,15 @@ final readonly class DailyVehicleEntryService
     /**
      * @param  string|null  $entryType  When set, export only entries of this type (e.g. 'railway_siding_empty_weighment').
      */
-    public function exportEntries(string $date, int $sidingId, string $shift, ?string $entryType = null): string
+    public function exportEntries(string $date, int $sidingId, string $shift, ?string $entryType = null, ?int $createdByUserId = null): string
     {
         $siding = Siding::findOrFail($sidingId);
 
         if ($shift === 'all') {
-            return $this->exportAllShifts($date, $siding, $entryType);
+            return $this->exportAllShifts($date, $siding, $entryType, $createdByUserId);
         }
 
-        return $this->exportSingleShift($date, $siding, (int) $shift, $entryType);
+        return $this->exportSingleShift($date, $siding, (int) $shift, $entryType, $createdByUserId);
     }
 
     /**
@@ -244,7 +259,7 @@ final readonly class DailyVehicleEntryService
         }
     }
 
-    private function exportAllShifts(string $date, Siding $siding, ?string $entryType = null): string
+    private function exportAllShifts(string $date, Siding $siding, ?string $entryType = null, ?int $createdByUserId = null): string
     {
         $filename = "{$siding->name}_{$date}_AllShifts.xlsx";
         $filepath = storage_path("app/public/{$filename}");
@@ -256,9 +271,9 @@ final readonly class DailyVehicleEntryService
         $html .= '<table border="1">';
 
         // Get entries for all shifts
-        $shift1Entries = $this->getEntriesForExport($date, $siding->id, 1, $entryType);
-        $shift2Entries = $this->getEntriesForExport($date, $siding->id, 2, $entryType);
-        $shift3Entries = $this->getEntriesForExport($date, $siding->id, 3, $entryType);
+        $shift1Entries = $this->getEntriesForExport($date, $siding->id, 1, $entryType, $createdByUserId);
+        $shift2Entries = $this->getEntriesForExport($date, $siding->id, 2, $entryType, $createdByUserId);
+        $shift3Entries = $this->getEntriesForExport($date, $siding->id, 3, $entryType, $createdByUserId);
 
         $maxRows = max(count($shift1Entries), count($shift2Entries), count($shift3Entries));
 
@@ -313,7 +328,7 @@ final readonly class DailyVehicleEntryService
         return $filepath;
     }
 
-    private function exportSingleShift(string $date, Siding $siding, int $shift, ?string $entryType = null): string
+    private function exportSingleShift(string $date, Siding $siding, int $shift, ?string $entryType = null, ?int $createdByUserId = null): string
     {
         $filename = "{$siding->name}_{$date}_Shift{$shift}.xlsx";
         $filepath = storage_path("app/public/{$filename}");
@@ -324,7 +339,7 @@ final readonly class DailyVehicleEntryService
         $html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>'.$filename.'</title></head><body>';
         $html .= '<table border="1">';
 
-        $entries = $this->getEntriesForExport($date, $siding->id, $shift, $entryType);
+        $entries = $this->getEntriesForExport($date, $siding->id, $shift, $entryType, $createdByUserId);
 
         // Write title row
         $html .= '<tr><td colspan="10" style="font-weight:bold; text-align:center; background-color:#f0f0f0;">SHIFT '.$shift.' - '.$date.' - '.$siding->name.'</td></tr>';
@@ -367,7 +382,7 @@ final readonly class DailyVehicleEntryService
         return $filepath;
     }
 
-    private function getEntriesForExport(string $date, int $sidingId, int $shift, ?string $entryType = null): Collection
+    private function getEntriesForExport(string $date, int $sidingId, int $shift, ?string $entryType = null, ?int $createdByUserId = null): Collection
     {
         $query = DailyVehicleEntry::query()
             ->where('entry_date', $date)
@@ -377,6 +392,10 @@ final readonly class DailyVehicleEntryService
 
         if ($entryType !== null) {
             $query->where('entry_type', $entryType);
+        }
+
+        if ($createdByUserId !== null) {
+            $query->where('created_by', $createdByUserId);
         }
 
         return $query->get();

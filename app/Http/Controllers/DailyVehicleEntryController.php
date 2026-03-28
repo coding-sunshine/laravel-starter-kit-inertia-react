@@ -107,8 +107,11 @@ final class DailyVehicleEntryController extends Controller
             abort(403, 'You are not allowed to access this shift for the selected siding.');
         }
 
-        $entries = $this->service->getEntriesByDateAndShift($date, $activeShift, $sidingId, $entryType);
-        $shiftSummary = $this->service->getShiftSummary($date, $entryType);
+        $viewAllEntries = $user->canViewAllRoadDispatchDailyVehicleEntries();
+        $scopedToUserId = $viewAllEntries ? null : (int) $user->id;
+
+        $entries = $this->service->getEntriesByDateAndShift($date, $activeShift, $sidingId, $entryType, $scopedToUserId);
+        $shiftSummary = $this->service->getShiftSummary($date, $entryType, (int) $sidingIdForShifts, $scopedToUserId);
         $shiftStatus = $this->shiftValidation->getShiftCompletionStatus($date, $sidingIdForShifts);
         $shiftTimes = $this->shiftValidation->getShiftTimesForSiding($sidingIdForShifts);
 
@@ -188,7 +191,7 @@ final class DailyVehicleEntryController extends Controller
         $entry = $this->service->updateEntry($entry, []);
 
         if ($request->wantsJson()) {
-            return response()->json(['entry' => $entry->load('siding')], 201);
+            return response()->json(['entry' => $entry->load(['siding', 'creator', 'updater'])], 201);
         }
 
         return redirect()->route('road-dispatch.daily-vehicle-entries.index', [
@@ -221,7 +224,7 @@ final class DailyVehicleEntryController extends Controller
         $this->service->updateEntry($entry, $data);
 
         if ($request->wantsJson()) {
-            return response()->json(['entry' => $entry->fresh()->load('siding')]);
+            return response()->json(['entry' => $entry->fresh()->load(['siding', 'creator', 'updater'])]);
         }
 
         return redirect()->route('road-dispatch.daily-vehicle-entries.index', [
@@ -238,7 +241,7 @@ final class DailyVehicleEntryController extends Controller
         $updatedEntry = $this->service->markCompleted($entry);
 
         if ($request->wantsJson()) {
-            return response()->json(['entry' => $updatedEntry->load('siding')]);
+            return response()->json(['entry' => $updatedEntry->load(['siding', 'creator', 'updater'])]);
         }
 
         return redirect()->route('road-dispatch.daily-vehicle-entries.index', [
@@ -348,12 +351,16 @@ final class DailyVehicleEntryController extends Controller
             abort(403, 'You are not allowed to access this shift for the selected siding.');
         }
 
+        $viewAllEntries = $user->canViewAllRoadDispatchDailyVehicleEntries();
+        $scopedToUserId = $viewAllEntries ? null : (int) $user->id;
+
         try {
             $filepath = $this->service->exportEntries(
                 $data['date'],
                 $data['siding'],
                 $data['shift'],
-                DailyVehicleEntry::ENTRY_TYPE_ROAD_DISPATCH
+                DailyVehicleEntry::ENTRY_TYPE_ROAD_DISPATCH,
+                $scopedToUserId
             );
 
             $filename = basename($filepath);
@@ -383,6 +390,11 @@ final class DailyVehicleEntryController extends Controller
         )->values();
         if (! $allowedPairs->contains($pair)) {
             abort(403, 'You can only manage entries for your assigned shift.');
+        }
+
+        if (! $user->canViewAllRoadDispatchDailyVehicleEntries()
+            && (int) $entry->created_by !== (int) $user->id) {
+            abort(403, 'You can only manage entries you created.');
         }
     }
 

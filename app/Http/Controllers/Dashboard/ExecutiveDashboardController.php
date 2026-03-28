@@ -25,6 +25,7 @@ use App\Models\SidingOpeningBalance;
 use App\Models\SidingVehicleDispatch;
 use App\Models\StockLedger;
 use App\Models\VehicleUnload;
+use App\Services\CoalTransportReport\CoalTransportReportDataBuilder;
 use App\Support\Dashboard\DashboardFilterResolver;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
@@ -49,6 +50,7 @@ final class ExecutiveDashboardController extends Controller
 
     public function __construct(
         private readonly DashboardFilterResolver $filters,
+        private readonly CoalTransportReportDataBuilder $coalTransportReportDataBuilder,
     ) {}
 
     public function __invoke(Request $request): Response
@@ -86,11 +88,11 @@ final class ExecutiveDashboardController extends Controller
             'penaltyTrendDaily' => $this->buildPenaltyTrendDaily($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
             'penaltyByType' => $this->buildPenaltyByType($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
             'penaltyBySiding' => $this->buildPenaltyBySiding($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
-            //'notifications' => $this->buildDashboardNotifications($request),
-            //'notificationsUnreadCount' => $this->buildDashboardUnreadNotificationCount($request),
+            // 'notifications' => $this->buildDashboardNotifications($request),
+            // 'notificationsUnreadCount' => $this->buildDashboardUnreadNotificationCount($request),
             'liveRakeStatus' => $this->buildLiveRakeStatus($resolved['filteredSidingIds'], $resolved['filterContext']),
             'dailyRakeDetails' => $this->buildDailyRakeDetails($resolved['filteredSidingIds'], $resolved['dailyRakeDate']),
-            'coalTransportReport' => $this->buildCoalTransportReport($resolved['filteredSidingIds'], $resolved['coalTransportDate'], $resolved['filterContext']['shift'] ?? null),
+            'coalTransportReport' => $this->coalTransportReportDataBuilder->buildCoalTransportReport($resolved['filteredSidingIds'], $resolved['coalTransportDate'], $resolved['filterContext']['shift'] ?? null),
             'truckReceiptTrend' => $this->buildTruckReceiptTrend($resolved['filteredSidingIds'], $resolved['filterContext']),
             'shiftWiseVehicleReceipt' => $this->buildShiftWiseVehicleReceipt($resolved['filteredSidingIds'], $resolved['filterContext']['shift'] ?? null),
             // 'stockGauge' => $this->buildStockGauge($resolved['filteredSidingIds'], $resolved['to']), // hidden for now
@@ -1324,100 +1326,7 @@ final class ExecutiveDashboardController extends Controller
      */
     public function buildCoalTransportReport(array $sidingIds, CarbonInterface $date, ?string $shiftFilter): array
     {
-        $dateStr = $date->toDateString();
-        if ($sidingIds === []) {
-            return [
-                'date' => $dateStr,
-                'sidings' => [],
-                'rows' => [],
-                'totals' => ['siding_metrics' => [], 'total_trips' => 0, 'total_qty' => 0.0],
-            ];
-        }
-
-        $sidings = Siding::query()
-            ->whereIn('id', $sidingIds)
-            ->orderBy('name')
-            ->get(['id', 'name']);
-
-        $shiftsToShow = ($shiftFilter !== null && $shiftFilter !== '') ? [(int) $shiftFilter] : [1, 2, 3];
-        $shiftLabels = [1 => '1st', 2 => '2nd', 3 => '3rd'];
-
-        $q = DailyVehicleEntry::query()
-            ->leftJoin('stock_ledgers', function ($join): void {
-                $join->on('stock_ledgers.daily_vehicle_entry_id', '=', 'daily_vehicle_entries.id')
-                    ->where('stock_ledgers.transaction_type', '=', 'receipt');
-            })
-            ->where('daily_vehicle_entries.entry_date', $dateStr)
-            ->whereIn('daily_vehicle_entries.siding_id', $sidingIds)
-            ->whereIn('daily_vehicle_entries.shift', $shiftsToShow)
-            ->selectRaw('daily_vehicle_entries.shift, daily_vehicle_entries.siding_id, count(*) as trips, coalesce(sum(stock_ledgers.quantity_mt), 0) as qty')
-            ->groupBy('daily_vehicle_entries.shift', 'daily_vehicle_entries.siding_id');
-
-        $rawRows = $q->get();
-
-        $byShiftSiding = [];
-        foreach ($rawRows as $r) {
-            $byShiftSiding[(int) $r->shift][(int) $r->siding_id] = [
-                'trips' => (int) $r->trips,
-                'qty' => round((float) $r->qty, 2),
-            ];
-        }
-
-        $rows = [];
-        $slNo = 1;
-        $totalsBySiding = [];
-        foreach ($sidings as $s) {
-            $totalsBySiding[$s->name] = ['trips' => 0, 'qty' => 0.0];
-        }
-        $grandTrips = 0;
-        $grandQty = 0.0;
-
-        foreach ($shiftsToShow as $shiftNum) {
-            $sidingMetrics = [];
-            $rowTrips = 0;
-            $rowQty = 0.0;
-            foreach ($sidings as $siding) {
-                $cell = $byShiftSiding[$shiftNum][$siding->id] ?? ['trips' => 0, 'qty' => 0.0];
-                $sidingMetrics[] = [
-                    'siding_name' => $siding->name,
-                    'trips' => $cell['trips'],
-                    'qty' => $cell['qty'],
-                ];
-                $rowTrips += $cell['trips'];
-                $rowQty += $cell['qty'];
-                $totalsBySiding[$siding->name]['trips'] += $cell['trips'];
-                $totalsBySiding[$siding->name]['qty'] += $cell['qty'];
-            }
-            $grandTrips += $rowTrips;
-            $grandQty += $rowQty;
-            $rows[] = [
-                'sl_no' => $slNo++,
-                'shift_label' => $shiftLabels[$shiftNum] ?? (string) $shiftNum,
-                'siding_metrics' => $sidingMetrics,
-                'total_trips' => $rowTrips,
-                'total_qty' => round($rowQty, 2),
-            ];
-        }
-
-        $totalsSidingMetrics = [];
-        foreach ($sidings as $siding) {
-            $totalsSidingMetrics[] = [
-                'siding_name' => $siding->name,
-                'trips' => $totalsBySiding[$siding->name]['trips'],
-                'qty' => round($totalsBySiding[$siding->name]['qty'], 2),
-            ];
-        }
-
-        return [
-            'date' => $dateStr,
-            'sidings' => $sidings->map(fn (Siding $s): array => ['id' => $s->id, 'name' => $s->name])->values()->all(),
-            'rows' => $rows,
-            'totals' => [
-                'siding_metrics' => $totalsSidingMetrics,
-                'total_trips' => $grandTrips,
-                'total_qty' => round($grandQty, 2),
-            ],
-        ];
+        return $this->coalTransportReportDataBuilder->buildCoalTransportReport($sidingIds, $date, $shiftFilter);
     }
 
     /**

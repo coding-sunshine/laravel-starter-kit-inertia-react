@@ -26,6 +26,8 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
+use Illuminate\Http\Request;
+use Inertia\Support\Header;
 use Spatie\Csp\AddCspHeaders;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 use Spatie\Permission\Middleware\RoleMiddleware;
@@ -93,5 +95,13 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->report(function (MartinPetricko\LaravelDatabaseMail\Exceptions\DatabaseMailException $e): void {
             MartinPetricko\LaravelDatabaseMail\Facades\LaravelDatabaseMail::logException($e);
+        });
+
+        $exceptions->shouldRenderJsonWhen(function (Request $request, Throwable $e): bool {
+            if ($request->headers->has(Header::INERTIA)) {
+                return false;
+            }
+
+            return $request->expectsJson();
         });
     })->create();

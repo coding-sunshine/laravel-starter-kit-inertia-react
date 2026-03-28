@@ -30,13 +30,13 @@ final readonly class SessionController
         if ($user->hasEnabledTwoFactorAuthentication()) {
             $request->session()->put([
                 'login.id' => $user->getKey(),
-                'login.remember' => $request->boolean('remember'),
+                'login.remember' => false,
             ]);
 
             return to_route('two-factor.login');
         }
 
-        Auth::login($user, $request->boolean('remember'));
+        Auth::login($user, false);
 
         $request->session()->regenerate();
 

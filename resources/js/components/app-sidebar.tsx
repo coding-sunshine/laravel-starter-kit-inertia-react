@@ -113,6 +113,13 @@ const platformNavItems: NavItem[] = [
                 dataPan: 'nav-opening-coal-stock',
             },
             {
+                title: 'Daily Stock Details',
+                href: '/master-data/daily-stock-details',
+                icon: Scale,
+                permission: 'sections.daily_stock_details.view',
+                dataPan: 'nav-daily-stock-details',
+            },
+            {
                 title: 'Distance Matrix',
                 href: '/master-data/distance-matrix',
                 icon: Route,

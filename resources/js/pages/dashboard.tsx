@@ -38,6 +38,7 @@ import {
     TriangleAlert,
     TrendingUp,
     Truck,
+    FileSpreadsheet,
     X,
     Zap,
 } from 'lucide-react';
@@ -2695,7 +2696,7 @@ export default function Dashboard() {
                                     <div className="dashboard-card min-w-0 rounded-xl border-0 p-5">
                                         <div className="flex flex-wrap items-center justify-between gap-3">
                                             <SectionHeader icon={Truck} title="Coal Transport Report" subtitle="Trips and quantity by shift and siding" titleClassName="font-bold text-black" />
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex flex-wrap items-center gap-2">
                                                 <label htmlFor="coal-transport-date" className="text-xs font-medium text-gray-600">Date</label>
                                                 <input
                                                     id="coal-transport-date"
@@ -2707,6 +2708,29 @@ export default function Dashboard() {
                                                     }}
                                                     className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
                                                 />
+                                                {(() => {
+                                                    const coalDate =
+                                                        filters.coal_transport_date ?? coalTransportReport?.date ?? '';
+                                                    if (coalDate) {
+                                                        return (
+                                                            <Button variant="outline" size="sm" asChild>
+                                                                <a
+                                                                    href={`/exports/coal-transport-report?date=${encodeURIComponent(coalDate)}`}
+                                                                    data-pan="dashboard-coal-transport-export-xlsx"
+                                                                >
+                                                                    <FileSpreadsheet className="mr-1.5 h-4 w-4" />
+                                                                    Export XLSX
+                                                                </a>
+                                                            </Button>
+                                                        );
+                                                    }
+                                                    return (
+                                                        <Button variant="outline" size="sm" disabled title="Select a date">
+                                                            <FileSpreadsheet className="mr-1.5 h-4 w-4" />
+                                                            Export XLSX
+                                                        </Button>
+                                                    );
+                                                })()}
                                             </div>
                                         </div>
                                         {coalTransportReport ? (

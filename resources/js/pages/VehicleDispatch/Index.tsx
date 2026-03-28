@@ -1,5 +1,5 @@
 import { Head, router, usePage } from '@inertiajs/react';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { dashboard } from '@/routes';
 import AppLayout from '@/layouts/app-layout';
 import Heading from '@/components/heading';
@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Filter, Upload, Calendar as CalendarIcon, AlertCircle, CheckCircle } from 'lucide-react';
+import { Filter, Upload, Calendar as CalendarIcon, AlertCircle, CheckCircle, FileSpreadsheet } from 'lucide-react';
 import { format } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 import type { VehicleDispatch, Filters } from './types';
@@ -140,6 +140,18 @@ export default function VehicleDispatchIndex({
     );
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
     const prevFiltersRef = useRef<Filters>(filters);
+
+    const coalTransportReportDate = useMemo((): string | null => {
+        const sf = searchFilters;
+        if (sf.date && !sf.date_from && !sf.date_to) {
+            return sf.date;
+        }
+        if (sf.date_from && sf.date_to && sf.date_from === sf.date_to) {
+            return sf.date_from;
+        }
+
+        return null;
+    }, [searchFilters.date, searchFilters.date_from, searchFilters.date_to]);
 
     // Sync activeTab when tab prop changes (e.g. after Generate DPR redirect)
     useEffect(() => {
@@ -538,10 +550,32 @@ export default function VehicleDispatchIndex({
                         )}
                     </div>
 
-                    <Button onClick={() => setShowImportDialog(true)}>
-                        <Upload className="h-4 w-4 mr-2" />
-                        Bulk Import
-                    </Button>
+                    <div className="flex flex-wrap items-center gap-2">
+                        {coalTransportReportDate ? (
+                            <Button variant="outline" asChild>
+                                <a
+                                    href={`/exports/coal-transport-report?date=${encodeURIComponent(coalTransportReportDate)}`}
+                                    data-pan="vehicle-dispatch-coal-transport-export"
+                                >
+                                    <FileSpreadsheet className="mr-2 h-4 w-4" />
+                                    Coal Transport Report (Excel)
+                                </a>
+                            </Button>
+                        ) : (
+                            <Button
+                                variant="outline"
+                                disabled
+                                title="Set the date range to a single day to export the coal transport report"
+                            >
+                                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                                Coal Transport Report (Excel)
+                            </Button>
+                        )}
+                        <Button onClick={() => setShowImportDialog(true)}>
+                            <Upload className="h-4 w-4 mr-2" />
+                            Bulk Import
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Tabbed Content: JIMMS Data | DPR */}
