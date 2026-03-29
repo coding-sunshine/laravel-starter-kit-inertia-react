@@ -19,6 +19,9 @@ interface EmptyWeighmentEntry {
   status: 'draft' | 'completed';
 }
 
+const numberInputNoSpinner =
+  '[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [appearance:textfield]';
+
 function getCsrfHeaders(): Record<string, string> {
   const cookieMatch = document.cookie.match(/\bXSRF-TOKEN=([^;]+)/);
   if (cookieMatch) {
@@ -314,7 +317,7 @@ export default function VehicleEntryRow({
               debouncedSave();
             }}
             placeholder="T2"
-            className="w-24 h-12 px-2 text-right text-xs"
+            className={`w-24 h-12 px-2 text-right text-xs ${numberInputNoSpinner}`}
           />
         </TableCell>
 
@@ -394,6 +397,7 @@ export default function VehicleEntryRow({
                   value={formData.tare_wt_two}
                   onChange={(e) => updateField('tare_wt_two', e.target.value)}
                   placeholder="T2"
+                  className={numberInputNoSpinner}
                 />
               </div>
               <div>
