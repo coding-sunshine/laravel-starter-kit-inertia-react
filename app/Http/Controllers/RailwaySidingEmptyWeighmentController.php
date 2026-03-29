@@ -101,6 +101,44 @@ final class RailwaySidingEmptyWeighmentController extends Controller
             abort(403, 'You are not allowed to access this shift for the selected siding.');
         }
 
+        $canBypassShiftLock = $this->canBypassShiftLock();
+        $timeEditableShift = null;
+        $shiftGraceEndsAtIso = null;
+
+        if ($isToday && ! $canBypassShiftLock) {
+            $timeEditableShift = $this->shiftValidation->resolveEditableShiftForAssignments(
+                $allowedShifts->all(),
+                (int) $sidingIdForShifts
+            );
+            if ($timeEditableShift !== null) {
+                $graceEnd = $this->shiftValidation->getContainingExtendedWindowEnd(
+                    $timeEditableShift,
+                    null,
+                    (int) $sidingIdForShifts
+                );
+                $shiftGraceEndsAtIso = $graceEnd?->toIso8601String();
+            }
+        }
+
+        if (! $canBypassShiftLock && $isToday && ! $restrictToAssignedShift) {
+            if ($timeEditableShift !== null && $activeShift !== $timeEditableShift) {
+                return redirect()->route('railway-siding-empty-weighment.index', array_filter([
+                    'date' => $date,
+                    'shift' => $timeEditableShift,
+                    'siding_id' => $sidingId,
+                ], fn (mixed $v): bool => $v !== null && $v !== ''));
+            }
+            if ($timeEditableShift !== null) {
+                $activeShift = $timeEditableShift;
+            } elseif ($allowedShifts->isNotEmpty()) {
+                $activeShift = (int) $allowedShifts->first();
+            }
+        }
+
+        if (! $sidingShiftPairs->contains($sidingId.'|'.$activeShift)) {
+            abort(403, 'You are not allowed to access this shift for the selected siding.');
+        }
+
         $entries = $this->service->getEntriesByDateAndShift(
             $date,
             $activeShift,
@@ -111,7 +149,6 @@ final class RailwaySidingEmptyWeighmentController extends Controller
         $shiftStatus = $this->shiftValidation->getShiftCompletionStatus($date, $sidingIdForShifts);
         $shiftTimes = $this->shiftValidation->getShiftTimesForSiding($sidingIdForShifts);
 
-        $canBypassShiftLock = $this->canBypassShiftLockForSiding((int) $sidingIdForShifts);
         $shiftLock = $this->buildShiftLock(
             date: (string) $date,
             sidingId: (int) $sidingIdForShifts,
@@ -134,6 +171,8 @@ final class RailwaySidingEmptyWeighmentController extends Controller
             'restrictToAssignedShift' => $restrictToAssignedShift,
             'canBypassShiftLock' => $canBypassShiftLock,
             'shiftLock' => $shiftLock,
+            'timeEditableShift' => $timeEditableShift,
+            'shiftGraceEndsAtIso' => $shiftGraceEndsAtIso,
         ]);
     }
 
@@ -321,6 +360,33 @@ final class RailwaySidingEmptyWeighmentController extends Controller
             abort(403, 'You are not allowed to access this shift for the selected siding.');
         }
 
+        $exportSidingId = (int) $data['siding'];
+        $allowedForExportSiding = $assignedShifts
+            ->where('siding_id', $exportSidingId)
+            ->pluck('sort_order')
+            ->map(fn (mixed $s): int => (int) $s)
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+
+        if (! $user->canViewAllRoadDispatchDailyVehicleEntries() && $data['date'] === now()->format('Y-m-d')) {
+            if ($data['shift'] === 'all') {
+                throw ValidationException::withMessages([
+                    'shift' => 'You can only export the current shift for today.',
+                ]);
+            }
+            $editable = $this->shiftValidation->resolveEditableShiftForAssignments(
+                $allowedForExportSiding,
+                $exportSidingId
+            );
+            if ($editable === null || (int) $data['shift'] !== $editable) {
+                throw ValidationException::withMessages([
+                    'shift' => 'You can only export the shift that is currently active for your assignment.',
+                ]);
+            }
+        }
+
         try {
             $filepath = $this->service->exportEntries(
                 $data['date'],
@@ -449,11 +515,11 @@ final class RailwaySidingEmptyWeighmentController extends Controller
             ->values()
             ->all();
 
-        $isAnyAssignedShiftActive = collect($assignedShiftOrders)->contains(
-            fn (int $shift): bool => $this->shiftValidation->isShiftActive($shift, $now, $sidingId)
+        $isAnyAssignedShiftEditable = collect($assignedShiftOrders)->contains(
+            fn (int $shift): bool => $this->shiftValidation->isShiftWithinExtendedWindow($shift, $now, $sidingId)
         );
 
-        if ($isAnyAssignedShiftActive) {
+        if ($isAnyAssignedShiftEditable) {
             return [
                 'isLocked' => false,
                 'message' => '',
@@ -462,28 +528,11 @@ final class RailwaySidingEmptyWeighmentController extends Controller
             ];
         }
 
-        $shiftTimes = $this->shiftValidation->getShiftTimesForSiding($sidingId);
-        $candidateStarts = collect($assignedShiftOrders)
-            ->filter(fn (int $shift): bool => isset($shiftTimes[$shift]))
-            ->map(function (int $shift) use ($now, $shiftTimes): Carbon {
-                $start = $shiftTimes[$shift]['start'];
-                $startParts = explode(':', $start);
-                $hour = (int) ($startParts[0] ?? 0);
-                $minute = (int) ($startParts[1] ?? 0);
-
-                return $now->copy()->startOfDay()->setTime($hour, $minute);
-            })
-            ->values();
-
-        $nextStart = $candidateStarts
-            ->filter(fn (Carbon $start): bool => $start->greaterThan($now))
-            ->sort()
-            ->first();
-
-        if (! $nextStart instanceof Carbon) {
-            $firstStart = $candidateStarts->sort()->first();
-            $nextStart = $firstStart instanceof Carbon ? $firstStart->copy()->addDay() : null;
-        }
+        $nextStart = $this->shiftValidation->getNextAssignedShiftWindowStartAfter(
+            $now,
+            $sidingId,
+            $assignedShiftOrders
+        );
 
         return [
             'isLocked' => true,

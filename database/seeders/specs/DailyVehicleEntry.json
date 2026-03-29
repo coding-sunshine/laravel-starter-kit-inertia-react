@@ -116,6 +116,11 @@
             "type": "numeric",
             "nullable": true,
             "default": null
+        },
+        "inline_submitted_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {

@@ -1,0 +1,74 @@
+{
+    "model": "CoalStockApproxDetail",
+    "table": "coal_stock_approx_details",
+    "fields": {
+        "id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "siding_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
+        },
+        "date": {
+            "type": "date",
+            "nullable": true,
+            "default": null
+        },
+        "railway_siding_opening_coal_stock": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "railway_siding_closing_coal_stock": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "coal_dispatch_qty": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "no_of_rakes": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "rakes_qty": {
+            "type": "numeric",
+            "nullable": true,
+            "default": null
+        },
+        "source": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "remarks": {
+            "type": "text",
+            "nullable": true,
+            "default": null
+        },
+        "created_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "updated_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        }
+    },
+    "relationships": {
+        "siding": {
+            "type": "belongsTo",
+            "model": "Siding"
+        }
+    },
+    "value_hints": [],
+    "scenarios": []
+}

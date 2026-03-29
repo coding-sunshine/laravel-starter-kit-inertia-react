@@ -19,6 +19,13 @@ final class DailyVehicleEntry extends Model
 
     protected $table = 'daily_vehicle_entries';
 
+    /**
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'challan_mode' => 'online',
+    ];
+
     protected $fillable = [
         'siding_id',
         'entry_date',
@@ -40,6 +47,7 @@ final class DailyVehicleEntry extends Model
         'transport_name',
         'remarks',
         'net_wt',
+        'inline_submitted_at',
     ];
 
     /**
@@ -47,6 +55,7 @@ final class DailyVehicleEntry extends Model
      */
     protected $casts = [
         'entry_date' => 'date',
+        'inline_submitted_at' => 'datetime',
         'reached_at' => 'datetime',
         'gross_wt' => 'decimal:2',
         'tare_wt' => 'decimal:2',

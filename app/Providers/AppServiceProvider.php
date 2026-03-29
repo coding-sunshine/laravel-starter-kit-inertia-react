@@ -241,6 +241,8 @@ final class AppServiceProvider extends ServiceProvider
             'production-edit-entry',
             'production-delete-entry',
             'shift-lock-overlay',
+            'daily-vehicle-entries-table-fullscreen',
+            'daily-vehicle-entries-add-five-rows-pack',
         ]);
     }
 
