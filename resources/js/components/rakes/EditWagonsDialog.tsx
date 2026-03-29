@@ -8,13 +8,6 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
-import {
     Table,
     TableBody,
     TableCell,
@@ -23,7 +16,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { Loader2, Pencil } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export interface EditWagonsWagon {
     id: number;
@@ -36,26 +29,13 @@ export interface EditWagonsWagon {
     state: string | null;
 }
 
-export interface EditWagonsTypeOption {
-    id: number;
-    code: string;
-    full_form: string | null;
-    carrying_capacity_min_mt: string | number;
-    carrying_capacity_max_mt: string | number;
-    gross_tare_weight_mt: string | number;
-    default_pcc_weight_mt: string | number | null;
-}
-
 interface WagonRowState {
-    wagon_number: string;
-    wagon_type: string;
     tare_weight_mt: string;
     pcc_weight_mt: string;
 }
 
 interface EditWagonsDialogProps {
     wagons: EditWagonsWagon[];
-    wagonTypes: EditWagonsTypeOption[];
     rakeId: number;
     onWagonSaved?: (wagon: EditWagonsWagon) => void;
 }
@@ -74,8 +54,6 @@ function getCsrfHeaders(): Record<string, string> {
 
 function toRowState(wagon: EditWagonsWagon): WagonRowState {
     return {
-        wagon_number: wagon.wagon_number ?? '',
-        wagon_type: wagon.wagon_type ?? '',
         tare_weight_mt:
             wagon.tare_weight_mt != null ? String(wagon.tare_weight_mt) : '',
         pcc_weight_mt:
@@ -83,9 +61,16 @@ function toRowState(wagon: EditWagonsWagon): WagonRowState {
     };
 }
 
+function normalizeStoredWeight(value: string | number | null | undefined): string {
+    if (value === null || value === undefined) {
+        return '';
+    }
+
+    return String(value);
+}
+
 export function EditWagonsDialog({
     wagons,
-    wagonTypes,
     rakeId,
     onWagonSaved,
 }: EditWagonsDialogProps) {
@@ -108,14 +93,6 @@ export function EditWagonsDialog({
         setSavingById({});
         setErrorById({});
     }, [open, wagons]);
-
-    const wagonTypeByCode = useMemo(() => {
-        const map = new Map<string, EditWagonsTypeOption>();
-        wagonTypes.forEach((type) => {
-            map.set(type.code, type);
-        });
-        return map;
-    }, [wagonTypes]);
 
     const setRow = (wagonId: number, patch: Partial<WagonRowState>): void => {
         setRows((prev) => {
@@ -174,38 +151,33 @@ export function EditWagonsDialog({
         }
     };
 
-    const handleWagonNumberBlur = async (wagon: EditWagonsWagon): Promise<void> => {
+    const handleWeightBlur = async (
+        wagon: EditWagonsWagon,
+        field: 'tare_weight_mt' | 'pcc_weight_mt',
+    ): Promise<void> => {
         const state = rows[wagon.id] ?? toRowState(wagon);
-        const wagonNumber = state.wagon_number.trim();
+        const raw = state[field].trim();
+        const previous = normalizeStoredWeight(wagon[field]);
 
-        if (wagonNumber.length <= 4 || wagonNumber === (wagon.wagon_number ?? '').trim()) {
+        if (raw === previous) {
             return;
         }
 
-        await saveRow(wagon.id, { wagon_number: wagonNumber });
-    };
+        if (raw === '') {
+            await saveRow(wagon.id, { [field]: null });
+            return;
+        }
 
-    const handleWagonTypeChange = async (wagon: EditWagonsWagon, code: string): Promise<void> => {
-        const value = code === '_none' ? '' : code;
-        const selectedType = value ? wagonTypeByCode.get(value) : null;
-        const tareWeight = selectedType?.gross_tare_weight_mt != null
-            ? String(selectedType.gross_tare_weight_mt)
-            : '';
-        const pccWeight = selectedType?.default_pcc_weight_mt != null
-            ? String(selectedType.default_pcc_weight_mt)
-            : '';
+        const num = parseFloat(raw);
+        if (Number.isNaN(num)) {
+            setErrorById((prev) => ({
+                ...prev,
+                [wagon.id]: 'Enter a valid number or leave empty.',
+            }));
+            return;
+        }
 
-        setRow(wagon.id, {
-            wagon_type: value,
-            tare_weight_mt: tareWeight,
-            pcc_weight_mt: pccWeight,
-        });
-
-        await saveRow(wagon.id, {
-            wagon_type: value || null,
-            tare_weight_mt: tareWeight ? parseFloat(tareWeight) : null,
-            pcc_weight_mt: pccWeight ? parseFloat(pccWeight) : null,
-        });
+        await saveRow(wagon.id, { [field]: num });
     };
 
     return (
@@ -244,46 +216,43 @@ export function EditWagonsDialog({
 
                                     return (
                                         <TableRow key={wagon.id}>
-                                            <TableCell>
-                                                <Input
-                                                    className="h-8 w-36"
-                                                    value={row.wagon_number}
-                                                    onChange={(event) => {
-                                                        setRow(wagon.id, {
-                                                            wagon_number: event.target.value,
-                                                        });
-                                                    }}
-                                                    onBlur={() => void handleWagonNumberBlur(wagon)}
-                                                    placeholder="Min 5 chars"
-                                                    disabled={isSaving}
-                                                />
+                                            <TableCell className="font-medium tabular-nums">
+                                                {wagon.wagon_number}
                                             </TableCell>
                                             <TableCell className="text-muted-foreground">
                                                 {wagon.wagon_sequence}
                                             </TableCell>
-                                            <TableCell>
-                                                <Select
-                                                    value={row.wagon_type || '_none'}
-                                                    onValueChange={(value) => {
-                                                        void handleWagonTypeChange(wagon, value);
-                                                    }}
-                                                    disabled={isSaving}
-                                                >
-                                                    <SelectTrigger className="h-8 w-[140px]">
-                                                        <SelectValue placeholder="Type" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="_none">—</SelectItem>
-                                                        {wagonTypes.map((wagonType) => (
-                                                            <SelectItem key={wagonType.id} value={wagonType.code}>
-                                                                {wagonType.code}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
+                                            <TableCell className="text-muted-foreground">
+                                                {wagon.wagon_type?.trim() ? wagon.wagon_type : '—'}
                                             </TableCell>
-                                            <TableCell>{row.tare_weight_mt || '—'}</TableCell>
-                                            <TableCell>{row.pcc_weight_mt || '—'}</TableCell>
+                                            <TableCell>
+                                                <Input
+                                                    className="h-8 w-28"
+                                                    value={row.tare_weight_mt}
+                                                    onChange={(event) => {
+                                                        setRow(wagon.id, {
+                                                            tare_weight_mt: event.target.value,
+                                                        });
+                                                    }}
+                                                    onBlur={() => void handleWeightBlur(wagon, 'tare_weight_mt')}
+                                                    disabled={isSaving}
+                                                    inputMode="decimal"
+                                                />
+                                            </TableCell>
+                                            <TableCell>
+                                                <Input
+                                                    className="h-8 w-28"
+                                                    value={row.pcc_weight_mt}
+                                                    onChange={(event) => {
+                                                        setRow(wagon.id, {
+                                                            pcc_weight_mt: event.target.value,
+                                                        });
+                                                    }}
+                                                    onBlur={() => void handleWeightBlur(wagon, 'pcc_weight_mt')}
+                                                    disabled={isSaving}
+                                                    inputMode="decimal"
+                                                />
+                                            </TableCell>
                                             <TableCell className="text-xs">
                                                 {isSaving ? (
                                                     <span className="inline-flex items-center text-muted-foreground">

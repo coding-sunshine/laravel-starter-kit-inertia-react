@@ -15,7 +15,6 @@ use App\Models\RakeCharge;
 use App\Models\SectionTimer;
 use App\Models\Siding;
 use App\Models\Wagon;
-use App\Models\WagonType;
 use Carbon\Carbon;
 use Closure;
 use DateTimeImmutable;
@@ -97,20 +96,6 @@ final class RakesController extends Controller
             $end = $rake->placement_time->copy()->addMinutes((int) $rake->loading_free_minutes);
             $demurrageRemainingMinutes = max(0, (int) now()->diffInMinutes($end, false));
         }
-
-        $wagonTypes = WagonType::query()
-            ->orderBy('code')
-            ->get([
-                'id',
-                'code',
-                'full_form',
-                'typical_use',
-                'loading_method',
-                'carrying_capacity_min_mt',
-                'carrying_capacity_max_mt',
-                'gross_tare_weight_mt',
-                'default_pcc_weight_mt',
-            ]);
 
         $loadingSection = SectionTimer::query()
             ->where('section_name', 'loading')
@@ -240,7 +225,6 @@ final class RakesController extends Controller
 
         return Inertia::render('rakes/show', [
             'rake' => $rakeArray,
-            'wagonTypes' => $wagonTypes,
             'powerPlants' => $powerPlants,
             'demurrageRemainingMinutes' => $demurrageRemainingMinutes,
             'demurrage_rate_per_mt_hour' => config('rrmcs.demurrage_rate_per_mt_hour', 50),

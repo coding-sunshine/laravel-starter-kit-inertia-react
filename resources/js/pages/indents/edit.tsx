@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, router, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Download, FileText, Pencil } from 'lucide-react';
 
 interface Siding {
@@ -44,6 +44,11 @@ interface Indent {
     indent_pdf_download_url?: string | null;
     indent_pdf_url?: string | null;
     indent_confirmation_pdf_url?: string | null;
+    rake?: {
+        id: number;
+        rake_number: string | null;
+        priority_number: number | null;
+    } | null;
 }
 
 interface Props {
@@ -144,6 +149,43 @@ export default function IndentsEdit({ indent, sidings, currentStockMt }: Props) 
                         Back to indent
                     </Button>
                 </div>
+
+                {indent.rake != null && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-base">Linked rake</CardTitle>
+                            <CardDescription>
+                                Rake Sq. number and priority (from e-Demand / indent
+                                id). Edit the rake record to change the rake number.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="flex flex-wrap items-end justify-between gap-4">
+                            <dl className="grid gap-3 text-sm sm:grid-cols-2">
+                                <div>
+                                    <dt className="text-muted-foreground">
+                                        Rake number
+                                    </dt>
+                                    <dd className="font-medium">
+                                        {indent.rake.rake_number ?? '—'}
+                                    </dd>
+                                </div>
+                                <div>
+                                    <dt className="text-muted-foreground">
+                                        Priority number
+                                    </dt>
+                                    <dd className="font-medium">
+                                        {indent.rake.priority_number ?? '—'}
+                                    </dd>
+                                </div>
+                            </dl>
+                            <Button variant="outline" size="sm" asChild>
+                                <Link href={`/rakes/${indent.rake.id}`}>
+                                    Open rake
+                                </Link>
+                            </Button>
+                        </CardContent>
+                    </Card>
+                )}
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <Card>

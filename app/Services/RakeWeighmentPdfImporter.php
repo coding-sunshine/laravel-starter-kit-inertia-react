@@ -9,6 +9,7 @@ use App\Actions\UpdateStockLedger;
 use App\Models\Rake;
 use App\Models\RakeWagonWeighment;
 use App\Models\RakeWeighment;
+use App\Models\Wagon;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -24,7 +25,8 @@ final readonly class RakeWeighmentPdfImporter
     ) {}
 
     /**
-     * Import a weighment PDF for an existing rake. Writes only to rake_weighments and rake_wagon_weighments.
+     * Import a weighment PDF for an existing rake. Creates wagons from the PDF when the rake has none,
+     * then writes rake_weighments and rake_wagon_weighments.
      */
     public function importForRake(Rake $rake, UploadedFile $pdf, int $userId): RakeWeighment
     {
@@ -42,17 +44,19 @@ final readonly class RakeWeighmentPdfImporter
         $totals = $parsed['totals'];
         $wagonRows = $parsed['wagon_rows'];
 
-        $rake->load(['wagons' => fn ($q) => $q->orderBy('wagon_sequence')]);
-        $wagons = $rake->wagons;
-
-        if ($wagons->isEmpty()) {
-            throw new InvalidArgumentException('This rake has no wagons. Add wagons before uploading a weighment PDF.');
-        }
-
         $attemptNo = 1;
 
         try {
-            return DB::transaction(function () use ($rake, $header, $totals, $wagonRows, $pdf, $userId, $attemptNo, $wagons): RakeWeighment {
+            return DB::transaction(function () use ($rake, $header, $totals, $wagonRows, $pdf, $userId, $attemptNo): RakeWeighment {
+                $rake->load(['wagons' => fn ($q) => $q->orderBy('wagon_sequence')]);
+
+                if ($rake->wagons->isEmpty()) {
+                    $this->createWagonsFromParsedRows($rake, $wagonRows);
+                    $rake->load(['wagons' => fn ($q) => $q->orderBy('wagon_sequence')]);
+                }
+
+                $wagons = $rake->wagons;
+
                 $storedPath = $pdf->store('weighment-pdfs', 'public');
 
                 $weighment = RakeWeighment::query()->create([
@@ -111,6 +115,8 @@ final readonly class RakeWeighmentPdfImporter
                     $matched++;
                 }
 
+                $this->syncWagonsFromRakeWeighment($weighment);
+
                 Log::info('RakeWeighmentPdfImporter: created weighment and wagon rows', [
                     'rake_weighment_id' => $weighment->id,
                     'matched' => $matched,
@@ -149,5 +155,133 @@ final readonly class RakeWeighmentPdfImporter
             ]);
             throw $e;
         }
+    }
+
+    /**
+     * Copy wagon identity and slip weights from rake_wagon_weighments onto wagons rows.
+     * Placeholder wagons (e.g. W1, W2) matched by sequence keep stale DB values until this runs.
+     */
+    public function syncWagonsFromRakeWeighment(RakeWeighment $weighment): void
+    {
+        $rows = RakeWagonWeighment::query()
+            ->where('rake_weighment_id', $weighment->id)
+            ->whereNotNull('wagon_id')
+            ->get();
+
+        foreach ($rows as $ww) {
+            $number = mb_trim((string) ($ww->wagon_number ?? ''));
+            if ($number === '') {
+                continue;
+            }
+
+            /** @var Wagon|null $wagon */
+            $wagon = Wagon::query()->find($ww->wagon_id);
+            if ($wagon === null) {
+                continue;
+            }
+
+            $tare = null;
+            if ($ww->printed_tare_mt !== null) {
+                $tare = $ww->printed_tare_mt;
+            } elseif ($ww->actual_tare_mt !== null) {
+                $tare = $ww->actual_tare_mt;
+            }
+
+            $data = [
+                'wagon_number' => $number,
+                'wagon_sequence' => $ww->wagon_sequence !== null
+                    ? (int) $ww->wagon_sequence
+                    : $wagon->wagon_sequence,
+            ];
+
+            if ($ww->wagon_type !== null && mb_trim((string) $ww->wagon_type) !== '') {
+                $data['wagon_type'] = mb_trim((string) $ww->wagon_type);
+            }
+
+            if ($tare !== null) {
+                $data['tare_weight_mt'] = $tare;
+            }
+
+            if ($ww->cc_capacity_mt !== null) {
+                $data['pcc_weight_mt'] = $ww->cc_capacity_mt;
+            }
+
+            $wagon->update($data);
+        }
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $wagonRows
+     */
+    private function createWagonsFromParsedRows(Rake $rake, array $wagonRows): void
+    {
+        if ($wagonRows === []) {
+            throw new InvalidArgumentException('Weighment PDF has no wagon rows to create wagons from.');
+        }
+
+        $seen = [];
+        $autoSeq = 0;
+
+        foreach ($wagonRows as $row) {
+            $wagonNumber = mb_trim((string) ($row['wagon_number'] ?? ''));
+
+            if ($wagonNumber === '') {
+                throw new InvalidArgumentException('Weighment PDF contains a wagon row with an empty wagon number.');
+            }
+
+            if (mb_strlen($wagonNumber) < 5) {
+                throw new InvalidArgumentException(
+                    sprintf('Weighment PDF wagon number "%s" is too short (minimum 5 characters).', $wagonNumber),
+                );
+            }
+
+            $seq = (int) ($row['sequence'] ?? 0);
+            if ($seq <= 0) {
+                $autoSeq++;
+                $seq = $autoSeq;
+            }
+
+            $dedupeKey = $seq.'|'.$wagonNumber;
+            if (isset($seen[$dedupeKey])) {
+                continue;
+            }
+            $seen[$dedupeKey] = true;
+
+            $printedTare = $row['printed_tare_mt'] ?? null;
+            $tareCol = $row['tare_weight_mt'] ?? null;
+            $tareMt = null;
+            if (is_numeric($printedTare)) {
+                $tareMt = (float) $printedTare;
+            } elseif (is_numeric($tareCol)) {
+                $tareMt = (float) $tareCol;
+            }
+
+            $cc = $row['cc_capacity_mt'] ?? null;
+            $pccMt = is_numeric($cc) ? (float) $cc : null;
+
+            $wagonType = $row['wagon_type'] ?? null;
+            if ($wagonType !== null && $wagonType !== '') {
+                $wagonType = mb_trim((string) $wagonType);
+                if ($wagonType === '') {
+                    $wagonType = null;
+                }
+            } else {
+                $wagonType = null;
+            }
+
+            Wagon::query()->create([
+                'rake_id' => $rake->id,
+                'wagon_sequence' => $seq,
+                'wagon_number' => $wagonNumber,
+                'wagon_type' => $wagonType,
+                'tare_weight_mt' => $tareMt,
+                'pcc_weight_mt' => $pccMt,
+                'is_unfit' => false,
+                'state' => 'pending',
+            ]);
+        }
+
+        $count = Wagon::query()->where('rake_id', $rake->id)->count();
+        $rake->update(['wagon_count' => $count]);
     }
 }
