@@ -116,6 +116,10 @@
         "creator": {
             "type": "belongsTo",
             "model": "Creator"
+        },
+        "dispatchReport": {
+            "type": "hasOne",
+            "model": "DispatchReport"
         }
     },
     "value_hints": [],

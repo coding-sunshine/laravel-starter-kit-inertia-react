@@ -51,3 +51,9 @@ export interface VehicleDispatchPagination {
         active: boolean;
     }>;
 }
+
+export type ImportBatchSummary = {
+    skipped: number;
+    totalRows: number;
+    newCount: number;
+};

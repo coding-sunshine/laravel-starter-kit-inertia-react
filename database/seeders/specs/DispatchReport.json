@@ -121,12 +121,21 @@
             "type": "timestamp",
             "nullable": true,
             "default": null
+        },
+        "vehicle_dispatch_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {
         "siding": {
             "type": "belongsTo",
             "model": "Siding"
+        },
+        "vehicleDispatch": {
+            "type": "belongsTo",
+            "model": "VehicleDispatch"
         }
     },
     "value_hints": {
