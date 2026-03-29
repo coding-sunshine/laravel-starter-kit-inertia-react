@@ -14,14 +14,18 @@ import {
 import { useCan } from '@/hooks/use-can';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { Calendar, Download, Plus } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import ShiftTabs from './shift-tabs';
 import VehicleEntryTable from './vehicle-entry-table';
 
-function toIsoDate(d: Date): string {
-    return d.toISOString().split('T')[0]!;
+/** YYYY-MM-DD in local time (matches server `date` better than UTC `toISOString().slice(0,10)`). */
+function toLocalYmd(d: Date): string {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
 }
 
 function parseTimeParts(time: string): { hour: number; minute: number } {
@@ -58,6 +62,19 @@ function shiftEndsAt(
     return end;
 }
 
+/** Nominal shift end plus grace when server does not send {@see shiftGraceEndsAtIso}. */
+function shiftGraceEndAt(
+    now: Date,
+    shift: number,
+    shiftTimes: Record<number, ShiftTime>,
+): Date | null {
+    const end = shiftEndsAt(now, shift, shiftTimes);
+    if (!end) {
+        return null;
+    }
+    return new Date(end.getTime() + 5 * 60 * 1000);
+}
+
 function formatCountdown(totalSeconds: number): string {
     const s = Math.max(0, Math.floor(totalSeconds));
     const mm = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
@@ -69,6 +86,11 @@ function formatCountdown(totalSeconds: number): string {
 interface DailyVehicleEntry {
     id: number;
     siding_id: number;
+    siding?: {
+        id: number;
+        name: string;
+        station_code?: string | null;
+    };
     entry_date: string;
     shift: number;
     e_challan_no: string | null;
@@ -83,15 +105,63 @@ interface DailyVehicleEntry {
     d_challan_no: string | null;
     challan_mode: 'offline' | 'online' | null;
     status: 'draft' | 'completed';
+    remarks?: string | null;
+    net_wt?: number | null;
     created_by: number;
     updated_by: number | null;
     created_at: string;
     updated_at: string;
+    inline_submitted_at: string | null;
+}
+
+function buildLocalDraftEntry(
+    id: number,
+    siding: Siding,
+    entryDate: string,
+    shift: number,
+    userId: number,
+): DailyVehicleEntry {
+    return {
+        id,
+        siding_id: siding.id,
+        siding: {
+            id: siding.id,
+            name: siding.name,
+            station_code: siding.station_code,
+        },
+        entry_date: entryDate,
+        shift,
+        e_challan_no: null,
+        vehicle_no: null,
+        trip_id_no: null,
+        transport_name: null,
+        gross_wt: null,
+        tare_wt: null,
+        tare_wt_two: null,
+        reached_at: new Date().toISOString(),
+        wb_no: null,
+        d_challan_no: null,
+        challan_mode: 'online',
+        status: 'draft',
+        remarks: null,
+        net_wt: null,
+        created_by: userId,
+        updated_by: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        inline_submitted_at: null,
+    };
 }
 
 interface Siding {
     id: number;
     name: string;
+    station_code?: string | null;
+}
+
+function sidingDisplayLabel(siding: Siding): string {
+    const code = siding.station_code?.trim();
+    return code && code.length > 0 ? code : siding.name;
 }
 
 interface ShiftStatus {
@@ -103,18 +173,6 @@ interface ShiftStatus {
 interface ShiftTime {
     start: string;
     end: string;
-}
-
-function getCsrfHeaders(): Record<string, string> {
-    const cookieMatch = document.cookie.match(/\bXSRF-TOKEN=([^;]+)/);
-    if (cookieMatch) {
-        return { 'X-XSRF-TOKEN': decodeURIComponent(cookieMatch[1].trim()) };
-    }
-    const meta = document.querySelector('meta[name="csrf-token"]');
-    if (meta?.getAttribute('content')) {
-        return { 'X-CSRF-TOKEN': meta.getAttribute('content')! };
-    }
-    return {};
 }
 
 interface Props {
@@ -136,13 +194,25 @@ interface Props {
         nextShiftStartAt: string | null;
         now: string;
     } | null;
+    /** Today’s time-editable shift for non-admins; null when outside all windows or not applicable. */
+    timeEditableShift?: number | null;
+    /** ISO end of extended window (nominal end + grace) for {@see timeEditableShift}. */
+    shiftGraceEndsAtIso?: string | null;
+}
+
+interface InertiaAuthPageProps {
+    auth?: {
+        user?: {
+            id?: number;
+        } | null;
+    };
 }
 
 export default function DailyVehicleEntriesIndex({
     entries: entriesProp,
     date,
     activeShift,
-    shiftSummary,
+    shiftSummary: shiftSummaryFromServer,
     shiftStatus,
     shiftTimes,
     sidings,
@@ -151,7 +221,10 @@ export default function DailyVehicleEntriesIndex({
     restrictToAssignedShift = false,
     canBypassShiftLock = false,
     shiftLock = null,
+    timeEditableShift = null,
+    shiftGraceEndsAtIso = null,
 }: Props) {
+    const page = usePage<InertiaAuthPageProps>();
     const canCreate = useCan('sections.railway_siding_record_data.create');
     const canUpdate = useCan('sections.railway_siding_record_data.update');
     const canDelete = useCan('sections.railway_siding_record_data.delete');
@@ -172,9 +245,8 @@ export default function DailyVehicleEntriesIndex({
         String(activeShift),
     );
     const [isExporting, setIsExporting] = useState(false);
-    const [isAddingRow, setIsAddingRow] = useState(false);
     const [addRowError, setAddRowError] = useState<string | null>(null);
-    const addingRowRef = useRef(false);
+    const localDraftIdRef = useRef(0);
 
     const [shiftCountdown, setShiftCountdown] = useState<{
         secondsLeft: number;
@@ -182,15 +254,50 @@ export default function DailyVehicleEntriesIndex({
         warning: boolean;
     } | null>(null);
 
+    const [shiftSummaryState, setShiftSummaryState] = useState(
+        shiftSummaryFromServer,
+    );
+
     const effectiveSidingId = selectedSidingId ?? firstSidingId;
     const entriesForSiding =
         effectiveSidingId == null
             ? entries
             : entries.filter((e) => e.siding_id === effectiveSidingId);
 
+    const lastEntryForSiding =
+        entriesForSiding.length > 0
+            ? entriesForSiding[entriesForSiding.length - 1]
+            : undefined;
+    const canAddAnotherRow =
+        entriesForSiding.length === 0 ||
+        lastEntryForSiding?.inline_submitted_at != null;
+
+    const isSelectedToday = selectedDate === toLocalYmd(new Date());
+    const lockTabsByTime = !canBypassShiftLock && isSelectedToday;
+    const tableLockedByWrongShift =
+        lockTabsByTime &&
+        typeof timeEditableShift === 'number' &&
+        activeShiftState !== timeEditableShift;
+    const effectiveTableLocked = isShiftLocked || tableLockedByWrongShift;
+
     useEffect(() => {
-        setEntries(Array.isArray(entriesProp) ? entriesProp : []);
+        const raw = Array.isArray(entriesProp) ? entriesProp : [];
+        setEntries(
+            raw.map((e) => ({
+                ...e,
+                inline_submitted_at: e.inline_submitted_at ?? null,
+            })),
+        );
     }, [entriesProp]);
+
+    useEffect(() => {
+        setShiftSummaryState(shiftSummaryFromServer);
+    }, [shiftSummaryFromServer]);
+
+    useEffect(() => {
+        setActiveShiftState(activeShift);
+        setExportShift(String(activeShift));
+    }, [activeShift]);
 
     useEffect(() => {
         if (sidingIdProp !== undefined && sidingIdProp !== null) {
@@ -209,16 +316,21 @@ export default function DailyVehicleEntriesIndex({
     }, [allowedShifts, activeShiftState]);
 
     useEffect(() => {
-        // Auto shift transition for users with 1–2 shifts (no “all shifts” bypass).
         if (canBypassShiftLock) return;
         const now = new Date();
-        if (toIsoDate(now) !== selectedDate) {
+        if (toLocalYmd(now) !== selectedDate) {
+            setShiftCountdown(null);
+            return;
+        }
+        if (timeEditableShift == null) {
             setShiftCountdown(null);
             return;
         }
 
-        const end = shiftEndsAt(now, activeShiftState, shiftTimes);
-        if (!end) {
+        const end = shiftGraceEndsAtIso
+            ? new Date(shiftGraceEndsAtIso)
+            : shiftGraceEndAt(now, timeEditableShift, shiftTimes);
+        if (!end || Number.isNaN(end.getTime())) {
             setShiftCountdown(null);
             return;
         }
@@ -236,28 +348,6 @@ export default function DailyVehicleEntriesIndex({
             });
 
             if (secondsLeft <= 0) {
-                const sorted = [...allowedShifts]
-                    .map(Number)
-                    .sort((a, b) => a - b);
-                const idx = sorted.indexOf(activeShiftState);
-                const next = idx >= 0 ? sorted[idx + 1] : null;
-
-                if (typeof next === 'number') {
-                    setActiveShiftState(next);
-                    setExportShift(String(next));
-                    const params: Record<string, string | number> = {
-                        date: selectedDate,
-                        shift: next,
-                    };
-                    if (effectiveSidingId != null)
-                        params.siding_id = effectiveSidingId;
-                    router.get('/road-dispatch/daily-vehicle-entries', params, {
-                        preserveState: false,
-                        preserveScroll: true,
-                    });
-                    return;
-                }
-
                 router.reload({ preserveState: false, preserveScroll: true });
             }
         };
@@ -266,12 +356,12 @@ export default function DailyVehicleEntriesIndex({
         const id = window.setInterval(tick, 1000);
         return () => window.clearInterval(id);
     }, [
-        allowedShifts,
         activeShiftState,
         canBypassShiftLock,
-        effectiveSidingId,
         selectedDate,
+        shiftGraceEndsAtIso,
         shiftTimes,
+        timeEditableShift,
     ]);
 
     const breadcrumbs: BreadcrumbItem[] = [
@@ -297,20 +387,16 @@ export default function DailyVehicleEntriesIndex({
     };
 
     const handleShiftChange = (shift: number) => {
-        // Check if shift is available for today
-        if (
-            shiftStatus &&
-            selectedDate === new Date().toISOString().split('T')[0]
-        ) {
-            if (!shiftStatus[shift]?.is_available) {
-                // Show alert or message instead of changing shift
-                const messages = {
-                    2: `2nd shift will be available after 1st shift completion (after ${shiftTimes[1]?.end ?? '08:00'})`,
-                    3: `3rd shift will be available after 2nd shift completion (after ${shiftTimes[2]?.end ?? '16:00'})`,
-                };
+        if (lockTabsByTime) {
+            if (timeEditableShift === null) {
                 alert(
-                    messages[shift as keyof typeof messages] ||
-                        'This shift is not available at the current time.',
+                    'No shift is active for your assignment at the current time.',
+                );
+                return;
+            }
+            if (shift !== timeEditableShift) {
+                alert(
+                    'You can only open the shift that is currently active for your assignment (including the grace period).',
                 );
                 return;
             }
@@ -329,108 +415,109 @@ export default function DailyVehicleEntriesIndex({
         });
     };
 
-    const handleAddRow = async (count: number = 1) => {
-        if (addingRowRef.current) return;
-        addingRowRef.current = true;
-        if (isShiftLocked) {
-            alert(
-                shiftLock?.message ||
-                    'Your shift is not active yet (or has ended).',
-            );
-            addingRowRef.current = false;
-            return;
-        }
-        if (
-            shiftStatus &&
-            selectedDate === new Date().toISOString().split('T')[0]
-        ) {
-            if (!shiftStatus[activeShiftState]?.is_available) {
-                const messages = {
-                    1: `1st shift is only available between ${shiftTimes[1]?.start ?? '00:01'} - ${shiftTimes[1]?.end ?? '08:00'}`,
-                    2: `2nd shift will be available after 1st shift completion (after ${shiftTimes[1]?.end ?? '08:00'})`,
-                    3: `3rd shift will be available after 2nd shift completion (after ${shiftTimes[2]?.end ?? '16:00'})`,
-                };
+    const handleAddRow = useCallback(
+        (count: number = 1) => {
+            if (!canAddAnotherRow) {
                 alert(
-                    messages[activeShiftState as keyof typeof messages] ||
-                        'This shift is not available at the current time.',
+                    'Submit the last vehicle entry row before adding another row.',
                 );
-                addingRowRef.current = false;
                 return;
             }
-        }
-
-        setAddRowError(null);
-        setIsAddingRow(true);
-        const newEntries: DailyVehicleEntry[] = [];
-        const payload = {
-            siding_id: effectiveSidingId ?? sidings[0]?.id ?? 1,
-            entry_date: selectedDate,
-            shift: activeShiftState,
-        };
-        try {
-            for (let i = 0; i < count; i++) {
-                const res = await fetch(
-                    '/road-dispatch/daily-vehicle-entries',
-                    {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            Accept: 'application/json',
-                            'X-Requested-With': 'XMLHttpRequest',
-                            ...getCsrfHeaders(),
-                        },
-                        body: JSON.stringify(payload),
-                        credentials: 'include',
-                    },
+            if (effectiveTableLocked) {
+                alert(
+                    shiftLock?.message ||
+                        'Your shift is not active yet (or has ended).',
                 );
-                const data = await res.json().catch(() => ({}));
-                if (!res.ok) {
-                    const msg =
-                        ((data as { message?: string }).message ??
-                        (data as { errors?: Record<string, string[]> }).errors)
-                            ? Object.values(
-                                  (data as { errors: Record<string, string[]> })
-                                      .errors,
-                              )
-                                  .flat()
-                                  .join(', ')
-                            : res.statusText;
-                    setAddRowError(msg ?? 'Failed to add row');
-                    if (res.status === 419) {
-                        setAddRowError(
-                            'Session expired. Please refresh the page.',
-                        );
-                    }
-                    addingRowRef.current = false;
-                    return;
-                }
-                const newEntry = (data as { entry?: DailyVehicleEntry }).entry;
-                if (newEntry) {
-                    newEntries.push(newEntry);
-                }
+                return;
             }
-            if (newEntries.length > 0) {
-                setEntries((prev) => [...prev, ...newEntries]);
+
+            const targetSidingId = effectiveSidingId ?? sidings[0]?.id;
+            const siding =
+                sidings.find((s) => s.id === targetSidingId) ?? sidings[0];
+            if (siding == null) {
+                setAddRowError('No siding selected.');
+                return;
             }
-        } catch {
-            setAddRowError('Network error. Please try again.');
-        } finally {
-            setIsAddingRow(false);
-            addingRowRef.current = false;
+
+            setAddRowError(null);
+            const userId = page.props.auth?.user?.id ?? 0;
+            const drafts: DailyVehicleEntry[] = [];
+            for (let i = 0; i < count; i++) {
+                localDraftIdRef.current -= 1;
+                drafts.push(
+                    buildLocalDraftEntry(
+                        localDraftIdRef.current,
+                        siding,
+                        selectedDate,
+                        activeShiftState,
+                        userId,
+                    ),
+                );
+            }
+            setEntries((prev) => [...prev, ...drafts]);
+        },
+        [
+            activeShiftState,
+            canAddAnotherRow,
+            effectiveSidingId,
+            effectiveTableLocked,
+            page.props.auth?.user?.id,
+            selectedDate,
+            shiftLock?.message,
+            sidings,
+        ],
+    );
+
+    const handleEntryUpdated = useCallback(
+        (
+            entry: DailyVehicleEntry,
+            context?: { replaceClientId?: number },
+        ) => {
+            const replaceId = context?.replaceClientId ?? entry.id;
+            setEntries((prev) => {
+                if (!prev.some((e) => e.id === replaceId)) {
+                    return prev;
+                }
+                return prev.map((e) =>
+                    e.id === replaceId
+                        ? {
+                              ...entry,
+                              inline_submitted_at:
+                                  entry.inline_submitted_at ?? null,
+                          }
+                        : e,
+                );
+            });
+            if (
+                context?.replaceClientId != null &&
+                context.replaceClientId < 0
+            ) {
+                setShiftSummaryState((s) => ({
+                    ...s,
+                    [entry.shift]: (s[entry.shift] ?? 0) + 1,
+                }));
+            }
+        },
+        [],
+    );
+
+    const handleEntryDeleted = useCallback((id: number) => {
+        const isLocalOnly = id < 0;
+        let removedShift: number | undefined;
+        setEntries((prev) => {
+            const removed = prev.find((e) => e.id === id);
+            if (removed != null) {
+                removedShift = removed.shift;
+            }
+            return prev.filter((e) => e.id !== id);
+        });
+        if (!isLocalOnly && removedShift !== undefined) {
+            setShiftSummaryState((s) => ({
+                ...s,
+                [removedShift]: Math.max(0, (s[removedShift] ?? 0) - 1),
+            }));
         }
-    };
-
-    const handleEntryUpdated = (entry: DailyVehicleEntry) => {
-        setEntries((prev) =>
-            prev.some((e) => e.id === entry.id)
-                ? prev.map((e) => (e.id === entry.id ? entry : e))
-                : prev,
-        );
-    };
-
-    const handleEntryDeleted = (id: number) => {
-        setEntries((prev) => prev.filter((e) => e.id !== id));
-    };
+    }, []);
 
     const handleExport = async () => {
         setIsExporting(true);
@@ -598,9 +685,15 @@ export default function DailyVehicleEntriesIndex({
                             <div className="flex items-center gap-2">
                                 <span className="text-sm text-muted-foreground">
                                     Your shift:{' '}
-                                    {sidings.find(
-                                        (s) => s.id === effectiveSidingId,
-                                    )?.name ?? '—'}{' '}
+                                    {(() => {
+                                        const s = sidings.find(
+                                            (x) =>
+                                                x.id === effectiveSidingId,
+                                        );
+                                        return s != null
+                                            ? sidingDisplayLabel(s)
+                                            : '—';
+                                    })()}{' '}
                                     · Shift {activeShiftState}
                                 </span>
                                 {canExport && (
@@ -625,10 +718,10 @@ export default function DailyVehicleEntriesIndex({
                     shiftCountdown &&
                     shiftCountdown.secondsLeft > 0 && (
                         <div
-                            className={`flex flex-wrap items-center gap-2 rounded-md border px-3 py-2 text-xs ${
+                            className={`sticky top-0 z-30 flex flex-wrap items-center gap-2 rounded-md border px-3 py-2 text-xs backdrop-blur-sm ${
                                 shiftCountdown.warning
-                                    ? 'border-amber-300 bg-amber-50 text-amber-900'
-                                    : 'border-muted bg-background text-muted-foreground'
+                                    ? 'border-amber-300 bg-amber-50/95 text-amber-900'
+                                    : 'border-muted bg-background/95 text-muted-foreground'
                             }`}
                         >
                             <span className="font-medium">Shift ends in</span>
@@ -637,30 +730,33 @@ export default function DailyVehicleEntriesIndex({
                             </span>
                             {shiftCountdown.warning && (
                                 <span className="ml-auto text-amber-800">
-                                    Please finish your entries. Page will
-                                    switch/reload when shift completes.
+                                    Please finish your entries. The page will
+                                    reload when this window ends.
                                 </span>
                             )}
                         </div>
                     )}
 
-                {/* Date filter, shift summary, shift times, shift tabs: only for superadmin / dispatch-manage-admin */}
                 {!restrictToAssignedShift && (
                     <>
                         <Card className="gap-3 p-3">
                             <CardContent className="mx-0 px-0 pt-0 pb-0">
                                 <div className="flex flex-wrap items-center gap-3">
-                                    <div className="flex items-center gap-2">
-                                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                                        <Input
-                                            type="date"
-                                            value={selectedDate}
-                                            onChange={(e) =>
-                                                handleDateChange(e.target.value)
-                                            }
-                                            className="h-8 w-auto"
-                                        />
-                                    </div>
+                                    {canBypassShiftLock && (
+                                        <div className="flex items-center gap-2">
+                                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                                            <Input
+                                                type="date"
+                                                value={selectedDate}
+                                                onChange={(e) =>
+                                                    handleDateChange(
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="h-8 w-auto"
+                                            />
+                                        </div>
+                                    )}
                                     <div className="ml-auto flex flex-wrap items-center gap-2">
                                         {allowedShifts.map((shift) => (
                                             <Badge
@@ -677,7 +773,7 @@ export default function DailyVehicleEntriesIndex({
                                                     : shift === 2
                                                       ? '2ND'
                                                       : '3RD'}
-                                                : {shiftSummary[shift] || 0}
+                                                : {shiftSummaryState[shift] || 0}
                                             </Badge>
                                         ))}
                                     </div>
@@ -703,10 +799,12 @@ export default function DailyVehicleEntriesIndex({
                         <ShiftTabs
                             activeShift={activeShiftState}
                             onShiftChange={handleShiftChange}
-                            shiftSummary={shiftSummary}
+                            shiftSummary={shiftSummaryState}
                             shiftStatus={shiftStatus}
                             shiftTimes={shiftTimes}
                             allowedShifts={allowedShifts}
+                            lockTabsByTime={lockTabsByTime}
+                            timeEditableShift={timeEditableShift}
                         />
                     </>
                 )}
@@ -719,23 +817,23 @@ export default function DailyVehicleEntriesIndex({
                     entries={entriesForSiding}
                     date={selectedDate}
                     shift={activeShiftState}
-                    canCreate={canCreate && !isShiftLocked}
-                    canUpdate={canUpdate && !isShiftLocked}
-                    canDelete={canDelete && !isShiftLocked}
+                    canCreate={canCreate && !effectiveTableLocked}
+                    canUpdate={canUpdate && !effectiveTableLocked}
+                    canDelete={canDelete && !effectiveTableLocked}
+                    canAddAnotherRow={canAddAnotherRow}
                     onEntryUpdated={handleEntryUpdated}
                     onEntryDeleted={handleEntryDeleted}
                     onAddRow={handleAddRow}
-                    isAddingRow={isAddingRow}
                     addRowButton={
                         <>
-                            {canCreate && !isShiftLocked && (
+                            {canCreate && !effectiveTableLocked && (
                                 <Button
                                     onClick={() => handleAddRow(5)}
-                                    disabled={isAddingRow}
+                                    disabled={!canAddAnotherRow}
                                     className="flex items-center gap-2"
                                 >
                                     <Plus className="h-4 w-4" />
-                                    {isAddingRow ? 'Adding...' : 'Add 5 Rows'}
+                                    Add 5 Rows
                                 </Button>
                             )}
                             {addRowError && (

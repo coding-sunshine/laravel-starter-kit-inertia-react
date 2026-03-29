@@ -55,6 +55,18 @@ function shiftEndsAt(
     return end;
 }
 
+function shiftGraceEndAt(
+    now: Date,
+    shift: number,
+    shiftTimes: Record<number, { start: string; end: string }>,
+): Date | null {
+    const end = shiftEndsAt(now, shift, shiftTimes);
+    if (!end) {
+        return null;
+    }
+    return new Date(end.getTime() + 5 * 60 * 1000);
+}
+
 function formatCountdown(totalSeconds: number): string {
     const s = Math.max(0, Math.floor(totalSeconds));
     const mm = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
@@ -123,6 +135,8 @@ interface Props {
         nextShiftStartAt: string | null;
         now: string;
     } | null;
+    timeEditableShift?: number | null;
+    shiftGraceEndsAtIso?: string | null;
 }
 
 export default function RailwaySidingEmptyWeighmentIndex({
@@ -138,6 +152,8 @@ export default function RailwaySidingEmptyWeighmentIndex({
     restrictToAssignedShift = false,
     canBypassShiftLock = false,
     shiftLock = null,
+    timeEditableShift = null,
+    shiftGraceEndsAtIso = null,
 }: Props) {
     const [entries, setEntries] = useState(() =>
         Array.isArray(entriesProp) ? entriesProp : [],
@@ -170,9 +186,22 @@ export default function RailwaySidingEmptyWeighmentIndex({
             ? entries
             : entries.filter((e) => e.siding_id === effectiveSidingId);
 
+    const isSelectedToday = selectedDate === toIsoDate(new Date());
+    const lockTabsByTime = !canBypassShiftLock && isSelectedToday;
+    const tableLockedByWrongShift =
+        lockTabsByTime &&
+        typeof timeEditableShift === 'number' &&
+        activeShiftState !== timeEditableShift;
+    const effectiveTableLocked = isShiftLocked || tableLockedByWrongShift;
+
     useEffect(() => {
         setEntries(Array.isArray(entriesProp) ? entriesProp : []);
     }, [entriesProp]);
+
+    useEffect(() => {
+        setActiveShiftState(activeShift);
+        setExportShift(String(activeShift));
+    }, [activeShift]);
 
     useEffect(() => {
         if (sidingIdProp !== undefined && sidingIdProp !== null) {
@@ -197,9 +226,15 @@ export default function RailwaySidingEmptyWeighmentIndex({
             setShiftCountdown(null);
             return;
         }
+        if (timeEditableShift === null) {
+            setShiftCountdown(null);
+            return;
+        }
 
-        const end = shiftEndsAt(now, activeShiftState, shiftTimes);
-        if (!end) {
+        const end = shiftGraceEndsAtIso
+            ? new Date(shiftGraceEndsAtIso)
+            : shiftGraceEndAt(now, activeShiftState, shiftTimes);
+        if (!end || Number.isNaN(end.getTime())) {
             setShiftCountdown(null);
             return;
         }
@@ -217,28 +252,6 @@ export default function RailwaySidingEmptyWeighmentIndex({
             });
 
             if (secondsLeft <= 0) {
-                const sorted = [...allowedShifts]
-                    .map(Number)
-                    .sort((a, b) => a - b);
-                const idx = sorted.indexOf(activeShiftState);
-                const next = idx >= 0 ? sorted[idx + 1] : null;
-
-                if (typeof next === 'number') {
-                    setActiveShiftState(next);
-                    setExportShift(String(next));
-                    const params: Record<string, string | number> = {
-                        date: selectedDate,
-                        shift: next,
-                    };
-                    if (effectiveSidingId != null)
-                        params.siding_id = effectiveSidingId;
-                    router.get('/railway-siding-empty-weighment', params, {
-                        preserveState: false,
-                        preserveScroll: true,
-                    });
-                    return;
-                }
-
                 router.reload({ preserveState: false, preserveScroll: true });
             }
         };
@@ -247,12 +260,12 @@ export default function RailwaySidingEmptyWeighmentIndex({
         const id = window.setInterval(tick, 1000);
         return () => window.clearInterval(id);
     }, [
-        allowedShifts,
         activeShiftState,
         canBypassShiftLock,
-        effectiveSidingId,
         selectedDate,
+        shiftGraceEndsAtIso,
         shiftTimes,
+        timeEditableShift,
     ]);
 
     const breadcrumbs: BreadcrumbItem[] = [
@@ -274,18 +287,16 @@ export default function RailwaySidingEmptyWeighmentIndex({
     };
 
     const handleShiftChange = (shift: number) => {
-        if (
-            shiftStatus &&
-            selectedDate === new Date().toISOString().split('T')[0]
-        ) {
-            if (!shiftStatus[shift]?.is_available) {
-                const messages: Record<number, string> = {
-                    2: `2nd shift will be available after 1st shift completion (after ${shiftTimes[1]?.end ?? '08:00'})`,
-                    3: `3rd shift will be available after 2nd shift completion (after ${shiftTimes[2]?.end ?? '16:00'})`,
-                };
+        if (lockTabsByTime) {
+            if (timeEditableShift === null) {
                 alert(
-                    messages[shift] ||
-                        'This shift is not available at the current time.',
+                    'No shift is active for your assignment at the current time.',
+                );
+                return;
+            }
+            if (shift !== timeEditableShift) {
+                alert(
+                    'You can only open the shift that is currently active for your assignment (including the grace period).',
                 );
                 return;
             }
@@ -307,31 +318,13 @@ export default function RailwaySidingEmptyWeighmentIndex({
     const handleAddRow = async (count: number = 1) => {
         if (addingRowRef.current) return;
         addingRowRef.current = true;
-        if (isShiftLocked) {
+        if (effectiveTableLocked) {
             alert(
                 shiftLock?.message ||
                     'Your shift is not active yet (or has ended).',
             );
             addingRowRef.current = false;
             return;
-        }
-        if (
-            shiftStatus &&
-            selectedDate === new Date().toISOString().split('T')[0]
-        ) {
-            if (!shiftStatus[activeShiftState]?.is_available) {
-                const messages: Record<number, string> = {
-                    1: `1st shift is only available between ${shiftTimes[1]?.start ?? '00:01'} - ${shiftTimes[1]?.end ?? '08:00'}`,
-                    2: `2nd shift will be available after 1st shift completion (after ${shiftTimes[1]?.end ?? '08:00'})`,
-                    3: `3rd shift will be available after 2nd shift completion (after ${shiftTimes[2]?.end ?? '16:00'})`,
-                };
-                alert(
-                    messages[activeShiftState] ||
-                        'This shift is not available at the current time.',
-                );
-                addingRowRef.current = false;
-                return;
-            }
         }
 
         setAddRowError(null);
@@ -591,7 +584,7 @@ export default function RailwaySidingEmptyWeighmentIndex({
                             {shiftCountdown.warning && (
                                 <span className="ml-auto text-amber-800">
                                     Please finish your entries. Page will
-                                    switch/reload when shift completes.
+                                    reload when this window ends.
                                 </span>
                             )}
                         </div>
@@ -602,17 +595,21 @@ export default function RailwaySidingEmptyWeighmentIndex({
                         <Card className="gap-3 p-3">
                             <CardContent className="mx-0 px-0 pt-0 pb-0">
                                 <div className="flex flex-wrap items-center gap-3">
-                                    <div className="flex items-center gap-2">
-                                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                                        <Input
-                                            type="date"
-                                            value={selectedDate}
-                                            onChange={(e) =>
-                                                handleDateChange(e.target.value)
-                                            }
-                                            className="h-8 w-auto"
-                                        />
-                                    </div>
+                                    {canBypassShiftLock && (
+                                        <div className="flex items-center gap-2">
+                                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                                            <Input
+                                                type="date"
+                                                value={selectedDate}
+                                                onChange={(e) =>
+                                                    handleDateChange(
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="h-8 w-auto"
+                                            />
+                                        </div>
+                                    )}
                                     <div className="ml-auto flex flex-wrap items-center gap-2">
                                         {allowedShifts.map((shift) => (
                                             <Badge
@@ -659,6 +656,8 @@ export default function RailwaySidingEmptyWeighmentIndex({
                             shiftStatus={shiftStatus}
                             shiftTimes={shiftTimes}
                             allowedShifts={allowedShifts}
+                            lockTabsByTime={lockTabsByTime}
+                            timeEditableShift={timeEditableShift}
                         />
                     </>
                 )}
@@ -668,7 +667,7 @@ export default function RailwaySidingEmptyWeighmentIndex({
                     entries={entriesForSiding}
                     date={selectedDate}
                     shift={activeShiftState}
-                    isLocked={isShiftLocked}
+                    isLocked={effectiveTableLocked}
                     onEntryUpdated={handleEntryUpdated}
                     onEntryDeleted={handleEntryDeleted}
                     onAddRow={handleAddRow}
@@ -677,7 +676,7 @@ export default function RailwaySidingEmptyWeighmentIndex({
                         <>
                             <Button
                                 onClick={() => handleAddRow(5)}
-                                disabled={isAddingRow || isShiftLocked}
+                                disabled={isAddingRow || effectiveTableLocked}
                                 className="flex items-center gap-2"
                             >
                                 <Plus className="h-4 w-4" />

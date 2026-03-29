@@ -14,9 +14,22 @@ interface ShiftTabsProps {
   shiftStatus?: Record<number, ShiftStatus>;
   shiftTimes?: Record<number, { start: string; end: string }>;
   allowedShifts?: number[];
+  /** When true (today + non-admin), only {@see timeEditableShift} tab is clickable; others stay visible but disabled. */
+  lockTabsByTime?: boolean;
+  /** Shift number allowed for the current wall-clock window, or null when none (fully locked). */
+  timeEditableShift?: number | null;
 }
 
-export default function ShiftTabs({ activeShift, onShiftChange, shiftSummary, shiftStatus, shiftTimes, allowedShifts = [1, 2, 3] }: ShiftTabsProps) {
+export default function ShiftTabs({
+  activeShift,
+  onShiftChange,
+  shiftSummary,
+  shiftStatus,
+  shiftTimes,
+  allowedShifts = [1, 2, 3],
+  lockTabsByTime = false,
+  timeEditableShift = null,
+}: ShiftTabsProps) {
   const allShifts = [
     { id: 1, label: '1ST SHIFT' },
     { id: 2, label: '2ND SHIFT' },
@@ -31,12 +44,27 @@ export default function ShiftTabs({ activeShift, onShiftChange, shiftSummary, sh
   };
 
   const getShiftDisabled = (shiftId: number) => {
+    if (lockTabsByTime) {
+      if (timeEditableShift === null) {
+        return true;
+      }
+      return shiftId !== timeEditableShift;
+    }
     return shiftStatus ? !shiftStatus[shiftId]?.is_available : false;
   };
 
   const getShiftTitle = (shiftId: number) => {
+    if (lockTabsByTime) {
+      if (timeEditableShift === null) {
+        return 'No shift is active for your assignment right now';
+      }
+      if (shiftId !== timeEditableShift) {
+        return 'Available only during this shift scheduled time (including grace period)';
+      }
+      return 'Current editable shift for your assignment';
+    }
     if (!shiftStatus) return '';
-    
+
     const status = shiftStatus[shiftId];
     if (status.is_active) return 'Current active shift';
     if (!status.is_available) {

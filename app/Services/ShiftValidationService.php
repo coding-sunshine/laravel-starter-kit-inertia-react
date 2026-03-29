@@ -11,6 +11,9 @@ use Illuminate\Support\Collection;
 
 final readonly class ShiftValidationService
 {
+    /** Minutes after nominal shift end when operators may still finish entries. */
+    public const SHIFT_END_GRACE_MINUTES = 5;
+
     /**
      * Fallback when no siding shifts exist in DB (e.g. before seed).
      * Client timings: 1st 12:01 AM–08:00 AM, 2nd 08:01 AM–04:00 PM, 3rd 04:01 PM–12:00 AM
@@ -86,6 +89,126 @@ final readonly class ShiftValidationService
         $currentTime = $now->format('H:i');
 
         return $this->isTimeInRange($currentTime, $times[$shift]['start'], $times[$shift]['end']);
+    }
+
+    /**
+     * Whether {@see $now} falls in [nominal start, nominal end + grace] for this shift (wall-clock).
+     * Overnight shifts (start time > end time) use the segment that spans midnight.
+     */
+    public function isShiftWithinExtendedWindow(int $shift, ?Carbon $dateTime = null, ?int $sidingId = null, int $graceMinutes = self::SHIFT_END_GRACE_MINUTES): bool
+    {
+        $times = $this->getShiftTimesForSiding($sidingId);
+        if (! isset($times[$shift])) {
+            return false;
+        }
+
+        $now = $dateTime ?? Carbon::now();
+        $start = $times[$shift]['start'];
+        $end = $times[$shift]['end'];
+
+        if ($start > $end) {
+            return $this->isNowInOvernightExtendedWindow($now, $start, $end, $graceMinutes);
+        }
+
+        $day = $now->copy()->startOfDay();
+        $windowStart = $this->timeOnCalendarDay($day, $start);
+        $windowEnd = $this->timeOnCalendarDay($day, $end)->addMinutes($graceMinutes);
+
+        return $now->greaterThanOrEqualTo($windowStart) && $now->lessThanOrEqualTo($windowEnd);
+    }
+
+    /**
+     * Among assigned shift numbers, the single editable shift for time-lock UX: lowest shift whose
+     * extended window contains {@see $now}. Null if none.
+     *
+     * @param  array<int, int>  $allowedShiftOrders
+     */
+    public function resolveEditableShiftForAssignments(array $allowedShiftOrders, ?int $sidingId = null, ?Carbon $dateTime = null, int $graceMinutes = self::SHIFT_END_GRACE_MINUTES): ?int
+    {
+        $now = $dateTime ?? Carbon::now();
+        $orders = collect($allowedShiftOrders)
+            ->map(fn (mixed $s): int => (int) $s)
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+
+        $candidates = [];
+        foreach ($orders as $order) {
+            if ($this->isShiftWithinExtendedWindow($order, $now, $sidingId, $graceMinutes)) {
+                $candidates[] = $order;
+            }
+        }
+
+        if ($candidates === []) {
+            return null;
+        }
+
+        return min($candidates);
+    }
+
+    /**
+     * Inclusive end instant of the extended window that contains {@see $now} for this shift, if any.
+     */
+    public function getContainingExtendedWindowEnd(int $shift, ?Carbon $dateTime = null, ?int $sidingId = null, int $graceMinutes = self::SHIFT_END_GRACE_MINUTES): ?Carbon
+    {
+        if (! $this->isShiftWithinExtendedWindow($shift, $dateTime, $sidingId, $graceMinutes)) {
+            return null;
+        }
+
+        $times = $this->getShiftTimesForSiding($sidingId);
+        if (! isset($times[$shift])) {
+            return null;
+        }
+
+        $now = $dateTime ?? Carbon::now();
+        $start = $times[$shift]['start'];
+        $end = $times[$shift]['end'];
+
+        if ($start > $end) {
+            return $this->getOvernightExtendedWindowEndContaining($now, $start, $end, $graceMinutes);
+        }
+
+        $day = $now->copy()->startOfDay();
+
+        return $this->timeOnCalendarDay($day, $end)->addMinutes($graceMinutes);
+    }
+
+    /**
+     * Next instant (strictly after {@see $now}) when any assigned shift's extended window starts.
+     *
+     * @param  array<int, int>  $allowedShiftOrders
+     */
+    public function getNextAssignedShiftWindowStartAfter(
+        Carbon $now,
+        int $sidingId,
+        array $allowedShiftOrders,
+        int $graceMinutes = self::SHIFT_END_GRACE_MINUTES
+    ): ?Carbon {
+        $orders = collect($allowedShiftOrders)
+            ->map(fn (mixed $s): int => (int) $s)
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+
+        if ($orders === []) {
+            return null;
+        }
+
+        $candidates = [];
+        foreach ($orders as $shift) {
+            $next = $this->getNextShiftNominalStartAfter($now, $sidingId, $shift, $graceMinutes);
+            if ($next instanceof Carbon) {
+                $candidates[] = $next;
+            }
+        }
+
+        if ($candidates === []) {
+            return null;
+        }
+
+        return collect($candidates)->sortBy(fn (Carbon $c): int => $c->getTimestamp())->first();
     }
 
     /**
@@ -211,5 +334,100 @@ final readonly class ShiftValidationService
         }
 
         return $currentTime >= $startTime && $currentTime < $endTime;
+    }
+
+    private function timeOnCalendarDay(Carbon $dayStart, string $hi): Carbon
+    {
+        $parts = explode(':', $hi);
+        $hour = (int) ($parts[0] ?? 0);
+        $minute = (int) ($parts[1] ?? 0);
+
+        return $dayStart->copy()->startOfDay()->setTime($hour, $minute, 0);
+    }
+
+    private function isNowInOvernightExtendedWindow(Carbon $now, string $start, string $end, int $graceMinutes): bool
+    {
+        $today = $now->copy()->startOfDay();
+        $yesterday = $today->copy()->subDay();
+        $tomorrow = $today->copy()->addDay();
+
+        $w1Start = $this->timeOnCalendarDay($yesterday, $start);
+        $w1End = $this->timeOnCalendarDay($today, $end)->addMinutes($graceMinutes);
+        if ($now->greaterThanOrEqualTo($w1Start) && $now->lessThanOrEqualTo($w1End)) {
+            return true;
+        }
+
+        $w2Start = $this->timeOnCalendarDay($today, $start);
+        $w2End = $this->timeOnCalendarDay($tomorrow, $end)->addMinutes($graceMinutes);
+
+        return $now->greaterThanOrEqualTo($w2Start) && $now->lessThanOrEqualTo($w2End);
+    }
+
+    private function getOvernightExtendedWindowEndContaining(Carbon $now, string $start, string $end, int $graceMinutes): ?Carbon
+    {
+        $today = $now->copy()->startOfDay();
+        $yesterday = $today->copy()->subDay();
+        $tomorrow = $today->copy()->addDay();
+
+        $w1Start = $this->timeOnCalendarDay($yesterday, $start);
+        $w1End = $this->timeOnCalendarDay($today, $end)->addMinutes($graceMinutes);
+        if ($now->greaterThanOrEqualTo($w1Start) && $now->lessThanOrEqualTo($w1End)) {
+            return $w1End;
+        }
+
+        $w2Start = $this->timeOnCalendarDay($today, $start);
+        $w2End = $this->timeOnCalendarDay($tomorrow, $end)->addMinutes($graceMinutes);
+        if ($now->greaterThanOrEqualTo($w2Start) && $now->lessThanOrEqualTo($w2End)) {
+            return $w2End;
+        }
+
+        return null;
+    }
+
+    private function getNextShiftNominalStartAfter(Carbon $now, int $sidingId, int $shift, int $graceMinutes): ?Carbon
+    {
+        $times = $this->getShiftTimesForSiding($sidingId);
+        if (! isset($times[$shift])) {
+            return null;
+        }
+
+        $start = $times[$shift]['start'];
+        $end = $times[$shift]['end'];
+
+        if ($start > $end) {
+            return $this->getNextOvernightShiftStartAfter($now, $start, $end);
+        }
+
+        for ($i = 0; $i < 4; $i++) {
+            $day = $now->copy()->startOfDay()->addDays($i);
+            $windowStart = $this->timeOnCalendarDay($day, $start);
+            $windowEndGrace = $this->timeOnCalendarDay($day, $end)->addMinutes($graceMinutes);
+            if ($now->lessThan($windowStart)) {
+                return $windowStart;
+            }
+            if ($now->lessThanOrEqualTo($windowEndGrace)) {
+                return null;
+            }
+        }
+
+        return $this->timeOnCalendarDay($now->copy()->startOfDay()->addDays(4), $start);
+    }
+
+    private function getNextOvernightShiftStartAfter(Carbon $now, string $start, string $end): ?Carbon
+    {
+        if ($this->isNowInOvernightExtendedWindow($now, $start, $end, self::SHIFT_END_GRACE_MINUTES)) {
+            return null;
+        }
+
+        $best = null;
+        for ($i = -2; $i <= 6; $i++) {
+            $day = $now->copy()->startOfDay()->addDays($i);
+            $candidate = $this->timeOnCalendarDay($day, $start);
+            if ($candidate->greaterThan($now) && ($best === null || $candidate->lessThan($best))) {
+                $best = $candidate->copy();
+            }
+        }
+
+        return $best;
     }
 }

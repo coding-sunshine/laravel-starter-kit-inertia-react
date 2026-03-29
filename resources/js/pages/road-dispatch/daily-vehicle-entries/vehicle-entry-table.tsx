@@ -1,32 +1,67 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import VehicleEntryRow from './vehicle-entry-row';
+import { cn } from '@/lib/utils';
+import { Maximize2, Minimize2 } from 'lucide-react';
+import VehicleEntryRow, { type DailyVehicleEntry } from './vehicle-entry-row';
 
-interface DailyVehicleEntry {
-  id: number;
-  siding_id: number;
-  siding?: {
-    id: number;
-    name: string;
-  };
-  entry_date: string;
-  shift: number;
-  e_challan_no: string | null;
-  vehicle_no: string | null;
-  trip_id_no: string | null;
-  transport_name: string | null;
-  gross_wt: number | null;
-  tare_wt: number | null;
-  tare_wt_two: number | null;
-  reached_at: string | null;
-  wb_no: string | null;
-  d_challan_no: string | null;
-  challan_mode: 'offline' | 'online' | null;
-  status: 'draft' | 'completed';
-  created_by: number;
-  updated_by: number | null;
-  created_at: string;
-  updated_at: string;
+export type { DailyVehicleEntry };
+
+/** Extra blank slots below data rows (click to add). */
+const PLACEHOLDER_ROWS_BELOW_DATA = 100;
+
+const emptyCellClass = 'min-h-[4rem] px-2 py-3 border-t border-r border-gray-300';
+const emptyCellClassLast = 'min-h-[4rem] px-2 py-3 border-t border-gray-300';
+
+const EmptyPlaceholderRow = React.memo(function EmptyPlaceholderRow({
+  allowAddInteraction,
+  isAddingRow,
+  onAddRow,
+}: {
+  allowAddInteraction: boolean;
+  isAddingRow: boolean;
+  onAddRow?: (count: number) => void;
+}) {
+  return (
+    <TableRow
+      className={
+        !allowAddInteraction || isAddingRow
+          ? 'opacity-60'
+          : 'cursor-pointer hover:bg-gray-50'
+      }
+      onClick={() => {
+        if (allowAddInteraction && onAddRow && !isAddingRow) {
+          onAddRow(1);
+        }
+      }}
+    >
+      <TableCell className={`${emptyCellClass} text-center`} />
+      <TableCell className={emptyCellClass} />
+      <TableCell className={emptyCellClass} />
+      <TableCell className={emptyCellClass} />
+      <TableCell className={emptyCellClass} />
+      <TableCell className={emptyCellClass} />
+      <TableCell className={emptyCellClass} />
+      <TableCell className={emptyCellClass} />
+      <TableCell className={emptyCellClass} />
+      <TableCell className={emptyCellClass} />
+      <TableCell className={emptyCellClass} />
+      <TableCell className={emptyCellClass} />
+      <TableCell className={emptyCellClass} />
+      <TableCell className={emptyCellClass} />
+      <TableCell className={emptyCellClassLast} />
+    </TableRow>
+  );
+});
+
+/** Net MT for an entry (matches row display: stored net_wt when set, else gross − tare). */
+function entryNetWeightMt(entry: DailyVehicleEntry): number {
+  if (entry.net_wt != null && entry.net_wt !== undefined) {
+    return Number(entry.net_wt);
+  }
+  const gross = parseFloat(entry.gross_wt?.toString() || '0') || 0;
+  const tare = parseFloat(entry.tare_wt?.toString() || '0') || 0;
+  return gross - tare;
 }
 
 interface VehicleEntryTableProps {
@@ -36,11 +71,15 @@ interface VehicleEntryTableProps {
   canCreate?: boolean;
   canUpdate?: boolean;
   canDelete?: boolean;
-  onEntryUpdated?: (entry: DailyVehicleEntry) => void;
+  /** When false, user must submit the last row before adding another. */
+  canAddAnotherRow?: boolean;
+  onEntryUpdated?: (entry: DailyVehicleEntry, context?: { replaceClientId?: number }) => void;
   onEntryDeleted?: (id: number) => void;
   addRowButton?: React.ReactNode;
   onAddRow?: (count: number) => void;
   isAddingRow?: boolean;
+  /** Shown at the top of the fullscreen overlay (e.g. shift countdown). Ignored when not fullscreen. */
+  fullscreenTopContent?: React.ReactNode;
 }
 
 export default function VehicleEntryTable({
@@ -50,70 +89,99 @@ export default function VehicleEntryTable({
   canCreate = false,
   canUpdate = false,
   canDelete = false,
+  canAddAnotherRow = true,
   onEntryUpdated,
   onEntryDeleted,
   addRowButton,
   onAddRow,
   isAddingRow = false,
 }: VehicleEntryTableProps) {
-  const totalEntries = entries.length;
-  
-  // Check if the selected date is today
-  const isToday = date === new Date().toISOString().split('T')[0];
-  
-  // Calculate side-wise totals
-  const sideWiseTotals = entries.reduce((acc, entry) => {
-    const sidingName = entry.siding?.name || 'Unknown Siding';
-    const gross = parseFloat(entry.gross_wt?.toString() || '0') || 0;
-    const tare = parseFloat(entry.tare_wt?.toString() || '0') || 0;
-    const net = gross - tare;
-    
-    if (!acc[sidingName]) {
-      acc[sidingName] = {
-        totalGross: 0,
-        totalNet: 0,
-        count: 0
-      };
-    }
-    
-    acc[sidingName].totalGross += gross;
-    acc[sidingName].totalNet += net;
-    acc[sidingName].count += 1;
-    
-    return acc;
-  }, {} as Record<string, { totalGross: number; totalNet: number; count: number }>);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Calculate overall totals
-  const totalGrossWeight = entries.reduce((sum, entry) => {
-    return sum + (parseFloat(entry.gross_wt?.toString() || '0') || 0);
-  }, 0);
-  
-  const totalNetWeight = entries.reduce((sum, entry) => {
-    const gross = parseFloat(entry.gross_wt?.toString() || '0') || 0;
-    const tare = parseFloat(entry.tare_wt?.toString() || '0') || 0;
-    return sum + (gross - tare);
-  }, 0);
-  
-  const totalRows = Math.max(totalEntries, 100);
+  useEffect(() => {
+    if (!isFullscreen) {
+      return;
+    }
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isFullscreen]);
+
+  useEffect(() => {
+    if (!isFullscreen) {
+      return;
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsFullscreen(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isFullscreen]);
+
+  const totalEntries = entries.length;
+
+  const totalTrips = entries.filter(
+    (e) => e.status === 'completed' && entryNetWeightMt(e) > 0,
+  ).length;
+
+  const totalNetWeight = entries.reduce((sum, entry) => sum + entryNetWeightMt(entry), 0);
+
+  const allowAddInteraction = canCreate && canAddAnotherRow;
 
   return (
-    <div className="overflow-x-auto">
-      {/* Top strip: totals only */}
-      <div className="border border-gray-300 border-b-0 px-2 py-1 flex flex-wrap items-center justify-end gap-4 text-[11px] bg-white">
-        <span>
-          Rows: <span className="font-semibold">{totalEntries}</span>
-        </span>
-        <span>
-          Total Gross:{' '}
-          <span className="font-semibold">{totalGrossWeight.toFixed(2)}</span>
-        </span>
-        <span>
-          Total Net:{' '}
-          <span className="font-semibold">{totalNetWeight.toFixed(2)}</span>
-        </span>
+    <div
+      className={cn(
+        'flex flex-col',
+        isFullscreen
+          ? 'fixed inset-0 z-[100] overflow-hidden bg-background p-3 shadow-2xl md:p-4'
+          : 'relative',
+      )}
+      role={isFullscreen ? 'dialog' : undefined}
+      aria-label={isFullscreen ? 'Vehicle entries (full screen)' : undefined}
+    >
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border border-gray-300 border-b-0 bg-white px-2 py-2 text-[11px]">
+        <div className="flex flex-wrap items-center gap-4">
+          <span>
+            Total trips: <span className="font-semibold">{totalTrips}</span>
+          </span>
+          <span>
+            Total Net:{' '}
+            <span className="font-semibold">{totalNetWeight.toFixed(2)}</span>
+          </span>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-8 gap-1.5 text-xs"
+          onClick={() => setIsFullscreen((open) => !open)}
+          data-pan="daily-vehicle-entries-table-fullscreen"
+        >
+          {isFullscreen ? (
+            <>
+              <Minimize2 className="h-3.5 w-3.5" aria-hidden />
+              <span>Exit full screen</span>
+            </>
+          ) : (
+            <>
+              <Maximize2 className="h-3.5 w-3.5" aria-hidden />
+              <span>Full screen</span>
+            </>
+          )}
+        </Button>
       </div>
 
-      <Table className="text-xs border border-gray-300 border-collapse">
+      <div
+        className={cn(
+          'min-h-0 bg-white',
+          isFullscreen ? 'flex-1 overflow-auto' : 'overflow-x-auto',
+        )}
+      >
+        <Table className="w-full border-collapse border border-gray-300 border-t-0 text-xs">
         <TableHeader>
           <TableRow>
             <TableHead className="w-12 min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">SL NO</TableHead>
@@ -129,63 +197,37 @@ export default function VehicleEntryTable({
             <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">WB No</TableHead>
             <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">D Challan No</TableHead>
             <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">Challan Mode</TableHead>
-            <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center">Status</TableHead>
+            <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">Status</TableHead>
+            <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {Array.from({ length: totalRows }).map((_, index) => {
-            if (index < totalEntries) {
-              const entry = entries[index];
-
-              return (
-                <VehicleEntryRow
-                  key={entry.id}
-                  entry={entry}
-                  serialNumber={index + 1}
-                  date={date}
-                  shift={shift}
-                  canUpdate={canUpdate}
-                  canDelete={canDelete}
-                  onEntryUpdated={onEntryUpdated}
-                  onEntryDeleted={onEntryDeleted}
-                />
-              );
-            }
-
-            const emptyCellClass = 'min-h-[4rem] px-2 py-3 border-t border-r border-gray-300';
-            const emptyCellClassLast = 'min-h-[4rem] px-2 py-3 border-t border-gray-300';
-            return (
-              <TableRow
-                key={`empty-${index}`}
-                className={isAddingRow ? 'opacity-60' : 'cursor-pointer hover:bg-gray-50'}
-                onClick={() => {
-                  if (canCreate && onAddRow && !isAddingRow) {
-                    onAddRow(1);
-                  }
-                }}
-              >
-                <TableCell className={`${emptyCellClass} text-center`} />
-                <TableCell className={emptyCellClass} />
-                <TableCell className={emptyCellClass} />
-                <TableCell className={emptyCellClass} />
-                <TableCell className={emptyCellClass} />
-                <TableCell className={emptyCellClass} />
-                <TableCell className={emptyCellClass} />
-                <TableCell className={emptyCellClass} />
-                <TableCell className={emptyCellClass} />
-                <TableCell className={emptyCellClass} />
-                <TableCell className={emptyCellClass} />
-                <TableCell className={emptyCellClass} />
-                <TableCell className={emptyCellClass} />
-                <TableCell className={emptyCellClassLast} />
-              </TableRow>
-            );
-          })}
+          {entries.map((entry, index) => (
+            <VehicleEntryRow
+              key={entry.id}
+              entry={entry}
+              serialNumber={index + 1}
+              date={date}
+              shift={shift}
+              canUpdate={canUpdate}
+              canDelete={canDelete}
+              onEntryUpdated={onEntryUpdated}
+              onEntryDeleted={onEntryDeleted}
+            />
+          ))}
+          {Array.from({ length: PLACEHOLDER_ROWS_BELOW_DATA }).map((_, i) => (
+            <EmptyPlaceholderRow
+              key={`placeholder-${totalEntries + i}`}
+              allowAddInteraction={allowAddInteraction}
+              isAddingRow={isAddingRow}
+              onAddRow={onAddRow}
+            />
+          ))}
         </TableBody>
-      </Table>
+        </Table>
+      </div>
 
-      {/* Add Row button at bottom */}
-      <div className="border border-gray-300 border-t-0 px-2 py-2 flex items-center justify-center bg-white">
+      <div className="flex shrink-0 items-center justify-center border border-gray-300 border-t-0 bg-white px-2 py-2">
         {canCreate ? addRowButton : null}
       </div>
     </div>
