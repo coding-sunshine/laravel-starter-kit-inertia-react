@@ -177,6 +177,7 @@ final class DailyVehicleEntryController extends Controller
             'shiftLock' => $shiftLock,
             'timeEditableShift' => $timeEditableShift,
             'shiftGraceEndsAtIso' => $shiftGraceEndsAtIso,
+            'showCreatedByColumn' => $user?->canViewAllRoadDispatchDailyVehicleEntries() ?? false,
         ]);
     }
 

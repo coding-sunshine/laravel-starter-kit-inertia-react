@@ -7,8 +7,8 @@ import VehicleEntryRow, { type DailyVehicleEntry } from './vehicle-entry-row';
 
 export type { DailyVehicleEntry };
 
-/** Extra blank slots below data rows (click to add). */
-const PLACEHOLDER_ROWS_BELOW_DATA = 100;
+/** Extra blank slots below data rows (click to add). Temporarily low for testing add-row UX. */
+const PLACEHOLDER_ROWS_BELOW_DATA = 5;
 
 const emptyCellClass = 'min-h-[4rem] px-2 py-3 border-t border-r border-gray-300';
 const emptyCellClassLast = 'min-h-[4rem] px-2 py-3 border-t border-gray-300';
@@ -17,20 +17,29 @@ const EmptyPlaceholderRow = React.memo(function EmptyPlaceholderRow({
   allowAddInteraction,
   isAddingRow,
   onAddRow,
+  staticOnly = false,
+  showCreatedByColumn = false,
 }: {
   allowAddInteraction: boolean;
   isAddingRow: boolean;
   onAddRow?: (count: number) => void;
+  /** Empty row with no click handler (spacing below an editable draft). */
+  staticOnly?: boolean;
+  showCreatedByColumn?: boolean;
 }) {
+  const clickable =
+    !staticOnly && allowAddInteraction && onAddRow && !isAddingRow;
   return (
     <TableRow
       className={
-        !allowAddInteraction || isAddingRow
-          ? 'opacity-60'
-          : 'cursor-pointer hover:bg-gray-50'
+        staticOnly
+          ? ''
+          : !allowAddInteraction || isAddingRow
+            ? 'opacity-60'
+            : 'cursor-pointer hover:bg-gray-50'
       }
       onClick={() => {
-        if (allowAddInteraction && onAddRow && !isAddingRow) {
+        if (clickable) {
           onAddRow(1);
         }
       }}
@@ -48,6 +57,7 @@ const EmptyPlaceholderRow = React.memo(function EmptyPlaceholderRow({
       <TableCell className={emptyCellClass} />
       <TableCell className={emptyCellClass} />
       <TableCell className={emptyCellClass} />
+      {showCreatedByColumn ? <TableCell className={emptyCellClass} /> : null}
       <TableCell className={emptyCellClass} />
       <TableCell className={emptyCellClassLast} />
     </TableRow>
@@ -78,6 +88,10 @@ interface VehicleEntryTableProps {
   addRowButton?: React.ReactNode;
   onAddRow?: (count: number) => void;
   isAddingRow?: boolean;
+  /** Non-interactive blank rows directly under the last data row (e.g. after “Add 5 rows”). */
+  plainRowsAfterLastEntry?: number;
+  /** Super-admin / dispatch-manage-admin: extra “Created by” column. */
+  showCreatedByColumn?: boolean;
   /** Shown at the top of the fullscreen overlay (e.g. shift countdown). Ignored when not fullscreen. */
   fullscreenTopContent?: React.ReactNode;
 }
@@ -95,6 +109,8 @@ export default function VehicleEntryTable({
   addRowButton,
   onAddRow,
   isAddingRow = false,
+  plainRowsAfterLastEntry = 0,
+  showCreatedByColumn = false,
 }: VehicleEntryTableProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -197,6 +213,11 @@ export default function VehicleEntryTable({
             <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">WB No</TableHead>
             <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">D Challan No</TableHead>
             <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">Challan Mode</TableHead>
+            {showCreatedByColumn ? (
+              <TableHead className="min-h-[4rem] h-14 min-w-[7rem] px-2 py-3 text-center border-r border-gray-300">
+                Created by
+              </TableHead>
+            ) : null}
             <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">Status</TableHead>
             <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center">Actions</TableHead>
           </TableRow>
@@ -213,6 +234,16 @@ export default function VehicleEntryTable({
               canDelete={canDelete}
               onEntryUpdated={onEntryUpdated}
               onEntryDeleted={onEntryDeleted}
+              showCreatedByColumn={showCreatedByColumn}
+            />
+          ))}
+          {Array.from({ length: plainRowsAfterLastEntry }).map((_, i) => (
+            <EmptyPlaceholderRow
+              key={`plain-tail-${totalEntries}-${i}`}
+              allowAddInteraction={false}
+              isAddingRow={false}
+              staticOnly
+              showCreatedByColumn={showCreatedByColumn}
             />
           ))}
           {Array.from({ length: PLACEHOLDER_ROWS_BELOW_DATA }).map((_, i) => (
@@ -221,6 +252,7 @@ export default function VehicleEntryTable({
               allowAddInteraction={allowAddInteraction}
               isAddingRow={isAddingRow}
               onAddRow={onAddRow}
+              showCreatedByColumn={showCreatedByColumn}
             />
           ))}
         </TableBody>

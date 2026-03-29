@@ -35,6 +35,10 @@ export interface DailyVehicleEntry {
   created_at: string;
   updated_at: string;
   inline_submitted_at: string | null;
+  creator?: {
+    id: number;
+    name: string;
+  } | null;
 }
 
 type VehicleLookupResponse = {
@@ -146,6 +150,11 @@ function formatChallanModeLabel(mode: string | null): string {
   return '—';
 }
 
+function formatCreatorLabel(entry: DailyVehicleEntry): string {
+  const name = entry.creator?.name?.trim();
+  return name && name.length > 0 ? name : '—';
+}
+
 interface VehicleEntryRowProps {
   entry: DailyVehicleEntry;
   serialNumber: number;
@@ -155,6 +164,7 @@ interface VehicleEntryRowProps {
   canDelete?: boolean;
   onEntryUpdated?: (entry: DailyVehicleEntry) => void;
   onEntryDeleted?: (id: number) => void;
+  showCreatedByColumn?: boolean;
 }
 
 function VehicleEntryRow({
@@ -166,6 +176,7 @@ function VehicleEntryRow({
   canDelete = false,
   onEntryUpdated,
   onEntryDeleted,
+  showCreatedByColumn = false,
 }: VehicleEntryRowProps) {
   const isLocalDraft = entry.id < 0;
   const [isSaving, setIsSaving] = useState(false);
@@ -441,6 +452,11 @@ function VehicleEntryRow({
             <TableCell className={readOnlyClass}>{entry.wb_no?.trim() || '—'}</TableCell>
             <TableCell className={readOnlyClass}>{entry.d_challan_no?.trim() || '—'}</TableCell>
             <TableCell className={readOnlyClass}>{formatChallanModeLabel(entry.challan_mode)}</TableCell>
+            {showCreatedByColumn ? (
+              <TableCell className={`${readOnlyClass} text-muted-foreground whitespace-nowrap`} title="Created by">
+                {formatCreatorLabel(entry)}
+              </TableCell>
+            ) : null}
             <TableCell className="px-2 py-3 border-t border-r border-gray-300 min-h-[4rem]">
               {entry.status === 'completed' ? (
                 <Badge variant="default" className="text-xs px-2 py-0.5">
@@ -585,6 +601,12 @@ function VehicleEntryRow({
                 </SelectContent>
               </Select>
             </TableCell>
+
+            {showCreatedByColumn ? (
+              <TableCell className={`${readOnlyClass} text-muted-foreground whitespace-nowrap`} title="Created by">
+                {formatCreatorLabel(entry)}
+              </TableCell>
+            ) : null}
 
             <TableCell className="px-2 py-3 border-t border-r border-gray-300 min-h-[4rem]">
               {entry.status === 'completed' ? (
@@ -782,6 +804,7 @@ export default React.memo(VehicleEntryRow, (prev, next) => {
     prev.canDelete === next.canDelete &&
     prev.date === next.date &&
     prev.shift === next.shift &&
+    prev.showCreatedByColumn === next.showCreatedByColumn &&
     prev.onEntryUpdated === next.onEntryUpdated &&
     prev.onEntryDeleted === next.onEntryDeleted
   );

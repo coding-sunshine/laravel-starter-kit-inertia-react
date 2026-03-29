@@ -20,6 +20,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import ShiftTabs from './shift-tabs';
 import VehicleEntryTable from './vehicle-entry-table';
 
+/** “Add 5 rows” adds one editable draft plus this many non-interactive rows under it. */
+const PLAIN_ROWS_AFTER_ADD_FIVE = 4;
+
 /** YYYY-MM-DD in local time (matches server `date` better than UTC `toISOString().slice(0,10)`). */
 function toLocalYmd(d: Date): string {
     const y = d.getFullYear();
@@ -112,6 +115,10 @@ interface DailyVehicleEntry {
     created_at: string;
     updated_at: string;
     inline_submitted_at: string | null;
+    creator?: {
+        id: number;
+        name: string;
+    } | null;
 }
 
 function buildLocalDraftEntry(
@@ -120,6 +127,7 @@ function buildLocalDraftEntry(
     entryDate: string,
     shift: number,
     userId: number,
+    creator: { id: number; name: string } | null,
 ): DailyVehicleEntry {
     return {
         id,
@@ -150,6 +158,7 @@ function buildLocalDraftEntry(
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         inline_submitted_at: null,
+        ...(creator != null ? { creator } : {}),
     };
 }
 
@@ -204,8 +213,18 @@ interface InertiaAuthPageProps {
     auth?: {
         user?: {
             id?: number;
+            name?: string;
         } | null;
     };
+}
+
+function draftCreatorFromAuth(
+    user: InertiaAuthPageProps['auth']['user'],
+): { id: number; name: string } | null {
+    if (user?.id == null || user.name == null || user.name === '') {
+        return null;
+    }
+    return { id: user.id, name: user.name };
 }
 
 export default function DailyVehicleEntriesIndex({
@@ -219,6 +238,7 @@ export default function DailyVehicleEntriesIndex({
     sidingId: sidingIdProp,
     allowedShifts = [1, 2, 3],
     restrictToAssignedShift = false,
+    showCreatedByColumn = false,
     canBypassShiftLock = false,
     shiftLock = null,
     timeEditableShift = null,
@@ -246,6 +266,8 @@ export default function DailyVehicleEntriesIndex({
     );
     const [isExporting, setIsExporting] = useState(false);
     const [addRowError, setAddRowError] = useState<string | null>(null);
+    /** Plain spacer rows directly under the last table row (after “Add 5 rows”). */
+    const [plainRowsAfterLastEntry, setPlainRowsAfterLastEntry] = useState(0);
     const localDraftIdRef = useRef(0);
 
     const [shiftCountdown, setShiftCountdown] = useState<{
@@ -286,9 +308,29 @@ export default function DailyVehicleEntriesIndex({
             raw.map((e) => ({
                 ...e,
                 inline_submitted_at: e.inline_submitted_at ?? null,
+                creator: e.creator ?? null,
             })),
         );
+        setPlainRowsAfterLastEntry(0);
     }, [entriesProp]);
+
+    useEffect(() => {
+        setPlainRowsAfterLastEntry(0);
+    }, [effectiveSidingId]);
+
+    useEffect(() => {
+        if (plainRowsAfterLastEntry === 0) {
+            return;
+        }
+        const forSiding =
+            effectiveSidingId == null
+                ? entries
+                : entries.filter((e) => e.siding_id === effectiveSidingId);
+        const last = forSiding[forSiding.length - 1];
+        if (last != null && last.inline_submitted_at != null) {
+            setPlainRowsAfterLastEntry(0);
+        }
+    }, [entries, effectiveSidingId, plainRowsAfterLastEntry]);
 
     useEffect(() => {
         setShiftSummaryState(shiftSummaryFromServer);
@@ -440,7 +482,9 @@ export default function DailyVehicleEntriesIndex({
             }
 
             setAddRowError(null);
+            setPlainRowsAfterLastEntry(0);
             const userId = page.props.auth?.user?.id ?? 0;
+            const creator = draftCreatorFromAuth(page.props.auth?.user);
             const drafts: DailyVehicleEntry[] = [];
             for (let i = 0; i < count; i++) {
                 localDraftIdRef.current -= 1;
@@ -451,6 +495,7 @@ export default function DailyVehicleEntriesIndex({
                         selectedDate,
                         activeShiftState,
                         userId,
+                        creator,
                     ),
                 );
             }
@@ -461,12 +506,58 @@ export default function DailyVehicleEntriesIndex({
             canAddAnotherRow,
             effectiveSidingId,
             effectiveTableLocked,
-            page.props.auth?.user?.id,
+            page.props.auth?.user,
             selectedDate,
             shiftLock?.message,
             sidings,
         ],
     );
+
+    const handleAddFiveRows = useCallback(() => {
+        if (!canAddAnotherRow) {
+            alert(
+                'Submit the last vehicle entry row before adding another row.',
+            );
+            return;
+        }
+        if (effectiveTableLocked) {
+            alert(
+                shiftLock?.message ||
+                    'Your shift is not active yet (or has ended).',
+            );
+            return;
+        }
+
+        const targetSidingId = effectiveSidingId ?? sidings[0]?.id;
+        const siding =
+            sidings.find((s) => s.id === targetSidingId) ?? sidings[0];
+        if (siding == null) {
+            setAddRowError('No siding selected.');
+            return;
+        }
+
+        setAddRowError(null);
+        const userId = page.props.auth?.user?.id ?? 0;
+        localDraftIdRef.current -= 1;
+        const draft = buildLocalDraftEntry(
+            localDraftIdRef.current,
+            siding,
+            selectedDate,
+            activeShiftState,
+            userId,
+        );
+        setEntries((prev) => [...prev, draft]);
+        setPlainRowsAfterLastEntry(PLAIN_ROWS_AFTER_ADD_FIVE);
+    }, [
+        activeShiftState,
+        canAddAnotherRow,
+        effectiveSidingId,
+        effectiveTableLocked,
+        page.props.auth?.user,
+        selectedDate,
+        shiftLock?.message,
+        sidings,
+    ]);
 
     const handleEntryUpdated = useCallback(
         (
@@ -484,6 +575,7 @@ export default function DailyVehicleEntriesIndex({
                               ...entry,
                               inline_submitted_at:
                                   entry.inline_submitted_at ?? null,
+                              creator: entry.creator ?? null,
                           }
                         : e,
                 );
@@ -502,6 +594,7 @@ export default function DailyVehicleEntriesIndex({
     );
 
     const handleEntryDeleted = useCallback((id: number) => {
+        setPlainRowsAfterLastEntry(0);
         const isLocalOnly = id < 0;
         let removedShift: number | undefined;
         setEntries((prev) => {
@@ -824,13 +917,17 @@ export default function DailyVehicleEntriesIndex({
                     onEntryUpdated={handleEntryUpdated}
                     onEntryDeleted={handleEntryDeleted}
                     onAddRow={handleAddRow}
+                    plainRowsAfterLastEntry={plainRowsAfterLastEntry}
+                    showCreatedByColumn={showCreatedByColumn}
                     addRowButton={
                         <>
                             {canCreate && !effectiveTableLocked && (
                                 <Button
-                                    onClick={() => handleAddRow(5)}
+                                    type="button"
+                                    onClick={handleAddFiveRows}
                                     disabled={!canAddAnotherRow}
                                     className="flex items-center gap-2"
+                                    data-pan="daily-vehicle-entries-add-five-rows-pack"
                                 >
                                     <Plus className="h-4 w-4" />
                                     Add 5 Rows
