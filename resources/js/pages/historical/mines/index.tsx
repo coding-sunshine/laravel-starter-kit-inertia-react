@@ -1,8 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Head, router } from '@inertiajs/react';
+import { Head, router, useForm } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import HistoricalMineTable from '@/components/historical/historical-mine-table';
 
 function getCsrfHeaders(): Record<string, string> {
@@ -16,6 +20,9 @@ function getCsrfHeaders(): Record<string, string> {
   }
   return {};
 }
+
+/** Radix Select does not allow SelectItem with an empty string value. */
+const ALL_SIDINGS_VALUE = '__all__';
 
 interface HistoricalMine {
   id: number;
@@ -39,16 +46,43 @@ interface PaginatedMines {
   total: number;
 }
 
-interface Props {
-  mines: PaginatedMines;
+interface SidingOption {
+  id: number;
+  name: string;
 }
 
-export default function HistoricalMinesIndex({ mines }: Props) {
+interface Filters {
+  date_from: string | null;
+  date_to: string | null;
+  siding_id: number | null;
+}
+
+interface Props {
+  mines: PaginatedMines;
+  sidings: SidingOption[];
+  filters: Filters;
+}
+
+export default function HistoricalMinesIndex({ mines, sidings, filters }: Props) {
   const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
     { title: 'Historical', href: '/historical/mines' },
     { title: 'Mines', href: '' },
   ];
+
+  const { data, setData, processing } = useForm({
+    date_from: filters.date_from ?? '',
+    date_to: filters.date_to ?? '',
+    siding_id: filters.siding_id != null ? String(filters.siding_id) : ALL_SIDINGS_VALUE,
+  });
+
+  useEffect(() => {
+    setData({
+      date_from: filters.date_from ?? '',
+      date_to: filters.date_to ?? '',
+      siding_id: filters.siding_id != null ? String(filters.siding_id) : ALL_SIDINGS_VALUE,
+    });
+  }, [filters.date_from, filters.date_to, filters.siding_id, setData]);
 
   const [minesState, setMinesState] = useState<HistoricalMine[]>(() =>
     Array.isArray(mines?.data) ? mines.data : [],
@@ -59,6 +93,41 @@ export default function HistoricalMinesIndex({ mines }: Props) {
   useEffect(() => {
     setMinesState(Array.isArray(mines?.data) ? mines.data : []);
   }, [mines]);
+
+  function filterQueryParams(page?: number): Record<string, string> {
+    const q: Record<string, string> = {};
+    if (data.date_from) {
+      q.date_from = data.date_from;
+    }
+    if (data.date_to) {
+      q.date_to = data.date_to;
+    }
+    if (data.siding_id && data.siding_id !== ALL_SIDINGS_VALUE) {
+      q.siding_id = data.siding_id;
+    }
+    if (page !== undefined && page >= 1) {
+      q.page = String(page);
+    }
+
+    return q;
+  }
+
+  function applyFilters(e: React.FormEvent) {
+    e.preventDefault();
+    router.get('/historical/mines', filterQueryParams(1), {
+      preserveState: true,
+      preserveScroll: true,
+    });
+  }
+
+  function clearFilters() {
+    setData({
+      date_from: '',
+      date_to: '',
+      siding_id: ALL_SIDINGS_VALUE,
+    });
+    router.get('/historical/mines', {}, { preserveState: true, preserveScroll: true });
+  }
 
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
@@ -76,7 +145,65 @@ export default function HistoricalMinesIndex({ mines }: Props) {
         </div>
 
         <Card>
-          <CardContent className="pt-4">
+          <CardContent className="pt-6">
+            <form
+              onSubmit={applyFilters}
+              className="flex flex-wrap items-end gap-4 border-b border-gray-200 pb-6 mb-6"
+            >
+              <div className="space-y-2">
+                <Label htmlFor="historical-mines-date-from">Date from</Label>
+                <Input
+                  id="historical-mines-date-from"
+                  type="date"
+                  value={data.date_from}
+                  onChange={(e) => setData('date_from', e.target.value)}
+                  className="w-[11rem]"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="historical-mines-date-to">Date to</Label>
+                <Input
+                  id="historical-mines-date-to"
+                  type="date"
+                  value={data.date_to}
+                  onChange={(e) => setData('date_to', e.target.value)}
+                  className="w-[11rem]"
+                />
+              </div>
+              <div className="space-y-2 min-w-[12rem]">
+                <Label htmlFor="historical-mines-siding">Siding</Label>
+                <Select
+                  value={data.siding_id}
+                  onValueChange={(v) => setData('siding_id', v)}
+                >
+                  <SelectTrigger id="historical-mines-siding">
+                    <SelectValue placeholder="All sidings" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL_SIDINGS_VALUE}>All sidings</SelectItem>
+                    {sidings.map((s) => (
+                      <SelectItem key={s.id} value={String(s.id)}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex gap-2">
+                <Button type="submit" disabled={processing} data-pan="historical-mines-filter-apply">
+                  Apply filters
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={clearFilters}
+                  data-pan="historical-mines-filter-clear"
+                >
+                  Clear
+                </Button>
+              </div>
+            </form>
+
             <HistoricalMineTable
               mines={minesState}
               editingId={editingId}
@@ -102,11 +229,11 @@ export default function HistoricalMinesIndex({ mines }: Props) {
                     body: JSON.stringify({}),
                     credentials: 'include',
                   });
-                  const data = await res.json().catch(() => ({}));
+                  const responseData = await res.json().catch(() => ({}));
                   if (!res.ok) {
                     return;
                   }
-                  const newMine = (data as { mine?: HistoricalMine }).mine;
+                  const newMine = (responseData as { mine?: HistoricalMine }).mine;
                   if (newMine) {
                     setMinesState((prev) => [newMine, ...prev].sort((a, b) => b.id - a.id));
                     setEditingId(newMine.id);
@@ -133,12 +260,14 @@ export default function HistoricalMinesIndex({ mines }: Props) {
                   className="rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium shadow-sm hover:bg-gray-50 disabled:opacity-50 disabled:shadow-none"
                   onClick={() => {
                     if (mines.current_page <= 1) return;
-                    const query: Record<string, string> = {};
-                    query.page = String(mines.current_page - 1);
-                    router.get('/historical/mines', query, {
-                      preserveState: true,
-                      preserveScroll: true,
-                    });
+                    router.get(
+                      '/historical/mines',
+                      filterQueryParams(mines.current_page - 1),
+                      {
+                        preserveState: true,
+                        preserveScroll: true,
+                      },
+                    );
                   }}
                 >
                   Previous
@@ -149,12 +278,14 @@ export default function HistoricalMinesIndex({ mines }: Props) {
                   className="rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium shadow-sm hover:bg-gray-50 disabled:opacity-50 disabled:shadow-none"
                   onClick={() => {
                     if (mines.current_page >= mines.last_page) return;
-                    const query: Record<string, string> = {};
-                    query.page = String(mines.current_page + 1);
-                    router.get('/historical/mines', query, {
-                      preserveState: true,
-                      preserveScroll: true,
-                    });
+                    router.get(
+                      '/historical/mines',
+                      filterQueryParams(mines.current_page + 1),
+                      {
+                        preserveState: true,
+                        preserveScroll: true,
+                      },
+                    );
                   }}
                 >
                   Next
@@ -167,4 +298,3 @@ export default function HistoricalMinesIndex({ mines }: Props) {
     </AppLayout>
   );
 }
-

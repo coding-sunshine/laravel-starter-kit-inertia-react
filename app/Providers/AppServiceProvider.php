@@ -243,6 +243,8 @@ final class AppServiceProvider extends ServiceProvider
             'shift-lock-overlay',
             'daily-vehicle-entries-table-fullscreen',
             'daily-vehicle-entries-add-five-rows-pack',
+            'historical-mines-filter-apply',
+            'historical-mines-filter-clear',
         ]);
     }
 

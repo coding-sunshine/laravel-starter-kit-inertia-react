@@ -166,7 +166,7 @@ export default function HistoricalMineTable({
               SL NO
             </TableHead>
             <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">
-              Month
+              Date
             </TableHead>
             <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">
               Siding
@@ -209,10 +209,8 @@ export default function HistoricalMineTable({
                       <TableCell className={cellClass()}>
                         <input
                           ref={refMonth}
-                          type="text"
-                          inputMode="numeric"
-                          placeholder="YYYY-MM"
-                          className="w-full border border-gray-300 rounded px-1 py-0.5 text-xs"
+                          type="date"
+                          className="w-full min-w-[9rem] border border-gray-300 rounded px-1 py-0.5 text-xs"
                           defaultValue={mine.month ?? ''}
                         />
                       </TableCell>
