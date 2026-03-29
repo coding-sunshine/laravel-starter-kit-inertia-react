@@ -35,7 +35,6 @@ export interface Filters {
     date_from?: string;
     date_to?: string;
     date?: string;
-    shift?: string;
     permit_no?: string;
     truck_regd_no?: string;
 }

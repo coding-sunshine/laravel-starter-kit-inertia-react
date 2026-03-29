@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Calendar } from '@/components/ui/calendar';
@@ -35,13 +34,7 @@ interface Props {
         }>;
     };
     filters: Filters;
-    shifts: string[];
     availableDates: string[];
-    currentSiding: {
-        id: number;
-        name: string;
-        code: string;
-    } | null;
     sidings: Array<{
         id: number;
         name: string;
@@ -56,6 +49,8 @@ interface Props {
 
 export interface DispatchReport {
     id: number;
+    /** Set for rows created after dispatch_reports.vehicle_dispatch_id migration; null for legacy rows. */
+    vehicle_dispatch_id?: number | null;
     siding_id: number;
     siding?: { id: number; name: string; code: string };
     ref_no: number | null;
@@ -84,9 +79,7 @@ export default function VehicleDispatchIndex({
     vehicleDispatches,
     dispatchReports = [],
     filters,
-    shifts,
     availableDates,
-    currentSiding,
     sidings,
     preview_data,
     import_target_date,
@@ -424,8 +417,8 @@ export default function VehicleDispatchIndex({
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            <div className="lg:col-span-2">
+                        <div className="grid grid-cols-1 gap-4">
+                            <div>
                                 <Label htmlFor="date-range">Date Range</Label>
                                 <Popover>
                                     <PopoverTrigger asChild>
@@ -515,24 +508,6 @@ export default function VehicleDispatchIndex({
                                     </PopoverContent>
                                 </Popover>
                             </div>
-
-                            <div>
-                                <Label htmlFor="shift">Shift</Label>
-                                <Select
-                                    value={searchFilters.shift || ''}
-                                    onValueChange={(value) => setSearchFilters(prev => ({ ...prev, shift: value }))}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select shift" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">All Shifts</SelectItem>
-                                        <SelectItem value="1st">1st Shift (00:00-08:00)</SelectItem>
-                                        <SelectItem value="2nd">2nd Shift (08:01-16:00)</SelectItem>
-                                        <SelectItem value="3rd">3rd Shift (16:01-23:59)</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
                         </div>
                     </CardContent>
                 </Card>
@@ -543,9 +518,14 @@ export default function VehicleDispatchIndex({
                         <Badge variant="outline">
                             {vehicleDispatches.total} records
                         </Badge>
-                        {currentSiding && (
-                            <Badge variant="secondary">
-                                {currentSiding.name} ({currentSiding.code})
+                        {sidings.length > 0 && (
+                            <Badge
+                                variant="secondary"
+                                title="Vehicle dispatch and DPR include every siding you can access (not the global siding switcher)."
+                            >
+                                {sidings.length === 1
+                                    ? `${sidings[0].name} (${sidings[0].code})`
+                                    : `All sidings (${sidings.length})`}
                             </Badge>
                         )}
                     </div>

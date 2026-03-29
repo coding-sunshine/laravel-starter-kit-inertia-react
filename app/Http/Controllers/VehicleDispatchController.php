@@ -8,7 +8,6 @@ use App\Http\Requests\UpdateVehicleDispatchRequest;
 use App\Models\DispatchReport;
 use App\Models\Siding;
 use App\Models\VehicleDispatch;
-use App\Services\SidingContext;
 use DateTimeImmutable;
 use DOMDocument;
 use Exception;
@@ -40,13 +39,12 @@ final class VehicleDispatchController extends Controller
     public function index(Request $request): Response|RedirectResponse
     {
         $user = Auth::user();
-        $currentSiding = SidingContext::get();
 
         // Default to current date when no date filters are provided
         if (! $request->date && ! $request->date_from && ! $request->date_to) {
             return redirect()->route('vehicle-dispatch.index', array_merge(
                 ['date' => now()->format('Y-m-d')],
-                $request->only(['shift', 'permit_no', 'truck_regd_no', 'tab'])
+                $request->only(['permit_no', 'truck_regd_no', 'tab'])
             ));
         }
 
@@ -55,11 +53,10 @@ final class VehicleDispatchController extends Controller
             : $user->accessibleSidings()->get()->pluck('id')->all();
 
         $query = VehicleDispatch::with(['siding', 'creator'])
-            // ->when($currentSiding, fn ($q) => $q->forSiding($currentSiding->id), fn ($q) => $q->whereIn('siding_id', $sidingIds))
+            ->whereIn('siding_id', $sidingIds)
             ->when($request->date_from, fn ($q) => $q->whereDate('issued_on', '>=', $request->date_from))
             ->when($request->date_to, fn ($q) => $q->whereDate('issued_on', '<=', $request->date_to))
             ->when($request->date && ! $request->date_from && ! $request->date_to, fn ($q) => $q->forDate($request->get('date')))
-            ->when($request->shift, fn ($q) => $q->forShift($request->shift))
             ->when($request->permit_no, fn ($q) => $q->byPermitNo($request->permit_no))
             ->when($request->truck_regd_no, fn ($q) => $q->byTruckRegdNo($request->truck_regd_no))
             ->orderBy('issued_on', 'desc')
@@ -67,9 +64,9 @@ final class VehicleDispatchController extends Controller
 
         $vehicleDispatches = $query->paginate(25);
         // dd($vehicleDispatches);
-        $shifts = ['1st', '2nd', '3rd'];
         $availableDates = VehicleDispatch::selectRaw('DATE(issued_on) as date')
             ->whereNotNull('issued_on')
+            ->whereIn('siding_id', $sidingIds)
             ->distinct()
             ->orderBy('date', 'desc')
             ->pluck('date');
@@ -81,7 +78,7 @@ final class VehicleDispatchController extends Controller
             ->get(['id', 'name', 'code']);
 
         $dispatchReportsQuery = DispatchReport::with('siding')
-            // ->when($currentSiding, fn ($q) => $q->where('siding_id', $currentSiding->id), fn ($q) => $q->whereIn('siding_id', $sidingIds))
+            ->whereIn('siding_id', $sidingIds)
             ->when($request->date_from, fn ($q) => $q->whereDate('issued_on', '>=', $request->date_from))
             ->when($request->date_to, fn ($q) => $q->whereDate('issued_on', '<=', $request->date_to))
             ->when($request->get('date') && ! $request->date_from && ! $request->date_to, fn ($q) => $q->whereDate('issued_on', $request->get('date')))
@@ -94,11 +91,9 @@ final class VehicleDispatchController extends Controller
         return Inertia::render('VehicleDispatch/Index', [
             'vehicleDispatches' => $vehicleDispatches,
             'dispatchReports' => $dispatchReports,
-            'filters' => $request->only(['date_from', 'date_to', 'date', 'shift', 'permit_no', 'truck_regd_no']),
+            'filters' => $request->only(['date_from', 'date_to', 'date', 'permit_no', 'truck_regd_no']),
             'tab' => $request->get('tab', 'main-data'),
-            'shifts' => $shifts,
             'availableDates' => $availableDates,
-            'currentSiding' => $currentSiding,
             'sidings' => $sidings,
             'preview_data' => $request->session()->get('preview_data', []),
             'import_target_date' => $request->session()->get('import_target_date'),
@@ -183,14 +178,14 @@ final class VehicleDispatchController extends Controller
 
         if (! empty($errors)) {
             return redirect()
-                ->route('vehicle-dispatch.index', array_merge(['date' => $targetDate], $request->only(['shift', 'permit_no', 'truck_regd_no'])))
+                ->route('vehicle-dispatch.index', array_merge(['date' => $targetDate], $request->only(['permit_no', 'truck_regd_no'])))
                 ->with('import_errors', $errors)
                 ->with('import_target_date', $targetDate);
         }
 
         // Redirect back to index with preview data in session (keeps URL as /vehicle-dispatch)
         return redirect()
-            ->route('vehicle-dispatch.index', array_merge(['date' => $targetDate], $request->only(['shift', 'permit_no', 'truck_regd_no'])))
+            ->route('vehicle-dispatch.index', array_merge(['date' => $targetDate], $request->only(['permit_no', 'truck_regd_no'])))
             ->with('preview_data', $parsedRows)
             ->with('import_target_date', $targetDate);
     }
@@ -248,23 +243,20 @@ final class VehicleDispatchController extends Controller
 
     private function getVehicleDispatches($request)
     {
-        $currentSiding = $this->getCurrentSiding($request);
+        $user = $request->user();
+        $sidingIds = $user->isSuperAdmin()
+            ? Siding::query()->pluck('id')->all()
+            : $user->accessibleSidings()->get()->pluck('id')->all();
         $query = VehicleDispatch::query()
             ->with(['siding', 'creator'])
-            ->when($currentSiding, fn ($q) => $q->where('siding_id', $currentSiding->id))
+            ->whereIn('siding_id', $sidingIds)
             ->when($request->date, fn ($q) => $q->whereDate('issued_on', $request->date))
-            ->when($request->shift, fn ($q) => $q->where('shift', $request->shift))
             ->when($request->permit_no, fn ($q) => $q->byPermitNo($request->permit_no))
             ->when($request->truck_regd_no, fn ($q) => $q->byTruckRegdNo($request->truck_regd_no))
             ->orderBy('issued_on', 'desc')
             ->orderBy('created_at', 'desc');
 
         return $query->paginate(25);
-    }
-
-    private function getCurrentSiding($request): ?Siding
-    {
-        return SidingContext::get();
     }
 
     private function getAvailableSidings($request)

@@ -33,11 +33,17 @@ final class DispatchReport extends Model
         'remarks',
         'wb',
         'trip_id_no',
+        'vehicle_dispatch_id',
     ];
 
     public function siding(): BelongsTo
     {
         return $this->belongsTo(Siding::class);
+    }
+
+    public function vehicleDispatch(): BelongsTo
+    {
+        return $this->belongsTo(VehicleDispatch::class, 'vehicle_dispatch_id');
     }
 
     protected function casts(): array
