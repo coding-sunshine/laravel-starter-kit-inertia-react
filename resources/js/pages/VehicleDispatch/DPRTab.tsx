@@ -28,14 +28,26 @@ function formatDecimal(value: number | string | null): string {
     return Number.isNaN(n) ? '—' : n.toLocaleString('en-IN', { maximumFractionDigits: 2 });
 }
 
-function formatDateTime(value: string | null): string {
-    if (!value) return '—';
+/** Weighbridge / daily_vehicle_entries sourced columns when missing */
+function formatDveDecimal(value: number | string | null | undefined): string {
+    if (value === null || value === undefined) return 'N/A';
+    const n = typeof value === 'string' ? parseFloat(value) : value;
+    return Number.isNaN(n) ? 'N/A' : n.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+}
+
+function formatDveDateTime(value: string | null | undefined): string {
+    if (!value) return 'N/A';
     try {
         const d = new Date(value);
         return format(d, 'dd MMM yyyy HH:mm');
     } catch {
         return value;
     }
+}
+
+function dveText(value: string | null | undefined): string {
+    if (value === null || value === undefined || value === '') return 'N/A';
+    return value;
 }
 
 export default function DPRTab({ dispatchReports, filters, flashSuccess }: DPRTabProps) {
@@ -79,10 +91,18 @@ export default function DPRTab({ dispatchReports, filters, flashSuccess }: DPRTa
                                     {dateRangeLabel}
                                 </span>
                             )}
+                            {dispatchReports.length > 0 && (
+                                <span className="text-sm font-normal text-muted-foreground">
+                                    {' '}
+                                    · {dispatchReports.length}{' '}
+                                    {dispatchReports.length === 1 ? 'row' : 'rows'} (full list, not paginated)
+                                </span>
+                            )}
                         </CardTitle>
                         <CardDescription>
-                            Merged data from mine dispatch and siding weighbridge. Click Generate DPR to sync
-                            records.
+                            Built from mine dispatch; weighbridge fields fill when daily vehicle entries exist,
+                            otherwise they show N/A. The table lists every DPR row returned for your filters—there
+                            is no row limit. Click Generate DPR to rebuild from dispatches.
                         </CardDescription>
                     </div>
                     <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
@@ -126,7 +146,8 @@ export default function DPRTab({ dispatchReports, filters, flashSuccess }: DPRTa
                         <FileBarChart className="h-12 w-12 mb-4 opacity-50" />
                         <p className="text-sm">No DPR records yet.</p>
                         <p className="text-xs mt-2">
-                            Click &quot;Generate DPR&quot; to merge mine dispatch and siding weighbridge data.
+                            Click &quot;Generate DPR&quot; to build rows from dispatches (weighbridge data when
+                            available).
                         </p>
                     </div>
                 ) : (
@@ -168,16 +189,16 @@ export default function DPRTab({ dispatchReports, filters, flashSuccess }: DPRTa
                                         <TableCell>{row.date ? format(new Date(row.date), 'dd MMM yyyy') : '—'}</TableCell>
                                         <TableCell>{row.trips ?? '—'}</TableCell>
                                         <TableCell>{row.wo_no ?? '—'}</TableCell>
-                                        <TableCell>{row.transport_name ?? '—'}</TableCell>
+                                        <TableCell>{dveText(row.transport_name)}</TableCell>
                                         <TableCell>{formatDecimal(row.mineral_wt)}</TableCell>
-                                        <TableCell>{formatDecimal(row.gross_wt_siding_rec_wt)}</TableCell>
-                                        <TableCell>{formatDecimal(row.tare_wt)}</TableCell>
-                                        <TableCell>{formatDecimal(row.net_wt_siding_rec_wt)}</TableCell>
+                                        <TableCell>{formatDveDecimal(row.gross_wt_siding_rec_wt)}</TableCell>
+                                        <TableCell>{formatDveDecimal(row.tare_wt)}</TableCell>
+                                        <TableCell>{formatDveDecimal(row.net_wt_siding_rec_wt)}</TableCell>
                                         <TableCell>{row.tyres ?? '—'}</TableCell>
-                                        <TableCell>{formatDecimal(row.coal_ton_variation)}</TableCell>
-                                        <TableCell>{formatDateTime(row.reached_datetime)}</TableCell>
-                                        <TableCell>{row.wb ?? '—'}</TableCell>
-                                        <TableCell>{row.trip_id_no ?? '—'}</TableCell>
+                                        <TableCell>{formatDveDecimal(row.coal_ton_variation)}</TableCell>
+                                        <TableCell>{formatDveDateTime(row.reached_datetime)}</TableCell>
+                                        <TableCell>{dveText(row.wb)}</TableCell>
+                                        <TableCell>{dveText(row.trip_id_no)}</TableCell>
                                         <TableCell>
                                             {row.siding
                                                 ? `${row.siding.name} (${row.siding.code})`

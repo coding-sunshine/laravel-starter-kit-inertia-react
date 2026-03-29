@@ -203,7 +203,7 @@ final class RailwaySidingEmptyWeighmentController extends Controller
         }
 
         $sidingIdForValidation = (int) ($data['siding_id'] ?? 0);
-        if (! $this->canBypassShiftLockForSiding($sidingIdForValidation)) {
+        if (! $this->canBypassShiftLock() && ! $this->canBypassShiftLockForSiding($sidingIdForValidation)) {
             $this->enforceStrictActiveShift(
                 shift: (int) $data['shift'],
                 entryDate: (string) $data['entry_date'],
@@ -422,6 +422,11 @@ final class RailwaySidingEmptyWeighmentController extends Controller
         }
     }
 
+    private function canBypassShiftLock(): bool
+    {
+        return (bool) Auth::user()?->canViewAllRoadDispatchDailyVehicleEntries();
+    }
+
     private function canBypassShiftLockForSiding(int $sidingId): bool
     {
         $user = Auth::user();
@@ -443,7 +448,7 @@ final class RailwaySidingEmptyWeighmentController extends Controller
 
     private function enforceStrictActiveShiftForEntry(DailyVehicleEntry $entry): void
     {
-        if ($this->canBypassShiftLockForSiding((int) $entry->siding_id)) {
+        if ($this->canBypassShiftLock() || $this->canBypassShiftLockForSiding((int) $entry->siding_id)) {
             return;
         }
 

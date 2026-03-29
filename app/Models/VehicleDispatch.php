@@ -8,6 +8,7 @@ use DateTimeInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 final class VehicleDispatch extends Model
 {
@@ -63,6 +64,7 @@ final class VehicleDispatch extends Model
         if ($minutes <= 960) { // 08:01-16:00
             return '2nd';
         }
+
         // 16:01-23:59
         return '3rd';
     }
@@ -75,6 +77,11 @@ final class VehicleDispatch extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function dispatchReport(): HasOne
+    {
+        return $this->hasOne(DispatchReport::class, 'vehicle_dispatch_id');
     }
 
     public function scopeForSiding($query, $sidingId)

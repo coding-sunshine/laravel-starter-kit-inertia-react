@@ -16,8 +16,11 @@ final class GenerateDispatchReportJob implements ShouldQueue
     /**
      * Create a new job instance.
      */
+    /**
+     * @param  list<int>  $sidingIds
+     */
     public function __construct(
-        private readonly ?int $sidingId = null,
+        private readonly array $sidingIds,
         private readonly array $filters = [],
     ) {}
 
@@ -26,12 +29,13 @@ final class GenerateDispatchReportJob implements ShouldQueue
      */
     public function handle(GenerateDispatchReport $generateDispatchReport): void
     {
-        $count = $generateDispatchReport->handle($this->sidingId, $this->filters);
+        $count = $generateDispatchReport->handle($this->sidingIds, $this->filters);
 
         Log::info('DPR queue generation completed.', [
-            'siding_id' => $this->sidingId,
+            'siding_ids' => $this->sidingIds,
             'filters' => $this->filters,
             'records_processed' => $count,
+            'scoped_date_window' => GenerateDispatchReport::filtersDefineDateWindow($this->filters),
         ]);
     }
 }
