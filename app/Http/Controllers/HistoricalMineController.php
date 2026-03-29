@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Models\HistoricalMine;
+use App\Models\Siding;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -16,9 +17,34 @@ final class HistoricalMineController extends Controller
 {
     public function index(Request $request): InertiaResponse
     {
+        $request->merge([
+            'date_from' => $request->filled('date_from') ? $request->input('date_from') : null,
+            'date_to' => $request->filled('date_to') ? $request->input('date_to') : null,
+            'siding_id' => $request->filled('siding_id') ? $request->input('siding_id') : null,
+        ]);
+
+        $validated = $request->validate([
+            'date_from' => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date'],
+            'siding_id' => ['nullable', 'integer', 'exists:sidings,id'],
+        ]);
+
         $query = HistoricalMine::query()
-            ->with('siding:id,name')
-            ->orderByDesc('id');
+            ->with('siding:id,name');
+
+        if (! empty($validated['date_from'])) {
+            $query->whereDate('month', '>=', $validated['date_from']);
+        }
+
+        if (! empty($validated['date_to'])) {
+            $query->whereDate('month', '<=', $validated['date_to']);
+        }
+
+        if (! empty($validated['siding_id'])) {
+            $query->where('siding_id', $validated['siding_id']);
+        }
+
+        $query->orderByDesc('month')->orderByDesc('id');
 
         $mines = $query
             ->paginate(250)
@@ -26,7 +52,7 @@ final class HistoricalMineController extends Controller
             ->through(function (HistoricalMine $mine): array {
                 return [
                     'id' => $mine->id,
-                    'month' => $mine->month?->format('Y-m'),
+                    'month' => $mine->month?->format('Y-m-d'),
                     'siding_id' => $mine->siding_id,
                     'siding_name' => $mine->siding?->name,
                     'trips_dispatched' => $mine->trips_dispatched,
@@ -39,8 +65,22 @@ final class HistoricalMineController extends Controller
                 ];
             });
 
+        $sidings = Siding::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn (Siding $s): array => ['id' => $s->id, 'name' => $s->name])
+            ->values()
+            ->all();
+
         return Inertia::render('historical/mines/index', [
             'mines' => $mines,
+            'sidings' => $sidings,
+            'filters' => [
+                'date_from' => $validated['date_from'] ?? null,
+                'date_to' => $validated['date_to'] ?? null,
+                'siding_id' => isset($validated['siding_id']) ? (int) $validated['siding_id'] : null,
+            ],
         ]);
     }
 
@@ -68,7 +108,7 @@ final class HistoricalMineController extends Controller
         return response()->json([
             'mine' => [
                 'id' => $mine->id,
-                'month' => $mine->month?->format('Y-m'),
+                'month' => $mine->month?->format('Y-m-d'),
                 'siding_id' => $mine->siding_id,
                 'siding_name' => $mine->siding?->name,
                 'trips_dispatched' => $mine->trips_dispatched,
@@ -107,7 +147,7 @@ final class HistoricalMineController extends Controller
         return response()->json([
             'mine' => [
                 'id' => $mine->id,
-                'month' => $mine->month?->format('Y-m'),
+                'month' => $mine->month?->format('Y-m-d'),
                 'siding_id' => $mine->siding_id,
                 'siding_name' => $mine->siding?->name,
                 'trips_dispatched' => $mine->trips_dispatched,

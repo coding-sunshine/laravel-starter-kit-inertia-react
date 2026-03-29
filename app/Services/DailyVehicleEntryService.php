@@ -47,6 +47,7 @@ final readonly class DailyVehicleEntryService
 
     public function createEntry(array $data): DailyVehicleEntry
     {
+        
         $entryType = $data['entry_type'] ?? DailyVehicleEntry::ENTRY_TYPE_ROAD_DISPATCH;
 
         return DailyVehicleEntry::create([
@@ -59,6 +60,7 @@ final readonly class DailyVehicleEntryService
 
     public function updateEntry(DailyVehicleEntry $entry, array $data): DailyVehicleEntry
     {
+        
         $oldStatus = $entry->status;
         $newStatus = $this->determineStatus($entry, $data);
 
@@ -67,6 +69,7 @@ final readonly class DailyVehicleEntryService
             || ($oldStatus === 'completed' && $newStatus === 'completed');
 
         $updated = DB::transaction(function () use ($entry, $data, $oldStatus, $newStatus): DailyVehicleEntry {
+            $oldNetWt = (float) ($entry->net_wt ?? 0);
             $entry->update([
                 ...$data,
                 'status' => $newStatus,
@@ -82,8 +85,7 @@ final readonly class DailyVehicleEntryService
             }
 
             if ($oldStatus === 'completed' && $newStatus === 'completed') {
-                $this->deleteStockLedgerEntry($entry);
-                $this->createStockLedgerEntry($entry->fresh());
+                $this->updateStockLedgerWithDelta($entry->fresh(), $oldNetWt);
             }
 
             return $entry->fresh();
@@ -162,61 +164,75 @@ final readonly class DailyVehicleEntryService
         if ($entry->entry_type !== DailyVehicleEntry::ENTRY_TYPE_ROAD_DISPATCH) {
             return;
         }
-
+    
         $grossWt = (float) ($entry->gross_wt ?? 0);
         $tareWt = (float) ($entry->tare_wt ?? 0);
         $netWeight = round($grossWt - $tareWt, 2);
-
+    
         if ($netWeight <= 0) {
-            DailyVehicleEntry::query()->whereKey($entry->id)->update(['net_wt' => null]);
-
+            $entry->update(['net_wt' => null]);
             return;
         }
-
-        $lastLedger = StockLedger::query()
-            ->where('siding_id', $entry->siding_id)
-            ->latest('id')
-            ->first();
-
-        // No prior ledger for this siding => use configured opening balance (or 0). Else use last row's closing.
-        $openingBalance = $lastLedger
-            ? (float) $lastLedger->closing_balance_mt
-            : SidingOpeningBalance::getOpeningBalanceForSiding($entry->siding_id);
-
-        $closingBalance = round($openingBalance + $netWeight, 2);
-
-        StockLedger::create([
-            'siding_id' => $entry->siding_id,
-            'transaction_type' => 'receipt',
-            'vehicle_arrival_id' => null,
-            'rake_id' => null,
-            'daily_vehicle_entry_id' => $entry->id,
-            'quantity_mt' => $netWeight,
-            'opening_balance_mt' => $openingBalance,
-            'closing_balance_mt' => $closingBalance,
-            'reference_number' => $entry->e_challan_no,
-            'remarks' => "Vehicle {$entry->vehicle_no} — Daily entry #{$entry->id}, Shift {$entry->shift}",
-            'created_by' => auth()->id(),
-        ]);
-
-        DailyVehicleEntry::query()->whereKey($entry->id)->update(['net_wt' => $netWeight]);
-
+    
+        $closingBalance = 0;
+        $openingBalance = 0;
+    
+        DB::transaction(function () use ($entry, $netWeight, &$openingBalance, &$closingBalance) {
+    
+            $lastLedger = StockLedger::query()
+                ->where('siding_id', $entry->siding_id)
+                ->lockForUpdate()
+                ->latest('id')
+                ->first();
+    
+            $openingBalance = $lastLedger
+                ? (float) $lastLedger->closing_balance_mt
+                : SidingOpeningBalance::getOpeningBalanceForSiding($entry->siding_id);
+    
+            $closingBalance = round($openingBalance + $netWeight, 2);
+    
+            StockLedger::create([
+                'siding_id' => $entry->siding_id,
+                'transaction_type' => 'receipt',
+                'daily_vehicle_entry_id' => $entry->id,
+                'quantity_mt' => $netWeight,
+                'opening_balance_mt' => $openingBalance,
+                'closing_balance_mt' => $closingBalance,
+                'reference_number' => $entry->e_challan_no,
+                'remarks' => "Vehicle {$entry->vehicle_no} — Entry #{$entry->id}",
+                'created_by' => auth()->id(),
+            ]);
+    
+            //  use model, not query
+            $entry->update(['net_wt' => $netWeight]);
+        });
+    
+        // after transaction (safe to use values now)
         $req = self::STOCK_REQUIREMENT_MT_PER_RAKE;
-        $oldCapacity = $req > 0 ? (int) floor($openingBalance / $req) : 0;
-        $newCapacity = $req > 0 ? (int) floor($closingBalance / $req) : 0;
-
-        if ($newCapacity > 0 && $newCapacity > $oldCapacity) {
-            $sidingName = Siding::query()->whereKey($entry->siding_id)->value('name');
-
-            DB::afterCommit(function () use ($entry, $closingBalance, $newCapacity, $req, $sidingName): void {
-                NotifySuperAdmins::dispatch(\App\Notifications\StockCapacityIncreasedNotification::class, [
-                    'siding_id' => (int) $entry->siding_id,
-                    'siding_name' => $sidingName,
-                    'closing_balance_mt' => $closingBalance,
-                    'capacity_rakes' => $newCapacity,
-                    'requirement_mt' => $req,
-                ]);
-            });
+    
+        if ($req > 0) {
+            $oldCapacity = (int) floor($openingBalance / $req);
+            $newCapacity = (int) floor($closingBalance / $req);
+    
+            if ($newCapacity > 0 && $newCapacity > $oldCapacity) {
+    
+                $sidingName = Siding::query()
+                    ->whereKey($entry->siding_id)
+                    ->value('name');
+    
+                DB::afterCommit(function () use ($entry, $closingBalance, $newCapacity, $req, $sidingName) {
+                    NotifySuperAdmins::dispatch(
+                        \App\Notifications\StockCapacityIncreasedNotification::class,
+                        [
+                            'siding_id' => (int) $entry->siding_id,
+                            'siding_name' => $sidingName,
+                            'closing_balance_mt' => $closingBalance,
+                            'capacity_rakes' => $newCapacity,
+                            'requirement_mt' => $req,
+                        ]
+                    );
+                });
+            }
         }
     }
 
@@ -243,6 +259,52 @@ final readonly class DailyVehicleEntryService
         }
 
         return $data['status'] ?? $entry->status ?? 'draft';
+    }
+
+    private function updateStockLedgerWithDelta(
+        DailyVehicleEntry $entry,
+        float $oldWeight
+    ): void {
+        $grossWt = (float) ($entry->gross_wt ?? 0);
+        $tareWt = (float) ($entry->tare_wt ?? 0);
+    
+        $newWeight = round($grossWt - $tareWt, 2);
+        $delta = round($newWeight - $oldWeight, 2);
+    
+        // nothing changed
+        if ($delta == 0) {
+            return;
+        }
+    
+        DB::transaction(function () use ($entry, $delta, $newWeight) {
+    
+            $lastLedger = StockLedger::query()
+                ->where('siding_id', $entry->siding_id)
+                ->lockForUpdate()
+                ->latest('id')
+                ->first();
+    
+            $opening = $lastLedger
+                ? (float) $lastLedger->closing_balance_mt
+                : SidingOpeningBalance::getOpeningBalanceForSiding($entry->siding_id);
+    
+            $closing = round($opening + $delta, 2);
+    
+            StockLedger::create([
+                'siding_id' => $entry->siding_id,
+                'transaction_type' => 'correction',
+                'daily_vehicle_entry_id' => $entry->id,
+                'quantity_mt' => $delta, // 🔥 delta applied
+                'opening_balance_mt' => $opening,
+                'closing_balance_mt' => $closing,
+                'reference_number' => $entry->e_challan_no,
+                'remarks' => "Correction for entry #{$entry->id}",
+                'created_by' => auth()->id(),
+            ]);
+    
+            // ✅ update final value
+            $entry->update(['net_wt' => $newWeight]);
+        });
     }
 
     private function deleteStockLedgerEntry(DailyVehicleEntry $entry): void
