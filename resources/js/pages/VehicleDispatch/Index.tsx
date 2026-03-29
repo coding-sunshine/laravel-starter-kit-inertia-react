@@ -14,7 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Filter, Upload, Calendar as CalendarIcon, AlertCircle, CheckCircle, FileSpreadsheet } from 'lucide-react';
 import { format } from 'date-fns';
 import { DateRange } from 'react-day-picker';
-import type { VehicleDispatch, Filters } from './types';
+import type { VehicleDispatch, Filters, ImportBatchSummary } from './types';
 import { toDatetimeLocal } from './utils';
 import MainDataTab from './MainDataTab';
 import DPRTab from './DPRTab';
@@ -42,6 +42,8 @@ interface Props {
     }>;
     preview_data?: Record<string, unknown>[];
     import_target_date?: string;
+    vehicle_dispatch_import_skipped?: number | null;
+    vehicle_dispatch_import_total_rows?: number | null;
     flash?: { success?: string };
     dispatchReports?: DispatchReport[];
     tab?: string;
@@ -125,6 +127,7 @@ export default function VehicleDispatchIndex({
         import_target_date ?? new Date().toISOString().split('T')[0]
     );
     const [previewData, setPreviewData] = useState<Record<string, unknown>[]>([]);
+    const [importBatchSummary, setImportBatchSummary] = useState<ImportBatchSummary | null>(null);
     const [editingDispatch, setEditingDispatch] = useState<VehicleDispatch | null>(null);
     const [editForm, setEditForm] = useState<Record<string, string | number | null>>({});
     const [isUpdating, setIsUpdating] = useState(false);
@@ -151,16 +154,37 @@ export default function VehicleDispatchIndex({
         setActiveTab((tab === 'dpr' ? 'dpr' : 'main-data') as VehicleDispatchTabValue);
     }, [tab]);
 
-    // Handle preview data from props (after import redirect)
+    // Handle preview data and import batch stats from props (after import redirect)
     useEffect(() => {
+        if (import_target_date) {
+            setTargetDate(import_target_date);
+        }
+
+        const totalRowsProp = pageProps.vehicle_dispatch_import_total_rows;
+        if (typeof totalRowsProp === 'number') {
+            const skipped = pageProps.vehicle_dispatch_import_skipped ?? 0;
+            const rows = Array.isArray(preview_data) ? preview_data : [];
+            setPreviewData(rows);
+            setImportBatchSummary({
+                skipped,
+                totalRows: totalRowsProp,
+                newCount: rows.length,
+            });
+            setShowImportDialog(false);
+
+            return;
+        }
+
         if (preview_data && Array.isArray(preview_data) && preview_data.length > 0) {
             setPreviewData(preview_data);
             setShowImportDialog(false);
-            if (import_target_date) {
-                setTargetDate(import_target_date);
-            }
         }
-    }, [preview_data, import_target_date]);
+    }, [
+        preview_data,
+        import_target_date,
+        pageProps.vehicle_dispatch_import_skipped,
+        pageProps.vehicle_dispatch_import_total_rows,
+    ]);
 
     // Handle import errors from session
     useEffect(() => {
@@ -263,14 +287,21 @@ export default function VehicleDispatchIndex({
             { data: importData, target_date: targetDate },
             {
                 onSuccess: (page) => {
-                    const preview = page.props.preview_data;
-                    if (preview && Array.isArray(preview) && preview.length > 0) {
+                    const p = page.props as Props;
+                    const preview = Array.isArray(p.preview_data) ? p.preview_data : [];
+                    const totalRows = p.vehicle_dispatch_import_total_rows;
+                    setImportData('');
+                    if (typeof totalRows === 'number') {
                         setPreviewData(preview);
-                        setImportData('');
-                    } else {
-                        setImportSuccess(page.props.success as string);
-                        setShowImportDialog(false);
+                        setImportBatchSummary({
+                            skipped: p.vehicle_dispatch_import_skipped ?? 0,
+                            totalRows,
+                            newCount: preview.length,
+                        });
+                    } else if (preview.length > 0) {
+                        setPreviewData(preview);
                     }
+                    setShowImportDialog(false);
                     setIsImporting(false);
                 },
                 onError: (errors) => {
@@ -301,6 +332,7 @@ export default function VehicleDispatchIndex({
                         (page.props as { flash?: { success?: string } }).flash?.success ?? '',
                     );
                     setPreviewData([]);
+                    setImportBatchSummary(null);
                     setShowImportDialog(false);
                     setIsImporting(false);
                 },
@@ -404,6 +436,13 @@ export default function VehicleDispatchIndex({
                     }
                     description="Manage vehicle dispatch entries for sidings"
                 />
+
+                {successMessage && !showImportDialog && (
+                    <div className="flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800 dark:border-green-900 dark:bg-green-950/40 dark:text-green-100">
+                        <CheckCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                        <span>{successMessage}</span>
+                    </div>
+                )}
 
                 {/* Filters */}
                 <Card>
@@ -565,12 +604,14 @@ export default function VehicleDispatchIndex({
                             vehicleDispatches={vehicleDispatches}
                             searchFilters={searchFilters}
                             previewData={previewData}
+                            importBatchSummary={importBatchSummary}
                             importErrors={importErrors}
                             isImporting={isImporting}
                             onEditDispatch={openEditModal}
                             onClearPreview={() => {
                                 setPreviewData([]);
                                 setImportErrors([]);
+                                setImportBatchSummary(null);
                             }}
                             onSaveImport={handleSaveImport}
                         />

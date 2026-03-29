@@ -1,10 +1,12 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertCircle } from 'lucide-react';
+import type { ImportBatchSummary } from './types';
 import { formatVehicleDispatchDate } from './utils';
 
 interface ImportPreviewCardProps {
     previewData: Record<string, unknown>[];
+    importBatchSummary: ImportBatchSummary | null;
     importErrors: string[];
     isImporting: boolean;
     onClearPreview: () => void;
@@ -13,6 +15,7 @@ interface ImportPreviewCardProps {
 
 export default function ImportPreviewCard({
     previewData,
+    importBatchSummary,
     importErrors,
     isImporting,
     onClearPreview,
@@ -20,13 +23,18 @@ export default function ImportPreviewCard({
 }: ImportPreviewCardProps) {
     if (previewData.length === 0) return null;
 
+    const summaryLine =
+        importBatchSummary && importBatchSummary.skipped > 0
+            ? `${previewData.length} new record(s) ready to save; ${importBatchSummary.skipped} skipped (pass number already in database) out of ${importBatchSummary.totalRows} pasted row(s).`
+            : null;
+
     return (
         <Card className="mt-6">
             <CardHeader>
-                <CardTitle>Import Preview - {previewData.length} Records</CardTitle>
+                <CardTitle>Import Preview — {previewData.length} new record(s)</CardTitle>
                 <CardDescription>
-                    Review the parsed data below. Click "Save to Database" to store these records or
-                    "Clear Preview" to remove them.
+                    {summaryLine ??
+                        'Review the parsed data below. Click "Save to Database" to store these records or "Clear Preview" to remove them.'}
                 </CardDescription>
             </CardHeader>
             <CardContent>

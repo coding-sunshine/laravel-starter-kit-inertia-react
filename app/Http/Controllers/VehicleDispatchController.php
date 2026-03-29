@@ -97,6 +97,8 @@ final class VehicleDispatchController extends Controller
             'sidings' => $sidings,
             'preview_data' => $request->session()->get('preview_data', []),
             'import_target_date' => $request->session()->get('import_target_date'),
+            'vehicle_dispatch_import_skipped' => $request->session()->pull('vehicle_dispatch_import_skipped'),
+            'vehicle_dispatch_import_total_rows' => $request->session()->pull('vehicle_dispatch_import_total_rows'),
             'flash' => [
                 'success' => $request->session()->get('success'),
                 'import_errors' => $request->session()->get('import_errors'),
@@ -154,18 +156,18 @@ final class VehicleDispatchController extends Controller
         // Parse and validate all rows without saving to database
         $parsedRows = [];
         $errors = [];
+        $skippedDuplicatePass = 0;
+        $totalRows = count($rows);
 
         foreach ($rows as $index => $row) {
             try {
                 $parsedData = $this->parseVehicleDispatchRow($row);
 
-                // Check for unique Pass No during import preview
-                if (! empty($parsedData['pass_no'])) {
-                    $existingPass = VehicleDispatch::where('pass_no', $parsedData['pass_no'])->first();
-                    if ($existingPass) {
-                        // Stop immediately and throw error for duplicate Pass No
-                        throw new InvalidArgumentException("Pass No '{$parsedData['pass_no']}' already exists. Import stopped.");
-                    }
+                if (! empty($parsedData['pass_no'])
+                    && VehicleDispatch::query()->where('pass_no', $parsedData['pass_no'])->exists()) {
+                    $skippedDuplicatePass++;
+
+                    continue;
                 }
 
                 $parsedRows[] = $parsedData;
@@ -187,7 +189,9 @@ final class VehicleDispatchController extends Controller
         return redirect()
             ->route('vehicle-dispatch.index', array_merge(['date' => $targetDate], $request->only(['permit_no', 'truck_regd_no'])))
             ->with('preview_data', $parsedRows)
-            ->with('import_target_date', $targetDate);
+            ->with('import_target_date', $targetDate)
+            ->with('vehicle_dispatch_import_skipped', $skippedDuplicatePass)
+            ->with('vehicle_dispatch_import_total_rows', $totalRows);
     }
 
     public function saveImport(Request $request): RedirectResponse
@@ -205,20 +209,45 @@ final class VehicleDispatchController extends Controller
         $targetDate = $request->input('target_date', now()->format('Y-m-d'));
 
         $imported = 0;
+        $skipped = 0;
         $errors = [];
 
-        DB::transaction(function () use ($data, $targetDate, &$imported, &$errors) {
+        $passNos = array_values(array_filter(array_map(
+            fn (mixed $row): ?string => is_array($row) && ! empty($row['pass_no']) ? (string) $row['pass_no'] : null,
+            $data
+        )));
+
+        $existingPassNos = $passNos === []
+            ? []
+            : VehicleDispatch::query()->whereIn('pass_no', $passNos)->pluck('pass_no')->all();
+
+        $existingPassSet = array_fill_keys($existingPassNos, true);
+
+        DB::transaction(function () use ($data, $targetDate, &$imported, &$skipped, &$errors, $existingPassSet) {
             foreach ($data as $index => $row) {
+                if (! is_array($row)) {
+                    $errors[] = 'Row '.($index + 1).': Invalid row data';
+
+                    continue;
+                }
+
                 try {
-                    // Remove siding object data before saving (only keep siding_id)
                     if (isset($row['siding'])) {
                         unset($row['siding']);
                     }
 
-                    // Validate required fields before saving
+                    $passNo = isset($row['pass_no']) && $row['pass_no'] !== '' && $row['pass_no'] !== null
+                        ? (string) $row['pass_no']
+                        : '';
+
+                    if ($passNo !== '' && isset($existingPassSet[$passNo])) {
+                        $skipped++;
+
+                        continue;
+                    }
+
                     $this->validateVehicleDispatchData($row);
 
-                    // Apply target date to each record if no issued_on is present
                     if (empty($row['issued_on'])) {
                         $row['issued_on'] = $targetDate.' '.now()->format('H:i:s');
                     }
@@ -237,8 +266,16 @@ final class VehicleDispatchController extends Controller
             ]);
         }
 
+        if ($imported === 0 && $skipped > 0) {
+            $success = "No new records added. Skipped {$skipped} (pass number already in database).";
+        } elseif ($skipped > 0) {
+            $success = "Added {$imported} record(s). Skipped {$skipped} (pass number already in database).";
+        } else {
+            $success = "Successfully added {$imported} vehicle dispatch record(s).";
+        }
+
         return redirect()->route('vehicle-dispatch.index', ['date' => $targetDate])
-            ->with('success', "Successfully imported {$imported} vehicle dispatch records.");
+            ->with('success', $success);
     }
 
     private function getVehicleDispatches($request)
