@@ -332,13 +332,11 @@ function LoadingTimesForm({ rakeId, loadingStart, loadingEnd }: LoadingTimesForm
 export function RakeWorkflow({
     rake,
     powerPlants,
-    demurrage_rate_per_mt_hour,
     onUnfitWagonIdsSynced,
 }: RakeWorkflowProps) {
     const { auth } = usePage().props as { auth?: { can_bypass?: boolean } };
     const isSuperAdmin = auth?.can_bypass === true;
     const [rakeData, setRakeData] = useState(rake);
-    const [workflowGateError, setWorkflowGateError] = useState<string | null>(null);
     const [preRrEstimate, setPreRrEstimate] = useState<PreRrEstimate | null>(null);
     const [preRrLoading, setPreRrLoading] = useState(false);
 
@@ -384,12 +382,10 @@ export function RakeWorkflow({
     const isWagonLoadingCompleted =
         fitWagons.length > 0 &&
         fitWagons.every(w => positivelyLoadedWagonIds.has(w.id));
-    const missingWagonNumberCount = rakeData.wagons.filter(
-        (wagon) => (wagon.wagon_number ?? '').trim().length <= 4
-    ).length;
-    const hasMissingWagonNumbers = missingWagonNumberCount > 0;
     const isGuardApproved = rakeData.guardInspections?.[0]?.is_approved;
     const isWeighmentCompleted = rakeData.weighments?.[0]?.status === 'success';
+    const isComparisonStepCompleted =
+        isWeighmentCompleted && isWagonLoadingCompleted;
     const hasPowerPlantReceipt = (rakeData.powerPlantReceipts ?? []).length > 0;
     const hasRrDocument = ((): boolean => {
         const docs = rakeData.rrDocuments ?? [];
@@ -426,28 +422,34 @@ export function RakeWorkflow({
             status: 'completed',
         },
         {
+            id: 'weighment',
+            label: 'Inmotion weighment',
+            description: 'At least one successful rake weighment exists.',
+            status: isWeighmentCompleted ? 'completed' : 'pending',
+        },
+        {
+            id: 'loading',
+            label: 'Loader weighment',
+            description: 'All fit wagons have loader quantity recorded (unfit rows are optional).',
+            status: isWagonLoadingCompleted ? 'completed' : 'pending',
+        },
+        {
+            id: 'comparison',
+            label: 'Loader vs weighment',
+            description: 'Inmotion weighment and loader quantities are both recorded for comparison.',
+            status: isComparisonStepCompleted ? 'completed' : 'pending',
+        },
+        {
             id: 'txr',
             label: 'TXR',
             description: 'Train Examination Report: start and end inspection times saved.',
             status: isTxrTimesRecorded ? 'completed' : 'pending',
         },
         {
-            id: 'loading',
-            label: 'Wagon loading',
-            description: 'All fit wagons have quantity recorded (unfit rows are optional).',
-            status: isWagonLoadingCompleted ? 'completed' : 'pending',
-        },
-        {
             id: 'guard',
             label: 'Guard inspection',
             description: 'Guard inspection completed and approved.',
             status: isGuardApproved ? 'completed' : 'pending',
-        },
-        {
-            id: 'weighment',
-            label: 'Rake weighment',
-            description: 'At least one successful rake weighment exists.',
-            status: isWeighmentCompleted ? 'completed' : 'pending',
         },
         {
             id: 'power-plant-receipt',
@@ -463,11 +465,8 @@ export function RakeWorkflow({
         },
     ];
 
-    const disableTxr = hasMissingWagonNumbers;
-    const disableWagonLoading = hasMissingWagonNumbers;
     const disableGuardInspection = false;
     const disableWeighment = false;
-    const disableComparison = false;
     const disableRrDocument = false;
     const disablePenalties = false;
 
@@ -519,39 +518,81 @@ export function RakeWorkflow({
                 </ol>
             </div>
 
-            {workflowGateError && (
-                <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                    {workflowGateError}
-                </div>
-            )}
-
-            <Accordion type="multiple" /* defaultValue={['txr']} */ className="w-full">
-                {/* 1. TXR */}
-                <AccordionItem value="txr">
-                    <AccordionTrigger
-                        onClick={(event) => {
-                            if (disableTxr) {
-                                event.preventDefault();
-                                setWorkflowGateError('Please add all wagon numbers for this rake.');
-                            } else {
-                                setWorkflowGateError(null);
-                            }
-                        }}
-                    >
+            <Accordion type="multiple" className="w-full">
+                {/* 1. Inmotion weighment */}
+                <AccordionItem value="weighment">
+                    <AccordionTrigger disabled={disableWeighment}>
                         <div className="flex items-center gap-2 text-left">
-                            <span className="font-medium">1. TXR - Train Examination Report</span>
-                            {isTxrTimesRecorded && (
+                            <span className="font-medium">1. Inmotion weighment</span>
+                            {isWeighmentCompleted && (
                                 <span className="text-green-600 text-sm">✓ Completed</span>
                             )}
-                            {disableTxr && !isTxrTimesRecorded && (
+                            {disableWeighment && !isWeighmentCompleted && (
                                 <span className="text-gray-400 text-sm">🔒 Locked</span>
+                            )}
+                        </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                        <WeighmentWorkflow rake={rakeData} disabled={disableWeighment} />
+                    </AccordionContent>
+                </AccordionItem>
+
+                {/* 2. Loader weighment */}
+                <AccordionItem value="wagon-loading">
+                    <AccordionTrigger>
+                        <div className="flex items-center gap-2 text-left">
+                            <span className="font-medium">2. Loader weighment</span>
+                            {isWagonLoadingCompleted && (
+                                <span className="text-green-600 text-sm">✓ Completed</span>
+                            )}
+                        </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                        <LoadingTimesForm rakeId={rakeData.id} loadingStart={rakeData.loading_start_time} loadingEnd={rakeData.loading_end_time} />
+                        <div className="mt-4">
+                            <WagonLoadingWorkflow
+                                rake={rakeData}
+                                disabled={false}
+                                onWagonLoadingsSaved={(loadings) =>
+                                    setRakeData((prev) => ({
+                                        ...prev,
+                                        wagonLoadings: loadings,
+                                    }))
+                                }
+                            />
+                        </div>
+                    </AccordionContent>
+                </AccordionItem>
+
+                {/* 3. Loader vs weighment */}
+                <AccordionItem value="comparison">
+                    <AccordionTrigger>
+                        <div className="flex items-center gap-2 text-left">
+                            <span className="font-medium">3. Loader vs weighment</span>
+                            {isComparisonStepCompleted && (
+                                <span className="text-green-600 text-sm">✓ Ready</span>
+                            )}
+                        </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                        <ComparisonWorkflow rake={rakeData} disabled={false} />
+                    </AccordionContent>
+                </AccordionItem>
+
+                {/* 4. TXR */}
+                <AccordionItem value="txr">
+                    <AccordionTrigger>
+                        <div className="flex items-center gap-2 text-left">
+                            <span className="font-medium">4. TXR - Train Examination Report</span>
+                            {isTxrTimesRecorded && (
+                                <span className="text-green-600 text-sm">✓ Completed</span>
                             )}
                         </div>
                     </AccordionTrigger>
                     <AccordionContent>
                         <TxrWorkflow
                             rake={rakeData}
-                            disabled={disableTxr}
+                            disabled={false}
                             onTxrHeaderSaved={(incoming) => {
                                 setRakeData((prev) => ({
                                     ...prev,
@@ -594,58 +635,11 @@ export function RakeWorkflow({
                     </AccordionContent>
                 </AccordionItem>
 
-                {/* 2. Wagon Loading */}
-                <AccordionItem value="wagon-loading">
-                    <AccordionTrigger
-                        onClick={(event) => {
-                            if (disableWagonLoading) {
-                                event.preventDefault();
-                                setWorkflowGateError('Please add all wagon numbers for this rake.');
-                            } else {
-                                setWorkflowGateError(null);
-                            }
-                        }}
-                    >
-                        <div className="flex items-center gap-2 text-left">
-                            <span className="font-medium">2. Wagon Loading</span>
-                            {isWagonLoadingCompleted && (
-                                <span className="text-green-600 text-sm">✓ Completed</span>
-                            )}
-                            {disableWagonLoading && !isWagonLoadingCompleted && (
-                                <span className="text-gray-400 text-sm">🔒 Locked</span>
-                            )}
-                        </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                        <LoadingTimesForm rakeId={rakeData.id} loadingStart={rakeData.loading_start_time} loadingEnd={rakeData.loading_end_time} />
-                        <div className="mt-4">
-                            <WagonLoadingWorkflow
-                                rake={rakeData}
-                                disabled={disableWagonLoading}
-                                onWagonLoadingsSaved={(loadings) =>
-                                    setRakeData((prev) => ({
-                                        ...prev,
-                                        wagonLoadings: loadings,
-                                    }))
-                                }
-                                onWagonUpdated={(wagonId, updates) =>
-                                    setRakeData((prev) => ({
-                                        ...prev,
-                                        wagons: prev.wagons.map((w) =>
-                                            w.id === wagonId ? { ...w, wagon_number: updates.wagon_number } : w
-                                        ),
-                                    }))
-                                }
-                            />
-                        </div>
-                    </AccordionContent>
-                </AccordionItem>
-
-                {/* 3. Guard Inspection */}
+                {/* 5. Guard Inspection */}
                 <AccordionItem value="guard-inspection">
                     <AccordionTrigger disabled={disableGuardInspection}>
                         <div className="flex items-center gap-2 text-left">
-                            <span className="font-medium">3. Guard Inspection</span>
+                            <span className="font-medium">5. Guard Inspection</span>
                             {isGuardApproved !== undefined && (
                                 <span className={isGuardApproved ? "text-green-600 text-sm" : "text-red-600 text-sm"}>
                                     {isGuardApproved ? "✓ Approved" : "✗ Rejected"}
@@ -661,29 +655,11 @@ export function RakeWorkflow({
                     </AccordionContent>
                 </AccordionItem>
 
-                {/* 4. Rake Weighment */}
-                <AccordionItem value="weighment">
-                    <AccordionTrigger disabled={disableWeighment}>
-                        <div className="flex items-center gap-2 text-left">
-                            <span className="font-medium">4. Rake Weighment</span>
-                            {isWeighmentCompleted && (
-                                <span className="text-green-600 text-sm">✓ Completed</span>
-                            )}
-                            {disableWeighment && !isWeighmentCompleted && (
-                                <span className="text-gray-400 text-sm">🔒 Locked</span>
-                            )}
-                        </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                        <WeighmentWorkflow rake={rakeData} disabled={disableWeighment} />
-                    </AccordionContent>
-                </AccordionItem>
-
-                {/* 5. Power plant receipt */}
+                {/* 6. Power plant receipt */}
                 <AccordionItem value="power-plant-receipt">
                     <AccordionTrigger>
                         <div className="flex items-center gap-2 text-left">
-                            <span className="font-medium">5. Power Plant Receipt</span>
+                            <span className="font-medium">6. Power Plant Receipt</span>
                             {hasPowerPlantReceipt && (
                                 <span className="text-green-600 text-sm">✓ Recorded</span>
                             )}
@@ -698,22 +674,7 @@ export function RakeWorkflow({
                     </AccordionContent>
                 </AccordionItem>
 
-                {/* 6. Loader vs Weighment Comparison */}
-                <AccordionItem value="comparison">
-                    <AccordionTrigger disabled={disableComparison}>
-                        <div className="flex items-center gap-2 text-left">
-                            <span className="font-medium">6. Loader vs Weighment Comparison</span>
-                            {disableComparison && (
-                                <span className="text-gray-400 text-sm">🔒 Locked</span>
-                            )}
-                        </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                        <ComparisonWorkflow rake={rakeData} disabled={disableComparison} />
-                    </AccordionContent>
-                </AccordionItem>
-
-                {/* 6. Railway Receipt Document */}
+                {/* 7. Railway Receipt Document */}
                 <AccordionItem value="rr-document">
                     <AccordionTrigger disabled={disableRrDocument}>
                         <div className="flex items-center gap-2 text-left">
@@ -731,7 +692,7 @@ export function RakeWorkflow({
                     </AccordionContent>
                 </AccordionItem>
 
-                {/* 7. Penalties */}
+                {/* 8. Penalties */}
                 <AccordionItem value="penalties">
                     <AccordionTrigger disabled={disablePenalties}>
                         <div className="flex items-center gap-2 text-left">

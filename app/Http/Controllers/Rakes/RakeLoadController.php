@@ -267,6 +267,39 @@ final class RakeLoadController extends Controller
         ]);
     }
 
+    /**
+     * Ensure one {@see RakeWagonLoading} row exists per wagon on the rake (idempotent).
+     */
+    public function ensureAllWagonLoadingRows(Rake $rake): JsonResponse
+    {
+        $wagonIds = $rake->wagons()->orderBy('wagon_sequence')->pluck('id');
+
+        if ($wagonIds->isEmpty()) {
+            return response()->json([
+                'wagonLoadings' => [],
+            ]);
+        }
+
+        DB::transaction(function () use ($rake, $wagonIds): void {
+            foreach ($wagonIds as $wagonId) {
+                RakeWagonLoading::query()->firstOrCreate(
+                    [
+                        'rake_id' => $rake->id,
+                        'wagon_id' => $wagonId,
+                    ],
+                    [
+                        'loader_id' => null,
+                        'loaded_quantity_mt' => null,
+                        'loading_time' => null,
+                        'remarks' => null,
+                    ]
+                );
+            }
+        });
+
+        return $this->indexWagonLoadings($rake->fresh());
+    }
+
     public function storeWagonRow(Request $request, Rake $rake): JsonResponse
     {
         $validated = $request->validate([

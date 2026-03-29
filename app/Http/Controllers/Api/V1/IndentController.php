@@ -141,9 +141,14 @@ final class IndentController extends Controller
             ]);
         }
 
+        $indent = $indent->fresh(['rake:id,indent_id,rake_number,priority_number,state']);
+
         return response()->json([
-            'data' => $indent->fresh(),
-            'message' => 'Indent imported from PDF successfully.',
+            'data' => [
+                'indent' => $indent,
+                'rake' => $indent->rake,
+            ],
+            'message' => 'Indent and rake created from PDF successfully.',
         ], 201);
     }
 

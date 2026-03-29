@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Indents;
 
 use App\Actions\DeleteIndentAction;
+use App\Actions\ProvisionRakeForIndent;
 use App\Actions\UpdateStockLedger;
 use App\Http\Controllers\Controller;
 use App\Models\Indent;
@@ -18,10 +19,12 @@ use DateTimeImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use InvalidArgumentException;
+use RuntimeException;
 use Throwable;
 
 final class IndentsController extends Controller
@@ -64,8 +67,13 @@ final class IndentsController extends Controller
                 $sidingIds
             );
 
-            return to_route('indents.edit', $indent)
-                ->with('success', 'Indent imported from PDF. Please verify and update details.');
+            $rake = $indent->rake;
+            if ($rake === null) {
+                throw new RuntimeException('Rake was not provisioned after PDF import.');
+            }
+
+            return to_route('rakes.show', $rake)
+                ->with('success', 'Indent and rake created from e-Demand PDF. Review the rake below.');
         } catch (InvalidArgumentException $e) {
             return back()->withErrors(['pdf' => $e->getMessage()]);
         } catch (Throwable $e) {
@@ -157,33 +165,37 @@ final class IndentsController extends Controller
             'pdf' => ['nullable', 'file', 'mimes:pdf', 'max:10240'],
         ]);
 
-        $indent = new Indent;
-        $indent->siding_id = $validated['siding_id'];
-        $indent->indent_number = $validated['indent_number'] ?? null;
-        $indent->state = $validated['state'] ?? 'pending';
-        $indent->remarks = $validated['remarks'] ?? null;
-        $indent->e_demand_reference_id = $validated['e_demand_reference_id'] ?? null;
-        $indent->fnr_number = $validated['fnr_number'] ?? null;
-        $indent->railway_reference_no = $validated['railway_reference_no'] ?? null;
-        $indent->destination = $validated['destination'] ?? null;
-        $indent->expected_loading_date = $validated['expected_loading_date'] ?? null;
-        $indent->required_by_date = $validated['required_by_date'] ?? null;
-        $indent->demanded_stock = $validated['demanded_stock'] ?? null;
-        $indent->total_units = $validated['total_units'] ?? null;
-        $indent->target_quantity_mt = $validated['target_quantity_mt'] ?? null;
-        $indent->allocated_quantity_mt = $validated['allocated_quantity_mt'] ?? null;
-        $indent->available_stock_mt = $validated['available_stock_mt'] ?? null;
-        $this->applyIndentAt($indent, $validated['indent_at'] ?? null);
-        $indent->created_by = $request->user()->id;
-        $indent->updated_by = $request->user()->id;
-        $indent->save();
+        return DB::transaction(function () use ($request, $validated): RedirectResponse {
+            $indent = new Indent;
+            $indent->siding_id = $validated['siding_id'];
+            $indent->indent_number = $validated['indent_number'] ?? null;
+            $indent->state = $validated['state'] ?? 'pending';
+            $indent->remarks = $validated['remarks'] ?? null;
+            $indent->e_demand_reference_id = $validated['e_demand_reference_id'] ?? null;
+            $indent->fnr_number = $validated['fnr_number'] ?? null;
+            $indent->railway_reference_no = $validated['railway_reference_no'] ?? null;
+            $indent->destination = $validated['destination'] ?? null;
+            $indent->expected_loading_date = $validated['expected_loading_date'] ?? null;
+            $indent->required_by_date = $validated['required_by_date'] ?? null;
+            $indent->demanded_stock = $validated['demanded_stock'] ?? null;
+            $indent->total_units = $validated['total_units'] ?? null;
+            $indent->target_quantity_mt = $validated['target_quantity_mt'] ?? null;
+            $indent->allocated_quantity_mt = $validated['allocated_quantity_mt'] ?? null;
+            $indent->available_stock_mt = $validated['available_stock_mt'] ?? null;
+            $this->applyIndentAt($indent, $validated['indent_at'] ?? null);
+            $indent->created_by = $request->user()->id;
+            $indent->updated_by = $request->user()->id;
+            $indent->save();
 
-        if ($request->hasFile('pdf')) {
-            $indent->addMediaFromRequest('pdf')->toMediaCollection('indent_confirmation_pdf');
-        }
+            if ($request->hasFile('pdf')) {
+                $indent->addMediaFromRequest('pdf')->toMediaCollection('indent_confirmation_pdf');
+            }
 
-        return to_route('indents.show', $indent)
-            ->with('success', 'Indent created.');
+            $rake = app(ProvisionRakeForIndent::class)->handle($indent, null, (int) $request->user()->id);
+
+            return to_route('rakes.show', $rake)
+                ->with('success', 'Indent created. Open the rake to continue.');
+        });
     }
 
     public function downloadPdf(Indent $indent): \Illuminate\Contracts\Support\Responsable
@@ -207,7 +219,7 @@ final class IndentsController extends Controller
 
         // Load rake relationship safely without causing attribute errors
         $rake = Rake::where('indent_id', $indent->id)
-            ->select('id', 'rake_number', 'state')
+            ->select('id', 'rake_number', 'priority_number', 'state')
             ->first();
 
         $hasPdf = $indent->getFirstMedia('indent_pdf')
@@ -215,17 +227,13 @@ final class IndentsController extends Controller
         $indent->setAttribute('indent_pdf_download_url', $hasPdf ? route('indents.pdf', $indent) : null);
 
         $user = $request->user();
-        $canCreateRake = $rake === null
-            && $user !== null
-            && $this->hasStrictSectionPermission($user, 'sections.rakes.create');
-        $canDeleteIndent = $rake === null && $user !== null && (
-            $this->hasSectionPermission($user, 'sections.indents.delete')
-        );
+        $canDeleteIndent = $user !== null
+            && $this->hasSectionPermission($user, 'sections.indents.delete')
+            && app(DeleteIndentAction::class)->canDeleteWithRakeEligibility($indent);
 
         return Inertia::render('indents/show', [
             'indent' => $indent,
             'rake' => $rake,
-            'can_create_rake' => $canCreateRake,
             'can_delete_indent' => $canDeleteIndent,
         ]);
     }
@@ -250,7 +258,10 @@ final class IndentsController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'code']);
 
-        $indent->load('siding:id,name,code');
+        $indent->load([
+            'siding:id,name,code',
+            'rake:id,indent_id,rake_number,priority_number',
+        ]);
 
         $hasPdf = $indent->getFirstMedia('indent_pdf')
             || $indent->getFirstMedia('indent_confirmation_pdf');
@@ -327,10 +338,10 @@ final class IndentsController extends Controller
             abort(403);
         }
 
-        // Check if rake already exists for this indent
-        if ($indent->rake) {
-            return to_route('indents.show', $indent)
-                ->with('error', 'A rake already exists for this indent.');
+        $indent->load('rake:id,indent_id');
+        if ($indent->rake !== null) {
+            return to_route('rakes.show', $indent->rake)
+                ->with('info', 'This indent already has a rake.');
         }
 
         $sidingIds = $user->isSuperAdmin()
@@ -384,10 +395,10 @@ final class IndentsController extends Controller
             abort(403);
         }
 
-        // Check if rake already exists for this indent
-        if ($indent->rake) {
-            return to_route('indents.show', $indent)
-                ->with('error', 'A rake already exists for this indent.');
+        $indent->load('rake:id,indent_id');
+        if ($indent->rake !== null) {
+            return to_route('rakes.show', $indent->rake)
+                ->with('info', 'This indent already has a rake.');
         }
         $validated = $request->validate([
             'rake_number' => [

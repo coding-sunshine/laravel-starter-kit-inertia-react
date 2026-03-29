@@ -181,15 +181,6 @@ interface RakeData {
 
 interface Props {
     rake: RakeData;
-    wagonTypes: Array<{
-        id: number;
-        code: string;
-        full_form: string | null;
-        carrying_capacity_min_mt: string | number;
-        carrying_capacity_max_mt: string | number;
-        gross_tare_weight_mt: string | number;
-        default_pcc_weight_mt: string | number | null;
-    }>;
     powerPlants: Array<{
         id: number;
         name: string;
@@ -728,7 +719,6 @@ function TxrEditForm({ rake }: { rake: RakeData }) {
 
 export default function RakesShow({
     rake,
-    wagonTypes,
     powerPlants,
     demurrageRemainingMinutes,
     demurrage_rate_per_mt_hour,
@@ -833,7 +823,6 @@ export default function RakesShow({
                         />
                         <EditWagonsDialog
                             wagons={wagons}
-                            wagonTypes={wagonTypes}
                             rakeId={rake.id}
                             onWagonSaved={(updatedWagon) =>
                                 setWagons((prev) =>

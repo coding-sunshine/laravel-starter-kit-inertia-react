@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Actions\ProvisionRakeForIndent;
 use App\Models\Indent;
 use App\Models\PowerPlant;
 use App\Models\Siding;
@@ -70,15 +71,23 @@ final readonly class IndentPdfImporter
             );
         }
 
+        $rakeSqNumber = isset($parsed['rake_sq_number']) ? mb_trim((string) $parsed['rake_sq_number']) : '';
+        if ($rakeSqNumber === '') {
+            throw new InvalidArgumentException('This does not appear to be a complete indent PDF. Rake Sq. Number could not be found.');
+        }
+
+        app(ProvisionRakeForIndent::class)->assertRakeNumberFreeForSidingThisMonth($rakeSqNumber, (int) $siding->id);
+
         Log::info('Indent PDF import: parsed and siding detected', [
             'user_id' => $userId,
             'indent_number' => $parsed['indent_number'] ?? null,
             'e_demand_reference_id' => $parsed['e_demand_reference_id'] ?? null,
+            'rake_sq_number' => $rakeSqNumber,
             'siding_id' => $siding->id,
         ]);
 
         try {
-            return DB::transaction(function () use ($parsed, $siding, $pdf, $userId) {
+            return DB::transaction(function () use ($parsed, $siding, $pdf, $userId, $rakeSqNumber) {
                 $indent = Indent::query()->create([
                     'siding_id' => $siding->id,
                     'indent_number' => $parsed['indent_number'] ?? null,
@@ -103,12 +112,14 @@ final readonly class IndentPdfImporter
 
                 $indent->addMedia($pdf)->toMediaCollection('indent_pdf');
 
+                app(ProvisionRakeForIndent::class)->handle($indent, $rakeSqNumber, $userId);
+
                 Log::info('Indent PDF import: transaction committed', [
                     'user_id' => $userId,
                     'indent_id' => $indent->id,
                 ]);
 
-                return $indent->fresh();
+                return $indent->fresh(['rake']);
             });
         } catch (Throwable $e) {
             Log::error('Indent PDF import: transaction rolled back', [
@@ -137,6 +148,11 @@ final readonly class IndentPdfImporter
 
         if (preg_match('/e-Demand\s+Reference\s+Id\s*[:\-]\s*(\S+)/i', $text, $m)) {
             $out['e_demand_reference_id'] = mb_trim($m[1]);
+        }
+        if (preg_match('/Rake\s+Sq\.?\s*Number\s*[:\-]\s*(\S+)/iu', $text, $m)) {
+            $out['rake_sq_number'] = mb_trim($m[1]);
+        } elseif (preg_match('/Rake\s+Sequence\s+Number\s*[:\-]\s*(\S+)/iu', $text, $m)) {
+            $out['rake_sq_number'] = mb_trim($m[1]);
         }
         if (preg_match('/Forwarding\s+Note\s+Number\s*[:\-]\s*([\d.]+)/i', $text, $m)) {
             $out['indent_number'] = mb_trim($m[1]);
