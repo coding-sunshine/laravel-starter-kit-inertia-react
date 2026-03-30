@@ -66,7 +66,7 @@ export default function IndentsIndex({ indents }: Props) {
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: '/dashboard' },
-        { title: 'Indents', href: '/indents' },
+        { title: 'E-Demand', href: '/indents' },
     ];
 
     const handleUploadClick = () => {
@@ -96,7 +96,7 @@ export default function IndentsIndex({ indents }: Props) {
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Indents" />
+            <Head title="E-Demand" />
 
             <div className="space-y-6">
                 {flash?.success && (
@@ -113,7 +113,7 @@ export default function IndentsIndex({ indents }: Props) {
 
                 <div className="flex flex-wrap items-center justify-between gap-2">
                     <Heading
-                        title="Rake Indents"
+                        title="E-Demand"
                         description="Manage rake orders and requests for the RRMCS system"
                     />
                     <div className="flex items-center gap-2">
@@ -141,21 +141,15 @@ export default function IndentsIndex({ indents }: Props) {
                     </div>
                 </div>
 
-                <RrmcsGuidance
-                    title="What this section is for"
-                    before="Indent requests raised on paper or Excel; 30+ minutes to prepare and submit; stock and allocations tracked manually."
-                    after="Create indents in the app with target quantity and date; attach e-Demand confirmation PDF. Track status: pending → allocated → completed."
-                />
-
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                             <FileText className="h-5 w-5" />
-                            Indents
+                            E-Demand
                         </CardTitle>
                         <CardDescription>
-                            View and manage all rake indents (orders). e-Demand
-                            reference and FNR shown when set.
+                            View and manage all rake e-demand (orders). e-Demand reference and FNR
+                            shown when set.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -165,7 +159,7 @@ export default function IndentsIndex({ indents }: Props) {
                                     <thead>
                                         <tr className="border-b text-left">
                                             <th className="pr-4 pb-2 font-medium">
-                                                Indent number
+                                                E-Demand number
                                             </th>
                                             <th className="pr-4 pb-2 font-medium">
                                                 Siding

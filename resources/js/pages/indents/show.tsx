@@ -68,17 +68,17 @@ export default function IndentsShow({
     const canViewIndent = useCan('sections.indents.view');
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: '/dashboard' },
-        { title: 'Indents', href: '/indents' },
+        { title: 'E-Demand', href: '/indents' },
         { title: indent.indent_number || 'N/A', href: `/indents/${indent.id}` },
     ];
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title={`Indent ${indent.indent_number || 'N/A'}`} />
+            <Head title={`E-Demand ${indent.indent_number || 'N/A'}`} />
             <div className="space-y-6">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                     <h2 className="text-lg font-medium">
-                        Indent {indent.indent_number || 'N/A'}
+                        E-Demand {indent.indent_number || 'N/A'}
                     </h2>
                     <div className="flex gap-2">
                         {rake ? (
@@ -126,14 +126,14 @@ export default function IndentsShow({
                             Details
                         </CardTitle>
                         <CardDescription>
-                            Indent and e-Demand reference information
+                            E-Demand and reference information
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <dl className="grid gap-3 text-sm sm:grid-cols-2">
                             <div>
                                 <dt className="text-muted-foreground">
-                                    Indent number
+                                    E-Demand number
                                 </dt>
                                 <dd className="font-medium">
                                     {indent.indent_number ?? '—'}
@@ -206,7 +206,7 @@ export default function IndentsShow({
                             </div>
                             <div>
                                 <dt className="text-muted-foreground">
-                                    Indent date
+                                    E-Demand date
                                 </dt>
                                 <dd>
                                     {indent.indent_date
@@ -218,7 +218,7 @@ export default function IndentsShow({
                             </div>
                             <div>
                                 <dt className="text-muted-foreground">
-                                    Indent time
+                                    E-Demand time
                                 </dt>
                                 <dd>
                                     {indent.indent_time

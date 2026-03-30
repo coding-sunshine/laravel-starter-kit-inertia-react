@@ -28,11 +28,11 @@ export default function AppLogo({
             {showWordmark ? (
                 <span
                     className={cn(
-                        'truncate font-semibold leading-tight group-data-[collapsible=icon]:hidden',
+                        'truncate leading-tight font-semibold group-data-[collapsible=icon]:hidden',
                         wordmarkClassName,
                     )}
                 >
-                    RMMS
+                    SHAReReport
                 </span>
             ) : null}
         </div>

@@ -1,5 +1,4 @@
 import Heading from '@/components/heading';
-import { RrmcsGuidance } from '@/components/rrmcs-guidance';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -404,11 +403,6 @@ export default function ReportsIndex({ reports, sidings }: Props) {
                 <Heading
                     title="Reports"
                     description="Generate and export operational reports"
-                />
-                <RrmcsGuidance
-                    title="What this section is for"
-                    before="Reports extracted manually from different registers and Excel files — takes hours."
-                    after="One-click report generation with Excel export for all siding operations, penalties, indents, and financial data."
                 />
 
                 <div className="grid gap-6 lg:grid-cols-[240px_1fr]">

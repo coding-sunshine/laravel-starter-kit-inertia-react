@@ -246,6 +246,11 @@
             "type": "boolean",
             "nullable": true,
             "default": null
+        },
+        "loader_weighment_status": {
+            "type": "string",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {

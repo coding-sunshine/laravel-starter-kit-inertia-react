@@ -900,12 +900,11 @@ final class ExecutiveDashboardController extends Controller
 
         $fromDate = $from->toDateString();
         $toDate = $to->toDateString();
-        $asOf = now();
 
+        // Get latest ledger per siding (correct ordering using id)
         $latestLedgerIds = StockLedger::query()
             ->whereIn('siding_id', $sidingIds)
-            ->where('created_at', '<=', $asOf)
-            ->selectRaw('max(id) as id')
+            ->selectRaw('MAX(id) as id')
             ->groupBy('siding_id')
             ->pluck('id')
             ->all();
@@ -915,33 +914,36 @@ final class ExecutiveDashboardController extends Controller
             ->get()
             ->keyBy('siding_id');
 
+        // Total received (positive values)
         $receivedBySiding = StockLedger::query()
             ->whereIn('siding_id', $sidingIds)
-            ->whereNotNull('daily_vehicle_entry_id')
             ->where('transaction_type', 'receipt')
-            ->selectRaw('siding_id, coalesce(sum(quantity_mt), 0) as total')
+            ->selectRaw('siding_id, COALESCE(SUM(quantity_mt), 0) as total')
             ->groupBy('siding_id')
             ->pluck('total', 'siding_id');
 
+        // Total dispatched (stored as negative, so sum will be negative)
         $dispatchedBySiding = StockLedger::query()
             ->whereIn('siding_id', $sidingIds)
-            ->whereNotNull('rake_id')
             ->where('transaction_type', 'dispatch')
-            ->selectRaw('siding_id, coalesce(sum(quantity_mt), 0) as total')
+            ->selectRaw('siding_id, COALESCE(SUM(quantity_mt), 0) as total')
             ->groupBy('siding_id')
             ->pluck('total', 'siding_id');
 
+        // Rake count in date range
         $rakeCountsBySiding = Rake::query()
             ->whereIn('siding_id', $sidingIds)
             ->whereNotNull('created_at')
             ->whereRaw($this->dateOnlyBetweenSql('created_at'), [$fromDate, $toDate])
-            ->selectRaw('siding_id, count(*) as cnt')
+            ->selectRaw('siding_id, COUNT(*) as cnt')
             ->groupBy('siding_id')
             ->pluck('cnt', 'siding_id');
 
         $result = [];
+
         foreach ($sidingIds as $sid) {
             $latest = $latestLedgers->get($sid);
+
             if ($latest) {
                 $opening = (float) $latest->opening_balance_mt;
                 $closing = (float) $latest->closing_balance_mt;
@@ -956,7 +958,7 @@ final class ExecutiveDashboardController extends Controller
                 'closing_balance_mt' => $closing,
                 'total_rakes' => (int) ($rakeCountsBySiding[$sid] ?? 0),
                 'received_mt' => (float) ($receivedBySiding[$sid] ?? 0),
-                'dispatched_mt' => (float) ($dispatchedBySiding[$sid] ?? 0),
+                'dispatched_mt' => abs((float) ($dispatchedBySiding[$sid] ?? 0)), // important fix
             ];
         }
 

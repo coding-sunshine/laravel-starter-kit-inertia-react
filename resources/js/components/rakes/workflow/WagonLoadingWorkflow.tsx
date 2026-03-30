@@ -59,6 +59,7 @@ interface WagonLoadingRecord {
     };
     loader_id?: number | null;
     loader?: { loader_name: string; code: string };
+    loader_operator_name?: string | null;
     loaded_quantity_mt: string;
     loading_time?: string | null;
     remarks?: string | null;
@@ -80,6 +81,11 @@ interface WagonLoadingWorkflowProps {
     };
     disabled: boolean;
     onWagonLoadingsSaved?: (loadings: WagonLoadingRecord[]) => void;
+    /**
+     * By default the table scrolls internally to keep the page compact.
+     * For dedicated screens (like Rake Loader) you may want full height.
+     */
+    compact?: boolean;
 }
 
 interface LoadingRow {
@@ -88,6 +94,7 @@ interface LoadingRow {
     wagon_id: string;
     wagon_number: string;
     loader_id: string;
+    loader_operator_name: string;
     wagon_type: string;
     pcc_capacity: string;
     loaded_quantity_mt: string;
@@ -97,16 +104,24 @@ interface LoadingRow {
 
 const EMPTY_LOADINGS: WagonLoadingRecord[] = [];
 
+function shouldSkipLoaderWeighmentWagonNumber(wagonNumber: string | null | undefined): boolean {
+    const trimmed = (wagonNumber ?? '').trim();
+    return /^W\d+$/.test(trimmed);
+}
+
 export function WagonLoadingWorkflow({
     rake,
     disabled,
     onWagonLoadingsSaved,
+    compact = true,
 }: WagonLoadingWorkflowProps) {
     const existingLoadings = rake.wagonLoadings ?? rake.wagon_loadings ?? EMPTY_LOADINGS;
     /** All wagons on the rake (including unfit — loaders may still record quantities). */
     const rakeWagonsOrdered = useMemo(
         () =>
-            [...rake.wagons].sort(
+            [...rake.wagons]
+                .filter((w) => !shouldSkipLoaderWeighmentWagonNumber(w.wagon_number))
+                .sort(
                 (a, b) => (a.wagon_sequence ?? 0) - (b.wagon_sequence ?? 0)
             ),
         [rake.wagons]
@@ -115,6 +130,7 @@ export function WagonLoadingWorkflow({
     const [rows, setRows] = useState<LoadingRow[]>([]);
     const [saving, setSaving] = useState(false);
     const [ensuring, setEnsuring] = useState(false);
+    const [savingRowKey, setSavingRowKey] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     const onWagonLoadingsSavedRef = useRef(onWagonLoadingsSaved);
@@ -149,12 +165,15 @@ export function WagonLoadingWorkflow({
         const nextRows: LoadingRow[] =
             list.length === 0
                 ? []
-                : list.map((l) => ({
+                : list
+                      .filter((l) => !shouldSkipLoaderWeighmentWagonNumber(l.wagon?.wagon_number))
+                      .map((l) => ({
                       id: l.id,
                       key: `load-${l.wagon_id}-${l.id ?? Date.now()}`,
                       wagon_id: String(l.wagon_id),
                       wagon_number: l.wagon?.wagon_number ?? '',
                       loader_id: l.loader_id ? String(l.loader_id) : '',
+                      loader_operator_name: l.loader_operator_name ?? '',
                       wagon_type: l.wagon?.wagon_type ?? '',
                       pcc_capacity: l.wagon?.pcc_weight_mt ?? '',
                       loaded_quantity_mt: l.loaded_quantity_mt ?? '',
@@ -265,14 +284,27 @@ export function WagonLoadingWorkflow({
             ),
         [existingLoadings]
     );
+
+    const loadedAndHasLoaderWagonIds = useMemo(() => {
+        const ids = new Set<number>();
+        for (const l of existingLoadings) {
+            if (Number(l.loaded_quantity_mt) > 0 && l.loader_id) {
+                ids.add(l.wagon_id);
+            }
+        }
+        return ids;
+    }, [existingLoadings]);
+
     /** Status / “Completed” uses fit wagons only; unfit wagons may stay at 0 for audit. */
     const fitWagonsOrdered = useMemo(
         () => rakeWagonsOrdered.filter((w) => !w.is_unfit),
         [rakeWagonsOrdered]
     );
-    const unloadedFitWagons = fitWagonsOrdered.filter((w) => !positivelyLoadedWagonIds.has(w.id));
+    const incompleteFitWagons = fitWagonsOrdered.filter(
+        (w) => !loadedAndHasLoaderWagonIds.has(w.id)
+    );
     const isCompleted =
-        fitWagonsOrdered.length > 0 && unloadedFitWagons.length === 0;
+        fitWagonsOrdered.length > 0 && incompleteFitWagons.length === 0;
 
     const [editMode, setEditMode] = useState(!isCompleted);
 
@@ -281,14 +313,26 @@ export function WagonLoadingWorkflow({
     }, [isCompleted]);
 
     const updateRow = (key: string, field: keyof LoadingRow, value: string) => {
-        setRows((prev) =>
-            prev.map((r) => {
-                if (r.key !== key) {
-                    return r;
-                }
-                return { ...r, [field]: value };
-            })
-        );
+        setRows((prev) => {
+            const idx = prev.findIndex((r) => r.key === key);
+            if (idx < 0) {
+                return prev;
+            }
+
+            const current = prev[idx];
+            if (!current) {
+                return prev;
+            }
+
+            // Avoid rewriting array for no-op updates (helps typing performance).
+            if (current[field] === value) {
+                return prev;
+            }
+
+            const next = [...prev];
+            next[idx] = { ...current, [field]: value };
+            return next;
+        });
     };
 
     const getStatusIcon = () => {
@@ -313,6 +357,69 @@ export function WagonLoadingWorkflow({
 
     const showWorkflowPanel = editMode || rows.length > 0 || rake.wagons.length > 0;
     const tableReadOnly = !editMode;
+
+    const saveRow = async (row: LoadingRow): Promise<void> => {
+        if (!row.id) {
+            return;
+        }
+        if (tableReadOnly || disabled) {
+            return;
+        }
+
+        const loaderId =
+            row.loader_id && row.loader_id !== '__none__'
+                ? Number(row.loader_id)
+                : null;
+
+        const operatorName = row.loader_operator_name.trim();
+        const quantityString = row.loaded_quantity_mt.trim();
+        if (quantityString === '') {
+            setError('Loaded quantity is required.');
+            return;
+        }
+
+        setError(null);
+        setSaving(true);
+        setSavingRowKey(row.key);
+
+        try {
+            const response = await fetch(
+                `/rakes/${rake.id}/load/wagon-rows/${row.id}`,
+                {
+                    method: 'PATCH',
+                    headers: {
+                        Accept: 'application/json',
+                        'Content-Type': 'application/json',
+                        ...getCsrfHeaders(),
+                    },
+                    body: JSON.stringify({
+                        loader_id: loaderId,
+                        loader_operator_name: operatorName === '' ? null : operatorName,
+                        loaded_quantity_mt: quantityString,
+                    }),
+                }
+            );
+
+            const data = (await response.json().catch(() => null)) as
+                | { loading?: WagonLoadingRecord; message?: string }
+                | null;
+            if (!response.ok || !data?.loading) {
+                setError(data?.message ?? 'Failed to update wagon row.');
+                return;
+            }
+
+            const updated = data.loading;
+            const merged = existingLoadings.map((l) =>
+                l.id === updated.id ? updated : l
+            );
+            onWagonLoadingsSaved?.(merged);
+        } catch {
+            setError('Failed to update wagon row.');
+        } finally {
+            setSaving(false);
+            setSavingRowKey(null);
+        }
+    };
 
     return (
         <Card>
@@ -372,17 +479,24 @@ export function WagonLoadingWorkflow({
                                         {error}
                                     </div>
                                 )}
-                                <div className="max-h-80 overflow-y-auto border rounded-lg">
+                                <div
+                                    className={
+                                        (compact ? 'max-h-80 overflow-y-auto ' : '') +
+                                        'border rounded-lg'
+                                    }
+                                >
                                     <Table>
                                         <TableHeader>
                                             <TableRow>
                                                 <TableHead>Wagon</TableHead>
                                                 <TableHead>Loader</TableHead>
+                                                <TableHead>Loader operator</TableHead>
                                                 <TableHead>Wagon Type</TableHead>
                                                 <TableHead>PCC Capacity</TableHead>
                                                 <TableHead>Loaded Qty (MT)</TableHead>
                                                 <TableHead>Loading Time</TableHead>
                                                 <TableHead>Remarks</TableHead>
+                                                <TableHead className="w-[120px]">Update</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -429,46 +543,9 @@ export function WagonLoadingWorkflow({
                                                             <TableCell className="min-w-[180px]">
                                                                 <Select
                                                                     value={row.loader_id || '__none__'}
-                                                                    onValueChange={async (value) => {
+                                                                    onValueChange={(value) => {
                                                                         const loaderId = value === '__none__' ? null : value;
-                                                                        const currentRow = rows.find((r) => r.key === row.key);
-                                                                        if (!currentRow?.id) {
-                                                                            return;
-                                                                        }
                                                                         updateRow(row.key, 'loader_id', loaderId ? String(loaderId) : '');
-                                                                        setError(null);
-                                                                        setSaving(true);
-                                                                        try {
-                                                                            const response = await fetch(
-                                                                                `/rakes/${rake.id}/load/wagon-rows/${currentRow.id}`,
-                                                                                {
-                                                                                    method: 'PATCH',
-                                                                                    headers: {
-                                                                                        Accept: 'application/json',
-                                                                                        'Content-Type': 'application/json',
-                                                                                        ...getCsrfHeaders(),
-                                                                                    },
-                                                                                    body: JSON.stringify({
-                                                                                        loader_id: loaderId,
-                                                                                    }),
-                                                                                }
-                                                                            );
-                                                                            const data = (await response.json().catch(() => null)) as
-                                                                                | { loading?: WagonLoadingRecord; message?: string }
-                                                                                | null;
-                                                                            if (!response.ok || !data?.loading) {
-                                                                                setError(data?.message ?? 'Failed to update loader.');
-                                                                                return;
-                                                                            }
-                                                                            const merged = existingLoadings.map((l) =>
-                                                                                l.id === data.loading!.id ? data.loading! : l
-                                                                            );
-                                                                            onWagonLoadingsSaved?.(merged);
-                                                                        } catch {
-                                                                            setError('Failed to update loader.');
-                                                                        } finally {
-                                                                            setSaving(false);
-                                                                        }
                                                                     }}
                                                                     disabled={disabled || tableReadOnly}
                                                                 >
@@ -485,6 +562,21 @@ export function WagonLoadingWorkflow({
                                                                         ))}
                                                                     </SelectContent>
                                                                 </Select>
+                                                            </TableCell>
+                                                            <TableCell className="min-w-[180px]">
+                                                                <Input
+                                                                    value={row.loader_operator_name}
+                                                                    onChange={(e) =>
+                                                                        updateRow(
+                                                                            row.key,
+                                                                            'loader_operator_name',
+                                                                            e.target.value
+                                                                        )
+                                                                    }
+                                                                    placeholder="Operator name"
+                                                                    disabled={disabled || tableReadOnly}
+                                                                    className="w-44"
+                                                                />
                                                             </TableCell>
                                                             <TableCell>
                                                                 <Input
@@ -504,57 +596,14 @@ export function WagonLoadingWorkflow({
                                                             </TableCell>
                                                             <TableCell>
                                                                 <Input
-                                                                    type="number"
-                                                                    step="0.01"
-                                                                    min="0"
+                                                                    // Use text to avoid browser spinners and preserve fast, permissive typing.
+                                                                    type="text"
+                                                                    inputMode="decimal"
+                                                                    pattern="[0-9]*[.,]?[0-9]*"
                                                                     value={row.loaded_quantity_mt}
                                                                     onChange={(e) =>
                                                                         updateRow(row.key, 'loaded_quantity_mt', e.target.value)
                                                                     }
-                                                                    onBlur={async (e) => {
-                                                                        const value = e.target.value;
-                                                                        const currentRow = rows.find((r) => r.key === row.key);
-                                                                        if (!currentRow?.id || !value) {
-                                                                            return;
-                                                                        }
-                                                                        setError(null);
-                                                                        setSaving(true);
-                                                                        try {
-                                                                            const response = await fetch(
-                                                                                `/rakes/${rake.id}/load/wagon-rows/${currentRow.id}`,
-                                                                                {
-                                                                                    method: 'PATCH',
-                                                                                    headers: {
-                                                                                        Accept: 'application/json',
-                                                                                        'Content-Type': 'application/json',
-                                                                                        ...getCsrfHeaders(),
-                                                                                    },
-                                                                                    body: JSON.stringify({
-                                                                                        loaded_quantity_mt: value,
-                                                                                    }),
-                                                                                }
-                                                                            );
-                                                                            const data = (await response.json().catch(() => null)) as
-                                                                                | { loading?: WagonLoadingRecord; message?: string }
-                                                                                | null;
-                                                                            if (!response.ok || !data?.loading) {
-                                                                                setError(
-                                                                                    data?.message ??
-                                                                                        'Failed to update loaded quantity.'
-                                                                                );
-                                                                                return;
-                                                                            }
-                                                                            const updated = data.loading;
-                                                                            const merged = existingLoadings.map((l) =>
-                                                                                l.id === updated.id ? updated : l
-                                                                            );
-                                                                            onWagonLoadingsSaved?.(merged);
-                                                                        } catch {
-                                                                            setError('Failed to update loaded quantity.');
-                                                                        } finally {
-                                                                            setSaving(false);
-                                                                        }
-                                                                    }}
                                                                     placeholder="0"
                                                                     disabled={disabled || tableReadOnly}
                                                                     className="w-24"
@@ -577,8 +626,31 @@ export function WagonLoadingWorkflow({
                                                                     onChange={(e) => updateRow(row.key, 'remarks', e.target.value)}
                                                                     placeholder="Remarks"
                                                                     disabled={disabled || tableReadOnly}
-                                                                    className="min-w-[100px]"
+                                                                    className="w-28"
                                                                 />
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <Button
+                                                                    type="button"
+                                                                    size="sm"
+                                                                    onClick={() => void saveRow(row)}
+                                                                    disabled={
+                                                                        disabled ||
+                                                                        tableReadOnly ||
+                                                                        ensuring ||
+                                                                        (savingRowKey !== null && savingRowKey !== row.key)
+                                                                    }
+                                                                    className="w-full"
+                                                                >
+                                                                    {savingRowKey === row.key ? (
+                                                                        <>
+                                                                            <Loader className="mr-2 h-4 w-4 animate-spin" />
+                                                                            Saving…
+                                                                        </>
+                                                                    ) : (
+                                                                        'Update'
+                                                                    )}
+                                                                </Button>
                                                             </TableCell>
                                                         </TableRow>
                                                     );
@@ -588,7 +660,7 @@ export function WagonLoadingWorkflow({
                                     </Table>
                                 </div>
                                 <div className="flex justify-end mt-4 text-xs text-muted-foreground">
-                                    Changes are saved automatically.
+                                    Click Update to save each row.
                                 </div>
                             </form>
                         </div>

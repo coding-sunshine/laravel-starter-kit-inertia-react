@@ -27,6 +27,9 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 interface WeighmentRow {
     id: number;
     rake_id: number;
+    rake?: {
+        rake_number: string | null;
+    } | null;
     attempt_no: number;
     gross_weighment_datetime: string | null;
     tare_weighment_datetime: string | null;
@@ -290,6 +293,7 @@ export default function WeighmentsIndex({ weighments = [] }: Props) {
                                 <table className="w-full border-collapse">
                                     <thead>
                                         <tr className="border-b">
+                                            <th className="p-2 text-left">Rake #</th>
                                             <th className="p-2 text-left">Train Name</th>
                                             <th className="p-2 text-left">Direction</th>
                                             <th className="p-2 text-left">Commodity</th>
@@ -307,6 +311,11 @@ export default function WeighmentsIndex({ weighments = [] }: Props) {
                                     <tbody>
                                         {weighments.map((weighment) => (
                                             <tr key={weighment.id} className="border-b hover:bg-muted/50">
+                                                <td className="p-2">
+                                                    {weighment.rake?.rake_number
+                                                        ? weighment.rake.rake_number
+                                                        : 'N/A'}
+                                                </td>
                                                 <td className="p-2">{weighment.train_name || '-'}</td>
                                                 <td className="p-2">{weighment.direction || '-'}</td>
                                                 <td className="p-2">{weighment.commodity || '-'}</td>

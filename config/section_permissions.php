@@ -71,6 +71,11 @@ return [
             'actions' => ['view', 'create', 'update', 'delete', 'upload'],
         ],
         [
+            'slug' => 'rake_loader',
+            'label' => 'Rake Loader',
+            'actions' => ['view', 'update'],
+        ],
+        [
             'slug' => 'indents',
             'label' => 'Indents',
             'actions' => ['view', 'create', 'update', 'delete'],
@@ -273,6 +278,11 @@ return [
         'rakes.guard-inspection.store' => 'sections.rakes.update',
         'txr.unfit-wagons.store' => 'sections.rakes.update',
 
+        // Rake Loader
+        'rake-loader.index' => 'sections.rake_loader.view',
+        'rake-loader.rakes' => 'sections.rake_loader.view',
+        'rake-loader.rakes.show' => 'sections.rake_loader.view',
+
         // Indents
         'indents.index' => 'sections.indents.view',
         'indents.show' => 'sections.indents.view',
@@ -419,6 +429,7 @@ return [
         'distance_matrix' => 'sections.distance_matrix.view',
         'billing' => 'sections.billing.view',
         'rakes' => 'sections.rakes.view',
+        'rake_loader' => 'sections.rake_loader.view',
         'indents' => 'sections.indents.view',
         'railway_siding_record_data' => 'sections.railway_siding_record_data.view',
         'railway_siding_empty_weighment' => 'sections.railway_siding_empty_weighment.view',

@@ -96,7 +96,8 @@ export default function Welcome() {
                                 Let's get started
                             </h1>
                             <p className="mb-2 text-[#706f6c] dark:text-[#A1A09A]">
-                                RMMS has comprehensive features for railway management.
+                                SHAReReport has comprehensive features for
+                                railway management.
                                 <br />
                                 We suggest starting with the following.
                             </p>

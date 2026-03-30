@@ -13,34 +13,25 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
-import { index as changelogIndex } from '@/routes/changelog';
-import { create as contactCreate } from '@/routes/contact';
-import { index as helpIndex } from '@/routes/help';
 import { type NavGroup, type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import {
     AlertTriangle,
     BarChart3,
-    BookOpen,
-    Building2,
     CreditCard,
+    Factory,
     FileText,
-    Folder,
     History,
     LayoutGrid,
-    LifeBuoy,
-    Mail,
-    Megaphone,
+    MapPin,
     Mountain,
+    Package,
+    Route,
     Scale,
+    Settings,
+    Timer,
     Train,
     Truck,
-    Settings,
-    Factory,
-    MapPin,
-    Package,
-    Timer,
-    Route,
 } from 'lucide-react';
 import { useMemo } from 'react';
 import AppLogo from './app-logo';
@@ -191,6 +182,13 @@ const platformNavItems: NavItem[] = [
         ],
     },
     {
+        title: 'E-Demand',
+        href: '/indents',
+        icon: FileText,
+        permission: 'sections.indents.view',
+        dataPan: 'nav-indents',
+    },
+    {
         title: 'Rakes',
         href: '/rakes',
         icon: Train,
@@ -198,11 +196,25 @@ const platformNavItems: NavItem[] = [
         dataPan: 'nav-rakes',
     },
     {
-        title: 'Indents',
-        href: '/indents',
+        title: 'Rake Weighment',
+        href: '/weighments',
+        icon: Scale,
+        permission: 'sections.weighments.view',
+        dataPan: 'nav-weighments',
+    },
+    {
+        title: 'Rake Loader',
+        href: '/rake-loader',
+        icon: Package,
+        permission: 'sections.rake_loader.view',
+        dataPan: 'nav-rake-loader',
+    },
+    {
+        title: 'RR Upload',
+        href: '/railway-receipts',
         icon: FileText,
-        permission: 'sections.indents.view',
-        dataPan: 'nav-indents',
+        permission: 'sections.railway_receipts.view',
+        dataPan: 'nav-railway-receipts',
     },
     {
         title: 'Railway Siding Record Data',
@@ -225,13 +237,6 @@ const platformNavItems: NavItem[] = [
         permission: 'sections.mines_dispatch_data.view',
         dataPan: 'nav-vehicle-dispatch',
     },
-    {
-        title: 'Railway Receipts',
-        href: '/railway-receipts',
-        icon: FileText,
-        permission: 'sections.railway_receipts.view',
-        dataPan: 'nav-railway-receipts',
-    },
     // {
     //     title: 'Penalties',
     //     href: '/penalties',
@@ -253,13 +258,7 @@ const platformNavItems: NavItem[] = [
     //     permission: 'sections.reconciliation.view',
     //     dataPan: 'nav-reconciliation',
     // },
-    {
-        title: 'Weighments',
-        href: '/weighments',
-        icon: Scale,
-        permission: 'sections.weighments.view',
-        dataPan: 'nav-weighments',
-    },
+
     // {
     //     title: 'Changelog',
     //     href: changelogIndex().url,
@@ -342,17 +341,22 @@ function canShowNavItem(
 export function AppSidebar() {
     const { auth, features } = usePage<SharedData>().props;
     const canShow = useMemo(
-        () =>
-            (item: NavItem) =>
-                canShowNavItem(
-                    item,
-                    auth.permissions ?? [],
-                    auth.roles ?? [],
-                    auth.can_bypass ?? false,
-                    features ?? {},
-                    auth.tenancy_enabled ?? true,
-                ),
-        [auth.permissions, auth.roles, auth.can_bypass, auth.tenancy_enabled, features],
+        () => (item: NavItem) =>
+            canShowNavItem(
+                item,
+                auth.permissions ?? [],
+                auth.roles ?? [],
+                auth.can_bypass ?? false,
+                features ?? {},
+                auth.tenancy_enabled ?? true,
+            ),
+        [
+            auth.permissions,
+            auth.roles,
+            auth.can_bypass,
+            auth.tenancy_enabled,
+            features,
+        ],
     );
 
     const navGroups = useMemo((): NavGroup[] => {
@@ -373,7 +377,9 @@ export function AppSidebar() {
                 subItems: visibleSettingsSubItems,
             });
         }
-        restPlatform.filter(canShow).forEach((item) => platformItems.push(item));
+        restPlatform
+            .filter(canShow)
+            .forEach((item) => platformItems.push(item));
 
         if (platformItems.length === 0) return [];
         return [{ title: 'Platform', items: platformItems }];
@@ -392,7 +398,11 @@ export function AppSidebar() {
             <SidebarHeader>
                 <SidebarMenu>
                     <SidebarMenuItem>
-                        <SidebarMenuButton size="lg" asChild tooltip="RMMS">
+                        <SidebarMenuButton
+                            size="lg"
+                            asChild
+                            tooltip="SHAReReport"
+                        >
                             <Link href={dashboard().url} prefetch>
                                 <AppLogo />
                             </Link>
