@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
 use Throwable;
+use Illuminate\Support\Facades\DB;
 
 final class RakeWeighmentController extends Controller
 {
@@ -63,42 +64,70 @@ final class RakeWeighmentController extends Controller
 
     public function destroy(Rake $rake): RedirectResponse
     {
-        // $this->authorize('update', $rake);
-
-        // 1) Reverse any dispatch ledgers for this rake
-        $dispatchLedgers = StockLedger::query()
-            ->where('rake_id', $rake->id)
-            ->where('transaction_type', 'dispatch')
-            ->get();
-
         $userId = (int) auth()->id();
 
-        foreach ($dispatchLedgers as $dispatch) {
-            $siding = $dispatch->siding;
-            $quantity = (float) $dispatch->quantity_mt;
+        // Get the single dispatch entry for this rake
+        $dispatch = StockLedger::query()
+            ->where('rake_id', $rake->id)
+            ->where('transaction_type', 'dispatch')
+            ->latest('id')
+            ->first();
 
-            if ($siding !== null && $quantity > 0) {
-                // Add coal back by writing a correction row that increases balance
-                $currentBalance = $this->updateStockLedger->getCurrentBalance($siding->id);
-                $newBalance = $currentBalance + $quantity;
+        if ($dispatch) {
 
-                StockLedger::query()->create([
-                    'siding_id' => $siding->id,
-                    'transaction_type' => 'correction',
-                    'rake_id' => $rake->id,
-                    'quantity_mt' => $quantity,
-                    'opening_balance_mt' => $currentBalance,
-                    'closing_balance_mt' => $newBalance,
-                    'reference_number' => 'REV-DISP-'.$dispatch->id,
-                    'remarks' => 'Reversal for deleted rake weighment #'.$rake->id,
-                    'created_by' => $userId ?: null,
-                ]);
+            
+                DB::transaction(function () use ($dispatch, $rake, $userId) {
 
-                // Let the rest of the app know stock changed
-                event(new \App\Events\CoalStockUpdated($siding->id, $newBalance));
-            }
+                    $sidingId = $dispatch->siding_id;
+
+                    if (! $sidingId) {
+                        return;
+                    }
+                    $alreadyReversed = StockLedger::query()
+                        ->where('reference_number', 'REV-DISP-'.$dispatch->id)
+                        ->lockForUpdate()
+                        ->exists();
+
+                    if ($alreadyReversed) {
+                        return;
+                    }
+
+                    // reverse dispatch (negative → positive)
+                    $reverseQty = abs((float) $dispatch->quantity_mt);
+
+                    //  lock latest ledger row
+                    $lastLedger = StockLedger::query()
+                        ->where('siding_id', $sidingId)
+                        ->lockForUpdate()
+                        ->latest('id')
+                        ->first();
+
+                    $opening = $lastLedger
+                        ? (float) $lastLedger->closing_balance_mt
+                        : SidingOpeningBalance::getOpeningBalanceForSiding($sidingId);
+
+                    $closing = round($opening + $reverseQty, 2);
+
+                    StockLedger::create([
+                        'siding_id' => $sidingId,
+                        'transaction_type' => 'correction',
+                        'rake_id' => $rake->id,
+                        'quantity_mt' => $reverseQty, //  positive
+                        'opening_balance_mt' => $opening,
+                        'closing_balance_mt' => $closing,
+                        'reference_number' => 'REV-DISP-'.$dispatch->id,
+                        'remarks' => 'Reversal for deleted rake #'.$rake->id,
+                        'created_by' => $userId ?: null,
+                    ]);
+
+                    DB::afterCommit(function () use ($sidingId, $closing) {
+                        event(new \App\Events\CoalStockUpdated($sidingId, $closing));
+                    });
+                });
+            
         }
 
+        // 🔹 Delete weighment files + records
         $weighments = $rake->rakeWeighments()->get();
 
         foreach ($weighments as $weighment) {
@@ -109,11 +138,13 @@ final class RakeWeighmentController extends Controller
             $weighment->delete();
         }
 
+        // 🔹 Delete penalties
         AppliedPenalty::query()
             ->where('rake_id', $rake->id)
             ->where('meta->source', 'weighment')
             ->delete();
 
+        // 🔹 Update penalty charge
         $penaltyCharge = RakeCharge::query()
             ->where('rake_id', $rake->id)
             ->where('charge_type', 'PENALTY')
