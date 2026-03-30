@@ -144,6 +144,20 @@ final class PanServiceProvider extends ServiceProvider
             'mode-toggle-light',
             'mode-toggle-dark',
             'mode-toggle-system',
+            'settings-nav-webhooks',
+            'webhooks-add',
+            'webhooks-test',
+            'webhooks-reset-circuit',
+            'webhooks-edit',
+            'webhooks-delete',
+            'webhooks-save',
+            'webhooks-update',
+            'webhooks-regenerate-secret',
+            'settings-nav-email-templates',
+            'email-templates-edit',
+            'email-templates-preview',
+            'email-templates-save',
+            'email-templates-reset',
         ]);
     }
 }

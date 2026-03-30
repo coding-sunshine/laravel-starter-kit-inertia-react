@@ -1,49 +1,49 @@
 {
-    "model": "DataTableSavedView",
-    "table": "data_table_saved_views",
+    "model": "WebhookEndpoint",
+    "table": "webhook_endpoints",
     "fields": {
         "id": {
             "type": "bigint",
             "nullable": true,
             "default": null
         },
-        "user_id": {
+        "organization_id": {
             "type": "bigint",
             "nullable": true,
             "default": null
         },
-        "table_name": {
+        "url": {
             "type": "string",
             "nullable": true,
             "default": null
         },
-        "name": {
-            "type": "string",
-            "nullable": true,
-            "default": null
-        },
-        "filters": {
+        "events": {
             "type": "text",
             "nullable": true,
             "default": null
         },
-        "sort": {
-            "type": "string",
-            "nullable": true,
-            "default": null
-        },
-        "columns": {
+        "secret": {
             "type": "text",
             "nullable": true,
             "default": null
         },
-        "column_order": {
-            "type": "text",
-            "nullable": true,
-            "default": null
-        },
-        "is_default": {
+        "is_active": {
             "type": "boolean",
+            "nullable": true,
+            "default": null
+        },
+        "description": {
+            "type": "string",
+            "nullable": true,
+            "default": null
+        },
+        "last_called_at": {
+            "type": "timestamp",
+            "nullable": true,
+            "default": null
+        },
+        "created_by": {
+            "type": "integer",
             "nullable": true,
             "default": null
         },
@@ -57,32 +57,13 @@
             "nullable": true,
             "default": null
         },
-        "organization_id": {
-            "type": "bigint",
-            "nullable": true,
-            "default": null
-        },
-        "is_shared": {
-            "type": "boolean",
-            "nullable": true,
-            "default": null
-        },
-        "is_system": {
-            "type": "boolean",
-            "nullable": true,
-            "default": null
-        },
-        "created_by": {
-            "type": "integer",
+        "deleted_at": {
+            "type": "timestamp",
             "nullable": true,
             "default": null
         }
     },
     "relationships": {
-        "user": {
-            "type": "belongsTo",
-            "model": "User"
-        },
         "creator": {
             "type": "belongsTo",
             "model": "Creator"
@@ -93,25 +74,21 @@
         }
     },
     "value_hints": {
-        "is_default": {
+        "url": {
+            "type": "url",
+            "example": "https://example.com"
+        },
+        "secret": {
+            "type": "string",
+            "example": "whsec_randomstring32chars"
+        },
+        "is_active": {
             "type": "boolean",
             "example": true
         },
-        "is_shared": {
-            "type": "boolean",
-            "example": true
-        },
-        "is_system": {
-            "type": "boolean",
-            "example": true
-        },
-        "table_name": {
-            "type": "name",
-            "example": "John Doe"
-        },
-        "name": {
-            "type": "name",
-            "example": "John Doe"
+        "last_called_at": {
+            "type": "datetime",
+            "example": "2024-01-01 00:00:00"
         }
     },
     "scenarios": []
