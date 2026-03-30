@@ -20,8 +20,8 @@ export default function IndentsCreate({ sidings }: Props) {
     const { errors } = usePage<{ errors?: Record<string, string> }>().props;
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: '/dashboard' },
-        { title: 'Indents', href: '/indents' },
-        { title: 'Create indent', href: '/indents/create' },
+        { title: 'E-Demand', href: '/indents' },
+        { title: 'Create e-demand', href: '/indents/create' },
     ];
 
     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -33,9 +33,9 @@ export default function IndentsCreate({ sidings }: Props) {
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Create indent" />
+            <Head title="Create e-demand" />
             <div className="space-y-6">
-                <h2 className="text-lg font-medium">Create indent</h2>
+                <h2 className="text-lg font-medium">Create e-demand</h2>
                 <form
                     onSubmit={handleSubmit}
                     className="max-w-lg space-y-4"
@@ -59,7 +59,7 @@ export default function IndentsCreate({ sidings }: Props) {
                         <InputError message={errors?.siding_id} />
                     </div>
                     <div className="grid gap-2">
-                        <Label htmlFor="indent_number">Indent number</Label>
+                        <Label htmlFor="indent_number">E-Demand number</Label>
                         <Input
                             id="indent_number"
                             name="indent_number"
@@ -84,7 +84,7 @@ export default function IndentsCreate({ sidings }: Props) {
                             <InputError message={errors?.target_quantity_mt} />
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="indent_date">Indent date *</Label>
+                        <Label htmlFor="indent_date">E-Demand date *</Label>
                             <Input
                                 id="indent_date"
                                 name="indent_date"
@@ -187,7 +187,7 @@ export default function IndentsCreate({ sidings }: Props) {
                         <InputError message={errors?.remarks} />
                     </div>
                     <div className="flex gap-2">
-                        <Button type="submit">Create indent</Button>
+                        <Button type="submit">Create e-demand</Button>
                         <Button
                             type="button"
                             variant="outline"

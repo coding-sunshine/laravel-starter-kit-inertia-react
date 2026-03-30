@@ -1,6 +1,5 @@
 import { DataTable } from 'laravel-data-table';
 import type { DataTableResponse } from 'laravel-data-table';
-import { RrmcsGuidance } from '@/components/rrmcs-guidance';
 import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
 import {
@@ -255,11 +254,6 @@ export default function RailwayReceiptsIndex({
                         </p>
                     )}
                 </div>
-                <RrmcsGuidance
-                    title="What this section is for"
-                    before="RR documents filed in physical folders; FNR, freight, and wagon details copied manually into Excel."
-                    after="Upload RR PDF, auto-parsed into structured data — FNR, freight, charges, wagon table all searchable."
-                />
                 <Card>
                     <CardHeader>
                         <CardTitle>RR documents</CardTitle>

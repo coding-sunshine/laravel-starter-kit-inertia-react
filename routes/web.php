@@ -53,6 +53,7 @@ use App\Http\Controllers\Rakes\RakeDiverrtDestinationController;
 use App\Http\Controllers\Rakes\RakeDiversionModeController;
 use App\Http\Controllers\Rakes\RakeGuardInspectionController;
 use App\Http\Controllers\Rakes\RakeLoadController;
+use App\Http\Controllers\Rakes\RakeLoaderController;
 use App\Http\Controllers\Rakes\RakePowerPlantReceiptController;
 use App\Http\Controllers\Rakes\RakesController;
 use App\Http\Controllers\Rakes\RakeTxrController;
@@ -208,6 +209,10 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::post('siding/switch', SidingSwitchController::class)->name('siding.switch');
 
     // RRMCS Routes (Railway Rake Management Control System)
+    Route::get('rake-loader', [RakeLoaderController::class, 'index'])->name('rake-loader.index');
+    Route::get('rake-loader/rakes', [RakeLoaderController::class, 'rakes'])->name('rake-loader.rakes');
+    Route::get('rake-loader/rakes/{rake}', [RakeLoaderController::class, 'show'])->name('rake-loader.rakes.show');
+
     Route::get('rakes', [RakesController::class, 'index'])->name('rakes.index');
     Route::get('rakes/{rake}', [RakesController::class, 'show'])->name('rakes.show');
     Route::get('rakes/{rake}/pre-rr', [PreRrController::class, 'show'])->name('rakes.pre-rr.show');

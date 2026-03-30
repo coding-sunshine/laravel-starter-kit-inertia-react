@@ -40,7 +40,7 @@ final class AdminPanelProvider extends PanelProvider
             ->homeUrl(fn (): string => UserResource::getUrl('index', panel: 'admin'))
             ->authGuard('web')
             ->login(Login::class)
-            ->brandName('RMMS')
+            ->brandName('SHAReReport')
             ->brandLogo(asset('logo.png'))
             ->brandLogoHeight('2rem')
             ->favicon(asset('logo.png'))

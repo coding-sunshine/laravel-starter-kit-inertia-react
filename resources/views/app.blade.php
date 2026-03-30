@@ -3,9 +3,9 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="description" content="RMMS is a Railway Rake Management System for tracking stock, dispatch, weighment, RR uploads, and penalty workflows.">
+        <meta name="description" content="SHAReReport is a Railway Rake Management System for tracking stock, dispatch, weighment, RR uploads, and penalty workflows.">
         <meta property="og:type" content="website">
-        <meta property="og:title" content="RMMS | Railway Rake Management System">
+        <meta property="og:title" content="SHAReReport | Railway Rake Management System">
         <meta property="og:description" content="Manage railway rakes, coal stock, weighments, RR documents, and penalties in one operational dashboard.">
         <meta property="og:url" content="{{ request()->fullUrl() }}">
         <meta property="og:image" content="{{ url('/logo.png') }}">

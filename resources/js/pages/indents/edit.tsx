@@ -100,8 +100,8 @@ export default function IndentsEdit({ indent, sidings, currentStockMt }: Props) 
     const stateOptions = INDENT_STATES;
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: '/dashboard' },
-        { title: 'Indents', href: '/indents' },
-        { title: indent.indent_number || 'Indent', href: `/indents/${indent.id}` },
+        { title: 'E-Demand', href: '/indents' },
+        { title: indent.indent_number || 'E-Demand', href: `/indents/${indent.id}` },
         { title: 'Edit', href: `/indents/${indent.id}/edit` },
     ];
 
@@ -126,18 +126,18 @@ export default function IndentsEdit({ indent, sidings, currentStockMt }: Props) 
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title={`Edit indent ${indent.indent_number || ''}`} />
+            <Head title={`Edit e-demand ${indent.indent_number || ''}`} />
             <div className="mx-auto max-w-4xl space-y-6">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                     <div>
                         <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
                             <Pencil className="size-6 text-muted-foreground" />
-                            Edit indent
+                            Edit e-demand
                         </h1>
                         <p className="mt-1 text-sm text-muted-foreground">
                             {indent.indent_number
-                                ? `Forwarding note / indent ${indent.indent_number}`
-                                : 'Update indent details and quantities'}
+                                ? `Forwarding note / e-demand ${indent.indent_number}`
+                                : 'Update e-demand details and quantities'}
                         </p>
                     </div>
                     <Button
@@ -146,7 +146,7 @@ export default function IndentsEdit({ indent, sidings, currentStockMt }: Props) 
                         data-pan="indents-edit-cancel"
                         onClick={() => router.visit(`/indents/${indent.id}`)}
                     >
-                        Back to indent
+                        Back to e-demand
                     </Button>
                 </div>
 
@@ -234,7 +234,7 @@ export default function IndentsEdit({ indent, sidings, currentStockMt }: Props) 
                             </div>
                             <div className="grid gap-2">
                                 <Label htmlFor="indent_number">
-                                    Indent / forwarding note number
+                                    E-Demand / forwarding note number
                                 </Label>
                                 <Input
                                     id="indent_number"
@@ -417,7 +417,7 @@ export default function IndentsEdit({ indent, sidings, currentStockMt }: Props) 
                         <CardContent className="grid gap-4 sm:grid-cols-2">
                             <div className="grid gap-2 sm:col-span-2">
                                 <Label htmlFor="indent_at">
-                                    Indent date &amp; time (demand)
+                                    E-Demand date &amp; time (demand)
                                 </Label>
                                 <Input
                                     id="indent_at"
@@ -468,16 +468,16 @@ export default function IndentsEdit({ indent, sidings, currentStockMt }: Props) 
                     <Card>
                         <CardHeader>
                             <CardTitle className="text-base">
-                                Indent PDF & notes
+                                E-Demand PDF & notes
                             </CardTitle>
                             <CardDescription>
                                 The e-Demand confirmation is stored as the indent PDF.
-                                Download it here; use Indents import to attach a new file.
+                                Download it here; use E-Demand import to attach a new file.
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="grid gap-2">
-                                <Label>Indent PDF (e-Demand confirmation)</Label>
+                                <Label>E-Demand PDF (e-Demand confirmation)</Label>
                                 {indentPdfHref ? (
                                     <a
                                         href={indentPdfHref}
@@ -492,7 +492,7 @@ export default function IndentsEdit({ indent, sidings, currentStockMt }: Props) 
                                 ) : (
                                     <p className="text-sm text-muted-foreground">
                                         No indent PDF attached. Import an e-Demand slip from
-                                        the Indents list to add one.
+                                        the E-Demand list to add one.
                                     </p>
                                 )}
                             </div>

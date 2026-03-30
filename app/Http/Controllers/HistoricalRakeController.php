@@ -104,7 +104,7 @@ final class HistoricalRakeController extends Controller
 
     public function update(Request $request, Rake $rake): JsonResponse
     {
-        if ($rake->data_source !== 'historical_excel' && $rake->data_source !== 'historical_manual') {
+        if (! in_array($rake->data_source, ['historical_excel', 'historical_manual', 'historical_import'], true)) {
             abort(403, 'Only historical rakes can be edited.');
         }
 
@@ -157,7 +157,7 @@ final class HistoricalRakeController extends Controller
 
     public function destroy(Request $request, Rake $rake): JsonResponse
     {
-        if ($rake->data_source === 'historical_excel') {
+        if (in_array($rake->data_source, ['historical_excel', 'historical_import'], true)) {
             return response()->json([
                 'message' => 'Imported historical records cannot be deleted.',
             ], 422);

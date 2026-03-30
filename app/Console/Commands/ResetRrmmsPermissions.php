@@ -23,7 +23,7 @@ final class ResetRrmmsPermissions extends Command
      *
      * @var string
      */
-    protected $description = 'Drop all Spatie permissions and re-assign RMMS route-based permissions to roles';
+    protected $description = 'Drop all Spatie permissions and re-assign SHAReReport route-based permissions to roles';
 
     public function handle(): int
     {
@@ -45,7 +45,7 @@ final class ResetRrmmsPermissions extends Command
         $seeder = app(RolesAndPermissionsSeeder::class);
         $seeder->run();
 
-        $this->info('RMMS permissions have been reset and reassigned.');
+        $this->info('SHAReReport permissions have been reset and reassigned.');
 
         return self::SUCCESS;
     }

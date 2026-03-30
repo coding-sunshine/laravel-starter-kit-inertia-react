@@ -68,7 +68,7 @@ export default function CreateRakeFromIndent({
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: '/dashboard' },
-        { title: 'Indents', href: '/indents' },
+        { title: 'E-Demand', href: '/indents' },
         { title: indent.indent_number || 'N/A', href: `/indents/${indent.id}` },
         { title: 'Create Rake', href: `/indents/${indent.id}/create-rake` },
     ];

@@ -12,6 +12,7 @@ use App\Models\GuardInspection;
 use App\Models\PenaltyType;
 use App\Models\Rake;
 use App\Models\RakeWagonLoading;
+use App\Models\User;
 use App\Services\RakeLoadStateResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -230,6 +231,9 @@ final class RakeLoadController extends Controller
      */
     public function indexWagonLoadings(Rake $rake): JsonResponse
     {
+        $user = request()->user();
+        abort_unless($user instanceof User && $this->canEditLoaderWeighment($user), 403);
+
         $rake->load([
             'wagonLoadings.wagon:id,wagon_number,wagon_sequence,wagon_type,tare_weight_mt,pcc_weight_mt,is_unfit',
             'wagonLoadings.loader:id,loader_name,code',
@@ -243,6 +247,7 @@ final class RakeLoadController extends Controller
                     'id' => $loading->id,
                     'wagon_id' => $loading->wagon_id,
                     'loader_id' => $loading->loader_id,
+                    'loader_operator_name' => $loading->loader_operator_name,
                     'loaded_quantity_mt' => $loading->loaded_quantity_mt !== null ? (string) $loading->loaded_quantity_mt : '',
                     'loading_time' => $loading->loading_time?->toIso8601String(),
                     'remarks' => $loading->remarks,
@@ -272,7 +277,16 @@ final class RakeLoadController extends Controller
      */
     public function ensureAllWagonLoadingRows(Rake $rake): JsonResponse
     {
-        $wagonIds = $rake->wagons()->orderBy('wagon_sequence')->pluck('id');
+        $user = request()->user();
+        abort_unless($user instanceof User && $this->canEditLoaderWeighment($user), 403);
+
+        $wagons = $rake->wagons()
+            ->orderBy('wagon_sequence')
+            ->get(['id', 'wagon_number']);
+
+        $wagonIds = $wagons
+            ->reject(static fn ($w): bool => self::shouldSkipLoaderWeighmentWagonNumber($w->wagon_number))
+            ->pluck('id');
 
         if ($wagonIds->isEmpty()) {
             return response()->json([
@@ -297,11 +311,16 @@ final class RakeLoadController extends Controller
             }
         });
 
+        $this->syncLoaderWeighmentStatus($rake->fresh());
+
         return $this->indexWagonLoadings($rake->fresh());
     }
 
     public function storeWagonRow(Request $request, Rake $rake): JsonResponse
     {
+        $user = $request->user();
+        abort_unless($user instanceof User && $this->canEditLoaderWeighment($user), 403);
+
         $validated = $request->validate([
             'wagon_id' => ['required', 'integer'],
         ]);
@@ -333,6 +352,8 @@ final class RakeLoadController extends Controller
             'wagon:id,wagon_number,wagon_sequence,wagon_type,tare_weight_mt,pcc_weight_mt,is_unfit',
         ]);
 
+        $this->syncLoaderWeighmentStatus($rake->fresh());
+
         return response()->json([
             'loading' => [
                 'id' => $loading->id,
@@ -356,18 +377,25 @@ final class RakeLoadController extends Controller
 
     public function updateWagonRow(Request $request, Rake $rake, RakeWagonLoading $loading): JsonResponse
     {
+        $user = $request->user();
+        abort_unless($user instanceof User && $this->canEditLoaderWeighment($user), 403);
+
         if ($loading->rake_id !== $rake->id) {
             abort(404);
         }
 
         $validated = $request->validate([
             'loader_id' => ['nullable', 'integer', 'exists:loaders,id'],
+            'loader_operator_name' => ['nullable', 'string', 'max:255'],
             'loaded_quantity_mt' => ['nullable', 'numeric', 'min:0'],
         ]);
 
         $update = [];
         if (array_key_exists('loader_id', $validated)) {
             $update['loader_id'] = $validated['loader_id'];
+        }
+        if (array_key_exists('loader_operator_name', $validated)) {
+            $update['loader_operator_name'] = $validated['loader_operator_name'];
         }
         if (array_key_exists('loaded_quantity_mt', $validated) && $validated['loaded_quantity_mt'] !== null) {
             $update['loaded_quantity_mt'] = $validated['loaded_quantity_mt'];
@@ -376,6 +404,8 @@ final class RakeLoadController extends Controller
         if ($update !== []) {
             $loading->update($update);
         }
+
+        $this->syncLoaderWeighmentStatus($rake->fresh());
 
         $loading->load([
             'wagon:id,wagon_number,wagon_sequence,wagon_type,tare_weight_mt,pcc_weight_mt,is_unfit',
@@ -387,6 +417,7 @@ final class RakeLoadController extends Controller
                 'id' => $loading->id,
                 'wagon_id' => $loading->wagon_id,
                 'loader_id' => $loading->loader_id,
+                'loader_operator_name' => $loading->loader_operator_name,
                 'loaded_quantity_mt' => $loading->loaded_quantity_mt !== null ? (string) $loading->loaded_quantity_mt : '',
                 'loading_time' => $loading->loading_time?->toIso8601String(),
                 'remarks' => $loading->remarks,
@@ -409,11 +440,16 @@ final class RakeLoadController extends Controller
 
     public function destroyWagonRow(Request $request, Rake $rake, RakeWagonLoading $loading): JsonResponse
     {
+        $user = $request->user();
+        abort_unless($user instanceof User && $this->canEditLoaderWeighment($user), 403);
+
         if ($loading->rake_id !== $rake->id) {
             abort(404);
         }
 
         $loading->delete();
+
+        $this->syncLoaderWeighmentStatus($rake->fresh());
 
         return response()->json(['deleted' => true]);
     }
@@ -522,5 +558,69 @@ final class RakeLoadController extends Controller
             ->route('rakes.show', $rake)
             ->setStatusCode(303)
             ->with('success', 'Rake dispatched successfully.');
+    }
+
+    private static function shouldSkipLoaderWeighmentWagonNumber(?string $wagonNumber): bool
+    {
+        $trimmed = $wagonNumber !== null ? mb_trim($wagonNumber) : '';
+
+        return $trimmed !== '' && preg_match('/^W\d+$/', $trimmed) === 1;
+    }
+
+    private function canEditLoaderWeighment(User $user): bool
+    {
+        return $this->hasSectionPermission($user, 'sections.rakes.update')
+            || $this->hasSectionPermission($user, 'sections.rake_loader.update');
+    }
+
+    private function hasSectionPermission(User $user, string $permission): bool
+    {
+        if ($user->can('bypass-permissions')) {
+            return true;
+        }
+
+        if (\App\Services\TenantContext::check() && $user->canInCurrentOrganization($permission)) {
+            return true;
+        }
+
+        return $user->hasPermissionTo($permission);
+    }
+
+    private function syncLoaderWeighmentStatus(Rake $rake): void
+    {
+        $wagons = $rake->wagons()
+            ->get(['id', 'wagon_number', 'is_unfit'])
+            ->filter(static fn ($w): bool => ! (bool) $w->is_unfit)
+            ->reject(static fn ($w): bool => self::shouldSkipLoaderWeighmentWagonNumber($w->wagon_number))
+            ->values();
+
+        if ($wagons->isEmpty()) {
+            $rake->update(['loader_weighment_status' => 'pending']);
+
+            return;
+        }
+
+        $loadings = $rake->wagonLoadings()
+            ->whereIn('wagon_id', $wagons->pluck('id'))
+            ->get(['wagon_id', 'loader_id', 'loaded_quantity_mt']);
+
+        $hasAnyInput = $loadings->contains(static function ($l): bool {
+            return $l->loader_id !== null || (float) ($l->loaded_quantity_mt ?? 0) > 0;
+        });
+
+        $completeWagonIds = $loadings
+            ->filter(static function ($l): bool {
+                return $l->loader_id !== null && (float) ($l->loaded_quantity_mt ?? 0) > 0;
+            })
+            ->pluck('wagon_id')
+            ->flip();
+
+        $isComplete = $wagons->every(static fn ($w): bool => $completeWagonIds->has($w->id));
+
+        $status = $isComplete ? 'completed' : ($hasAnyInput ? 'in_progress' : 'pending');
+
+        if ($rake->loader_weighment_status !== $status) {
+            $rake->update(['loader_weighment_status' => $status]);
+        }
     }
 }

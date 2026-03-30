@@ -416,6 +416,11 @@ final class RrDocumentController extends Controller
             return true;
         }
 
+        // Historical RR documents may exist without a linked rake. In that case, only the uploader can view/download/delete.
+        if ($rrDocument->rake_id === null) {
+            return (int) $rrDocument->created_by === (int) $user->id;
+        }
+
         $sidingId = $rrDocument->rake()->value('siding_id');
         if ($sidingId === null) {
             return false;

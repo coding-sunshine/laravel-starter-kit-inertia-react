@@ -63,6 +63,16 @@ final class RakesController extends Controller
             'rakeCharges.rrPenaltySnapshots:id,rake_charge_id,amount',
         ]);
 
+        // Keep loader weighment rows in wagon sequence order even when rows were created later.
+        if ($rake->relationLoaded('wagonLoadings')) {
+            $rake->setRelation(
+                'wagonLoadings',
+                $rake->wagonLoadings
+                    ->sortBy(static fn ($l): int => $l->wagon?->wagon_sequence ?? $l->id)
+                    ->values()
+            );
+        }
+
         if ($rake->txr !== null) {
             $expectedUnfitIds = $rake->txr->wagonUnfitLogs
                 ->pluck('wagon_id')

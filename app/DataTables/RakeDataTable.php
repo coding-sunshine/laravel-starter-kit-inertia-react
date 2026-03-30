@@ -78,7 +78,6 @@ final class RakeDataTable extends AbstractDataTable
             ]),
             new Column(id: 'loading_date', label: 'Loading date', type: 'date', sortable: true, filterable: true),
             new Column(id: 'progress', label: 'Progress', type: 'text', sortable: false, filterable: false),
-            new Column(id: 'placement_time', label: 'Loading window', type: 'date', sortable: true, filterable: false),
         ];
     }
 
@@ -169,7 +168,7 @@ final class RakeDataTable extends AbstractDataTable
 
     public static function tableAllowedSorts(): array
     {
-        return ['rake_number', 'rake_type', 'wagon_count', 'state', 'loading_date', 'placement_time'];
+        return ['rake_number', 'rake_type', 'wagon_count', 'state', 'loading_date'];
     }
 
     /**

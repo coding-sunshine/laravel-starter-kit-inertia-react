@@ -80,6 +80,11 @@ final readonly class ProvisionRakeForIndent
             }
         }
 
+        $indent->update([
+            'state' => 'completed',
+            'updated_by' => $userId,
+        ]);
+
         return $rake->fresh();
     }
 

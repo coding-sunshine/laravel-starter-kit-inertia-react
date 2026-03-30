@@ -56,12 +56,6 @@ export default function RakesIndex({ tableData }: Props) {
                     description="Manage railway rakes and wagons for the RRMCS system"
                 />
 
-                <RrmcsGuidance
-                    title="What this section is for"
-                    before="Rake status and 3-hour loading window tracked in Excel and stopwatch; demurrage and penalties found only after Railway Receipt (RR) arrives."
-                    after="Rake list with live demurrage countdown; alerts at 60 min (amber), 30 min (red), 0 min (critical). Overload detection during weighment—24+ hours before RR."
-                />
-
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">

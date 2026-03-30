@@ -172,6 +172,7 @@ final class AppServiceProvider extends ServiceProvider
             'nav-api-docs',
             'nav-repository',
             'nav-documentation',
+            'nav-rake-loader',
             'dashboard-quick-edit-profile',
             'dashboard-quick-settings',
             'dashboard-quick-export-pdf',
