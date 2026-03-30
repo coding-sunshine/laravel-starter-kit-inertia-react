@@ -126,6 +126,11 @@ final class HandleInertiaRequests extends Middleware
             ];
         }
 
+        // Clear cached roles/permissions — earlier middleware may have loaded them
+        // before SetTenantContext set the correct team ID, causing stale team-0 data.
+        $user->unsetRelation('roles');
+        $user->unsetRelation('permissions');
+
         $isSuperAdmin = $this->withGlobalTeam(fn () => $user->hasRole('super-admin'));
 
         if ($isSuperAdmin) {
@@ -139,6 +144,10 @@ final class HandleInertiaRequests extends Middleware
                 $this->buildFeatureMap(forceAll: true, user: $user),
             ];
         }
+
+        // Clear again after withGlobalTeam which loaded roles for team 0.
+        $user->unsetRelation('roles');
+        $user->unsetRelation('permissions');
 
         return [
             [

@@ -60,6 +60,12 @@ final class SetTenantContext
 
         TenantContext::initForUser($user);
 
+        // Clear cached roles/permissions so they reload with the correct team ID.
+        // Earlier middleware (auth, verified) may have triggered Spatie role checks
+        // before the tenant context was set, caching roles for team 0 instead.
+        $user->unsetRelation('roles');
+        $user->unsetRelation('permissions');
+
         return $next($request);
     }
 

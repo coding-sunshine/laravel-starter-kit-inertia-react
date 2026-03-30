@@ -140,38 +140,28 @@ export default function WebhooksCreate() {
                                     const allSelected = keys.every((k) =>
                                         data.events.includes(k),
                                     );
-                                    const someSelected = keys.some((k) =>
-                                        data.events.includes(k),
-                                    );
 
                                     return (
                                         <div key={group} className="space-y-2">
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    toggleGroup(events)
-                                                }
-                                                className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                                            <div
+                                                className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-muted-foreground"
                                                 data-pan="webhook-toggle-group"
                                             >
                                                 <Checkbox
                                                     checked={allSelected}
-                                                    data-state={
-                                                        someSelected &&
-                                                        !allSelected
-                                                            ? 'indeterminate'
-                                                            : undefined
+                                                    onCheckedChange={() =>
+                                                        toggleGroup(events)
                                                     }
-                                                    className="pointer-events-none size-3.5"
+                                                    className="size-3.5"
                                                 />
-                                                {group}
-                                            </button>
+                                                <span>{group}</span>
+                                            </div>
                                             <div className="ml-5 space-y-2 rounded-lg border bg-muted/30 p-3">
                                                 {Object.entries(events).map(
                                                     ([key, label]) => (
-                                                        <label
+                                                        <div
                                                             key={key}
-                                                            className="flex cursor-pointer items-center gap-3"
+                                                            className="flex items-center gap-3"
                                                         >
                                                             <Checkbox
                                                                 checked={data.events.includes(
@@ -192,7 +182,7 @@ export default function WebhooksCreate() {
                                                                     {label}
                                                                 </p>
                                                             </div>
-                                                        </label>
+                                                        </div>
                                                     ),
                                                 )}
                                             </div>
