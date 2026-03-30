@@ -1710,11 +1710,6 @@
                     "filament.system.resources.help-articles.create",
                     "filament.system.resources.help-articles.view",
                     "filament.system.resources.help-articles.edit",
-                    "debugbar.openhandler",
-                    "debugbar.cache.delete",
-                    "debugbar.queries.explain",
-                    "debugbar.clockwork",
-                    "debugbar.assets",
                     "api.chat",
                     "chat.memories",
                     "conversations.index",
@@ -1731,8 +1726,6 @@
                     "api.v1.users.store",
                     "api.v1.users.update",
                     "api.v1.users.destroy",
-                    "dev.components",
-                    "dev.pages",
                     "up.ready",
                     "up",
                     "invitations.show",
@@ -1875,6 +1868,11 @@
                     "settings.webhooks.test",
                     "settings.webhooks.reset-circuit",
                     "settings.webhooks.regenerate-secret",
+                    "settings.email-templates.index",
+                    "settings.email-templates.edit",
+                    "settings.email-templates.update",
+                    "settings.email-templates.preview",
+                    "settings.email-templates.reset",
                     "genealabs.laravel-governor.api.user-can.show",
                     "genealabs.laravel-governor.api.user-is.show",
                     "genealabs.laravel-governor.roles.index",
@@ -2248,11 +2246,6 @@
                     "filament.system.resources.help-articles.create",
                     "filament.system.resources.help-articles.view",
                     "filament.system.resources.help-articles.edit",
-                    "debugbar.openhandler",
-                    "debugbar.cache.delete",
-                    "debugbar.queries.explain",
-                    "debugbar.clockwork",
-                    "debugbar.assets",
                     "api.chat",
                     "chat.memories",
                     "conversations.index",
@@ -2269,8 +2262,6 @@
                     "api.v1.users.store",
                     "api.v1.users.update",
                     "api.v1.users.destroy",
-                    "dev.components",
-                    "dev.pages",
                     "up.ready",
                     "up",
                     "invitations.show",
@@ -2413,6 +2404,11 @@
                     "settings.webhooks.test",
                     "settings.webhooks.reset-circuit",
                     "settings.webhooks.regenerate-secret",
+                    "settings.email-templates.index",
+                    "settings.email-templates.edit",
+                    "settings.email-templates.update",
+                    "settings.email-templates.preview",
+                    "settings.email-templates.reset",
                     "genealabs.laravel-governor.api.user-can.show",
                     "genealabs.laravel-governor.api.user-is.show",
                     "genealabs.laravel-governor.roles.index",
@@ -2692,11 +2688,6 @@
                     "filament.system.resources.help-articles.create",
                     "filament.system.resources.help-articles.view",
                     "filament.system.resources.help-articles.edit",
-                    "debugbar.openhandler",
-                    "debugbar.cache.delete",
-                    "debugbar.queries.explain",
-                    "debugbar.clockwork",
-                    "debugbar.assets",
                     "api.chat",
                     "chat.memories",
                     "conversations.index",
@@ -2713,8 +2704,6 @@
                     "api.v1.users.store",
                     "api.v1.users.update",
                     "api.v1.users.destroy",
-                    "dev.components",
-                    "dev.pages",
                     "up.ready",
                     "up",
                     "invitations.show",
@@ -2857,6 +2846,11 @@
                     "settings.webhooks.test",
                     "settings.webhooks.reset-circuit",
                     "settings.webhooks.regenerate-secret",
+                    "settings.email-templates.index",
+                    "settings.email-templates.edit",
+                    "settings.email-templates.update",
+                    "settings.email-templates.preview",
+                    "settings.email-templates.reset",
                     "genealabs.laravel-governor.api.user-can.show",
                     "genealabs.laravel-governor.api.user-is.show",
                     "genealabs.laravel-governor.roles.index",
@@ -3309,11 +3303,6 @@
                     "filament.system.resources.help-articles.create",
                     "filament.system.resources.help-articles.view",
                     "filament.system.resources.help-articles.edit",
-                    "debugbar.openhandler",
-                    "debugbar.cache.delete",
-                    "debugbar.queries.explain",
-                    "debugbar.clockwork",
-                    "debugbar.assets",
                     "api.chat",
                     "chat.memories",
                     "conversations.index",
@@ -3330,8 +3319,6 @@
                     "api.v1.users.store",
                     "api.v1.users.update",
                     "api.v1.users.destroy",
-                    "dev.components",
-                    "dev.pages",
                     "up.ready",
                     "up",
                     "invitations.show",
@@ -3474,6 +3461,11 @@
                     "settings.webhooks.test",
                     "settings.webhooks.reset-circuit",
                     "settings.webhooks.regenerate-secret",
+                    "settings.email-templates.index",
+                    "settings.email-templates.edit",
+                    "settings.email-templates.update",
+                    "settings.email-templates.preview",
+                    "settings.email-templates.reset",
                     "genealabs.laravel-governor.api.user-can.show",
                     "genealabs.laravel-governor.api.user-is.show",
                     "genealabs.laravel-governor.roles.index",
@@ -3785,9 +3777,7 @@
             "lastUpdated": "2026-03-07",
             "relationships": {
                 "renderedBy": [],
-                "relatedRoutes": [
-                    "dev.components"
-                ]
+                "relatedRoutes": []
             }
         },
         "dev/pages": {
@@ -3796,9 +3786,7 @@
             "developerGuide": null,
             "relationships": {
                 "renderedBy": [],
-                "relatedRoutes": [
-                    "dev.pages"
-                ]
+                "relatedRoutes": []
             }
         },
         "error": {
@@ -4162,11 +4150,6 @@
                     "filament.system.resources.help-articles.create",
                     "filament.system.resources.help-articles.view",
                     "filament.system.resources.help-articles.edit",
-                    "debugbar.openhandler",
-                    "debugbar.cache.delete",
-                    "debugbar.queries.explain",
-                    "debugbar.clockwork",
-                    "debugbar.assets",
                     "api.chat",
                     "chat.memories",
                     "conversations.index",
@@ -4183,8 +4166,6 @@
                     "api.v1.users.store",
                     "api.v1.users.update",
                     "api.v1.users.destroy",
-                    "dev.components",
-                    "dev.pages",
                     "up.ready",
                     "up",
                     "invitations.show",
@@ -4327,6 +4308,11 @@
                     "settings.webhooks.test",
                     "settings.webhooks.reset-circuit",
                     "settings.webhooks.regenerate-secret",
+                    "settings.email-templates.index",
+                    "settings.email-templates.edit",
+                    "settings.email-templates.update",
+                    "settings.email-templates.preview",
+                    "settings.email-templates.reset",
                     "genealabs.laravel-governor.api.user-can.show",
                     "genealabs.laravel-governor.api.user-is.show",
                     "genealabs.laravel-governor.roles.index",
@@ -5002,6 +4988,93 @@
                     "users.destroy",
                     "users.restore",
                     "users.force-delete"
+                ]
+            }
+        },
+        "settings/email-templates/edit": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": [
+                    "settings.email-templates.index",
+                    "settings.email-templates.edit",
+                    "settings.email-templates.update",
+                    "settings.email-templates.preview",
+                    "settings.email-templates.reset"
+                ]
+            }
+        },
+        "settings/email-templates/index": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": [
+                    "settings.email-templates.index",
+                    "settings.email-templates.edit",
+                    "settings.email-templates.update",
+                    "settings.email-templates.preview",
+                    "settings.email-templates.reset"
+                ]
+            }
+        },
+        "settings/webhooks/create": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": [
+                    "settings.webhooks.index",
+                    "settings.webhooks.create",
+                    "settings.webhooks.store",
+                    "settings.webhooks.edit",
+                    "settings.webhooks.update",
+                    "settings.webhooks.destroy",
+                    "settings.webhooks.test",
+                    "settings.webhooks.reset-circuit",
+                    "settings.webhooks.regenerate-secret"
+                ]
+            }
+        },
+        "settings/webhooks/edit": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": [
+                    "settings.webhooks.index",
+                    "settings.webhooks.create",
+                    "settings.webhooks.store",
+                    "settings.webhooks.edit",
+                    "settings.webhooks.update",
+                    "settings.webhooks.destroy",
+                    "settings.webhooks.test",
+                    "settings.webhooks.reset-circuit",
+                    "settings.webhooks.regenerate-secret"
+                ]
+            }
+        },
+        "settings/webhooks/index": {
+            "documented": false,
+            "userGuide": null,
+            "developerGuide": null,
+            "relationships": {
+                "renderedBy": [],
+                "relatedRoutes": [
+                    "settings.webhooks.index",
+                    "settings.webhooks.create",
+                    "settings.webhooks.store",
+                    "settings.webhooks.edit",
+                    "settings.webhooks.update",
+                    "settings.webhooks.destroy",
+                    "settings.webhooks.test",
+                    "settings.webhooks.reset-circuit",
+                    "settings.webhooks.regenerate-secret"
                 ]
             }
         }

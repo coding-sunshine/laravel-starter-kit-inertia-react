@@ -118,5 +118,10 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | invitations/index | No |
 | users/create | No |
 | users/edit | No |
+| settings/email-templates/edit | No |
+| settings/email-templates/index | No |
+| settings/webhooks/create | No |
+| settings/webhooks/edit | No |
+| settings/webhooks/index | No |
 
 
