@@ -99,6 +99,7 @@ const PERIODS = [
 
 const DASHBOARD_SECTIONS = [
     { id: 'executive-overview', label: 'Executive overview' },
+    { id: 'siding-overview', label: 'Siding overview' },
     { id: 'operations', label: 'Operations control' },
     { id: 'penalty-control', label: 'Penalty control' },
     { id: 'rake-performance', label: 'Rake-wise performance' },
@@ -108,6 +109,7 @@ const DASHBOARD_SECTIONS = [
 
 const SECTION_FILTER_KEYS = {
     'executive-overview': ['power_plant', 'rake_number', 'penalty_type'] as const,
+    'siding-overview': ['power_plant', 'rake_number', 'penalty_type'] as const,
     operations: ['shift', 'daily_rake_date', 'coal_transport_date'] as const,
     'penalty-control': ['penalty_type'] as const,
     'rake-performance': ['rake_number', 'power_plant'] as const,
@@ -2246,8 +2248,6 @@ export default function Dashboard() {
         const s = props.section ?? DEFAULT_DASHBOARD_SECTION;
         return DASHBOARD_SECTIONS.some((sec) => sec.id === s) ? s : DEFAULT_DASHBOARD_SECTION;
     });
-    // Default: show Yesterday view on page load (Executive section only).
-    const [executiveTab, setExecutiveTab] = useState<'regular' | 'yesterday'>('yesterday');
     const [executiveYesterdayViewMode, setExecutiveYesterdayViewMode] = useState<'table' | 'charts'>('charts');
     const [alertsOpen, setAlertsOpen] = useState(false);
     const [notifications, setNotifications] = useState(props.notifications ?? []);
@@ -2526,7 +2526,9 @@ export default function Dashboard() {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dashboard" />
-            <div className="dashboard-page flex h-full flex-1 flex-col gap-5 overflow-x-auto bg-[#FAFAFA] p-3">
+            {/* AppSidebarLayout adds p-4/sm:p-6/lg:p-8 around pages; cancel it for dashboard full-bleed layout. */}
+            <div className="-m-4 sm:-m-6 lg:-m-8">
+                <div className="dashboard-page flex h-full flex-1 flex-col gap-5 overflow-x-auto bg-[#FAFAFA] p-3">
                 <div className="sticky top-0 z-10 -mx-3 flex flex-col gap-1 bg-[#FAFAFA] px-3 pb-2 pt-1">
                     <div className="flex flex-col">
                         <h2 className="text-xl font-semibold tracking-tight">
@@ -2571,9 +2573,8 @@ export default function Dashboard() {
                         >
                             Reset
                         </Button>
-                        {activeSection === 'executive-overview' && executiveTab === 'yesterday' && !!props.executiveYesterday && (
+                        {activeSection === 'executive-overview' && !!props.executiveYesterday && (
                             <div className="flex items-center gap-2">
-                                <span className="text-xs font-medium text-gray-600">View</span>
                                 <select
                                     value={executiveYesterdayViewMode}
                                     onChange={(e) => setExecutiveYesterdayViewMode(e.target.value as 'table' | 'charts')}
@@ -2681,110 +2682,88 @@ export default function Dashboard() {
                     <div className="min-w-0 space-y-6">
                         {activeSection === 'executive-overview' && (
                             <div className="space-y-6">
-                                <div className="dashboard-card rounded-xl border-0 p-3">
-                                    <div className="inline-flex items-center rounded-lg bg-[#f1f5f9] p-1">
-                                        <button
-                                            type="button"
-                                            onClick={() => setExecutiveTab('yesterday')}
-                                            className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
-                                                executiveTab === 'yesterday' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'
-                                            }`}
-                                        >
-                                            Yesterday
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setExecutiveTab('regular')}
-                                            className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
-                                                executiveTab === 'regular' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'
-                                            }`}
-                                        >
-                                            Regular
-                                        </button>
-                                    </div>
-                                </div>
-                                {executiveTab === 'yesterday' ? (
-                                    executiveYesterday ? (
-                                        <ExecutiveYesterdaySection data={executiveYesterday} viewMode={executiveYesterdayViewMode} />
-                                    ) : (
-                                        <div className="dashboard-card rounded-xl border-0 p-6 text-sm text-gray-600">Yesterday data is not available.</div>
-                                    )
+                                {executiveYesterday ? (
+                                    <ExecutiveYesterdaySection data={executiveYesterday} viewMode={executiveYesterdayViewMode} />
                                 ) : (
-                                    <>
-                                        {sidingPerformance.length > 0 ? (
-                                            <SidingPerformanceSection data={sidingPerformance} />
-                                        ) : (
-                                            <div className="dashboard-card rounded-xl border-0 p-6">
-                                                <SectionHeader icon={BarChart3} title="Siding performance" subtitle="Rakes, coal & penalty by siding" />
-                                                <div className="mt-4 py-8 text-center text-sm text-gray-600">No performance data for selected filters.</div>
-                                            </div>
-                                        )}
-                                        <div className="dashboard-card rounded-xl border-0 p-6">
-                                            <SectionHeader icon={Calendar} title="Penalty trend" subtitle="Date / month vs penalty amount" />
-                                            {penaltyTrendDaily.length > 0 ? (
-                                                <ResponsiveContainer width="100%" height={280}>
-                                                    <RechartsAreaChart data={penaltyTrendDaily} margin={{ top: 8, right: 16, left: 8, bottom: 0 }}>
-                                                        <defs>
-                                                            <linearGradient id="penalty-trend-gradient" x1="0" y1="0" x2="0" y2="1">
-                                                                <stop offset="0%" stopColor="#DC2626" stopOpacity={0.4} />
-                                                                <stop offset="100%" stopColor="#DC2626" stopOpacity={0} />
-                                                            </linearGradient>
-                                                        </defs>
-                                                        <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
-                                                        <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-                                                        <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => formatCurrency(v)} />
-                                                        <Tooltip formatter={(v: number | string | undefined) => formatCurrency(Number(v ?? 0))} />
-                                                        <Area type="monotone" dataKey="total" name="Penalty" stroke="#DC2626" strokeWidth={2} fill="url(#penalty-trend-gradient)" dot={false} activeDot={{ r: 4 }} isAnimationActive />
-                                                    </RechartsAreaChart>
-                                                </ResponsiveContainer>
-                                            ) : (
-                                                <div className="mt-4 py-8 text-center text-sm text-gray-600">No penalty data for selected period.</div>
-                                            )}
-                                        </div>
-                                        <div className="dashboard-card rounded-xl border-0 p-6">
-                                            <SectionHeader icon={Factory} title="Power plant dispatch distribution" subtitle="Coal supply by destination" />
-                                            {powerPlantDispatch.length > 0 ? (() => {
-                                                const totalWeight = powerPlantDispatch.reduce((s, p) => s + p.weight_mt, 0);
-                                                const donutData = powerPlantDispatch.map((pp) => ({
-                                                    name: pp.name,
-                                                    value: Math.round((pp.weight_mt / Math.max(1, totalWeight)) * 100),
-                                                    weightMt: pp.weight_mt,
-                                                }));
-                                                return (
-                                                    <div className="relative">
-                                                        <ResponsiveContainer width="100%" height={280}>
-                                                            <RechartsPieChart>
-                                                                <Pie
-                                                                    data={donutData}
-                                                                    dataKey="value"
-                                                                    nameKey="name"
-                                                                    cx="50%"
-                                                                    cy="50%"
-                                                                    innerRadius="65%"
-                                                                    outerRadius="90%"
-                                                                    paddingAngle={2}
-                                                                    strokeWidth={0}
-                                                                >
-                                                                    {donutData.map((_, i) => (
-                                                                        <Cell key={i} fill={['#22c55e', '#3b82f6', '#f97316', '#eab308', '#a855f7'][i % 5]} />
-                                                                    ))}
-                                                                </Pie>
-                                                                <Tooltip formatter={(v: number | undefined, _: unknown, props: { payload?: { weightMt: number } }) => [`${v ?? 0}%`, formatWeight(props.payload?.weightMt ?? 0)]} />
-                                                                <Legend layout="horizontal" align="center" verticalAlign="bottom" wrapperStyle={{ paddingTop: 16 }} formatter={(value, entry) => `${value} ${Number((entry as { payload?: { value: number } }).payload?.value ?? 0)}%`} />
-                                                            </RechartsPieChart>
-                                                        </ResponsiveContainer>
-                                                        <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center text-center">
-                                                            <span className="text-xs font-medium text-gray-600">Total</span>
-                                                            <span className="text-lg font-bold tabular-nums text-gray-800">{formatWeight(totalWeight)}</span>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })() : (
-                                                <div className="mt-4 py-8 text-center text-sm text-gray-600">No power plant dispatch data.</div>
-                                            )}
-                                        </div>
-                                    </>
+                                    <div className="dashboard-card rounded-xl border-0 p-6 text-sm text-gray-600">Yesterday data is not available.</div>
                                 )}
+                            </div>
+                        )}
+
+                        {activeSection === 'siding-overview' && (
+                            <div className="space-y-6">
+                                {sidingPerformance.length > 0 ? (
+                                    <SidingPerformanceSection data={sidingPerformance} />
+                                ) : (
+                                    <div className="dashboard-card rounded-xl border-0 p-6">
+                                        <SectionHeader icon={BarChart3} title="Siding performance" subtitle="Rakes, coal & penalty by siding" />
+                                        <div className="mt-4 py-8 text-center text-sm text-gray-600">No performance data for selected filters.</div>
+                                    </div>
+                                )}
+                                <div className="dashboard-card rounded-xl border-0 p-6">
+                                    <SectionHeader icon={Calendar} title="Penalty trend" subtitle="Date / month vs penalty amount" />
+                                    {penaltyTrendDaily.length > 0 ? (
+                                        <ResponsiveContainer width="100%" height={280}>
+                                            <RechartsAreaChart data={penaltyTrendDaily} margin={{ top: 8, right: 16, left: 8, bottom: 0 }}>
+                                                <defs>
+                                                    <linearGradient id="penalty-trend-gradient" x1="0" y1="0" x2="0" y2="1">
+                                                        <stop offset="0%" stopColor="#DC2626" stopOpacity={0.4} />
+                                                        <stop offset="100%" stopColor="#DC2626" stopOpacity={0} />
+                                                    </linearGradient>
+                                                </defs>
+                                                <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
+                                                <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                                                <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => formatCurrency(v)} />
+                                                <Tooltip formatter={(v: number | string | undefined) => formatCurrency(Number(v ?? 0))} />
+                                                <Area type="monotone" dataKey="total" name="Penalty" stroke="#DC2626" strokeWidth={2} fill="url(#penalty-trend-gradient)" dot={false} activeDot={{ r: 4 }} isAnimationActive />
+                                            </RechartsAreaChart>
+                                        </ResponsiveContainer>
+                                    ) : (
+                                        <div className="mt-4 py-8 text-center text-sm text-gray-600">No penalty data for selected period.</div>
+                                    )}
+                                </div>
+                                <div className="dashboard-card rounded-xl border-0 p-6">
+                                    <SectionHeader icon={Factory} title="Power plant dispatch distribution" subtitle="Coal supply by destination" />
+                                    {powerPlantDispatch.length > 0 ? (() => {
+                                        const totalWeight = powerPlantDispatch.reduce((s, p) => s + p.weight_mt, 0);
+                                        const donutData = powerPlantDispatch.map((pp) => ({
+                                            name: pp.name,
+                                            value: Math.round((pp.weight_mt / Math.max(1, totalWeight)) * 100),
+                                            weightMt: pp.weight_mt,
+                                        }));
+                                        return (
+                                            <div className="relative">
+                                                <ResponsiveContainer width="100%" height={280}>
+                                                    <RechartsPieChart>
+                                                        <Pie
+                                                            data={donutData}
+                                                            dataKey="value"
+                                                            nameKey="name"
+                                                            cx="50%"
+                                                            cy="50%"
+                                                            innerRadius="65%"
+                                                            outerRadius="90%"
+                                                            paddingAngle={2}
+                                                            strokeWidth={0}
+                                                        >
+                                                            {donutData.map((_, i) => (
+                                                                <Cell key={i} fill={['#22c55e', '#3b82f6', '#f97316', '#eab308', '#a855f7'][i % 5]} />
+                                                            ))}
+                                                        </Pie>
+                                                        <Tooltip formatter={(v: number | undefined, _: unknown, props: { payload?: { weightMt: number } }) => [`${v ?? 0}%`, formatWeight(props.payload?.weightMt ?? 0)]} />
+                                                        <Legend layout="horizontal" align="center" verticalAlign="bottom" wrapperStyle={{ paddingTop: 16 }} formatter={(value, entry) => `${value} ${Number((entry as { payload?: { value: number } }).payload?.value ?? 0)}%`} />
+                                                    </RechartsPieChart>
+                                                </ResponsiveContainer>
+                                                <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center text-center">
+                                                    <span className="text-xs font-medium text-gray-600">Total</span>
+                                                    <span className="text-lg font-bold tabular-nums text-gray-800">{formatWeight(totalWeight)}</span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })() : (
+                                        <div className="mt-4 py-8 text-center text-sm text-gray-600">No power plant dispatch data.</div>
+                                    )}
+                                </div>
                             </div>
                         )}
 
@@ -3528,6 +3507,7 @@ export default function Dashboard() {
                         </div>
                     </DialogContent>
                 </Dialog>
+                </div>
             </div>
         </AppLayout>
     );
