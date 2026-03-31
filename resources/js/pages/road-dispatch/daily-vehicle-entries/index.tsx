@@ -3,6 +3,14 @@ import ShiftLockOverlay from '@/components/ShiftLockOverlay';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import {
     Select,
@@ -265,6 +273,15 @@ export default function DailyVehicleEntriesIndex({
         String(activeShift),
     );
     const [isExporting, setIsExporting] = useState(false);
+    const [hourlyOpen, setHourlyOpen] = useState(false);
+    const [hourlyLoading, setHourlyLoading] = useState(false);
+    const [hourlyError, setHourlyError] = useState<string | null>(null);
+    const [hourlyLastUpdatedIso, setHourlyLastUpdatedIso] = useState<
+        string | null
+    >(null);
+    const [hourlyRows, setHourlyRows] = useState<
+        { hour: string; label: string; count: number }[]
+    >([]);
     const [addRowError, setAddRowError] = useState<string | null>(null);
     /** Plain spacer rows directly under the last table row (after “Add 5 rows”). */
     const [plainRowsAfterLastEntry, setPlainRowsAfterLastEntry] = useState(0);
@@ -723,6 +740,131 @@ export default function DailyVehicleEntriesIndex({
         }
     };
 
+    const fetchHourlySummary = useCallback(async () => {
+        if (effectiveSidingId == null) {
+            setHourlyError('No siding selected.');
+            return;
+        }
+
+        setHourlyLoading(true);
+        setHourlyError(null);
+
+        try {
+            const params = new URLSearchParams({
+                date: selectedDate,
+                shift: String(activeShiftState),
+                siding_id: String(effectiveSidingId),
+            });
+
+            const res = await fetch(
+                `/road-dispatch/daily-vehicle-entries/hourly-summary?${params.toString()}`,
+                {
+                    method: 'GET',
+                    headers: {
+                        Accept: 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    credentials: 'include',
+                },
+            );
+
+            const data = (await res.json().catch(() => null)) as
+                | {
+                      now?: string;
+                      rows?: { hour: string; label: string; count: number }[];
+                      message?: string;
+                  }
+                | null;
+
+            if (!res.ok) {
+                setHourlyError(
+                    data?.message ??
+                        (res.status === 403
+                            ? 'Not allowed for this siding/shift.'
+                            : 'Failed to load hourly summary.'),
+                );
+                return;
+            }
+
+            setHourlyRows(Array.isArray(data?.rows) ? data!.rows : []);
+            setHourlyLastUpdatedIso(data?.now ?? new Date().toISOString());
+        } catch {
+            setHourlyError('Network error. Please try again.');
+        } finally {
+            setHourlyLoading(false);
+        }
+    }, [activeShiftState, effectiveSidingId, selectedDate]);
+
+    const exportHourlySummary = useCallback(async () => {
+        if (effectiveSidingId == null) {
+            setHourlyError('No siding selected.');
+            return;
+        }
+
+        try {
+            const params = new URLSearchParams({
+                date: selectedDate,
+                shift: String(activeShiftState),
+                siding_id: String(effectiveSidingId),
+            });
+
+            const exportUrl = `/road-dispatch/daily-vehicle-entries/hourly-summary/export?${params.toString()}`;
+
+            const response = await fetch(exportUrl, {
+                method: 'GET',
+                headers: {
+                    Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                credentials: 'same-origin',
+            });
+
+            if (!response.ok) {
+                throw new Error(`Export failed: ${response.statusText}`);
+            }
+
+            const contentDisposition =
+                response.headers.get('Content-Disposition');
+            let filename = 'hourly-summary.xlsx';
+            if (contentDisposition) {
+                const filenameMatch =
+                    contentDisposition.match(/filename="(.+)"/);
+                if (filenameMatch) {
+                    filename = filenameMatch[1];
+                }
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            const errorMessage =
+                error instanceof Error
+                    ? error.message
+                    : 'Unknown error occurred';
+            setHourlyError('Export failed: ' + errorMessage);
+        }
+    }, [activeShiftState, effectiveSidingId, selectedDate]);
+
+    useEffect(() => {
+        if (!hourlyOpen) {
+            return;
+        }
+
+        void fetchHourlySummary();
+        const id = window.setInterval(() => {
+            void fetchHourlySummary();
+        }, 10_000);
+
+        return () => window.clearInterval(id);
+    }, [fetchHourlySummary, hourlyOpen]);
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Daily Vehicle Entries" />
@@ -822,6 +964,16 @@ export default function DailyVehicleEntriesIndex({
                                             : 'Export'}
                                     </Button>
                                 )}
+
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setHourlyOpen(true)}
+                                    className="flex items-center gap-2"
+                                    data-pan="daily-vehicle-entries-hourly-record"
+                                >
+                                    Hourly record
+                                </Button>
                             </div>
                         )}
                         {restrictToAssignedShift && (
@@ -852,6 +1004,16 @@ export default function DailyVehicleEntriesIndex({
                                             : 'Export'}
                                     </Button>
                                 )}
+
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setHourlyOpen(true)}
+                                    className="flex items-center gap-2"
+                                    data-pan="daily-vehicle-entries-hourly-record"
+                                >
+                                    Hourly record
+                                </Button>
                             </div>
                         )}
                     </div>
@@ -992,6 +1154,104 @@ export default function DailyVehicleEntriesIndex({
                     }
                 />
             </div>
+
+            <Dialog open={hourlyOpen} onOpenChange={setHourlyOpen}>
+                <DialogContent className="sm:max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle>Hourly record</DialogTitle>
+                        <DialogDescription>
+                            Hour-wise trips recorded for the selected date,
+                            shift and siding.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-3">
+                        <div className="flex items-center justify-between gap-2">
+                            <div className="text-xs text-muted-foreground">
+                                {hourlyLastUpdatedIso
+                                    ? `Last updated: ${new Date(hourlyLastUpdatedIso).toLocaleTimeString('en-IN')}`
+                                    : '—'}
+                            </div>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => void fetchHourlySummary()}
+                                disabled={hourlyLoading}
+                            >
+                                {hourlyLoading ? 'Refreshing…' : 'Refresh'}
+                            </Button>
+                        </div>
+
+                        {hourlyError && (
+                            <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                                {hourlyError}
+                            </div>
+                        )}
+
+                        <div className="max-h-[55vh] overflow-auto rounded-md border">
+                            <table className="w-full border-collapse text-sm">
+                                <thead className="sticky top-0 bg-background">
+                                    <tr className="border-b">
+                                        <th className="px-3 py-2 text-left font-medium">
+                                            Hour
+                                        </th>
+                                        <th className="px-3 py-2 text-right font-medium">
+                                            Trips
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {hourlyRows.length === 0 ? (
+                                        <tr>
+                                            <td
+                                                colSpan={2}
+                                                className="px-3 py-6 text-center text-muted-foreground"
+                                            >
+                                                {hourlyLoading
+                                                    ? 'Loading…'
+                                                    : 'No records.'}
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        hourlyRows.map((r) => (
+                                            <tr
+                                                key={r.hour}
+                                                className="border-b last:border-b-0"
+                                            >
+                                                <td className="px-3 py-2 tabular-nums">
+                                                    {r.label}
+                                                </td>
+                                                <td className="px-3 py-2 text-right tabular-nums">
+                                                    {r.count}
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => void exportHourlySummary()}
+                            data-pan="daily-vehicle-entries-hourly-record-export"
+                        >
+                            Export XLSX
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setHourlyOpen(false)}
+                        >
+                            Close
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </AppLayout>
     );
 }

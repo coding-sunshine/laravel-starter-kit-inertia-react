@@ -233,6 +233,9 @@ final class AppServiceProvider extends ServiceProvider
             'rake-rr-diversion-destination-remove',
             'rake-rr-upload-diversion-pdf-button',
             'indents-upload-pdf-button',
+            'indents-create-button',
+            'indents-create-submit',
+            'indents-create-cancel',
             'indents-edit-submit',
             'indents-edit-cancel',
             'indents-edit-download-pdf',
@@ -244,6 +247,8 @@ final class AppServiceProvider extends ServiceProvider
             'shift-lock-overlay',
             'daily-vehicle-entries-table-fullscreen',
             'daily-vehicle-entries-add-five-rows-pack',
+            'daily-vehicle-entries-hourly-record',
+            'daily-vehicle-entries-hourly-record-export',
             'historical-mines-filter-apply',
             'historical-mines-filter-clear',
         ]);

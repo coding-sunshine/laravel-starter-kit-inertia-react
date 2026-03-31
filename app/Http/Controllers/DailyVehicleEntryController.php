@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Models\DailyVehicleEntry;
 use App\Models\Siding;
 use App\Models\SidingShift;
+use App\Models\StockLedger;
 use App\Models\VehicleWorkorder;
 use App\Services\DailyVehicleEntryService;
 use App\Services\ShiftValidationService;
@@ -16,12 +17,12 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 use Throwable;
-use App\Models\StockLedger;
-use Illuminate\Support\Facades\DB;
 
 final class DailyVehicleEntryController extends Controller
 {
@@ -183,6 +184,100 @@ final class DailyVehicleEntryController extends Controller
         ]);
     }
 
+    public function hourlySummary(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+        $assignedShifts = $user?->activeSidingShifts()
+            ->with('siding:id,name')
+            ->orderByPivot('assigned_at')
+            ->orderBy('siding_shift_user.id')
+            ->get();
+
+        if ($assignedShifts === null || $assignedShifts->isEmpty()) {
+            abort(403, 'No shift and siding assignment found for your account.');
+        }
+
+        $firstAssignment = $assignedShifts->first();
+        $restrictToAssignedShift = $assignedShifts->count() === 1 && $firstAssignment !== null;
+
+        $validated = $request->validate([
+            'date' => 'required|date_format:Y-m-d',
+            'shift' => 'required|integer|between:1,3',
+            'siding_id' => 'required|integer|exists:sidings,id',
+        ]);
+
+        $date = (string) $validated['date'];
+        $shift = (int) $validated['shift'];
+        $sidingId = (int) $validated['siding_id'];
+
+        if ($restrictToAssignedShift) {
+            $date = now()->format('Y-m-d');
+            $sidingId = (int) $firstAssignment->siding_id;
+            $shift = (int) $firstAssignment->sort_order;
+        }
+
+        $allowedSidingIds = $assignedShifts->pluck('siding_id')->unique()->values();
+        if (! $allowedSidingIds->contains($sidingId)) {
+            abort(403, 'You are not allowed to access this siding.');
+        }
+
+        $sidingShiftPairs = $assignedShifts->map(
+            fn (SidingShift $sidingShift): string => $sidingShift->siding_id.'|'.((int) $sidingShift->sort_order)
+        )->values();
+
+        if (! $sidingShiftPairs->contains($sidingId.'|'.$shift)) {
+            abort(403, 'You are not allowed to access this shift for the selected siding.');
+        }
+
+        $entryType = DailyVehicleEntry::ENTRY_TYPE_ROAD_DISPATCH;
+        $viewAllEntries = $user?->canViewAllRoadDispatchDailyVehicleEntries() ?? false;
+        $scopedToUserId = $viewAllEntries ? null : (int) $user->id;
+
+        $entries = $this->service->getEntriesByDateAndShift($date, $shift, $sidingId, $entryType, $scopedToUserId);
+
+        /** @var array<int, int> $counts */
+        $counts = array_fill(0, 24, 0);
+
+        foreach ($entries as $entry) {
+            $reachedAt = $entry->reached_at;
+            if ($reachedAt === null || $reachedAt === '') {
+                continue;
+            }
+
+            try {
+                $hour = Carbon::parse((string) $reachedAt)->hour;
+            } catch (Throwable) {
+                continue;
+            }
+
+            if ($hour >= 0 && $hour <= 23) {
+                $counts[$hour] += 1;
+            }
+        }
+
+        $rows = [];
+        $total = 0;
+        for ($h = 0; $h < 24; $h++) {
+            $count = (int) ($counts[$h] ?? 0);
+            $total += $count;
+            $hh = mb_str_pad((string) $h, 2, '0', STR_PAD_LEFT);
+            $rows[] = [
+                'hour' => $hh,
+                'label' => $hh.':00–'.$hh.':59',
+                'count' => $count,
+            ];
+        }
+
+        return response()->json([
+            'now' => now()->toIso8601String(),
+            'date' => $date,
+            'shift' => $shift,
+            'siding_id' => $sidingId,
+            'total' => $total,
+            'rows' => $rows,
+        ]);
+    }
+
     public function store(Request $request): RedirectResponse|JsonResponse
     {
         $user = Auth::user();
@@ -331,83 +426,83 @@ final class DailyVehicleEntryController extends Controller
     }
 
     public function destroy(Request $request, $id): RedirectResponse|JsonResponse
-{
-    $entry = DailyVehicleEntry::findOrFail($id);
+    {
+        $entry = DailyVehicleEntry::findOrFail($id);
 
-    $this->authorizeEntryForShiftUser($entry);
-    $this->enforceStrictActiveShiftForEntry($entry);
+        $this->authorizeEntryForShiftUser($entry);
+        $this->enforceStrictActiveShiftForEntry($entry);
 
-    $entryId = $entry->id;
+        $entryId = $entry->id;
 
-    DB::transaction(function () use ($entry) {
+        DB::transaction(function () use ($entry) {
 
-        //  If completed → reverse stock
-        if ($entry->status === 'completed') {
+            //  If completed → reverse stock
+            if ($entry->status === 'completed') {
 
-            $ledger = StockLedger::query()
-                ->where('daily_vehicle_entry_id', $entry->id)
-                ->where('transaction_type', 'receipt')
-                ->latest('id')
-                ->first();
+                $ledger = StockLedger::query()
+                    ->where('daily_vehicle_entry_id', $entry->id)
+                    ->where('transaction_type', 'receipt')
+                    ->latest('id')
+                    ->first();
 
-            if ($ledger) {
+                if ($ledger) {
 
-                $sidingId = $ledger->siding_id;
+                    $sidingId = $ledger->siding_id;
 
-                // prevent double reversal
-                $alreadyReversed = StockLedger::query()
-                    ->where('reference_number', 'REV-RCPT-' . $ledger->id)
-                    ->lockForUpdate()
-                    ->exists();
-
-                if (! $alreadyReversed) {
-
-                    $reverseQty = -abs((float) $ledger->quantity_mt); //  negative
-
-                    $lastLedger = StockLedger::query()
-                        ->where('siding_id', $sidingId)
+                    // prevent double reversal
+                    $alreadyReversed = StockLedger::query()
+                        ->where('reference_number', 'REV-RCPT-'.$ledger->id)
                         ->lockForUpdate()
-                        ->latest('id')
-                        ->first();
+                        ->exists();
 
-                    $opening = $lastLedger
-                        ? (float) $lastLedger->closing_balance_mt
-                        : SidingOpeningBalance::getOpeningBalanceForSiding($sidingId);
+                    if (! $alreadyReversed) {
 
-                    $closing = round($opening + $reverseQty, 2);
+                        $reverseQty = -abs((float) $ledger->quantity_mt); //  negative
 
-                    StockLedger::create([
-                        'siding_id' => $sidingId,
-                        'transaction_type' => 'correction',
-                        'daily_vehicle_entry_id' => $entry->id,
-                        'quantity_mt' => $reverseQty, //  negative
-                        'opening_balance_mt' => $opening,
-                        'closing_balance_mt' => $closing,
-                        'reference_number' => 'REV-RCPT-' . $ledger->id,
-                        'remarks' => 'Reversal for deleted vehicle entry #' . $entry->id,
-                        'created_by' => auth()->id(),
-                    ]);
+                        $lastLedger = StockLedger::query()
+                            ->where('siding_id', $sidingId)
+                            ->lockForUpdate()
+                            ->latest('id')
+                            ->first();
 
-                    DB::afterCommit(function () use ($sidingId, $closing) {
-                        event(new \App\Events\CoalStockUpdated($sidingId, $closing));
-                    });
+                        $opening = $lastLedger
+                            ? (float) $lastLedger->closing_balance_mt
+                            : SidingOpeningBalance::getOpeningBalanceForSiding($sidingId);
+
+                        $closing = round($opening + $reverseQty, 2);
+
+                        StockLedger::create([
+                            'siding_id' => $sidingId,
+                            'transaction_type' => 'correction',
+                            'daily_vehicle_entry_id' => $entry->id,
+                            'quantity_mt' => $reverseQty, //  negative
+                            'opening_balance_mt' => $opening,
+                            'closing_balance_mt' => $closing,
+                            'reference_number' => 'REV-RCPT-'.$ledger->id,
+                            'remarks' => 'Reversal for deleted vehicle entry #'.$entry->id,
+                            'created_by' => auth()->id(),
+                        ]);
+
+                        DB::afterCommit(function () use ($sidingId, $closing) {
+                            event(new \App\Events\CoalStockUpdated($sidingId, $closing));
+                        });
+                    }
                 }
             }
+
+            //  Now delete entry
+            $entry->delete();
+        });
+
+        if ($request->wantsJson()) {
+            return response()->json(['deleted' => true, 'id' => $entryId]);
         }
 
-        //  Now delete entry
-        $entry->delete();
-    });
-
-    if ($request->wantsJson()) {
-        return response()->json(['deleted' => true, 'id' => $entryId]);
+        return redirect()->route('road-dispatch.daily-vehicle-entries.index', [
+            'date' => $entry->entry_date,
+            'shift' => $entry->shift,
+        ])->with('success', 'Entry deleted successfully.');
     }
-
-    return redirect()->route('road-dispatch.daily-vehicle-entries.index', [
-        'date' => $entry->entry_date,
-        'shift' => $entry->shift,
-    ])->with('success', 'Entry deleted successfully.');
-}
 
     public function lookupVehicle(Request $request): JsonResponse
     {
@@ -432,6 +527,135 @@ final class DailyVehicleEntryController extends Controller
             'tare_wt' => $workorder->tare_weight ?? null,
             'transport_name' => $workorder->transport_name ?? null,
         ]);
+    }
+
+    public function exportHourlySummary(Request $request): Response|RedirectResponse
+    {
+        $user = Auth::user();
+        $assignedShifts = $user?->activeSidingShifts()
+            ->with('siding:id,name')
+            ->orderByPivot('assigned_at')
+            ->orderBy('siding_shift_user.id')
+            ->get();
+
+        if ($assignedShifts === null || $assignedShifts->isEmpty()) {
+            abort(403, 'No shift and siding assignment found for your account.');
+        }
+
+        $firstAssignment = $assignedShifts->first();
+        $restrictToAssignedShift = $assignedShifts->count() === 1 && $firstAssignment !== null;
+
+        $validated = $request->validate([
+            'date' => 'required|date_format:Y-m-d',
+            'shift' => 'required|integer|between:1,3',
+            'siding_id' => 'required|integer|exists:sidings,id',
+        ]);
+
+        $date = (string) $validated['date'];
+        $shift = (int) $validated['shift'];
+        $sidingId = (int) $validated['siding_id'];
+
+        if ($restrictToAssignedShift) {
+            $date = now()->format('Y-m-d');
+            $sidingId = (int) $firstAssignment->siding_id;
+            $shift = (int) $firstAssignment->sort_order;
+        }
+
+        $allowedSidingIds = $assignedShifts->pluck('siding_id')->unique()->values();
+        if (! $allowedSidingIds->contains($sidingId)) {
+            abort(403, 'You are not allowed to access this siding.');
+        }
+
+        $sidingShiftPairs = $assignedShifts->map(
+            fn (SidingShift $sidingShift): string => $sidingShift->siding_id.'|'.((int) $sidingShift->sort_order)
+        )->values();
+
+        if (! $sidingShiftPairs->contains($sidingId.'|'.$shift)) {
+            abort(403, 'You are not allowed to access this shift for the selected siding.');
+        }
+
+        $sidingName = (string) Siding::query()->whereKey($sidingId)->value('name');
+        if ($sidingName === '') {
+            $sidingName = '—';
+        }
+
+        $entryType = DailyVehicleEntry::ENTRY_TYPE_ROAD_DISPATCH;
+        $viewAllEntries = $user?->canViewAllRoadDispatchDailyVehicleEntries() ?? false;
+        $scopedToUserId = $viewAllEntries ? null : (int) $user->id;
+
+        $entries = $this->service->getEntriesByDateAndShift($date, $shift, $sidingId, $entryType, $scopedToUserId);
+
+        /** @var array<int, int> $counts */
+        $counts = array_fill(0, 24, 0);
+        foreach ($entries as $entry) {
+            $reachedAt = $entry->reached_at;
+            if ($reachedAt === null || $reachedAt === '') {
+                continue;
+            }
+
+            try {
+                $hour = Carbon::parse((string) $reachedAt)->hour;
+            } catch (Throwable) {
+                continue;
+            }
+
+            if ($hour >= 0 && $hour <= 23) {
+                $counts[$hour] += 1;
+            }
+        }
+
+        $rows = [];
+        $total = 0;
+        for ($h = 0; $h < 24; $h++) {
+            $count = (int) ($counts[$h] ?? 0);
+            $total += $count;
+            $hh = mb_str_pad((string) $h, 2, '0', STR_PAD_LEFT);
+            $rows[] = [
+                'hour' => $hh,
+                'label' => $hh.':00–'.$hh.':59',
+                'count' => $count,
+            ];
+        }
+
+        $userLabel = (string) ($user?->name ?? 'Unknown');
+        $filename = Str::slug("Hourly trips received - {$userLabel} - {$sidingName} - {$date} - shift {$shift}").'.xlsx';
+        $filepath = storage_path("app/public/{$filename}");
+
+        $handle = fopen($filepath, 'w');
+
+        $html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>'.$filename.'</title></head><body>';
+        $html .= '<table border="1">';
+
+        $html .= '<tr><td colspan="2" style="font-weight:bold; text-align:center; background-color:#f0f0f0;">Hourly trips received - '.$userLabel.'</td></tr>';
+        $html .= '<tr><td colspan="2" style="font-weight:bold; text-align:center; background-color:#f8f8f8;">Siding: '.$sidingName.' | Date: '.$date.' | Shift: '.$shift.'</td></tr>';
+        $html .= '<tr><td colspan="2"></td></tr>';
+
+        $html .= '<tr>';
+        $html .= '<td style="font-weight:bold; background-color:#e0e0e0; border:1px solid #ccc;">Hour</td>';
+        $html .= '<td style="font-weight:bold; background-color:#e0e0e0; border:1px solid #ccc;">Trips</td>';
+        $html .= '</tr>';
+
+        foreach ($rows as $r) {
+            $html .= '<tr>';
+            $html .= '<td style="border:1px solid #ccc;">'.$r['label'].'</td>';
+            $html .= '<td style="border:1px solid #ccc; text-align:right;">'.$r['count'].'</td>';
+            $html .= '</tr>';
+        }
+
+        $html .= '<tr>';
+        $html .= '<td style="font-weight:bold; background-color:#f8f8f8; border:1px solid #ccc;">Total</td>';
+        $html .= '<td style="font-weight:bold; background-color:#f8f8f8; border:1px solid #ccc; text-align:right;">'.$total.'</td>';
+        $html .= '</tr>';
+
+        $html .= '</table></body></html>';
+
+        fwrite($handle, $html);
+        fclose($handle);
+
+        return response()->download($filepath, basename($filepath), [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment; filename="'.basename($filepath).'"',
+        ])->deleteFileAfterSend(true);
     }
 
     public function export(Request $request): Response|RedirectResponse

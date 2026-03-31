@@ -317,6 +317,8 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::patch('road-dispatch/daily-vehicle-entries/{entry}', [DailyVehicleEntryController::class, 'update'])->name('road-dispatch.daily-vehicle-entries.update');
     Route::delete('road-dispatch/daily-vehicle-entries/{entry}', [DailyVehicleEntryController::class, 'destroy'])->name('road-dispatch.daily-vehicle-entries.destroy');
     Route::post('road-dispatch/daily-vehicle-entries/{entry}/complete', [DailyVehicleEntryController::class, 'markCompleted'])->name('road-dispatch.daily-vehicle-entries.complete');
+    Route::get('road-dispatch/daily-vehicle-entries/hourly-summary', [DailyVehicleEntryController::class, 'hourlySummary'])->name('road-dispatch.daily-vehicle-entries.hourly-summary');
+    Route::get('road-dispatch/daily-vehicle-entries/hourly-summary/export', [DailyVehicleEntryController::class, 'exportHourlySummary'])->name('road-dispatch.daily-vehicle-entries.hourly-summary.export');
     Route::get('road-dispatch/daily-vehicle-entries/export', [DailyVehicleEntryController::class, 'export'])->name('road-dispatch.daily-vehicle-entries.export');
     Route::get('road-dispatch/vehicle-workorders/lookup', [DailyVehicleEntryController::class, 'lookupVehicle'])->name('road-dispatch.vehicle-workorders.lookup');
 
