@@ -392,6 +392,17 @@ export default function RakeLoaderIndex({
                                 rakeId={rake.id}
                                 loadingStart={rake.loading_start_time ?? null}
                                 loadingEnd={rake.loading_end_time ?? null}
+                                onTimesSaved={({ loading_start_time, loading_end_time }) =>
+                                    setRake((prev) =>
+                                        prev
+                                            ? {
+                                                  ...prev,
+                                                  loading_start_time,
+                                                  loading_end_time,
+                                              }
+                                            : prev,
+                                    )
+                                }
                             />
 
                             <WagonLoadingWorkflow
