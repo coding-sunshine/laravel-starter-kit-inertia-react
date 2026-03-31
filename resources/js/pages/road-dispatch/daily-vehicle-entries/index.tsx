@@ -795,63 +795,6 @@ export default function DailyVehicleEntriesIndex({
         }
     }, [activeShiftState, effectiveSidingId, selectedDate]);
 
-    const exportHourlySummary = useCallback(async () => {
-        if (effectiveSidingId == null) {
-            setHourlyError('No siding selected.');
-            return;
-        }
-
-        try {
-            const params = new URLSearchParams({
-                date: selectedDate,
-                shift: String(activeShiftState),
-                siding_id: String(effectiveSidingId),
-            });
-
-            const exportUrl = `/road-dispatch/daily-vehicle-entries/hourly-summary/export?${params.toString()}`;
-
-            const response = await fetch(exportUrl, {
-                method: 'GET',
-                headers: {
-                    Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                    'X-Requested-With': 'XMLHttpRequest',
-                },
-                credentials: 'same-origin',
-            });
-
-            if (!response.ok) {
-                throw new Error(`Export failed: ${response.statusText}`);
-            }
-
-            const contentDisposition =
-                response.headers.get('Content-Disposition');
-            let filename = 'hourly-summary.xlsx';
-            if (contentDisposition) {
-                const filenameMatch =
-                    contentDisposition.match(/filename="(.+)"/);
-                if (filenameMatch) {
-                    filename = filenameMatch[1];
-                }
-            }
-
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = filename;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            window.URL.revokeObjectURL(url);
-        } catch (error) {
-            const errorMessage =
-                error instanceof Error
-                    ? error.message
-                    : 'Unknown error occurred';
-            setHourlyError('Export failed: ' + errorMessage);
-        }
-    }, [activeShiftState, effectiveSidingId, selectedDate]);
-
     useEffect(() => {
         if (!hourlyOpen) {
             return;
@@ -1234,14 +1177,6 @@ export default function DailyVehicleEntriesIndex({
                     </div>
 
                     <DialogFooter>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => void exportHourlySummary()}
-                            data-pan="daily-vehicle-entries-hourly-record-export"
-                        >
-                            Export XLSX
-                        </Button>
                         <Button
                             type="button"
                             variant="outline"
