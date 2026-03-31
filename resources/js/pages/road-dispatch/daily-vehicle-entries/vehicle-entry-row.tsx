@@ -230,6 +230,7 @@ function VehicleEntryRow({
     entry.gross_wt,
     entry.tare_wt,
     entry.net_wt,
+    entry.wb_no,
   ]);
 
   useEffect(() => {
@@ -399,6 +400,7 @@ function VehicleEntryRow({
         formData.transport_name.trim() ||
         formData.gross_wt.trim() ||
         formData.tare_wt.trim() ||
+        formData.wb_no.trim() ||
         formData.challan_mode === 'offline'
       );
     }
@@ -409,6 +411,7 @@ function VehicleEntryRow({
       entry.transport_name?.trim() ||
       entry.gross_wt ||
       entry.tare_wt ||
+      entry.wb_no?.trim() ||
       entry.challan_mode === 'offline'
     );
   };
@@ -424,6 +427,7 @@ function VehicleEntryRow({
       !entry.transport_name?.trim() &&
       !entry.gross_wt &&
       !entry.tare_wt &&
+      !entry.wb_no?.trim() &&
       entry.status === 'draft'
     );
   };
@@ -529,6 +533,7 @@ function VehicleEntryRow({
               {entry.tare_wt != null ? Number(entry.tare_wt).toFixed(2) : '—'}
             </TableCell>
             <TableCell className={`${readOnlyClass} font-medium text-blue-600 text-right`}>{formatEntryNetMt(entry)}</TableCell>
+            <TableCell className={readOnlyClass}>{entry.wb_no?.trim() || '—'}</TableCell>
             <TableCell className={`${readOnlyClass} text-gray-600 whitespace-nowrap`}>{formatDateTime(entry.reached_at)}</TableCell>
             <TableCell className={readOnlyClass}>{formatChallanModeLabel(entry.challan_mode)}</TableCell>
             {showCreatedByColumn ? (
@@ -632,6 +637,16 @@ function VehicleEntryRow({
 
             <TableCell className="px-2 py-3 font-medium text-blue-600 text-right text-xs border-t border-r border-gray-300 min-h-[4rem]">
               {displayedNetMt}
+            </TableCell>
+
+            <TableCell className="px-2 py-3 border-t border-r border-gray-300 min-h-[4rem]">
+              <Input
+                value={formData.wb_no}
+                disabled={!canUpdate}
+                onChange={(e) => updateField('wb_no', e.target.value)}
+                placeholder="WB"
+                className="w-20 h-12 px-2 text-xs"
+              />
             </TableCell>
 
             <TableCell className="px-2 py-3 text-xs text-gray-600 border-t border-r border-gray-300 min-h-[4rem] whitespace-nowrap">
@@ -772,6 +787,15 @@ function VehicleEntryRow({
                   disabled
                   className="bg-gray-50"
                   title={entry.net_wt != null ? 'Stored on completion (same as stock ledger qty)' : 'Gross − Tare'}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">WB No.</label>
+                <Input
+                  value={formData.wb_no}
+                  disabled={!canUpdate}
+                  onChange={(e) => updateField('wb_no', e.target.value)}
+                  placeholder="Weighbridge slip / ref"
                 />
               </div>
               <div className="col-span-2">
