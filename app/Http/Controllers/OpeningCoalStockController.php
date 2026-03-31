@@ -6,8 +6,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Siding;
 use App\Models\SidingOpeningBalance;
+use App\Models\StockLedger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
@@ -56,14 +58,54 @@ final class OpeningCoalStockController extends Controller
             'remarks' => 'nullable|string|max:1000',
         ]);
 
-        SidingOpeningBalance::query()->updateOrCreate(
-            ['siding_id' => $siding->id],
-            [
-                'opening_balance_mt' => $validated['opening_balance_mt'],
-                'as_of_date' => $validated['as_of_date'] ?? null,
-                'remarks' => $validated['remarks'] ?? null,
-            ]
-        );
+        DB::transaction(function () use ($validated, $siding) {
+
+            // 1. Save in opening balance table (your existing logic)
+            SidingOpeningBalance::query()->updateOrCreate(
+                ['siding_id' => $siding->id],
+                [
+                    'opening_balance_mt' => $validated['opening_balance_mt'],
+                    'as_of_date' => $validated['as_of_date'] ?? null,
+                    'remarks' => $validated['remarks'] ?? null,
+                ]
+            );
+
+            // 2. Get latest ledger (lock for safety)
+            $lastLedger = StockLedger::query()
+                ->where('siding_id', $siding->id)
+                ->lockForUpdate()
+                ->latest('id')
+                ->first();
+
+            $current = $lastLedger
+                ? (float) $lastLedger->closing_balance_mt
+                : 0.0;
+
+            $newBalance = (float) $validated['opening_balance_mt'];
+
+            $delta = round($newBalance - $current, 2);
+
+            // nothing to change
+            if ($delta === 0) {
+                return;
+            }
+
+            // 3. Insert ledger entry
+            StockLedger::create([
+                'siding_id' => $siding->id,
+                'transaction_type' => 'correction',
+                'quantity_mt' => $delta,
+                'opening_balance_mt' => $current,
+                'closing_balance_mt' => $newBalance,
+                'reference_number' => 'OPENING-RESET-'.now()->format('Ymd'),
+                'remarks' => 'Opening balance initialized',
+                'created_by' => auth()->id(),
+            ]);
+
+            DB::afterCommit(function () use ($siding, $newBalance) {
+                event(new \App\Events\CoalStockUpdated($siding->id, $newBalance));
+            });
+        });
 
         return redirect()->route('master-data.opening-coal-stock.index')
             ->with('success', 'Opening coal stock updated successfully.');
