@@ -53,6 +53,24 @@ type VehicleLookupResponse = {
   transport_name?: string | null;
 };
 
+function focusNextRowFirstField(fromElement: HTMLElement): boolean {
+  const currentRow = fromElement.closest('tr');
+  const nextRow = currentRow?.nextElementSibling;
+  if (!(nextRow instanceof HTMLElement)) {
+    return false;
+  }
+
+  const first = nextRow.querySelector<HTMLElement>('[data-field="e_challan_no"]');
+  if (!first) {
+    return false;
+  }
+
+  first.focus();
+  // @ts-expect-error HTMLInputElement#select exists; HTMLElement typing is generic here
+  first.select?.();
+  return true;
+}
+
 function getCsrfHeaders(): Record<string, string> {
   const cookieMatch = document.cookie.match(/\bXSRF-TOKEN=([^;]+)/);
   if (cookieMatch) {
@@ -166,7 +184,10 @@ interface VehicleEntryRowProps {
   shift: number;
   canUpdate?: boolean;
   canDelete?: boolean;
-  onEntryUpdated?: (entry: DailyVehicleEntry) => void;
+  onEntryUpdated?: (
+    entry: DailyVehicleEntry,
+    context?: { replaceClientId?: number; inlineSubmitted?: boolean; wasLocalDraft?: boolean },
+  ) => void;
   onEntryDeleted?: (id: number) => void;
   showCreatedByColumn?: boolean;
 }
@@ -367,9 +388,16 @@ function VehicleEntryRow({
         const updated = (data as { entry?: DailyVehicleEntry }).entry;
         if (updated) {
           if (isLocalDraft) {
-            onEntryUpdated?.(updated, { replaceClientId: entry.id });
+            onEntryUpdated?.(updated, {
+              replaceClientId: entry.id,
+              inlineSubmitted: options?.inlineSubmit ?? false,
+              wasLocalDraft: true,
+            });
           } else {
-            onEntryUpdated?.(updated);
+            onEntryUpdated?.(updated, {
+              inlineSubmitted: options?.inlineSubmit ?? false,
+              wasLocalDraft: false,
+            });
           }
         }
         setShowSuccess(true);
@@ -508,6 +536,13 @@ function VehicleEntryRow({
         })();
 
   const readOnlyClass = 'px-2 py-3 border-t border-r border-gray-300 min-h-[4rem] text-xs align-middle';
+  const focusWithinCellClass =
+    'focus-within:bg-green-100 focus-within:ring-2 focus-within:ring-green-500 focus-within:ring-inset dark:focus-within:bg-green-950/30';
+  const interactiveCellClass = `px-2 py-3 border-t border-r border-gray-300 min-h-[4rem] ${focusWithinCellClass}`;
+  const submitButtonFocusClass =
+    'focus-visible:ring-4 focus-visible:ring-yellow-600 focus-visible:ring-offset-2 focus-visible:ring-offset-background';
+  const deleteButtonFocusClass =
+    'focus-visible:ring-4 focus-visible:ring-red-700 focus-visible:ring-offset-2 focus-visible:ring-offset-background';
 
   return (
     <>
@@ -575,8 +610,10 @@ function VehicleEntryRow({
           </>
         ) : (
           <>
-            <TableCell className="px-2 py-3 border-t border-r border-gray-300 min-h-[4rem]">
+            <TableCell className={interactiveCellClass}>
               <Input
+                data-entry-id={entry.id}
+                data-field="e_challan_no"
                 value={formData.e_challan_no}
                 disabled={!canUpdate}
                 onChange={(e) => updateField('e_challan_no', e.target.value)}
@@ -585,7 +622,7 @@ function VehicleEntryRow({
               />
             </TableCell>
 
-            <TableCell className="px-2 py-3 border-t border-r border-gray-300 min-h-[4rem]">
+            <TableCell className={interactiveCellClass}>
               <Input
                 value={formData.vehicle_no}
                 disabled={!canUpdate}
@@ -596,7 +633,7 @@ function VehicleEntryRow({
               />
             </TableCell>
 
-            <TableCell className="px-2 py-3 border-t border-r border-gray-300 min-h-[4rem]">
+            <TableCell className={interactiveCellClass}>
               <Input
                 value={formData.trip_id_no}
                 disabled={!canUpdate}
@@ -606,7 +643,7 @@ function VehicleEntryRow({
               />
             </TableCell>
 
-            <TableCell className="px-2 py-3 border-t border-r border-gray-300 min-h-[4rem]">
+            <TableCell className={interactiveCellClass}>
               <Input
                 value={formData.transport_name}
                 disabled={!canUpdate}
@@ -616,7 +653,7 @@ function VehicleEntryRow({
               />
             </TableCell>
 
-            <TableCell className="px-2 py-3 border-t border-r border-gray-300 min-h-[4rem]">
+            <TableCell className={interactiveCellClass}>
               <Input
                 type="text"
                 inputMode="numeric"
@@ -639,7 +676,7 @@ function VehicleEntryRow({
               {displayedNetMt}
             </TableCell>
 
-            <TableCell className="px-2 py-3 border-t border-r border-gray-300 min-h-[4rem]">
+            <TableCell className={interactiveCellClass}>
               <Input
                 value={formData.wb_no}
                 disabled={!canUpdate}
@@ -653,7 +690,7 @@ function VehicleEntryRow({
               {formatDateTime(entry.reached_at)}
             </TableCell>
 
-            <TableCell className="px-2 py-3 border-t border-r border-gray-300 min-h-[4rem]">
+            <TableCell className={interactiveCellClass}>
               <Select
                 value={formData.challan_mode}
                 disabled={!canUpdate}
@@ -691,15 +728,36 @@ function VehicleEntryRow({
               )}
             </TableCell>
 
-            <TableCell className="px-2 py-3 border-t border-gray-300 min-h-[4rem]">
+            <TableCell className={`px-2 py-3 border-t border-gray-300 min-h-[4rem] ${focusWithinCellClass}`}>
               <div className="flex flex-col items-stretch gap-1">
                 {canUpdate && (
-                  <Button type="button" size="sm" className="h-8 text-xs" disabled={isSaving} onClick={() => save({ inlineSubmit: true })}>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className={`h-8 text-xs ${submitButtonFocusClass}`}
+                    disabled={isSaving}
+                    onClick={() => save({ inlineSubmit: true })}
+                  >
                     {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Submit'}
                   </Button>
                 )}
                 {canDelete && shouldShowDeleteButton() && (
-                  <Button type="button" size="sm" variant="outline" className="h-8 text-xs" disabled={isSaving} onClick={handleDelete}>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className={`h-8 text-xs ${deleteButtonFocusClass}`}
+                    disabled={isSaving}
+                    onClick={handleDelete}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Tab' && !event.shiftKey) {
+                        const moved = focusNextRowFirstField(event.currentTarget);
+                        if (moved) {
+                          event.preventDefault();
+                        }
+                      }
+                    }}
+                  >
                     Delete
                   </Button>
                 )}

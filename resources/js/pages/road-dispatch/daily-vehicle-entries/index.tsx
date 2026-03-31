@@ -562,14 +562,30 @@ export default function DailyVehicleEntriesIndex({
     const handleEntryUpdated = useCallback(
         (
             entry: DailyVehicleEntry,
-            context?: { replaceClientId?: number },
+            context?: {
+                replaceClientId?: number;
+                inlineSubmitted?: boolean;
+                wasLocalDraft?: boolean;
+            },
         ) => {
             const replaceId = context?.replaceClientId ?? entry.id;
+            const shouldAutoAddDraft =
+                context?.wasLocalDraft === true &&
+                context?.inlineSubmitted === true &&
+                !effectiveTableLocked;
+
+            const targetSidingId = effectiveSidingId ?? sidings[0]?.id;
+            const siding =
+                sidings.find((s) => s.id === targetSidingId) ?? sidings[0];
+            const userId = page.props.auth?.user?.id ?? 0;
+            const creator = draftCreatorFromAuth(page.props.auth?.user);
+            const newDraftId = shouldAutoAddDraft ? localDraftIdRef.current - 1 : null;
+
             setEntries((prev) => {
                 if (!prev.some((e) => e.id === replaceId)) {
                     return prev;
                 }
-                return prev.map((e) =>
+                const next = prev.map((e) =>
                     e.id === replaceId
                         ? {
                               ...entry,
@@ -579,6 +595,21 @@ export default function DailyVehicleEntriesIndex({
                           }
                         : e,
                 );
+
+                if (!shouldAutoAddDraft || siding == null || newDraftId == null) {
+                    return next;
+                }
+
+                localDraftIdRef.current = newDraftId;
+                const draft = buildLocalDraftEntry(
+                    newDraftId,
+                    siding,
+                    selectedDate,
+                    activeShiftState,
+                    userId,
+                    creator,
+                );
+                return [...next, draft];
             });
             if (
                 context?.replaceClientId != null &&
@@ -589,8 +620,27 @@ export default function DailyVehicleEntriesIndex({
                     [entry.shift]: (s[entry.shift] ?? 0) + 1,
                 }));
             }
+
+            if (shouldAutoAddDraft) {
+                setPlainRowsAfterLastEntry(0);
+                const focusSelector = `[data-field="e_challan_no"][data-entry-id="${newDraftId}"]`;
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        const el = document.querySelector<HTMLInputElement>(focusSelector);
+                        el?.focus();
+                        el?.select?.();
+                    });
+                });
+            }
         },
-        [],
+        [
+            activeShiftState,
+            effectiveSidingId,
+            effectiveTableLocked,
+            page.props.auth?.user,
+            selectedDate,
+            sidings,
+        ],
     );
 
     const handleEntryDeleted = useCallback((id: number) => {
