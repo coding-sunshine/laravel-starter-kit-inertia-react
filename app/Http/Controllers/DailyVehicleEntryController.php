@@ -20,6 +20,8 @@ use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 use Throwable;
+use App\Models\StockLedger;
+use Illuminate\Support\Facades\DB;
 
 final class DailyVehicleEntryController extends Controller
 {
@@ -329,49 +331,83 @@ final class DailyVehicleEntryController extends Controller
     }
 
     public function destroy(Request $request, $id): RedirectResponse|JsonResponse
-    {
-        $entry = DailyVehicleEntry::findOrFail($id);
-        $this->authorizeEntryForShiftUser($entry);
-        $this->enforceStrictActiveShiftForEntry($entry);
+{
+    $entry = DailyVehicleEntry::findOrFail($id);
 
-        if ($entry->status !== 'draft') {
-            if ($request->wantsJson()) {
-                return response()->json(['message' => 'Cannot delete completed entries.'], 422);
+    $this->authorizeEntryForShiftUser($entry);
+    $this->enforceStrictActiveShiftForEntry($entry);
+
+    $entryId = $entry->id;
+
+    DB::transaction(function () use ($entry) {
+
+        //  If completed → reverse stock
+        if ($entry->status === 'completed') {
+
+            $ledger = StockLedger::query()
+                ->where('daily_vehicle_entry_id', $entry->id)
+                ->where('transaction_type', 'receipt')
+                ->latest('id')
+                ->first();
+
+            if ($ledger) {
+
+                $sidingId = $ledger->siding_id;
+
+                // prevent double reversal
+                $alreadyReversed = StockLedger::query()
+                    ->where('reference_number', 'REV-RCPT-' . $ledger->id)
+                    ->lockForUpdate()
+                    ->exists();
+
+                if (! $alreadyReversed) {
+
+                    $reverseQty = -abs((float) $ledger->quantity_mt); //  negative
+
+                    $lastLedger = StockLedger::query()
+                        ->where('siding_id', $sidingId)
+                        ->lockForUpdate()
+                        ->latest('id')
+                        ->first();
+
+                    $opening = $lastLedger
+                        ? (float) $lastLedger->closing_balance_mt
+                        : SidingOpeningBalance::getOpeningBalanceForSiding($sidingId);
+
+                    $closing = round($opening + $reverseQty, 2);
+
+                    StockLedger::create([
+                        'siding_id' => $sidingId,
+                        'transaction_type' => 'correction',
+                        'daily_vehicle_entry_id' => $entry->id,
+                        'quantity_mt' => $reverseQty, //  negative
+                        'opening_balance_mt' => $opening,
+                        'closing_balance_mt' => $closing,
+                        'reference_number' => 'REV-RCPT-' . $ledger->id,
+                        'remarks' => 'Reversal for deleted vehicle entry #' . $entry->id,
+                        'created_by' => auth()->id(),
+                    ]);
+
+                    DB::afterCommit(function () use ($sidingId, $closing) {
+                        event(new \App\Events\CoalStockUpdated($sidingId, $closing));
+                    });
+                }
             }
-
-            return back()->with('error', 'Cannot delete completed entries.');
         }
 
-        // Do not treat challan_mode as blocking data: new rows default to "online" via the model.
-        $hasData = ! empty($entry->e_challan_no) ||
-                   ! empty($entry->vehicle_no) ||
-                   ! empty($entry->trip_id_no) ||
-                   ! empty($entry->transport_name) ||
-                   ! is_null($entry->gross_wt) ||
-                   ! is_null($entry->tare_wt) ||
-                   ! empty($entry->wb_no) ||
-                   ! empty($entry->d_challan_no);
-
-        if ($hasData) {
-            if ($request->wantsJson()) {
-                return response()->json(['message' => 'Cannot delete entries with data.'], 422);
-            }
-
-            return back()->with('error', 'Cannot delete entries with data.');
-        }
-
-        $entryId = $entry->id;
+        //  Now delete entry
         $entry->delete();
+    });
 
-        if ($request->wantsJson()) {
-            return response()->json(['deleted' => true, 'id' => $entryId]);
-        }
-
-        return redirect()->route('road-dispatch.daily-vehicle-entries.index', [
-            'date' => $entry->entry_date,
-            'shift' => $entry->shift,
-        ])->with('success', 'Entry deleted successfully.');
+    if ($request->wantsJson()) {
+        return response()->json(['deleted' => true, 'id' => $entryId]);
     }
+
+    return redirect()->route('road-dispatch.daily-vehicle-entries.index', [
+        'date' => $entry->entry_date,
+        'shift' => $entry->shift,
+    ])->with('success', 'Entry deleted successfully.');
+}
 
     public function lookupVehicle(Request $request): JsonResponse
     {

@@ -123,15 +123,22 @@ type InlineFormState = {
   remarks: string;
 };
 
-function mergeVehicleHints(prev: InlineFormState, data: VehicleLookupResponse | null): InlineFormState {
+function mergeVehicleHints(
+  prev: InlineFormState,
+  data: VehicleLookupResponse | null,
+  options?: { overwriteTransportName?: boolean },
+): InlineFormState {
   if (!data) {
     return prev;
   }
   const next = { ...prev };
-  if (!next.tare_wt && data.tare_wt != null) {
+  if (data.tare_wt != null) {
     next.tare_wt = data.tare_wt.toString();
   }
-  if (!next.transport_name && data.transport_name) {
+  if (
+    data.transport_name &&
+    (options?.overwriteTransportName === true || next.transport_name.trim() === '')
+  ) {
     next.transport_name = data.transport_name;
   }
   return next;
@@ -225,6 +232,7 @@ function VehicleEntryRow({
   const formDataRef = useRef(formData);
   const grossDigitsLocalRef = useRef(grossDigitsLocal);
   const grossFocusedRef = useRef(false);
+  const autoTransportNameRef = useRef(true);
 
   useEffect(() => {
     formDataRef.current = formData;
@@ -268,6 +276,9 @@ function VehicleEntryRow({
   }, [formData.tare_wt]);
 
   const updateField = (field: keyof InlineFormState, value: string) => {
+    if (field === 'transport_name') {
+      autoTransportNameRef.current = value.trim() === '';
+    }
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -415,7 +426,17 @@ function VehicleEntryRow({
   const handleVehicleNoBlur = useCallback(async () => {
     const hints = await fetchVehicleWorkorderHints(formDataRef.current.vehicle_no);
     if (hints) {
-      setFormData((prev) => mergeVehicleHints(prev, hints));
+      setFormData((prev) => {
+        const next = mergeVehicleHints(prev, hints, {
+          overwriteTransportName: autoTransportNameRef.current,
+        });
+        // Ensure modal + row net weight updates immediately when tare comes from lookup.
+        setDisplayedNetMt(formatNetMtFromGrossTare(next.gross_wt, next.tare_wt));
+        return next;
+      });
+      if (hints.transport_name) {
+        autoTransportNameRef.current = true;
+      }
     }
   }, []);
 
@@ -521,10 +542,14 @@ function VehicleEntryRow({
   };
 
   const displayNetMtModal = () => {
-    if (entry.net_wt != null && entry.net_wt !== undefined) {
-      return Number(entry.net_wt).toFixed(2);
-    }
-    return displayedNetMt;
+    // In modal edit mode we want *live* Gross − Tare.
+    // Important: while gross is focused we keep the "live" digits in `grossDigitsLocal`
+    // and only commit to `formData.gross_wt` on blur, so net must read from that buffer.
+    const grossForNet = isGrossFocused
+      ? digitsToGrossDisplay(grossDigitsLocal)
+      : formData.gross_wt;
+
+    return formatNetMtFromGrossTare(grossForNet, formData.tare_wt);
   };
 
   const tareDisplayText =
@@ -844,7 +869,11 @@ function VehicleEntryRow({
                   value={displayNetMtModal()}
                   disabled
                   className="bg-gray-50"
-                  title={entry.net_wt != null ? 'Stored on completion (same as stock ledger qty)' : 'Gross − Tare'}
+                  title={
+                    entry.net_wt != null
+                      ? `Gross − Tare (stored net: ${Number(entry.net_wt).toFixed(2)})`
+                      : 'Gross − Tare'
+                  }
                 />
               </div>
               <div>
@@ -923,7 +952,7 @@ function VehicleEntryRow({
                   </Button>
                 )}
 
-                {canDelete && shouldShowDeleteButton() && (
+                {canDelete && (
                   <Button variant="destructive" onClick={handleDelete} disabled={isSaving} className="min-w-[100px]">
                     <Trash2 className="h-4 w-4 mr-2" />
                     Delete
