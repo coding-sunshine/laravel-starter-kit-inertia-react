@@ -408,14 +408,18 @@ export function AppSidebar() {
                             </Link>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
-                    {(auth.tenancy_enabled ?? true) && (
+                    {/* Hidden for now (keep code, hide UI) */}
+                    {false && (auth.tenancy_enabled ?? true) && (
                         <SidebarMenuItem>
                             <OrganizationSwitcher />
                         </SidebarMenuItem>
                     )}
-                    <SidebarMenuItem>
-                        <SidingSwitcher />
-                    </SidebarMenuItem>
+                    {/* Hidden for now (keep code, hide UI) */}
+                    {false && (
+                        <SidebarMenuItem>
+                            <SidingSwitcher />
+                        </SidebarMenuItem>
+                    )}
                 </SidebarMenu>
             </SidebarHeader>
 

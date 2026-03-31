@@ -136,8 +136,14 @@ final class IndentsController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'code']);
 
+        $powerPlants = PowerPlant::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['name', 'code']);
+
         return Inertia::render('indents/create', [
             'sidings' => $sidings,
+            'power_plants' => $powerPlants,
         ]);
     }
 
@@ -153,18 +159,80 @@ final class IndentsController extends Controller
             'e_demand_reference_id' => ['nullable', 'string', 'max:100'],
             'fnr_number' => ['nullable', 'string', 'max:50'],
             'railway_reference_no' => ['nullable', 'string', 'max:100'],
-            'destination' => ['nullable', 'string', 'max:100'],
+            'destination' => [
+                'nullable',
+                'string',
+                'max:100',
+                Rule::exists('power_plants', 'code')->where('is_active', true),
+            ],
             'expected_loading_date' => ['nullable', 'date'],
             'required_by_date' => ['nullable', 'date'],
-            'indent_at' => ['nullable', 'date'],
+            'indent_at' => ['required', 'date'],
             'demanded_stock' => ['nullable', 'string', 'max:100'],
             'total_units' => ['nullable', 'integer', 'min:0', 'max:999999'],
             'target_quantity_mt' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99'],
             'allocated_quantity_mt' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99'],
             'available_stock_mt' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99'],
+            'rake_number' => [
+                'nullable',
+                'string',
+                'max:100',
+                function (string $attribute, mixed $value, Closure $fail) use ($request): void {
+                    $trimmed = $value !== null && mb_trim((string) $value) !== '' ? mb_trim((string) $value) : null;
+                    if ($trimmed === null) {
+                        return;
+                    }
+
+                    $sidingId = (int) $request->input('siding_id');
+                    if ($sidingId <= 0) {
+                        return;
+                    }
+
+                    $existsInMonth = Rake::query()
+                        ->where('rake_number', $trimmed)
+                        ->where('siding_id', $sidingId)
+                        ->whereYear('loading_date', now()->year)
+                        ->whereMonth('loading_date', now()->month)
+                        ->exists();
+
+                    if ($existsInMonth) {
+                        $fail('This rake number is already in use this month for this siding.');
+                    }
+                },
+            ],
+            'rake_priority_number' => [
+                'nullable',
+                'integer',
+                'min:0',
+                function (string $attribute, mixed $value, Closure $fail) use ($request): void {
+                    if ($value === null || $value === '') {
+                        return;
+                    }
+                    if (! is_numeric($value)) {
+                        return;
+                    }
+
+                    $num = (int) $value;
+                    $sidingId = (int) $request->input('siding_id');
+                    if ($sidingId <= 0) {
+                        return;
+                    }
+
+                    $existsInMonth = Rake::query()
+                        ->where('priority_number', $num)
+                        ->where('siding_id', $sidingId)
+                        ->whereYear('loading_date', now()->year)
+                        ->whereMonth('loading_date', now()->month)
+                        ->exists();
+
+                    if ($existsInMonth) {
+                        $fail('This rake priority number is already in use this month for this siding.');
+                    }
+                },
+            ],
             'pdf' => ['nullable', 'file', 'mimes:pdf', 'max:10240'],
         ]);
-
+        
         return DB::transaction(function () use ($request, $validated): RedirectResponse {
             $indent = new Indent;
             $indent->siding_id = $validated['siding_id'];
@@ -191,7 +259,19 @@ final class IndentsController extends Controller
                 $indent->addMediaFromRequest('pdf')->toMediaCollection('indent_confirmation_pdf');
             }
 
-            $rake = app(ProvisionRakeForIndent::class)->handle($indent, null, (int) $request->user()->id);
+            $rakeNumber = isset($validated['rake_number']) && mb_trim((string) $validated['rake_number']) !== ''
+                ? mb_trim((string) $validated['rake_number'])
+                : null;
+            $priorityNumber = array_key_exists('rake_priority_number', $validated)
+                ? (($validated['rake_priority_number'] ?? null) !== null ? (int) $validated['rake_priority_number'] : null)
+                : null;
+
+            $rake = app(ProvisionRakeForIndent::class)->handle(
+                $indent,
+                $rakeNumber,
+                (int) $request->user()->id,
+                $priorityNumber,
+            );
 
             return to_route('rakes.show', $rake)
                 ->with('success', 'Indent created. Open the rake to continue.');

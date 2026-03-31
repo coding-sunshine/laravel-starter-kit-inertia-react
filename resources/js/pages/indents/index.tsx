@@ -13,7 +13,7 @@ import AppLayout from '@/layouts/app-layout';
 import { useCan } from '@/hooks/use-can';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { FileText, Upload } from 'lucide-react';
+import { FileText, Plus, Upload } from 'lucide-react';
 import { useRef, useState } from 'react';
 
 interface Siding {
@@ -119,6 +119,15 @@ export default function IndentsIndex({ indents }: Props) {
                     <div className="flex items-center gap-2">
                         {canCreateIndent && (
                             <>
+                                <Link href="/indents/create">
+                                    <Button
+                                        size="sm"
+                                        data-pan="indents-create-button"
+                                    >
+                                        <Plus className="mr-2 size-4" />
+                                        Create e-Demand
+                                    </Button>
+                                </Link>
                                 <input
                                     ref={fileInputRef}
                                     type="file"
@@ -276,7 +285,7 @@ export default function IndentsIndex({ indents }: Props) {
                             <div className="rounded-lg border border-dashed p-8 text-center">
                                 <FileText className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
                                 <p className="text-sm text-muted-foreground">
-                                    No indents yet. Create one to get started.
+                                    No e-Demand yet. Create one to get started.
                                 </p>
                             </div>
                         )}

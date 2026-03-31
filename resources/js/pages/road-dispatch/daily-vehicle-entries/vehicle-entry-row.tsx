@@ -53,6 +53,24 @@ type VehicleLookupResponse = {
   transport_name?: string | null;
 };
 
+function focusNextRowFirstField(fromElement: HTMLElement): boolean {
+  const currentRow = fromElement.closest('tr');
+  const nextRow = currentRow?.nextElementSibling;
+  if (!(nextRow instanceof HTMLElement)) {
+    return false;
+  }
+
+  const first = nextRow.querySelector<HTMLElement>('[data-field="e_challan_no"]');
+  if (!first) {
+    return false;
+  }
+
+  first.focus();
+  // @ts-expect-error HTMLInputElement#select exists; HTMLElement typing is generic here
+  first.select?.();
+  return true;
+}
+
 function getCsrfHeaders(): Record<string, string> {
   const cookieMatch = document.cookie.match(/\bXSRF-TOKEN=([^;]+)/);
   if (cookieMatch) {
@@ -105,15 +123,22 @@ type InlineFormState = {
   remarks: string;
 };
 
-function mergeVehicleHints(prev: InlineFormState, data: VehicleLookupResponse | null): InlineFormState {
+function mergeVehicleHints(
+  prev: InlineFormState,
+  data: VehicleLookupResponse | null,
+  options?: { overwriteTransportName?: boolean },
+): InlineFormState {
   if (!data) {
     return prev;
   }
   const next = { ...prev };
-  if (!next.tare_wt && data.tare_wt != null) {
+  if (data.tare_wt != null) {
     next.tare_wt = data.tare_wt.toString();
   }
-  if (!next.transport_name && data.transport_name) {
+  if (
+    data.transport_name &&
+    (options?.overwriteTransportName === true || next.transport_name.trim() === '')
+  ) {
     next.transport_name = data.transport_name;
   }
   return next;
@@ -166,7 +191,10 @@ interface VehicleEntryRowProps {
   shift: number;
   canUpdate?: boolean;
   canDelete?: boolean;
-  onEntryUpdated?: (entry: DailyVehicleEntry) => void;
+  onEntryUpdated?: (
+    entry: DailyVehicleEntry,
+    context?: { replaceClientId?: number; inlineSubmitted?: boolean; wasLocalDraft?: boolean },
+  ) => void;
   onEntryDeleted?: (id: number) => void;
   showCreatedByColumn?: boolean;
 }
@@ -204,6 +232,7 @@ function VehicleEntryRow({
   const formDataRef = useRef(formData);
   const grossDigitsLocalRef = useRef(grossDigitsLocal);
   const grossFocusedRef = useRef(false);
+  const autoTransportNameRef = useRef(true);
 
   useEffect(() => {
     formDataRef.current = formData;
@@ -230,6 +259,7 @@ function VehicleEntryRow({
     entry.gross_wt,
     entry.tare_wt,
     entry.net_wt,
+    entry.wb_no,
   ]);
 
   useEffect(() => {
@@ -246,6 +276,9 @@ function VehicleEntryRow({
   }, [formData.tare_wt]);
 
   const updateField = (field: keyof InlineFormState, value: string) => {
+    if (field === 'transport_name') {
+      autoTransportNameRef.current = value.trim() === '';
+    }
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -366,9 +399,16 @@ function VehicleEntryRow({
         const updated = (data as { entry?: DailyVehicleEntry }).entry;
         if (updated) {
           if (isLocalDraft) {
-            onEntryUpdated?.(updated, { replaceClientId: entry.id });
+            onEntryUpdated?.(updated, {
+              replaceClientId: entry.id,
+              inlineSubmitted: options?.inlineSubmit ?? false,
+              wasLocalDraft: true,
+            });
           } else {
-            onEntryUpdated?.(updated);
+            onEntryUpdated?.(updated, {
+              inlineSubmitted: options?.inlineSubmit ?? false,
+              wasLocalDraft: false,
+            });
           }
         }
         setShowSuccess(true);
@@ -386,7 +426,17 @@ function VehicleEntryRow({
   const handleVehicleNoBlur = useCallback(async () => {
     const hints = await fetchVehicleWorkorderHints(formDataRef.current.vehicle_no);
     if (hints) {
-      setFormData((prev) => mergeVehicleHints(prev, hints));
+      setFormData((prev) => {
+        const next = mergeVehicleHints(prev, hints, {
+          overwriteTransportName: autoTransportNameRef.current,
+        });
+        // Ensure modal + row net weight updates immediately when tare comes from lookup.
+        setDisplayedNetMt(formatNetMtFromGrossTare(next.gross_wt, next.tare_wt));
+        return next;
+      });
+      if (hints.transport_name) {
+        autoTransportNameRef.current = true;
+      }
     }
   }, []);
 
@@ -399,6 +449,7 @@ function VehicleEntryRow({
         formData.transport_name.trim() ||
         formData.gross_wt.trim() ||
         formData.tare_wt.trim() ||
+        formData.wb_no.trim() ||
         formData.challan_mode === 'offline'
       );
     }
@@ -409,6 +460,7 @@ function VehicleEntryRow({
       entry.transport_name?.trim() ||
       entry.gross_wt ||
       entry.tare_wt ||
+      entry.wb_no?.trim() ||
       entry.challan_mode === 'offline'
     );
   };
@@ -424,6 +476,7 @@ function VehicleEntryRow({
       !entry.transport_name?.trim() &&
       !entry.gross_wt &&
       !entry.tare_wt &&
+      !entry.wb_no?.trim() &&
       entry.status === 'draft'
     );
   };
@@ -489,10 +542,14 @@ function VehicleEntryRow({
   };
 
   const displayNetMtModal = () => {
-    if (entry.net_wt != null && entry.net_wt !== undefined) {
-      return Number(entry.net_wt).toFixed(2);
-    }
-    return displayedNetMt;
+    // In modal edit mode we want *live* Gross − Tare.
+    // Important: while gross is focused we keep the "live" digits in `grossDigitsLocal`
+    // and only commit to `formData.gross_wt` on blur, so net must read from that buffer.
+    const grossForNet = isGrossFocused
+      ? digitsToGrossDisplay(grossDigitsLocal)
+      : formData.gross_wt;
+
+    return formatNetMtFromGrossTare(grossForNet, formData.tare_wt);
   };
 
   const tareDisplayText =
@@ -504,6 +561,13 @@ function VehicleEntryRow({
         })();
 
   const readOnlyClass = 'px-2 py-3 border-t border-r border-gray-300 min-h-[4rem] text-xs align-middle';
+  const focusWithinCellClass =
+    'focus-within:bg-green-100 focus-within:ring-2 focus-within:ring-green-500 focus-within:ring-inset dark:focus-within:bg-green-950/30';
+  const interactiveCellClass = `px-2 py-3 border-t border-r border-gray-300 min-h-[4rem] ${focusWithinCellClass}`;
+  const submitButtonFocusClass =
+    'focus-visible:ring-4 focus-visible:ring-yellow-600 focus-visible:ring-offset-2 focus-visible:ring-offset-background';
+  const deleteButtonFocusClass =
+    'focus-visible:ring-4 focus-visible:ring-red-700 focus-visible:ring-offset-2 focus-visible:ring-offset-background';
 
   return (
     <>
@@ -529,6 +593,7 @@ function VehicleEntryRow({
               {entry.tare_wt != null ? Number(entry.tare_wt).toFixed(2) : '—'}
             </TableCell>
             <TableCell className={`${readOnlyClass} font-medium text-blue-600 text-right`}>{formatEntryNetMt(entry)}</TableCell>
+            <TableCell className={readOnlyClass}>{entry.wb_no?.trim() || '—'}</TableCell>
             <TableCell className={`${readOnlyClass} text-gray-600 whitespace-nowrap`}>{formatDateTime(entry.reached_at)}</TableCell>
             <TableCell className={readOnlyClass}>{formatChallanModeLabel(entry.challan_mode)}</TableCell>
             {showCreatedByColumn ? (
@@ -570,8 +635,10 @@ function VehicleEntryRow({
           </>
         ) : (
           <>
-            <TableCell className="px-2 py-3 border-t border-r border-gray-300 min-h-[4rem]">
+            <TableCell className={interactiveCellClass}>
               <Input
+                data-entry-id={entry.id}
+                data-field="e_challan_no"
                 value={formData.e_challan_no}
                 disabled={!canUpdate}
                 onChange={(e) => updateField('e_challan_no', e.target.value)}
@@ -580,7 +647,7 @@ function VehicleEntryRow({
               />
             </TableCell>
 
-            <TableCell className="px-2 py-3 border-t border-r border-gray-300 min-h-[4rem]">
+            <TableCell className={interactiveCellClass}>
               <Input
                 value={formData.vehicle_no}
                 disabled={!canUpdate}
@@ -591,7 +658,7 @@ function VehicleEntryRow({
               />
             </TableCell>
 
-            <TableCell className="px-2 py-3 border-t border-r border-gray-300 min-h-[4rem]">
+            <TableCell className={interactiveCellClass}>
               <Input
                 value={formData.trip_id_no}
                 disabled={!canUpdate}
@@ -601,7 +668,7 @@ function VehicleEntryRow({
               />
             </TableCell>
 
-            <TableCell className="px-2 py-3 border-t border-r border-gray-300 min-h-[4rem]">
+            <TableCell className={interactiveCellClass}>
               <Input
                 value={formData.transport_name}
                 disabled={!canUpdate}
@@ -611,7 +678,7 @@ function VehicleEntryRow({
               />
             </TableCell>
 
-            <TableCell className="px-2 py-3 border-t border-r border-gray-300 min-h-[4rem]">
+            <TableCell className={interactiveCellClass}>
               <Input
                 type="text"
                 inputMode="numeric"
@@ -634,11 +701,21 @@ function VehicleEntryRow({
               {displayedNetMt}
             </TableCell>
 
+            <TableCell className={interactiveCellClass}>
+              <Input
+                value={formData.wb_no}
+                disabled={!canUpdate}
+                onChange={(e) => updateField('wb_no', e.target.value)}
+                placeholder="WB"
+                className="w-20 h-12 px-2 text-xs"
+              />
+            </TableCell>
+
             <TableCell className="px-2 py-3 text-xs text-gray-600 border-t border-r border-gray-300 min-h-[4rem] whitespace-nowrap">
               {formatDateTime(entry.reached_at)}
             </TableCell>
 
-            <TableCell className="px-2 py-3 border-t border-r border-gray-300 min-h-[4rem]">
+            <TableCell className={interactiveCellClass}>
               <Select
                 value={formData.challan_mode}
                 disabled={!canUpdate}
@@ -676,15 +753,36 @@ function VehicleEntryRow({
               )}
             </TableCell>
 
-            <TableCell className="px-2 py-3 border-t border-gray-300 min-h-[4rem]">
+            <TableCell className={`px-2 py-3 border-t border-gray-300 min-h-[4rem] ${focusWithinCellClass}`}>
               <div className="flex flex-col items-stretch gap-1">
                 {canUpdate && (
-                  <Button type="button" size="sm" className="h-8 text-xs" disabled={isSaving} onClick={() => save({ inlineSubmit: true })}>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className={`h-8 text-xs ${submitButtonFocusClass}`}
+                    disabled={isSaving}
+                    onClick={() => save({ inlineSubmit: true })}
+                  >
                     {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Submit'}
                   </Button>
                 )}
                 {canDelete && shouldShowDeleteButton() && (
-                  <Button type="button" size="sm" variant="outline" className="h-8 text-xs" disabled={isSaving} onClick={handleDelete}>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className={`h-8 text-xs ${deleteButtonFocusClass}`}
+                    disabled={isSaving}
+                    onClick={handleDelete}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Tab' && !event.shiftKey) {
+                        const moved = focusNextRowFirstField(event.currentTarget);
+                        if (moved) {
+                          event.preventDefault();
+                        }
+                      }
+                    }}
+                  >
                     Delete
                   </Button>
                 )}
@@ -771,7 +869,20 @@ function VehicleEntryRow({
                   value={displayNetMtModal()}
                   disabled
                   className="bg-gray-50"
-                  title={entry.net_wt != null ? 'Stored on completion (same as stock ledger qty)' : 'Gross − Tare'}
+                  title={
+                    entry.net_wt != null
+                      ? `Gross − Tare (stored net: ${Number(entry.net_wt).toFixed(2)})`
+                      : 'Gross − Tare'
+                  }
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">WB No.</label>
+                <Input
+                  value={formData.wb_no}
+                  disabled={!canUpdate}
+                  onChange={(e) => updateField('wb_no', e.target.value)}
+                  placeholder="Weighbridge slip / ref"
                 />
               </div>
               <div className="col-span-2">
@@ -841,7 +952,7 @@ function VehicleEntryRow({
                   </Button>
                 )}
 
-                {canDelete && shouldShowDeleteButton() && (
+                {canDelete && (
                   <Button variant="destructive" onClick={handleDelete} disabled={isSaving} className="min-w-[100px]">
                     <Trash2 className="h-4 w-4 mr-2" />
                     Delete

@@ -55,6 +55,7 @@ const EmptyPlaceholderRow = React.memo(function EmptyPlaceholderRow({
       <TableCell className={emptyCellClass} />
       <TableCell className={emptyCellClass} />
       <TableCell className={emptyCellClass} />
+      <TableCell className={emptyCellClass} />
       {showCreatedByColumn ? <TableCell className={emptyCellClass} /> : null}
       <TableCell className={emptyCellClass} />
       <TableCell className={emptyCellClassLast} />
@@ -207,6 +208,7 @@ export default function VehicleEntryTable({
             <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">Gross WT (G2)</TableHead>
             <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">Tare WT (T1)</TableHead>
             <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">Net Weight</TableHead>
+            <TableHead className="min-h-[4rem] h-14 min-w-[4.5rem] px-2 py-3 text-center border-r border-gray-300">WB</TableHead>
             <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">Reached At</TableHead>
             <TableHead className="min-h-[4rem] h-14 px-2 py-3 text-center border-r border-gray-300">Challan Mode</TableHead>
             {showCreatedByColumn ? (

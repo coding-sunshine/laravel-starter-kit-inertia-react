@@ -17,18 +17,22 @@ final readonly class ProvisionRakeForIndent
     /**
      * Create a rake for an indent (PDF import or manual indent create).
      *
-     * @param  ?string  $rakeNumberFromPdf  Trimmed rake sq. from e-Demand; null for manual indents.
+     * @param  ?string  $rakeNumber  Trimmed rake sq. from e-Demand (PDF) or manual entry.
+     * @param  ?int  $priorityNumber  Optional override; defaults to indent primary key.
      */
-    public function handle(Indent $indent, ?string $rakeNumberFromPdf, int $userId): Rake
+    public function handle(Indent $indent, ?string $rakeNumber, int $userId, ?int $priorityNumber = null): Rake
     {
         if ($indent->rake()->exists()) {
             throw new InvalidArgumentException('A rake already exists for this indent.');
         }
 
-        $rakeNumber = null;
-        if ($rakeNumberFromPdf !== null && mb_trim($rakeNumberFromPdf) !== '') {
-            $rakeNumber = mb_trim($rakeNumberFromPdf);
+        $rakeNumber = $rakeNumber !== null && mb_trim($rakeNumber) !== '' ? mb_trim($rakeNumber) : null;
+        if ($rakeNumber !== null) {
             $this->assertRakeNumberFreeForSidingThisMonth($rakeNumber, (int) $indent->siding_id);
+        }
+
+        if ($priorityNumber !== null) {
+            $this->assertPriorityNumberFreeForSidingThisMonth($priorityNumber, (int) $indent->siding_id);
         }
 
         $powerPlant = $this->resolvePowerPlant($indent->destination);
@@ -49,7 +53,7 @@ final readonly class ProvisionRakeForIndent
         $rake->indent_id = $indent->id;
         $rake->siding_id = $indent->siding_id;
         $rake->rake_number = $rakeNumber;
-        $rake->priority_number = (int) $indent->id;
+        $rake->priority_number = $priorityNumber ?? (int) $indent->id;
         $rake->loading_date = $loadingDate;
         $rake->rake_type = $rakeType;
         $rake->wagon_count = $wagonCount;
@@ -93,12 +97,25 @@ final readonly class ProvisionRakeForIndent
         $existsInMonth = Rake::query()
             ->where('rake_number', $rakeNumber)
             ->where('siding_id', $sidingId)
-            ->whereYear('created_at', now()->year)
-            ->whereMonth('created_at', now()->month)
+            ->whereYear('loading_date', now()->year)
+            ->whereMonth('loading_date', now()->month)
+            ->exists();
+        if ($existsInMonth) {
+            throw new InvalidArgumentException('This rake number is already in use this month for this siding.');
+        }
+    }
+
+    public function assertPriorityNumberFreeForSidingThisMonth(int $priorityNumber, int $sidingId): void
+    {
+        $existsInMonth = Rake::query()
+            ->where('priority_number', $priorityNumber)
+            ->where('siding_id', $sidingId)
+            ->whereYear('loading_date', now()->year)
+            ->whereMonth('loading_date', now()->month)
             ->exists();
 
         if ($existsInMonth) {
-            throw new InvalidArgumentException('This rake number is already in use this month for this siding.');
+            throw new InvalidArgumentException('This rake priority number is already in use this month for this siding.');
         }
     }
 
