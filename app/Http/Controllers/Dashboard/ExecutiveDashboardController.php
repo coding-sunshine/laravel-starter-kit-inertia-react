@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Alert;
 use App\Models\AppliedPenalty;
 use App\Models\DailyVehicleEntry;
+use App\Models\HistoricalMine;
 use App\Models\Indent;
 use App\Models\Loader;
 use App\Models\Penalty;
@@ -457,6 +458,90 @@ final class ExecutiveDashboardController extends Controller
             ],
         ];
 
+        $cutover = Carbon::create(2026, 3, 20, 0, 0, 0, $tz)->startOfDay();
+        $fyChartRows = [];
+        for ($y = $startFyYear; $y <= $endFyYear; $y++) {
+            $rowFyStart = Carbon::create($y, 4, 1, 0, 0, 0, $tz)->startOfDay();
+            $rowFyEnd = $rowFyStart->copy()->addYear()->subDay()->endOfDay();
+            $rowLabel = sprintf('%d-%02d', $y, (int) $rowFyStart->copy()->addYear()->format('y'));
+
+            $preFrom = $rowFyStart->copy();
+            $preTo = $rowFyEnd->copy()->min($cutover);
+            $postFrom = $rowFyStart->copy()->max($cutover->copy()->addDay());
+            $postTo = $rowFyEnd->copy();
+
+            $preValid = $preFrom->lte($preTo);
+            $postValid = $postFrom->lte($postTo);
+
+            // Production from ProductionEntry (no cutover rule).
+            $prodScope = ProductionEntry::query();
+            if ($sidingIds !== []) {
+                $prodScope->where(function ($query) use ($sidingIds): void {
+                    $query->whereIn('siding_id', $sidingIds)->orWhereNull('siding_id');
+                });
+            }
+
+            $obRow = (clone $prodScope)
+                ->where('type', ProductionEntry::TYPE_OB)
+                ->whereRaw($this->dateOnlyBetweenSql('date', true), [$rowFyStart->toDateString(), $rowFyEnd->toDateString()])
+                ->selectRaw('coalesce(sum(qty), 0) as qty')
+                ->first();
+
+            $coalRow = (clone $prodScope)
+                ->where('type', ProductionEntry::TYPE_COAL)
+                ->whereRaw($this->dateOnlyBetweenSql('date', true), [$rowFyStart->toDateString(), $rowFyEnd->toDateString()])
+                ->selectRaw('coalesce(sum(qty), 0) as qty')
+                ->first();
+
+            // Dispatch qty: historical_mines up to cutover, live tables after cutover.
+            $preRoadQty = 0.0;
+            $preRailQty = 0.0;
+            if ($preValid) {
+                $preRoadQty = (float) HistoricalMine::query()
+                    ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
+                    ->whereBetween('month', [$preFrom->toDateString(), $preTo->toDateString()])
+                    ->selectRaw('coalesce(sum(received_qty), 0) as qty')
+                    ->value('qty');
+
+                $preRailQty = (float) HistoricalMine::query()
+                    ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
+                    ->whereBetween('month', [$preFrom->toDateString(), $preTo->toDateString()])
+                    ->selectRaw('coalesce(sum(dispatched_qty), 0) as qty')
+                    ->value('qty');
+            }
+
+            $postRoadQty = 0.0;
+            $postRailQty = 0.0;
+            if ($postValid) {
+                // DailyVehicleEntry: qty per row = gross_wt - tare_wt, date = reached_at.
+                $postRoadQty = (float) DailyVehicleEntry::query()
+                    ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
+                    ->where('entry_type', DailyVehicleEntry::ENTRY_TYPE_ROAD_DISPATCH)
+                    ->whereRaw($this->dateOnlyBetweenSql('reached_at'), [$postFrom->toDateString(), $postTo->toDateString()])
+                    ->selectRaw('coalesce(sum(coalesce(gross_wt, 0) - coalesce(tare_wt, 0)), 0) as qty')
+                    ->value('qty');
+
+                $postRailQty = (float) Rake::query()
+                    ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
+                    ->whereNotNull('loading_date')
+                    ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$postFrom->toDateString(), $postTo->toDateString()])
+                    ->selectRaw('coalesce(sum(loaded_weight_mt), 0) as qty')
+                    ->value('qty');
+            }
+
+            $fyChartRows[] = [
+                'fy' => $rowLabel,
+                'production' => [
+                    'obQty' => round((float) ($obRow?->qty ?? 0), 2),
+                    'coalQty' => round((float) ($coalRow?->qty ?? 0), 2),
+                ],
+                'dispatch' => [
+                    'roadQty' => round($preRoadQty + $postRoadQty, 2),
+                    'railQty' => round($preRailQty + $postRailQty, 2),
+                ],
+            ];
+        }
+
         return [
             'anchorDate' => $anchor->toDateString(),
             'fyLabel' => $fyLabel,
@@ -484,6 +569,10 @@ final class ExecutiveDashboardController extends Controller
             ],
             'fySummary' => [
                 'rows' => $fySummaryRows,
+            ],
+            'fyCharts' => [
+                'cutoverDate' => $cutover->toDateString(),
+                'rows' => $fyChartRows,
             ],
         ];
     }

@@ -369,6 +369,14 @@ interface ExecutiveYesterdayData {
             railDispatch: { rakes: number; qty: number };
         }>;
     };
+    fyCharts: {
+        cutoverDate: string;
+        rows: Array<{
+            fy: string;
+            production: { obQty: number; coalQty: number };
+            dispatch: { roadQty: number; railQty: number };
+        }>;
+    };
 }
 
 interface DashboardAlert {
@@ -552,9 +560,13 @@ function ExecutiveYesterdayTable({
     );
 }
 
-function ExecutiveYesterdaySection({ data }: { data: ExecutiveYesterdayData }) {
-    const anchorDateLabel = new Date(`${data.anchorDate}T00:00:00`).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
-    const [viewMode, setViewMode] = useState<'table' | 'charts'>('table');
+function ExecutiveYesterdaySection({
+    data,
+    viewMode,
+}: {
+    data: ExecutiveYesterdayData;
+    viewMode: 'table' | 'charts';
+}) {
 
     const [customFrom, setCustomFrom] = useState<string>(data.customRange.from);
     const [customTo, setCustomTo] = useState<string>(data.customRange.to);
@@ -833,171 +845,146 @@ function ExecutiveYesterdaySection({ data }: { data: ExecutiveYesterdayData }) {
         </div>
     );
 
-    const chartData = [
-        {
-            metric: 'OB Production (MT)',
-            yesterday: data.obProduction.yesterday.qty,
-            today: data.obProduction.today.qty,
-            week: data.obProduction.week.qty,
-            month: data.obProduction.month.qty,
-            fy: data.obProduction.fy.qty,
-            unit: 'MT',
-        },
-        {
-            metric: 'Coal Production (MT)',
-            yesterday: data.coalProduction.yesterday.qty,
-            today: data.coalProduction.today.qty,
-            week: data.coalProduction.week.qty,
-            month: data.coalProduction.month.qty,
-            fy: data.coalProduction.fy.qty,
-            unit: 'MT',
-        },
-        {
-            metric: 'Road Dispatch (MT)',
-            yesterday: data.roadDispatch.totals.yesterday.qty,
-            today: data.roadDispatch.totals.today.qty,
-            week: data.roadDispatch.totals.week.qty,
-            month: data.roadDispatch.totals.month.qty,
-            fy: data.roadDispatch.totals.fy.qty,
-            unit: 'MT',
-        },
-        {
-            metric: 'Rail Dispatch (Rakes)',
-            yesterday: data.railDispatch.totals.yesterday.rakes,
-            today: data.railDispatch.totals.today.rakes,
-            week: data.railDispatch.totals.week.rakes,
-            month: data.railDispatch.totals.month.rakes,
-            fy: data.railDispatch.totals.fy.rakes,
-            unit: 'Rakes',
-        },
-    ];
+    const compactQty = (n: number): string => fmtNumber(n, n % 1 === 0 ? 0 : 2);
 
-    const chartMax = Math.max(
-        ...chartData.flatMap((d) => [d.yesterday, d.today, d.week, d.month, d.fy]).map((v) => Number(v) || 0),
+    const fyProductionRows = data.fyCharts.rows.map((r) => ({
+        fy: r.fy,
+        OB: r.production.obQty,
+        COAL: r.production.coalQty,
+        unit: 'MT',
+    }));
+
+    const fyDispatchRows = data.fyCharts.rows.map((r) => ({
+        fy: r.fy,
+        ROAD: r.dispatch.roadQty,
+        RAIL: r.dispatch.railQty,
+        unit: 'MT',
+    }));
+
+    const fyCombinedRows = data.fyCharts.rows.map((r) => ({
+        fy: r.fy,
+        OB: r.production.obQty,
+        COAL: r.production.coalQty,
+        ROAD: r.dispatch.roadQty,
+        RAIL: r.dispatch.railQty,
+        unit: 'MT',
+    }));
+
+    const maxOf = (rows: Array<Record<string, number | string>>) => Math.max(
+        ...rows.flatMap((row) => Object.values(row)).filter((v) => typeof v === 'number') as number[],
         1,
     );
 
-    const ChartsView = (
-        <div className="dashboard-card overflow-hidden rounded-xl border-0 p-0">
-            <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                        <p className="text-sm font-semibold text-gray-900">Period-wise comparison</p>
-                        <p className="text-[11px] text-muted-foreground">Grouped bars (Yesterday/Today/Week/Month/Year) per metric</p>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-3 text-[11px] font-medium text-muted-foreground">
-                        {periodKeys.map((k) => (
-                            <span key={k} className="inline-flex items-center gap-1.5">
-                                <span
-                                    className="inline-block size-2.5 rounded-sm"
-                                    style={{
-                                        backgroundColor: {
-                                            yesterday: DASHBOARD_PALETTE.darkGrey,
-                                            today: DASHBOARD_PALETTE.steelBlue,
-                                            week: DASHBOARD_PALETTE.successGreen,
-                                            month: DASHBOARD_PALETTE.safetyYellow,
-                                            fy: DASHBOARD_PALETTE.steelBlueLight,
-                                        }[k],
-                                    }}
-                                />
-                                {periodLabels[k]}
-                            </span>
-                        ))}
+    const FyChartCard = (props: {
+        title: string;
+        subtitle?: string;
+        rows: Array<Record<string, number | string>>;
+        series: Array<{ key: string; label: string; color: string }>;
+        height?: number;
+    }) => {
+        const max = maxOf(props.rows);
+
+        return (
+            <div className="dashboard-card overflow-hidden rounded-xl border-0 p-0">
+                <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <p className="text-sm font-semibold text-gray-900">{props.title}</p>
+                            {props.subtitle ? <p className="text-[11px] text-muted-foreground">{props.subtitle}</p> : null}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-3 text-[11px] font-medium text-muted-foreground">
+                            {props.series.map((s) => (
+                                <span key={s.key} className="inline-flex items-center gap-1.5">
+                                    <span className="inline-block size-2.5 rounded-sm" style={{ backgroundColor: s.color }} />
+                                    {s.label}
+                                </span>
+                            ))}
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div className="bg-[#fbfbfc] p-4">
-                <ResponsiveContainer width="100%" height={300}>
-                    <RechartsBarChart data={chartData} margin={{ top: 12, right: 16, bottom: 8, left: 8 }} barCategoryGap="28%">
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                        <XAxis dataKey="metric" tick={{ fontSize: 11 }} interval={0} height={44} />
-                        <YAxis tick={{ fontSize: 11 }} domain={[0, chartMax * 1.12]} />
-                        <Tooltip
-                            content={(props: unknown) => {
-                                const { active, payload, label } = (props ?? {}) as {
-                                    active?: boolean;
-                                    payload?: ReadonlyArray<{ name?: string; value?: number | string; payload?: { unit?: string } }>;
-                                    label?: string;
-                                };
-                                if (!active || !payload?.length) {
-                                    return null;
-                                }
+                <div className="bg-[#fbfbfc] p-4">
+                    <ResponsiveContainer width="100%" height={props.height ?? 300}>
+                        <RechartsBarChart data={props.rows} margin={{ top: 12, right: 16, bottom: 8, left: 8 }} barCategoryGap="28%">
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                            <XAxis dataKey="fy" tick={{ fontSize: 11 }} interval={0} height={36} />
+                            <YAxis tick={{ fontSize: 11 }} domain={[0, max * 1.12]} />
+                            <Tooltip
+                                content={(tooltipProps: unknown) => {
+                                    const { active, payload, label } = (tooltipProps ?? {}) as {
+                                        active?: boolean;
+                                        payload?: ReadonlyArray<{ name?: string; value?: number | string; payload?: { unit?: string } }>;
+                                        label?: string;
+                                    };
+                                    if (!active || !payload?.length) {
+                                        return null;
+                                    }
 
-                                const unit = String(payload[0]?.payload?.unit ?? '');
+                                    const unit = String(payload[0]?.payload?.unit ?? 'MT');
 
-                                return (
-                                    <div className="rounded-lg border bg-popover px-3 py-2 text-xs shadow-md">
-                                        <div className="font-semibold">{String(label ?? '')}</div>
-                                        <div className="mt-1 space-y-0.5">
-                                            {payload.map((p) => (
-                                                <div key={String(p.name)} className="flex items-center justify-between gap-4">
-                                                    <span className="text-muted-foreground">{String(p.name)}</span>
-                                                    <span className="tabular-nums font-semibold">
-                                                        {unit === 'Rakes' ? fmtNumber(Number(p.value ?? 0), 0) : fmtNumber(Number(p.value ?? 0), 2)}{' '}
-                                                        <span className="text-muted-foreground font-normal">{unit}</span>
-                                                    </span>
-                                                </div>
-                                            ))}
+                                    return (
+                                        <div className="rounded-lg border bg-popover px-3 py-2 text-xs shadow-md">
+                                            <div className="font-semibold">{String(label ?? '')}</div>
+                                            <div className="mt-1 space-y-0.5">
+                                                {payload.map((p) => (
+                                                    <div key={String(p.name)} className="flex items-center justify-between gap-4">
+                                                        <span className="text-muted-foreground">{String(p.name)}</span>
+                                                        <span className="tabular-nums font-semibold">
+                                                            {compactQty(Number(p.value ?? 0))}{' '}
+                                                            <span className="text-muted-foreground font-normal">{unit}</span>
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
-                                    </div>
-                                );
-                            }}
-                        />
-                        <Bar name="Yesterday" dataKey="yesterday" fill={DASHBOARD_PALETTE.darkGrey} radius={[6, 6, 0, 0]} barSize={16} />
-                        <Bar name="Today" dataKey="today" fill={DASHBOARD_PALETTE.steelBlue} radius={[6, 6, 0, 0]} barSize={16} />
-                        <Bar name="Week" dataKey="week" fill={DASHBOARD_PALETTE.successGreen} radius={[6, 6, 0, 0]} barSize={16} />
-                        <Bar name="Month" dataKey="month" fill={DASHBOARD_PALETTE.safetyYellow} radius={[6, 6, 0, 0]} barSize={16} />
-                        <Bar name="Year" dataKey="fy" fill={DASHBOARD_PALETTE.steelBlueLight} radius={[6, 6, 0, 0]} barSize={16} />
-                    </RechartsBarChart>
-                </ResponsiveContainer>
+                                    );
+                                }}
+                            />
+                            {props.series.map((s) => (
+                                <Bar key={s.key} name={s.label} dataKey={s.key} fill={s.color} radius={0} barSize={16} />
+                            ))}
+                        </RechartsBarChart>
+                    </ResponsiveContainer>
+                </div>
             </div>
-        </div>
-    );
+        );
+    };
 
-    return (
+    const ChartsView = (
         <div className="space-y-6">
-            <div className="dashboard-card rounded-xl border-0 p-5">
-                <SectionHeader
-                    icon={Calendar}
-                    title="Date based filtering"
-                    subtitle="Executive yesterday view (separate date filter)"
-                    action={(
-                        <div className="flex flex-wrap items-center justify-end gap-3">
-                            <div className="flex items-center gap-2">
-                                <label htmlFor="executive-yesterday-view" className="text-xs font-medium text-gray-600">View</label>
-                                <select
-                                    id="executive-yesterday-view"
-                                    value={viewMode}
-                                    onChange={(e) => setViewMode(e.target.value as 'table' | 'charts')}
-                                    className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
-                                >
-                                    <option value="table">Table View</option>
-                                    <option value="charts">Bar Chart View</option>
-                                </select>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <label htmlFor="executive-yesterday-date" className="text-xs font-medium text-gray-600">Select date</label>
-                                <input
-                                    id="executive-yesterday-date"
-                                    type="date"
-                                    value={data.anchorDate}
-                                    onChange={(e) => {
-                                        const v = e.target.value;
-                                        submitExecutiveParams({ executive_yesterday_date: v });
-                                    }}
-                                    className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
-                                />
-                            </div>
-                        </div>
-                    )}
-                />
-                <p className="mt-2 text-sm text-gray-600">Selected date: <span className="font-semibold text-gray-900">{anchorDateLabel}</span></p>
-            </div>
+            <FyChartCard
+                title="Production"
+                rows={fyProductionRows}
+                series={[
+                    { key: 'OB', label: 'OB', color: DASHBOARD_PALETTE.successGreen },
+                    { key: 'COAL', label: 'COAL', color: DASHBOARD_PALETTE.steelBlue },
+                ]}
+            />
 
-            {viewMode === 'table' ? TableView : ChartsView}
+            <FyChartCard
+                title="Dispatch"
+                rows={fyDispatchRows}
+                series={[
+                    { key: 'ROAD', label: 'ROAD', color: DASHBOARD_PALETTE.steelBlue },
+                    { key: 'RAIL', label: 'RAIL', color: DASHBOARD_PALETTE.darkGrey },
+                ]}
+            />
+
+            <FyChartCard
+                title="Production & Dispatch"
+                rows={fyCombinedRows}
+                series={[
+                    { key: 'OB', label: 'OB', color: DASHBOARD_PALETTE.successGreen },
+                    { key: 'COAL', label: 'Coal', color: DASHBOARD_PALETTE.steelBlue },
+                    { key: 'ROAD', label: 'Road', color: DASHBOARD_PALETTE.safetyYellow },
+                    { key: 'RAIL', label: 'Rail', color: DASHBOARD_PALETTE.darkGrey },
+                ]}
+                height={340}
+            />
         </div>
     );
+
+    return viewMode === 'table' ? TableView : ChartsView;
 }
 
 const SIDING_BAR_COLORS = [DASHBOARD_PALETTE.steelBlue, DASHBOARD_PALETTE.successGreen, DASHBOARD_PALETTE.safetyYellow];
@@ -2261,6 +2248,7 @@ export default function Dashboard() {
     });
     // Default: show Yesterday view on page load (Executive section only).
     const [executiveTab, setExecutiveTab] = useState<'regular' | 'yesterday'>('yesterday');
+    const [executiveYesterdayViewMode, setExecutiveYesterdayViewMode] = useState<'table' | 'charts'>('charts');
     const [alertsOpen, setAlertsOpen] = useState(false);
     const [notifications, setNotifications] = useState(props.notifications ?? []);
     const [notificationsUnreadCount, setNotificationsUnreadCount] = useState(props.notificationsUnreadCount ?? 0);
@@ -2583,6 +2571,19 @@ export default function Dashboard() {
                         >
                             Reset
                         </Button>
+                        {activeSection === 'executive-overview' && executiveTab === 'yesterday' && !!props.executiveYesterday && (
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs font-medium text-gray-600">View</span>
+                                <select
+                                    value={executiveYesterdayViewMode}
+                                    onChange={(e) => setExecutiveYesterdayViewMode(e.target.value as 'table' | 'charts')}
+                                    className="rounded-[10px] border border-gray-200 bg-white px-2.5 py-1.5 text-sm shadow-sm"
+                                >
+                                    <option value="charts">Bar Chart View</option>
+                                    <option value="table">Table View</option>
+                                </select>
+                            </div>
+                        )}
                         <Select value={activeSection} onValueChange={setActiveSection}>
                             <SelectTrigger className="min-w-[200px] rounded-[10px] border border-gray-200 bg-white shadow-sm w-full sm:w-auto">
                                 <SelectValue placeholder="Select section" />
@@ -2704,7 +2705,7 @@ export default function Dashboard() {
                                 </div>
                                 {executiveTab === 'yesterday' ? (
                                     executiveYesterday ? (
-                                        <ExecutiveYesterdaySection data={executiveYesterday} />
+                                        <ExecutiveYesterdaySection data={executiveYesterday} viewMode={executiveYesterdayViewMode} />
                                     ) : (
                                         <div className="dashboard-card rounded-xl border-0 p-6 text-sm text-gray-600">Yesterday data is not available.</div>
                                     )
