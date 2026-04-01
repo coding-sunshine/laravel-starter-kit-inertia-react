@@ -51,16 +51,6 @@ export default function Index({ sidings }: Props) {
                             Edit
                           </Button>
                         </Link>
-                        <Link
-                          href={`/master-data/opening-coal-stock/${siding.id}/fix`}
-                          method="post"
-                          as="button"
-                          preserveScroll
-                        >
-                          <Button variant="secondary" size="sm" data-pan="opening-coal-stock-fix">
-                            Fix
-                          </Button>
-                        </Link>
                       </div>
                     </TableCell>
                   </TableRow>
