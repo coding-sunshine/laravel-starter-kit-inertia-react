@@ -11,6 +11,7 @@ use App\Models\RakeWagonWeighment;
 use App\Models\RakeWeighment;
 use App\Models\Wagon;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
@@ -20,6 +21,7 @@ final readonly class RakeWeighmentPdfImporter
 {
     public function __construct(
         private WeighmentPdfImporter $importer,
+        private RakeWeighmentXlsxParser $xlsxParser,
         private ApplyWeighmentPenaltiesAction $applyWeighmentPenalties,
         private UpdateStockLedger $updateStockLedger,
     ) {}
@@ -40,119 +42,62 @@ final readonly class RakeWeighmentPdfImporter
         }
 
         $parsed = $this->importer->parsePdfForRake($rake, $pdf);
-        $header = $parsed['header'];
-        $totals = $parsed['totals'];
-        $wagonRows = $parsed['wagon_rows'];
-
-        $attemptNo = 1;
+        $storedPath = $pdf->store('weighment-pdfs', 'public');
 
         try {
-            return DB::transaction(function () use ($rake, $header, $totals, $wagonRows, $pdf, $userId, $attemptNo): RakeWeighment {
-                $rake->load(['wagons' => fn ($q) => $q->orderBy('wagon_sequence')]);
-
-                if ($rake->wagons->isEmpty()) {
-                    $this->createWagonsFromParsedRows($rake, $wagonRows);
-                    $rake->load(['wagons' => fn ($q) => $q->orderBy('wagon_sequence')]);
-                }
-
-                $wagons = $rake->wagons;
-
-                $storedPath = $pdf->store('weighment-pdfs', 'public');
-
-                $weighment = RakeWeighment::query()->create([
-                    'rake_id' => $rake->id,
-                    'attempt_no' => $attemptNo,
-                    'gross_weighment_datetime' => $header['gross_weighment_datetime'] ?? null,
-                    'tare_weighment_datetime' => $header['tare_weighment_datetime'] ?? null,
-                    'train_name' => $header['train_name'] ?? null,
-                    'direction' => $header['direction'] ?? null,
-                    'commodity' => $header['commodity'] ?? null,
-                    'from_station' => $header['from_station'] ?? null,
-                    'to_station' => $header['to_station'] ?? null,
-                    'priority_number' => $header['priority_number'] ?? null,
-                    'total_gross_weight_mt' => $totals['total_gross_weight_mt'] ?? null,
-                    'total_tare_weight_mt' => $totals['total_tare_weight_mt'] ?? null,
-                    'total_net_weight_mt' => $totals['total_net_weight_mt'] ?? null,
-                    'total_cc_weight_mt' => $totals['total_cc_weight_mt'] ?? null,
-                    'total_under_load_mt' => $totals['total_under_load_mt'] ?? null,
-                    'total_over_load_mt' => $totals['total_over_load_mt'] ?? null,
-                    'maximum_train_speed_kmph' => $totals['maximum_train_speed_kmph'] ?? null,
-                    'maximum_weight_mt' => $totals['maximum_weight_mt'] ?? null,
-                    'pdf_file_path' => $storedPath,
-                    'status' => 'success',
-                    'created_by' => $userId,
-                ]);
-
-                $wagonsBySequence = [];
-                $wagonsByNumber = [];
-                foreach ($wagons as $w) {
-                    $wagonsBySequence[(int) $w->wagon_sequence] = $w;
-                    $wagonsByNumber[mb_trim((string) $w->wagon_number)] = $w;
-                }
-
-                $matched = 0;
-                foreach ($wagonRows as $row) {
-                    $seq = (int) ($row['sequence'] ?? 0);
-                    $wagonNumber = mb_trim((string) ($row['wagon_number'] ?? ''));
-                    $wagon = $wagonsBySequence[$seq] ?? $wagonsByNumber[$wagonNumber] ?? null;
-
-                    RakeWagonWeighment::query()->create([
-                        'rake_weighment_id' => $weighment->id,
-                        'wagon_id' => $wagon?->id,
-                        'wagon_number' => $wagonNumber !== '' ? $wagonNumber : $wagon?->wagon_number,
-                        'wagon_sequence' => $seq ?: $wagon?->wagon_sequence,
-                        'wagon_type' => $row['wagon_type'] ?? null,
-                        'axles' => $row['axles'] ?? null,
-                        'cc_capacity_mt' => $row['cc_capacity_mt'] ?? null,
-                        'printed_tare_mt' => $row['printed_tare_mt'] ?? null,
-                        'actual_gross_mt' => $row['actual_gross_mt'] ?? null,
-                        'actual_tare_mt' => $row['tare_weight_mt'] ?? null,
-                        'net_weight_mt' => $row['net_weight_mt'] ?? null,
-                        'under_load_mt' => $row['under_load_mt'] ?? null,
-                        'over_load_mt' => $row['over_load_mt'] ?? null,
-                        'speed_kmph' => $row['speed_kmph'] ?? null,
-                    ]);
-                    $matched++;
-                }
-
-                $this->syncWagonsFromRakeWeighment($weighment);
-
-                Log::info('RakeWeighmentPdfImporter: created weighment and wagon rows', [
-                    'rake_weighment_id' => $weighment->id,
-                    'matched' => $matched,
-                    'total_rows' => count($wagonRows),
-                ]);
-
-                $rake->update([
-                    'data_source' => 'system',
-                    'loaded_weight_mt' => $weighment->total_net_weight_mt,
-                    'under_load_mt' => $weighment->total_under_load_mt,
-                    'over_load_mt' => $weighment->total_over_load_mt,
-                ]);
-
-                $siding = $rake->siding;
-                $quantity = $weighment->total_net_weight_mt !== null ? (float) $weighment->total_net_weight_mt : 0.0;
-
-                if ($siding !== null && $quantity > 0) {
-                    $this->updateStockLedger->recordDispatch(
-                        $siding,
-                        $quantity,
-                        $rake->id,
-                        'Rake weighment imported',
-                        $userId,
-                    );
-                }
-
-                $this->applyWeighmentPenalties->handle($rake, $weighment);
-
-                return $weighment->fresh(['rakeWagonWeighments.wagon']);
-            });
+            return $this->importForRakeFromParsed(
+                $rake,
+                $parsed['header'],
+                $parsed['totals'],
+                $parsed['wagon_rows'],
+                $storedPath,
+                $userId,
+            );
         } catch (Throwable $e) {
             Log::error('RakeWeighmentPdfImporter: transaction failed', [
                 'rake_id' => $rake->id,
                 'exception' => get_class($e),
                 'message' => $e->getMessage(),
             ]);
+            throw $e;
+        }
+    }
+
+    public function importForRakeFromXlsx(Rake $rake, UploadedFile $xlsx, int $userId): RakeWeighment
+    {
+        Log::info('RakeWeighmentXlsxImporter: starting', [
+            'rake_id' => $rake->id,
+            'user_id' => $userId,
+        ]);
+
+        if ($rake->rakeWeighments()->exists()) {
+            throw new InvalidArgumentException('A weighment has already been uploaded for this rake.');
+        }
+
+        $realPath = $xlsx->getRealPath();
+        if ($realPath === false || $realPath === '' || ! is_readable($realPath)) {
+            throw new InvalidArgumentException('Unable to read uploaded XLSX file.');
+        }
+
+        $parsed = $this->xlsxParser->parseForRake($rake, $realPath);
+        $storedPath = $xlsx->store('weighment-excels', 'public');
+
+        try {
+            return $this->importForRakeFromParsed(
+                $rake,
+                $parsed['header'],
+                $parsed['totals'],
+                $parsed['wagon_rows'],
+                $storedPath,
+                $userId,
+            );
+        } catch (Throwable $e) {
+            Log::error('RakeWeighmentXlsxImporter: transaction failed', [
+                'rake_id' => $rake->id,
+                'exception' => get_class($e),
+                'message' => $e->getMessage(),
+            ]);
+
             throw $e;
         }
     }
@@ -208,6 +153,150 @@ final readonly class RakeWeighmentPdfImporter
 
             $wagon->update($data);
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $header
+     * @param  array<string, float|null>  $totals
+     * @param  array<int, array<string, mixed>>  $wagonRows
+     */
+    public function importForRakeFromParsed(
+        Rake $rake,
+        array $header,
+        array $totals,
+        array $wagonRows,
+        string $storedPath,
+        int $userId,
+    ): RakeWeighment {
+        $attemptNo = 1;
+
+        return DB::transaction(function () use ($rake, $header, $totals, $wagonRows, $storedPath, $userId, $attemptNo): RakeWeighment {
+            $rake->load(['wagons' => fn ($q) => $q->orderBy('wagon_sequence')]);
+            $rake->loadMissing('siding');
+
+            $fallbackDate = null;
+            $dateString = $header['loading_date'] ?? null;
+            if (is_string($dateString) && mb_trim($dateString) !== '') {
+                try {
+                    $fallbackDate = Date::parse($dateString);
+                } catch (Throwable) {
+                    $fallbackDate = null;
+                }
+            }
+            if ($fallbackDate === null && $rake->loading_date !== null) {
+                $fallbackDate = Date::parse($rake->loading_date->toDateString());
+            }
+
+            $fromStation = $header['from_station'] ?? null;
+            if (! is_string($fromStation) || mb_trim($fromStation) === '') {
+                $fromStation = $rake->siding?->station_code ?? $rake->siding?->code ?? null;
+            }
+
+            $toStation = $header['to_station'] ?? null;
+            if (! is_string($toStation) || mb_trim($toStation) === '') {
+                $toStation = $rake->destination_code ?? null;
+            }
+
+            $priorityNumber = $header['priority_number'] ?? null;
+            if (! is_string($priorityNumber) || mb_trim($priorityNumber) === '') {
+                $priorityNumber = $rake->priority_number !== null ? (string) $rake->priority_number : null;
+            }
+
+            if ($rake->wagons->isEmpty()) {
+                $this->createWagonsFromParsedRows($rake, $wagonRows);
+                $rake->load(['wagons' => fn ($q) => $q->orderBy('wagon_sequence')]);
+            }
+
+            $wagons = $rake->wagons;
+
+            $weighment = RakeWeighment::query()->create([
+                'rake_id' => $rake->id,
+                'attempt_no' => $attemptNo,
+                'gross_weighment_datetime' => $header['gross_weighment_datetime'] ?? $fallbackDate,
+                'tare_weighment_datetime' => $header['tare_weighment_datetime'] ?? $fallbackDate,
+                'train_name' => $header['train_name'] ?? null,
+                'direction' => $header['direction'] ?? null,
+                'commodity' => $header['commodity'] ?? null,
+                'from_station' => $fromStation,
+                'to_station' => $toStation,
+                'priority_number' => $priorityNumber,
+                'total_gross_weight_mt' => $totals['total_gross_weight_mt'] ?? null,
+                'total_tare_weight_mt' => $totals['total_tare_weight_mt'] ?? null,
+                'total_net_weight_mt' => $totals['total_net_weight_mt'] ?? null,
+                'total_cc_weight_mt' => $totals['total_cc_weight_mt'] ?? null,
+                'total_under_load_mt' => $totals['total_under_load_mt'] ?? null,
+                'total_over_load_mt' => $totals['total_over_load_mt'] ?? null,
+                'maximum_train_speed_kmph' => $totals['maximum_train_speed_kmph'] ?? null,
+                'maximum_weight_mt' => $totals['maximum_weight_mt'] ?? null,
+                'pdf_file_path' => $storedPath,
+                'status' => 'success',
+                'created_by' => $userId,
+            ]);
+
+            $wagonsBySequence = [];
+            $wagonsByNumber = [];
+            foreach ($wagons as $w) {
+                $wagonsBySequence[(int) $w->wagon_sequence] = $w;
+                $wagonsByNumber[mb_trim((string) $w->wagon_number)] = $w;
+            }
+
+            $matched = 0;
+            foreach ($wagonRows as $row) {
+                $seq = (int) ($row['sequence'] ?? 0);
+                $wagonNumber = mb_trim((string) ($row['wagon_number'] ?? ''));
+                $wagon = $wagonsBySequence[$seq] ?? $wagonsByNumber[$wagonNumber] ?? null;
+
+                RakeWagonWeighment::query()->create([
+                    'rake_weighment_id' => $weighment->id,
+                    'wagon_id' => $wagon?->id,
+                    'wagon_number' => $wagonNumber !== '' ? $wagonNumber : $wagon?->wagon_number,
+                    'wagon_sequence' => $seq ?: $wagon?->wagon_sequence,
+                    'wagon_type' => $row['wagon_type'] ?? null,
+                    'axles' => $row['axles'] ?? null,
+                    'cc_capacity_mt' => $row['cc_capacity_mt'] ?? null,
+                    'printed_tare_mt' => $row['printed_tare_mt'] ?? null,
+                    'actual_gross_mt' => $row['actual_gross_mt'] ?? null,
+                    'actual_tare_mt' => $row['tare_weight_mt'] ?? null,
+                    'net_weight_mt' => $row['net_weight_mt'] ?? null,
+                    'under_load_mt' => $row['under_load_mt'] ?? null,
+                    'over_load_mt' => $row['over_load_mt'] ?? null,
+                    'speed_kmph' => $row['speed_kmph'] ?? null,
+                ]);
+                $matched++;
+            }
+
+            $this->syncWagonsFromRakeWeighment($weighment);
+
+            Log::info('RakeWeighmentImporter: created weighment and wagon rows', [
+                'rake_weighment_id' => $weighment->id,
+                'matched' => $matched,
+                'total_rows' => count($wagonRows),
+            ]);
+
+            $rake->update([
+                'data_source' => 'system',
+                'loaded_weight_mt' => $weighment->total_net_weight_mt,
+                'under_load_mt' => $weighment->total_under_load_mt,
+                'over_load_mt' => $weighment->total_over_load_mt,
+            ]);
+
+            $siding = $rake->siding;
+            $quantity = $weighment->total_net_weight_mt !== null ? (float) $weighment->total_net_weight_mt : 0.0;
+
+            if ($siding !== null && $quantity > 0) {
+                $this->updateStockLedger->recordDispatch(
+                    $siding,
+                    $quantity,
+                    $rake->id,
+                    'Rake weighment imported',
+                    $userId,
+                );
+            }
+
+            $this->applyWeighmentPenalties->handle($rake, $weighment);
+
+            return $weighment->fresh(['rakeWagonWeighments.wagon']);
+        });
     }
 
     /**

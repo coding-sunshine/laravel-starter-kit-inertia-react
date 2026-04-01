@@ -113,7 +113,7 @@ export function WeighmentWorkflow({ rake, disabled }: WeighmentWorkflowProps) {
                                     <Input
                                         id="weighment_pdf"
                                         type="file"
-                                        accept=".pdf"
+                                        accept=".pdf,.xlsx"
                                         onChange={handleFileChange}
                                         disabled={disabled}
                                         className="file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
@@ -126,9 +126,31 @@ export function WeighmentWorkflow({ rake, disabled }: WeighmentWorkflowProps) {
                                     )}
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-1">
-                                    Upload the official weighment certificate (PDF format)
+                                    Upload weighment slip as PDF. If unsupported, upload the filled Excel template (XLSX).
                                 </p>
                                 <InputError message={errors?.weighment_pdf} />
+                            </div>
+
+                            <div className="flex items-center justify-between rounded-md border p-3 text-sm">
+                                <div>
+                                    <div className="font-medium">Need the Excel template?</div>
+                                    <div className="text-xs text-muted-foreground">
+                                        Download a prefilled XLSX for this rake, fill it, then upload it here.
+                                    </div>
+                                </div>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                        window.location.href = `/weighments/template-xlsx?rake_id=${encodeURIComponent(
+                                            String(rake.id),
+                                        )}`;
+                                    }}
+                                    data-pan="rake-weighment-download-xlsx-template"
+                                >
+                                    Download XLSX
+                                </Button>
                             </div>
                             
                             <div className="flex justify-end space-x-2">

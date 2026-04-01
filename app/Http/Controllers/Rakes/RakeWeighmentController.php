@@ -13,11 +13,11 @@ use App\Models\StockLedger;
 use App\Services\RakeWeighmentPdfImporter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
 use Throwable;
-use Illuminate\Support\Facades\DB;
 
 final class RakeWeighmentController extends Controller
 {
@@ -30,11 +30,19 @@ final class RakeWeighmentController extends Controller
         // $this->authorize('update', $rake);
 
         $validated = $request->validate([
-            'weighment_pdf' => ['required', 'file', 'mimes:pdf', 'max:20480'],
+            'weighment_pdf' => ['required', 'file', 'mimes:pdf,xlsx,xls', 'max:20480'],
         ]);
 
         try {
-            $importer->importForRake($rake, $validated['weighment_pdf'], (int) $request->user()->id);
+            $file = $validated['weighment_pdf'];
+            $extension = mb_strtolower((string) $file->getClientOriginalExtension());
+            $isXlsx = in_array($extension, ['xlsx', 'xls'], true);
+
+            if ($isXlsx) {
+                $importer->importForRakeFromXlsx($rake, $file, (int) $request->user()->id);
+            } else {
+                $importer->importForRake($rake, $file, (int) $request->user()->id);
+            }
         } catch (InvalidArgumentException $e) {
             Log::warning('RakeWeighmentController: import validation failed', [
                 'rake_id' => $rake->id,
@@ -75,56 +83,55 @@ final class RakeWeighmentController extends Controller
 
         if ($dispatch) {
 
-            
-                DB::transaction(function () use ($dispatch, $rake, $userId) {
+            DB::transaction(function () use ($dispatch, $rake, $userId) {
 
-                    $sidingId = $dispatch->siding_id;
+                $sidingId = $dispatch->siding_id;
 
-                    if (! $sidingId) {
-                        return;
-                    }
-                    $alreadyReversed = StockLedger::query()
-                        ->where('reference_number', 'REV-DISP-'.$dispatch->id)
-                        ->lockForUpdate()
-                        ->exists();
+                if (! $sidingId) {
+                    return;
+                }
+                $alreadyReversed = StockLedger::query()
+                    ->where('reference_number', 'REV-DISP-'.$dispatch->id)
+                    ->lockForUpdate()
+                    ->exists();
 
-                    if ($alreadyReversed) {
-                        return;
-                    }
+                if ($alreadyReversed) {
+                    return;
+                }
 
-                    // reverse dispatch (negative → positive)
-                    $reverseQty = abs((float) $dispatch->quantity_mt);
+                // reverse dispatch (negative → positive)
+                $reverseQty = abs((float) $dispatch->quantity_mt);
 
-                    //  lock latest ledger row
-                    $lastLedger = StockLedger::query()
-                        ->where('siding_id', $sidingId)
-                        ->lockForUpdate()
-                        ->latest('id')
-                        ->first();
+                //  lock latest ledger row
+                $lastLedger = StockLedger::query()
+                    ->where('siding_id', $sidingId)
+                    ->lockForUpdate()
+                    ->latest('id')
+                    ->first();
 
-                    $opening = $lastLedger
-                        ? (float) $lastLedger->closing_balance_mt
-                        : SidingOpeningBalance::getOpeningBalanceForSiding($sidingId);
+                $opening = $lastLedger
+                    ? (float) $lastLedger->closing_balance_mt
+                    : SidingOpeningBalance::getOpeningBalanceForSiding($sidingId);
 
-                    $closing = round($opening + $reverseQty, 2);
+                $closing = round($opening + $reverseQty, 2);
 
-                    StockLedger::create([
-                        'siding_id' => $sidingId,
-                        'transaction_type' => 'correction',
-                        'rake_id' => $rake->id,
-                        'quantity_mt' => $reverseQty, //  positive
-                        'opening_balance_mt' => $opening,
-                        'closing_balance_mt' => $closing,
-                        'reference_number' => 'REV-DISP-'.$dispatch->id,
-                        'remarks' => 'Reversal for deleted rake #'.$rake->id,
-                        'created_by' => $userId ?: null,
-                    ]);
+                StockLedger::create([
+                    'siding_id' => $sidingId,
+                    'transaction_type' => 'correction',
+                    'rake_id' => $rake->id,
+                    'quantity_mt' => $reverseQty, //  positive
+                    'opening_balance_mt' => $opening,
+                    'closing_balance_mt' => $closing,
+                    'reference_number' => 'REV-DISP-'.$dispatch->id,
+                    'remarks' => 'Reversal for deleted rake #'.$rake->id,
+                    'created_by' => $userId ?: null,
+                ]);
 
-                    DB::afterCommit(function () use ($sidingId, $closing) {
-                        event(new \App\Events\CoalStockUpdated($sidingId, $closing));
-                    });
+                DB::afterCommit(function () use ($sidingId, $closing) {
+                    event(new \App\Events\CoalStockUpdated($sidingId, $closing));
                 });
-            
+            });
+
         }
 
         // 🔹 Delete weighment files + records
