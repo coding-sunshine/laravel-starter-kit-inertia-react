@@ -30,6 +30,7 @@ use App\Support\Dashboard\DashboardFilterResolver;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use DateTimeInterface;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -57,6 +58,7 @@ final class ExecutiveDashboardController extends Controller
     {
         $resolved = $this->filters->resolve($request);
         $executiveYesterdayDate = $this->parseExecutiveYesterdayDate($request);
+        $executiveCustomRanges = $this->parseExecutiveCustomRanges($request, $executiveYesterdayDate);
 
         $allSidings = Siding::query()
             ->whereIn('id', $resolved['allSidingIds'])
@@ -107,8 +109,19 @@ final class ExecutiveDashboardController extends Controller
             'loaderOverloadTrends' => $this->buildLoaderOverloadTrends($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
             'powerPlantDispatch' => $this->buildPowerPlantDispatch($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
             // Executive Yesterday tab uses its own date picker and ignores main dashboard filters.
-            'executiveYesterday' => $this->buildExecutiveYesterdayData($resolved['allSidingIds'], $executiveYesterdayDate),
+            'executiveYesterday' => $this->buildExecutiveYesterdayData($resolved['allSidingIds'], $executiveYesterdayDate, $executiveCustomRanges),
         ]);
+    }
+
+    public function executiveYesterdayData(Request $request): JsonResponse
+    {
+        $resolved = $this->filters->resolve($request);
+        $executiveYesterdayDate = $this->parseExecutiveYesterdayDate($request);
+        $executiveCustomRanges = $this->parseExecutiveCustomRanges($request, $executiveYesterdayDate);
+
+        return response()->json(
+            $this->buildExecutiveYesterdayData($resolved['allSidingIds'], $executiveYesterdayDate, $executiveCustomRanges),
+        );
     }
 
     /**
@@ -138,17 +151,18 @@ final class ExecutiveDashboardController extends Controller
      *     },
      *     obProduction: array{yesterday: array{trips: int, qty: float}, today: array{trips: int, qty: float}, week: array{trips: int, qty: float}, month: array{trips: int, qty: float}, fy: array{trips: int, qty: float}},
      *     coalProduction: array{yesterday: array{trips: int, qty: float}, today: array{trips: int, qty: float}, week: array{trips: int, qty: float}, month: array{trips: int, qty: float}, fy: array{trips: int, qty: float}},
-     *     customRange: array{
-     *         from: string,
-     *         to: string,
-     *         bySiding: array<int, array{sidingId: int, sidingName: string, road: array{trips: int, qty: float}, rail: array{rakes: int, qty: float}}>
+     *     customRanges: array{
+     *         roadDispatch: array{from: string, to: string, totals: array{trips: int, qty: float}, bySiding: array<int, array{sidingId: int, sidingName: string, trips: int, qty: float}>},
+     *         railDispatch: array{from: string, to: string, totals: array{rakes: int, qty: float}, bySiding: array<int, array{sidingId: int, sidingName: string, rakes: int, qty: float}>},
+     *         obProduction: array{from: string, to: string, totals: array{trips: int, qty: float}},
+     *         coalProduction: array{from: string, to: string, totals: array{trips: int, qty: float}}
      *     },
      *     fySummary: array{
      *         rows: array<int, array{fy: string, production: array{obQty: float, coalQty: float}, roadDispatch: array{trips: int, qty: float}, railDispatch: array{rakes: int, qty: float}}>
      *     }
      * }
      */
-    public function buildExecutiveYesterdayData(array $sidingIds, CarbonInterface $anchorDate): array
+    public function buildExecutiveYesterdayData(array $sidingIds, CarbonInterface $anchorDate, array $customRanges): array
     {
         $tz = config('app.timezone', 'UTC');
         $anchor = Carbon::parse($anchorDate, $tz)->startOfDay();
@@ -298,50 +312,189 @@ final class ExecutiveDashboardController extends Controller
             }
         }
 
-        $customFrom = $this->parseRequestDate(request(), 'executive_custom_from', $tz) ?? $anchor->copy()->subDays(6)->startOfDay();
-        $customTo = $this->parseRequestDate(request(), 'executive_custom_to', $tz) ?? $anchor->copy()->endOfDay();
-        if ($customFrom->gt($customTo)) {
-            [$customFrom, $customTo] = [$customTo->copy()->startOfDay(), $customFrom->copy()->endOfDay()];
-        }
+        $roadFrom = (string) $customRanges['roadDispatch']['from'];
+        $roadTo = (string) $customRanges['roadDispatch']['to'];
+        $railFrom = (string) $customRanges['railDispatch']['from'];
+        $railTo = (string) $customRanges['railDispatch']['to'];
+        $obFrom = (string) $customRanges['obProduction']['from'];
+        $obTo = (string) $customRanges['obProduction']['to'];
+        $coalFrom = (string) $customRanges['coalProduction']['from'];
+        $coalTo = (string) $customRanges['coalProduction']['to'];
 
-        $customFromDate = $customFrom->toDateString();
-        $customToDate = $customTo->toDateString();
-
-        $customRoad = SidingVehicleDispatch::query()
+        $customRoadBySiding = SidingVehicleDispatch::query()
             ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
-            ->whereRaw($this->dateOnlyBetweenSql('issued_on'), [$customFromDate, $customToDate])
+            ->whereRaw($this->dateOnlyBetweenSql('issued_on'), [$roadFrom, $roadTo])
             ->selectRaw('siding_id, count(*) as trips, coalesce(sum(mineral_weight), 0) as qty')
             ->groupBy('siding_id')
             ->get()
             ->keyBy('siding_id');
 
-        $customRail = Rake::query()
+        $customRailBySiding = Rake::query()
             ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
             ->whereNotNull('loading_date')
-            ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$customFromDate, $customToDate])
+            ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$railFrom, $railTo])
             ->selectRaw('siding_id, count(*) as rakes, coalesce(sum(loaded_weight_mt), 0) as qty')
             ->groupBy('siding_id')
             ->get()
             ->keyBy('siding_id');
 
-        $customBySiding = [];
+        $customRoadBySidingRows = [];
+        $customRailBySidingRows = [];
         foreach ($sidingMap as $sid => $name) {
-            $roadRow = $customRoad->get((int) $sid);
-            $railRow = $customRail->get((int) $sid);
+            $roadRow = $customRoadBySiding->get((int) $sid);
+            $railRow = $customRailBySiding->get((int) $sid);
 
-            $customBySiding[] = [
+            $customRoadBySidingRows[] = [
                 'sidingId' => (int) $sid,
                 'sidingName' => (string) $name,
-                'road' => [
-                    'trips' => (int) ($roadRow?->trips ?? 0),
-                    'qty' => round((float) ($roadRow?->qty ?? 0), 2),
-                ],
-                'rail' => [
-                    'rakes' => (int) ($railRow?->rakes ?? 0),
-                    'qty' => round((float) ($railRow?->qty ?? 0), 2),
-                ],
+                'trips' => (int) ($roadRow?->trips ?? 0),
+                'qty' => round((float) ($roadRow?->qty ?? 0), 2),
+            ];
+
+            $customRailBySidingRows[] = [
+                'sidingId' => (int) $sid,
+                'sidingName' => (string) $name,
+                'rakes' => (int) ($railRow?->rakes ?? 0),
+                'qty' => round((float) ($railRow?->qty ?? 0), 2),
             ];
         }
+
+        $customRoadTotalsRow = SidingVehicleDispatch::query()
+            ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
+            ->whereRaw($this->dateOnlyBetweenSql('issued_on'), [$roadFrom, $roadTo])
+            ->selectRaw('count(*) as trips, coalesce(sum(mineral_weight), 0) as qty')
+            ->first();
+
+        $customRailTotalsRow = Rake::query()
+            ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
+            ->whereNotNull('loading_date')
+            ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$railFrom, $railTo])
+            ->selectRaw('count(*) as rakes, coalesce(sum(loaded_weight_mt), 0) as qty')
+            ->first();
+
+        $prodCustomScope = ProductionEntry::query();
+        if ($sidingIds !== []) {
+            $prodCustomScope->where(function ($query) use ($sidingIds): void {
+                $query->whereIn('siding_id', $sidingIds)->orWhereNull('siding_id');
+            });
+        }
+
+        $customObTotalsRow = (clone $prodCustomScope)
+            ->where('type', ProductionEntry::TYPE_OB)
+            ->whereRaw($this->dateOnlyBetweenSql('date', true), [$obFrom, $obTo])
+            ->selectRaw('count(*) as trips, coalesce(sum(qty), 0) as qty')
+            ->first();
+
+        $customCoalTotalsRow = (clone $prodCustomScope)
+            ->where('type', ProductionEntry::TYPE_COAL)
+            ->whereRaw($this->dateOnlyBetweenSql('date', true), [$coalFrom, $coalTo])
+            ->selectRaw('count(*) as trips, coalesce(sum(qty), 0) as qty')
+            ->first();
+
+        $customRoadSummary = $this->buildCustomSummaryDispatch(
+            anchor: $anchor,
+            from: Carbon::parse($roadFrom, $tz)->startOfDay(),
+            to: Carbon::parse($roadTo, $tz)->endOfDay(),
+            countKey: 'trips',
+            totals: [
+                'trips' => (int) ($customRoadTotalsRow?->trips ?? 0),
+                'qty' => round((float) ($customRoadTotalsRow?->qty ?? 0), 2),
+            ],
+            resolveTotals: function (CarbonInterface $from, CarbonInterface $to) use ($sidingIds): array {
+                $row = SidingVehicleDispatch::query()
+                    ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
+                    ->whereRaw($this->dateOnlyBetweenSql('issued_on'), [$from->toDateString(), $to->toDateString()])
+                    ->selectRaw('count(*) as trips, coalesce(sum(mineral_weight), 0) as qty')
+                    ->first();
+
+                return [
+                    'trips' => (int) ($row?->trips ?? 0),
+                    'qty' => round((float) ($row?->qty ?? 0), 2),
+                ];
+            },
+        );
+
+        $customRailSummary = $this->buildCustomSummaryDispatch(
+            anchor: $anchor,
+            from: Carbon::parse($railFrom, $tz)->startOfDay(),
+            to: Carbon::parse($railTo, $tz)->endOfDay(),
+            countKey: 'rakes',
+            totals: [
+                'rakes' => (int) ($customRailTotalsRow?->rakes ?? 0),
+                'qty' => round((float) ($customRailTotalsRow?->qty ?? 0), 2),
+            ],
+            resolveTotals: function (CarbonInterface $from, CarbonInterface $to) use ($sidingIds): array {
+                $row = Rake::query()
+                    ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
+                    ->whereNotNull('loading_date')
+                    ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$from->toDateString(), $to->toDateString()])
+                    ->selectRaw('count(*) as rakes, coalesce(sum(loaded_weight_mt), 0) as qty')
+                    ->first();
+
+                return [
+                    'rakes' => (int) ($row?->rakes ?? 0),
+                    'qty' => round((float) ($row?->qty ?? 0), 2),
+                ];
+            },
+        );
+
+        $customObSummary = $this->buildCustomSummaryProduction(
+            anchor: $anchor,
+            from: Carbon::parse($obFrom, $tz)->startOfDay(),
+            to: Carbon::parse($obTo, $tz)->endOfDay(),
+            totals: [
+                'trips' => (int) ($customObTotalsRow?->trips ?? 0),
+                'qty' => round((float) ($customObTotalsRow?->qty ?? 0), 2),
+            ],
+            resolveTotals: function (CarbonInterface $from, CarbonInterface $to) use ($sidingIds): array {
+                $prodScope = ProductionEntry::query();
+                if ($sidingIds !== []) {
+                    $prodScope->where(function ($query) use ($sidingIds): void {
+                        $query->whereIn('siding_id', $sidingIds)->orWhereNull('siding_id');
+                    });
+                }
+
+                $row = $prodScope
+                    ->where('type', ProductionEntry::TYPE_OB)
+                    ->whereRaw($this->dateOnlyBetweenSql('date', true), [$from->toDateString(), $to->toDateString()])
+                    ->selectRaw('count(*) as trips, coalesce(sum(qty), 0) as qty')
+                    ->first();
+
+                return [
+                    'trips' => (int) ($row?->trips ?? 0),
+                    'qty' => round((float) ($row?->qty ?? 0), 2),
+                ];
+            },
+        );
+
+        $customCoalSummary = $this->buildCustomSummaryProduction(
+            anchor: $anchor,
+            from: Carbon::parse($coalFrom, $tz)->startOfDay(),
+            to: Carbon::parse($coalTo, $tz)->endOfDay(),
+            totals: [
+                'trips' => (int) ($customCoalTotalsRow?->trips ?? 0),
+                'qty' => round((float) ($customCoalTotalsRow?->qty ?? 0), 2),
+            ],
+            resolveTotals: function (CarbonInterface $from, CarbonInterface $to) use ($sidingIds): array {
+                $prodScope = ProductionEntry::query();
+                if ($sidingIds !== []) {
+                    $prodScope->where(function ($query) use ($sidingIds): void {
+                        $query->whereIn('siding_id', $sidingIds)->orWhereNull('siding_id');
+                    });
+                }
+
+                $row = $prodScope
+                    ->where('type', ProductionEntry::TYPE_COAL)
+                    ->whereRaw($this->dateOnlyBetweenSql('date', true), [$from->toDateString(), $to->toDateString()])
+                    ->selectRaw('count(*) as trips, coalesce(sum(qty), 0) as qty')
+                    ->first();
+
+                return [
+                    'trips' => (int) ($row?->trips ?? 0),
+                    'qty' => round((float) ($row?->qty ?? 0), 2),
+                ];
+            },
+        );
 
         $fySummaryRows = [];
         $startFyYear = 2018;
@@ -562,10 +715,45 @@ final class ExecutiveDashboardController extends Controller
             ],
             'obProduction' => $obTotals,
             'coalProduction' => $coalTotals,
-            'customRange' => [
-                'from' => $customFromDate,
-                'to' => $customToDate,
-                'bySiding' => $customBySiding,
+            'customRanges' => [
+                'roadDispatch' => [
+                    'from' => $roadFrom,
+                    'to' => $roadTo,
+                    'totals' => [
+                        'trips' => (int) ($customRoadTotalsRow?->trips ?? 0),
+                        'qty' => round((float) ($customRoadTotalsRow?->qty ?? 0), 2),
+                    ],
+                    'bySiding' => $customRoadBySidingRows,
+                    'summary' => $customRoadSummary,
+                ],
+                'railDispatch' => [
+                    'from' => $railFrom,
+                    'to' => $railTo,
+                    'totals' => [
+                        'rakes' => (int) ($customRailTotalsRow?->rakes ?? 0),
+                        'qty' => round((float) ($customRailTotalsRow?->qty ?? 0), 2),
+                    ],
+                    'bySiding' => $customRailBySidingRows,
+                    'summary' => $customRailSummary,
+                ],
+                'obProduction' => [
+                    'from' => $obFrom,
+                    'to' => $obTo,
+                    'totals' => [
+                        'trips' => (int) ($customObTotalsRow?->trips ?? 0),
+                        'qty' => round((float) ($customObTotalsRow?->qty ?? 0), 2),
+                    ],
+                    'summary' => $customObSummary,
+                ],
+                'coalProduction' => [
+                    'from' => $coalFrom,
+                    'to' => $coalTo,
+                    'totals' => [
+                        'trips' => (int) ($customCoalTotalsRow?->trips ?? 0),
+                        'qty' => round((float) ($customCoalTotalsRow?->qty ?? 0), 2),
+                    ],
+                    'summary' => $customCoalSummary,
+                ],
             ],
             'fySummary' => [
                 'rows' => $fySummaryRows,
@@ -2686,6 +2874,187 @@ final class ExecutiveDashboardController extends Controller
         }
 
         return Carbon::parse((string) $value, $tz)->startOfDay();
+    }
+
+    /**
+     * @return array{
+     *     roadDispatch: array{from: string, to: string},
+     *     railDispatch: array{from: string, to: string},
+     *     obProduction: array{from: string, to: string},
+     *     coalProduction: array{from: string, to: string}
+     * }
+     */
+    private function parseExecutiveCustomRanges(Request $request, CarbonInterface $anchorDate): array
+    {
+        $tz = config('app.timezone', 'UTC');
+        $anchor = Carbon::parse($anchorDate, $tz)->startOfDay();
+
+        $defaultFrom = $anchor->copy()->subDays(6)->startOfDay();
+        $defaultTo = $anchor->copy()->endOfDay();
+
+        $road = $this->parseRange($request, 'executive_road_from', 'executive_road_to', $defaultFrom, $defaultTo, $tz);
+        $rail = $this->parseRange($request, 'executive_rail_from', 'executive_rail_to', $defaultFrom, $defaultTo, $tz);
+        $ob = $this->parseRange($request, 'executive_ob_from', 'executive_ob_to', $defaultFrom, $defaultTo, $tz);
+        $coal = $this->parseRange($request, 'executive_coal_from', 'executive_coal_to', $defaultFrom, $defaultTo, $tz);
+
+        return [
+            'roadDispatch' => ['from' => $road['from']->toDateString(), 'to' => $road['to']->toDateString()],
+            'railDispatch' => ['from' => $rail['from']->toDateString(), 'to' => $rail['to']->toDateString()],
+            'obProduction' => ['from' => $ob['from']->toDateString(), 'to' => $ob['to']->toDateString()],
+            'coalProduction' => ['from' => $coal['from']->toDateString(), 'to' => $coal['to']->toDateString()],
+        ];
+    }
+
+    /**
+     * @return array{from: Carbon, to: Carbon}
+     */
+    private function parseRange(
+        Request $request,
+        string $fromKey,
+        string $toKey,
+        Carbon $defaultFrom,
+        Carbon $defaultTo,
+        string $tz,
+    ): array {
+        $from = $this->parseRequestDate($request, $fromKey, $tz) ?? $defaultFrom->copy();
+        $to = $this->parseRequestDate($request, $toKey, $tz) ?? $defaultTo->copy();
+
+        if ($from->gt($to)) {
+            [$from, $to] = [$to->copy()->startOfDay(), $from->copy()->endOfDay()];
+        }
+
+        return ['from' => $from->copy()->startOfDay(), 'to' => $to->copy()->endOfDay()];
+    }
+
+    /**
+     * @param  array<string, int|float>  $totals
+     * @param  callable(CarbonInterface, CarbonInterface): array<string, int|float>  $resolveTotals
+     * @return array{granularity: string, columns: list<string>, data: array<string, array<string, int|float>>}
+     */
+    private function buildCustomSummaryDispatch(
+        CarbonInterface $anchor,
+        CarbonInterface $from,
+        CarbonInterface $to,
+        string $countKey,
+        array $totals,
+        callable $resolveTotals,
+    ): array {
+        $now = now($anchor->getTimezone())->startOfDay();
+
+        $isMultiYear = (int) $from->year !== (int) $to->year;
+        $isSingleMonth = (int) $from->year === (int) $to->year && (int) $from->month === (int) $to->month;
+        $isCurrentMonth = $isSingleMonth && (int) $from->year === (int) $now->year && (int) $from->month === (int) $now->month;
+
+        if ($isMultiYear) {
+            return [
+                'granularity' => 'year',
+                'columns' => ['Year'],
+                'data' => [
+                    'Year' => $totals,
+                ],
+            ];
+        }
+
+        if ($isSingleMonth) {
+            if ($isCurrentMonth) {
+                $yesterday = $now->copy()->subDay();
+                $today = $now->copy();
+                $mtdFrom = $now->copy()->startOfMonth();
+                $mtdTo = $now->copy();
+
+                return [
+                    'granularity' => 'current_month',
+                    'columns' => ['Yesterday', 'Today', 'MonthToDate'],
+                    'data' => [
+                        'Yesterday' => $resolveTotals($yesterday, $yesterday),
+                        'Today' => $resolveTotals($today, $today),
+                        'MonthToDate' => $resolveTotals($mtdFrom, $mtdTo),
+                    ],
+                ];
+            }
+
+            return [
+                'granularity' => 'other_month',
+                'columns' => ['Month'],
+                'data' => [
+                    'Month' => $totals,
+                ],
+            ];
+        }
+
+        return [
+            'granularity' => 'month',
+            'columns' => ['Year', 'Month'],
+            'data' => [
+                'Year' => $totals,
+                'Month' => $totals,
+            ],
+        ];
+    }
+
+    /**
+     * @param  array{trips: int, qty: float}  $totals
+     * @param  callable(CarbonInterface, CarbonInterface): array{trips: int, qty: float}  $resolveTotals
+     * @return array{granularity: string, columns: list<string>, data: array<string, array{trips: int, qty: float}>}
+     */
+    private function buildCustomSummaryProduction(
+        CarbonInterface $anchor,
+        CarbonInterface $from,
+        CarbonInterface $to,
+        array $totals,
+        callable $resolveTotals,
+    ): array {
+        $now = now($anchor->getTimezone())->startOfDay();
+
+        $isMultiYear = (int) $from->year !== (int) $to->year;
+        $isSingleMonth = (int) $from->year === (int) $to->year && (int) $from->month === (int) $to->month;
+        $isCurrentMonth = $isSingleMonth && (int) $from->year === (int) $now->year && (int) $from->month === (int) $now->month;
+
+        if ($isMultiYear) {
+            return [
+                'granularity' => 'year',
+                'columns' => ['Year'],
+                'data' => [
+                    'Year' => $totals,
+                ],
+            ];
+        }
+
+        if ($isSingleMonth) {
+            if ($isCurrentMonth) {
+                $yesterday = $now->copy()->subDay();
+                $today = $now->copy();
+                $mtdFrom = $now->copy()->startOfMonth();
+                $mtdTo = $now->copy();
+
+                return [
+                    'granularity' => 'current_month',
+                    'columns' => ['Yesterday', 'Today', 'MonthToDate'],
+                    'data' => [
+                        'Yesterday' => $resolveTotals($yesterday, $yesterday),
+                        'Today' => $resolveTotals($today, $today),
+                        'MonthToDate' => $resolveTotals($mtdFrom, $mtdTo),
+                    ],
+                ];
+            }
+
+            return [
+                'granularity' => 'other_month',
+                'columns' => ['Month'],
+                'data' => [
+                    'Month' => $totals,
+                ],
+            ];
+        }
+
+        return [
+            'granularity' => 'month',
+            'columns' => ['Year', 'Month'],
+            'data' => [
+                'Year' => $totals,
+                'Month' => $totals,
+            ],
+        ];
     }
 
     /**

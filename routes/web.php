@@ -175,6 +175,8 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::post('terms/accept', [TermsAcceptController::class, 'store'])->name('terms.accept.store');
 
     Route::get('dashboard', App\Http\Controllers\Dashboard\ExecutiveDashboardController::class)->name('dashboard');
+    Route::get('dashboard/executive-yesterday-data', [App\Http\Controllers\Dashboard\ExecutiveDashboardController::class, 'executiveYesterdayData'])
+        ->name('dashboard.executive-yesterday-data');
 
     Route::get('exports/coal-transport-report', CoalTransportReportExportController::class)
         ->name('exports.coal-transport-report');

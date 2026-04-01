@@ -353,15 +353,33 @@ interface ExecutiveYesterdayData {
     };
     obProduction: Record<'yesterday' | 'today' | 'week' | 'month' | 'fy', { trips: number; qty: number }>;
     coalProduction: Record<'yesterday' | 'today' | 'week' | 'month' | 'fy', { trips: number; qty: number }>;
-    customRange: {
-        from: string;
-        to: string;
-        bySiding: Array<{
-            sidingId: number;
-            sidingName: string;
-            road: { trips: number; qty: number };
-            rail: { rakes: number; qty: number };
-        }>;
+    customRanges: {
+        roadDispatch: {
+            from: string;
+            to: string;
+            totals: { trips: number; qty: number };
+            bySiding: Array<{ sidingId: number; sidingName: string; trips: number; qty: number }>;
+            summary: { granularity: string; columns: string[]; data: Record<string, { trips: number; qty: number }> };
+        };
+        railDispatch: {
+            from: string;
+            to: string;
+            totals: { rakes: number; qty: number };
+            bySiding: Array<{ sidingId: number; sidingName: string; rakes: number; qty: number }>;
+            summary: { granularity: string; columns: string[]; data: Record<string, { rakes: number; qty: number }> };
+        };
+        obProduction: {
+            from: string;
+            to: string;
+            totals: { trips: number; qty: number };
+            summary: { granularity: string; columns: string[]; data: Record<string, { trips: number; qty: number }> };
+        };
+        coalProduction: {
+            from: string;
+            to: string;
+            totals: { trips: number; qty: number };
+            summary: { granularity: string; columns: string[]; data: Record<string, { trips: number; qty: number }> };
+        };
     };
     fySummary: {
         rows: Array<{
@@ -569,9 +587,31 @@ function ExecutiveYesterdaySection({
     data: ExecutiveYesterdayData;
     viewMode: 'table' | 'charts';
 }) {
+    const [executiveData, setExecutiveData] = useState<ExecutiveYesterdayData>(data);
 
-    const [customFrom, setCustomFrom] = useState<string>(data.customRange.from);
-    const [customTo, setCustomTo] = useState<string>(data.customRange.to);
+    const [roadFrom, setRoadFrom] = useState<string>(data.customRanges.roadDispatch.from);
+    const [roadTo, setRoadTo] = useState<string>(data.customRanges.roadDispatch.to);
+    const [railFrom, setRailFrom] = useState<string>(data.customRanges.railDispatch.from);
+    const [railTo, setRailTo] = useState<string>(data.customRanges.railDispatch.to);
+    const [obFrom, setObFrom] = useState<string>(data.customRanges.obProduction.from);
+    const [obTo, setObTo] = useState<string>(data.customRanges.obProduction.to);
+    const [coalFrom, setCoalFrom] = useState<string>(data.customRanges.coalProduction.from);
+    const [coalTo, setCoalTo] = useState<string>(data.customRanges.coalProduction.to);
+
+    const [isCustomLoading, setIsCustomLoading] = useState(false);
+    const [customError, setCustomError] = useState<string | null>(null);
+
+    useEffect(() => {
+        setExecutiveData(data);
+        setRoadFrom(data.customRanges.roadDispatch.from);
+        setRoadTo(data.customRanges.roadDispatch.to);
+        setRailFrom(data.customRanges.railDispatch.from);
+        setRailTo(data.customRanges.railDispatch.to);
+        setObFrom(data.customRanges.obProduction.from);
+        setObTo(data.customRanges.obProduction.to);
+        setCoalFrom(data.customRanges.coalProduction.from);
+        setCoalTo(data.customRanges.coalProduction.to);
+    }, [data]);
 
     const fmtNumber = (n: number, fractionDigits = 0): string =>
         n.toLocaleString(undefined, { minimumFractionDigits: fractionDigits, maximumFractionDigits: fractionDigits });
@@ -587,24 +627,51 @@ function ExecutiveYesterdaySection({
 
     const dashboardPath = dashboard().url.split('?')[0] || dashboard().url;
 
-    const submitExecutiveParams = (next: { executive_yesterday_date?: string; executive_custom_from?: string; executive_custom_to?: string }) => {
-        router.get(dashboardPath, {
-            section: 'executive-overview',
-            executive_yesterday_date: next.executive_yesterday_date ?? data.anchorDate,
-            executive_custom_from: next.executive_custom_from ?? customFrom,
-            executive_custom_to: next.executive_custom_to ?? customTo,
-        }, {
-            preserveState: true,
-            preserveScroll: true,
-        });
-    };
+    const isValidRange = (from: string, to: string): boolean => Boolean(from) && Boolean(to) && from <= to;
 
-    const PeriodHeader = (
+    const applyCustomRanges = useCallback(async (): Promise<void> => {
+        setIsCustomLoading(true);
+        setCustomError(null);
+        try {
+            const url = new URL(`${dashboardPath.replace(/\/$/, '')}/executive-yesterday-data`, window.location.origin);
+            url.searchParams.set('executive_yesterday_date', executiveData.anchorDate);
+            url.searchParams.set('executive_road_from', roadFrom);
+            url.searchParams.set('executive_road_to', roadTo);
+            url.searchParams.set('executive_rail_from', railFrom);
+            url.searchParams.set('executive_rail_to', railTo);
+            url.searchParams.set('executive_ob_from', obFrom);
+            url.searchParams.set('executive_ob_to', obTo);
+            url.searchParams.set('executive_coal_from', coalFrom);
+            url.searchParams.set('executive_coal_to', coalTo);
+
+            const res = await fetch(url.toString(), {
+                credentials: 'same-origin',
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+            if (!res.ok) {
+                throw new Error(`Request failed (${res.status})`);
+            }
+
+            const next = (await res.json()) as ExecutiveYesterdayData;
+            setExecutiveData(next);
+        } catch (e) {
+            setCustomError(e instanceof Error ? e.message : 'Failed to load custom range data.');
+        } finally {
+            setIsCustomLoading(false);
+        }
+    }, [dashboardPath, executiveData.anchorDate, roadFrom, roadTo, railFrom, railTo, obFrom, obTo, coalFrom, coalTo]);
+
+    const SummaryHeader = ({ label, columns }: { label: string; columns: string[] }) => (
         <thead className="bg-[#eef2f7] text-black">
             <tr>
-                <th className="border border-[#d5dbe4] px-3 py-2 text-left font-medium" colSpan={2}>{data.fyLabel}</th>
-                {periodKeys.map((k) => (
-                    <th key={k} className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">{periodLabels[k]}</th>
+                <th className="border border-[#d5dbe4] px-3 py-2 text-left font-medium" colSpan={2}>{label}</th>
+                {columns.map((c) => (
+                    <th key={c} className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">
+                        {c === 'MonthToDate' ? 'Month to date' : c}
+                    </th>
                 ))}
             </tr>
         </thead>
@@ -613,74 +680,75 @@ function ExecutiveYesterdaySection({
     const DispatchBlock = (props: {
         title: string;
         metricCountLabel: string;
-        totals: Record<'yesterday' | 'today' | 'week' | 'month' | 'fy', { count: number; qty: number }>;
-        bySiding: Array<{ sidingId: number; sidingName: string; totals: Record<'yesterday' | 'today' | 'week' | 'month' | 'fy', { count: number; qty: number }> }>;
+        countKey: 'trips' | 'rakes';
+        summary: { columns: string[]; data: Record<string, { qty: number } & Partial<Record<'trips' | 'rakes', number>> > };
+        toolbar?: React.ReactNode;
     }) => (
         <div className="overflow-hidden rounded-xl border border-[#d5dbe4] bg-white">
             <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
-                <p className="text-sm font-semibold text-gray-900">{props.title}</p>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-sm font-semibold text-gray-900">{props.title}</p>
+                    {props.toolbar ? <div className="flex flex-wrap items-center gap-2">{props.toolbar}</div> : null}
+                </div>
             </div>
             <div className="overflow-x-auto">
                 <table className="w-full border-separate text-xs" style={{ borderSpacing: 0 }}>
-                    {PeriodHeader}
+                    <SummaryHeader label={props.title} columns={props.summary.columns} />
                     <tbody>
                         <tr className="bg-white">
                             <td className="border border-[#d5dbe4] px-3 py-2 font-semibold" rowSpan={2}>{props.title}</td>
                             <td className="border border-[#d5dbe4] px-3 py-2 font-medium">{props.metricCountLabel}</td>
-                            {periodKeys.map((k) => (
-                                <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{fmtNumber(props.totals[k].count, 0)}</td>
+                            {props.summary.columns.map((c) => (
+                                <td key={c} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                    {fmtNumber(Number(props.summary.data?.[c]?.[props.countKey] ?? 0), 0)}
+                                </td>
                             ))}
                         </tr>
                         <tr className="bg-white">
                             <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Qty</td>
-                            {periodKeys.map((k) => (
-                                <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{fmtNumber(props.totals[k].qty, 2)}</td>
+                            {props.summary.columns.map((c) => (
+                                <td key={c} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                    {fmtNumber(Number(props.summary.data?.[c]?.qty ?? 0), 2)}
+                                </td>
                             ))}
                         </tr>
-
-                        {props.bySiding.map((s) => (
-                            <Fragment key={s.sidingId}>
-                                <tr className="bg-white">
-                                    <td className="border border-[#d5dbe4] px-3 py-2 font-semibold" rowSpan={2}>{s.sidingName}</td>
-                                    <td className="border border-[#d5dbe4] px-3 py-2 text-muted-foreground">{props.metricCountLabel}</td>
-                                    {periodKeys.map((k) => (
-                                        <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{fmtNumber(s.totals[k].count, 0)}</td>
-                                    ))}
-                                </tr>
-                                <tr className="bg-white">
-                                    <td className="border border-[#d5dbe4] px-3 py-2 text-muted-foreground">Qty</td>
-                                    {periodKeys.map((k) => (
-                                        <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{fmtNumber(s.totals[k].qty, 2)}</td>
-                                    ))}
-                                </tr>
-                            </Fragment>
-                        ))}
                     </tbody>
                 </table>
             </div>
         </div>
     );
 
-    const ProductionBlock = (props: { title: string; totals: ExecutiveYesterdayData['obProduction'] }) => (
+    const ProductionBlock = (props: {
+        title: string;
+        summary: { columns: string[]; data: Record<string, { trips: number; qty: number }> };
+        toolbar?: React.ReactNode;
+    }) => (
         <div className="overflow-hidden rounded-xl border border-[#d5dbe4] bg-white">
             <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
-                <p className="text-sm font-semibold text-gray-900">{props.title}</p>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-sm font-semibold text-gray-900">{props.title}</p>
+                    {props.toolbar ? <div className="flex flex-wrap items-center gap-2">{props.toolbar}</div> : null}
+                </div>
             </div>
             <div className="overflow-x-auto">
                 <table className="w-full border-separate text-xs" style={{ borderSpacing: 0 }}>
-                    {PeriodHeader}
+                    <SummaryHeader label={props.title} columns={props.summary.columns} />
                     <tbody>
                         <tr className="bg-white">
                             <td className="border border-[#d5dbe4] px-3 py-2 font-semibold" rowSpan={2}>{props.title}</td>
                             <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Trips</td>
-                            {periodKeys.map((k) => (
-                                <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{fmtNumber(props.totals[k].trips, 0)}</td>
+                            {props.summary.columns.map((c) => (
+                                <td key={c} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                    {fmtNumber(props.summary.data?.[c]?.trips ?? 0, 0)}
+                                </td>
                             ))}
                         </tr>
                         <tr className="bg-white">
                             <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Qty</td>
-                            {periodKeys.map((k) => (
-                                <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{fmtNumber(props.totals[k].qty, 2)}</td>
+                            {props.summary.columns.map((c) => (
+                                <td key={c} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                    {fmtNumber(props.summary.data?.[c]?.qty ?? 0, 2)}
+                                </td>
                             ))}
                         </tr>
                     </tbody>
@@ -694,116 +762,152 @@ function ExecutiveYesterdaySection({
             <DispatchBlock
                 title="Road Dispatch"
                 metricCountLabel="Trips"
-                totals={{
-                    yesterday: { count: data.roadDispatch.totals.yesterday.trips, qty: data.roadDispatch.totals.yesterday.qty },
-                    today: { count: data.roadDispatch.totals.today.trips, qty: data.roadDispatch.totals.today.qty },
-                    week: { count: data.roadDispatch.totals.week.trips, qty: data.roadDispatch.totals.week.qty },
-                    month: { count: data.roadDispatch.totals.month.trips, qty: data.roadDispatch.totals.month.qty },
-                    fy: { count: data.roadDispatch.totals.fy.trips, qty: data.roadDispatch.totals.fy.qty },
-                }}
-                bySiding={data.roadDispatch.bySiding.map((s) => ({
-                    sidingId: s.sidingId,
-                    sidingName: s.sidingName,
-                    totals: {
-                        yesterday: { count: s.totals.yesterday.trips, qty: s.totals.yesterday.qty },
-                        today: { count: s.totals.today.trips, qty: s.totals.today.qty },
-                        week: { count: s.totals.week.trips, qty: s.totals.week.qty },
-                        month: { count: s.totals.month.trips, qty: s.totals.month.qty },
-                        fy: { count: s.totals.fy.trips, qty: s.totals.fy.qty },
-                    },
-                }))}
+                countKey="trips"
+                summary={executiveData.customRanges.roadDispatch.summary}
+                toolbar={
+                    <>
+                        <span className="hidden text-[11px] text-muted-foreground sm:inline">
+                            Custom: {fmtNumber(executiveData.customRanges.roadDispatch.totals.trips, 0)} trips, {fmtNumber(executiveData.customRanges.roadDispatch.totals.qty, 2)} MT
+                        </span>
+                        <label className="text-xs font-medium text-gray-600">From</label>
+                        <input
+                            type="date"
+                            value={roadFrom}
+                            onChange={(e) => setRoadFrom(e.target.value)}
+                            className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
+                        />
+                        <label className="text-xs font-medium text-gray-600">To</label>
+                        <input
+                            type="date"
+                            value={roadTo}
+                            onChange={(e) => setRoadTo(e.target.value)}
+                            className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
+                        />
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={isCustomLoading || !isValidRange(roadFrom, roadTo)}
+                            onClick={applyCustomRanges}
+                        >
+                            {isCustomLoading ? 'Applying…' : 'Apply'}
+                        </Button>
+                    </>
+                }
             />
 
             <DispatchBlock
                 title="Rail Dispatch"
                 metricCountLabel="Rakes"
-                totals={{
-                    yesterday: { count: data.railDispatch.totals.yesterday.rakes, qty: data.railDispatch.totals.yesterday.qty },
-                    today: { count: data.railDispatch.totals.today.rakes, qty: data.railDispatch.totals.today.qty },
-                    week: { count: data.railDispatch.totals.week.rakes, qty: data.railDispatch.totals.week.qty },
-                    month: { count: data.railDispatch.totals.month.rakes, qty: data.railDispatch.totals.month.qty },
-                    fy: { count: data.railDispatch.totals.fy.rakes, qty: data.railDispatch.totals.fy.qty },
-                }}
-                bySiding={data.railDispatch.bySiding.map((s) => ({
-                    sidingId: s.sidingId,
-                    sidingName: s.sidingName,
-                    totals: {
-                        yesterday: { count: s.totals.yesterday.rakes, qty: s.totals.yesterday.qty },
-                        today: { count: s.totals.today.rakes, qty: s.totals.today.qty },
-                        week: { count: s.totals.week.rakes, qty: s.totals.week.qty },
-                        month: { count: s.totals.month.rakes, qty: s.totals.month.qty },
-                        fy: { count: s.totals.fy.rakes, qty: s.totals.fy.qty },
-                    },
-                }))}
+                countKey="rakes"
+                summary={executiveData.customRanges.railDispatch.summary}
+                toolbar={
+                    <>
+                        <span className="hidden text-[11px] text-muted-foreground sm:inline">
+                            Custom: {fmtNumber(executiveData.customRanges.railDispatch.totals.rakes, 0)} rakes, {fmtNumber(executiveData.customRanges.railDispatch.totals.qty, 2)} MT
+                        </span>
+                        <label className="text-xs font-medium text-gray-600">From</label>
+                        <input
+                            type="date"
+                            value={railFrom}
+                            onChange={(e) => setRailFrom(e.target.value)}
+                            className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
+                        />
+                        <label className="text-xs font-medium text-gray-600">To</label>
+                        <input
+                            type="date"
+                            value={railTo}
+                            onChange={(e) => setRailTo(e.target.value)}
+                            className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
+                        />
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={isCustomLoading || !isValidRange(railFrom, railTo)}
+                            onClick={applyCustomRanges}
+                        >
+                            {isCustomLoading ? 'Applying…' : 'Apply'}
+                        </Button>
+                    </>
+                }
             />
 
-            <ProductionBlock title="OB Production" totals={data.obProduction} />
-            <ProductionBlock title="Coal Production" totals={data.coalProduction} />
+            {customError ? (
+                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+                    {customError}
+                </div>
+            ) : null}
 
-            <div className="overflow-hidden rounded-xl border border-[#d5dbe4] bg-white">
-                <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div>
-                            <p className="text-sm font-semibold text-gray-900">Custom Date</p>
-                            <p className="text-[11px] text-muted-foreground">From/To range totals by siding</p>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2">
-                            <label className="text-xs font-medium text-gray-600">From</label>
-                            <input
-                                type="date"
-                                value={customFrom}
-                                onChange={(e) => setCustomFrom(e.target.value)}
-                                onBlur={() => submitExecutiveParams({ executive_custom_from: customFrom })}
-                                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
-                            />
-                            <label className="ml-2 text-xs font-medium text-gray-600">To</label>
-                            <input
-                                type="date"
-                                value={customTo}
-                                onChange={(e) => setCustomTo(e.target.value)}
-                                onBlur={() => submitExecutiveParams({ executive_custom_to: customTo })}
-                                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
-                            />
-                            <button
-                                type="button"
-                                className="ml-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-800 hover:bg-gray-50"
-                                onClick={() => submitExecutiveParams({ executive_custom_from: customFrom, executive_custom_to: customTo })}
-                            >
-                                Apply
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div className="overflow-x-auto">
-                    <table className="w-full border-separate text-xs" style={{ borderSpacing: 0 }}>
-                        <thead className="bg-[#eef2f7] text-black">
-                            <tr>
-                                <th className="border border-[#d5dbe4] px-3 py-2 text-left font-medium">Sidings</th>
-                                <th className="border border-[#d5dbe4] px-3 py-2 text-center font-medium" colSpan={2}>Road Dispatch</th>
-                                <th className="border border-[#d5dbe4] px-3 py-2 text-center font-medium" colSpan={2}>Rail Dispatch</th>
-                            </tr>
-                            <tr>
-                                <th className="border border-[#d5dbe4] px-3 py-2 text-left font-medium" />
-                                <th className="border border-[#d5dbe4] px-3 py-2 text-right font-medium">Trips</th>
-                                <th className="border border-[#d5dbe4] px-3 py-2 text-right font-medium">Qty</th>
-                                <th className="border border-[#d5dbe4] px-3 py-2 text-right font-medium">Rakes</th>
-                                <th className="border border-[#d5dbe4] px-3 py-2 text-right font-medium">Qty</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {data.customRange.bySiding.map((r) => (
-                                <tr key={r.sidingId} className="bg-white">
-                                    <td className="border border-[#d5dbe4] px-3 py-2 font-medium">{r.sidingName}</td>
-                                    <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{fmtNumber(r.road.trips, 0)}</td>
-                                    <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{fmtNumber(r.road.qty, 2)}</td>
-                                    <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{fmtNumber(r.rail.rakes, 0)}</td>
-                                    <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{fmtNumber(r.rail.qty, 2)}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+            <ProductionBlock
+                title="OB Production"
+                summary={executiveData.customRanges.obProduction.summary}
+                toolbar={
+                    <>
+                        <span className="hidden text-[11px] text-muted-foreground sm:inline">
+                            Custom: {fmtNumber(executiveData.customRanges.obProduction.totals.trips, 0)} trips, {fmtNumber(executiveData.customRanges.obProduction.totals.qty, 2)} MT
+                        </span>
+                        <label className="text-xs font-medium text-gray-600">From</label>
+                        <input
+                            type="date"
+                            value={obFrom}
+                            onChange={(e) => setObFrom(e.target.value)}
+                            className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
+                        />
+                        <label className="text-xs font-medium text-gray-600">To</label>
+                        <input
+                            type="date"
+                            value={obTo}
+                            onChange={(e) => setObTo(e.target.value)}
+                            className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
+                        />
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={isCustomLoading || !isValidRange(obFrom, obTo)}
+                            onClick={applyCustomRanges}
+                        >
+                            {isCustomLoading ? 'Applying…' : 'Apply'}
+                        </Button>
+                    </>
+                }
+            />
+
+            <ProductionBlock
+                title="Coal Production"
+                summary={executiveData.customRanges.coalProduction.summary}
+                toolbar={
+                    <>
+                        <span className="hidden text-[11px] text-muted-foreground sm:inline">
+                            Custom: {fmtNumber(executiveData.customRanges.coalProduction.totals.trips, 0)} trips, {fmtNumber(executiveData.customRanges.coalProduction.totals.qty, 2)} MT
+                        </span>
+                        <label className="text-xs font-medium text-gray-600">From</label>
+                        <input
+                            type="date"
+                            value={coalFrom}
+                            onChange={(e) => setCoalFrom(e.target.value)}
+                            className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
+                        />
+                        <label className="text-xs font-medium text-gray-600">To</label>
+                        <input
+                            type="date"
+                            value={coalTo}
+                            onChange={(e) => setCoalTo(e.target.value)}
+                            className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
+                        />
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={isCustomLoading || !isValidRange(coalFrom, coalTo)}
+                            onClick={applyCustomRanges}
+                        >
+                            {isCustomLoading ? 'Applying…' : 'Apply'}
+                        </Button>
+                    </>
+                }
+            />
 
             <div className="overflow-hidden rounded-xl border border-[#d5dbe4] bg-white">
                 <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
@@ -829,7 +933,7 @@ function ExecutiveYesterdaySection({
                             </tr>
                         </thead>
                         <tbody>
-                            {data.fySummary.rows.map((r) => (
+                            {executiveData.fySummary.rows.map((r) => (
                                 <tr key={r.fy} className="bg-white">
                                     <td className="border border-[#d5dbe4] px-3 py-2 font-medium">{r.fy}</td>
                                     <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{fmtNumber(r.production.obQty, 2)}</td>
@@ -849,21 +953,23 @@ function ExecutiveYesterdaySection({
 
     const compactQty = (n: number): string => fmtNumber(n, n % 1 === 0 ? 0 : 2);
 
-    const fyProductionRows = data.fyCharts.rows.map((r) => ({
+    const [isCombinedChartVisible, setIsCombinedChartVisible] = useState(false);
+
+    const fyProductionRows = executiveData.fyCharts.rows.map((r) => ({
         fy: r.fy,
         OB: r.production.obQty,
         COAL: r.production.coalQty,
         unit: 'MT',
     }));
 
-    const fyDispatchRows = data.fyCharts.rows.map((r) => ({
+    const fyDispatchRows = executiveData.fyCharts.rows.map((r) => ({
         fy: r.fy,
         ROAD: r.dispatch.roadQty,
         RAIL: r.dispatch.railQty,
         unit: 'MT',
     }));
 
-    const fyCombinedRows = data.fyCharts.rows.map((r) => ({
+    const fyCombinedRows = executiveData.fyCharts.rows.map((r) => ({
         fy: r.fy,
         OB: r.production.obQty,
         COAL: r.production.coalQty,
@@ -972,17 +1078,41 @@ function ExecutiveYesterdaySection({
                 ]}
             />
 
-            <FyChartCard
-                title="Production & Dispatch"
-                rows={fyCombinedRows}
-                series={[
-                    { key: 'OB', label: 'OB', color: DASHBOARD_PALETTE.successGreen },
-                    { key: 'COAL', label: 'Coal', color: DASHBOARD_PALETTE.steelBlue },
-                    { key: 'ROAD', label: 'Road', color: DASHBOARD_PALETTE.safetyYellow },
-                    { key: 'RAIL', label: 'Rail', color: DASHBOARD_PALETTE.darkGrey },
-                ]}
-                height={340}
-            />
+            <div className="flex items-center justify-end">
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsCombinedChartVisible((v) => !v)}
+                    className="gap-2"
+                >
+                    {isCombinedChartVisible ? (
+                        <>
+                            <ChevronUp className="size-4" />
+                            Hide Production & Dispatch
+                        </>
+                    ) : (
+                        <>
+                            <ChevronDown className="size-4" />
+                            Show Production & Dispatch
+                        </>
+                    )}
+                </Button>
+            </div>
+
+            {isCombinedChartVisible ? (
+                <FyChartCard
+                    title="Production & Dispatch"
+                    rows={fyCombinedRows}
+                    series={[
+                        { key: 'OB', label: 'OB', color: DASHBOARD_PALETTE.successGreen },
+                        { key: 'COAL', label: 'Coal', color: DASHBOARD_PALETTE.steelBlue },
+                        { key: 'ROAD', label: 'Road', color: DASHBOARD_PALETTE.safetyYellow },
+                        { key: 'RAIL', label: 'Rail', color: DASHBOARD_PALETTE.darkGrey },
+                    ]}
+                    height={340}
+                />
+            ) : null}
         </div>
     );
 
