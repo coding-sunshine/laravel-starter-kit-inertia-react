@@ -35,8 +35,6 @@ final class EditUser extends EditRecord
 
     private ?int $pendingRoleId = null;
 
-    private ?int $pendingSidingId = null;
-
     private ?string $pendingRoleName = null;
 
     /**
@@ -64,18 +62,16 @@ final class EditUser extends EditRecord
             ->value('id');
 
         $usesSectionAssignments = $this->roleUsesSectionAssignments($data['roles'] !== null ? (int) $data['roles'] : null);
+        $data['siding_ids'] = DB::table('user_siding')
+            ->where('user_id', $this->getRecord()->getKey())
+            ->orderByDesc('is_primary')
+            ->orderBy('siding_id')
+            ->pluck('siding_id')
+            ->all();
+
         if ($usesSectionAssignments) {
-            $data['siding_ids_multi'] = DB::table('user_siding')
-                ->where('user_id', $this->getRecord()->getKey())
-                ->orderByDesc('is_primary')
-                ->orderBy('siding_id')
-                ->pluck('siding_id')
-                ->all();
             $data['siding_shifts_multi'] = $this->getRecord()->sidingShifts()->pluck('siding_shifts.id')->all();
-            $data['siding_id_single'] = null;
         } else {
-            $data['siding_id_single'] = $this->getRecord()->siding_id;
-            $data['siding_ids_multi'] = [];
             $data['siding_shifts_multi'] = [];
         }
 
@@ -142,11 +138,12 @@ final class EditUser extends EditRecord
         $this->pendingSidingIds = [];
         $this->pendingShiftIds = [];
 
+        $this->pendingSidingIds = array_values(array_filter(array_map(
+            intval(...),
+            (array) ($data['siding_ids'] ?? [])
+        )));
+
         if ($this->usesSectionAssignments) {
-            $this->pendingSidingIds = array_values(array_filter(array_map(
-                intval(...),
-                (array) ($data['siding_ids_multi'] ?? [])
-            )));
             $this->pendingShiftIds = array_values(array_filter(array_map(
                 intval(...),
                 (array) ($data['siding_shifts_multi'] ?? [])
@@ -157,13 +154,9 @@ final class EditUser extends EditRecord
                     'is_active' => true,
                 ];
             }
-            $this->pendingSidingId = null;
-        } else {
-            $this->pendingSidingId = isset($data['siding_id_single']) && $data['siding_id_single'] !== ''
-                ? (int) $data['siding_id_single']
-                : null;
         }
-        unset($data['siding_ids_multi'], $data['siding_id_single'], $data['siding_shifts_multi']);
+
+        unset($data['siding_ids'], $data['siding_shifts_multi']);
 
         $user = $this->getRecord();
         if (! $user->isLastSuperAdmin() || ! $user->hasRole('super-admin')) {
@@ -192,35 +185,21 @@ final class EditUser extends EditRecord
 
     protected function afterSave(): void
     {
+        $primarySidingId = $this->pendingSidingIds[0] ?? null;
+
         $this->record->forceFill([
-            'siding_id' => $this->usesSectionAssignments ? null : $this->pendingSidingId,
+            'siding_id' => $primarySidingId,
         ])->save();
 
-        if (! $this->usesSectionAssignments) {
-            DB::table('user_siding')->where('user_id', $this->record->getKey())->delete();
-            if ($this->pendingSidingId !== null) {
-                DB::table('user_siding')->insert([
-                    'user_id' => $this->record->getKey(),
-                    'siding_id' => $this->pendingSidingId,
-                    'is_primary' => true,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-            }
-            $this->record->sidingShifts()->sync([]);
-        }
-
-        if ($this->usesSectionAssignments) {
-            DB::table('user_siding')->where('user_id', $this->record->getKey())->delete();
-            foreach ($this->pendingSidingIds as $index => $sidingId) {
-                DB::table('user_siding')->insert([
-                    'user_id' => $this->record->getKey(),
-                    'siding_id' => $sidingId,
-                    'is_primary' => $index === 0,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-            }
+        DB::table('user_siding')->where('user_id', $this->record->getKey())->delete();
+        foreach ($this->pendingSidingIds as $index => $sidingId) {
+            DB::table('user_siding')->insert([
+                'user_id' => $this->record->getKey(),
+                'siding_id' => $sidingId,
+                'is_primary' => $index === 0,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
         }
 
         if ($this->usesSectionAssignments) {

@@ -123,7 +123,7 @@ final class WeighmentsController extends Controller
                     'size' => $pdf->getSize(),
                 ]);
 
-                $rakeImporter->importForRake($rake, $pdf, $userId);
+                $weighment = $rakeImporter->importForRake($rake, $pdf, $userId);
             } catch (InvalidArgumentException $e) {
                 Log::warning('WeighmentsController: rake import failed with validation error', [
                     'user_id' => $userId,
@@ -147,7 +147,7 @@ final class WeighmentsController extends Controller
                     ->withInput();
             }
 
-            return to_route('rakes.show', $rake)
+            return to_route('weighments.show', $weighment->getKey())
                 ->with('success', 'Weighment recorded.');
         }
 
