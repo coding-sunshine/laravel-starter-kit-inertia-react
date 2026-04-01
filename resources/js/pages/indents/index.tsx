@@ -12,49 +12,30 @@ import {
 import AppLayout from '@/layouts/app-layout';
 import { useCan } from '@/hooks/use-can';
 import { type BreadcrumbItem } from '@/types';
+import { DataTable } from '@/components/data-table/data-table';
+import type { DataTableResponse } from 'laravel-data-table';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { FileText, Plus, Upload } from 'lucide-react';
 import { useRef, useState } from 'react';
 
-interface Siding {
+interface IndentRow {
     id: number;
-    name: string;
-    code: string;
-}
-
-interface Indent {
-    id: number;
+    rake_number: string | null;
     indent_number: string | null;
-    demanded_stock: string | null;
-    total_units: number | string | null;
-    target_quantity_mt: string | null;
-    allocated_quantity_mt: string | null;
-    state: string;
+    siding: string | null;
     indent_date: string | null;
     expected_loading_date: string | null;
-    required_by_date: string | null;
     e_demand_reference_id: string | null;
+    state: string;
     fnr_number: string | null;
-    indent_confirmation_pdf_url?: string | null;
-    indent_pdf_url?: string | null;
-    siding?: Siding | null;
-}
-
-interface PaginatedIndents {
-    data: Indent[];
-    current_page: number;
-    last_page: number;
-    per_page: number;
-    total: number;
-    links: { url: string | null; label: string; active: boolean }[];
+    weighment_pdf_uploaded: boolean;
 }
 
 interface Props {
-    indents: PaginatedIndents;
-    sidings: Siding[];
+    tableData: DataTableResponse<IndentRow>;
 }
 
-export default function IndentsIndex({ indents }: Props) {
+export default function IndentsIndex({ tableData }: Props) {
     const canCreateIndent = useCan('sections.indents.create');
     const { flash, errors } = usePage<{
         flash?: { success?: string };
@@ -162,133 +143,82 @@ export default function IndentsIndex({ indents }: Props) {
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        {indents.data.length > 0 ? (
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-sm">
-                                    <thead>
-                                        <tr className="border-b text-left">
-                                            <th className="pr-4 pb-2 font-medium">
-                                                E-Demand number
-                                            </th>
-                                            <th className="pr-4 pb-2 font-medium">
-                                                Siding
-                                            </th>
-                                            <th className="pr-4 pb-2 font-medium">
-                                                Demanded stock
-                                            </th>
-                                            <th className="pr-4 pb-2 font-medium">
-                                                Units
-                                            </th>
-                                            <th className="pr-4 pb-2 font-medium">
-                                                Target (MT)
-                                            </th>
-                                            <th className="pr-4 pb-2 font-medium">
-                                                Expected loading
-                                            </th>
-                                            <th className="pr-4 pb-2 font-medium">
-                                                State
-                                            </th>
-                                            <th className="pr-4 pb-2 font-medium">
-                                                <GlossaryTerm term="e-Demand">
-                                                    e-Demand
-                                                </GlossaryTerm>{' '}
-                                                ref
-                                            </th>
-                                            <th className="pr-4 pb-2 font-medium">
-                                                <GlossaryTerm term="FNR">
-                                                    FNR
-                                                </GlossaryTerm>
-                                            </th>
-                                            <th className="pb-2 font-medium">
-                                                Actions
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {indents.data.map((indent) => (
-                                            <tr
-                                                key={indent.id}
-                                                className="border-b"
-                                            >
-                                                <td className="py-2 pr-4">
-                                                    <Link
-                                                        href={`/indents/${indent.id}`}
-                                                        className="font-medium underline underline-offset-2"
-                                                    >
-                                                        {indent.indent_number ?? '—'}
-                                                    </Link>
-                                                </td>
-                                                <td className="py-2 pr-4 text-muted-foreground">
-                                                    {indent.siding?.name ?? '—'}
-                                                </td>
-                                                <td className="py-2 pr-4">
-                                                    {indent.demanded_stock ?? '—'}
-                                                </td>
-                                                <td className="py-2 pr-4">
-                                                    {indent.total_units ?? '—'}
-                                                </td>
-                                                <td className="py-2 pr-4">
-                                                    {indent.target_quantity_mt ?? '—'}
-                                                </td>
-                                                <td className="py-2 pr-4 text-muted-foreground">
-                                                    {indent.expected_loading_date
-                                                        ? new Date(
-                                                              indent.expected_loading_date,
-                                                          ).toLocaleDateString()
-                                                        : '—'}
-                                                </td>
-                                                <td className="py-2 pr-4 capitalize">
-                                                    {indent.state}
-                                                </td>
-                                                <td className="py-2 pr-4 text-muted-foreground">
-                                                    {indent.e_demand_reference_id ??
-                                                        '—'}
-                                                </td>
-                                                <td className="py-2 pr-4 text-muted-foreground">
-                                                    {indent.fnr_number ?? '—'}
-                                                </td>
-                                                <td className="py-2">
-                                                    <Link
-                                                        href={`/indents/${indent.id}`}
-                                                    >
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                        >
-                                                            View
-                                                        </Button>
-                                                    </Link>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                                {indents.last_page > 1 && (
-                                    <div className="mt-4 flex flex-wrap gap-2">
-                                        {indents.links.map((link, index) => (
-                                            <Link
-                                                key={`${link.url ?? 'null'}-${link.label}-${index}`}
-                                                href={link.url ?? '#'}
-                                                className={
-                                                    link.active
-                                                        ? 'rounded border bg-muted px-2 py-1 text-sm font-medium'
-                                                        : 'rounded border px-2 py-1 text-sm'
-                                                }
-                                            >
-                                                {link.label}
-                                            </Link>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        ) : (
-                            <div className="rounded-lg border border-dashed p-8 text-center">
-                                <FileText className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-                                <p className="text-sm text-muted-foreground">
-                                    No e-Demand yet. Create one to get started.
-                                </p>
-                            </div>
-                        )}
+                        <DataTable<IndentRow>
+                            tableData={tableData}
+                            tableName="indents"
+                            rowClassName={(row) =>
+                                row.weighment_pdf_uploaded
+                                    ? 'bg-green-200/80 dark:bg-green-900/40'
+                                    : ''
+                            }
+                            actions={[
+                                {
+                                    label: 'View',
+                                    onClick: (row) => {
+                                        router.visit(`/indents/${row.id}`);
+                                    },
+                                },
+                            ]}
+                            renderCell={(columnId, value, row) => {
+                                if (columnId === 'indent_number') {
+                                    return (
+                                        <Link
+                                            href={`/indents/${row.id}`}
+                                            className="font-medium underline underline-offset-2"
+                                        >
+                                            {row.indent_number ?? '—'}
+                                        </Link>
+                                    );
+                                }
+
+                                if (columnId === 'expected_loading_date') {
+                                    return row.expected_loading_date
+                                        ? new Date(
+                                              row.expected_loading_date,
+                                          ).toLocaleDateString()
+                                        : '—';
+                                }
+
+                                if (columnId === 'indent_date') {
+                                    return row.indent_date
+                                        ? new Date(
+                                              row.indent_date,
+                                          ).toLocaleDateString()
+                                        : '—';
+                                }
+
+                                if (columnId === 'fnr_number') {
+                                    return (
+                                        <GlossaryTerm term="FNR">
+                                            {row.fnr_number ?? '—'}
+                                        </GlossaryTerm>
+                                    );
+                                }
+
+                                if (columnId === 'e_demand_reference_id') {
+                                    return (
+                                        <GlossaryTerm term="e-Demand">
+                                            {row.e_demand_reference_id ?? '—'}
+                                        </GlossaryTerm>
+                                    );
+                                }
+
+                                if (columnId === 'state') {
+                                    return (
+                                        <span className="capitalize">
+                                            {row.state ?? '—'}
+                                        </span>
+                                    );
+                                }
+
+                                return undefined;
+                            }}
+                            options={{
+                                exports: false,
+                                quickViews: false,
+                                customQuickViews: false,
+                            }}
+                        />
                     </CardContent>
                 </Card>
             </div>

@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Indents;
 use App\Actions\DeleteIndentAction;
 use App\Actions\ProvisionRakeForIndent;
 use App\Actions\UpdateStockLedger;
+use App\DataTables\IndentDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\Indent;
 use App\Models\PowerPlant;
@@ -87,32 +88,8 @@ final class IndentsController extends Controller
 
     public function index(Request $request): Response
     {
-        $user = $request->user();
-        $sidingIds = $user->isSuperAdmin()
-            ? Siding::query()->pluck('id')->all()
-            : $user->sidings()->get()->pluck('id')->all();
-
-        // Backward compatibility: some legacy users only have `users.siding_id`
-        // and no rows in the `user_siding` pivot table.
-        if (! $user->isSuperAdmin() && $sidingIds === [] && $user->siding_id !== null) {
-            $sidingIds = [(int) $user->siding_id];
-        }
-
-        $indents = Indent::query()
-            ->with('siding:id,name,code')
-            ->whereIn('siding_id', $sidingIds)
-            ->latest('created_at')
-            ->paginate(15)
-            ->withQueryString();
-
-        $sidings = Siding::query()
-            ->whereIn('id', $sidingIds)
-            ->orderBy('name')
-            ->get(['id', 'name', 'code']);
-
         return Inertia::render('indents/index', [
-            'indents' => $indents,
-            'sidings' => $sidings,
+            'tableData' => IndentDataTable::makeTable($request),
         ]);
     }
 
@@ -232,7 +209,7 @@ final class IndentsController extends Controller
             ],
             'pdf' => ['nullable', 'file', 'mimes:pdf', 'max:10240'],
         ]);
-        
+
         return DB::transaction(function () use ($request, $validated): RedirectResponse {
             $indent = new Indent;
             $indent->siding_id = $validated['siding_id'];
