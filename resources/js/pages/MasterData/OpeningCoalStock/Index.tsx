@@ -45,11 +45,23 @@ export default function Index({ sidings }: Props) {
                     <TableCell className="font-medium">{siding.name}</TableCell>
                     <TableCell>{Number(siding.opening_balance_mt).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
                     <TableCell>
-                      <Link href={`/master-data/opening-coal-stock/${siding.id}/edit`}>
-                        <Button variant="outline" size="sm" data-pan="opening-coal-stock-edit">
-                          Edit
-                        </Button>
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        <Link href={`/master-data/opening-coal-stock/${siding.id}/edit`}>
+                          <Button variant="outline" size="sm" data-pan="opening-coal-stock-edit">
+                            Edit
+                          </Button>
+                        </Link>
+                        <Link
+                          href={`/master-data/opening-coal-stock/${siding.id}/fix`}
+                          method="post"
+                          as="button"
+                          preserveScroll
+                        >
+                          <Button variant="secondary" size="sm" data-pan="opening-coal-stock-fix">
+                            Fix
+                          </Button>
+                        </Link>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

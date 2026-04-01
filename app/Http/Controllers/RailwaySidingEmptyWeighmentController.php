@@ -7,7 +7,6 @@ namespace App\Http\Controllers;
 use App\Models\DailyVehicleEntry;
 use App\Models\Siding;
 use App\Models\SidingShift;
-use App\Services\DailyVehicleEntryService;
 use App\Services\ShiftValidationService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -23,7 +22,6 @@ use Throwable;
 final class RailwaySidingEmptyWeighmentController extends Controller
 {
     public function __construct(
-        private DailyVehicleEntryService $service,
         private ShiftValidationService $shiftValidation
     ) {}
 
@@ -101,6 +99,7 @@ final class RailwaySidingEmptyWeighmentController extends Controller
             abort(403, 'You are not allowed to access this shift for the selected siding.');
         }
 
+        // Keep time-based shift locking consistent with DailyVehicleEntryController.
         $canBypassShiftLock = $this->canBypassShiftLock();
         $timeEditableShift = null;
         $shiftGraceEndsAtIso = null;
@@ -139,13 +138,35 @@ final class RailwaySidingEmptyWeighmentController extends Controller
             abort(403, 'You are not allowed to access this shift for the selected siding.');
         }
 
-        $entries = $this->service->getEntriesByDateAndShift(
-            $date,
-            $activeShift,
-            $sidingId,
-            DailyVehicleEntry::ENTRY_TYPE_RAILWAY_SIDING_EMPTY_WEIGHMENT
-        );
-        $shiftSummary = $this->service->getShiftSummary($date, DailyVehicleEntry::ENTRY_TYPE_RAILWAY_SIDING_EMPTY_WEIGHMENT);
+        $viewAllEntries = $user?->canViewAllRoadDispatchDailyVehicleEntries() ?? false;
+        $scopedToUserId = $viewAllEntries ? null : (int) $user->id;
+
+        $entries = DailyVehicleEntry::query()
+            ->with(['siding'])
+            ->where('entry_date', $date)
+            ->where('shift', $activeShift)
+            ->where('siding_id', $sidingId)
+            ->where('entry_type', DailyVehicleEntry::ENTRY_TYPE_RAILWAY_SIDING_EMPTY_WEIGHMENT)
+            ->when(
+                $scopedToUserId !== null,
+                fn ($q) => $q->where('created_by', $scopedToUserId),
+            )
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        $shiftSummary = [];
+        for ($shift = 1; $shift <= 3; $shift++) {
+            $shiftSummary[$shift] = DailyVehicleEntry::query()
+                ->where('entry_date', $date)
+                ->where('shift', $shift)
+                ->where('siding_id', $sidingId)
+                ->where('entry_type', DailyVehicleEntry::ENTRY_TYPE_RAILWAY_SIDING_EMPTY_WEIGHMENT)
+                ->when(
+                    $scopedToUserId !== null,
+                    fn ($q) => $q->where('created_by', $scopedToUserId),
+                )
+                ->count();
+        }
         $shiftStatus = $this->shiftValidation->getShiftCompletionStatus($date, $sidingIdForShifts);
         $shiftTimes = $this->shiftValidation->getShiftTimesForSiding($sidingIdForShifts);
 
@@ -193,7 +214,15 @@ final class RailwaySidingEmptyWeighmentController extends Controller
             'siding_id' => 'required|exists:sidings,id',
             'entry_date' => 'required|date',
             'shift' => 'required|integer|between:1,3',
+            'vehicle_no' => 'nullable|string|max:255',
+            'transport_name' => 'nullable|string|max:255',
+            'tare_wt_two' => 'nullable|numeric|min:0',
+            'status' => 'nullable|in:draft,completed',
+            'inline_submit' => 'sometimes|boolean',
         ]);
+
+        $inlineSubmit = $request->boolean('inline_submit');
+        unset($data['inline_submit']);
 
         if ($isShiftRestrictedUser) {
             $data['siding_id'] = $firstAssignment->siding_id;
@@ -203,7 +232,7 @@ final class RailwaySidingEmptyWeighmentController extends Controller
         }
 
         $sidingIdForValidation = (int) ($data['siding_id'] ?? 0);
-        if (! $this->canBypassShiftLock() && ! $this->canBypassShiftLockForSiding($sidingIdForValidation)) {
+        if (! $this->canBypassShiftLock()) {
             $this->enforceStrictActiveShift(
                 shift: (int) $data['shift'],
                 entryDate: (string) $data['entry_date'],
@@ -211,11 +240,26 @@ final class RailwaySidingEmptyWeighmentController extends Controller
             );
         }
 
-        $data['entry_type'] = DailyVehicleEntry::ENTRY_TYPE_RAILWAY_SIDING_EMPTY_WEIGHMENT;
-        $entry = $this->service->createEntry($data);
+        $vehicleNo = mb_trim((string) ($data['vehicle_no'] ?? ''));
+        $tareWtTwo = (float) ($data['tare_wt_two'] ?? 0);
+        $shouldAutoComplete = $vehicleNo !== '' && $tareWtTwo > 0;
+
+        $entry = DailyVehicleEntry::create([
+            ...$data,
+            'entry_type' => DailyVehicleEntry::ENTRY_TYPE_RAILWAY_SIDING_EMPTY_WEIGHMENT,
+            'status' => $shouldAutoComplete ? 'completed' : ($data['status'] ?? 'draft'),
+            'reached_at' => now(),
+            'created_by' => auth()->id(),
+        ]);
+
+        if ($inlineSubmit) {
+            $entry->update(['inline_submitted_at' => now()]);
+        }
+
+        $entry->refresh();
 
         if ($request->wantsJson()) {
-            return response()->json(['entry' => $entry->load('siding')], 201);
+            return response()->json(['entry' => $entry->load(['siding'])], 201);
         }
 
         return redirect()->route('railway-siding-empty-weighment.index', [
@@ -242,12 +286,28 @@ final class RailwaySidingEmptyWeighmentController extends Controller
             'transport_name' => 'nullable|string|max:255',
             'tare_wt_two' => 'nullable|numeric|min:0',
             'status' => 'nullable|in:draft,completed',
+            'inline_submit' => 'sometimes|boolean',
         ]);
 
-        $this->service->updateEntry($entry, $data);
+        $inlineSubmit = $request->boolean('inline_submit');
+        unset($data['inline_submit']);
+
+        $vehicleNo = mb_trim((string) ($data['vehicle_no'] ?? $entry->vehicle_no ?? ''));
+        $tareWtTwo = (float) ($data['tare_wt_two'] ?? $entry->tare_wt_two ?? 0);
+        $shouldAutoComplete = $vehicleNo !== '' && $tareWtTwo > 0;
+
+        $entry->update([
+            ...$data,
+            'status' => $shouldAutoComplete ? 'completed' : ($data['status'] ?? $entry->status ?? 'draft'),
+            'updated_by' => auth()->id(),
+        ]);
+
+        if ($inlineSubmit && $entry->inline_submitted_at === null) {
+            $entry->update(['inline_submitted_at' => now()]);
+        }
 
         if ($request->wantsJson()) {
-            return response()->json(['entry' => $entry->fresh()->load('siding')]);
+            return response()->json(['entry' => $entry->fresh()->load(['siding'])]);
         }
 
         return redirect()->route('railway-siding-empty-weighment.index', [
@@ -269,7 +329,12 @@ final class RailwaySidingEmptyWeighmentController extends Controller
             return back()->with('error', 'Entry does not belong to railway siding empty weighment.');
         }
 
-        $updatedEntry = $this->service->markCompleted($entry);
+        $entry->update([
+            'status' => 'completed',
+            'updated_by' => auth()->id(),
+            'inline_submitted_at' => $entry->inline_submitted_at ?? now(),
+        ]);
+        $updatedEntry = $entry->fresh();
 
         if ($request->wantsJson()) {
             return response()->json(['entry' => $updatedEntry->load('siding')]);
@@ -278,6 +343,123 @@ final class RailwaySidingEmptyWeighmentController extends Controller
         return redirect()->route('railway-siding-empty-weighment.index', [
             'date' => $entry->entry_date->format('Y-m-d'),
             'shift' => $entry->shift,
+        ]);
+    }
+
+    public function hourlySummary(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+        $assignedShifts = $user?->activeSidingShifts()
+            ->with('siding:id,name')
+            ->orderByPivot('assigned_at')
+            ->orderBy('siding_shift_user.id')
+            ->get();
+
+        if ($assignedShifts === null || $assignedShifts->isEmpty()) {
+            abort(403, 'No shift and siding assignment found for your account.');
+        }
+
+        $firstAssignment = $assignedShifts->first();
+        $restrictToAssignedShift = $assignedShifts->count() === 1 && $firstAssignment !== null;
+
+        $validated = $request->validate([
+            'date' => 'required|date_format:Y-m-d',
+            'siding_id' => 'required|integer|exists:sidings,id',
+        ]);
+
+        $date = (string) $validated['date'];
+        $sidingId = (int) $validated['siding_id'];
+
+        if ($restrictToAssignedShift) {
+            $date = now()->format('Y-m-d');
+            $sidingId = (int) $firstAssignment->siding_id;
+        }
+
+        $allowedSidingIds = $assignedShifts->pluck('siding_id')->unique()->values();
+        if (! $allowedSidingIds->contains($sidingId)) {
+            abort(403, 'You are not allowed to access this siding.');
+        }
+
+        $allowedShiftsForSiding = $assignedShifts
+            ->where('siding_id', $sidingId)
+            ->pluck('sort_order')
+            ->map(fn ($v): int => (int) $v)
+            ->unique()
+            ->sort()
+            ->values();
+
+        if ($allowedShiftsForSiding->isEmpty()) {
+            abort(403, 'You are not allowed to access this siding.');
+        }
+
+        $activeShift = $this->shiftValidation->getCurrentShift();
+        $includedShifts = $allowedShiftsForSiding;
+        if ($activeShift !== null) {
+            $includedShifts = $allowedShiftsForSiding
+                ->filter(fn (int $shift): bool => $shift <= $activeShift)
+                ->values();
+        }
+
+        if ($includedShifts->isEmpty()) {
+            $includedShifts = $allowedShiftsForSiding->values();
+        }
+
+        $viewAllEntries = $user?->canViewAllRoadDispatchDailyVehicleEntries() ?? false;
+        $scopedToUserId = $viewAllEntries ? null : (int) $user->id;
+
+        $entries = DailyVehicleEntry::query()
+            ->where('entry_date', $date)
+            ->whereIn('shift', $includedShifts->all())
+            ->where('siding_id', $sidingId)
+            ->where('entry_type', DailyVehicleEntry::ENTRY_TYPE_RAILWAY_SIDING_EMPTY_WEIGHMENT)
+            ->when(
+                $scopedToUserId !== null,
+                fn ($q) => $q->where('created_by', $scopedToUserId),
+            )
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        /** @var array<int, int> $counts */
+        $counts = array_fill(0, 24, 0);
+
+        foreach ($entries as $entry) {
+            $reachedAt = $entry->reached_at;
+            if ($reachedAt === null || $reachedAt === '') {
+                continue;
+            }
+
+            try {
+                $hour = Carbon::parse((string) $reachedAt)->hour;
+            } catch (Throwable) {
+                continue;
+            }
+
+            if ($hour >= 0 && $hour <= 23) {
+                $counts[$hour] += 1;
+            }
+        }
+
+        $rows = [];
+        $total = 0;
+        for ($h = 0; $h < 24; $h++) {
+            $count = (int) ($counts[$h] ?? 0);
+            $total += $count;
+            $hh = mb_str_pad((string) $h, 2, '0', STR_PAD_LEFT);
+            $rows[] = [
+                'hour' => $hh,
+                'label' => $hh.':00–'.$hh.':59',
+                'count' => $count,
+            ];
+        }
+
+        return response()->json([
+            'now' => now()->toIso8601String(),
+            'date' => $date,
+            'siding_id' => $sidingId,
+            'shifts' => $includedShifts->all(),
+            'scoped_to_user_id' => $scopedToUserId,
+            'total' => $total,
+            'rows' => $rows,
         ]);
     }
 
@@ -292,26 +474,6 @@ final class RailwaySidingEmptyWeighmentController extends Controller
             }
 
             return back()->with('error', 'Entry does not belong to railway siding empty weighment.');
-        }
-
-        if ($entry->status !== 'draft') {
-            if ($request->wantsJson()) {
-                return response()->json(['message' => 'Cannot delete completed entries.'], 422);
-            }
-
-            return back()->with('error', 'Cannot delete completed entries.');
-        }
-
-        $hasData = ! empty($entry->vehicle_no) ||
-                   ! empty($entry->transport_name) ||
-                   ! is_null($entry->tare_wt_two);
-
-        if ($hasData) {
-            if ($request->wantsJson()) {
-                return response()->json(['message' => 'Cannot delete entries with data.'], 422);
-            }
-
-            return back()->with('error', 'Cannot delete entries with data.');
         }
 
         $entryId = $entry->id;
@@ -448,7 +610,7 @@ final class RailwaySidingEmptyWeighmentController extends Controller
 
     private function enforceStrictActiveShiftForEntry(DailyVehicleEntry $entry): void
     {
-        if ($this->canBypassShiftLock() || $this->canBypassShiftLockForSiding((int) $entry->siding_id)) {
+        if ($this->canBypassShiftLock()) {
             return;
         }
 

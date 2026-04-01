@@ -112,80 +112,60 @@ final class ExecutiveDashboardController extends Controller
     }
 
     /**
-     * Executive Yesterday tab data (date-wise, month-wise, FY-wise) for production and dispatch.
+     * Executive Yesterday tab data (Yesterday/Today/Week/Month/FY) for production and dispatch,
+     * plus Custom Range and FY summary tables.
+     *
+     * Anchor date is driven by the Executive tab date picker.
      *
      * @param  array<int>  $sidingIds
      * @return array{
-     *     date: string,
-     *     monthLabel: string,
+     *     anchorDate: string,
      *     fyLabel: string,
-     *     obProduction: array{dateWise: array{trips: int|null, qty: float|null}, monthWise: array{trips: int|null, qty: float|null}, fyWise: array{trips: int|null, qty: float|null}},
-     *     coalProduction: array{dateWise: array{trips: int|null, qty: float|null}, monthWise: array{trips: int|null, qty: float|null}, fyWise: array{trips: int|null, qty: float|null}},
-     *     coalDispatch: array{dateWise: array{trips: int|null, qty: float|null}, monthWise: array{trips: int|null, qty: float|null}, fyWise: array{trips: int|null, qty: float|null}},
-     *     rakeDispatch: array{dateWise: array{trips: int|null, qty: float|null}, monthWise: array{trips: int|null, qty: float|null}, fyWise: array{trips: int|null, qty: float|null}},
-     *     coalDispatchBySiding: array<int, array{sidingId: int, sidingName: string, dateWise: array{qty: float|null}, monthWise: array{qty: float}, fyWise: array{qty: float}}},
-     *     rakeDispatchBySiding: array<int, array{sidingId: int, sidingName: string, dateWise: array{trips: int, qty: float}, monthWise: array{trips: int, qty: float}, fyWise: array{trips: int, qty: float}}}
+     *     periods: array{
+     *         yesterday: array{from: string, to: string},
+     *         today: array{from: string, to: string},
+     *         week: array{from: string, to: string},
+     *         month: array{from: string, to: string},
+     *         fy: array{from: string, to: string}
+     *     },
+     *     roadDispatch: array{
+     *         totals: array{yesterday: array{trips: int, qty: float}, today: array{trips: int, qty: float}, week: array{trips: int, qty: float}, month: array{trips: int, qty: float}, fy: array{trips: int, qty: float}},
+     *         bySiding: array<int, array{sidingId: int, sidingName: string, totals: array{yesterday: array{trips: int, qty: float}, today: array{trips: int, qty: float}, week: array{trips: int, qty: float}, month: array{trips: int, qty: float}, fy: array{trips: int, qty: float}}}>
+     *     },
+     *     railDispatch: array{
+     *         totals: array{yesterday: array{rakes: int, qty: float}, today: array{rakes: int, qty: float}, week: array{rakes: int, qty: float}, month: array{rakes: int, qty: float}, fy: array{rakes: int, qty: float}},
+     *         bySiding: array<int, array{sidingId: int, sidingName: string, totals: array{yesterday: array{rakes: int, qty: float}, today: array{rakes: int, qty: float}, week: array{rakes: int, qty: float}, month: array{rakes: int, qty: float}, fy: array{rakes: int, qty: float}}}>
+     *     },
+     *     obProduction: array{yesterday: array{trips: int, qty: float}, today: array{trips: int, qty: float}, week: array{trips: int, qty: float}, month: array{trips: int, qty: float}, fy: array{trips: int, qty: float}},
+     *     coalProduction: array{yesterday: array{trips: int, qty: float}, today: array{trips: int, qty: float}, week: array{trips: int, qty: float}, month: array{trips: int, qty: float}, fy: array{trips: int, qty: float}},
+     *     customRange: array{
+     *         from: string,
+     *         to: string,
+     *         bySiding: array<int, array{sidingId: int, sidingName: string, road: array{trips: int, qty: float}, rail: array{rakes: int, qty: float}}>
+     *     },
+     *     fySummary: array{
+     *         rows: array<int, array{fy: string, production: array{obQty: float, coalQty: float}, roadDispatch: array{trips: int, qty: float}, railDispatch: array{rakes: int, qty: float}}>
+     *     }
      * }
      */
     public function buildExecutiveYesterdayData(array $sidingIds, CarbonInterface $anchorDate): array
     {
-        $anchor = Carbon::parse($anchorDate)->startOfDay();
-        $date = $anchor->toDateString();
-        $monthStart = $anchor->copy()->startOfMonth()->toDateString();
-        $monthEnd = $anchor->copy()->endOfMonth()->toDateString();
+        $tz = config('app.timezone', 'UTC');
+        $anchor = Carbon::parse($anchorDate, $tz)->startOfDay();
+
         $fyStart = $anchor->month >= 4
             ? $anchor->copy()->startOfDay()->setDate($anchor->year, 4, 1)
             : $anchor->copy()->startOfDay()->setDate($anchor->year - 1, 4, 1);
-        $fyEnd = $fyStart->copy()->addYear()->subDay();
+        $fyLabel = sprintf('FY %d-%02d', $fyStart->year, (int) $fyStart->copy()->addYear()->format('y'));
 
-        // Business rule: future dates should show no data.
-        if ($anchor->gt(today())) {
-            $sidingMap = Siding::query()
-                ->whereIn('id', $sidingIds)
-                ->orderBy('name')
-                ->pluck('name', 'id')
-                ->all();
-
-            return [
-                'date' => $date,
-                'monthLabel' => $anchor->format('F Y'),
-                'fyLabel' => sprintf('FY %d-%02d', $fyStart->year, (int) $fyStart->copy()->addYear()->format('y')),
-                'obProduction' => [
-                    'dateWise' => ['trips' => 0, 'qty' => 0.0],
-                    'monthWise' => ['trips' => 0, 'qty' => 0.0],
-                    'fyWise' => ['trips' => 0, 'qty' => 0.0],
-                ],
-                'coalProduction' => [
-                    'dateWise' => ['trips' => 0, 'qty' => 0.0],
-                    'monthWise' => ['trips' => 0, 'qty' => 0.0],
-                    'fyWise' => ['trips' => 0, 'qty' => 0.0],
-                ],
-                'coalDispatch' => [
-                    'dateWise' => ['trips' => null, 'qty' => null],
-                    'monthWise' => ['trips' => 0, 'qty' => 0.0],
-                    'fyWise' => ['trips' => 0, 'qty' => 0.0],
-                ],
-                'rakeDispatch' => [
-                    'dateWise' => ['trips' => 0, 'qty' => 0.0],
-                    'monthWise' => ['trips' => 0, 'qty' => 0.0],
-                    'fyWise' => ['trips' => 0, 'qty' => 0.0],
-                ],
-                'coalDispatchBySiding' => collect($sidingMap)->map(fn (string $name, int $id): array => [
-                    'sidingId' => $id,
-                    'sidingName' => $name,
-                    'dateWise' => ['qty' => null],
-                    'monthWise' => ['qty' => 0.0],
-                    'fyWise' => ['qty' => 0.0],
-                ])->values()->all(),
-                'rakeDispatchBySiding' => collect($sidingMap)->map(fn (string $name, int $id): array => [
-                    'sidingId' => $id,
-                    'sidingName' => $name,
-                    'dateWise' => ['trips' => 0, 'qty' => 0.0],
-                    'monthWise' => ['trips' => 0, 'qty' => 0.0],
-                    'fyWise' => ['trips' => 0, 'qty' => 0.0],
-                ])->values()->all(),
-            ];
-        }
+        $yesterday = $anchor->copy()->subDay();
+        $periods = [
+            'yesterday' => [$yesterday->toDateString(), $yesterday->toDateString()],
+            'today' => [$anchor->toDateString(), $anchor->toDateString()],
+            'week' => [$anchor->copy()->startOfWeek()->toDateString(), $anchor->toDateString()],
+            'month' => [$anchor->copy()->startOfMonth()->toDateString(), $anchor->toDateString()],
+            'fy' => [$fyStart->toDateString(), $anchor->toDateString()],
+        ];
 
         $sidingMap = Siding::query()
             ->whereIn('id', $sidingIds)
@@ -193,227 +173,407 @@ final class ExecutiveDashboardController extends Controller
             ->pluck('name', 'id')
             ->all();
 
-        $monthRow = HistoricalMine::query()
-            ->whereBetween('month', [$monthStart, $monthEnd])
-            ->selectRaw('coalesce(sum(trips_dispatched), 0) as dispatch_trips, coalesce(sum(dispatched_qty), 0) as dispatch_qty, coalesce(sum(ob_production_qty), 0) as ob_qty, coalesce(sum(coal_production_qty), 0) as coal_qty')
+        $emptyTripsQty = fn (): array => ['trips' => 0, 'qty' => 0.0];
+        $emptyRakesQty = fn (): array => ['rakes' => 0, 'qty' => 0.0];
+
+        $roadTotals = [];
+        $railTotals = [];
+        $obTotals = [];
+        $coalTotals = [];
+
+        foreach ($periods as $key => [$fromDate, $toDate]) {
+            $roadRow = SidingVehicleDispatch::query()
+                ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
+                ->whereRaw($this->dateOnlyBetweenSql('issued_on'), [$fromDate, $toDate])
+                ->selectRaw('count(*) as trips, coalesce(sum(mineral_weight), 0) as qty')
+                ->first();
+
+            $railRow = Rake::query()
+                ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
+                ->whereNotNull('loading_date')
+                ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$fromDate, $toDate])
+                ->selectRaw('count(*) as rakes, coalesce(sum(loaded_weight_mt), 0) as qty')
+                ->first();
+
+            $prodScope = ProductionEntry::query();
+            if ($sidingIds !== []) {
+                $prodScope->where(function ($query) use ($sidingIds): void {
+                    $query->whereIn('siding_id', $sidingIds)->orWhereNull('siding_id');
+                });
+            }
+
+            $obRow = (clone $prodScope)
+                ->where('type', ProductionEntry::TYPE_OB)
+                ->whereRaw($this->dateOnlyBetweenSql('date', true), [$fromDate, $toDate])
+                ->selectRaw('count(*) as trips, coalesce(sum(qty), 0) as qty')
+                ->first();
+
+            $coalRow = (clone $prodScope)
+                ->where('type', ProductionEntry::TYPE_COAL)
+                ->whereRaw($this->dateOnlyBetweenSql('date', true), [$fromDate, $toDate])
+                ->selectRaw('count(*) as trips, coalesce(sum(qty), 0) as qty')
+                ->first();
+
+            $roadTotals[$key] = [
+                'trips' => (int) ($roadRow?->trips ?? 0),
+                'qty' => round((float) ($roadRow?->qty ?? 0), 2),
+            ];
+            $railTotals[$key] = [
+                'rakes' => (int) ($railRow?->rakes ?? 0),
+                'qty' => round((float) ($railRow?->qty ?? 0), 2),
+            ];
+            $obTotals[$key] = [
+                'trips' => (int) ($obRow?->trips ?? 0),
+                'qty' => round((float) ($obRow?->qty ?? 0), 2),
+            ];
+            $coalTotals[$key] = [
+                'trips' => (int) ($coalRow?->trips ?? 0),
+                'qty' => round((float) ($coalRow?->qty ?? 0), 2),
+            ];
+        }
+
+        $roadBySiding = [];
+        $railBySiding = [];
+        foreach ($sidingMap as $sid => $name) {
+            $roadBySiding[$sid] = [
+                'sidingId' => (int) $sid,
+                'sidingName' => (string) $name,
+                'totals' => [
+                    'yesterday' => $emptyTripsQty(),
+                    'today' => $emptyTripsQty(),
+                    'week' => $emptyTripsQty(),
+                    'month' => $emptyTripsQty(),
+                    'fy' => $emptyTripsQty(),
+                ],
+            ];
+            $railBySiding[$sid] = [
+                'sidingId' => (int) $sid,
+                'sidingName' => (string) $name,
+                'totals' => [
+                    'yesterday' => $emptyRakesQty(),
+                    'today' => $emptyRakesQty(),
+                    'week' => $emptyRakesQty(),
+                    'month' => $emptyRakesQty(),
+                    'fy' => $emptyRakesQty(),
+                ],
+            ];
+        }
+
+        foreach ($periods as $key => [$fromDate, $toDate]) {
+            $roadRows = SidingVehicleDispatch::query()
+                ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
+                ->whereRaw($this->dateOnlyBetweenSql('issued_on'), [$fromDate, $toDate])
+                ->selectRaw('siding_id, count(*) as trips, coalesce(sum(mineral_weight), 0) as qty')
+                ->groupBy('siding_id')
+                ->get();
+
+            foreach ($roadRows as $r) {
+                $sid = (int) ($r->siding_id ?? 0);
+                if (! isset($roadBySiding[$sid])) {
+                    continue;
+                }
+                $roadBySiding[$sid]['totals'][$key] = [
+                    'trips' => (int) ($r->trips ?? 0),
+                    'qty' => round((float) ($r->qty ?? 0), 2),
+                ];
+            }
+
+            $railRows = Rake::query()
+                ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
+                ->whereNotNull('loading_date')
+                ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$fromDate, $toDate])
+                ->selectRaw('siding_id, count(*) as rakes, coalesce(sum(loaded_weight_mt), 0) as qty')
+                ->groupBy('siding_id')
+                ->get();
+
+            foreach ($railRows as $r) {
+                $sid = (int) ($r->siding_id ?? 0);
+                if (! isset($railBySiding[$sid])) {
+                    continue;
+                }
+                $railBySiding[$sid]['totals'][$key] = [
+                    'rakes' => (int) ($r->rakes ?? 0),
+                    'qty' => round((float) ($r->qty ?? 0), 2),
+                ];
+            }
+        }
+
+        $customFrom = $this->parseRequestDate(request(), 'executive_custom_from', $tz) ?? $anchor->copy()->subDays(6)->startOfDay();
+        $customTo = $this->parseRequestDate(request(), 'executive_custom_to', $tz) ?? $anchor->copy()->endOfDay();
+        if ($customFrom->gt($customTo)) {
+            [$customFrom, $customTo] = [$customTo->copy()->startOfDay(), $customFrom->copy()->endOfDay()];
+        }
+
+        $customFromDate = $customFrom->toDateString();
+        $customToDate = $customTo->toDateString();
+
+        $customRoad = SidingVehicleDispatch::query()
+            ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
+            ->whereRaw($this->dateOnlyBetweenSql('issued_on'), [$customFromDate, $customToDate])
+            ->selectRaw('siding_id, count(*) as trips, coalesce(sum(mineral_weight), 0) as qty')
+            ->groupBy('siding_id')
+            ->get()
+            ->keyBy('siding_id');
+
+        $customRail = Rake::query()
+            ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
+            ->whereNotNull('loading_date')
+            ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$customFromDate, $customToDate])
+            ->selectRaw('siding_id, count(*) as rakes, coalesce(sum(loaded_weight_mt), 0) as qty')
+            ->groupBy('siding_id')
+            ->get()
+            ->keyBy('siding_id');
+
+        $customBySiding = [];
+        foreach ($sidingMap as $sid => $name) {
+            $roadRow = $customRoad->get((int) $sid);
+            $railRow = $customRail->get((int) $sid);
+
+            $customBySiding[] = [
+                'sidingId' => (int) $sid,
+                'sidingName' => (string) $name,
+                'road' => [
+                    'trips' => (int) ($roadRow?->trips ?? 0),
+                    'qty' => round((float) ($roadRow?->qty ?? 0), 2),
+                ],
+                'rail' => [
+                    'rakes' => (int) ($railRow?->rakes ?? 0),
+                    'qty' => round((float) ($railRow?->qty ?? 0), 2),
+                ],
+            ];
+        }
+
+        $fySummaryRows = [];
+        $startFyYear = 2018;
+        $currentFyStart = $anchor->month >= 4
+            ? $anchor->copy()->setDate($anchor->year, 4, 1)->startOfDay()
+            : $anchor->copy()->setDate($anchor->year - 1, 4, 1)->startOfDay();
+        $endFyYear = (int) $currentFyStart->year;
+
+        for ($y = $startFyYear; $y <= $endFyYear; $y++) {
+            $rowFyStart = Carbon::create($y, 4, 1, 0, 0, 0, $tz)->startOfDay();
+            $rowFyEnd = $rowFyStart->copy()->addYear()->subDay()->endOfDay();
+            $fyRangeFrom = $rowFyStart->toDateString();
+            $fyRangeTo = $rowFyEnd->toDateString();
+            $rowLabel = sprintf('%d-%02d', $y, (int) $rowFyStart->copy()->addYear()->format('y'));
+
+            $roadRow = SidingVehicleDispatch::query()
+                ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
+                ->whereRaw($this->dateOnlyBetweenSql('issued_on'), [$fyRangeFrom, $fyRangeTo])
+                ->selectRaw('count(*) as trips, coalesce(sum(mineral_weight), 0) as qty')
+                ->first();
+
+            $railRow = Rake::query()
+                ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
+                ->whereNotNull('loading_date')
+                ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$fyRangeFrom, $fyRangeTo])
+                ->selectRaw('count(*) as rakes, coalesce(sum(loaded_weight_mt), 0) as qty')
+                ->first();
+
+            $prodScope = ProductionEntry::query();
+            if ($sidingIds !== []) {
+                $prodScope->where(function ($query) use ($sidingIds): void {
+                    $query->whereIn('siding_id', $sidingIds)->orWhereNull('siding_id');
+                });
+            }
+
+            $obRow = (clone $prodScope)
+                ->where('type', ProductionEntry::TYPE_OB)
+                ->whereRaw($this->dateOnlyBetweenSql('date', true), [$fyRangeFrom, $fyRangeTo])
+                ->selectRaw('coalesce(sum(qty), 0) as qty')
+                ->first();
+
+            $coalRow = (clone $prodScope)
+                ->where('type', ProductionEntry::TYPE_COAL)
+                ->whereRaw($this->dateOnlyBetweenSql('date', true), [$fyRangeFrom, $fyRangeTo])
+                ->selectRaw('coalesce(sum(qty), 0) as qty')
+                ->first();
+
+            $fySummaryRows[] = [
+                'fy' => $rowLabel,
+                'production' => [
+                    'obQty' => round((float) ($obRow?->qty ?? 0), 2),
+                    'coalQty' => round((float) ($coalRow?->qty ?? 0), 2),
+                ],
+                'roadDispatch' => [
+                    'trips' => (int) ($roadRow?->trips ?? 0),
+                    'qty' => round((float) ($roadRow?->qty ?? 0), 2),
+                ],
+                'railDispatch' => [
+                    'rakes' => (int) ($railRow?->rakes ?? 0),
+                    'qty' => round((float) ($railRow?->qty ?? 0), 2),
+                ],
+            ];
+        }
+
+        $tillDateFrom = Carbon::create($startFyYear, 4, 1, 0, 0, 0, $tz)->startOfDay();
+        $tillDateFromDate = $tillDateFrom->toDateString();
+        $tillDateToDate = $anchor->toDateString();
+
+        $tillRoad = SidingVehicleDispatch::query()
+            ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
+            ->whereRaw($this->dateOnlyBetweenSql('issued_on'), [$tillDateFromDate, $tillDateToDate])
+            ->selectRaw('count(*) as trips, coalesce(sum(mineral_weight), 0) as qty')
             ->first();
 
-        $fyHistoricalRow = HistoricalMine::query()
-            ->whereBetween('month', [$fyStart->toDateString(), $fyEnd->toDateString()])
-            ->selectRaw('coalesce(sum(trips_dispatched), 0) as dispatch_trips, coalesce(sum(dispatched_qty), 0) as dispatch_qty, coalesce(sum(ob_production_qty), 0) as ob_qty, coalesce(sum(coal_production_qty), 0) as coal_qty')
+        $tillRail = Rake::query()
+            ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
+            ->whereNotNull('loading_date')
+            ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$tillDateFromDate, $tillDateToDate])
+            ->selectRaw('count(*) as rakes, coalesce(sum(loaded_weight_mt), 0) as qty')
             ->first();
 
-        $productionEntryScope = ProductionEntry::query();
+        $prodScope = ProductionEntry::query();
         if ($sidingIds !== []) {
-            $productionEntryScope->where(function ($query) use ($sidingIds): void {
-                $query->whereIn('siding_id', $sidingIds)
-                    // Historical production imports can be mine-level (no siding_id),
-                    // and should still contribute to Yesterday month/FY totals.
-                    ->orWhereNull('siding_id');
+            $prodScope->where(function ($query) use ($sidingIds): void {
+                $query->whereIn('siding_id', $sidingIds)->orWhereNull('siding_id');
             });
         }
 
-        $obDate = (clone $productionEntryScope)
+        $tillOb = (clone $prodScope)
             ->where('type', ProductionEntry::TYPE_OB)
-            ->whereDate('date', $date)
-            ->selectRaw('count(*) as trips, coalesce(sum(qty), 0) as qty')
+            ->whereRaw($this->dateOnlyBetweenSql('date', true), [$tillDateFromDate, $tillDateToDate])
+            ->selectRaw('coalesce(sum(qty), 0) as qty')
             ->first();
 
-        $coalDate = (clone $productionEntryScope)
+        $tillCoal = (clone $prodScope)
             ->where('type', ProductionEntry::TYPE_COAL)
-            ->whereDate('date', $date)
-            ->selectRaw('count(*) as trips, coalesce(sum(qty), 0) as qty')
+            ->whereRaw($this->dateOnlyBetweenSql('date', true), [$tillDateFromDate, $tillDateToDate])
+            ->selectRaw('coalesce(sum(qty), 0) as qty')
             ->first();
 
-        $obMonth = (clone $productionEntryScope)
-            ->where('type', ProductionEntry::TYPE_OB)
-            ->whereBetween('date', [$monthStart, $monthEnd])
-            ->selectRaw('count(*) as trips, coalesce(sum(qty), 0) as qty')
-            ->first();
+        $fySummaryRows[] = [
+            'fy' => 'Till Date',
+            'production' => [
+                'obQty' => round((float) ($tillOb?->qty ?? 0), 2),
+                'coalQty' => round((float) ($tillCoal?->qty ?? 0), 2),
+            ],
+            'roadDispatch' => [
+                'trips' => (int) ($tillRoad?->trips ?? 0),
+                'qty' => round((float) ($tillRoad?->qty ?? 0), 2),
+            ],
+            'railDispatch' => [
+                'rakes' => (int) ($tillRail?->rakes ?? 0),
+                'qty' => round((float) ($tillRail?->qty ?? 0), 2),
+            ],
+        ];
 
-        $coalMonth = (clone $productionEntryScope)
-            ->where('type', ProductionEntry::TYPE_COAL)
-            ->whereBetween('date', [$monthStart, $monthEnd])
-            ->selectRaw('count(*) as trips, coalesce(sum(qty), 0) as qty')
-            ->first();
+        $cutover = Carbon::create(2026, 3, 20, 0, 0, 0, $tz)->startOfDay();
+        $fyChartRows = [];
+        for ($y = $startFyYear; $y <= $endFyYear; $y++) {
+            $rowFyStart = Carbon::create($y, 4, 1, 0, 0, 0, $tz)->startOfDay();
+            $rowFyEnd = $rowFyStart->copy()->addYear()->subDay()->endOfDay();
+            $rowLabel = sprintf('%d-%02d', $y, (int) $rowFyStart->copy()->addYear()->format('y'));
 
-        $obFy = (clone $productionEntryScope)
-            ->where('type', ProductionEntry::TYPE_OB)
-            ->whereBetween('date', [$fyStart->toDateString(), $fyEnd->toDateString()])
-            ->selectRaw('count(*) as trips, coalesce(sum(qty), 0) as qty')
-            ->first();
+            $preFrom = $rowFyStart->copy();
+            $preTo = $rowFyEnd->copy()->min($cutover);
+            $postFrom = $rowFyStart->copy()->max($cutover->copy()->addDay());
+            $postTo = $rowFyEnd->copy();
 
-        $coalFy = (clone $productionEntryScope)
-            ->where('type', ProductionEntry::TYPE_COAL)
-            ->whereBetween('date', [$fyStart->toDateString(), $fyEnd->toDateString()])
-            ->selectRaw('count(*) as trips, coalesce(sum(qty), 0) as qty')
-            ->first();
+            $preValid = $preFrom->lte($preTo);
+            $postValid = $postFrom->lte($postTo);
 
-        $rakeScope = Rake::query()
-            ->whereNotNull('loading_date');
-        if ($sidingIds !== []) {
-            $rakeScope->whereIn('siding_id', $sidingIds);
+            // Production from ProductionEntry (no cutover rule).
+            $prodScope = ProductionEntry::query();
+            if ($sidingIds !== []) {
+                $prodScope->where(function ($query) use ($sidingIds): void {
+                    $query->whereIn('siding_id', $sidingIds)->orWhereNull('siding_id');
+                });
+            }
+
+            $obRow = (clone $prodScope)
+                ->where('type', ProductionEntry::TYPE_OB)
+                ->whereRaw($this->dateOnlyBetweenSql('date', true), [$rowFyStart->toDateString(), $rowFyEnd->toDateString()])
+                ->selectRaw('coalesce(sum(qty), 0) as qty')
+                ->first();
+
+            $coalRow = (clone $prodScope)
+                ->where('type', ProductionEntry::TYPE_COAL)
+                ->whereRaw($this->dateOnlyBetweenSql('date', true), [$rowFyStart->toDateString(), $rowFyEnd->toDateString()])
+                ->selectRaw('coalesce(sum(qty), 0) as qty')
+                ->first();
+
+            // Dispatch qty: historical_mines up to cutover, live tables after cutover.
+            $preRoadQty = 0.0;
+            $preRailQty = 0.0;
+            if ($preValid) {
+                $preRoadQty = (float) HistoricalMine::query()
+                    ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
+                    ->whereBetween('month', [$preFrom->toDateString(), $preTo->toDateString()])
+                    ->selectRaw('coalesce(sum(received_qty), 0) as qty')
+                    ->value('qty');
+
+                $preRailQty = (float) HistoricalMine::query()
+                    ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
+                    ->whereBetween('month', [$preFrom->toDateString(), $preTo->toDateString()])
+                    ->selectRaw('coalesce(sum(dispatched_qty), 0) as qty')
+                    ->value('qty');
+            }
+
+            $postRoadQty = 0.0;
+            $postRailQty = 0.0;
+            if ($postValid) {
+                // DailyVehicleEntry: qty per row = gross_wt - tare_wt, date = reached_at.
+                $postRoadQty = (float) DailyVehicleEntry::query()
+                    ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
+                    ->where('entry_type', DailyVehicleEntry::ENTRY_TYPE_ROAD_DISPATCH)
+                    ->whereRaw($this->dateOnlyBetweenSql('reached_at'), [$postFrom->toDateString(), $postTo->toDateString()])
+                    ->selectRaw('coalesce(sum(coalesce(gross_wt, 0) - coalesce(tare_wt, 0)), 0) as qty')
+                    ->value('qty');
+
+                $postRailQty = (float) Rake::query()
+                    ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
+                    ->whereNotNull('loading_date')
+                    ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$postFrom->toDateString(), $postTo->toDateString()])
+                    ->selectRaw('coalesce(sum(loaded_weight_mt), 0) as qty')
+                    ->value('qty');
+            }
+
+            $fyChartRows[] = [
+                'fy' => $rowLabel,
+                'production' => [
+                    'obQty' => round((float) ($obRow?->qty ?? 0), 2),
+                    'coalQty' => round((float) ($coalRow?->qty ?? 0), 2),
+                ],
+                'dispatch' => [
+                    'roadQty' => round($preRoadQty + $postRoadQty, 2),
+                    'railQty' => round($preRailQty + $postRailQty, 2),
+                ],
+            ];
         }
 
-        $rakeDate = (clone $rakeScope)
-            ->whereDate('loading_date', $date)
-            ->selectRaw('count(*) as trips, coalesce(sum(loaded_weight_mt), 0) as qty')
-            ->first();
-
-        $rakeMonth = (clone $rakeScope)
-            ->whereBetween('loading_date', [$monthStart, $monthEnd])
-            ->selectRaw('count(*) as trips, coalesce(sum(loaded_weight_mt), 0) as qty')
-            ->first();
-
-        $rakeFy = (clone $rakeScope)
-            ->whereBetween('loading_date', [$fyStart->toDateString(), $fyEnd->toDateString()])
-            ->selectRaw('count(*) as trips, coalesce(sum(loaded_weight_mt), 0) as qty')
-            ->first();
-
-        $monthDispatchBySiding = HistoricalMine::query()
-            ->whereBetween('month', [$monthStart, $monthEnd])
-            ->whereIn('siding_id', array_keys($sidingMap))
-            ->selectRaw('siding_id, coalesce(sum(dispatched_qty), 0) as qty')
-            ->groupBy('siding_id')
-            ->pluck('qty', 'siding_id')
-            ->all();
-
-        $fyDispatchBySiding = HistoricalMine::query()
-            ->whereBetween('month', [$fyStart->toDateString(), $fyEnd->toDateString()])
-            ->whereIn('siding_id', array_keys($sidingMap))
-            ->selectRaw('siding_id, coalesce(sum(dispatched_qty), 0) as qty')
-            ->groupBy('siding_id')
-            ->pluck('qty', 'siding_id')
-            ->all();
-
-        $rakeDateBySiding = (clone $rakeScope)
-            ->whereDate('loading_date', $date)
-            ->selectRaw('siding_id, count(*) as trips, coalesce(sum(loaded_weight_mt), 0) as qty')
-            ->groupBy('siding_id')
-            ->get()
-            ->keyBy('siding_id');
-
-        $rakeMonthBySiding = (clone $rakeScope)
-            ->whereBetween('loading_date', [$monthStart, $monthEnd])
-            ->selectRaw('siding_id, count(*) as trips, coalesce(sum(loaded_weight_mt), 0) as qty')
-            ->groupBy('siding_id')
-            ->get()
-            ->keyBy('siding_id');
-
-        $rakeFyBySiding = (clone $rakeScope)
-            ->whereBetween('loading_date', [$fyStart->toDateString(), $fyEnd->toDateString()])
-            ->selectRaw('siding_id, count(*) as trips, coalesce(sum(loaded_weight_mt), 0) as qty')
-            ->groupBy('siding_id')
-            ->get()
-            ->keyBy('siding_id');
-
-        $monthDispatchTrips = (int) ($monthRow?->dispatch_trips ?? 0);
-        $monthDispatchQty = (float) ($monthRow?->dispatch_qty ?? 0);
-        $monthObQty = (float) ($monthRow?->ob_qty ?? 0);
-        $monthCoalQty = (float) ($monthRow?->coal_qty ?? 0);
-
-        $fyDispatchTrips = (int) ($fyHistoricalRow?->dispatch_trips ?? 0);
-        $fyDispatchQty = (float) ($fyHistoricalRow?->dispatch_qty ?? 0);
-        $fyHistoricalObQty = (float) ($fyHistoricalRow?->ob_qty ?? 0);
-        $fyHistoricalCoalQty = (float) ($fyHistoricalRow?->coal_qty ?? 0);
-
-        $fyObQty = $fyHistoricalObQty > 0 ? $fyHistoricalObQty : (float) ($obFy?->qty ?? 0);
-        $fyCoalQty = $fyHistoricalCoalQty > 0 ? $fyHistoricalCoalQty : (float) ($coalFy?->qty ?? 0);
-
         return [
-            'date' => $date,
-            'monthLabel' => $anchor->format('F Y'),
-            'fyLabel' => sprintf('FY %d-%02d', $fyStart->year, (int) $fyStart->copy()->addYear()->format('y')),
-            'obProduction' => [
-                'dateWise' => [
-                    'trips' => (int) ($obDate?->trips ?? 0),
-                    'qty' => round((float) ($obDate?->qty ?? 0), 2),
-                ],
-                'monthWise' => [
-                    'trips' => (int) ($obMonth?->trips ?? 0),
-                    'qty' => round($monthObQty > 0 ? $monthObQty : (float) ($obMonth?->qty ?? 0), 2),
-                ],
-                'fyWise' => [
-                    'trips' => (int) ($obFy?->trips ?? 0),
-                    'qty' => round($fyObQty, 2),
-                ],
+            'anchorDate' => $anchor->toDateString(),
+            'fyLabel' => $fyLabel,
+            'periods' => [
+                'yesterday' => ['from' => $periods['yesterday'][0], 'to' => $periods['yesterday'][1]],
+                'today' => ['from' => $periods['today'][0], 'to' => $periods['today'][1]],
+                'week' => ['from' => $periods['week'][0], 'to' => $periods['week'][1]],
+                'month' => ['from' => $periods['month'][0], 'to' => $periods['month'][1]],
+                'fy' => ['from' => $periods['fy'][0], 'to' => $periods['fy'][1]],
             ],
-            'coalProduction' => [
-                'dateWise' => [
-                    'trips' => (int) ($coalDate?->trips ?? 0),
-                    'qty' => round((float) ($coalDate?->qty ?? 0), 2),
-                ],
-                'monthWise' => [
-                    'trips' => (int) ($coalMonth?->trips ?? 0),
-                    'qty' => round($monthCoalQty > 0 ? $monthCoalQty : (float) ($coalMonth?->qty ?? 0), 2),
-                ],
-                'fyWise' => [
-                    'trips' => (int) ($coalFy?->trips ?? 0),
-                    'qty' => round($fyCoalQty, 2),
-                ],
+            'roadDispatch' => [
+                'totals' => $roadTotals,
+                'bySiding' => array_values($roadBySiding),
             ],
-            'coalDispatch' => [
-                'dateWise' => [
-                    'trips' => null,
-                    'qty' => null,
-                ],
-                'monthWise' => [
-                    'trips' => $monthDispatchTrips,
-                    'qty' => round($monthDispatchQty, 2),
-                ],
-                'fyWise' => [
-                    'trips' => $fyDispatchTrips,
-                    'qty' => round($fyDispatchQty, 2),
-                ],
+            'railDispatch' => [
+                'totals' => $railTotals,
+                'bySiding' => array_values($railBySiding),
             ],
-            'rakeDispatch' => [
-                'dateWise' => [
-                    'trips' => (int) ($rakeDate?->trips ?? 0),
-                    'qty' => round((float) ($rakeDate?->qty ?? 0), 2),
-                ],
-                'monthWise' => [
-                    'trips' => (int) ($rakeMonth?->trips ?? 0),
-                    'qty' => round((float) ($rakeMonth?->qty ?? 0), 2),
-                ],
-                'fyWise' => [
-                    'trips' => (int) ($rakeFy?->trips ?? 0),
-                    'qty' => round((float) ($rakeFy?->qty ?? 0), 2),
-                ],
+            'obProduction' => $obTotals,
+            'coalProduction' => $coalTotals,
+            'customRange' => [
+                'from' => $customFromDate,
+                'to' => $customToDate,
+                'bySiding' => $customBySiding,
             ],
-            'coalDispatchBySiding' => collect($sidingMap)->map(function (string $name, int $id) use ($monthDispatchBySiding, $fyDispatchBySiding): array {
-                $monthQty = (float) ($monthDispatchBySiding[$id] ?? 0);
-                $fyQty = (float) ($fyDispatchBySiding[$id] ?? 0);
-
-                return [
-                    'sidingId' => $id,
-                    'sidingName' => $name,
-                    'dateWise' => ['qty' => null],
-                    'monthWise' => ['qty' => round($monthQty, 2)],
-                    'fyWise' => ['qty' => round($fyQty, 2)],
-                ];
-            })->values()->all(),
-            'rakeDispatchBySiding' => collect($sidingMap)->map(function (string $name, int $id) use ($rakeDateBySiding, $rakeMonthBySiding, $rakeFyBySiding): array {
-                $dateRow = $rakeDateBySiding->get($id);
-                $monthRow = $rakeMonthBySiding->get($id);
-                $fyRow = $rakeFyBySiding->get($id);
-
-                return [
-                    'sidingId' => $id,
-                    'sidingName' => $name,
-                    'dateWise' => [
-                        'trips' => (int) ($dateRow?->trips ?? 0),
-                        'qty' => round((float) ($dateRow?->qty ?? 0), 2),
-                    ],
-                    'monthWise' => [
-                        'trips' => (int) ($monthRow?->trips ?? 0),
-                        'qty' => round((float) ($monthRow?->qty ?? 0), 2),
-                    ],
-                    'fyWise' => [
-                        'trips' => (int) ($fyRow?->trips ?? 0),
-                        'qty' => round((float) ($fyRow?->qty ?? 0), 2),
-                    ],
-                ];
-            })->values()->all(),
+            'fySummary' => [
+                'rows' => $fySummaryRows,
+            ],
+            'fyCharts' => [
+                'cutoverDate' => $cutover->toDateString(),
+                'rows' => $fyChartRows,
+            ],
         ];
     }
 
@@ -2522,7 +2682,7 @@ final class ExecutiveDashboardController extends Controller
         $tz = config('app.timezone', 'UTC');
         $value = $request->query('executive_yesterday_date') ?? $request->input('executive_yesterday_date');
         if ($value === null || $value === '') {
-            return now($tz)->subDay()->startOfDay();
+            return now($tz)->startOfDay();
         }
 
         return Carbon::parse((string) $value, $tz)->startOfDay();
