@@ -143,7 +143,9 @@ export default function VehicleEntryTable({
     (e) => e.status === 'completed' && entryNetWeightMt(e) > 0,
   ).length;
 
-  const totalNetWeight = entries.reduce((sum, entry) => sum + entryNetWeightMt(entry), 0);
+  const totalNetWeight = entries
+    .filter((e) => e.status === 'completed')
+    .reduce((sum, entry) => sum + Math.max(0, entryNetWeightMt(entry)), 0);
 
   const allowAddInteraction = canCreate && canAddAnotherRow;
 
