@@ -325,6 +325,7 @@ return [
         'railway-siding-empty-weighment.update' => 'sections.railway_siding_empty_weighment.update',
         'railway-siding-empty-weighment.destroy' => 'sections.railway_siding_empty_weighment.delete',
         'railway-siding-empty-weighment.complete' => 'sections.railway_siding_empty_weighment.update',
+        'railway-siding-empty-weighment.hourly-summary' => 'sections.railway_siding_empty_weighment.view',
         'railway-siding-empty-weighment.export' => 'sections.railway_siding_empty_weighment.view',
 
         // Production Coal / OB

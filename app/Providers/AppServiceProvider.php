@@ -210,6 +210,7 @@ final class AppServiceProvider extends ServiceProvider
             'shift-timings-edit',
             'nav-opening-coal-stock',
             'opening-coal-stock-edit',
+            'opening-coal-stock-fix',
             'nav-vehicle-workorders',
             'vehicle-workorders-filters',
             'vehicle-workorders-table',
@@ -249,6 +250,9 @@ final class AppServiceProvider extends ServiceProvider
             'daily-vehicle-entries-add-five-rows-pack',
             'daily-vehicle-entries-hourly-record',
             'daily-vehicle-entries-hourly-record-export',
+            'railway-empty-weighment-table-fullscreen',
+            'railway-empty-weighment-add-five-rows-pack',
+            'railway-empty-weighment-hourly-record',
             'historical-mines-filter-apply',
             'historical-mines-filter-clear',
         ]);

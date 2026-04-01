@@ -50,8 +50,7 @@ final class OpeningCoalStockController extends Controller
         ]);
     }
 
-    public function update(Request $request, Siding $siding): RedirectResponse
-    {
+    public function update(Request $request, Siding $siding): RedirectResponse{
         $validated = $request->validate([
             'opening_balance_mt' => 'required|numeric|min:0',
             'as_of_date' => 'nullable|date',
@@ -60,8 +59,8 @@ final class OpeningCoalStockController extends Controller
 
         DB::transaction(function () use ($validated, $siding) {
 
-            // 1. Save in opening balance table (your existing logic)
-            SidingOpeningBalance::query()->updateOrCreate(
+             // 1. Save in opening balance table (your existing logic)
+             SidingOpeningBalance::query()->updateOrCreate(
                 ['siding_id' => $siding->id],
                 [
                     'opening_balance_mt' => $validated['opening_balance_mt'],
@@ -70,38 +69,38 @@ final class OpeningCoalStockController extends Controller
                 ]
             );
 
-            // 2. Get latest ledger (lock for safety)
+            // 1. Lock latest row (to prevent race condition)
             $lastLedger = StockLedger::query()
                 ->where('siding_id', $siding->id)
                 ->lockForUpdate()
                 ->latest('id')
                 ->first();
-
-            $current = $lastLedger
-                ? (float) $lastLedger->closing_balance_mt
-                : 0.0;
-
-            $newBalance = (float) $validated['opening_balance_mt'];
-
-            $delta = round($newBalance - $current, 2);
-
-            // nothing to change
-            if ($delta === 0) {
-                return;
-            }
-
-            // 3. Insert ledger entry
+        
+            $openingInput = (float) $validated['opening_balance_mt'];
+        
+            // 2. Calculate TODAY's stock activity ONLY
+            $todayTotal = StockLedger::query()
+                ->where('siding_id', $siding->id)
+                ->whereDate('created_at', today())
+                ->sum('quantity_mt');
+            
+            // 3. New correct balance
+            $newBalance = $openingInput + $todayTotal;
+        
+            // 4. Opening for this entry = yesterday closing (input)
+            $openingBalance = $openingInput;
+            // 5. Insert correction
             StockLedger::create([
                 'siding_id' => $siding->id,
                 'transaction_type' => 'correction',
-                'quantity_mt' => $delta,
-                'opening_balance_mt' => $current,
+                'quantity_mt' => $openingInput, // we are adding base
+                'opening_balance_mt' => $todayTotal, // optional (see note below)
                 'closing_balance_mt' => $newBalance,
-                'reference_number' => 'OPENING-RESET-'.now()->format('Ymd'),
-                'remarks' => 'Opening balance initialized',
+                'reference_number' => 'OPENING-ADD-' . now()->format('YmdHis'),
+                'remarks' => 'Opening balance (yesterday closing)',
                 'created_by' => auth()->id(),
             ]);
-
+        
             DB::afterCommit(function () use ($siding, $newBalance) {
                 event(new \App\Events\CoalStockUpdated($siding->id, $newBalance));
             });
@@ -109,5 +108,76 @@ final class OpeningCoalStockController extends Controller
 
         return redirect()->route('master-data.opening-coal-stock.index')
             ->with('success', 'Opening coal stock updated successfully.');
+    }
+
+
+    public function fixWrongOpening(Siding $siding): RedirectResponse
+    {
+        DB::transaction(function () use ($siding) {
+    
+            // 1. Lock ALL ledger rows for this siding (important)
+            $ledgers = StockLedger::query()
+                ->where('siding_id', $siding->id)
+                ->whereDate('created_at',today())
+                ->lockForUpdate()
+                ->orderBy('id')
+                ->get();
+            // dd($ledgers);
+            // 2. Find reset entry
+            $reset = $ledgers
+            ->filter(function ($row) {
+                if(is_null($row->reference_number)){
+                    
+                }else{
+                    return str_starts_with($row->reference_number, 'OPENING-RESET-');
+                }
+            })
+            ->sortByDesc('id')   
+            ->first();
+    
+            if (! $reset) {
+                throw new \Exception('No reset entry found.');
+            }
+    
+            // 3. Split ledger
+            $beforeReset = $ledgers->where('id', '<', $reset->id)->sum('quantity_mt');
+            $afterReset  = $ledgers->where('id', '>', $reset->id)->sum('quantity_mt');
+    
+            $resetValue = (float) $reset->closing_balance_mt;
+    
+            // 4. Compute correct final balance
+            $correctFinal = $resetValue + $beforeReset + $afterReset;
+    
+            // 5. Get current (last row)
+            $lastLedger = $ledgers->last();
+            $current = (float) $lastLedger->closing_balance_mt;
+    
+            // 6. Calculate delta (IMPORTANT)
+            $delta = round($correctFinal - $current, 2);
+    
+            if ($delta == 0) {
+                return;
+            }
+    
+            $newBalance = $current + $delta;
+            // dd($newBalance,$current,$delta,$beforeReset,$afterReset,$correctFinal);
+            // 7. Insert correction entry
+            StockLedger::create([
+                'siding_id' => $siding->id,
+                'transaction_type' => 'correction',
+                'quantity_mt' => $delta,
+                'opening_balance_mt' => $current,
+                'closing_balance_mt' => $newBalance,
+                'reference_number' => 'PAKUR-FIX-' . now()->format('YmdHis'),
+                'remarks' => 'Fix incorrect opening reset placement',
+                'created_by' => auth()->id(),
+            ]);
+    
+            DB::afterCommit(function () use ($siding, $newBalance) {
+                event(new \App\Events\CoalStockUpdated($siding->id, $newBalance));
+            });
+        });
+    
+        return back()->with('success', 'Pakur stock fixed successfully.');
     }
 }

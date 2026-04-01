@@ -3,6 +3,14 @@ import ShiftLockOverlay from '@/components/ShiftLockOverlay';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import {
     Select,
@@ -11,16 +19,30 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { useCan } from '@/hooks/use-can';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { Calendar, Download, Plus } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import ShiftTabs from './shift-tabs';
 import VehicleEntryTable from './vehicle-entry-table';
 
-function toIsoDate(d: Date): string {
-    return d.toISOString().split('T')[0]!;
+/** “Add 5 rows” adds one editable draft plus this many non-interactive rows under it. */
+const PLAIN_ROWS_AFTER_ADD_FIVE = 4;
+
+/**
+ * UI-only toggle: keep the hourly summary endpoint + code, but hide it from the page.
+ * (Requested: "do not delete it just hide it")
+ */
+const SHOW_HOURLY_RECORD = false;
+
+/** YYYY-MM-DD in local time (matches server `date` better than UTC `toISOString().slice(0,10)`). */
+function toLocalYmd(d: Date): string {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
 }
 
 function parseTimeParts(time: string): { hour: number; minute: number } {
@@ -87,11 +109,35 @@ interface EmptyWeighmentEntry {
     reached_at: string;
     created_at: string;
     status: 'draft' | 'completed';
+    inline_submitted_at?: string | null;
 }
 
 interface Siding {
     id: number;
     name: string;
+}
+
+function buildLocalDraftEntry(
+    id: number,
+    siding: Siding,
+    entryDate: string,
+    shift: number,
+): EmptyWeighmentEntry {
+    const nowIso = new Date().toISOString();
+    return {
+        id,
+        siding_id: siding.id,
+        siding: { id: siding.id, name: siding.name },
+        entry_date: entryDate,
+        shift,
+        vehicle_no: null,
+        transport_name: null,
+        tare_wt_two: null,
+        reached_at: nowIso,
+        created_at: nowIso,
+        status: 'draft',
+        inline_submitted_at: null,
+    };
 }
 
 interface ShiftStatus {
@@ -139,6 +185,15 @@ interface Props {
     shiftGraceEndsAtIso?: string | null;
 }
 
+interface InertiaAuthPageProps {
+    auth?: {
+        user?: {
+            id?: number;
+            name?: string;
+        } | null;
+    };
+}
+
 export default function RailwaySidingEmptyWeighmentIndex({
     entries: entriesProp,
     date,
@@ -155,6 +210,12 @@ export default function RailwaySidingEmptyWeighmentIndex({
     timeEditableShift = null,
     shiftGraceEndsAtIso = null,
 }: Props) {
+    const page = usePage<InertiaAuthPageProps>();
+    const canCreate = useCan('sections.railway_siding_empty_weighment.create');
+    const canUpdate = useCan('sections.railway_siding_empty_weighment.update');
+    const canDelete = useCan('sections.railway_siding_empty_weighment.delete');
+    const canExport = useCan('sections.railway_siding_empty_weighment.view');
+
     const [entries, setEntries] = useState(() =>
         Array.isArray(entriesProp) ? entriesProp : [],
     );
@@ -168,9 +229,19 @@ export default function RailwaySidingEmptyWeighmentIndex({
         String(activeShift),
     );
     const [isExporting, setIsExporting] = useState(false);
-    const [isAddingRow, setIsAddingRow] = useState(false);
+    const [hourlyOpen, setHourlyOpen] = useState(false);
+    const [hourlyLoading, setHourlyLoading] = useState(false);
+    const [hourlyError, setHourlyError] = useState<string | null>(null);
+    const [hourlyLastUpdatedIso, setHourlyLastUpdatedIso] = useState<
+        string | null
+    >(null);
+    const [hourlyRows, setHourlyRows] = useState<
+        { hour: string; label: string; count: number }[]
+    >([]);
     const [addRowError, setAddRowError] = useState<string | null>(null);
-    const addingRowRef = useRef(false);
+    /** Plain spacer rows directly under the last table row (after “Add 5 rows”). */
+    const [plainRowsAfterLastEntry, setPlainRowsAfterLastEntry] = useState(0);
+    const localDraftIdRef = useRef(0);
 
     const isShiftLocked = !!shiftLock?.isLocked && !canBypassShiftLock;
 
@@ -180,13 +251,23 @@ export default function RailwaySidingEmptyWeighmentIndex({
         warning: boolean;
     } | null>(null);
 
+    const [shiftSummaryState, setShiftSummaryState] = useState(shiftSummary);
+
     const effectiveSidingId = selectedSidingId ?? firstSidingId;
     const entriesForSiding =
         effectiveSidingId == null
             ? entries
             : entries.filter((e) => e.siding_id === effectiveSidingId);
 
-    const isSelectedToday = selectedDate === toIsoDate(new Date());
+    const lastEntryForSiding =
+        entriesForSiding.length > 0
+            ? entriesForSiding[entriesForSiding.length - 1]
+            : undefined;
+    const canAddAnotherRow =
+        entriesForSiding.length === 0 ||
+        lastEntryForSiding?.inline_submitted_at != null;
+
+    const isSelectedToday = selectedDate === toLocalYmd(new Date());
     const lockTabsByTime = !canBypassShiftLock && isSelectedToday;
     const tableLockedByWrongShift =
         lockTabsByTime &&
@@ -195,8 +276,23 @@ export default function RailwaySidingEmptyWeighmentIndex({
     const effectiveTableLocked = isShiftLocked || tableLockedByWrongShift;
 
     useEffect(() => {
-        setEntries(Array.isArray(entriesProp) ? entriesProp : []);
+        const raw = Array.isArray(entriesProp) ? entriesProp : [];
+        setEntries(
+            raw.map((e) => ({
+                ...e,
+                inline_submitted_at: e.inline_submitted_at ?? null,
+            })),
+        );
+        setPlainRowsAfterLastEntry(0);
     }, [entriesProp]);
+
+    useEffect(() => {
+        setPlainRowsAfterLastEntry(0);
+    }, [effectiveSidingId]);
+
+    useEffect(() => {
+        setShiftSummaryState(shiftSummary);
+    }, [shiftSummary]);
 
     useEffect(() => {
         setActiveShiftState(activeShift);
@@ -222,7 +318,7 @@ export default function RailwaySidingEmptyWeighmentIndex({
     useEffect(() => {
         if (canBypassShiftLock) return;
         const now = new Date();
-        if (toIsoDate(now) !== selectedDate) {
+        if (toLocalYmd(now) !== selectedDate) {
             setShiftCountdown(null);
             return;
         }
@@ -233,7 +329,7 @@ export default function RailwaySidingEmptyWeighmentIndex({
 
         const end = shiftGraceEndsAtIso
             ? new Date(shiftGraceEndsAtIso)
-            : shiftGraceEndAt(now, activeShiftState, shiftTimes);
+            : shiftGraceEndAt(now, timeEditableShift, shiftTimes);
         if (!end || Number.isNaN(end.getTime())) {
             setShiftCountdown(null);
             return;
@@ -315,88 +411,200 @@ export default function RailwaySidingEmptyWeighmentIndex({
         });
     };
 
-    const handleAddRow = async (count: number = 1) => {
-        if (addingRowRef.current) return;
-        addingRowRef.current = true;
+    const handleAddRow = useCallback(
+        (count: number = 1) => {
+            if (!canAddAnotherRow) {
+                alert('Submit the last row before adding another row.');
+                return;
+            }
+            if (effectiveTableLocked) {
+                alert(
+                    shiftLock?.message ||
+                        'Your shift is not active yet (or has ended).',
+                );
+                return;
+            }
+
+            const targetSidingId = effectiveSidingId ?? sidings[0]?.id;
+            const siding =
+                sidings.find((s) => s.id === targetSidingId) ?? sidings[0];
+            if (siding == null) {
+                setAddRowError('No siding selected.');
+                return;
+            }
+
+            setAddRowError(null);
+            setPlainRowsAfterLastEntry(0);
+
+            const drafts: EmptyWeighmentEntry[] = [];
+            for (let i = 0; i < count; i++) {
+                localDraftIdRef.current -= 1;
+                drafts.push(
+                    buildLocalDraftEntry(
+                        localDraftIdRef.current,
+                        siding,
+                        selectedDate,
+                        activeShiftState,
+                    ),
+                );
+            }
+            setEntries((prev) => [...prev, ...drafts]);
+        },
+        [
+            activeShiftState,
+            canAddAnotherRow,
+            effectiveSidingId,
+            effectiveTableLocked,
+            selectedDate,
+            shiftLock?.message,
+            sidings,
+        ],
+    );
+
+    const handleAddFiveRows = useCallback(() => {
+        if (!canAddAnotherRow) {
+            alert('Submit the last row before adding another row.');
+            return;
+        }
         if (effectiveTableLocked) {
             alert(
                 shiftLock?.message ||
                     'Your shift is not active yet (or has ended).',
             );
-            addingRowRef.current = false;
+            return;
+        }
+
+        const targetSidingId = effectiveSidingId ?? sidings[0]?.id;
+        const siding =
+            sidings.find((s) => s.id === targetSidingId) ?? sidings[0];
+        if (siding == null) {
+            setAddRowError('No siding selected.');
             return;
         }
 
         setAddRowError(null);
-        setIsAddingRow(true);
-        const newEntries: EmptyWeighmentEntry[] = [];
-        const payload = {
-            siding_id: effectiveSidingId ?? sidings[0]?.id ?? 1,
-            entry_date: selectedDate,
-            shift: activeShiftState,
-        };
-        try {
-            for (let i = 0; i < count; i++) {
-                const res = await fetch('/railway-siding-empty-weighment', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Accept: 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest',
-                        ...getCsrfHeaders(),
-                    },
-                    body: JSON.stringify(payload),
-                    credentials: 'include',
-                });
-                const data = await res.json().catch(() => ({}));
-                if (!res.ok) {
-                    const msg =
-                        (data as { message?: string }).message ??
-                        ((data as { errors?: Record<string, string[]> }).errors
-                            ? Object.values(
-                                  (data as { errors: Record<string, string[]> })
-                                      .errors,
-                              )
-                                  .flat()
-                                  .join(', ')
-                            : res.statusText);
-                    setAddRowError(msg ?? 'Failed to add row');
-                    if (res.status === 419) {
-                        setAddRowError(
-                            'Session expired. Please refresh the page.',
-                        );
-                    }
-                    addingRowRef.current = false;
-                    return;
-                }
-                const newEntry = (data as { entry?: EmptyWeighmentEntry })
-                    .entry;
-                if (newEntry) {
-                    newEntries.push(newEntry);
-                }
-            }
-            if (newEntries.length > 0) {
-                setEntries((prev) => [...prev, ...newEntries]);
-            }
-        } catch {
-            setAddRowError('Network error. Please try again.');
-        } finally {
-            setIsAddingRow(false);
-            addingRowRef.current = false;
-        }
-    };
-
-    const handleEntryUpdated = (entry: EmptyWeighmentEntry) => {
-        setEntries((prev) =>
-            prev.some((e) => e.id === entry.id)
-                ? prev.map((e) => (e.id === entry.id ? entry : e))
-                : prev,
+        localDraftIdRef.current -= 1;
+        const draft = buildLocalDraftEntry(
+            localDraftIdRef.current,
+            siding,
+            selectedDate,
+            activeShiftState,
         );
-    };
+        setEntries((prev) => [...prev, draft]);
+        setPlainRowsAfterLastEntry(PLAIN_ROWS_AFTER_ADD_FIVE);
+    }, [
+        activeShiftState,
+        canAddAnotherRow,
+        effectiveSidingId,
+        effectiveTableLocked,
+        selectedDate,
+        shiftLock?.message,
+        sidings,
+    ]);
 
-    const handleEntryDeleted = (id: number) => {
-        setEntries((prev) => prev.filter((e) => e.id !== id));
-    };
+    const handleEntryUpdated = useCallback(
+        (
+            entry: EmptyWeighmentEntry,
+            context?: {
+                replaceClientId?: number;
+                inlineSubmitted?: boolean;
+                wasLocalDraft?: boolean;
+            },
+        ) => {
+            const replaceId = context?.replaceClientId ?? entry.id;
+            const shouldAutoAddDraft =
+                context?.wasLocalDraft === true &&
+                context?.inlineSubmitted === true &&
+                !effectiveTableLocked;
+
+            const targetSidingId = effectiveSidingId ?? sidings[0]?.id;
+            const siding =
+                sidings.find((s) => s.id === targetSidingId) ?? sidings[0];
+            const newDraftId = shouldAutoAddDraft
+                ? localDraftIdRef.current - 1
+                : null;
+
+            setEntries((prev) => {
+                if (!prev.some((e) => e.id === replaceId)) {
+                    return prev;
+                }
+                const next = prev.map((e) =>
+                    e.id === replaceId
+                        ? {
+                              ...entry,
+                              inline_submitted_at:
+                                  entry.inline_submitted_at ?? null,
+                          }
+                        : e,
+                );
+
+                if (!shouldAutoAddDraft || siding == null || newDraftId == null) {
+                    return next;
+                }
+
+                localDraftIdRef.current = newDraftId;
+                const draft = buildLocalDraftEntry(
+                    newDraftId,
+                    siding,
+                    selectedDate,
+                    activeShiftState,
+                );
+                return [...next, draft];
+            });
+
+            if (
+                context?.replaceClientId != null &&
+                context.replaceClientId < 0 &&
+                entry.inline_submitted_at != null
+            ) {
+                setShiftSummaryState((s) => ({
+                    ...s,
+                    [entry.shift]: (s[entry.shift] ?? 0) + 1,
+                }));
+            }
+
+            if (shouldAutoAddDraft && newDraftId != null) {
+                setPlainRowsAfterLastEntry(0);
+                const focusSelector = `[data-field="vehicle_no"][data-entry-id="${newDraftId}"]`;
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        const el =
+                            document.querySelector<HTMLInputElement>(
+                                focusSelector,
+                            );
+                        el?.focus();
+                        el?.select?.();
+                    });
+                });
+            }
+        },
+        [
+            activeShiftState,
+            effectiveSidingId,
+            effectiveTableLocked,
+            selectedDate,
+            sidings,
+        ],
+    );
+
+    const handleEntryDeleted = useCallback((id: number) => {
+        setPlainRowsAfterLastEntry(0);
+        const isLocalOnly = id < 0;
+        let removedShift: number | undefined;
+        setEntries((prev) => {
+            const removed = prev.find((e) => e.id === id);
+            if (!isLocalOnly && removed != null) {
+                removedShift = removed.shift;
+            }
+            return prev.filter((e) => e.id !== id);
+        });
+        if (!isLocalOnly && removedShift !== undefined) {
+            setShiftSummaryState((s) => ({
+                ...s,
+                [removedShift]: Math.max(0, (s[removedShift] ?? 0) - 1),
+            }));
+        }
+    }, []);
 
     const handleExport = async () => {
         setIsExporting(true);
@@ -447,6 +655,74 @@ export default function RailwaySidingEmptyWeighmentIndex({
             setIsExporting(false);
         }
     };
+
+    const fetchHourlySummary = useCallback(async () => {
+        if (effectiveSidingId == null) {
+            setHourlyError('No siding selected.');
+            return;
+        }
+
+        setHourlyLoading(true);
+        setHourlyError(null);
+
+        try {
+            const params = new URLSearchParams({
+                date: selectedDate,
+                shift: String(activeShiftState),
+                siding_id: String(effectiveSidingId),
+            });
+
+            const res = await fetch(
+                `/railway-siding-empty-weighment/hourly-summary?${params.toString()}`,
+                {
+                    method: 'GET',
+                    headers: {
+                        Accept: 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    credentials: 'include',
+                },
+            );
+
+            const data = (await res.json().catch(() => null)) as
+                | {
+                      now?: string;
+                      rows?: { hour: string; label: string; count: number }[];
+                      message?: string;
+                  }
+                | null;
+
+            if (!res.ok) {
+                setHourlyError(
+                    data?.message ??
+                        (res.status === 403
+                            ? 'Not allowed for this siding/shift.'
+                            : 'Failed to load hourly summary.'),
+                );
+                return;
+            }
+
+            setHourlyRows(Array.isArray(data?.rows) ? data!.rows : []);
+            setHourlyLastUpdatedIso(data?.now ?? new Date().toISOString());
+        } catch {
+            setHourlyError('Network error. Please try again.');
+        } finally {
+            setHourlyLoading(false);
+        }
+    }, [activeShiftState, effectiveSidingId, selectedDate]);
+
+    useEffect(() => {
+        if (!hourlyOpen) {
+            return;
+        }
+
+        void fetchHourlySummary();
+        const id = window.setInterval(() => {
+            void fetchHourlySummary();
+        }, 10_000);
+
+        return () => window.clearInterval(id);
+    }, [fetchHourlySummary, hourlyOpen]);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -533,15 +809,30 @@ export default function RailwaySidingEmptyWeighmentIndex({
                                         ))}
                                     </SelectContent>
                                 </Select>
-                                <Button
-                                    onClick={handleExport}
-                                    disabled={isExporting}
-                                    variant="outline"
-                                    className="flex items-center gap-2"
-                                >
-                                    <Download className="h-4 w-4" />
-                                    {isExporting ? 'Exporting...' : 'Export'}
-                                </Button>
+                                {canExport && (
+                                    <Button
+                                        onClick={handleExport}
+                                        disabled={isExporting}
+                                        variant="outline"
+                                        className="flex items-center gap-2"
+                                    >
+                                        <Download className="h-4 w-4" />
+                                        {isExporting
+                                            ? 'Exporting...'
+                                            : 'Export'}
+                                    </Button>
+                                )}
+                                {SHOW_HOURLY_RECORD && (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => setHourlyOpen(true)}
+                                        className="flex items-center gap-2"
+                                        data-pan="railway-empty-weighment-hourly-record"
+                                    >
+                                        Hourly record
+                                    </Button>
+                                )}
                             </div>
                         )}
                         {restrictToAssignedShift && (
@@ -553,15 +844,30 @@ export default function RailwaySidingEmptyWeighmentIndex({
                                     )?.name ?? '—'}{' '}
                                     · Shift {activeShiftState}
                                 </span>
-                                <Button
-                                    onClick={handleExport}
-                                    disabled={isExporting}
-                                    variant="outline"
-                                    className="flex items-center gap-2"
-                                >
-                                    <Download className="h-4 w-4" />
-                                    {isExporting ? 'Exporting...' : 'Export'}
-                                </Button>
+                                {canExport && (
+                                    <Button
+                                        onClick={handleExport}
+                                        disabled={isExporting}
+                                        variant="outline"
+                                        className="flex items-center gap-2"
+                                    >
+                                        <Download className="h-4 w-4" />
+                                        {isExporting
+                                            ? 'Exporting...'
+                                            : 'Export'}
+                                    </Button>
+                                )}
+                                {SHOW_HOURLY_RECORD && (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => setHourlyOpen(true)}
+                                        className="flex items-center gap-2"
+                                        data-pan="railway-empty-weighment-hourly-record"
+                                    >
+                                        Hourly record
+                                    </Button>
+                                )}
                             </div>
                         )}
                     </div>
@@ -620,13 +926,16 @@ export default function RailwaySidingEmptyWeighmentIndex({
                                                         : 'secondary'
                                                 }
                                                 className="cursor-pointer px-2 py-0.5 text-[11px] leading-none"
+                                                onClick={() =>
+                                                    handleShiftChange(shift)
+                                                }
                                             >
                                                 {shift === 1
                                                     ? '1ST'
                                                     : shift === 2
                                                       ? '2ND'
                                                       : '3RD'}
-                                                : {shiftSummary[shift] || 0}
+                                                : {shiftSummaryState[shift] || 0}
                                             </Badge>
                                         ))}
                                     </div>
@@ -667,21 +976,28 @@ export default function RailwaySidingEmptyWeighmentIndex({
                     entries={entriesForSiding}
                     date={selectedDate}
                     shift={activeShiftState}
-                    isLocked={effectiveTableLocked}
+                    canCreate={canCreate && !effectiveTableLocked}
+                    canUpdate={canUpdate && !effectiveTableLocked}
+                    canDelete={canDelete && !effectiveTableLocked}
+                    canAddAnotherRow={canAddAnotherRow}
                     onEntryUpdated={handleEntryUpdated}
                     onEntryDeleted={handleEntryDeleted}
                     onAddRow={handleAddRow}
-                    isAddingRow={isAddingRow}
+                    plainRowsAfterLastEntry={plainRowsAfterLastEntry}
                     addRowButton={
                         <>
-                            <Button
-                                onClick={() => handleAddRow(5)}
-                                disabled={isAddingRow || effectiveTableLocked}
-                                className="flex items-center gap-2"
-                            >
-                                <Plus className="h-4 w-4" />
-                                {isAddingRow ? 'Adding...' : 'Add 5 Rows'}
-                            </Button>
+                            {canCreate && !effectiveTableLocked && (
+                                <Button
+                                    type="button"
+                                    onClick={handleAddFiveRows}
+                                    disabled={!canAddAnotherRow}
+                                    className="flex items-center gap-2"
+                                    data-pan="railway-empty-weighment-add-five-rows-pack"
+                                >
+                                    <Plus className="h-4 w-4" />
+                                    Add 5 Rows
+                                </Button>
+                            )}
                             {addRowError && (
                                 <span className="text-sm text-destructive">
                                     {addRowError}
@@ -691,6 +1007,100 @@ export default function RailwaySidingEmptyWeighmentIndex({
                     }
                 />
             </div>
+
+            {SHOW_HOURLY_RECORD && (
+                <Dialog open={hourlyOpen} onOpenChange={setHourlyOpen}>
+                    <DialogContent className="sm:max-w-2xl">
+                        <DialogHeader>
+                            <DialogTitle>Hourly record</DialogTitle>
+                            <DialogDescription>
+                                Hour-wise entries recorded for the selected
+                                date, shift and siding.
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between gap-2">
+                                <div className="text-xs text-muted-foreground">
+                                    {hourlyLastUpdatedIso
+                                        ? `Last updated: ${new Date(hourlyLastUpdatedIso).toLocaleTimeString('en-IN')}`
+                                        : '—'}
+                                </div>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => void fetchHourlySummary()}
+                                    disabled={hourlyLoading}
+                                >
+                                    {hourlyLoading
+                                        ? 'Refreshing…'
+                                        : 'Refresh'}
+                                </Button>
+                            </div>
+
+                            {hourlyError && (
+                                <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                                    {hourlyError}
+                                </div>
+                            )}
+
+                            <div className="max-h-[55vh] overflow-auto rounded-md border">
+                                <table className="w-full border-collapse text-sm">
+                                    <thead className="sticky top-0 bg-background">
+                                        <tr className="border-b">
+                                            <th className="px-3 py-2 text-left font-medium">
+                                                Hour
+                                            </th>
+                                            <th className="px-3 py-2 text-right font-medium">
+                                                Entries
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {hourlyRows.length === 0 ? (
+                                            <tr>
+                                                <td
+                                                    colSpan={2}
+                                                    className="px-3 py-6 text-center text-muted-foreground"
+                                                >
+                                                    {hourlyLoading
+                                                        ? 'Loading…'
+                                                        : 'No records.'}
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            hourlyRows.map((r) => (
+                                                <tr
+                                                    key={r.hour}
+                                                    className="border-b last:border-b-0"
+                                                >
+                                                    <td className="px-3 py-2 tabular-nums">
+                                                        {r.label}
+                                                    </td>
+                                                    <td className="px-3 py-2 text-right tabular-nums">
+                                                        {r.count}
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <DialogFooter>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setHourlyOpen(false)}
+                            >
+                                Close
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+            )}
         </AppLayout>
     );
 }

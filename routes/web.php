@@ -278,6 +278,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         Route::get('opening-coal-stock', [OpeningCoalStockController::class, 'index'])->name('opening-coal-stock.index');
         Route::get('opening-coal-stock/{siding}/edit', [OpeningCoalStockController::class, 'edit'])->name('opening-coal-stock.edit');
         Route::put('opening-coal-stock/{siding}', [OpeningCoalStockController::class, 'update'])->name('opening-coal-stock.update');
+        Route::post('opening-coal-stock/{siding}/fix', [OpeningCoalStockController::class, 'fixWrongOpening'])->name('opening-coal-stock.fix');
         Route::get('daily-stock-details', [CoalStockApproxDetailController::class, 'index'])->name('daily-stock-details.index');
         Route::get('daily-stock-details/create', [CoalStockApproxDetailController::class, 'create'])->name('daily-stock-details.create');
         Route::post('daily-stock-details', [CoalStockApproxDetailController::class, 'store'])->name('daily-stock-details.store');
@@ -325,6 +326,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     // Railway Siding Empty Weighment
     Route::get('railway-siding-empty-weighment', [RailwaySidingEmptyWeighmentController::class, 'index'])->name('railway-siding-empty-weighment.index');
     Route::post('railway-siding-empty-weighment', [RailwaySidingEmptyWeighmentController::class, 'store'])->name('railway-siding-empty-weighment.store');
+    Route::get('railway-siding-empty-weighment/hourly-summary', [RailwaySidingEmptyWeighmentController::class, 'hourlySummary'])->name('railway-siding-empty-weighment.hourly-summary');
     Route::patch('railway-siding-empty-weighment/{entry}', [RailwaySidingEmptyWeighmentController::class, 'update'])->name('railway-siding-empty-weighment.update');
     Route::delete('railway-siding-empty-weighment/{entry}', [RailwaySidingEmptyWeighmentController::class, 'destroy'])->name('railway-siding-empty-weighment.destroy');
     Route::post('railway-siding-empty-weighment/{entry}/complete', [RailwaySidingEmptyWeighmentController::class, 'markCompleted'])->name('railway-siding-empty-weighment.complete');

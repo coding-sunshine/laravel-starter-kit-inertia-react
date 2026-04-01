@@ -2534,45 +2534,49 @@ export default function Dashboard() {
                         <h2 className="text-xl font-semibold tracking-tight">
                             Management Dashboard
                         </h2>
-                        {mainDateRangeLabel && (
+                        {mainDateRangeLabel && activeSection !== 'executive-overview' && (
                             <span className="mt-1 inline-flex items-center self-start rounded-full border border-green-500/70 bg-green-50 px-3 py-0.5 text-[11px] font-medium text-green-700">
                                 {mainDateRangeLabel} ({periodLabel})
                             </span> 
                         )}
                     </div>
                     <div className="flex flex-wrap items-center justify-end gap-2">
-                        {hasActiveFilters && !filtersExpanded && (
+                        {activeSection !== 'executive-overview' && hasActiveFilters && !filtersExpanded && (
                             <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
                                 {activeFilterCount} filter{activeFilterCount !== 1 ? 's' : ''} applied
                             </span>
                         )}
-                        <Button
-                            type="button"
-                            variant={filtersExpanded ? 'secondary' : hasActiveFilters ? 'default' : 'outline'}
-                            size="sm"
-                            className="shrink-0 rounded-[10px] relative"
-                            onClick={() => setFiltersExpanded((v) => !v)}
-                        >
-                            <Filter className="size-4 shrink-0" />
-                            <span className="ml-1.5">Filters</span>
-                            {hasActiveFilters && (
-                                <span className="ml-1.5 flex size-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
-                                    {activeFilterCount > 9 ? '9+' : activeFilterCount}
-                                </span>
-                            )}
-                        </Button>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="shrink-0 rounded-[10px]"
-                            onClick={() => {
-                                const basePath = dashboard().url.split('?')[0] || dashboard().url;
-                                router.get(basePath, { section: activeSection }, { preserveState: false, preserveScroll: true });
-                            }}
-                        >
-                            Reset
-                        </Button>
+                        {activeSection !== 'executive-overview' && (
+                            <>
+                                <Button
+                                    type="button"
+                                    variant={filtersExpanded ? 'secondary' : hasActiveFilters ? 'default' : 'outline'}
+                                    size="sm"
+                                    className="shrink-0 rounded-[10px] relative"
+                                    onClick={() => setFiltersExpanded((v) => !v)}
+                                >
+                                    <Filter className="size-4 shrink-0" />
+                                    <span className="ml-1.5">Filters</span>
+                                    {hasActiveFilters && (
+                                        <span className="ml-1.5 flex size-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+                                            {activeFilterCount > 9 ? '9+' : activeFilterCount}
+                                        </span>
+                                    )}
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="shrink-0 rounded-[10px]"
+                                    onClick={() => {
+                                        const basePath = dashboard().url.split('?')[0] || dashboard().url;
+                                        router.get(basePath, { section: activeSection }, { preserveState: false, preserveScroll: true });
+                                    }}
+                                >
+                                    Reset
+                                </Button>
+                            </>
+                        )}
                         {activeSection === 'executive-overview' && !!props.executiveYesterday && (
                             <div className="flex items-center gap-2">
                                 <select
@@ -2610,32 +2614,14 @@ export default function Dashboard() {
                     </div>
                 </div>
 
-                {kpiCards.length > 0 && (
-                    <div className="flex gap-4 overflow-x-auto pb-1 lg:grid lg:grid-cols-3 lg:overflow-visible xl:grid-cols-6">
-                        {kpiCards.map(({ label, value, borderColor, Icon }) => (
-                            <div
-                                key={label}
-                                className="dashboard-card flex min-w-[160px] flex-1 flex-col justify-between rounded-xl border-0 p-4 sm:min-w-0"
-                                style={{ borderTop: `4px solid ${borderColor}` }}
-                            >
-                                <div className="text-[0.7rem] font-semibold text-gray-600 leading-snug">{label}</div>
-                                <div className="mt-2 flex items-center justify-between gap-3">
-                                    <span className="truncate text-[1.85rem] font-extrabold tabular-nums leading-tight">
-                                        {value}
-                                    </span>
-                                    <Icon className="size-6 shrink-0" style={{ color: borderColor }} aria-hidden />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-
+                <div className="flex min-w-0 gap-3">
+                    <div className="min-w-0 flex-1 space-y-6">
                 {filteredSidings.length > 0 && (
-                    <div className="space-y-2">
+                    <div className="space-y-1">
                         <div className="flex items-center justify-between">
-                            <p className="text-[11px] text-gray-600">Coal stock updates live from the ledger (and real-time events when connected).</p>
+                            <p className="text-[10px] text-gray-500">Coal stock updates live from the ledger (and real-time events when connected).</p>
                         </div>
-                        <div className="flex gap-2 overflow-x-auto pb-1 lg:grid lg:grid-cols-3 lg:gap-3 lg:overflow-visible">
+                        <div className="flex gap-2 overflow-x-auto pb-0.5 lg:grid lg:grid-cols-3 lg:gap-2 lg:overflow-visible">
                             {filteredSidings.map((s) => {
                                 const stockMt = sidingStocks[s.id]?.closing_balance_mt ?? 0;
                                 const rakesLoadable = Math.floor(stockMt / MT_PER_RAKE_LOAD);
@@ -2643,27 +2629,27 @@ export default function Dashboard() {
                                 return (
                                     <div
                                         key={s.id}
-                                        className="dashboard-card flex min-w-[220px] flex-1 flex-col rounded-lg border-0 p-2.5 sm:min-w-0"
+                                        className="dashboard-card flex min-w-[220px] flex-1 flex-col rounded-lg border-0 p-2 sm:min-w-0"
                                         style={{ borderTop: `4px solid ${accent}` }}
                                     >
                                         <div className="text-[11px] font-semibold leading-snug text-gray-600">
                                             {s.name}
                                         </div>
-                                        <div className="mt-1.5 flex items-baseline justify-between gap-3">
+                                        <div className="mt-1 flex items-baseline justify-between gap-3">
                                             <div>
-                                                <p className="text-base font-bold leading-tight tabular-nums text-gray-900">
+                                                <p className="text-sm font-bold leading-tight tabular-nums text-gray-900">
                                                     <SlidingNumber
                                                         value={stockMt}
                                                         format={(v) => `${v.toLocaleString(undefined, { maximumFractionDigits: 0 })} MT`}
                                                     />
                                                 </p>
-                                                <p className="text-[11px] text-gray-600">Stock available</p>
+                                                <p className="text-[10px] text-gray-600">Stock</p>
                                             </div>
                                             <div className="text-right">
-                                                <p className="text-base font-bold leading-tight tabular-nums text-gray-900">
+                                                <p className="text-sm font-bold leading-tight tabular-nums text-gray-900">
                                                     {rakesLoadable}
                                                 </p>
-                                                <p className="text-[11px] text-gray-600">Rakes loadable</p>
+                                                <p className="text-[10px] text-gray-600">Rakes</p>
                                             </div>
                                         </div>
                                     </div>
@@ -3441,6 +3427,32 @@ export default function Dashboard() {
                         </div>
                     </>
                 )}
+                    </div>
+
+                    {kpiCards.length > 0 && (
+                        <aside className="group sticky top-20 h-[calc(100vh-6rem)] shrink-0 self-start">
+                            <div className="flex h-full flex-col overflow-hidden rounded-xl border bg-white shadow-sm transition-[width] duration-200 ease-out w-14 group-hover:w-72">
+                                <div className="flex flex-1 flex-col gap-2 p-2">
+                                    {kpiCards.map(({ label, value, borderColor, Icon }) => (
+                                        <div
+                                            key={label}
+                                            className="flex items-center gap-2 rounded-lg border border-gray-100 bg-white px-2 py-2 shadow-[0_1px_0_rgba(0,0,0,0.02)]"
+                                            style={{ borderLeft: `4px solid ${borderColor}` }}
+                                        >
+                                            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-gray-50">
+                                                <Icon className="size-5" style={{ color: borderColor }} aria-hidden />
+                                            </div>
+                                            <div className="min-w-0 flex-1 overflow-hidden opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                                                <div className="truncate text-[11px] font-semibold text-gray-600">{label}</div>
+                                                <div className="truncate text-lg font-extrabold tabular-nums text-gray-900">{value}</div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </aside>
+                    )}
+                </div>
 
                 {/* Floating notifications button: always visible (superadmin only) */}
                 <button
