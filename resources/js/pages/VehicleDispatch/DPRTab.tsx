@@ -105,7 +105,7 @@ export default function DPRTab({ dispatchReports, filters, flashSuccess }: DPRTa
                             is no row limit. Click Generate DPR to rebuild from dispatches.
                         </CardDescription>
                     </div>
-                    <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+                    <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:flex-wrap">
                         <Button
                             onClick={handleGenerate}
                             disabled={isGenerating}

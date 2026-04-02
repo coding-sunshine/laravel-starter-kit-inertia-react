@@ -25,6 +25,7 @@ use App\Http\Controllers\CookieConsentController;
 use App\Http\Controllers\DailyVehicleEntryController;
 use App\Http\Controllers\EnterpriseInquiryController;
 use App\Http\Controllers\Exports\CoalTransportReportExportController;
+use App\Http\Controllers\Exports\DispatchReportDprExportController;
 use App\Http\Controllers\GenerateDispatchReportController;
 use App\Http\Controllers\HelpCenter\HelpCenterController;
 use App\Http\Controllers\HelpCenter\RateHelpArticleController;
@@ -368,6 +369,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::post('vehicle-dispatch/import', [VehicleDispatchController::class, 'import'])->name('vehicle-dispatch.import');
     Route::post('vehicle-dispatch/save', [VehicleDispatchController::class, 'saveImport'])->name('vehicle-dispatch.save');
     Route::post('dispatch-reports/generate', [GenerateDispatchReportController::class, 'generate'])->name('dispatch-reports.generate');
+    Route::get('vehicle-dispatch/dpr-export', DispatchReportDprExportController::class)->name('vehicle-dispatch.dpr-export');
 
     // Vehicle Work Orders
     Route::get('vehicle-workorders', [VehicleWorkorderController::class, 'index'])->name('vehicle-workorders.index');

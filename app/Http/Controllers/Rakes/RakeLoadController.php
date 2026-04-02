@@ -562,9 +562,8 @@ final class RakeLoadController extends Controller
 
     private static function shouldSkipLoaderWeighmentWagonNumber(?string $wagonNumber): bool
     {
-        $trimmed = $wagonNumber !== null ? mb_trim($wagonNumber) : '';
-
-        return $trimmed !== '' && preg_match('/^W\d+$/', $trimmed) === 1;
+        // Placeholder wagon numbers like W01 are now treated as normal wagons.
+        return false;
     }
 
     private function canEditLoaderWeighment(User $user): bool

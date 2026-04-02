@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AppliedPenalty;
 use App\Models\Rake;
 use App\Models\RakeCharge;
+use App\Models\SidingOpeningBalance;
 use App\Models\StockLedger;
 use App\Services\RakeWeighmentPdfImporter;
 use Illuminate\Http\RedirectResponse;
@@ -82,9 +83,7 @@ final class RakeWeighmentController extends Controller
             ->first();
 
         if ($dispatch) {
-
             DB::transaction(function () use ($dispatch, $rake, $userId) {
-
                 $sidingId = $dispatch->siding_id;
 
                 if (! $sidingId) {
@@ -131,7 +130,6 @@ final class RakeWeighmentController extends Controller
                     event(new \App\Events\CoalStockUpdated($sidingId, $closing));
                 });
             });
-
         }
 
         // 🔹 Delete weighment files + records
@@ -150,6 +148,20 @@ final class RakeWeighmentController extends Controller
             ->where('rake_id', $rake->id)
             ->where('meta->source', 'weighment')
             ->delete();
+
+        // Reset wagons back to placeholders (keep wagon loading rows intact).
+        $rake->load(['wagons' => fn ($q) => $q->orderBy('wagon_sequence')]);
+        foreach ($rake->wagons as $wagon) {
+            $seq = (int) ($wagon->wagon_sequence ?? 0);
+            $wagon->update([
+                'wagon_number' => $seq > 0 ? 'W'.mb_str_pad((string) $seq, 2, '0', STR_PAD_LEFT) : $wagon->wagon_number,
+                'wagon_type' => null,
+                'tare_weight_mt' => 0.00,
+                'pcc_weight_mt' => 0.00,
+                'is_unfit' => false,
+                'state' => 'pending',
+            ]);
+        }
 
         // 🔹 Update penalty charge
         $penaltyCharge = RakeCharge::query()
