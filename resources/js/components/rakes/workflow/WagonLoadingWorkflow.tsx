@@ -59,7 +59,6 @@ interface WagonLoadingRecord {
     };
     loader_id?: number | null;
     loader?: { loader_name: string; code: string };
-    loader_operator_name?: string | null;
     loaded_quantity_mt: string;
     loading_time?: string | null;
     remarks?: string | null;
@@ -94,7 +93,6 @@ interface LoadingRow {
     wagon_id: string;
     wagon_number: string;
     loader_id: string;
-    loader_operator_name: string;
     wagon_type: string;
     pcc_capacity: string;
     loaded_quantity_mt: string;
@@ -106,7 +104,9 @@ const EMPTY_LOADINGS: WagonLoadingRecord[] = [];
 
 function shouldSkipLoaderWeighmentWagonNumber(wagonNumber: string | null | undefined): boolean {
     const trimmed = (wagonNumber ?? '').trim();
-    return /^W\d+$/.test(trimmed);
+    // We used to skip placeholder wagon numbers (e.g. W01). Now we keep them visible so
+    // loader operators can continue working even after a weighment reset.
+    return false;
 }
 
 export function WagonLoadingWorkflow({
@@ -173,7 +173,6 @@ export function WagonLoadingWorkflow({
                       wagon_id: String(l.wagon_id),
                       wagon_number: l.wagon?.wagon_number ?? '',
                       loader_id: l.loader_id ? String(l.loader_id) : '',
-                      loader_operator_name: l.loader_operator_name ?? '',
                       wagon_type: l.wagon?.wagon_type ?? '',
                       pcc_capacity: l.wagon?.pcc_weight_mt ?? '',
                       loaded_quantity_mt: l.loaded_quantity_mt ?? '',
@@ -370,8 +369,6 @@ export function WagonLoadingWorkflow({
             row.loader_id && row.loader_id !== '__none__'
                 ? Number(row.loader_id)
                 : null;
-
-        const operatorName = row.loader_operator_name.trim();
         const quantityString = row.loaded_quantity_mt.trim();
         if (quantityString === '') {
             setError('Loaded quantity is required.');
@@ -394,7 +391,6 @@ export function WagonLoadingWorkflow({
                     },
                     body: JSON.stringify({
                         loader_id: loaderId,
-                        loader_operator_name: operatorName === '' ? null : operatorName,
                         loaded_quantity_mt: quantityString,
                     }),
                 }
@@ -490,10 +486,9 @@ export function WagonLoadingWorkflow({
                                             <TableRow>
                                                 <TableHead>Wagon</TableHead>
                                                 <TableHead>Loader</TableHead>
-                                                <TableHead>Loader operator</TableHead>
+                                                <TableHead>Loaded Qty (MT)</TableHead>
                                                 <TableHead>Wagon Type</TableHead>
                                                 <TableHead>PCC Capacity</TableHead>
-                                                <TableHead>Loaded Qty (MT)</TableHead>
                                                 <TableHead>Loading Time</TableHead>
                                                 <TableHead>Remarks</TableHead>
                                                 <TableHead className="w-[120px]">Update</TableHead>
@@ -502,7 +497,7 @@ export function WagonLoadingWorkflow({
                                         <TableBody>
                                             {rows.length === 0 && ensuring ? (
                                                 <TableRow>
-                                                    <TableCell colSpan={7} className="text-center text-muted-foreground text-sm py-8">
+                                                    <TableCell colSpan={8} className="text-center text-muted-foreground text-sm py-8">
                                                         Preparing rows…
                                                     </TableCell>
                                                 </TableRow>
@@ -563,37 +558,6 @@ export function WagonLoadingWorkflow({
                                                                     </SelectContent>
                                                                 </Select>
                                                             </TableCell>
-                                                            <TableCell className="min-w-[180px]">
-                                                                <Input
-                                                                    value={row.loader_operator_name}
-                                                                    onChange={(e) =>
-                                                                        updateRow(
-                                                                            row.key,
-                                                                            'loader_operator_name',
-                                                                            e.target.value
-                                                                        )
-                                                                    }
-                                                                    placeholder="Operator name"
-                                                                    disabled={disabled || tableReadOnly}
-                                                                    className="w-44"
-                                                                />
-                                                            </TableCell>
-                                                            <TableCell>
-                                                                <Input
-                                                                    value={row.wagon_type}
-                                                                    readOnly
-                                                                    placeholder="Auto"
-                                                                    className="bg-muted w-24"
-                                                                />
-                                                            </TableCell>
-                                                            <TableCell>
-                                                                <Input
-                                                                    value={row.pcc_capacity}
-                                                                    readOnly
-                                                                    placeholder="Auto"
-                                                                    className="bg-muted w-20"
-                                                                />
-                                                            </TableCell>
                                                             <TableCell>
                                                                 <Input
                                                                     // Use text to avoid browser spinners and preserve fast, permissive typing.
@@ -607,6 +571,22 @@ export function WagonLoadingWorkflow({
                                                                     placeholder="0"
                                                                     disabled={disabled || tableReadOnly}
                                                                     className="w-24"
+                                                                />
+                                                            </TableCell>
+                                                            <TableCell className="min-w-[180px]">
+                                                                <Input
+                                                                    value={row.wagon_type}
+                                                                    readOnly
+                                                                    placeholder="Auto"
+                                                                    className="bg-muted w-24"
+                                                                />
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <Input
+                                                                    value={row.pcc_capacity}
+                                                                    readOnly
+                                                                    placeholder="Auto"
+                                                                    className="bg-muted w-20"
                                                                 />
                                                             </TableCell>
                                                             <TableCell>

@@ -13,36 +13,36 @@ final class HomeRedirectService
      */
     public function getHomeRouteFor(User $user): string
     {
-        // Respect intended URL when available; fallback is decided here.
         if ($user->can('bypass-permissions')) {
             return 'dashboard';
         }
 
-        $navPermissions = config('section_permissions.nav_permission', []);
+        /** @var array<string, string> $routeToPermission */
+        $routeToPermission = config('section_permissions.route_to_permission', []);
 
         $candidates = [
-            ['key' => 'dashboard', 'route' => 'dashboard'],
-            ['key' => 'rakes', 'route' => 'rakes.index'],
-            ['key' => 'indents', 'route' => 'indents.index'],
-            ['key' => 'railway_siding_record_data', 'route' => 'road-dispatch.daily-vehicle-entries.index'],
-            ['key' => 'railway_siding_empty_weighment', 'route' => 'railway-siding-empty-weighment.index'],
-            ['key' => 'weighments', 'route' => 'weighments.index'],
-            ['key' => 'mines_dispatch_data', 'route' => 'vehicle-dispatch.index'],
-            ['key' => 'historical_mines', 'route' => 'historical.mines.index'],
-            ['key' => 'historical_railway_siding', 'route' => 'historical.railway-siding.index'],
-            ['key' => 'reports', 'route' => 'reports.index'],
+            // Prefer task-entry pages when user has upload-only permissions.
+            ['route' => 'railway-receipts.index'],
+            ['route' => 'weighments.index'],
+            ['route' => 'vehicle-dispatch.index'],
+            ['route' => 'road-dispatch.daily-vehicle-entries.index'],
+            ['route' => 'railway-siding-empty-weighment.index'],
+            ['route' => 'rakes.index'],
+            ['route' => 'indents.index'],
+            ['route' => 'reports.index'],
+            ['route' => 'historical.mines.index'],
+            ['route' => 'historical.railway-siding.index'],
+            ['route' => 'dashboard'],
         ];
 
         foreach ($candidates as $candidate) {
-            $permissionKey = $candidate['key'];
             $routeName = $candidate['route'];
-
-            $permission = $navPermissions[$permissionKey] ?? null;
-            if (! is_string($permission) || $permission === '') {
+            $requiredPermission = $routeToPermission[$routeName] ?? null;
+            if (! is_string($requiredPermission) || $requiredPermission === '') {
                 continue;
             }
 
-            if ($user->can($permission)) {
+            if ($user->can($requiredPermission)) {
                 return $routeName;
             }
         }

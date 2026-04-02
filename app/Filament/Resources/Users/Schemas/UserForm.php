@@ -29,33 +29,8 @@ final class UserForm
                     ->searchable()
                     ->live()
                     ->afterStateUpdated(function (Set $set, Get $get, $livewire): void {
-                        $isSectionMode = self::roleUsesSectionAssignments($get);
-                        $record = method_exists($livewire, 'getRecord') ? $livewire->getRecord() : null;
-
-                        if ($isSectionMode) {
-                            $set('siding_id_single', null);
-
-                            if ($record !== null) {
-                                $sidingIds = \Illuminate\Support\Facades\DB::table('user_siding')
-                                    ->where('user_id', $record->getKey())
-                                    ->orderByDesc('is_primary')
-                                    ->orderBy('siding_id')
-                                    ->pluck('siding_id')
-                                    ->all();
-                                $shiftIds = $record->sidingShifts()->pluck('siding_shifts.id')->all();
-
-                                $set('siding_ids_multi', $sidingIds);
-                                $set('siding_shifts_multi', $shiftIds);
-                            }
-
-                            return;
-                        }
-
-                        $set('siding_ids_multi', []);
-                        $set('siding_shifts_multi', []);
-
-                        if ($record !== null) {
-                            $set('siding_id_single', $record->siding_id);
+                        if (! self::roleUsesSectionAssignments($get)) {
+                            $set('siding_shifts_multi', []);
                         }
                     })
                     ->options(function (): array {
@@ -66,13 +41,22 @@ final class UserForm
                             ->pluck('name', 'id')
                             ->all();
                     }),
-                Select::make('siding_ids_multi')
+                Select::make('siding_ids')
                     ->label('Sidings')
                     ->multiple()
                     ->live()
                     ->preload()
                     ->searchable()
-                    ->visible(fn (Get $get): bool => self::roleUsesSectionAssignments($get))
+                    ->default([])
+                    ->dehydrated()
+                    ->dehydrateStateUsing(function ($state): array {
+                        $values = is_array($state) ? $state : ($state !== null && $state !== '' ? [$state] : []);
+
+                        return array_values(array_filter(array_map(
+                            intval(...),
+                            $values
+                        )));
+                    })
                     ->hint(new HtmlString('<span wire:loading wire:target="data.roles">Loading sidings...</span>'))
                     ->options(function (): array {
                         return \App\Models\Siding::query()
@@ -81,22 +65,7 @@ final class UserForm
                             ->pluck('name', 'id')
                             ->all();
                     })
-                    ->helperText('Select one or more sidings for section-based roles.'),
-                Select::make('siding_id_single')
-                    ->label('Siding')
-                    ->live()
-                    ->preload()
-                    ->searchable()
-                    ->visible(fn (Get $get): bool => ! self::roleUsesSectionAssignments($get))
-                    ->hint(new HtmlString('<span wire:loading wire:target="data.roles">Loading siding...</span>'))
-                    ->options(function (): array {
-                        return \App\Models\Siding::query()
-                            ->where('is_active', true)
-                            ->orderBy('name')
-                            ->pluck('name', 'id')
-                            ->all();
-                    })
-                    ->helperText('Select one siding.'),
+                    ->helperText('Select one or more sidings this user can access.'),
                 Select::make('siding_shifts_multi')
                     ->label('Shifts')
                     ->multiple()
@@ -105,7 +74,7 @@ final class UserForm
                     ->visible(fn (Get $get): bool => self::roleUsesSectionAssignments($get))
                     ->hint(new HtmlString('<span wire:loading wire:target="data.roles">Loading shifts...</span>'))
                     ->options(function (Get $get): array {
-                        $selectedSidingIds = $get('siding_ids_multi');
+                        $selectedSidingIds = $get('siding_ids');
                         $sidingIds = array_values(array_filter(array_map(
                             intval(...),
                             is_array($selectedSidingIds) ? $selectedSidingIds : [$selectedSidingIds]

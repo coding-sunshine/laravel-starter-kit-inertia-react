@@ -11,6 +11,7 @@ use App\Models\Siding;
 use App\Models\User;
 use App\Models\Weighment;
 use App\Services\RakeWeighmentPdfImporter;
+use App\Services\RakeWeighmentXlsxTemplate;
 use App\Services\WeighmentPdfImporter;
 use App\Support\RrmcsDeletionRules;
 use Illuminate\Http\RedirectResponse;
@@ -19,6 +20,8 @@ use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
 use InvalidArgumentException;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Throwable;
 
 final class WeighmentsController extends Controller
@@ -86,7 +89,7 @@ final class WeighmentsController extends Controller
         RakeWeighmentPdfImporter $rakeImporter,
     ): RedirectResponse {
         $validated = $request->validate([
-            'pdf' => ['required', 'file', 'mimes:pdf', 'max:20480'],
+            'pdf' => ['required', 'file', 'mimes:pdf,xlsx,xls', 'max:20480'],
             'rake_id' => ['nullable', 'integer', 'exists:rakes,id'],
         ]);
 
@@ -95,6 +98,8 @@ final class WeighmentsController extends Controller
         $userId = (int) $user->id;
         $pdf = $validated['pdf'];
         $rakeId = $validated['rake_id'] ?? null;
+        $extension = mb_strtolower((string) $pdf->getClientOriginalExtension());
+        $isXlsx = in_array($extension, ['xlsx', 'xls'], true);
 
         if ($rakeId !== null) {
             $rake = Rake::query()->findOrFail($rakeId);
@@ -123,7 +128,9 @@ final class WeighmentsController extends Controller
                     'size' => $pdf->getSize(),
                 ]);
 
-                $rakeImporter->importForRake($rake, $pdf, $userId);
+                $weighment = $isXlsx
+                    ? $rakeImporter->importForRakeFromXlsx($rake, $pdf, $userId)
+                    : $rakeImporter->importForRake($rake, $pdf, $userId);
             } catch (InvalidArgumentException $e) {
                 Log::warning('WeighmentsController: rake import failed with validation error', [
                     'user_id' => $userId,
@@ -147,8 +154,14 @@ final class WeighmentsController extends Controller
                     ->withInput();
             }
 
-            return to_route('rakes.show', $rake)
+            return to_route('weighments.show', $weighment->getKey())
                 ->with('success', 'Weighment recorded.');
+        }
+
+        if ($isXlsx) {
+            return back()
+                ->withErrors(['pdf' => 'Excel upload requires selecting a rake.'])
+                ->withInput();
         }
 
         $sidingIds = $user->isSuperAdmin()
@@ -202,6 +215,36 @@ final class WeighmentsController extends Controller
 
         return to_route('weighments.show', $weighment)
             ->with('success', 'Weighment PDF imported successfully.');
+    }
+
+    public function downloadTemplateXlsx(Request $request, RakeWeighmentXlsxTemplate $template): BinaryFileResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'rake_id' => ['required', 'integer', 'exists:rakes,id'],
+        ]);
+
+        $rake = Rake::query()
+            ->with('siding:id,name,code,station_code')
+            ->findOrFail((int) $validated['rake_id']);
+
+        abort_unless($user->canAccessSiding((int) $rake->siding_id), 403);
+
+        $spreadsheet = $template->makeForRake($rake);
+        $writer = new Xlsx($spreadsheet);
+
+        $tmpPath = tempnam(sys_get_temp_dir(), 'weighment-template-');
+        if ($tmpPath === false) {
+            throw new InvalidArgumentException('Unable to create a temporary file for download.');
+        }
+
+        $writer->save($tmpPath);
+
+        $fileName = sprintf('weighment-template-%s.xlsx', preg_replace('/[^A-Za-z0-9_\-]+/', '-', (string) $rake->rake_number));
+
+        return response()->download($tmpPath, $fileName)->deleteFileAfterSend(true);
     }
 
     public function destroy(Request $request, Weighment $weighment, DeleteStandaloneHistoricalWeighmentAction $action): RedirectResponse

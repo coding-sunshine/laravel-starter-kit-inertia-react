@@ -9,15 +9,16 @@ use App\Http\Controllers\Controller;
 use App\Models\AppliedPenalty;
 use App\Models\Rake;
 use App\Models\RakeCharge;
+use App\Models\SidingOpeningBalance;
 use App\Models\StockLedger;
 use App\Services\RakeWeighmentPdfImporter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
 use Throwable;
-use Illuminate\Support\Facades\DB;
 
 final class RakeWeighmentController extends Controller
 {
@@ -30,11 +31,19 @@ final class RakeWeighmentController extends Controller
         // $this->authorize('update', $rake);
 
         $validated = $request->validate([
-            'weighment_pdf' => ['required', 'file', 'mimes:pdf', 'max:20480'],
+            'weighment_pdf' => ['required', 'file', 'mimes:pdf,xlsx,xls', 'max:20480'],
         ]);
 
         try {
-            $importer->importForRake($rake, $validated['weighment_pdf'], (int) $request->user()->id);
+            $file = $validated['weighment_pdf'];
+            $extension = mb_strtolower((string) $file->getClientOriginalExtension());
+            $isXlsx = in_array($extension, ['xlsx', 'xls'], true);
+
+            if ($isXlsx) {
+                $importer->importForRakeFromXlsx($rake, $file, (int) $request->user()->id);
+            } else {
+                $importer->importForRake($rake, $file, (int) $request->user()->id);
+            }
         } catch (InvalidArgumentException $e) {
             Log::warning('RakeWeighmentController: import validation failed', [
                 'rake_id' => $rake->id,
@@ -74,57 +83,53 @@ final class RakeWeighmentController extends Controller
             ->first();
 
         if ($dispatch) {
+            DB::transaction(function () use ($dispatch, $rake, $userId) {
+                $sidingId = $dispatch->siding_id;
 
-            
-                DB::transaction(function () use ($dispatch, $rake, $userId) {
+                if (! $sidingId) {
+                    return;
+                }
+                $alreadyReversed = StockLedger::query()
+                    ->where('reference_number', 'REV-DISP-'.$dispatch->id)
+                    ->lockForUpdate()
+                    ->exists();
 
-                    $sidingId = $dispatch->siding_id;
+                if ($alreadyReversed) {
+                    return;
+                }
 
-                    if (! $sidingId) {
-                        return;
-                    }
-                    $alreadyReversed = StockLedger::query()
-                        ->where('reference_number', 'REV-DISP-'.$dispatch->id)
-                        ->lockForUpdate()
-                        ->exists();
+                // reverse dispatch (negative → positive)
+                $reverseQty = abs((float) $dispatch->quantity_mt);
 
-                    if ($alreadyReversed) {
-                        return;
-                    }
+                //  lock latest ledger row
+                $lastLedger = StockLedger::query()
+                    ->where('siding_id', $sidingId)
+                    ->lockForUpdate()
+                    ->latest('id')
+                    ->first();
 
-                    // reverse dispatch (negative → positive)
-                    $reverseQty = abs((float) $dispatch->quantity_mt);
+                $opening = $lastLedger
+                    ? (float) $lastLedger->closing_balance_mt
+                    : SidingOpeningBalance::getOpeningBalanceForSiding($sidingId);
 
-                    //  lock latest ledger row
-                    $lastLedger = StockLedger::query()
-                        ->where('siding_id', $sidingId)
-                        ->lockForUpdate()
-                        ->latest('id')
-                        ->first();
+                $closing = round($opening + $reverseQty, 2);
 
-                    $opening = $lastLedger
-                        ? (float) $lastLedger->closing_balance_mt
-                        : SidingOpeningBalance::getOpeningBalanceForSiding($sidingId);
+                StockLedger::create([
+                    'siding_id' => $sidingId,
+                    'transaction_type' => 'correction',
+                    'rake_id' => $rake->id,
+                    'quantity_mt' => $reverseQty, //  positive
+                    'opening_balance_mt' => $opening,
+                    'closing_balance_mt' => $closing,
+                    'reference_number' => 'REV-DISP-'.$dispatch->id,
+                    'remarks' => 'Reversal for deleted rake #'.$rake->id,
+                    'created_by' => $userId ?: null,
+                ]);
 
-                    $closing = round($opening + $reverseQty, 2);
-
-                    StockLedger::create([
-                        'siding_id' => $sidingId,
-                        'transaction_type' => 'correction',
-                        'rake_id' => $rake->id,
-                        'quantity_mt' => $reverseQty, //  positive
-                        'opening_balance_mt' => $opening,
-                        'closing_balance_mt' => $closing,
-                        'reference_number' => 'REV-DISP-'.$dispatch->id,
-                        'remarks' => 'Reversal for deleted rake #'.$rake->id,
-                        'created_by' => $userId ?: null,
-                    ]);
-
-                    DB::afterCommit(function () use ($sidingId, $closing) {
-                        event(new \App\Events\CoalStockUpdated($sidingId, $closing));
-                    });
+                DB::afterCommit(function () use ($sidingId, $closing) {
+                    event(new \App\Events\CoalStockUpdated($sidingId, $closing));
                 });
-            
+            });
         }
 
         // 🔹 Delete weighment files + records
@@ -143,6 +148,20 @@ final class RakeWeighmentController extends Controller
             ->where('rake_id', $rake->id)
             ->where('meta->source', 'weighment')
             ->delete();
+
+        // Reset wagons back to placeholders (keep wagon loading rows intact).
+        $rake->load(['wagons' => fn ($q) => $q->orderBy('wagon_sequence')]);
+        foreach ($rake->wagons as $wagon) {
+            $seq = (int) ($wagon->wagon_sequence ?? 0);
+            $wagon->update([
+                'wagon_number' => $seq > 0 ? 'W'.mb_str_pad((string) $seq, 2, '0', STR_PAD_LEFT) : $wagon->wagon_number,
+                'wagon_type' => null,
+                'tare_weight_mt' => 0.00,
+                'pcc_weight_mt' => 0.00,
+                'is_unfit' => false,
+                'state' => 'pending',
+            ]);
+        }
 
         // 🔹 Update penalty charge
         $penaltyCharge = RakeCharge::query()

@@ -21,7 +21,7 @@ import { dashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { useCan } from '@/hooks/use-can';
 import { Head, router, usePage } from '@inertiajs/react';
-import { CalendarDays, Eye, Scale, Upload } from 'lucide-react';
+import { CalendarDays, Download, Eye, Scale, Upload } from 'lucide-react';
 import { useCallback, useMemo, useRef, useState } from 'react';
 
 interface WeighmentRow {
@@ -77,9 +77,11 @@ export default function WeighmentsIndex({ weighments = [] }: Props) {
     }>().props;
 
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const downloadDialogTriggerRef = useRef<HTMLButtonElement>(null);
     const [uploading, setUploading] = useState(false);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [isDownloadDialogOpen, setIsDownloadDialogOpen] = useState(false);
     const [month, setMonth] = useState<string>(getCurrentMonthValue);
     const [rakes, setRakes] = useState<RakeOption[]>([]);
     const [rakesLoading, setRakesLoading] = useState(false);
@@ -98,8 +100,17 @@ export default function WeighmentsIndex({ weighments = [] }: Props) {
         fileInputRef.current?.click();
     };
 
+    const openDownloadDialog = () => {
+        if (!canUpload) {
+            return;
+        }
+        setIsDownloadDialogOpen(true);
+        void fetchRakesForMonth(month);
+    };
+
     const resetDialogState = useCallback(() => {
         setIsDialogOpen(false);
+        setIsDownloadDialogOpen(false);
         setSelectedFile(null);
         setSelectedRakeId('');
         setRakes([]);
@@ -183,6 +194,20 @@ export default function WeighmentsIndex({ weighments = [] }: Props) {
         });
     }, [canUpload, resetDialogState, selectedFile, selectedRakeId]);
 
+    const downloadTemplate = useCallback(() => {
+        if (!selectedRakeId) {
+            setRakesError('Select a rake to download the Excel template.');
+            return;
+        }
+        const rakeId = Number.parseInt(selectedRakeId, 10);
+        if (Number.isNaN(rakeId)) {
+            setRakesError('Invalid rake selection.');
+            return;
+        }
+        window.location.href = `/weighments/template-xlsx?rake_id=${encodeURIComponent(String(rakeId))}`;
+        resetDialogState();
+    }, [resetDialogState, selectedRakeId]);
+
     const rakeLabel = useCallback((rake: RakeOption): string => {
         const parts: string[] = [rake.rake_number];
 
@@ -201,7 +226,7 @@ export default function WeighmentsIndex({ weighments = [] }: Props) {
 
     const dialogTitle = useMemo(() => {
         if (!selectedFile) {
-            return 'Upload weighment PDF';
+            return 'Upload weighment document';
         }
 
         return `Upload “${selectedFile.name}”`;
@@ -241,7 +266,7 @@ export default function WeighmentsIndex({ weighments = [] }: Props) {
                                 <input
                                     ref={fileInputRef}
                                     type="file"
-                                    accept=".pdf"
+                                    accept=".pdf,.xlsx"
                                     className="hidden"
                                     onChange={handleFileChange}
                                 />
@@ -253,6 +278,17 @@ export default function WeighmentsIndex({ weighments = [] }: Props) {
                                 >
                                     <Upload className="h-4 w-4" />
                                     {uploading ? 'Uploading…' : 'Upload Document'}
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    onClick={openDownloadDialog}
+                                    disabled={uploading}
+                                    data-pan="weighments-download-xlsx-template-button"
+                                    className="flex items-center gap-2"
+                                    ref={downloadDialogTriggerRef}
+                                >
+                                    <Download className="h-4 w-4" />
+                                    Download Excel Template
                                 </Button>
                             </>
                         )}
@@ -458,6 +494,91 @@ export default function WeighmentsIndex({ weighments = [] }: Props) {
                                 data-pan="weighments-upload-with-rake-button"
                             >
                                 {uploading ? 'Uploading…' : 'Upload'}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+            )}
+
+            {canUpload && (
+                <Dialog
+                    open={isDownloadDialogOpen}
+                    onOpenChange={(open) => {
+                        if (!open) {
+                            resetDialogState();
+                        }
+                    }}
+                >
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Download weighment Excel template</DialogTitle>
+                            <DialogDescription>
+                                Select a rake to download a prefilled Excel template. Fill it and upload it back if
+                                PDF parsing is not supported.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="weighment-month-download">Loading month (filter)</Label>
+                                <div className="flex items-center gap-2">
+                                    <div className="relative inline-flex items-center">
+                                        <CalendarDays className="pointer-events-none absolute left-2 size-4 text-muted-foreground" />
+                                        <input
+                                            id="weighment-month-download"
+                                            type="month"
+                                            className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 flex h-9 w-[11rem] rounded-md border pl-8 pr-3 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
+                                            value={month}
+                                            onChange={(event) => {
+                                                const value = event.target.value || getCurrentMonthValue();
+                                                setMonth(value);
+                                                void fetchRakesForMonth(value);
+                                            }}
+                                        />
+                                    </div>
+                                    {rakesLoading && (
+                                        <span className="text-xs text-muted-foreground">Loading rakes…</span>
+                                    )}
+                                </div>
+                                {rakesError ? <p className="text-xs text-destructive">{rakesError}</p> : null}
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="weighment-rake-select-download">Rake</Label>
+                                <Select value={selectedRakeId || undefined} onValueChange={setSelectedRakeId}>
+                                    <SelectTrigger id="weighment-rake-select-download" className="min-w-[260px]">
+                                        <SelectValue placeholder="Select a rake" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {rakes.length === 0 ? (
+                                            <SelectItem value="__none" disabled>
+                                                No rakes found for this month
+                                            </SelectItem>
+                                        ) : (
+                                            rakes.map((rake) => (
+                                                <SelectItem key={rake.id} value={String(rake.id)}>
+                                                    {rakeLabel(rake)}
+                                                </SelectItem>
+                                            ))
+                                        )}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                        <DialogFooter className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={resetDialogState}
+                                data-pan="weighments-download-xlsx-dialog-cancel"
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                type="button"
+                                onClick={downloadTemplate}
+                                disabled={!selectedRakeId}
+                                data-pan="weighments-download-xlsx-template-confirm"
+                            >
+                                Download
                             </Button>
                         </DialogFooter>
                     </DialogContent>

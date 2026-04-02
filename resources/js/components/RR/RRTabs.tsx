@@ -21,7 +21,8 @@ import {
     Scale,
     Train,
 } from 'lucide-react';
-import { useState } from 'react';
+import { usePage } from '@inertiajs/react';
+import { useEffect, useMemo, useState } from 'react';
 import { ChargesTable } from './ChargesTable';
 import { PenaltiesTable } from './PenaltiesTable';
 import type {
@@ -59,8 +60,26 @@ export function RRTabs({
     penalties,
     rawData,
 }: RRTabsProps) {
+    const page = usePage<{ auth?: { roles?: string[] } }>();
+    const roles = page.props.auth?.roles ?? [];
+    const isSuperAdmin = roles.includes('super-admin') || roles.includes('super_admin');
+
     const [activeTab, setActiveTab] = useState<TabValue>('overview');
     const [rawExpanded, setRawExpanded] = useState(false);
+
+    const visibleTabs = useMemo(() => {
+        if (isSuperAdmin) {
+            return tabs;
+        }
+
+        return tabs.filter((t) => t.value !== 'raw');
+    }, [isSuperAdmin]);
+
+    useEffect(() => {
+        if (!isSuperAdmin && activeTab === 'raw') {
+            setActiveTab('overview');
+        }
+    }, [activeTab, isSuperAdmin]);
 
     return (
         <div className="space-y-6">
@@ -73,7 +92,7 @@ export function RRTabs({
                 )}
                 data-pan="rr-details-tabs"
             >
-                {tabs.map(({ value, label, icon: Icon }) => (
+                {visibleTabs.map(({ value, label, icon: Icon }) => (
                     <ToggleGroupItem
                         key={value}
                         value={value}
@@ -198,7 +217,7 @@ export function RRTabs({
                     <PenaltiesTable data={penalties} />
                 )}
 
-                {activeTab === 'raw' && (
+                {isSuperAdmin && activeTab === 'raw' && (
                     <Collapsible
                         open={rawExpanded}
                         onOpenChange={setRawExpanded}

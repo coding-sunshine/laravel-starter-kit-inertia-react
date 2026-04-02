@@ -25,6 +25,7 @@ use App\Http\Controllers\CookieConsentController;
 use App\Http\Controllers\DailyVehicleEntryController;
 use App\Http\Controllers\EnterpriseInquiryController;
 use App\Http\Controllers\Exports\CoalTransportReportExportController;
+use App\Http\Controllers\Exports\DispatchReportDprExportController;
 use App\Http\Controllers\GenerateDispatchReportController;
 use App\Http\Controllers\HelpCenter\HelpCenterController;
 use App\Http\Controllers\HelpCenter\RateHelpArticleController;
@@ -175,6 +176,8 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::post('terms/accept', [TermsAcceptController::class, 'store'])->name('terms.accept.store');
 
     Route::get('dashboard', App\Http\Controllers\Dashboard\ExecutiveDashboardController::class)->name('dashboard');
+    Route::get('dashboard/executive-yesterday-data', [App\Http\Controllers\Dashboard\ExecutiveDashboardController::class, 'executiveYesterdayData'])
+        ->name('dashboard.executive-yesterday-data');
 
     Route::get('exports/coal-transport-report', CoalTransportReportExportController::class)
         ->name('exports.coal-transport-report');
@@ -366,6 +369,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::post('vehicle-dispatch/import', [VehicleDispatchController::class, 'import'])->name('vehicle-dispatch.import');
     Route::post('vehicle-dispatch/save', [VehicleDispatchController::class, 'saveImport'])->name('vehicle-dispatch.save');
     Route::post('dispatch-reports/generate', [GenerateDispatchReportController::class, 'generate'])->name('dispatch-reports.generate');
+    Route::get('vehicle-dispatch/dpr-export', DispatchReportDprExportController::class)->name('vehicle-dispatch.dpr-export');
 
     // Vehicle Work Orders
     Route::get('vehicle-workorders', [VehicleWorkorderController::class, 'index'])->name('vehicle-workorders.index');
@@ -407,9 +411,10 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 
     // Weighments (historical rake weighment imports)
     Route::get('weighments', [WeighmentsController::class, 'index'])->name('weighments.index');
-    Route::get('weighments/{weighment}', [WeighmentsController::class, 'show'])->name('weighments.show');
-    Route::delete('weighments/{weighment}', [WeighmentsController::class, 'destroy'])->name('weighments.destroy');
+    Route::get('weighments/{weighment}', [WeighmentsController::class, 'show'])->whereNumber('weighment')->name('weighments.show');
+    Route::delete('weighments/{weighment}', [WeighmentsController::class, 'destroy'])->whereNumber('weighment')->name('weighments.destroy');
     Route::post('weighments/import', [WeighmentsController::class, 'store'])->name('weighments.import');
+    Route::get('weighments/template-xlsx', [WeighmentsController::class, 'downloadTemplateXlsx'])->name('weighments.template-xlsx');
 
     // AI Chatbot
     Route::get('chat/conversations', [ChatController::class, 'index'])->name('chat.conversations.index');

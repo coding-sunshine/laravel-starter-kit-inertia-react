@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Filter, Upload, Calendar as CalendarIcon, AlertCircle, CheckCircle, FileSpreadsheet } from 'lucide-react';
 import { format } from 'date-fns';
 import { DateRange } from 'react-day-picker';
@@ -134,6 +135,7 @@ export default function VehicleDispatchIndex({
     const [activeTab, setActiveTab] = useState<VehicleDispatchTabValue>(
         (tab === 'dpr' ? 'dpr' : 'main-data') as VehicleDispatchTabValue
     );
+    const [dprExportSidingId, setDprExportSidingId] = useState<string>('all');
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
     const prevFiltersRef = useRef<Filters>(filters);
 
@@ -148,6 +150,28 @@ export default function VehicleDispatchIndex({
 
         return null;
     }, [searchFilters.date, searchFilters.date_from, searchFilters.date_to]);
+
+    const dprExportHref = useMemo((): string | null => {
+        if (filters.date_from && filters.date_to) {
+            let qs = `date_from=${encodeURIComponent(filters.date_from)}&date_to=${encodeURIComponent(filters.date_to)}`;
+            if (dprExportSidingId !== 'all') {
+                qs += `&siding_id=${encodeURIComponent(dprExportSidingId)}`;
+            }
+
+            return `/vehicle-dispatch/dpr-export?${qs}`;
+        }
+
+        if (filters.date && !filters.date_from && !filters.date_to) {
+            let qs = `date=${encodeURIComponent(filters.date)}`;
+            if (dprExportSidingId !== 'all') {
+                qs += `&siding_id=${encodeURIComponent(dprExportSidingId)}`;
+            }
+
+            return `/vehicle-dispatch/dpr-export?${qs}`;
+        }
+
+        return null;
+    }, [filters.date, filters.date_from, filters.date_to, dprExportSidingId]);
 
     // Sync activeTab when tab prop changes (e.g. after Generate DPR redirect)
     useEffect(() => {
@@ -589,6 +613,42 @@ export default function VehicleDispatchIndex({
                                 <FileSpreadsheet className="mr-2 h-4 w-4" />
                                 Coal Transport Report (Excel)
                             </Button>
+                        )}
+                        {activeTab === 'dpr' && (
+                            <>
+                                <div className="w-full sm:w-56">
+                                    <Select value={dprExportSidingId} onValueChange={setDprExportSidingId}>
+                                        <SelectTrigger aria-label="Siding for DPR export">
+                                            <SelectValue placeholder="Export siding" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All sidings</SelectItem>
+                                            {sidings.map((s) => (
+                                                <SelectItem key={s.id} value={String(s.id)}>
+                                                    {s.name} ({s.code})
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                {dprExportHref ? (
+                                    <Button variant="outline" asChild>
+                                        <a href={dprExportHref} data-pan="vehicle-dispatch-dpr-export">
+                                            <FileSpreadsheet className="mr-2 h-4 w-4" />
+                                            Export DPR (Excel)
+                                        </a>
+                                    </Button>
+                                ) : (
+                                    <Button
+                                        variant="outline"
+                                        disabled
+                                        title="Set either date or date_from/date_to to export DPR"
+                                    >
+                                        <FileSpreadsheet className="mr-2 h-4 w-4" />
+                                        Export DPR (Excel)
+                                    </Button>
+                                )}
+                            </>
                         )}
                         <Button onClick={() => setShowImportDialog(true)}>
                             <Upload className="h-4 w-4 mr-2" />

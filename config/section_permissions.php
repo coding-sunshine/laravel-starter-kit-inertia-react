@@ -346,6 +346,7 @@ return [
         'vehicle-dispatch.import' => 'sections.mines_dispatch_data.upload',
         'vehicle-dispatch.save' => 'sections.mines_dispatch_data.upload',
         'dispatch-reports.generate' => 'sections.mines_dispatch_data.view',
+        'vehicle-dispatch.dpr-export' => 'sections.mines_dispatch_data.view',
 
         // Transport (Vehicle Workorders)
         'vehicle-workorders.index' => 'sections.transport.view',

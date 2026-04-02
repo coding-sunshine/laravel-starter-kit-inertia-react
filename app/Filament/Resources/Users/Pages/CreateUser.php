@@ -21,8 +21,6 @@ final class CreateUser extends CreateRecord
 
     private ?int $pendingRoleId = null;
 
-    private ?int $pendingSidingId = null;
-
     private ?string $pendingRoleName = null;
 
     /**
@@ -70,11 +68,12 @@ final class CreateUser extends CreateRecord
         $this->pendingSidingIds = [];
         $this->pendingShiftIds = [];
 
+        $this->pendingSidingIds = array_values(array_filter(array_map(
+            intval(...),
+            (array) ($data['siding_ids'] ?? [])
+        )));
+
         if ($this->usesSectionAssignments) {
-            $this->pendingSidingIds = array_values(array_filter(array_map(
-                intval(...),
-                (array) ($data['siding_ids_multi'] ?? [])
-            )));
             $this->pendingShiftIds = array_values(array_filter(array_map(
                 intval(...),
                 (array) ($data['siding_shifts_multi'] ?? [])
@@ -85,13 +84,9 @@ final class CreateUser extends CreateRecord
                     'is_active' => true,
                 ];
             }
-            $this->pendingSidingId = null;
-        } else {
-            $this->pendingSidingId = isset($data['siding_id_single']) && $data['siding_id_single'] !== ''
-                ? (int) $data['siding_id_single']
-                : null;
         }
-        unset($data['siding_ids_multi'], $data['siding_id_single'], $data['siding_shifts_multi']);
+
+        unset($data['siding_ids'], $data['siding_shifts_multi']);
 
         // Users created by superadmin in Filament should be immediately active / verified.
         if (! array_key_exists('email_verified_at', $data) || $data['email_verified_at'] === null) {
@@ -108,35 +103,21 @@ final class CreateUser extends CreateRecord
 
     protected function afterCreate(): void
     {
+        $primarySidingId = $this->pendingSidingIds[0] ?? null;
+
         $this->record->forceFill([
-            'siding_id' => $this->usesSectionAssignments ? null : $this->pendingSidingId,
+            'siding_id' => $primarySidingId,
         ])->save();
 
-        if (! $this->usesSectionAssignments) {
-            DB::table('user_siding')->where('user_id', $this->record->getKey())->delete();
-            if ($this->pendingSidingId !== null) {
-                DB::table('user_siding')->insert([
-                    'user_id' => $this->record->getKey(),
-                    'siding_id' => $this->pendingSidingId,
-                    'is_primary' => true,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-            }
-            $this->record->sidingShifts()->sync([]);
-        }
-
-        if ($this->usesSectionAssignments) {
-            DB::table('user_siding')->where('user_id', $this->record->getKey())->delete();
-            foreach ($this->pendingSidingIds as $index => $sidingId) {
-                DB::table('user_siding')->insert([
-                    'user_id' => $this->record->getKey(),
-                    'siding_id' => $sidingId,
-                    'is_primary' => $index === 0,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-            }
+        DB::table('user_siding')->where('user_id', $this->record->getKey())->delete();
+        foreach ($this->pendingSidingIds as $index => $sidingId) {
+            DB::table('user_siding')->insert([
+                'user_id' => $this->record->getKey(),
+                'siding_id' => $sidingId,
+                'is_primary' => $index === 0,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
         }
 
         if ($this->usesSectionAssignments) {
