@@ -30,6 +30,7 @@ use App\Support\Dashboard\DashboardFilterResolver;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use DateTimeInterface;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -236,6 +237,7 @@ final class ExecutiveDashboardController extends Controller
                 ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
                 ->whereNotNull('loading_date')
                 ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$fromDate, $toDate])
+                ->tap(fn ($q) => $this->applyRakeDispatchWeighmentOrHistoricalFilter($q))
                 ->selectRaw('count(*) as rakes, coalesce(sum(loaded_weight_mt), 0) as qty')
                 ->first();
 
@@ -326,6 +328,7 @@ final class ExecutiveDashboardController extends Controller
                 ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
                 ->whereNotNull('loading_date')
                 ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$fromDate, $toDate])
+                ->tap(fn ($q) => $this->applyRakeDispatchWeighmentOrHistoricalFilter($q))
                 ->selectRaw('siding_id, count(*) as rakes, coalesce(sum(loaded_weight_mt), 0) as qty')
                 ->groupBy('siding_id')
                 ->get();
@@ -375,6 +378,7 @@ final class ExecutiveDashboardController extends Controller
                 ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
                 ->whereNotNull('loading_date')
                 ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$fyRangeFrom, $fyRangeTo])
+                ->tap(fn ($q) => $this->applyRakeDispatchWeighmentOrHistoricalFilter($q))
                 ->selectRaw('count(*) as rakes, coalesce(sum(loaded_weight_mt), 0) as qty')
                 ->first();
 
@@ -428,6 +432,7 @@ final class ExecutiveDashboardController extends Controller
             ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
             ->whereNotNull('loading_date')
             ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$tillDateFromDate, $tillDateToDate])
+            ->tap(fn ($q) => $this->applyRakeDispatchWeighmentOrHistoricalFilter($q))
             ->selectRaw('count(*) as rakes, coalesce(sum(loaded_weight_mt), 0) as qty')
             ->first();
 
@@ -533,6 +538,7 @@ final class ExecutiveDashboardController extends Controller
                     ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
                     ->whereNotNull('loading_date')
                     ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$postFrom->toDateString(), $postTo->toDateString()])
+                    ->tap(fn ($q) => $this->applyRakeDispatchWeighmentOrHistoricalFilter($q))
                     ->selectRaw('coalesce(sum(loaded_weight_mt), 0) as qty')
                     ->value('qty');
             }
@@ -686,7 +692,8 @@ final class ExecutiveDashboardController extends Controller
         $rakeIdsInRange = Rake::query()
             ->whereIn('siding_id', $sidingIds)
             ->whereNotNull('loading_date')
-            ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$fromDate, $toDate]);
+            ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$fromDate, $toDate])
+            ->tap(fn ($q) => $this->applyRakeDispatchWeighmentOrHistoricalFilter($q));
         if (! empty($filterContext['rake_number'])) {
             $rakeIdsInRange->where('rake_number', 'like', '%'.$filterContext['rake_number'].'%');
         }
@@ -1332,6 +1339,7 @@ final class ExecutiveDashboardController extends Controller
             ->whereIn('siding_id', $sidingIds)
             ->whereNotNull('loading_date')
             ->whereRaw($daySql, [$dateStr, $dateStr])
+            ->tap(fn ($q) => $this->applyRakeDispatchWeighmentOrHistoricalFilter($q))
             ->selectRaw('siding_id, count(*) as rakes, coalesce(sum(loaded_weight_mt), 0) as qty')
             ->groupBy('siding_id')
             ->get()
@@ -1341,6 +1349,7 @@ final class ExecutiveDashboardController extends Controller
             ->whereIn('siding_id', $sidingIds)
             ->whereNotNull('loading_date')
             ->whereRaw($daySql, [$monthStart, $dateStr])
+            ->tap(fn ($q) => $this->applyRakeDispatchWeighmentOrHistoricalFilter($q))
             ->selectRaw('siding_id, count(*) as rakes, coalesce(sum(loaded_weight_mt), 0) as qty')
             ->groupBy('siding_id')
             ->get()
@@ -1584,7 +1593,7 @@ final class ExecutiveDashboardController extends Controller
             $rakeIds = $this->getFilteredRakeIds($sidingIds, $filterContext);
         }
 
-        $appliedPenaltyBySidingQuery = function () use ($fromDate, $toDate, $filterContext): \Illuminate\Database\Eloquent\Builder {
+        $appliedPenaltyBySidingQuery = function () use ($fromDate, $toDate, $filterContext): Builder {
             $q = AppliedPenalty::query()
                 ->join('rakes', 'applied_penalties.rake_id', '=', 'rakes.id')
                 ->whereNotNull('rakes.loading_date')
@@ -2470,6 +2479,7 @@ final class ExecutiveDashboardController extends Controller
             })
             ->whereNotNull('loading_date')
             ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$fromDate, $toDate])
+            ->tap(fn ($q) => $this->applyRakeDispatchWeighmentOrHistoricalFilter($q))
             ->selectRaw(
                 "COALESCE(destination, destination_code, 'Unknown') as power_plant_name, ".
                 'siding_id, count(*) as rakes, coalesce(sum(loaded_weight_mt), 0) as weight_mt'
@@ -2752,6 +2762,7 @@ final class ExecutiveDashboardController extends Controller
                 ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
                 ->whereNotNull('loading_date')
                 ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$railFrom, $railTo])
+                ->tap(fn ($q) => $this->applyRakeDispatchWeighmentOrHistoricalFilter($q))
                 ->selectRaw('siding_id, count(*) as rakes, coalesce(sum(loaded_weight_mt), 0) as qty')
                 ->groupBy('siding_id')
                 ->get()
@@ -2812,6 +2823,7 @@ final class ExecutiveDashboardController extends Controller
                 ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
                 ->whereNotNull('loading_date')
                 ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$railFrom, $railTo])
+                ->tap(fn ($q) => $this->applyRakeDispatchWeighmentOrHistoricalFilter($q))
                 ->selectRaw('count(*) as rakes, coalesce(sum(loaded_weight_mt), 0) as qty')
                 ->first();
         }
@@ -2881,6 +2893,7 @@ final class ExecutiveDashboardController extends Controller
                         ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
                         ->whereNotNull('loading_date')
                         ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$from->toDateString(), $to->toDateString()])
+                        ->tap(fn ($q) => $this->applyRakeDispatchWeighmentOrHistoricalFilter($q))
                         ->selectRaw('count(*) as rakes, coalesce(sum(loaded_weight_mt), 0) as qty')
                         ->first();
 
@@ -3035,8 +3048,10 @@ final class ExecutiveDashboardController extends Controller
         $tz = config('app.timezone', 'UTC');
         $anchor = Carbon::parse($anchorDate, $tz)->startOfDay();
 
-        $defaultFrom = $anchor->copy()->subDays(6)->startOfDay();
-        $defaultTo = $anchor->copy()->endOfDay();
+        // Table view defaults: single calendar day before the anchor (yesterday vs anchor "today").
+        $defaultDay = $anchor->copy()->subDay();
+        $defaultFrom = $defaultDay->copy()->startOfDay();
+        $defaultTo = $defaultDay->copy()->endOfDay();
 
         $road = $this->parseRange($request, 'executive_road_from', 'executive_road_to', $defaultFrom, $defaultTo, $tz);
         $rail = $this->parseRange($request, 'executive_rail_from', 'executive_rail_to', $defaultFrom, $defaultTo, $tz);
@@ -3305,6 +3320,27 @@ final class ExecutiveDashboardController extends Controller
         $parsed = $this->parseRequestDate($request, 'coal_transport_date', $tz);
 
         return $parsed ?? now($tz)->subDay()->startOfDay();
+    }
+
+    /**
+     * Rail dispatch aggregates: operational rakes ({@see self::OPERATIONAL_RAKE_DATA_SOURCES} or null {@see Rake::$data_source})
+     * count only when at least one {@see RakeWeighment} exists. Historical imports (any other {@see Rake::$data_source}) count
+     * without requiring a weighment row. Aligns with {@see RakeDataTable} operational scope vs historical rakes.
+     */
+    private function applyRakeDispatchWeighmentOrHistoricalFilter(Builder $query): void
+    {
+        $query->where(function (Builder $outer): void {
+            $outer->where(function (Builder $op): void {
+                $op->where(function (Builder $q): void {
+                    $q->whereNull('data_source')
+                        ->orWhereIn('data_source', self::OPERATIONAL_RAKE_DATA_SOURCES);
+                });
+                $op->whereHas('rakeWeighments');
+            })->orWhere(function (Builder $hist): void {
+                $hist->whereNotNull('data_source')
+                    ->whereNotIn('data_source', self::OPERATIONAL_RAKE_DATA_SOURCES);
+            });
+        });
     }
 
     /**

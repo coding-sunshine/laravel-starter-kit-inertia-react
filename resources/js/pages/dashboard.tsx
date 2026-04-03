@@ -1209,58 +1209,6 @@ function ExecutiveYesterdaySection({
         return powerPlantDispatch;
     }, [executiveData.powerPlantDispatchByPeriod, hasPowerPlantPeriodSlices, powerPlantChartPeriod, powerPlantDispatch]);
 
-    const SummaryHeader = ({ label, columns }: { label: string; columns: string[] }) => (
-        <thead className="bg-[#eef2f7] text-black">
-            <tr>
-                <th className="border border-[#d5dbe4] px-3 py-2 text-left font-medium" colSpan={2}>{label}</th>
-                {columns.map((c) => (
-                    <th key={c} className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">
-                        {c === 'MonthToDate' ? 'Month to date' : c}
-                    </th>
-                ))}
-            </tr>
-        </thead>
-    );
-
-    const ProductionBlock = (props: {
-        title: string;
-        summary: { columns: string[]; data: Record<string, { trips: number; qty: number }> };
-        toolbar?: React.ReactNode;
-    }) => (
-        <div className="overflow-hidden rounded-xl border border-[#d5dbe4] bg-white">
-            <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                    <p className="text-sm font-semibold text-gray-900">{props.title}</p>
-                    {props.toolbar ? <div className="flex flex-wrap items-center gap-2">{props.toolbar}</div> : null}
-                </div>
-            </div>
-            <div className="overflow-x-auto">
-                <table className="w-full border-separate text-xs" style={{ borderSpacing: 0 }}>
-                    <SummaryHeader label={props.title} columns={props.summary.columns} />
-                    <tbody>
-                        <tr className="bg-white">
-                            <td className="border border-[#d5dbe4] px-3 py-2 font-semibold" rowSpan={2}>{props.title}</td>
-                            <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Trips</td>
-                            {props.summary.columns.map((c) => (
-                                <td key={c} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
-                                    {fmtNumber(props.summary.data?.[c]?.trips ?? 0, 0)}
-                                </td>
-                            ))}
-                        </tr>
-                        <tr className="bg-white">
-                            <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Qty</td>
-                            {props.summary.columns.map((c) => (
-                                <td key={c} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
-                                    {fmtNumber(props.summary.data?.[c]?.qty ?? 0, 2)}
-                                </td>
-                            ))}
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    );
-
     const roadCustomToolbar = (
         <>
             <label className="text-xs font-medium text-gray-600">From</label>
@@ -1529,69 +1477,145 @@ function ExecutiveYesterdaySection({
                 </div>
             ) : null}
 
-            <ProductionBlock
-                title="OB Production"
-                summary={executiveData.customRanges.obProduction.summary}
-                toolbar={
-                    <>
-                        <label className="text-xs font-medium text-gray-600">From</label>
-                        <input
-                            type="date"
-                            value={obFrom}
-                            onChange={(e) => setObFrom(e.target.value)}
-                            className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
-                        />
-                        <label className="text-xs font-medium text-gray-600">To</label>
-                        <input
-                            type="date"
-                            value={obTo}
-                            onChange={(e) => setObTo(e.target.value)}
-                            className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
-                        />
-                        <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            disabled={customApplyLoading === 'ob' || !isValidRange(obFrom, obTo)}
-                            onClick={() => void applyCustomRanges('ob')}
-                        >
-                            {customApplyLoading === 'ob' ? 'Applying…' : 'Apply'}
-                        </Button>
-                    </>
-                }
-            />
+            <div className="overflow-hidden rounded-xl border border-[#d5dbe4] bg-white">
+                <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        <p className="text-sm font-semibold text-gray-900">OB Production</p>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <label className="text-xs font-medium text-gray-600">From</label>
+                            <input
+                                type="date"
+                                value={obFrom}
+                                onChange={(e) => setObFrom(e.target.value)}
+                                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
+                            />
+                            <label className="text-xs font-medium text-gray-600">To</label>
+                            <input
+                                type="date"
+                                value={obTo}
+                                onChange={(e) => setObTo(e.target.value)}
+                                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
+                            />
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                disabled={customApplyLoading === 'ob' || !isValidRange(obFrom, obTo)}
+                                onClick={() => void applyCustomRanges('ob')}
+                            >
+                                {customApplyLoading === 'ob' ? 'Applying…' : 'Apply'}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full border-separate text-xs" style={{ borderSpacing: 0 }}>
+                        <thead className="bg-[#eef2f7] text-black">
+                            <tr>
+                                <th className="border border-[#d5dbe4] px-3 py-2 text-left font-medium" colSpan={2}>
+                                    {executiveData.fyLabel}
+                                </th>
+                                {execPeriodOrder.map((k) => (
+                                    <th key={k} className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">
+                                        {execPeriodColumnLabel[k]}
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr className="bg-white">
+                                <td className="border border-[#d5dbe4] px-3 py-2 font-semibold" rowSpan={2}>
+                                    OB Production
+                                </td>
+                                <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Trips</td>
+                                {execPeriodOrder.map((k) => (
+                                    <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                        {fmtNumber(executiveData.obProduction[k].trips, 0)}
+                                    </td>
+                                ))}
+                            </tr>
+                            <tr className="bg-white">
+                                <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Qty</td>
+                                {execPeriodOrder.map((k) => (
+                                    <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                        {fmtNumber(executiveData.obProduction[k].qty, 2)}
+                                    </td>
+                                ))}
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
-            <ProductionBlock
-                title="Coal Production"
-                summary={executiveData.customRanges.coalProduction.summary}
-                toolbar={
-                    <>
-                        <label className="text-xs font-medium text-gray-600">From</label>
-                        <input
-                            type="date"
-                            value={coalFrom}
-                            onChange={(e) => setCoalFrom(e.target.value)}
-                            className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
-                        />
-                        <label className="text-xs font-medium text-gray-600">To</label>
-                        <input
-                            type="date"
-                            value={coalTo}
-                            onChange={(e) => setCoalTo(e.target.value)}
-                            className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
-                        />
-                        <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            disabled={customApplyLoading === 'coal' || !isValidRange(coalFrom, coalTo)}
-                            onClick={() => void applyCustomRanges('coal')}
-                        >
-                            {customApplyLoading === 'coal' ? 'Applying…' : 'Apply'}
-                        </Button>
-                    </>
-                }
-            />
+            <div className="overflow-hidden rounded-xl border border-[#d5dbe4] bg-white">
+                <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        <p className="text-sm font-semibold text-gray-900">Coal Production</p>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <label className="text-xs font-medium text-gray-600">From</label>
+                            <input
+                                type="date"
+                                value={coalFrom}
+                                onChange={(e) => setCoalFrom(e.target.value)}
+                                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
+                            />
+                            <label className="text-xs font-medium text-gray-600">To</label>
+                            <input
+                                type="date"
+                                value={coalTo}
+                                onChange={(e) => setCoalTo(e.target.value)}
+                                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
+                            />
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                disabled={customApplyLoading === 'coal' || !isValidRange(coalFrom, coalTo)}
+                                onClick={() => void applyCustomRanges('coal')}
+                            >
+                                {customApplyLoading === 'coal' ? 'Applying…' : 'Apply'}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full border-separate text-xs" style={{ borderSpacing: 0 }}>
+                        <thead className="bg-[#eef2f7] text-black">
+                            <tr>
+                                <th className="border border-[#d5dbe4] px-3 py-2 text-left font-medium" colSpan={2}>
+                                    {executiveData.fyLabel}
+                                </th>
+                                {execPeriodOrder.map((k) => (
+                                    <th key={k} className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">
+                                        {execPeriodColumnLabel[k]}
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr className="bg-white">
+                                <td className="border border-[#d5dbe4] px-3 py-2 font-semibold" rowSpan={2}>
+                                    Coal Production
+                                </td>
+                                <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Trips</td>
+                                {execPeriodOrder.map((k) => (
+                                    <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                        {fmtNumber(executiveData.coalProduction[k].trips, 0)}
+                                    </td>
+                                ))}
+                            </tr>
+                            <tr className="bg-white">
+                                <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Qty</td>
+                                {execPeriodOrder.map((k) => (
+                                    <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                        {fmtNumber(executiveData.coalProduction[k].qty, 2)}
+                                    </td>
+                                ))}
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
             <div className="overflow-hidden rounded-xl border border-[#d5dbe4] bg-white">
                 <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
@@ -2226,22 +2250,35 @@ function RakePerformanceSection({ rakes }: { rakes: RakePerformanceItem[] }) {
                 </div>
             </div>
 
-            <div className="mt-5 grid gap-5 lg:grid-cols-2">
+            <div className="mt-5 space-y-8">
                 <div>
                     <p className="mb-2 text-xs font-medium text-gray-600">Weight breakdown (MT)</p>
                     {weightChartData.length > 0 ? (
-                        <ResponsiveContainer width="100%" height={220}>
-                            <RechartsBarChart data={weightChartData} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
-                                <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
-                                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                                <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${v} MT`} />
-                                <Tooltip formatter={(v: number | undefined) => `${Number(v ?? 0).toLocaleString()} MT`} />
-                                <Bar dataKey="value" radius={[4, 4, 0, 0]} barSize={32} isAnimationActive>
+                        <ResponsiveContainer width="100%" height={260}>
+                            <RechartsPieChart margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                                <Pie
+                                    data={weightChartData}
+                                    dataKey="value"
+                                    nameKey="name"
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={56}
+                                    outerRadius={92}
+                                    paddingAngle={2}
+                                    isAnimationActive
+                                >
                                     {weightChartData.map((entry, i) => (
-                                        <Cell key={i} fill={entry.fill ?? '#4B72BE'} />
+                                        <Cell key={`${entry.name}-${i}`} fill={entry.fill ?? '#4B72BE'} />
                                     ))}
-                                </Bar>
-                            </RechartsBarChart>
+                                </Pie>
+                                <Tooltip
+                                    formatter={(value, name) => [
+                                        `${Number(value ?? 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} MT`,
+                                        String(name ?? ''),
+                                    ]}
+                                />
+                                <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
+                            </RechartsPieChart>
                         </ResponsiveContainer>
                     ) : (
                         <div className="flex h-[220px] items-center justify-center rounded-lg border border-gray-100 bg-gray-50/50 text-sm text-gray-600">
