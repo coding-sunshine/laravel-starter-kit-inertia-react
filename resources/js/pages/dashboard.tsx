@@ -89,11 +89,12 @@ const DASHBOARD_PALETTE = {
 const ALL_FILTER_VALUE = '__all__';
 
 const PERIODS = [
+    { key: 'last_month', label: 'Last month' },
+    { key: 'last_week', label: 'Last week' },
+    { key: 'yesterday', label: 'Yesterday' },
     { key: 'today', label: 'Today' },
     { key: 'week', label: 'This week' },
     { key: 'month', label: 'This month' },
-    { key: 'quarter', label: 'Quarter' },
-    { key: 'year', label: 'Year' },
     { key: 'custom', label: 'Custom' },
 ] as const;
 
@@ -397,6 +398,9 @@ interface ExecutiveYesterdayData {
             dispatch: { roadQty: number; railQty: number };
         }>;
     };
+    /** Per chart-period slices (anchor-relative), same ranges as road/rail production charts. */
+    penaltyBySidingByPeriod?: Record<'yesterday' | 'today' | 'month' | 'fy', PenaltyBySidingPoint[]>;
+    powerPlantDispatchByPeriod?: Record<'yesterday' | 'today' | 'month' | 'fy', PowerPlantDispatchItem[]>;
 }
 
 interface DashboardAlert {
@@ -518,6 +522,316 @@ function SectionHeader({ icon: Icon, title, subtitle, action, titleClassName }: 
     );
 }
 
+/** Period keys aligned with executive table / backend totals (FY = year-to-date in FY). */
+type ExecutiveChartPeriodKey = 'yesterday' | 'today' | 'month' | 'fy';
+
+const EXEC_CHART_PERIOD_OPTIONS: { value: ExecutiveChartPeriodKey; label: string }[] = [
+    { value: 'yesterday', label: 'Yesterday' },
+    { value: 'today', label: 'Today' },
+    { value: 'month', label: 'This month' },
+    { value: 'fy', label: 'Year' },
+];
+
+function executiveChartFormatBarTooltipValue(n: number, unit: 'count' | 'mt'): string {
+    if (unit === 'count') {
+        return n.toLocaleString(undefined, { maximumFractionDigits: 0 });
+    }
+
+    return `${n.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} MT`;
+}
+
+function ExecutiveSidingBarChartCard(props: {
+    title: string;
+    rows: Array<{ name: string; value: number }>;
+    period: ExecutiveChartPeriodKey;
+    onPeriodChange: (p: ExecutiveChartPeriodKey) => void;
+    valueKind: 'count' | 'qty';
+    onValueKindChange: (k: 'count' | 'qty') => void;
+    countLabel: string;
+    barColor: string;
+}) {
+    const max = Math.max(...props.rows.map((r) => r.value), 1);
+    const unit: 'count' | 'mt' = props.valueKind === 'qty' ? 'mt' : 'count';
+
+    return (
+        <div className="dashboard-card overflow-hidden rounded-xl border border-[#d5dbe4] bg-white p-0">
+            <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                    <p className="text-sm font-semibold text-gray-900">{props.title}</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Select
+                            value={props.period}
+                            onValueChange={(v) => props.onPeriodChange(v as ExecutiveChartPeriodKey)}
+                        >
+                            <SelectTrigger className="h-9 w-[160px] text-xs">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {EXEC_CHART_PERIOD_OPTIONS.map((o) => (
+                                    <SelectItem key={o.value} value={o.value} className="text-xs">
+                                        {o.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <div className="flex rounded-lg border border-gray-200 p-0.5">
+                            <Button
+                                type="button"
+                                variant={props.valueKind === 'count' ? 'default' : 'ghost'}
+                                size="sm"
+                                className="h-8 px-3 text-xs"
+                                onClick={() => props.onValueKindChange('count')}
+                            >
+                                {props.countLabel}
+                            </Button>
+                            <Button
+                                type="button"
+                                variant={props.valueKind === 'qty' ? 'default' : 'ghost'}
+                                size="sm"
+                                className="h-8 px-3 text-xs"
+                                onClick={() => props.onValueKindChange('qty')}
+                            >
+                                Qty
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div className="bg-[#fbfbfc] p-4">
+                {props.rows.length === 0 ? (
+                    <p className="py-12 text-center text-sm text-muted-foreground">No siding data.</p>
+                ) : (
+                    <ResponsiveContainer width="100%" height={300}>
+                        <RechartsBarChart
+                            data={props.rows}
+                            margin={{ top: 12, right: 16, bottom: 64, left: 8 }}
+                            barCategoryGap="18%"
+                        >
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                            <XAxis
+                                dataKey="name"
+                                tick={{ fontSize: 10 }}
+                                interval={0}
+                                height={56}
+                                angle={-35}
+                                textAnchor="end"
+                            />
+                            <YAxis tick={{ fontSize: 11 }} domain={[0, max * 1.12]} />
+                            <Tooltip
+                                content={({ active, payload, label }) => {
+                                    if (!active || !payload?.length) {
+                                        return null;
+                                    }
+                                    const v = Number(payload[0]?.value ?? 0);
+
+                                    return (
+                                        <div className="rounded-lg border bg-popover px-3 py-2 text-xs shadow-md">
+                                            <div className="font-semibold">{String(label ?? '')}</div>
+                                            <div className="mt-1 tabular-nums font-semibold">
+                                                {executiveChartFormatBarTooltipValue(v, unit)}
+                                            </div>
+                                        </div>
+                                    );
+                                }}
+                            />
+                            <Bar dataKey="value" fill={props.barColor} radius={[2, 2, 0, 0]} maxBarSize={48} />
+                        </RechartsBarChart>
+                    </ResponsiveContainer>
+                )}
+            </div>
+        </div>
+    );
+}
+
+function ExecutiveProductionDonutCard(props: {
+    period: ExecutiveChartPeriodKey;
+    onPeriodChange: (p: ExecutiveChartPeriodKey) => void;
+    valueKind: 'trips' | 'qty';
+    onValueKindChange: (k: 'trips' | 'qty') => void;
+    obValue: number;
+    coalValue: number;
+}) {
+    const data = [
+        { name: 'OB', value: props.obValue, fill: DASHBOARD_PALETTE.successGreen },
+        { name: 'Coal', value: props.coalValue, fill: DASHBOARD_PALETTE.steelBlue },
+    ];
+    const total = props.obValue + props.coalValue;
+    const isEmpty = total <= 0;
+    /** Muted 50/50 donut so the chart frame is visible when there is no production data. */
+    const chartData = isEmpty
+        ? [
+              { name: 'OB', value: 1, fill: '#e2e8f0' },
+              { name: 'Coal', value: 1, fill: '#cbd5e1' },
+          ]
+        : data;
+
+    return (
+        <div className="dashboard-card overflow-hidden rounded-xl border border-[#d5dbe4] bg-white p-0">
+            <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                    <p className="text-sm font-semibold text-gray-900">Production</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Select
+                            value={props.period}
+                            onValueChange={(v) => props.onPeriodChange(v as ExecutiveChartPeriodKey)}
+                        >
+                            <SelectTrigger className="h-9 w-[160px] text-xs">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {EXEC_CHART_PERIOD_OPTIONS.map((o) => (
+                                    <SelectItem key={o.value} value={o.value} className="text-xs">
+                                        {o.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <div className="flex rounded-lg border border-gray-200 p-0.5">
+                            <Button
+                                type="button"
+                                variant={props.valueKind === 'trips' ? 'default' : 'ghost'}
+                                size="sm"
+                                className="h-8 px-3 text-xs"
+                                onClick={() => props.onValueKindChange('trips')}
+                            >
+                                Trips
+                            </Button>
+                            <Button
+                                type="button"
+                                variant={props.valueKind === 'qty' ? 'default' : 'ghost'}
+                                size="sm"
+                                className="h-8 px-3 text-xs"
+                                onClick={() => props.onValueKindChange('qty')}
+                            >
+                                Qty
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div className="relative bg-[#fbfbfc] p-4">
+                <div className="relative min-h-[280px]">
+                    <ResponsiveContainer width="100%" height={280}>
+                        <RechartsPieChart margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                            <Pie
+                                data={chartData}
+                                dataKey="value"
+                                nameKey="name"
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={72}
+                                outerRadius={104}
+                                paddingAngle={isEmpty ? 1 : 2}
+                                isAnimationActive={!isEmpty}
+                                stroke={isEmpty ? '#f8fafc' : undefined}
+                                strokeWidth={isEmpty ? 1 : 0}
+                            >
+                                {chartData.map((entry) => (
+                                    <Cell key={`cell-${entry.name}`} fill={entry.fill} />
+                                ))}
+                            </Pie>
+                            <Tooltip
+                                formatter={(value, name) => {
+                                    if (isEmpty) {
+                                        return ['No production data for this period', String(name)];
+                                    }
+                                    const v = Number(value ?? 0);
+
+                                    return [
+                                        props.valueKind === 'qty'
+                                            ? `${v.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} MT`
+                                            : v.toLocaleString(undefined, { maximumFractionDigits: 0 }),
+                                        String(name),
+                                    ];
+                                }}
+                            />
+                            <Legend wrapperStyle={{ fontSize: 12, opacity: isEmpty ? 0.45 : 1 }} />
+                        </RechartsPieChart>
+                    </ResponsiveContainer>
+                    {isEmpty ? (
+                        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center pb-6 text-center">
+                            <p className="text-xs font-medium text-muted-foreground">No production data</p>
+                            <p className="mt-0.5 text-[11px] text-muted-foreground/80">for this period</p>
+                        </div>
+                    ) : null}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+const PENALTY_BY_SIDING_CHART_COLORS = [
+    '#DC2626',
+    '#EA580C',
+    '#CA8A04',
+    '#65A30D',
+    '#059669',
+    '#0D9488',
+    '#2563EB',
+    '#7C3AED',
+    '#C026D3',
+    '#DB2777',
+];
+
+function DashboardPenaltyBySidingChart({
+    data,
+    period,
+    onPeriodChange,
+}: {
+    data: PenaltyBySidingPoint[];
+    period?: ExecutiveChartPeriodKey;
+    onPeriodChange?: (p: ExecutiveChartPeriodKey) => void;
+}) {
+    const sorted = useMemo(() => [...data].sort((a, b) => b.total - a.total), [data]);
+    const showPeriod = onPeriodChange != null && period != null;
+
+    return (
+        <div className="dashboard-card overflow-hidden rounded-xl border border-[#d5dbe4] bg-white p-0">
+            <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
+                {showPeriod ? (
+                    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                        <SectionHeader icon={BarChart3} title="Penalty by siding" subtitle="Which siding causes most penalties" />
+                        <Select value={period} onValueChange={(v) => onPeriodChange(v as ExecutiveChartPeriodKey)}>
+                            <SelectTrigger className="h-9 w-[160px] text-xs">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {EXEC_CHART_PERIOD_OPTIONS.map((o) => (
+                                    <SelectItem key={o.value} value={o.value} className="text-xs">
+                                        {o.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                ) : (
+                    <SectionHeader icon={BarChart3} title="Penalty by siding" subtitle="Which siding causes most penalties" />
+                )}
+            </div>
+            <div className="bg-[#fbfbfc] p-4">
+                {sorted.length === 0 ? (
+                    <p className="py-8 text-center text-sm text-muted-foreground">No sidings available for selected filters.</p>
+                ) : (
+                    <ResponsiveContainer width="100%" height={320}>
+                        <RechartsBarChart data={sorted} margin={{ top: 8, right: 24, bottom: 24, left: 16 }}>
+                            <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
+                            <XAxis dataKey="name" type="category" tick={{ fontSize: 11 }} interval={0} height={48} />
+                            <YAxis type="number" tickFormatter={(v: number) => formatCurrency(v)} width={72} tick={{ fontSize: 11 }} />
+                            <Tooltip formatter={(v: number | string | undefined) => formatCurrency(Number(v ?? 0))} />
+                            <Bar dataKey="total" radius={[4, 4, 0, 0]} barSize={28} isAnimationActive>
+                                <LabelList dataKey="total" position="top" formatter={(v: unknown) => formatCurrency(Number(v ?? 0))} />
+                                {sorted.map((row, i) => (
+                                    <Cell key={row.name} fill={PENALTY_BY_SIDING_CHART_COLORS[i % PENALTY_BY_SIDING_CHART_COLORS.length]} />
+                                ))}
+                            </Bar>
+                        </RechartsBarChart>
+                    </ResponsiveContainer>
+                )}
+            </div>
+        </div>
+    );
+}
+
 function ExecutiveYesterdayTable({
     title,
     values,
@@ -583,9 +897,13 @@ function ExecutiveYesterdayTable({
 function ExecutiveYesterdaySection({
     data,
     viewMode,
+    penaltyBySiding = [],
+    powerPlantDispatch = [],
 }: {
     data: ExecutiveYesterdayData;
     viewMode: 'table' | 'charts';
+    penaltyBySiding?: PenaltyBySidingPoint[];
+    powerPlantDispatch?: PowerPlantDispatchItem[];
 }) {
     const [executiveData, setExecutiveData] = useState<ExecutiveYesterdayData>(data);
 
@@ -598,8 +916,25 @@ function ExecutiveYesterdaySection({
     const [coalFrom, setCoalFrom] = useState<string>(data.customRanges.coalProduction.from);
     const [coalTo, setCoalTo] = useState<string>(data.customRanges.coalProduction.to);
 
-    const [isCustomLoading, setIsCustomLoading] = useState(false);
+    /** Single range for the Custom (by siding) table — applied to both road and rail. */
+    const [customFrom, setCustomFrom] = useState<string>(data.customRanges.roadDispatch.from);
+    const [customTo, setCustomTo] = useState<string>(data.customRanges.roadDispatch.to);
+
+    /** Which custom-range Apply is in flight (only that toolbar shows Applying… / is disabled). */
+    const [customApplyLoading, setCustomApplyLoading] = useState<
+        'road' | 'rail' | 'ob' | 'coal' | 'customTable' | null
+    >(null);
     const [customError, setCustomError] = useState<string | null>(null);
+
+    const [roadChartPeriod, setRoadChartPeriod] = useState<ExecutiveChartPeriodKey>('yesterday');
+    const [roadChartValueKind, setRoadChartValueKind] = useState<'count' | 'qty'>('count');
+    const [railChartPeriod, setRailChartPeriod] = useState<ExecutiveChartPeriodKey>('yesterday');
+    const [railChartValueKind, setRailChartValueKind] = useState<'count' | 'qty'>('count');
+    const [productionChartPeriod, setProductionChartPeriod] = useState<ExecutiveChartPeriodKey>('yesterday');
+    const [productionChartMetric, setProductionChartMetric] = useState<'trips' | 'qty'>('trips');
+    const [penaltyChartPeriod, setPenaltyChartPeriod] = useState<ExecutiveChartPeriodKey>('yesterday');
+    const [powerPlantChartPeriod, setPowerPlantChartPeriod] = useState<ExecutiveChartPeriodKey>('yesterday');
+    const [powerPlantMetric, setPowerPlantMetric] = useState<'rakes' | 'qty'>('rakes');
 
     useEffect(() => {
         setExecutiveData(data);
@@ -611,13 +946,15 @@ function ExecutiveYesterdaySection({
         setObTo(data.customRanges.obProduction.to);
         setCoalFrom(data.customRanges.coalProduction.from);
         setCoalTo(data.customRanges.coalProduction.to);
+        setCustomFrom(data.customRanges.roadDispatch.from);
+        setCustomTo(data.customRanges.roadDispatch.to);
     }, [data]);
 
     const fmtNumber = (n: number, fractionDigits = 0): string =>
         n.toLocaleString(undefined, { minimumFractionDigits: fractionDigits, maximumFractionDigits: fractionDigits });
 
-    const periodKeys: Array<'yesterday' | 'today' | 'week' | 'month' | 'fy'> = ['yesterday', 'today', 'week', 'month', 'fy'];
-    const periodLabels: Record<(typeof periodKeys)[number], string> = {
+    const execPeriodOrder = ['yesterday', 'today', 'week', 'month', 'fy'] as const;
+    const execPeriodColumnLabel: Record<(typeof execPeriodOrder)[number], string> = {
         yesterday: 'Yesterday',
         today: 'Today',
         week: 'Week',
@@ -629,20 +966,87 @@ function ExecutiveYesterdaySection({
 
     const isValidRange = (from: string, to: string): boolean => Boolean(from) && Boolean(to) && from <= to;
 
-    const applyCustomRanges = useCallback(async (): Promise<void> => {
-        setIsCustomLoading(true);
+    const applyCustomRanges = useCallback(
+        async (scope: 'road' | 'rail' | 'ob' | 'coal'): Promise<void> => {
+            setCustomApplyLoading(scope);
+            setCustomError(null);
+            try {
+                const url = new URL(`${dashboardPath.replace(/\/$/, '')}/executive-yesterday-data`, window.location.origin);
+                url.searchParams.set('executive_yesterday_date', executiveData.anchorDate);
+                url.searchParams.set('executive_road_from', roadFrom);
+                url.searchParams.set('executive_road_to', roadTo);
+                url.searchParams.set('executive_rail_from', railFrom);
+                url.searchParams.set('executive_rail_to', railTo);
+                url.searchParams.set('executive_ob_from', obFrom);
+                url.searchParams.set('executive_ob_to', obTo);
+                url.searchParams.set('executive_coal_from', coalFrom);
+                url.searchParams.set('executive_coal_to', coalTo);
+                url.searchParams.set('executive_apply_scope', scope);
+
+                const res = await fetch(url.toString(), {
+                    credentials: 'same-origin',
+                    headers: {
+                        Accept: 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+                if (!res.ok) {
+                    throw new Error(`Request failed (${res.status})`);
+                }
+
+                const body: unknown = await res.json();
+                if (
+                    typeof body === 'object' &&
+                    body !== null &&
+                    'anchorDate' in body &&
+                    'roadDispatch' in body &&
+                    'customRanges' in body
+                ) {
+                    setExecutiveData(body as ExecutiveYesterdayData);
+                    return;
+                }
+                if (
+                    typeof body === 'object' &&
+                    body !== null &&
+                    'customRanges' in body &&
+                    typeof (body as { customRanges?: unknown }).customRanges === 'object' &&
+                    (body as { customRanges?: unknown }).customRanges !== null
+                ) {
+                    const partial = (body as { customRanges: Partial<ExecutiveYesterdayData['customRanges']> }).customRanges;
+                    setExecutiveData((prev) => ({
+                        ...prev,
+                        customRanges: {
+                            ...prev.customRanges,
+                            ...partial,
+                        },
+                    }));
+                    return;
+                }
+                throw new Error('Unexpected response shape.');
+            } catch (e) {
+                setCustomError(e instanceof Error ? e.message : 'Failed to load custom range data.');
+            } finally {
+                setCustomApplyLoading(null);
+            }
+        },
+        [dashboardPath, executiveData.anchorDate, roadFrom, roadTo, railFrom, railTo, obFrom, obTo, coalFrom, coalTo],
+    );
+
+    const applyCustomTableRoadRail = useCallback(async (): Promise<void> => {
+        setCustomApplyLoading('customTable');
         setCustomError(null);
         try {
             const url = new URL(`${dashboardPath.replace(/\/$/, '')}/executive-yesterday-data`, window.location.origin);
             url.searchParams.set('executive_yesterday_date', executiveData.anchorDate);
-            url.searchParams.set('executive_road_from', roadFrom);
-            url.searchParams.set('executive_road_to', roadTo);
-            url.searchParams.set('executive_rail_from', railFrom);
-            url.searchParams.set('executive_rail_to', railTo);
+            url.searchParams.set('executive_road_from', customFrom);
+            url.searchParams.set('executive_road_to', customTo);
+            url.searchParams.set('executive_rail_from', customFrom);
+            url.searchParams.set('executive_rail_to', customTo);
             url.searchParams.set('executive_ob_from', obFrom);
             url.searchParams.set('executive_ob_to', obTo);
             url.searchParams.set('executive_coal_from', coalFrom);
             url.searchParams.set('executive_coal_to', coalTo);
+            url.searchParams.set('executive_apply_scope', 'road,rail');
 
             const res = await fetch(url.toString(), {
                 credentials: 'same-origin',
@@ -655,14 +1059,104 @@ function ExecutiveYesterdaySection({
                 throw new Error(`Request failed (${res.status})`);
             }
 
-            const next = (await res.json()) as ExecutiveYesterdayData;
-            setExecutiveData(next);
+            const body: unknown = await res.json();
+            if (
+                typeof body === 'object' &&
+                body !== null &&
+                'customRanges' in body &&
+                typeof (body as { customRanges?: unknown }).customRanges === 'object' &&
+                (body as { customRanges?: unknown }).customRanges !== null
+            ) {
+                const partial = (body as { customRanges: Partial<ExecutiveYesterdayData['customRanges']> }).customRanges;
+                setExecutiveData((prev) => ({
+                    ...prev,
+                    customRanges: {
+                        ...prev.customRanges,
+                        ...partial,
+                    },
+                }));
+                setRoadFrom(customFrom);
+                setRoadTo(customTo);
+                setRailFrom(customFrom);
+                setRailTo(customTo);
+                return;
+            }
+            throw new Error('Unexpected response shape.');
         } catch (e) {
             setCustomError(e instanceof Error ? e.message : 'Failed to load custom range data.');
         } finally {
-            setIsCustomLoading(false);
+            setCustomApplyLoading(null);
         }
-    }, [dashboardPath, executiveData.anchorDate, roadFrom, roadTo, railFrom, railTo, obFrom, obTo, coalFrom, coalTo]);
+    }, [
+        dashboardPath,
+        executiveData.anchorDate,
+        customFrom,
+        customTo,
+        obFrom,
+        obTo,
+        coalFrom,
+        coalTo,
+    ]);
+
+    const railCustomBySidingId = useMemo(
+        () => new Map(executiveData.customRanges.railDispatch.bySiding.map((r) => [r.sidingId, r])),
+        [executiveData.customRanges.railDispatch.bySiding],
+    );
+
+    const roadDispatchBarRows = useMemo(
+        () =>
+            executiveData.roadDispatch.bySiding.map((s) => ({
+                name: s.sidingName,
+                value:
+                    roadChartValueKind === 'count'
+                        ? s.totals[roadChartPeriod].trips
+                        : s.totals[roadChartPeriod].qty,
+            })),
+        [executiveData.roadDispatch.bySiding, roadChartPeriod, roadChartValueKind],
+    );
+
+    const railDispatchBarRows = useMemo(
+        () =>
+            executiveData.railDispatch.bySiding.map((s) => ({
+                name: s.sidingName,
+                value:
+                    railChartValueKind === 'count'
+                        ? s.totals[railChartPeriod].rakes
+                        : s.totals[railChartPeriod].qty,
+            })),
+        [executiveData.railDispatch.bySiding, railChartPeriod, railChartValueKind],
+    );
+
+    const productionObValue = useMemo(() => {
+        const row = executiveData.obProduction[productionChartPeriod];
+
+        return productionChartMetric === 'trips' ? row.trips : row.qty;
+    }, [executiveData.obProduction, productionChartPeriod, productionChartMetric]);
+
+    const productionCoalValue = useMemo(() => {
+        const row = executiveData.coalProduction[productionChartPeriod];
+
+        return productionChartMetric === 'trips' ? row.trips : row.qty;
+    }, [executiveData.coalProduction, productionChartPeriod, productionChartMetric]);
+
+    const hasPenaltyPeriodSlices = executiveData.penaltyBySidingByPeriod != null;
+    const hasPowerPlantPeriodSlices = executiveData.powerPlantDispatchByPeriod != null;
+
+    const penaltyChartData = useMemo(() => {
+        if (hasPenaltyPeriodSlices && executiveData.penaltyBySidingByPeriod) {
+            return executiveData.penaltyBySidingByPeriod[penaltyChartPeriod] ?? [];
+        }
+
+        return penaltyBySiding;
+    }, [executiveData.penaltyBySidingByPeriod, hasPenaltyPeriodSlices, penaltyBySiding, penaltyChartPeriod]);
+
+    const powerPlantChartData = useMemo(() => {
+        if (hasPowerPlantPeriodSlices && executiveData.powerPlantDispatchByPeriod) {
+            return executiveData.powerPlantDispatchByPeriod[powerPlantChartPeriod] ?? [];
+        }
+
+        return powerPlantDispatch;
+    }, [executiveData.powerPlantDispatchByPeriod, hasPowerPlantPeriodSlices, powerPlantChartPeriod, powerPlantDispatch]);
 
     const SummaryHeader = ({ label, columns }: { label: string; columns: string[] }) => (
         <thead className="bg-[#eef2f7] text-black">
@@ -675,47 +1169,6 @@ function ExecutiveYesterdaySection({
                 ))}
             </tr>
         </thead>
-    );
-
-    const DispatchBlock = (props: {
-        title: string;
-        metricCountLabel: string;
-        countKey: 'trips' | 'rakes';
-        summary: { columns: string[]; data: Record<string, { qty: number } & Partial<Record<'trips' | 'rakes', number>> > };
-        toolbar?: React.ReactNode;
-    }) => (
-        <div className="overflow-hidden rounded-xl border border-[#d5dbe4] bg-white">
-            <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                    <p className="text-sm font-semibold text-gray-900">{props.title}</p>
-                    {props.toolbar ? <div className="flex flex-wrap items-center gap-2">{props.toolbar}</div> : null}
-                </div>
-            </div>
-            <div className="overflow-x-auto">
-                <table className="w-full border-separate text-xs" style={{ borderSpacing: 0 }}>
-                    <SummaryHeader label={props.title} columns={props.summary.columns} />
-                    <tbody>
-                        <tr className="bg-white">
-                            <td className="border border-[#d5dbe4] px-3 py-2 font-semibold" rowSpan={2}>{props.title}</td>
-                            <td className="border border-[#d5dbe4] px-3 py-2 font-medium">{props.metricCountLabel}</td>
-                            {props.summary.columns.map((c) => (
-                                <td key={c} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
-                                    {fmtNumber(Number(props.summary.data?.[c]?.[props.countKey] ?? 0), 0)}
-                                </td>
-                            ))}
-                        </tr>
-                        <tr className="bg-white">
-                            <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Qty</td>
-                            {props.summary.columns.map((c) => (
-                                <td key={c} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
-                                    {fmtNumber(Number(props.summary.data?.[c]?.qty ?? 0), 2)}
-                                </td>
-                            ))}
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
     );
 
     const ProductionBlock = (props: {
@@ -757,81 +1210,229 @@ function ExecutiveYesterdaySection({
         </div>
     );
 
+    const roadCustomToolbar = (
+        <>
+            <label className="text-xs font-medium text-gray-600">From</label>
+            <input
+                type="date"
+                value={roadFrom}
+                onChange={(e) => setRoadFrom(e.target.value)}
+                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
+            />
+            <label className="text-xs font-medium text-gray-600">To</label>
+            <input
+                type="date"
+                value={roadTo}
+                onChange={(e) => setRoadTo(e.target.value)}
+                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
+            />
+            <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={customApplyLoading === 'road' || !isValidRange(roadFrom, roadTo)}
+                onClick={() => void applyCustomRanges('road')}
+            >
+                {customApplyLoading === 'road' ? 'Applying…' : 'Apply'}
+            </Button>
+        </>
+    );
+
+    const railCustomToolbar = (
+        <>
+            <label className="text-xs font-medium text-gray-600">From</label>
+            <input
+                type="date"
+                value={railFrom}
+                onChange={(e) => setRailFrom(e.target.value)}
+                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
+            />
+            <label className="text-xs font-medium text-gray-600">To</label>
+            <input
+                type="date"
+                value={railTo}
+                onChange={(e) => setRailTo(e.target.value)}
+                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
+            />
+            <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={customApplyLoading === 'rail' || !isValidRange(railFrom, railTo)}
+                onClick={() => void applyCustomRanges('rail')}
+            >
+                {customApplyLoading === 'rail' ? 'Applying…' : 'Apply'}
+            </Button>
+        </>
+    );
+
+    const customTableToolbar = (
+        <>
+            <label className="text-xs font-medium text-gray-600">From</label>
+            <input
+                type="date"
+                value={customFrom}
+                onChange={(e) => setCustomFrom(e.target.value)}
+                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
+            />
+            <label className="text-xs font-medium text-gray-600">To</label>
+            <input
+                type="date"
+                value={customTo}
+                onChange={(e) => setCustomTo(e.target.value)}
+                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
+            />
+            <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={customApplyLoading === 'customTable' || !isValidRange(customFrom, customTo)}
+                onClick={() => void applyCustomTableRoadRail()}
+            >
+                {customApplyLoading === 'customTable' ? 'Applying…' : 'Apply'}
+            </Button>
+        </>
+    );
+
     const TableView = (
         <div className="space-y-6">
-            <DispatchBlock
-                title="Road Dispatch"
-                metricCountLabel="Trips"
-                countKey="trips"
-                summary={executiveData.customRanges.roadDispatch.summary}
-                toolbar={
-                    <>
-                        <span className="hidden text-[11px] text-muted-foreground sm:inline">
-                            Custom: {fmtNumber(executiveData.customRanges.roadDispatch.totals.trips, 0)} trips, {fmtNumber(executiveData.customRanges.roadDispatch.totals.qty, 2)} MT
-                        </span>
-                        <label className="text-xs font-medium text-gray-600">From</label>
-                        <input
-                            type="date"
-                            value={roadFrom}
-                            onChange={(e) => setRoadFrom(e.target.value)}
-                            className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
-                        />
-                        <label className="text-xs font-medium text-gray-600">To</label>
-                        <input
-                            type="date"
-                            value={roadTo}
-                            onChange={(e) => setRoadTo(e.target.value)}
-                            className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
-                        />
-                        <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            disabled={isCustomLoading || !isValidRange(roadFrom, roadTo)}
-                            onClick={applyCustomRanges}
-                        >
-                            {isCustomLoading ? 'Applying…' : 'Apply'}
-                        </Button>
-                    </>
-                }
-            />
+            <div className="overflow-hidden rounded-xl border border-[#d5dbe4] bg-white">
+                <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        <p className="text-sm font-semibold text-gray-900">Road Dispatch</p>
+                        <div className="flex flex-wrap items-center gap-2">{roadCustomToolbar}</div>
+                    </div>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full border-separate text-xs" style={{ borderSpacing: 0 }}>
+                        <thead className="bg-[#eef2f7] text-black">
+                            <tr>
+                                <th className="border border-[#d5dbe4] px-3 py-2 text-left font-medium" colSpan={2}>
+                                    {executiveData.fyLabel}
+                                </th>
+                                {execPeriodOrder.map((k) => (
+                                    <th key={k} className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">
+                                        {execPeriodColumnLabel[k]}
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr className="bg-white">
+                                <td className="border border-[#d5dbe4] px-3 py-2 font-semibold" rowSpan={2}>
+                                    Road Dispatch
+                                </td>
+                                <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Trips</td>
+                                {execPeriodOrder.map((k) => (
+                                    <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                        {fmtNumber(executiveData.roadDispatch.totals[k].trips, 0)}
+                                    </td>
+                                ))}
+                            </tr>
+                            <tr className="bg-white">
+                                <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Qty</td>
+                                {execPeriodOrder.map((k) => (
+                                    <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                        {fmtNumber(executiveData.roadDispatch.totals[k].qty, 2)}
+                                    </td>
+                                ))}
+                            </tr>
+                            {executiveData.roadDispatch.bySiding.map((s) => (
+                                <Fragment key={s.sidingId}>
+                                    <tr className="bg-white">
+                                        <td className="border border-[#d5dbe4] px-3 py-2 font-medium" rowSpan={2}>
+                                            {s.sidingName}
+                                        </td>
+                                        <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Trips</td>
+                                        {execPeriodOrder.map((k) => (
+                                            <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                                {fmtNumber(s.totals[k].trips, 0)}
+                                            </td>
+                                        ))}
+                                    </tr>
+                                    <tr className="bg-white">
+                                        <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Qty</td>
+                                        {execPeriodOrder.map((k) => (
+                                            <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                                {fmtNumber(s.totals[k].qty, 2)}
+                                            </td>
+                                        ))}
+                                    </tr>
+                                </Fragment>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
-            <DispatchBlock
-                title="Rail Dispatch"
-                metricCountLabel="Rakes"
-                countKey="rakes"
-                summary={executiveData.customRanges.railDispatch.summary}
-                toolbar={
-                    <>
-                        <span className="hidden text-[11px] text-muted-foreground sm:inline">
-                            Custom: {fmtNumber(executiveData.customRanges.railDispatch.totals.rakes, 0)} rakes, {fmtNumber(executiveData.customRanges.railDispatch.totals.qty, 2)} MT
-                        </span>
-                        <label className="text-xs font-medium text-gray-600">From</label>
-                        <input
-                            type="date"
-                            value={railFrom}
-                            onChange={(e) => setRailFrom(e.target.value)}
-                            className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
-                        />
-                        <label className="text-xs font-medium text-gray-600">To</label>
-                        <input
-                            type="date"
-                            value={railTo}
-                            onChange={(e) => setRailTo(e.target.value)}
-                            className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
-                        />
-                        <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            disabled={isCustomLoading || !isValidRange(railFrom, railTo)}
-                            onClick={applyCustomRanges}
-                        >
-                            {isCustomLoading ? 'Applying…' : 'Apply'}
-                        </Button>
-                    </>
-                }
-            />
+            <div className="overflow-hidden rounded-xl border border-[#d5dbe4] bg-white">
+                <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        <p className="text-sm font-semibold text-gray-900">Rail Dispatch</p>
+                        <div className="flex flex-wrap items-center gap-2">{railCustomToolbar}</div>
+                    </div>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full border-separate text-xs" style={{ borderSpacing: 0 }}>
+                        <thead className="bg-[#eef2f7] text-black">
+                            <tr>
+                                <th className="border border-[#d5dbe4] px-3 py-2 text-left font-medium" colSpan={2}>
+                                    {executiveData.fyLabel}
+                                </th>
+                                {execPeriodOrder.map((k) => (
+                                    <th key={k} className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">
+                                        {execPeriodColumnLabel[k]}
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr className="bg-white">
+                                <td className="border border-[#d5dbe4] px-3 py-2 font-semibold" rowSpan={2}>
+                                    Rail Dispatch
+                                </td>
+                                <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Rakes</td>
+                                {execPeriodOrder.map((k) => (
+                                    <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                        {fmtNumber(executiveData.railDispatch.totals[k].rakes, 0)}
+                                    </td>
+                                ))}
+                            </tr>
+                            <tr className="bg-white">
+                                <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Qty</td>
+                                {execPeriodOrder.map((k) => (
+                                    <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                        {fmtNumber(executiveData.railDispatch.totals[k].qty, 2)}
+                                    </td>
+                                ))}
+                            </tr>
+                            {executiveData.railDispatch.bySiding.map((s) => (
+                                <Fragment key={s.sidingId}>
+                                    <tr className="bg-white">
+                                        <td className="border border-[#d5dbe4] px-3 py-2 font-medium" rowSpan={2}>
+                                            {s.sidingName}
+                                        </td>
+                                        <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Rakes</td>
+                                        {execPeriodOrder.map((k) => (
+                                            <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                                {fmtNumber(s.totals[k].rakes, 0)}
+                                            </td>
+                                        ))}
+                                    </tr>
+                                    <tr className="bg-white">
+                                        <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Qty</td>
+                                        {execPeriodOrder.map((k) => (
+                                            <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                                {fmtNumber(s.totals[k].qty, 2)}
+                                            </td>
+                                        ))}
+                                    </tr>
+                                </Fragment>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
             {customError ? (
                 <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
@@ -844,9 +1445,6 @@ function ExecutiveYesterdaySection({
                 summary={executiveData.customRanges.obProduction.summary}
                 toolbar={
                     <>
-                        <span className="hidden text-[11px] text-muted-foreground sm:inline">
-                            Custom: {fmtNumber(executiveData.customRanges.obProduction.totals.trips, 0)} trips, {fmtNumber(executiveData.customRanges.obProduction.totals.qty, 2)} MT
-                        </span>
                         <label className="text-xs font-medium text-gray-600">From</label>
                         <input
                             type="date"
@@ -865,10 +1463,10 @@ function ExecutiveYesterdaySection({
                             type="button"
                             size="sm"
                             variant="outline"
-                            disabled={isCustomLoading || !isValidRange(obFrom, obTo)}
-                            onClick={applyCustomRanges}
+                            disabled={customApplyLoading === 'ob' || !isValidRange(obFrom, obTo)}
+                            onClick={() => void applyCustomRanges('ob')}
                         >
-                            {isCustomLoading ? 'Applying…' : 'Apply'}
+                            {customApplyLoading === 'ob' ? 'Applying…' : 'Apply'}
                         </Button>
                     </>
                 }
@@ -879,9 +1477,6 @@ function ExecutiveYesterdaySection({
                 summary={executiveData.customRanges.coalProduction.summary}
                 toolbar={
                     <>
-                        <span className="hidden text-[11px] text-muted-foreground sm:inline">
-                            Custom: {fmtNumber(executiveData.customRanges.coalProduction.totals.trips, 0)} trips, {fmtNumber(executiveData.customRanges.coalProduction.totals.qty, 2)} MT
-                        </span>
                         <label className="text-xs font-medium text-gray-600">From</label>
                         <input
                             type="date"
@@ -900,14 +1495,76 @@ function ExecutiveYesterdaySection({
                             type="button"
                             size="sm"
                             variant="outline"
-                            disabled={isCustomLoading || !isValidRange(coalFrom, coalTo)}
-                            onClick={applyCustomRanges}
+                            disabled={customApplyLoading === 'coal' || !isValidRange(coalFrom, coalTo)}
+                            onClick={() => void applyCustomRanges('coal')}
                         >
-                            {isCustomLoading ? 'Applying…' : 'Apply'}
+                            {customApplyLoading === 'coal' ? 'Applying…' : 'Apply'}
                         </Button>
                     </>
                 }
             />
+
+            <div className="overflow-hidden rounded-xl border border-[#d5dbe4] bg-white">
+                <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        <p className="text-sm font-semibold text-gray-900">Custom</p>
+                        <div className="flex flex-wrap items-center gap-2">{customTableToolbar}</div>
+                    </div>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full border-separate text-xs" style={{ borderSpacing: 0 }}>
+                        <thead className="bg-[#eef2f7] text-black">
+                            <tr>
+                                <th className="border border-[#d5dbe4] px-3 py-2 text-left font-medium" rowSpan={2}>
+                                    Siding
+                                </th>
+                                <th className="border border-[#d5dbe4] px-3 py-2 text-center font-medium" colSpan={2}>
+                                    Road dispatch
+                                </th>
+                                <th className="border border-[#d5dbe4] px-3 py-2 text-center font-medium" colSpan={2}>
+                                    Rail dispatch
+                                </th>
+                            </tr>
+                            <tr>
+                                <th className="border border-[#d5dbe4] px-3 py-2 text-right font-medium">Trips</th>
+                                <th className="border border-[#d5dbe4] px-3 py-2 text-right font-medium">Qty (MT)</th>
+                                <th className="border border-[#d5dbe4] px-3 py-2 text-right font-medium">Rakes</th>
+                                <th className="border border-[#d5dbe4] px-3 py-2 text-right font-medium">Qty (MT)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr className="bg-[#f1f5f9]">
+                                <td className="border border-[#d5dbe4] px-3 py-2 font-semibold">Total</td>
+                                <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums font-semibold">
+                                    {fmtNumber(executiveData.customRanges.roadDispatch.totals.trips, 0)}
+                                </td>
+                                <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums font-semibold">
+                                    {fmtNumber(executiveData.customRanges.roadDispatch.totals.qty, 2)}
+                                </td>
+                                <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums font-semibold">
+                                    {fmtNumber(executiveData.customRanges.railDispatch.totals.rakes, 0)}
+                                </td>
+                                <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums font-semibold">
+                                    {fmtNumber(executiveData.customRanges.railDispatch.totals.qty, 2)}
+                                </td>
+                            </tr>
+                            {executiveData.customRanges.roadDispatch.bySiding.map((row) => {
+                                const rail = railCustomBySidingId.get(row.sidingId);
+
+                                return (
+                                    <tr key={row.sidingId} className="bg-white">
+                                        <td className="border border-[#d5dbe4] px-3 py-2 font-medium">{row.sidingName}</td>
+                                        <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{fmtNumber(row.trips, 0)}</td>
+                                        <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{fmtNumber(row.qty, 2)}</td>
+                                        <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{fmtNumber(rail?.rakes ?? 0, 0)}</td>
+                                        <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{fmtNumber(rail?.qty ?? 0, 2)}</td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
             <div className="overflow-hidden rounded-xl border border-[#d5dbe4] bg-white">
                 <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
@@ -953,8 +1610,6 @@ function ExecutiveYesterdaySection({
 
     const compactQty = (n: number): string => fmtNumber(n, n % 1 === 0 ? 0 : 2);
 
-    const [isCombinedChartVisible, setIsCombinedChartVisible] = useState(false);
-
     const fyProductionRows = executiveData.fyCharts.rows.map((r) => ({
         fy: r.fy,
         OB: r.production.obQty,
@@ -964,15 +1619,6 @@ function ExecutiveYesterdaySection({
 
     const fyDispatchRows = executiveData.fyCharts.rows.map((r) => ({
         fy: r.fy,
-        ROAD: r.dispatch.roadQty,
-        RAIL: r.dispatch.railQty,
-        unit: 'MT',
-    }));
-
-    const fyCombinedRows = executiveData.fyCharts.rows.map((r) => ({
-        fy: r.fy,
-        OB: r.production.obQty,
-        COAL: r.production.coalQty,
         ROAD: r.dispatch.roadQty,
         RAIL: r.dispatch.railQty,
         unit: 'MT',
@@ -1060,59 +1706,76 @@ function ExecutiveYesterdaySection({
 
     const ChartsView = (
         <div className="space-y-6">
-            <FyChartCard
-                title="Production"
-                rows={fyProductionRows}
-                series={[
-                    { key: 'OB', label: 'OB', color: DASHBOARD_PALETTE.successGreen },
-                    { key: 'COAL', label: 'COAL', color: DASHBOARD_PALETTE.steelBlue },
-                ]}
-            />
-
-            <FyChartCard
-                title="Dispatch"
-                rows={fyDispatchRows}
-                series={[
-                    { key: 'ROAD', label: 'ROAD', color: DASHBOARD_PALETTE.steelBlue },
-                    { key: 'RAIL', label: 'RAIL', color: DASHBOARD_PALETTE.darkGrey },
-                ]}
-            />
-
-            <div className="flex items-center justify-end">
-                <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsCombinedChartVisible((v) => !v)}
-                    className="gap-2"
-                >
-                    {isCombinedChartVisible ? (
-                        <>
-                            <ChevronUp className="size-4" />
-                            Hide Production & Dispatch
-                        </>
-                    ) : (
-                        <>
-                            <ChevronDown className="size-4" />
-                            Show Production & Dispatch
-                        </>
-                    )}
-                </Button>
+            <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+                <ExecutiveSidingBarChartCard
+                    title="Road Dispatch"
+                    rows={roadDispatchBarRows}
+                    period={roadChartPeriod}
+                    onPeriodChange={setRoadChartPeriod}
+                    valueKind={roadChartValueKind}
+                    onValueKindChange={setRoadChartValueKind}
+                    countLabel="Trips"
+                    barColor={DASHBOARD_PALETTE.steelBlue}
+                />
+                <ExecutiveSidingBarChartCard
+                    title="Rail Dispatch"
+                    rows={railDispatchBarRows}
+                    period={railChartPeriod}
+                    onPeriodChange={setRailChartPeriod}
+                    valueKind={railChartValueKind}
+                    onValueKindChange={setRailChartValueKind}
+                    countLabel="Rakes"
+                    barColor={DASHBOARD_PALETTE.darkGrey}
+                />
             </div>
 
-            {isCombinedChartVisible ? (
+            <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+                <ExecutiveProductionDonutCard
+                    period={productionChartPeriod}
+                    onPeriodChange={setProductionChartPeriod}
+                    valueKind={productionChartMetric}
+                    onValueKindChange={setProductionChartMetric}
+                    obValue={productionObValue}
+                    coalValue={productionCoalValue}
+                />
+                <DashboardPenaltyBySidingChart
+                    data={penaltyChartData}
+                    {...(hasPenaltyPeriodSlices
+                        ? { period: penaltyChartPeriod, onPeriodChange: setPenaltyChartPeriod }
+                        : {})}
+                />
+            </div>
+
+            <RakesPerPowerPlantExecutiveChart
+                data={powerPlantChartData}
+                {...(hasPowerPlantPeriodSlices
+                    ? {
+                          period: powerPlantChartPeriod,
+                          onPeriodChange: setPowerPlantChartPeriod,
+                          metric: powerPlantMetric,
+                          onMetricChange: setPowerPlantMetric,
+                      }
+                    : {})}
+            />
+
+            <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
                 <FyChartCard
-                    title="Production & Dispatch"
-                    rows={fyCombinedRows}
+                    title="Production"
+                    rows={fyProductionRows}
                     series={[
                         { key: 'OB', label: 'OB', color: DASHBOARD_PALETTE.successGreen },
-                        { key: 'COAL', label: 'Coal', color: DASHBOARD_PALETTE.steelBlue },
-                        { key: 'ROAD', label: 'Road', color: DASHBOARD_PALETTE.safetyYellow },
-                        { key: 'RAIL', label: 'Rail', color: DASHBOARD_PALETTE.darkGrey },
+                        { key: 'COAL', label: 'COAL', color: DASHBOARD_PALETTE.steelBlue },
                     ]}
-                    height={340}
                 />
-            ) : null}
+                <FyChartCard
+                    title="Dispatch"
+                    rows={fyDispatchRows}
+                    series={[
+                        { key: 'ROAD', label: 'ROAD', color: DASHBOARD_PALETTE.steelBlue },
+                        { key: 'RAIL', label: 'RAIL', color: DASHBOARD_PALETTE.darkGrey },
+                    ]}
+                />
+            </div>
         </div>
     );
 
@@ -1708,6 +2371,161 @@ const SIDING_COLORS = [DASHBOARD_PALETTE.steelBlue, DASHBOARD_PALETTE.successGre
 
 const PLANT_COLORS: Record<string, string> = { PSPM: '#3B82F6', STPS: '#10B981', BTPC: '#F59E0B', KPPS: '#8B5CF6' };
 
+/** Muted bars so the chart frame is visible when there is no dispatch data. */
+const POWER_PLANT_CHART_EMPTY_ROWS: PowerPlantDispatchItem[] = [
+    { name: '—', rakes: 1, weight_mt: 100, sidings: {} },
+    { name: '—', rakes: 1, weight_mt: 100, sidings: {} },
+    { name: '—', rakes: 1, weight_mt: 100, sidings: {} },
+];
+
+/** Rakes-by-plant bar only (subset of Power plant wise dispatch). */
+function RakesPerPowerPlantExecutiveChart({
+    data,
+    period,
+    onPeriodChange,
+    metric,
+    onMetricChange,
+}: {
+    data: PowerPlantDispatchItem[];
+    period?: ExecutiveChartPeriodKey;
+    onPeriodChange?: (p: ExecutiveChartPeriodKey) => void;
+    metric?: 'rakes' | 'qty';
+    onMetricChange?: (k: 'rakes' | 'qty') => void;
+}) {
+    const valueKind = metric ?? 'rakes';
+    const sorted = useMemo(() => {
+        const copy = [...data];
+        copy.sort((a, b) => (valueKind === 'qty' ? b.weight_mt - a.weight_mt : b.rakes - a.rakes));
+
+        return copy;
+    }, [data, valueKind]);
+
+    const isEmpty = data.length === 0;
+    const chartRows = isEmpty ? POWER_PLANT_CHART_EMPTY_ROWS : sorted;
+    const dataKey = valueKind === 'qty' ? 'weight_mt' : 'rakes';
+    const showControls = onPeriodChange != null && period != null && onMetricChange != null && metric != null;
+    const chartHeight = Math.max(260, chartRows.length * 40);
+
+    return (
+        <div className="dashboard-card overflow-hidden rounded-xl border border-[#d5dbe4] bg-white p-0">
+            <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
+                {showControls ? (
+                    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                        <SectionHeader
+                            icon={Factory}
+                            title="Powerplant Dispatch"
+                            subtitle="Rake load dispatched to each station (anchor period)"
+                        />
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Select value={period} onValueChange={(v) => onPeriodChange(v as ExecutiveChartPeriodKey)}>
+                                <SelectTrigger className="h-9 w-[160px] text-xs">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {EXEC_CHART_PERIOD_OPTIONS.map((o) => (
+                                        <SelectItem key={o.value} value={o.value} className="text-xs">
+                                            {o.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <div className="flex rounded-lg border border-gray-200 p-0.5">
+                                <Button
+                                    type="button"
+                                    variant={metric === 'rakes' ? 'default' : 'ghost'}
+                                    size="sm"
+                                    className="h-8 px-3 text-xs"
+                                    onClick={() => onMetricChange('rakes')}
+                                >
+                                    Rakes
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant={metric === 'qty' ? 'default' : 'ghost'}
+                                    size="sm"
+                                    className="h-8 px-3 text-xs"
+                                    onClick={() => onMetricChange('qty')}
+                                >
+                                    Qty
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <SectionHeader
+                        icon={Factory}
+                        title="Powerplant Dispatch"
+                        subtitle="From weighment destinations for current filters"
+                    />
+                )}
+            </div>
+            <div className="relative bg-[#fbfbfc] p-4">
+                <div className="relative min-h-[260px]">
+                    <ResponsiveContainer width="100%" height={chartHeight}>
+                        <RechartsBarChart data={chartRows} margin={{ top: 8, right: 16, bottom: 0, left: 8 }}>
+                            <CartesianGrid strokeDasharray="3 3" strokeOpacity={isEmpty ? 0.2 : 0.3} />
+                            <XAxis
+                                dataKey="name"
+                                tick={{ fontSize: 11, fill: isEmpty ? '#94a3b8' : undefined }}
+                            />
+                            <YAxis
+                                allowDecimals={valueKind === 'qty'}
+                                tick={{ fontSize: 11 }}
+                                tickFormatter={(v) =>
+                                    valueKind === 'qty' ? `${Number(v).toLocaleString(undefined, { maximumFractionDigits: 0 })}` : `${v}`
+                                }
+                                domain={isEmpty ? [0, 'auto'] : undefined}
+                            />
+                            <Tooltip
+                                formatter={(v: number | undefined) => {
+                                    if (isEmpty) {
+                                        return ['No dispatch data for this period', ''];
+                                    }
+
+                                    return valueKind === 'qty'
+                                        ? `${(v ?? 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} MT`
+                                        : `${v ?? 0} rakes`;
+                                }}
+                            />
+                            <Bar
+                                dataKey={dataKey}
+                                radius={[4, 4, 0, 0]}
+                                barSize={32}
+                                isAnimationActive={!isEmpty}
+                            >
+                                {chartRows.map((pp, i) => (
+                                    <Cell
+                                        key={`${pp.name}-${i}`}
+                                        fill={isEmpty ? '#e2e8f0' : PLANT_COLORS[pp.name] ?? SIDING_COLORS[i % SIDING_COLORS.length]}
+                                    />
+                                ))}
+                                {!isEmpty ? (
+                                    <LabelList
+                                        dataKey={dataKey}
+                                        position="top"
+                                        formatter={(v: unknown) =>
+                                            valueKind === 'qty'
+                                                ? `${Number(v ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+                                                : String(v ?? '')
+                                        }
+                                    />
+                                ) : null}
+                            </Bar>
+                        </RechartsBarChart>
+                    </ResponsiveContainer>
+                    {isEmpty ? (
+                        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center pb-8 text-center">
+                            <Factory className="mb-2 h-8 w-8 text-muted-foreground/35" />
+                            <p className="text-xs font-medium text-muted-foreground">No dispatch data</p>
+                            <p className="mt-0.5 text-[11px] text-muted-foreground/80">for this period</p>
+                        </div>
+                    ) : null}
+                </div>
+            </div>
+        </div>
+    );
+}
+
 function PowerPlantDispatchSection({ data }: { data: PowerPlantDispatchItem[] }) {
     const [stacked, setStacked] = useState(true);
     const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
@@ -2049,13 +2867,13 @@ function DashboardFiltersBar({
     }, [allSidingIds, applyFilters]);
 
     const resetAllFilters = useCallback(() => {
-        setPeriod('today');
+        setPeriod('yesterday');
         setCustomFrom(filters.from);
         setCustomTo(filters.to);
         setPendingSidingIds(allSidingIds);
         setRakeNumberInput('');
         applyFilters({
-            period: 'today',
+            period: 'yesterday',
             siding_ids: allSidingIds,
             power_plant: null,
             rake_number: null,
@@ -2096,7 +2914,7 @@ function DashboardFiltersBar({
                         applyFilters({ period: v });
                     }}
                 >
-                    <SelectTrigger className="h-7 w-[100px] rounded-md border text-[11px]">
+                    <SelectTrigger className="h-7 min-w-[128px] rounded-md border text-[11px]">
                         <SelectValue placeholder="Period" />
                     </SelectTrigger>
                     <SelectContent>
@@ -2379,6 +3197,7 @@ export default function Dashboard() {
         return DASHBOARD_SECTIONS.some((sec) => sec.id === s) ? s : DEFAULT_DASHBOARD_SECTION;
     });
     const [executiveYesterdayViewMode, setExecutiveYesterdayViewMode] = useState<'table' | 'charts'>('charts');
+    const [sidingOverviewPenaltyPeriod, setSidingOverviewPenaltyPeriod] = useState<ExecutiveChartPeriodKey>('yesterday');
     const [alertsOpen, setAlertsOpen] = useState(false);
     const [notifications, setNotifications] = useState(props.notifications ?? []);
     const [notificationsUnreadCount, setNotificationsUnreadCount] = useState(props.notificationsUnreadCount ?? 0);
@@ -2440,7 +3259,7 @@ export default function Dashboard() {
         setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read_at: n.read_at ?? new Date().toISOString() } : n)));
     }, [csrfToken]);
     const defaultFilters: DashboardFilters = {
-        period: 'today',
+        period: 'yesterday',
         from: '',
         to: '',
         siding_ids: [],
@@ -2463,20 +3282,22 @@ export default function Dashboard() {
     };
     const periodLabel = useMemo(() => {
         switch (filters.period) {
+            case 'yesterday':
+                return 'yesterday';
             case 'today':
                 return 'today';
             case 'week':
                 return 'this week';
+            case 'last_week':
+                return 'last week';
             case 'month':
                 return 'this month';
-            case 'quarter':
-                return 'this quarter';
-            case 'year':
-                return 'this year';
+            case 'last_month':
+                return 'last month';
             case 'custom':
                 return 'selected period';
             default:
-                return 'today';
+                return 'yesterday';
         }
     }, [filters.period, filters.from, filters.to]);
 
@@ -2610,6 +3431,15 @@ export default function Dashboard() {
     const yesterdayPredictedPenalties = props.yesterdayPredictedPenalties ?? [];
     const executiveYesterday = props.executiveYesterday;
 
+    const penaltyBySidingForSidingOverview = useMemo(() => {
+        const slices = executiveYesterday?.penaltyBySidingByPeriod;
+        if (slices) {
+            return slices[sidingOverviewPenaltyPeriod] ?? [];
+        }
+
+        return penaltyBySiding;
+    }, [executiveYesterday?.penaltyBySidingByPeriod, penaltyBySiding, sidingOverviewPenaltyPeriod]);
+
     const filteredSidings = useMemo(() => {
         if (filters.siding_ids.length === 0 || filters.siding_ids.length === sidings.length) {
             return sidings;
@@ -2619,7 +3449,7 @@ export default function Dashboard() {
     }, [sidings, filters.siding_ids]);
 
     const hasActiveFilters = useMemo(() => {
-        if (filters.period !== 'today') return true;
+        if (filters.period !== 'yesterday') return true;
         if (filters.power_plant) return true;
         if (filters.rake_number?.trim()) return true;
         if (filters.loader_id != null) return true;
@@ -2631,7 +3461,7 @@ export default function Dashboard() {
 
     const activeFilterCount = useMemo(() => {
         let n = 0;
-        if (filters.period !== 'today') n += 1;
+        if (filters.period !== 'yesterday') n += 1;
         if (filters.power_plant) n += 1;
         if (filters.rake_number?.trim()) n += 1;
         if (filters.loader_id != null) n += 1;
@@ -2799,7 +3629,12 @@ export default function Dashboard() {
                         {activeSection === 'executive-overview' && (
                             <div className="space-y-6">
                                 {executiveYesterday ? (
-                                    <ExecutiveYesterdaySection data={executiveYesterday} viewMode={executiveYesterdayViewMode} />
+                                    <ExecutiveYesterdaySection
+                                        data={executiveYesterday}
+                                        viewMode={executiveYesterdayViewMode}
+                                        penaltyBySiding={penaltyBySiding}
+                                        powerPlantDispatch={powerPlantDispatch}
+                                    />
                                 ) : (
                                     <div className="dashboard-card rounded-xl border-0 p-6 text-sm text-gray-600">Yesterday data is not available.</div>
                                 )}
@@ -3414,38 +4249,15 @@ export default function Dashboard() {
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                                    <div className="dashboard-card min-w-0 rounded-xl border-0 p-6">
-                                        <SectionHeader icon={BarChart3} title="Penalty by siding" subtitle="Which siding causes most penalties" />
-                                        {penaltyBySiding.length > 0 ? (
-                                        <div className="mt-4">
-                                            {(() => {
-                                                const sorted = [...penaltyBySiding].sort((a, b) => b.total - a.total);
-                                                const barColors = ['#DC2626', '#EA580C', '#CA8A04', '#65A30D', '#059669', '#0D9488', '#2563EB', '#7C3AED', '#C026D3', '#DB2777'];
-                                                return (
-                                                    <ResponsiveContainer width="100%" height={320}>
-                                                        <RechartsBarChart
-                                                            data={sorted}
-                                                            margin={{ top: 8, right: 24, bottom: 24, left: 16 }}
-                                                        >
-                                                            <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
-                                                            <XAxis dataKey="name" type="category" tick={{ fontSize: 11 }} interval={0} height={48} />
-                                                            <YAxis type="number" tickFormatter={(v: number) => formatCurrency(v)} width={72} tick={{ fontSize: 11 }} />
-                                                            <Tooltip formatter={(v: number | string | undefined) => formatCurrency(Number(v ?? 0))} />
-                                                            <Bar dataKey="total" radius={[4, 4, 0, 0]} barSize={28} isAnimationActive>
-                                                                <LabelList dataKey="total" position="top" formatter={(v: unknown) => formatCurrency(Number(v ?? 0))} />
-                                                                {sorted.map((_, i) => (
-                                                                    <Cell key={i} fill={barColors[i % barColors.length]} />
-                                                                ))}
-                                                            </Bar>
-                                                        </RechartsBarChart>
-                                                    </ResponsiveContainer>
-                                                );
-                                            })()}
-                                            </div>
-                                        ) : (
-                                        <div className="mt-4 py-8 text-center text-sm text-gray-600">No sidings available for selected filters.</div>
-                                        )}
-                                    </div>
+                                    <DashboardPenaltyBySidingChart
+                                        data={penaltyBySidingForSidingOverview}
+                                        {...(executiveYesterday?.penaltyBySidingByPeriod
+                                            ? {
+                                                  period: sidingOverviewPenaltyPeriod,
+                                                  onPeriodChange: setSidingOverviewPenaltyPeriod,
+                                              }
+                                            : {})}
+                                    />
                                     <div className="grid grid-cols-1 gap-6">
                                    
                                     <div className="dashboard-card min-w-0 rounded-xl border-0 p-6">

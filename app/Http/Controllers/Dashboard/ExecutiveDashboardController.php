@@ -119,6 +119,36 @@ final class ExecutiveDashboardController extends Controller
         $executiveYesterdayDate = $this->parseExecutiveYesterdayDate($request);
         $executiveCustomRanges = $this->parseExecutiveCustomRanges($request, $executiveYesterdayDate);
 
+        $scopeRaw = $request->query('executive_apply_scope');
+        if (is_string($scopeRaw) && $scopeRaw !== '') {
+            $scopes = array_values(array_filter(array_map('trim', explode(',', $scopeRaw))));
+            $allowed = ['road', 'rail', 'ob', 'coal'];
+            $scopes = array_values(array_intersect($scopes, $allowed));
+            if ($scopes === []) {
+                abort(422, 'Invalid executive_apply_scope.');
+            }
+
+            $tz = config('app.timezone', 'UTC');
+            $anchor = Carbon::parse($executiveYesterdayDate, $tz)->startOfDay();
+            $sidingIds = $resolved['allSidingIds'];
+            $sidingMap = Siding::query()
+                ->whereIn('id', $sidingIds)
+                ->orderBy('name')
+                ->pluck('name', 'id')
+                ->all();
+
+            $partial = $this->buildExecutiveCustomRangesPayload(
+                $sidingIds,
+                $sidingMap,
+                $anchor,
+                $executiveCustomRanges,
+                $tz,
+                $scopes,
+            );
+
+            return response()->json(['customRanges' => $partial]);
+        }
+
         return response()->json(
             $this->buildExecutiveYesterdayData($resolved['allSidingIds'], $executiveYesterdayDate, $executiveCustomRanges),
         );
@@ -312,188 +342,13 @@ final class ExecutiveDashboardController extends Controller
             }
         }
 
-        $roadFrom = (string) $customRanges['roadDispatch']['from'];
-        $roadTo = (string) $customRanges['roadDispatch']['to'];
-        $railFrom = (string) $customRanges['railDispatch']['from'];
-        $railTo = (string) $customRanges['railDispatch']['to'];
-        $obFrom = (string) $customRanges['obProduction']['from'];
-        $obTo = (string) $customRanges['obProduction']['to'];
-        $coalFrom = (string) $customRanges['coalProduction']['from'];
-        $coalTo = (string) $customRanges['coalProduction']['to'];
-
-        $customRoadBySiding = SidingVehicleDispatch::query()
-            ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
-            ->whereRaw($this->dateOnlyBetweenSql('issued_on'), [$roadFrom, $roadTo])
-            ->selectRaw('siding_id, count(*) as trips, coalesce(sum(mineral_weight), 0) as qty')
-            ->groupBy('siding_id')
-            ->get()
-            ->keyBy('siding_id');
-
-        $customRailBySiding = Rake::query()
-            ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
-            ->whereNotNull('loading_date')
-            ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$railFrom, $railTo])
-            ->selectRaw('siding_id, count(*) as rakes, coalesce(sum(loaded_weight_mt), 0) as qty')
-            ->groupBy('siding_id')
-            ->get()
-            ->keyBy('siding_id');
-
-        $customRoadBySidingRows = [];
-        $customRailBySidingRows = [];
-        foreach ($sidingMap as $sid => $name) {
-            $roadRow = $customRoadBySiding->get((int) $sid);
-            $railRow = $customRailBySiding->get((int) $sid);
-
-            $customRoadBySidingRows[] = [
-                'sidingId' => (int) $sid,
-                'sidingName' => (string) $name,
-                'trips' => (int) ($roadRow?->trips ?? 0),
-                'qty' => round((float) ($roadRow?->qty ?? 0), 2),
-            ];
-
-            $customRailBySidingRows[] = [
-                'sidingId' => (int) $sid,
-                'sidingName' => (string) $name,
-                'rakes' => (int) ($railRow?->rakes ?? 0),
-                'qty' => round((float) ($railRow?->qty ?? 0), 2),
-            ];
-        }
-
-        $customRoadTotalsRow = SidingVehicleDispatch::query()
-            ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
-            ->whereRaw($this->dateOnlyBetweenSql('issued_on'), [$roadFrom, $roadTo])
-            ->selectRaw('count(*) as trips, coalesce(sum(mineral_weight), 0) as qty')
-            ->first();
-
-        $customRailTotalsRow = Rake::query()
-            ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
-            ->whereNotNull('loading_date')
-            ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$railFrom, $railTo])
-            ->selectRaw('count(*) as rakes, coalesce(sum(loaded_weight_mt), 0) as qty')
-            ->first();
-
-        $prodCustomScope = ProductionEntry::query();
-        if ($sidingIds !== []) {
-            $prodCustomScope->where(function ($query) use ($sidingIds): void {
-                $query->whereIn('siding_id', $sidingIds)->orWhereNull('siding_id');
-            });
-        }
-
-        $customObTotalsRow = (clone $prodCustomScope)
-            ->where('type', ProductionEntry::TYPE_OB)
-            ->whereRaw($this->dateOnlyBetweenSql('date', true), [$obFrom, $obTo])
-            ->selectRaw('count(*) as trips, coalesce(sum(qty), 0) as qty')
-            ->first();
-
-        $customCoalTotalsRow = (clone $prodCustomScope)
-            ->where('type', ProductionEntry::TYPE_COAL)
-            ->whereRaw($this->dateOnlyBetweenSql('date', true), [$coalFrom, $coalTo])
-            ->selectRaw('count(*) as trips, coalesce(sum(qty), 0) as qty')
-            ->first();
-
-        $customRoadSummary = $this->buildCustomSummaryDispatch(
-            anchor: $anchor,
-            from: Carbon::parse($roadFrom, $tz)->startOfDay(),
-            to: Carbon::parse($roadTo, $tz)->endOfDay(),
-            countKey: 'trips',
-            totals: [
-                'trips' => (int) ($customRoadTotalsRow?->trips ?? 0),
-                'qty' => round((float) ($customRoadTotalsRow?->qty ?? 0), 2),
-            ],
-            resolveTotals: function (CarbonInterface $from, CarbonInterface $to) use ($sidingIds): array {
-                $row = SidingVehicleDispatch::query()
-                    ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
-                    ->whereRaw($this->dateOnlyBetweenSql('issued_on'), [$from->toDateString(), $to->toDateString()])
-                    ->selectRaw('count(*) as trips, coalesce(sum(mineral_weight), 0) as qty')
-                    ->first();
-
-                return [
-                    'trips' => (int) ($row?->trips ?? 0),
-                    'qty' => round((float) ($row?->qty ?? 0), 2),
-                ];
-            },
-        );
-
-        $customRailSummary = $this->buildCustomSummaryDispatch(
-            anchor: $anchor,
-            from: Carbon::parse($railFrom, $tz)->startOfDay(),
-            to: Carbon::parse($railTo, $tz)->endOfDay(),
-            countKey: 'rakes',
-            totals: [
-                'rakes' => (int) ($customRailTotalsRow?->rakes ?? 0),
-                'qty' => round((float) ($customRailTotalsRow?->qty ?? 0), 2),
-            ],
-            resolveTotals: function (CarbonInterface $from, CarbonInterface $to) use ($sidingIds): array {
-                $row = Rake::query()
-                    ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
-                    ->whereNotNull('loading_date')
-                    ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$from->toDateString(), $to->toDateString()])
-                    ->selectRaw('count(*) as rakes, coalesce(sum(loaded_weight_mt), 0) as qty')
-                    ->first();
-
-                return [
-                    'rakes' => (int) ($row?->rakes ?? 0),
-                    'qty' => round((float) ($row?->qty ?? 0), 2),
-                ];
-            },
-        );
-
-        $customObSummary = $this->buildCustomSummaryProduction(
-            anchor: $anchor,
-            from: Carbon::parse($obFrom, $tz)->startOfDay(),
-            to: Carbon::parse($obTo, $tz)->endOfDay(),
-            totals: [
-                'trips' => (int) ($customObTotalsRow?->trips ?? 0),
-                'qty' => round((float) ($customObTotalsRow?->qty ?? 0), 2),
-            ],
-            resolveTotals: function (CarbonInterface $from, CarbonInterface $to) use ($sidingIds): array {
-                $prodScope = ProductionEntry::query();
-                if ($sidingIds !== []) {
-                    $prodScope->where(function ($query) use ($sidingIds): void {
-                        $query->whereIn('siding_id', $sidingIds)->orWhereNull('siding_id');
-                    });
-                }
-
-                $row = $prodScope
-                    ->where('type', ProductionEntry::TYPE_OB)
-                    ->whereRaw($this->dateOnlyBetweenSql('date', true), [$from->toDateString(), $to->toDateString()])
-                    ->selectRaw('count(*) as trips, coalesce(sum(qty), 0) as qty')
-                    ->first();
-
-                return [
-                    'trips' => (int) ($row?->trips ?? 0),
-                    'qty' => round((float) ($row?->qty ?? 0), 2),
-                ];
-            },
-        );
-
-        $customCoalSummary = $this->buildCustomSummaryProduction(
-            anchor: $anchor,
-            from: Carbon::parse($coalFrom, $tz)->startOfDay(),
-            to: Carbon::parse($coalTo, $tz)->endOfDay(),
-            totals: [
-                'trips' => (int) ($customCoalTotalsRow?->trips ?? 0),
-                'qty' => round((float) ($customCoalTotalsRow?->qty ?? 0), 2),
-            ],
-            resolveTotals: function (CarbonInterface $from, CarbonInterface $to) use ($sidingIds): array {
-                $prodScope = ProductionEntry::query();
-                if ($sidingIds !== []) {
-                    $prodScope->where(function ($query) use ($sidingIds): void {
-                        $query->whereIn('siding_id', $sidingIds)->orWhereNull('siding_id');
-                    });
-                }
-
-                $row = $prodScope
-                    ->where('type', ProductionEntry::TYPE_COAL)
-                    ->whereRaw($this->dateOnlyBetweenSql('date', true), [$from->toDateString(), $to->toDateString()])
-                    ->selectRaw('count(*) as trips, coalesce(sum(qty), 0) as qty')
-                    ->first();
-
-                return [
-                    'trips' => (int) ($row?->trips ?? 0),
-                    'qty' => round((float) ($row?->qty ?? 0), 2),
-                ];
-            },
+        $customRangesPayload = $this->buildExecutiveCustomRangesPayload(
+            $sidingIds,
+            $sidingMap,
+            $anchor,
+            $customRanges,
+            $tz,
+            null,
         );
 
         $fySummaryRows = [];
@@ -695,6 +550,17 @@ final class ExecutiveDashboardController extends Controller
             ];
         }
 
+        $chartPeriodKeys = ['yesterday', 'today', 'month', 'fy'];
+        $penaltyBySidingByPeriod = [];
+        $powerPlantDispatchByPeriod = [];
+        foreach ($chartPeriodKeys as $periodKey) {
+            [$fromDateStr, $toDateStr] = $periods[$periodKey];
+            $fromCarbon = Carbon::parse($fromDateStr, $tz)->startOfDay();
+            $toCarbon = Carbon::parse($toDateStr, $tz)->endOfDay();
+            $penaltyBySidingByPeriod[$periodKey] = $this->buildPenaltyBySiding($sidingIds, $fromCarbon, $toCarbon, []);
+            $powerPlantDispatchByPeriod[$periodKey] = $this->buildPowerPlantDispatch($sidingIds, $fromCarbon, $toCarbon, []);
+        }
+
         return [
             'anchorDate' => $anchor->toDateString(),
             'fyLabel' => $fyLabel,
@@ -715,46 +581,7 @@ final class ExecutiveDashboardController extends Controller
             ],
             'obProduction' => $obTotals,
             'coalProduction' => $coalTotals,
-            'customRanges' => [
-                'roadDispatch' => [
-                    'from' => $roadFrom,
-                    'to' => $roadTo,
-                    'totals' => [
-                        'trips' => (int) ($customRoadTotalsRow?->trips ?? 0),
-                        'qty' => round((float) ($customRoadTotalsRow?->qty ?? 0), 2),
-                    ],
-                    'bySiding' => $customRoadBySidingRows,
-                    'summary' => $customRoadSummary,
-                ],
-                'railDispatch' => [
-                    'from' => $railFrom,
-                    'to' => $railTo,
-                    'totals' => [
-                        'rakes' => (int) ($customRailTotalsRow?->rakes ?? 0),
-                        'qty' => round((float) ($customRailTotalsRow?->qty ?? 0), 2),
-                    ],
-                    'bySiding' => $customRailBySidingRows,
-                    'summary' => $customRailSummary,
-                ],
-                'obProduction' => [
-                    'from' => $obFrom,
-                    'to' => $obTo,
-                    'totals' => [
-                        'trips' => (int) ($customObTotalsRow?->trips ?? 0),
-                        'qty' => round((float) ($customObTotalsRow?->qty ?? 0), 2),
-                    ],
-                    'summary' => $customObSummary,
-                ],
-                'coalProduction' => [
-                    'from' => $coalFrom,
-                    'to' => $coalTo,
-                    'totals' => [
-                        'trips' => (int) ($customCoalTotalsRow?->trips ?? 0),
-                        'qty' => round((float) ($customCoalTotalsRow?->qty ?? 0), 2),
-                    ],
-                    'summary' => $customCoalSummary,
-                ],
-            ],
+            'customRanges' => $customRangesPayload,
             'fySummary' => [
                 'rows' => $fySummaryRows,
             ],
@@ -762,6 +589,8 @@ final class ExecutiveDashboardController extends Controller
                 'cutoverDate' => $cutover->toDateString(),
                 'rows' => $fyChartRows,
             ],
+            'penaltyBySidingByPeriod' => $penaltyBySidingByPeriod,
+            'powerPlantDispatchByPeriod' => $powerPlantDispatchByPeriod,
         ];
     }
 
@@ -2863,6 +2692,320 @@ final class ExecutiveDashboardController extends Controller
                 'value' => $rate,
             ];
         })->values()->all();
+    }
+
+    /**
+     * Custom-range blocks for Executive Yesterday (road / rail / OB / coal).
+     *
+     * @param  array<int>  $sidingIds
+     * @param  array<int|string, string>  $sidingMap
+     * @param  array<string, mixed>  $customRanges
+     * @param  list<string>|null  $onlyKeys  'road', 'rail', 'ob', 'coal'; null = all
+     * @return array<string, mixed>
+     */
+    private function buildExecutiveCustomRangesPayload(
+        array $sidingIds,
+        array $sidingMap,
+        Carbon $anchor,
+        array $customRanges,
+        string $tz,
+        ?array $onlyKeys,
+    ): array {
+        $wantRoad = $onlyKeys === null || in_array('road', $onlyKeys, true);
+        $wantRail = $onlyKeys === null || in_array('rail', $onlyKeys, true);
+        $wantOb = $onlyKeys === null || in_array('ob', $onlyKeys, true);
+        $wantCoal = $onlyKeys === null || in_array('coal', $onlyKeys, true);
+
+        $roadFrom = (string) $customRanges['roadDispatch']['from'];
+        $roadTo = (string) $customRanges['roadDispatch']['to'];
+        $railFrom = (string) $customRanges['railDispatch']['from'];
+        $railTo = (string) $customRanges['railDispatch']['to'];
+        $obFrom = (string) $customRanges['obProduction']['from'];
+        $obTo = (string) $customRanges['obProduction']['to'];
+        $coalFrom = (string) $customRanges['coalProduction']['from'];
+        $coalTo = (string) $customRanges['coalProduction']['to'];
+
+        $customRoadBySidingRows = [];
+        $customRailBySidingRows = [];
+        $customRoadTotalsRow = null;
+        $customRailTotalsRow = null;
+        $customObTotalsRow = null;
+        $customCoalTotalsRow = null;
+
+        $customRoadBySiding = collect();
+        if ($wantRoad) {
+            $customRoadBySiding = SidingVehicleDispatch::query()
+                ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
+                ->whereRaw($this->dateOnlyBetweenSql('issued_on'), [$roadFrom, $roadTo])
+                ->selectRaw('siding_id, count(*) as trips, coalesce(sum(mineral_weight), 0) as qty')
+                ->groupBy('siding_id')
+                ->get()
+                ->keyBy('siding_id');
+        }
+
+        $customRailBySiding = collect();
+        if ($wantRail) {
+            $customRailBySiding = Rake::query()
+                ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
+                ->whereNotNull('loading_date')
+                ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$railFrom, $railTo])
+                ->selectRaw('siding_id, count(*) as rakes, coalesce(sum(loaded_weight_mt), 0) as qty')
+                ->groupBy('siding_id')
+                ->get()
+                ->keyBy('siding_id');
+        }
+
+        if ($wantRoad && $wantRail) {
+            foreach ($sidingMap as $sid => $name) {
+                $roadRow = $customRoadBySiding->get((int) $sid);
+                $railRow = $customRailBySiding->get((int) $sid);
+
+                $customRoadBySidingRows[] = [
+                    'sidingId' => (int) $sid,
+                    'sidingName' => (string) $name,
+                    'trips' => (int) ($roadRow?->trips ?? 0),
+                    'qty' => round((float) ($roadRow?->qty ?? 0), 2),
+                ];
+
+                $customRailBySidingRows[] = [
+                    'sidingId' => (int) $sid,
+                    'sidingName' => (string) $name,
+                    'rakes' => (int) ($railRow?->rakes ?? 0),
+                    'qty' => round((float) ($railRow?->qty ?? 0), 2),
+                ];
+            }
+        } elseif ($wantRoad) {
+            foreach ($sidingMap as $sid => $name) {
+                $roadRow = $customRoadBySiding->get((int) $sid);
+                $customRoadBySidingRows[] = [
+                    'sidingId' => (int) $sid,
+                    'sidingName' => (string) $name,
+                    'trips' => (int) ($roadRow?->trips ?? 0),
+                    'qty' => round((float) ($roadRow?->qty ?? 0), 2),
+                ];
+            }
+        } elseif ($wantRail) {
+            foreach ($sidingMap as $sid => $name) {
+                $railRow = $customRailBySiding->get((int) $sid);
+                $customRailBySidingRows[] = [
+                    'sidingId' => (int) $sid,
+                    'sidingName' => (string) $name,
+                    'rakes' => (int) ($railRow?->rakes ?? 0),
+                    'qty' => round((float) ($railRow?->qty ?? 0), 2),
+                ];
+            }
+        }
+
+        if ($wantRoad) {
+            $customRoadTotalsRow = SidingVehicleDispatch::query()
+                ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
+                ->whereRaw($this->dateOnlyBetweenSql('issued_on'), [$roadFrom, $roadTo])
+                ->selectRaw('count(*) as trips, coalesce(sum(mineral_weight), 0) as qty')
+                ->first();
+        }
+
+        if ($wantRail) {
+            $customRailTotalsRow = Rake::query()
+                ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
+                ->whereNotNull('loading_date')
+                ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$railFrom, $railTo])
+                ->selectRaw('count(*) as rakes, coalesce(sum(loaded_weight_mt), 0) as qty')
+                ->first();
+        }
+
+        $prodCustomScope = ProductionEntry::query();
+        if ($sidingIds !== []) {
+            $prodCustomScope->where(function ($query) use ($sidingIds): void {
+                $query->whereIn('siding_id', $sidingIds)->orWhereNull('siding_id');
+            });
+        }
+
+        if ($wantOb) {
+            $customObTotalsRow = (clone $prodCustomScope)
+                ->where('type', ProductionEntry::TYPE_OB)
+                ->whereRaw($this->dateOnlyBetweenSql('date', true), [$obFrom, $obTo])
+                ->selectRaw('count(*) as trips, coalesce(sum(qty), 0) as qty')
+                ->first();
+        }
+
+        if ($wantCoal) {
+            $customCoalTotalsRow = (clone $prodCustomScope)
+                ->where('type', ProductionEntry::TYPE_COAL)
+                ->whereRaw($this->dateOnlyBetweenSql('date', true), [$coalFrom, $coalTo])
+                ->selectRaw('count(*) as trips, coalesce(sum(qty), 0) as qty')
+                ->first();
+        }
+
+        $customRoadSummary = [];
+        if ($wantRoad) {
+            $customRoadSummary = $this->buildCustomSummaryDispatch(
+                anchor: $anchor,
+                from: Carbon::parse($roadFrom, $tz)->startOfDay(),
+                to: Carbon::parse($roadTo, $tz)->endOfDay(),
+                countKey: 'trips',
+                totals: [
+                    'trips' => (int) ($customRoadTotalsRow?->trips ?? 0),
+                    'qty' => round((float) ($customRoadTotalsRow?->qty ?? 0), 2),
+                ],
+                resolveTotals: function (CarbonInterface $from, CarbonInterface $to) use ($sidingIds): array {
+                    $row = SidingVehicleDispatch::query()
+                        ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
+                        ->whereRaw($this->dateOnlyBetweenSql('issued_on'), [$from->toDateString(), $to->toDateString()])
+                        ->selectRaw('count(*) as trips, coalesce(sum(mineral_weight), 0) as qty')
+                        ->first();
+
+                    return [
+                        'trips' => (int) ($row?->trips ?? 0),
+                        'qty' => round((float) ($row?->qty ?? 0), 2),
+                    ];
+                },
+            );
+        }
+
+        $customRailSummary = [];
+        if ($wantRail) {
+            $customRailSummary = $this->buildCustomSummaryDispatch(
+                anchor: $anchor,
+                from: Carbon::parse($railFrom, $tz)->startOfDay(),
+                to: Carbon::parse($railTo, $tz)->endOfDay(),
+                countKey: 'rakes',
+                totals: [
+                    'rakes' => (int) ($customRailTotalsRow?->rakes ?? 0),
+                    'qty' => round((float) ($customRailTotalsRow?->qty ?? 0), 2),
+                ],
+                resolveTotals: function (CarbonInterface $from, CarbonInterface $to) use ($sidingIds): array {
+                    $row = Rake::query()
+                        ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
+                        ->whereNotNull('loading_date')
+                        ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$from->toDateString(), $to->toDateString()])
+                        ->selectRaw('count(*) as rakes, coalesce(sum(loaded_weight_mt), 0) as qty')
+                        ->first();
+
+                    return [
+                        'rakes' => (int) ($row?->rakes ?? 0),
+                        'qty' => round((float) ($row?->qty ?? 0), 2),
+                    ];
+                },
+            );
+        }
+
+        $customObSummary = [];
+        if ($wantOb) {
+            $customObSummary = $this->buildCustomSummaryProduction(
+                anchor: $anchor,
+                from: Carbon::parse($obFrom, $tz)->startOfDay(),
+                to: Carbon::parse($obTo, $tz)->endOfDay(),
+                totals: [
+                    'trips' => (int) ($customObTotalsRow?->trips ?? 0),
+                    'qty' => round((float) ($customObTotalsRow?->qty ?? 0), 2),
+                ],
+                resolveTotals: function (CarbonInterface $from, CarbonInterface $to) use ($sidingIds): array {
+                    $prodScope = ProductionEntry::query();
+                    if ($sidingIds !== []) {
+                        $prodScope->where(function ($query) use ($sidingIds): void {
+                            $query->whereIn('siding_id', $sidingIds)->orWhereNull('siding_id');
+                        });
+                    }
+
+                    $row = $prodScope
+                        ->where('type', ProductionEntry::TYPE_OB)
+                        ->whereRaw($this->dateOnlyBetweenSql('date', true), [$from->toDateString(), $to->toDateString()])
+                        ->selectRaw('count(*) as trips, coalesce(sum(qty), 0) as qty')
+                        ->first();
+
+                    return [
+                        'trips' => (int) ($row?->trips ?? 0),
+                        'qty' => round((float) ($row?->qty ?? 0), 2),
+                    ];
+                },
+            );
+        }
+
+        $customCoalSummary = [];
+        if ($wantCoal) {
+            $customCoalSummary = $this->buildCustomSummaryProduction(
+                anchor: $anchor,
+                from: Carbon::parse($coalFrom, $tz)->startOfDay(),
+                to: Carbon::parse($coalTo, $tz)->endOfDay(),
+                totals: [
+                    'trips' => (int) ($customCoalTotalsRow?->trips ?? 0),
+                    'qty' => round((float) ($customCoalTotalsRow?->qty ?? 0), 2),
+                ],
+                resolveTotals: function (CarbonInterface $from, CarbonInterface $to) use ($sidingIds): array {
+                    $prodScope = ProductionEntry::query();
+                    if ($sidingIds !== []) {
+                        $prodScope->where(function ($query) use ($sidingIds): void {
+                            $query->whereIn('siding_id', $sidingIds)->orWhereNull('siding_id');
+                        });
+                    }
+
+                    $row = $prodScope
+                        ->where('type', ProductionEntry::TYPE_COAL)
+                        ->whereRaw($this->dateOnlyBetweenSql('date', true), [$from->toDateString(), $to->toDateString()])
+                        ->selectRaw('count(*) as trips, coalesce(sum(qty), 0) as qty')
+                        ->first();
+
+                    return [
+                        'trips' => (int) ($row?->trips ?? 0),
+                        'qty' => round((float) ($row?->qty ?? 0), 2),
+                    ];
+                },
+            );
+        }
+
+        $out = [];
+
+        if ($wantRoad) {
+            $out['roadDispatch'] = [
+                'from' => $roadFrom,
+                'to' => $roadTo,
+                'totals' => [
+                    'trips' => (int) ($customRoadTotalsRow?->trips ?? 0),
+                    'qty' => round((float) ($customRoadTotalsRow?->qty ?? 0), 2),
+                ],
+                'bySiding' => $customRoadBySidingRows,
+                'summary' => $customRoadSummary,
+            ];
+        }
+
+        if ($wantRail) {
+            $out['railDispatch'] = [
+                'from' => $railFrom,
+                'to' => $railTo,
+                'totals' => [
+                    'rakes' => (int) ($customRailTotalsRow?->rakes ?? 0),
+                    'qty' => round((float) ($customRailTotalsRow?->qty ?? 0), 2),
+                ],
+                'bySiding' => $customRailBySidingRows,
+                'summary' => $customRailSummary,
+            ];
+        }
+
+        if ($wantOb) {
+            $out['obProduction'] = [
+                'from' => $obFrom,
+                'to' => $obTo,
+                'totals' => [
+                    'trips' => (int) ($customObTotalsRow?->trips ?? 0),
+                    'qty' => round((float) ($customObTotalsRow?->qty ?? 0), 2),
+                ],
+                'summary' => $customObSummary,
+            ];
+        }
+
+        if ($wantCoal) {
+            $out['coalProduction'] = [
+                'from' => $coalFrom,
+                'to' => $coalTo,
+                'totals' => [
+                    'trips' => (int) ($customCoalTotalsRow?->trips ?? 0),
+                    'qty' => round((float) ($customCoalTotalsRow?->qty ?? 0), 2),
+                ],
+                'summary' => $customCoalSummary,
+            ];
+        }
+
+        return $out;
     }
 
     private function parseExecutiveYesterdayDate(Request $request): CarbonInterface
