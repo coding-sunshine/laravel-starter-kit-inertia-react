@@ -1218,7 +1218,7 @@ final class ExecutiveDashboardController extends Controller
      *
      * @param  array<int>  $sidingIds
      * @param  array{power_plant: string|null, rake_number: string|null, loader_id: int|null, shift: string|null}  $filterContext
-     * @return array<int, array{rake_number: string, siding_name: string, state: string, workflow_steps: array{txr_done: bool, wagon_loading_done: bool, guard_done: bool, weighment_done: bool, rr_done: bool}, time_elapsed: string, risk: string}>
+     * @return array<int, array{rake_number: string, siding_name: string, state: string, workflow_steps: array{txr_done: bool, wagon_loading_done: bool, guard_done: bool, weighment_done: bool, rr_done: bool}, time_elapsed: string, loading_date: string, risk: string}>
      */
     public function buildLiveRakeStatus(array $sidingIds, array $filterContext = []): array
     {
@@ -1253,7 +1253,7 @@ final class ExecutiveDashboardController extends Controller
             ->orderByDesc('placement_time')
             ->orderByDesc('id')
             ->limit(5)
-            ->get(['id', 'rake_number', 'siding_id', 'state', 'placement_time', 'loading_start_time', 'loading_end_time', 'loading_free_minutes']);
+            ->get(['id', 'rake_number', 'siding_id', 'state', 'placement_time', 'loading_date', 'loading_start_time', 'loading_end_time', 'loading_free_minutes']);
 
         $list = [];
         foreach ($rakes as $rake) {
@@ -1285,6 +1285,9 @@ final class ExecutiveDashboardController extends Controller
                 'state' => $rake->state ?? '—',
                 'workflow_steps' => RakeDataTable::workflowStepsForRake($rake),
                 'time_elapsed' => $loadingDuration,
+                'loading_date' => $rake->loading_date !== null
+                    ? $rake->loading_date->toDateString()
+                    : '—',
                 'risk' => $risk,
             ];
         }

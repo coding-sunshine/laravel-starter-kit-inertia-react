@@ -427,6 +427,8 @@ interface LiveRakeStatusRow {
     state: string;
     workflow_steps?: WorkflowSteps;
     time_elapsed: string;
+    /** YYYY-MM-DD or em dash when unset */
+    loading_date?: string;
     risk: string;
 }
 
@@ -540,6 +542,21 @@ function executiveChartFormatBarTooltipValue(n: number, unit: 'count' | 'mt'): s
     return `${n.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} MT`;
 }
 
+/** One color per siding bar (cycles); matches footer legend. */
+const EXECUTIVE_SIDING_BAR_CHART_COLORS = [
+    DASHBOARD_PALETTE.steelBlue,
+    DASHBOARD_PALETTE.successGreen,
+    DASHBOARD_PALETTE.safetyYellow,
+    DASHBOARD_PALETTE.steelBlueLight,
+    DASHBOARD_PALETTE.successGreenLight,
+    DASHBOARD_PALETTE.darkGrey,
+    '#8B5CF6',
+    '#F97316',
+    '#EC4899',
+    '#14B8A6',
+    '#6366F1',
+];
+
 function ExecutiveSidingBarChartCard(props: {
     title: string;
     rows: Array<{ name: string; value: number }>;
@@ -548,8 +565,16 @@ function ExecutiveSidingBarChartCard(props: {
     valueKind: 'count' | 'qty';
     onValueKindChange: (k: 'count' | 'qty') => void;
     countLabel: string;
-    barColor: string;
 }) {
+    const coloredRows = useMemo(
+        () =>
+            props.rows.map((r, i) => ({
+                ...r,
+                fill: EXECUTIVE_SIDING_BAR_CHART_COLORS[i % EXECUTIVE_SIDING_BAR_CHART_COLORS.length],
+            })),
+        [props.rows],
+    );
+
     const max = Math.max(...props.rows.map((r) => r.value), 1);
     const unit: 'count' | 'mt' = props.valueKind === 'qty' ? 'mt' : 'count';
 
@@ -601,42 +626,64 @@ function ExecutiveSidingBarChartCard(props: {
                 {props.rows.length === 0 ? (
                     <p className="py-12 text-center text-sm text-muted-foreground">No siding data.</p>
                 ) : (
-                    <ResponsiveContainer width="100%" height={300}>
-                        <RechartsBarChart
-                            data={props.rows}
-                            margin={{ top: 12, right: 16, bottom: 64, left: 8 }}
-                            barCategoryGap="18%"
-                        >
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                            <XAxis
-                                dataKey="name"
-                                tick={{ fontSize: 10 }}
-                                interval={0}
-                                height={56}
-                                angle={-35}
-                                textAnchor="end"
-                            />
-                            <YAxis tick={{ fontSize: 11 }} domain={[0, max * 1.12]} />
-                            <Tooltip
-                                content={({ active, payload, label }) => {
-                                    if (!active || !payload?.length) {
-                                        return null;
-                                    }
-                                    const v = Number(payload[0]?.value ?? 0);
+                    <>
+                        <ResponsiveContainer width="100%" height={300}>
+                            <RechartsBarChart
+                                data={coloredRows}
+                                margin={{ top: 12, right: 16, bottom: 12, left: 8 }}
+                                barCategoryGap="18%"
+                            >
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                <XAxis
+                                    dataKey="name"
+                                    tick={{ fontSize: 10, fill: '#374151' }}
+                                    interval={0}
+                                    angle={0}
+                                    textAnchor="middle"
+                                    height={36}
+                                />
+                                <YAxis tick={{ fontSize: 11 }} domain={[0, max * 1.12]} />
+                                <Tooltip
+                                    content={({ active, payload, label }) => {
+                                        if (!active || !payload?.length) {
+                                            return null;
+                                        }
+                                        const v = Number(payload[0]?.value ?? 0);
 
-                                    return (
-                                        <div className="rounded-lg border bg-popover px-3 py-2 text-xs shadow-md">
-                                            <div className="font-semibold">{String(label ?? '')}</div>
-                                            <div className="mt-1 tabular-nums font-semibold">
-                                                {executiveChartFormatBarTooltipValue(v, unit)}
+                                        return (
+                                            <div className="rounded-lg border bg-popover px-3 py-2 text-xs shadow-md">
+                                                <div className="font-semibold">{String(label ?? '')}</div>
+                                                <div className="mt-1 tabular-nums font-semibold">
+                                                    {executiveChartFormatBarTooltipValue(v, unit)}
+                                                </div>
                                             </div>
-                                        </div>
-                                    );
-                                }}
-                            />
-                            <Bar dataKey="value" fill={props.barColor} radius={[2, 2, 0, 0]} maxBarSize={48} />
-                        </RechartsBarChart>
-                    </ResponsiveContainer>
+                                        );
+                                    }}
+                                />
+                                <Bar dataKey="value" radius={[2, 2, 0, 0]} maxBarSize={48}>
+                                    {coloredRows.map((row, i) => (
+                                        <Cell key={`${row.name}-${i}`} fill={row.fill} />
+                                    ))}
+                                </Bar>
+                            </RechartsBarChart>
+                        </ResponsiveContainer>
+                        <div className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-2 border-t border-[#d5dbe4] pt-3">
+                            {coloredRows.map((row, i) => (
+                                <span
+                                    key={`${row.name}-${i}`}
+                                    className="inline-flex max-w-[min(100%,12rem)] items-center gap-1.5 text-[11px] text-gray-700"
+                                    title={row.name}
+                                >
+                                    <span
+                                        className="size-2.5 shrink-0 rounded-sm"
+                                        style={{ backgroundColor: row.fill }}
+                                        aria-hidden
+                                    />
+                                    <span className="truncate">{row.name}</span>
+                                </span>
+                            ))}
+                        </div>
+                    </>
                 )}
             </div>
         </div>
@@ -935,6 +982,10 @@ function ExecutiveYesterdaySection({
     const [penaltyChartPeriod, setPenaltyChartPeriod] = useState<ExecutiveChartPeriodKey>('yesterday');
     const [powerPlantChartPeriod, setPowerPlantChartPeriod] = useState<ExecutiveChartPeriodKey>('yesterday');
     const [powerPlantMetric, setPowerPlantMetric] = useState<'rakes' | 'qty'>('rakes');
+
+    /** Table view: road/rail totals visible; siding rows hidden until expanded. */
+    const [roadTableSidingExpanded, setRoadTableSidingExpanded] = useState(false);
+    const [railTableSidingExpanded, setRailTableSidingExpanded] = useState(false);
 
     useEffect(() => {
         setExecutiveData(data);
@@ -1337,29 +1388,48 @@ function ExecutiveYesterdaySection({
                                     </td>
                                 ))}
                             </tr>
-                            {executiveData.roadDispatch.bySiding.map((s) => (
-                                <Fragment key={s.sidingId}>
-                                    <tr className="bg-white">
-                                        <td className="border border-[#d5dbe4] px-3 py-2 font-medium" rowSpan={2}>
-                                            {s.sidingName}
-                                        </td>
-                                        <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Trips</td>
-                                        {execPeriodOrder.map((k) => (
-                                            <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
-                                                {fmtNumber(s.totals[k].trips, 0)}
-                                            </td>
-                                        ))}
-                                    </tr>
-                                    <tr className="bg-white">
-                                        <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Qty</td>
-                                        {execPeriodOrder.map((k) => (
-                                            <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
-                                                {fmtNumber(s.totals[k].qty, 2)}
-                                            </td>
-                                        ))}
-                                    </tr>
-                                </Fragment>
-                            ))}
+                            {roadTableSidingExpanded
+                                ? executiveData.roadDispatch.bySiding.map((s) => (
+                                      <Fragment key={s.sidingId}>
+                                          <tr className="bg-white">
+                                              <td className="border border-[#d5dbe4] px-3 py-2 font-medium" rowSpan={2}>
+                                                  {s.sidingName}
+                                              </td>
+                                              <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Trips</td>
+                                              {execPeriodOrder.map((k) => (
+                                                  <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                                      {fmtNumber(s.totals[k].trips, 0)}
+                                                  </td>
+                                              ))}
+                                          </tr>
+                                          <tr className="bg-white">
+                                              <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Qty</td>
+                                              {execPeriodOrder.map((k) => (
+                                                  <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                                      {fmtNumber(s.totals[k].qty, 2)}
+                                                  </td>
+                                              ))}
+                                          </tr>
+                                      </Fragment>
+                                  ))
+                                : null}
+                            {executiveData.roadDispatch.bySiding.length > 0 ? (
+                                <tr className="bg-[#f8fafc]">
+                                    <td colSpan={2 + execPeriodOrder.length} className="border border-[#d5dbe4] p-0">
+                                        <button
+                                            type="button"
+                                            className="flex w-full items-center justify-center gap-2 py-2.5 text-xs font-medium text-gray-700 transition hover:bg-gray-100"
+                                            onClick={() => setRoadTableSidingExpanded((v) => !v)}
+                                            aria-expanded={roadTableSidingExpanded}
+                                        >
+                                            <ChevronDown
+                                                className={`size-4 shrink-0 text-gray-500 transition-transform ${roadTableSidingExpanded ? 'rotate-180' : ''}`}
+                                            />
+                                            {roadTableSidingExpanded ? 'Hide siding breakdown' : 'Show siding breakdown'}
+                                        </button>
+                                    </td>
+                                </tr>
+                            ) : null}
                         </tbody>
                     </table>
                 </div>
@@ -1406,29 +1476,48 @@ function ExecutiveYesterdaySection({
                                     </td>
                                 ))}
                             </tr>
-                            {executiveData.railDispatch.bySiding.map((s) => (
-                                <Fragment key={s.sidingId}>
-                                    <tr className="bg-white">
-                                        <td className="border border-[#d5dbe4] px-3 py-2 font-medium" rowSpan={2}>
-                                            {s.sidingName}
-                                        </td>
-                                        <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Rakes</td>
-                                        {execPeriodOrder.map((k) => (
-                                            <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
-                                                {fmtNumber(s.totals[k].rakes, 0)}
-                                            </td>
-                                        ))}
-                                    </tr>
-                                    <tr className="bg-white">
-                                        <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Qty</td>
-                                        {execPeriodOrder.map((k) => (
-                                            <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
-                                                {fmtNumber(s.totals[k].qty, 2)}
-                                            </td>
-                                        ))}
-                                    </tr>
-                                </Fragment>
-                            ))}
+                            {railTableSidingExpanded
+                                ? executiveData.railDispatch.bySiding.map((s) => (
+                                      <Fragment key={s.sidingId}>
+                                          <tr className="bg-white">
+                                              <td className="border border-[#d5dbe4] px-3 py-2 font-medium" rowSpan={2}>
+                                                  {s.sidingName}
+                                              </td>
+                                              <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Rakes</td>
+                                              {execPeriodOrder.map((k) => (
+                                                  <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                                      {fmtNumber(s.totals[k].rakes, 0)}
+                                                  </td>
+                                              ))}
+                                          </tr>
+                                          <tr className="bg-white">
+                                              <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Qty</td>
+                                              {execPeriodOrder.map((k) => (
+                                                  <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                                      {fmtNumber(s.totals[k].qty, 2)}
+                                                  </td>
+                                              ))}
+                                          </tr>
+                                      </Fragment>
+                                  ))
+                                : null}
+                            {executiveData.railDispatch.bySiding.length > 0 ? (
+                                <tr className="bg-[#f8fafc]">
+                                    <td colSpan={2 + execPeriodOrder.length} className="border border-[#d5dbe4] p-0">
+                                        <button
+                                            type="button"
+                                            className="flex w-full items-center justify-center gap-2 py-2.5 text-xs font-medium text-gray-700 transition hover:bg-gray-100"
+                                            onClick={() => setRailTableSidingExpanded((v) => !v)}
+                                            aria-expanded={railTableSidingExpanded}
+                                        >
+                                            <ChevronDown
+                                                className={`size-4 shrink-0 text-gray-500 transition-transform ${railTableSidingExpanded ? 'rotate-180' : ''}`}
+                                            />
+                                            {railTableSidingExpanded ? 'Hide siding breakdown' : 'Show siding breakdown'}
+                                        </button>
+                                    </td>
+                                </tr>
+                            ) : null}
                         </tbody>
                     </table>
                 </div>
@@ -1715,7 +1804,6 @@ function ExecutiveYesterdaySection({
                     valueKind={roadChartValueKind}
                     onValueKindChange={setRoadChartValueKind}
                     countLabel="Trips"
-                    barColor={DASHBOARD_PALETTE.steelBlue}
                 />
                 <ExecutiveSidingBarChartCard
                     title="Rail Dispatch"
@@ -1725,7 +1813,6 @@ function ExecutiveYesterdaySection({
                     valueKind={railChartValueKind}
                     onValueKindChange={setRailChartValueKind}
                     countLabel="Rakes"
-                    barColor={DASHBOARD_PALETTE.darkGrey}
                 />
             </div>
 
@@ -2105,9 +2192,6 @@ function RakePerformanceSection({ rakes }: { rakes: RakePerformanceItem[] }) {
                                     ))}
                                 </SelectContent>
                             </Select>
-                            <Button variant="outline" size="sm" className="rounded-lg" asChild>
-                                <Link href={rakesIndex().url} data-pan="dashboard-view-all-rakes">View all rakes</Link>
-                            </Button>
                         </div>
                     }
                 />
@@ -2321,25 +2405,15 @@ function LoaderOverloadSection({ loaders, monthly }: { loaders: LoaderInfo[]; mo
                         <div>
                             <p className="mb-2 text-xs font-medium text-gray-600">Total wagons vs overloaded (monthly)</p>
                             <ResponsiveContainer width="100%" height={240}>
-                                <RechartsAreaChart data={trendData} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
-                                    <defs>
-                                        <linearGradient id="loader-total-gradient" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="0%" stopColor="#93C5FD" stopOpacity={0.4} />
-                                            <stop offset="100%" stopColor="#93C5FD" stopOpacity={0} />
-                                        </linearGradient>
-                                        <linearGradient id="loader-overload-gradient" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="0%" stopColor="#DC2626" stopOpacity={0.4} />
-                                            <stop offset="100%" stopColor="#DC2626" stopOpacity={0} />
-                                        </linearGradient>
-                                    </defs>
+                                <RechartsBarChart data={trendData} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
                                     <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                                    <YAxis tick={{ fontSize: 11 }} />
-                                    <Tooltip formatter={(v: number | undefined, name?: string) => [v ?? 0, name === 'total' ? 'Total wagons' : 'Overloaded']} />
+                                    <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                                    <Tooltip formatter={(v: number | undefined, name?: string) => [`${v ?? 0} wagons`, name ?? '']} />
                                     <Legend />
-                                    <Area type="monotone" dataKey="total" name="Total wagons" stroke="#3B82F6" fill="url(#loader-total-gradient)" strokeWidth={2} dot={false} />
-                                    <Area type="monotone" dataKey="overloaded" name="Overloaded" stroke="#DC2626" fill="url(#loader-overload-gradient)" strokeWidth={2} dot={false} />
-                                </RechartsAreaChart>
+                                    <Bar dataKey="total" name="Total wagons" fill="#3B82F6" radius={[2, 2, 0, 0]} maxBarSize={28} />
+                                    <Bar dataKey="overloaded" name="Overloaded" fill="#DC2626" radius={[2, 2, 0, 0]} maxBarSize={28} />
+                                </RechartsBarChart>
                             </ResponsiveContainer>
                         </div>
                         <div>
@@ -2569,7 +2643,7 @@ function PowerPlantDispatchSection({ data }: { data: PowerPlantDispatchItem[] })
     return (
         <div className="dashboard-card rounded-xl border-0 p-6">
             <SectionHeader icon={Factory} title="Power plant wise dispatch" subtitle="How many rakes sent to each power plant" />
-            <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div className="dashboard-card flex items-center gap-3 rounded-xl border-0 p-4" style={{ borderTop: '4px solid #3B82F6' }}>
                     <MapPin className="size-5 text-blue-600" />
                     <div>
@@ -2591,13 +2665,6 @@ function PowerPlantDispatchSection({ data }: { data: PowerPlantDispatchItem[] })
                         <div className="text-xl font-bold tabular-nums text-gray-900">{formatWeight(totalWeight)}</div>
                     </div>
                 </div>
-                <div className="dashboard-card flex items-center gap-3 rounded-xl border-0 p-4" style={{ borderTop: '4px solid #3B82F6' }}>
-                    <Zap className="size-5 text-blue-600" />
-                    <div>
-                        <div className="text-xs font-medium text-gray-600">Avg per destination</div>
-                        <div className="text-xl font-bold tabular-nums text-gray-900">{data.length > 0 ? formatWeight(totalWeight / data.length) : '—'}</div>
-                    </div>
-                </div>
             </div>
 
             <div className="mt-6 grid gap-6 lg:grid-cols-2">
@@ -2612,46 +2679,76 @@ function PowerPlantDispatchSection({ data }: { data: PowerPlantDispatchItem[] })
                             {stacked ? 'Grouped' : 'Stacked'}
                         </button>
                     </div>
-                    <ResponsiveContainer width="100%" height={Math.max(260, data.length * 48)}>
-                        <RechartsBarChart data={stackedChartData} margin={{ left: 10, right: 20, top: 5, bottom: 5 }} barCategoryGap="20%">
-                            <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
-                            <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                            <YAxis allowDecimals={false} />
-                            <Tooltip />
-                            <Legend />
-                            {allSidingNames.map((sn, i) => (
-                                <Bar
-                                    key={sn}
-                                    dataKey={sn}
-                                    stackId={stacked ? 'stack' : undefined}
-                                    fill={SIDING_COLORS[i % SIDING_COLORS.length]}
-                                    name={sn}
-                                    radius={[4, 4, 0, 0]}
-                                    barSize={32}
-                                >
-                                    <LabelList dataKey={sn} position="top" />
-                                </Bar>
-                            ))}
-                        </RechartsBarChart>
-                    </ResponsiveContainer>
+                    <div className="min-h-0 w-full overflow-x-auto pt-1">
+                        <ResponsiveContainer width="100%" height={Math.max(280, data.length * 52)}>
+                            <RechartsBarChart
+                                data={stackedChartData}
+                                margin={{ left: 8, right: 12, top: stacked ? 12 : 22, bottom: 8 }}
+                                barCategoryGap="18%"
+                            >
+                                <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
+                                <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} height={52} />
+                                <YAxis allowDecimals={false} tick={{ fontSize: 10 }} width={40} domain={[0, 'auto']} />
+                                <Tooltip />
+                                <Legend wrapperStyle={{ fontSize: 11 }} />
+                                {allSidingNames.map((sn, i) => (
+                                    <Bar
+                                        key={sn}
+                                        dataKey={sn}
+                                        stackId={stacked ? 'stack' : undefined}
+                                        fill={SIDING_COLORS[i % SIDING_COLORS.length]}
+                                        name={sn}
+                                        radius={[2, 2, 0, 0]}
+                                        maxBarSize={28}
+                                    >
+                                        {!stacked ? (
+                                            <LabelList
+                                                dataKey={sn}
+                                                position="top"
+                                                fill="#4b5563"
+                                                fontSize={10}
+                                                formatter={(label) => {
+                                                    const n = Number(label ?? 0);
+
+                                                    return n > 0 && !Number.isNaN(n) ? String(n) : '';
+                                                }}
+                                            />
+                                        ) : null}
+                                    </Bar>
+                                ))}
+                            </RechartsBarChart>
+                        </ResponsiveContainer>
+                    </div>
                 </div>
 
                 <div>
                     <h4 className="mb-2 text-xs font-medium text-gray-600">Rakes dispatched per power plant</h4>
-                    <ResponsiveContainer width="100%" height={Math.max(260, data.length * 40)}>
-                        <RechartsBarChart data={sortedByRakes} margin={{ top: 8, right: 16, bottom: 0, left: 8 }}>
-                            <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
-                            <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                            <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                            <Tooltip formatter={(v: number | undefined) => `${v ?? 0} rakes`} />
-                            <Bar dataKey="rakes" radius={[4, 4, 0, 0]} barSize={32} isAnimationActive>
-                                {sortedByRakes.map((pp, i) => (
-                                    <Cell key={pp.name} fill={PLANT_COLORS[pp.name] ?? SIDING_COLORS[i % SIDING_COLORS.length]} />
-                                ))}
-                                <LabelList dataKey="rakes" position="top" />
-                            </Bar>
-                        </RechartsBarChart>
-                    </ResponsiveContainer>
+                    <div className="min-h-0 w-full overflow-x-auto pt-1">
+                        <ResponsiveContainer width="100%" height={Math.max(280, data.length * 44)}>
+                            <RechartsBarChart data={sortedByRakes} margin={{ top: 22, right: 12, bottom: 4, left: 8 }}>
+                                <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
+                                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                <YAxis allowDecimals={false} tick={{ fontSize: 10 }} width={40} domain={[0, 'auto']} />
+                                <Tooltip formatter={(v: number | undefined) => `${v ?? 0} rakes`} />
+                                <Bar dataKey="rakes" radius={[4, 4, 0, 0]} maxBarSize={32} isAnimationActive>
+                                    {sortedByRakes.map((pp, i) => (
+                                        <Cell key={pp.name} fill={PLANT_COLORS[pp.name] ?? SIDING_COLORS[i % SIDING_COLORS.length]} />
+                                    ))}
+                                    <LabelList
+                                        dataKey="rakes"
+                                        position="top"
+                                        fill="#4b5563"
+                                        fontSize={10}
+                                        formatter={(label) => {
+                                            const n = Number(label ?? 0);
+
+                                            return n > 0 && !Number.isNaN(n) ? String(n) : '';
+                                        }}
+                                    />
+                                </Bar>
+                            </RechartsBarChart>
+                        </ResponsiveContainer>
+                    </div>
                 </div>
             </div>
 
@@ -3766,54 +3863,75 @@ export default function Dashboard() {
                                                 <p className="mt-1 text-xs text-gray-600">
                                                     {new Date(coalTransportReport.date + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                                                 </p>
-                                                <div className="dashboard-table-scroll mt-3 max-h-[420px] overflow-y-auto overflow-x-auto">
-                                                    <table className="w-full border-separate text-sm" style={{ borderSpacing: 0 }}>
-                                                        <thead className="sticky top-0 z-10 bg-[#369c7a] text-black">
-                                                            <tr>
-                                                                <th className="border border-[#1a3d2e] px-2 py-2 text-center font-medium" style={{ borderWidth: '1px' }}>Sl No</th>
-                                                                <th className="border border-[#1a3d2e] px-2 py-2 text-center font-medium" style={{ borderWidth: '1px' }}>Shift</th>
-                                                                {coalTransportReport.sidings.map((s) => (
-                                                                    <th key={s.id} colSpan={2} className="border border-[#1a3d2e] px-2 py-2 text-center font-medium" style={{ borderWidth: '1px' }}>{s.name}</th>
+                                                <div className="mt-3 overflow-hidden rounded-xl border border-[#d5dbe4] bg-white">
+                                                    <div className="dashboard-table-scroll max-h-[420px] overflow-y-auto overflow-x-auto">
+                                                        <table className="w-full border-separate text-xs" style={{ borderSpacing: 0 }}>
+                                                            <thead className="sticky top-0 z-10 bg-[#eef2f7] text-black">
+                                                                <tr>
+                                                                    <th className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">Sl No</th>
+                                                                    <th className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">Shift</th>
+                                                                    {coalTransportReport.sidings.map((s) => (
+                                                                        <th key={s.id} colSpan={2} className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">
+                                                                            {s.name}
+                                                                        </th>
+                                                                    ))}
+                                                                    <th colSpan={2} className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">
+                                                                        Total
+                                                                    </th>
+                                                                </tr>
+                                                                <tr>
+                                                                    <th className="border border-[#d5dbe4] px-3 py-2" />
+                                                                    <th className="border border-[#d5dbe4] px-3 py-2" />
+                                                                    {coalTransportReport.sidings.flatMap((s) => [
+                                                                        <th key={`${s.id}-t`} className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">
+                                                                            Trips
+                                                                        </th>,
+                                                                        <th key={`${s.id}-q`} className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">
+                                                                            Qty
+                                                                        </th>,
+                                                                    ])}
+                                                                    <th className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">Trips</th>
+                                                                    <th className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">Qty</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {coalTransportReport.rows.map((row) => (
+                                                                    <tr key={row.shift_label} className="bg-white">
+                                                                        <td className="border border-[#d5dbe4] px-3 py-2 tabular-nums">{row.sl_no}</td>
+                                                                        <td className="border border-[#d5dbe4] px-3 py-2 font-medium">{row.shift_label}</td>
+                                                                        {row.siding_metrics.map((m) => (
+                                                                            <Fragment key={m.siding_name}>
+                                                                                <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{m.trips}</td>
+                                                                                <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                                                                    {m.qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                                </td>
+                                                                            </Fragment>
+                                                                        ))}
+                                                                        <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{row.total_trips}</td>
+                                                                        <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                                                            {row.total_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                        </td>
+                                                                    </tr>
                                                                 ))}
-                                                                <th colSpan={2} className="border border-[#1a3d2e] px-2 py-2 text-center font-medium" style={{ borderWidth: '1px' }}>Total</th>
-                                                            </tr>
-                                                            <tr>
-                                                                <th className="border border-[#1a3d2e] px-2 py-1" style={{ borderWidth: '1px' }} />
-                                                                <th className="border border-[#1a3d2e] px-2 py-1" style={{ borderWidth: '1px' }} />
-                                                                {coalTransportReport.sidings.flatMap((s) => [<th key={`${s.id}-t`} className="border border-[#1a3d2e] px-2 py-1 text-center font-medium" style={{ borderWidth: '1px' }}>Trips</th>, <th key={`${s.id}-q`} className="border border-[#1a3d2e] px-2 py-1 text-center font-medium" style={{ borderWidth: '1px' }}>Qty</th>])}
-                                                                <th className="border border-[#1a3d2e] px-2 py-1 text-center font-medium" style={{ borderWidth: '1px' }}>Trips</th>
-                                                                <th className="border border-[#1a3d2e] px-2 py-1 text-center font-medium" style={{ borderWidth: '1px' }}>Qty</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            {coalTransportReport.rows.map((row) => (
-                                                                <tr key={row.shift_label} className="bg-white text-[0.875rem]">
-                                                                    <td className="border border-[#1a3d2e] px-2 py-2 tabular-nums" style={{ borderWidth: '1px' }}>{row.sl_no}</td>
-                                                                    <td className="border border-[#1a3d2e] px-2 py-2 font-medium" style={{ borderWidth: '1px' }}>{row.shift_label}</td>
-                                                                    {row.siding_metrics.map((m) => (
+                                                                <tr className="bg-[#f1f5f9] font-semibold text-black">
+                                                                    <td className="border border-[#d5dbe4] px-3 py-2" />
+                                                                    <td className="border border-[#d5dbe4] px-3 py-2">TOTAL</td>
+                                                                    {coalTransportReport.totals.siding_metrics.map((m) => (
                                                                         <Fragment key={m.siding_name}>
-                                                                            <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{m.trips}</td>
-                                                                            <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{m.qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                                                            <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{m.trips}</td>
+                                                                            <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                                                                {m.qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                            </td>
                                                                         </Fragment>
                                                                     ))}
-                                                                    <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{row.total_trips}</td>
-                                                                    <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{row.total_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                                                    <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{coalTransportReport.totals.total_trips}</td>
+                                                                    <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                                                        {coalTransportReport.totals.total_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                    </td>
                                                                 </tr>
-                                                            ))}
-                                                            <tr className="bg-[#369c7a] font-bold text-black">
-                                                                <td className="border border-[#1a3d2e] px-2 py-2" style={{ borderWidth: '1px' }} />
-                                                                <td className="border border-[#1a3d2e] px-2 py-2" style={{ borderWidth: '1px' }}>TOTAL</td>
-                                                                {coalTransportReport.totals.siding_metrics.map((m) => (
-                                                                    <Fragment key={m.siding_name}>
-                                                                        <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{m.trips}</td>
-                                                                        <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{m.qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                                                                    </Fragment>
-                                                                ))}
-                                                                <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{coalTransportReport.totals.total_trips}</td>
-                                                                <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{coalTransportReport.totals.total_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                                                            </tr>
-                                                        </tbody>
-                                                    </table>
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
                                                 </div>
                                             </>
                                         ) : (
@@ -3845,53 +3963,67 @@ export default function Dashboard() {
                                                         <span className="ml-2 text-amber-600">— No rake dispatches for this date</span>
                                                     )}
                                                 </p>
-                                                <div className="dashboard-table-scroll mt-3 max-h-[420px] overflow-y-auto overflow-x-auto">
-                                                    <table className="w-full border-separate text-sm" style={{ borderSpacing: 0 }}>
-                                                        <thead className="sticky top-0 z-10 bg-[#369c7a] text-black">
-                                                            <tr>
-                                                                <th className="border border-[#1a3d2e] px-2 py-2 text-center font-medium" style={{ borderWidth: '1px' }}>SL NO</th>
-                                                                <th className="border border-[#1a3d2e] px-2 py-2 text-center font-medium" style={{ borderWidth: '1px' }}>SIDING</th>
-                                                                <th colSpan={2} className="border border-[#1a3d2e] px-2 py-2 text-center font-medium" style={{ borderWidth: '1px' }}>DAY</th>
-                                                                <th colSpan={2} className="border border-[#1a3d2e] px-2 py-2 text-center font-medium" style={{ borderWidth: '1px' }}>MONTH</th>
-                                                                <th className="border border-[#1a3d2e] px-2 py-2 text-center font-medium" style={{ borderWidth: '1px' }}>FOR RAKE DAY/AVG</th>
-                                                                <th className="border border-[#1a3d2e] px-2 py-2 text-center font-medium" style={{ borderWidth: '1px' }}>REMARKS</th>
-                                                            </tr>
-                                                            <tr>
-                                                                <th className="border border-[#1a3d2e] px-2 py-1" style={{ borderWidth: '1px' }} />
-                                                                <th className="border border-[#1a3d2e] px-2 py-1" style={{ borderWidth: '1px' }} />
-                                                                <th className="border border-[#1a3d2e] px-2 py-1 text-center font-medium" style={{ borderWidth: '1px' }}>RAKES</th>
-                                                                <th className="border border-[#1a3d2e] px-2 py-1 text-center font-medium" style={{ borderWidth: '1px' }}>QTY</th>
-                                                                <th className="border border-[#1a3d2e] px-2 py-1 text-center font-medium" style={{ borderWidth: '1px' }}>RAKES</th>
-                                                                <th className="border border-[#1a3d2e] px-2 py-1 text-center font-medium" style={{ borderWidth: '1px' }}>QTY</th>
-                                                                <th className="border border-[#1a3d2e] px-2 py-1" style={{ borderWidth: '1px' }} />
-                                                                <th className="border border-[#1a3d2e] px-2 py-1" style={{ borderWidth: '1px' }} />
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            {dailyRakeDetails.rows.map((r) => (
-                                                                <tr key={r.siding_name} className="bg-white text-[0.875rem]">
-                                                                    <td className="border border-[#1a3d2e] px-2 py-2 tabular-nums" style={{ borderWidth: '1px' }}>{r.sl_no}</td>
-                                                                    <td className="border border-[#1a3d2e] px-2 py-2 font-medium" style={{ borderWidth: '1px' }}>{r.siding_name}</td>
-                                                                    <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{r.day_rakes}</td>
-                                                                    <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{r.day_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                                                                    <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{r.month_rakes}</td>
-                                                                    <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{r.month_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                                                                    <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{r.rake_day_avg.toFixed(2)}</td>
-                                                                    <td className="border border-[#1a3d2e] px-2 py-2 text-gray-600" style={{ borderWidth: '1px' }}>{r.remarks || '—'}</td>
+                                                <div className="mt-3 overflow-hidden rounded-xl border border-[#d5dbe4] bg-white">
+                                                    <div className="dashboard-table-scroll max-h-[420px] overflow-y-auto overflow-x-auto">
+                                                        <table className="w-full border-separate text-xs" style={{ borderSpacing: 0 }}>
+                                                            <thead className="sticky top-0 z-10 bg-[#eef2f7] text-black">
+                                                                <tr>
+                                                                    <th className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">SL NO</th>
+                                                                    <th className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">SIDING</th>
+                                                                    <th colSpan={2} className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">
+                                                                        DAY
+                                                                    </th>
+                                                                    <th colSpan={2} className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">
+                                                                        MONTH
+                                                                    </th>
+                                                                    <th className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">FOR RAKE DAY/AVG</th>
+                                                                    <th className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">REMARKS</th>
                                                                 </tr>
-                                                            ))}
-                                                            <tr className="bg-[#369c7a] font-bold text-black">
-                                                                <td className="border border-[#1a3d2e] px-2 py-2" style={{ borderWidth: '1px' }} />
-                                                                <td className="border border-[#1a3d2e] px-2 py-2" style={{ borderWidth: '1px' }}>TOTAL</td>
-                                                                <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{dailyRakeDetails.totals.day_rakes}</td>
-                                                                <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{dailyRakeDetails.totals.day_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                                                                <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{dailyRakeDetails.totals.month_rakes}</td>
-                                                                <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{dailyRakeDetails.totals.month_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                                                                <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{dailyRakeDetails.totals.rake_day_avg.toFixed(2)}</td>
-                                                                <td className="border border-[#1a3d2e] px-2 py-2" style={{ borderWidth: '1px' }} />
-                                                            </tr>
-                                                        </tbody>
-                                                    </table>
+                                                                <tr>
+                                                                    <th className="border border-[#d5dbe4] px-3 py-2" />
+                                                                    <th className="border border-[#d5dbe4] px-3 py-2" />
+                                                                    <th className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">RAKES</th>
+                                                                    <th className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">QTY</th>
+                                                                    <th className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">RAKES</th>
+                                                                    <th className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">QTY</th>
+                                                                    <th className="border border-[#d5dbe4] px-3 py-2" />
+                                                                    <th className="border border-[#d5dbe4] px-3 py-2" />
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {dailyRakeDetails.rows.map((r) => (
+                                                                    <tr key={r.siding_name} className="bg-white">
+                                                                        <td className="border border-[#d5dbe4] px-3 py-2 tabular-nums">{r.sl_no}</td>
+                                                                        <td className="border border-[#d5dbe4] px-3 py-2 font-medium">{r.siding_name}</td>
+                                                                        <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{r.day_rakes}</td>
+                                                                        <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                                                            {r.day_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                        </td>
+                                                                        <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{r.month_rakes}</td>
+                                                                        <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                                                            {r.month_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                        </td>
+                                                                        <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{r.rake_day_avg.toFixed(2)}</td>
+                                                                        <td className="border border-[#d5dbe4] px-3 py-2 text-gray-600">{r.remarks || '—'}</td>
+                                                                    </tr>
+                                                                ))}
+                                                                <tr className="bg-[#f1f5f9] font-semibold text-black">
+                                                                    <td className="border border-[#d5dbe4] px-3 py-2" />
+                                                                    <td className="border border-[#d5dbe4] px-3 py-2">TOTAL</td>
+                                                                    <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{dailyRakeDetails.totals.day_rakes}</td>
+                                                                    <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                                                        {dailyRakeDetails.totals.day_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                    </td>
+                                                                    <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{dailyRakeDetails.totals.month_rakes}</td>
+                                                                    <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                                                        {dailyRakeDetails.totals.month_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                    </td>
+                                                                    <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{dailyRakeDetails.totals.rake_day_avg.toFixed(2)}</td>
+                                                                    <td className="border border-[#d5dbe4] px-3 py-2" />
+                                                                </tr>
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
                                                 </div>
                                             </>
                                         ) : (
@@ -3968,11 +4100,6 @@ export default function Dashboard() {
                                  <div className="dashboard-card rounded-xl border-0 p-5">
                                         <div className="flex flex-wrap items-center justify-between gap-3">
                                             <SectionHeader icon={Train} title="Live rake status" subtitle="Pending on siding — no weighment receipt yet" />
-                                            <Button variant="outline" size="sm" className="rounded-lg" asChild>
-                                                <Link href={rakesIndex().url} data-pan="dashboard-live-rakes-view-all">
-                                                    View all
-                                                </Link>
-                                            </Button>
                                         </div>
                                         <p className="mt-1 text-xs text-gray-600">
                                             Last updated: Just now
@@ -4007,7 +4134,7 @@ export default function Dashboard() {
                                                             </th>
                                                             <th className="group cursor-pointer pb-3 px-2 pt-2 font-medium">
                                                                 <span className="inline-flex items-center gap-1">
-                                                                    Loading time
+                                                                    Loading date
                                                                     <ArrowUp className="size-3.5 opacity-0 group-hover:opacity-50" />
                                                                 </span>
                                                             </th>
@@ -4055,7 +4182,17 @@ export default function Dashboard() {
                                                                             }
                                                                         />
                                                                     </td>
-                                                                    <td className="py-3 tabular-nums px-2">{row.time_elapsed}</td>
+                                                                    <td className="py-3 tabular-nums px-2">
+                                                                        {row.loading_date != null &&
+                                                                        row.loading_date !== '' &&
+                                                                        row.loading_date !== '—'
+                                                                            ? new Date(`${row.loading_date}T12:00:00`).toLocaleDateString('en-IN', {
+                                                                                  day: '2-digit',
+                                                                                  month: '2-digit',
+                                                                                  year: 'numeric',
+                                                                              })
+                                                                            : (row.loading_date ?? '—')}
+                                                                    </td>
                                                                 </tr>
                                                             );
                                                         })}
