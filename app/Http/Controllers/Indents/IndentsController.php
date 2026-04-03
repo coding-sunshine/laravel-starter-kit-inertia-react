@@ -165,15 +165,22 @@ final class IndentsController extends Controller
                         return;
                     }
 
+                    $indentAt = $request->input('indent_at');
+                    if ($indentAt === null || $indentAt === '') {
+                        return;
+                    }
+
+                    $reference = Date::parse($indentAt);
+
                     $existsInMonth = Rake::query()
                         ->where('rake_number', $trimmed)
                         ->where('siding_id', $sidingId)
-                        ->whereYear('loading_date', now()->year)
-                        ->whereMonth('loading_date', now()->month)
+                        ->whereYear('loading_date', $reference->year)
+                        ->whereMonth('loading_date', $reference->month)
                         ->exists();
 
                     if ($existsInMonth) {
-                        $fail('This rake number is already in use this month for this siding.');
+                        $fail('This rake number is already in use for this siding in the indent month.');
                     }
                 },
             ],
@@ -195,15 +202,22 @@ final class IndentsController extends Controller
                         return;
                     }
 
+                    $indentAt = $request->input('indent_at');
+                    if ($indentAt === null || $indentAt === '') {
+                        return;
+                    }
+
+                    $reference = Date::parse($indentAt);
+
                     $existsInMonth = Rake::query()
                         ->where('priority_number', $num)
                         ->where('siding_id', $sidingId)
-                        ->whereYear('loading_date', now()->year)
-                        ->whereMonth('loading_date', now()->month)
+                        ->whereYear('loading_date', $reference->year)
+                        ->whereMonth('loading_date', $reference->month)
                         ->exists();
 
                     if ($existsInMonth) {
-                        $fail('This rake priority number is already in use this month for this siding.');
+                        $fail('This rake priority number is already in use for this siding in the indent month.');
                     }
                 },
             ],
@@ -416,11 +430,18 @@ final class IndentsController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'code']);
 
-        $maxPriorityThisMonthOnSiding = Rake::query()
-            ->where('siding_id', $indent->siding_id)
-            ->whereYear('created_at', now()->year)
-            ->whereMonth('created_at', now()->month)
-            ->max('priority_number');
+        try {
+            $indentRef = ProvisionRakeForIndent::referenceDateFromIndent($indent);
+            $maxPriorityThisMonthOnSiding = Rake::query()
+                ->where('siding_id', $indent->siding_id)
+                ->whereYear('loading_date', $indentRef->year)
+                ->whereMonth('loading_date', $indentRef->month)
+                ->max('priority_number');
+        } catch (InvalidArgumentException) {
+            $maxPriorityThisMonthOnSiding = Rake::query()
+                ->where('siding_id', $indent->siding_id)
+                ->max('priority_number');
+        }
 
         $nextPriorityNumber = (int) $maxPriorityThisMonthOnSiding + 1;
 
@@ -457,24 +478,37 @@ final class IndentsController extends Controller
             return to_route('rakes.show', $indent->rake)
                 ->with('info', 'This indent already has a rake.');
         }
+
+        $indentReference = null;
+        try {
+            $indentReference = ProvisionRakeForIndent::referenceDateFromIndent($indent);
+        } catch (InvalidArgumentException) {
+            $indentReference = null;
+        }
+
         $validated = $request->validate([
             'rake_number' => [
                 'required',
                 'string',
                 'max:100',
-                function (string $attribute, mixed $value, Closure $fail) use ($indent) {
+                function (string $attribute, mixed $value, Closure $fail) use ($indent, $indentReference) {
                     $trimmed = $value !== null && mb_trim((string) $value) !== '' ? mb_trim((string) $value) : null;
                     if ($trimmed === null) {
+                        return;
+                    }
+                    if ($indentReference === null) {
+                        $fail('Cannot validate rake number: indent must have an indent date or expected loading date.');
+
                         return;
                     }
                     $existsInMonth = Rake::query()
                         ->where('rake_number', $trimmed)
                         ->where('siding_id', $indent->siding_id)
-                        ->whereYear('created_at', now()->year)
-                        ->whereMonth('created_at', now()->month)
+                        ->whereYear('loading_date', $indentReference->year)
+                        ->whereMonth('loading_date', $indentReference->month)
                         ->exists();
                     if ($existsInMonth) {
-                        $fail('This rake number is already in use this month.');
+                        $fail('This rake number is already in use for this siding in the indent month.');
                     }
                 },
             ],
@@ -482,19 +516,24 @@ final class IndentsController extends Controller
                 'required',
                 'integer',
                 'min:0',
-                function (string $attribute, mixed $value, Closure $fail) use ($indent) {
+                function (string $attribute, mixed $value, Closure $fail) use ($indent, $indentReference) {
                     if (! is_numeric($value)) {
                         return;
                     }
                     $num = (int) $value;
+                    if ($indentReference === null) {
+                        $fail('Cannot validate rake priority: indent must have an indent date or expected loading date.');
+
+                        return;
+                    }
                     $existsInMonth = Rake::query()
                         ->where('priority_number', $num)
                         ->where('siding_id', $indent->siding_id)
-                        ->whereYear('created_at', now()->year)
-                        ->whereMonth('created_at', now()->month)
+                        ->whereYear('loading_date', $indentReference->year)
+                        ->whereMonth('loading_date', $indentReference->month)
                         ->exists();
                     if ($existsInMonth) {
-                        $fail('This rake priority number is already in use this month.');
+                        $fail('This rake priority number is already in use for this siding in the indent month.');
                     }
                 },
             ],
