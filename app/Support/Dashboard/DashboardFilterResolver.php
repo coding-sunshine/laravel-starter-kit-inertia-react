@@ -32,7 +32,7 @@ final class DashboardFilterResolver
     public function resolve(Request $request): array
     {
         $user = $request->user();
-        $period = (string) $request->input('period', 'today');
+        $period = (string) $request->input('period', 'yesterday');
 
         if ($period !== 'custom') {
             $request->merge(['from' => null, 'to' => null]);
@@ -176,28 +176,51 @@ final class DashboardFilterResolver
      */
     private function resolveDateRange(Request $request): array
     {
-        $period = (string) $request->input('period', 'today');
+        $period = (string) $request->input('period', 'yesterday');
         $tz = config('app.timezone', 'UTC');
-        $to = now($tz)->endOfDay();
-
-        $from = match ($period) {
-            'today' => now($tz)->startOfDay(),
-            'week' => now($tz)->startOfWeek(),
-            'month' => now($tz)->startOfMonth(),
-            'quarter' => now($tz)->startOfQuarter(),
-            'year' => now($tz)->startOfYear(),
-            'custom' => $this->parseRequestDate($request, 'from', $tz) ?? now($tz)->startOfMonth(),
-            default => now($tz)->startOfMonth(),
-        };
+        $now = now($tz);
 
         if ($period === 'custom') {
+            $from = $this->parseRequestDate($request, 'from', $tz) ?? $now->copy()->startOfMonth();
+            $to = $now->copy()->endOfDay();
             $parsedTo = $this->parseRequestDate($request, 'to', $tz);
             if ($parsedTo !== null) {
                 $to = $parsedTo->copy()->endOfDay();
             }
+
+            return [$from, $to];
         }
 
-        return [$from, $to];
+        return match ($period) {
+            'yesterday' => [
+                $now->copy()->subDay()->startOfDay(),
+                $now->copy()->subDay()->endOfDay(),
+            ],
+            'today' => [
+                $now->copy()->startOfDay(),
+                $now->copy()->endOfDay(),
+            ],
+            'week' => [
+                $now->copy()->startOfWeek(),
+                $now->copy()->endOfDay(),
+            ],
+            'last_week' => [
+                $now->copy()->subWeek()->startOfWeek(),
+                $now->copy()->subWeek()->endOfWeek(),
+            ],
+            'month' => [
+                $now->copy()->startOfMonth(),
+                $now->copy()->endOfDay(),
+            ],
+            'last_month' => [
+                $now->copy()->subMonthNoOverflow()->startOfMonth(),
+                $now->copy()->subMonthNoOverflow()->endOfMonth(),
+            ],
+            default => [
+                $now->copy()->subDay()->startOfDay(),
+                $now->copy()->subDay()->endOfDay(),
+            ],
+        };
     }
 
     private function parseRequestDate(Request $request, string $key, string $tz): ?\Carbon\Carbon

@@ -8,12 +8,41 @@ use App\Models\Indent;
 use App\Models\PowerPlant;
 use App\Models\Rake;
 use App\Models\Wagon;
+use Carbon\CarbonInterface;
 use DateTimeInterface;
 use Illuminate\Support\Facades\Date;
 use InvalidArgumentException;
 
 final readonly class ProvisionRakeForIndent
 {
+    /**
+     * Month used for rake uniqueness: indent date, else expected loading date.
+     */
+    public static function referenceDateFromIndent(Indent $indent): CarbonInterface
+    {
+        $d = $indent->indent_date ?? $indent->expected_loading_date;
+        if ($d === null) {
+            throw new InvalidArgumentException('Indent must have an indent date or expected loading date to provision a rake.');
+        }
+
+        return Date::parse($d instanceof DateTimeInterface ? $d->format('Y-m-d H:i:s') : (string) $d);
+    }
+
+    /**
+     * For PDF import before an Indent row exists: parsed Demand Date/Time and/or Expected Loading Date.
+     */
+    public static function referenceDateFromParsedPdf(?DateTimeInterface $indentDate, ?DateTimeInterface $expectedLoadingDate): CarbonInterface
+    {
+        $d = $indentDate ?? $expectedLoadingDate;
+        if ($d === null) {
+            throw new InvalidArgumentException(
+                'Unable to determine indent month from PDF. Ensure Demand Date/Time or Expected Loading Date is present.'
+            );
+        }
+
+        return Date::parse($d->format('Y-m-d H:i:s'));
+    }
+
     /**
      * Create a rake for an indent (PDF import or manual indent create).
      *
@@ -26,13 +55,15 @@ final readonly class ProvisionRakeForIndent
             throw new InvalidArgumentException('A rake already exists for this indent.');
         }
 
+        $reference = self::referenceDateFromIndent($indent);
+
         $rakeNumber = $rakeNumber !== null && mb_trim($rakeNumber) !== '' ? mb_trim($rakeNumber) : null;
         if ($rakeNumber !== null) {
-            $this->assertRakeNumberFreeForSidingThisMonth($rakeNumber, (int) $indent->siding_id);
+            $this->assertRakeNumberFreeForSidingInIndentMonth($rakeNumber, (int) $indent->siding_id, $reference);
         }
 
         if ($priorityNumber !== null) {
-            $this->assertPriorityNumberFreeForSidingThisMonth($priorityNumber, (int) $indent->siding_id);
+            $this->assertPriorityNumberFreeForSidingInIndentMonth($priorityNumber, (int) $indent->siding_id, $reference);
         }
 
         $powerPlant = $this->resolvePowerPlant($indent->destination);
@@ -92,30 +123,34 @@ final readonly class ProvisionRakeForIndent
         return $rake->fresh();
     }
 
-    public function assertRakeNumberFreeForSidingThisMonth(string $rakeNumber, int $sidingId): void
+    public function assertRakeNumberFreeForSidingInIndentMonth(string $rakeNumber, int $sidingId, CarbonInterface $reference): void
     {
         $existsInMonth = Rake::query()
             ->where('rake_number', $rakeNumber)
             ->where('siding_id', $sidingId)
-            ->whereYear('loading_date', now()->year)
-            ->whereMonth('loading_date', now()->month)
+            ->whereYear('loading_date', $reference->year)
+            ->whereMonth('loading_date', $reference->month)
             ->exists();
         if ($existsInMonth) {
-            throw new InvalidArgumentException('This rake number is already in use this month for this siding.');
+            throw new InvalidArgumentException(
+                'This rake number is already in use for this siding in the indent month.'
+            );
         }
     }
 
-    public function assertPriorityNumberFreeForSidingThisMonth(int $priorityNumber, int $sidingId): void
+    public function assertPriorityNumberFreeForSidingInIndentMonth(int $priorityNumber, int $sidingId, CarbonInterface $reference): void
     {
         $existsInMonth = Rake::query()
             ->where('priority_number', $priorityNumber)
             ->where('siding_id', $sidingId)
-            ->whereYear('loading_date', now()->year)
-            ->whereMonth('loading_date', now()->month)
+            ->whereYear('loading_date', $reference->year)
+            ->whereMonth('loading_date', $reference->month)
             ->exists();
 
         if ($existsInMonth) {
-            throw new InvalidArgumentException('This rake priority number is already in use this month for this siding.');
+            throw new InvalidArgumentException(
+                'This rake priority number is already in use for this siding in the indent month.'
+            );
         }
     }
 

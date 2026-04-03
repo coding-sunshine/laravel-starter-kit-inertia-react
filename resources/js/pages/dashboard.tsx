@@ -89,11 +89,12 @@ const DASHBOARD_PALETTE = {
 const ALL_FILTER_VALUE = '__all__';
 
 const PERIODS = [
+    { key: 'last_month', label: 'Last month' },
+    { key: 'last_week', label: 'Last week' },
+    { key: 'yesterday', label: 'Yesterday' },
     { key: 'today', label: 'Today' },
     { key: 'week', label: 'This week' },
     { key: 'month', label: 'This month' },
-    { key: 'quarter', label: 'Quarter' },
-    { key: 'year', label: 'Year' },
     { key: 'custom', label: 'Custom' },
 ] as const;
 
@@ -397,6 +398,9 @@ interface ExecutiveYesterdayData {
             dispatch: { roadQty: number; railQty: number };
         }>;
     };
+    /** Per chart-period slices (anchor-relative), same ranges as road/rail production charts. */
+    penaltyBySidingByPeriod?: Record<'yesterday' | 'today' | 'month' | 'fy', PenaltyBySidingPoint[]>;
+    powerPlantDispatchByPeriod?: Record<'yesterday' | 'today' | 'month' | 'fy', PowerPlantDispatchItem[]>;
 }
 
 interface DashboardAlert {
@@ -423,6 +427,8 @@ interface LiveRakeStatusRow {
     state: string;
     workflow_steps?: WorkflowSteps;
     time_elapsed: string;
+    /** YYYY-MM-DD or em dash when unset */
+    loading_date?: string;
     risk: string;
 }
 
@@ -518,6 +524,361 @@ function SectionHeader({ icon: Icon, title, subtitle, action, titleClassName }: 
     );
 }
 
+/** Period keys aligned with executive table / backend totals (FY = year-to-date in FY). */
+type ExecutiveChartPeriodKey = 'yesterday' | 'today' | 'month' | 'fy';
+
+const EXEC_CHART_PERIOD_OPTIONS: { value: ExecutiveChartPeriodKey; label: string }[] = [
+    { value: 'yesterday', label: 'Yesterday' },
+    { value: 'today', label: 'Today' },
+    { value: 'month', label: 'This month' },
+    { value: 'fy', label: 'Year' },
+];
+
+function executiveChartFormatBarTooltipValue(n: number, unit: 'count' | 'mt'): string {
+    if (unit === 'count') {
+        return n.toLocaleString(undefined, { maximumFractionDigits: 0 });
+    }
+
+    return `${n.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} MT`;
+}
+
+/** One color per siding bar (cycles); matches footer legend. */
+const EXECUTIVE_SIDING_BAR_CHART_COLORS = [
+    DASHBOARD_PALETTE.steelBlue,
+    DASHBOARD_PALETTE.successGreen,
+    DASHBOARD_PALETTE.safetyYellow,
+    DASHBOARD_PALETTE.steelBlueLight,
+    DASHBOARD_PALETTE.successGreenLight,
+    DASHBOARD_PALETTE.darkGrey,
+    '#8B5CF6',
+    '#F97316',
+    '#EC4899',
+    '#14B8A6',
+    '#6366F1',
+];
+
+function ExecutiveSidingBarChartCard(props: {
+    title: string;
+    rows: Array<{ name: string; value: number }>;
+    period: ExecutiveChartPeriodKey;
+    onPeriodChange: (p: ExecutiveChartPeriodKey) => void;
+    valueKind: 'count' | 'qty';
+    onValueKindChange: (k: 'count' | 'qty') => void;
+    countLabel: string;
+}) {
+    const coloredRows = useMemo(
+        () =>
+            props.rows.map((r, i) => ({
+                ...r,
+                fill: EXECUTIVE_SIDING_BAR_CHART_COLORS[i % EXECUTIVE_SIDING_BAR_CHART_COLORS.length],
+            })),
+        [props.rows],
+    );
+
+    const max = Math.max(...props.rows.map((r) => r.value), 1);
+    const unit: 'count' | 'mt' = props.valueKind === 'qty' ? 'mt' : 'count';
+
+    return (
+        <div className="dashboard-card overflow-hidden rounded-xl border border-[#d5dbe4] bg-white p-0">
+            <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                    <p className="text-sm font-semibold text-gray-900">{props.title}</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Select
+                            value={props.period}
+                            onValueChange={(v) => props.onPeriodChange(v as ExecutiveChartPeriodKey)}
+                        >
+                            <SelectTrigger className="h-9 w-[160px] text-xs">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {EXEC_CHART_PERIOD_OPTIONS.map((o) => (
+                                    <SelectItem key={o.value} value={o.value} className="text-xs">
+                                        {o.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <div className="flex rounded-lg border border-gray-200 p-0.5">
+                            <Button
+                                type="button"
+                                variant={props.valueKind === 'count' ? 'default' : 'ghost'}
+                                size="sm"
+                                className="h-8 px-3 text-xs"
+                                onClick={() => props.onValueKindChange('count')}
+                            >
+                                {props.countLabel}
+                            </Button>
+                            <Button
+                                type="button"
+                                variant={props.valueKind === 'qty' ? 'default' : 'ghost'}
+                                size="sm"
+                                className="h-8 px-3 text-xs"
+                                onClick={() => props.onValueKindChange('qty')}
+                            >
+                                Qty
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div className="bg-[#fbfbfc] p-4">
+                {props.rows.length === 0 ? (
+                    <p className="py-12 text-center text-sm text-muted-foreground">No siding data.</p>
+                ) : (
+                    <>
+                        <ResponsiveContainer width="100%" height={300}>
+                            <RechartsBarChart
+                                data={coloredRows}
+                                margin={{ top: 12, right: 16, bottom: 12, left: 8 }}
+                                barCategoryGap="18%"
+                            >
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                <XAxis
+                                    dataKey="name"
+                                    tick={{ fontSize: 10, fill: '#374151' }}
+                                    interval={0}
+                                    angle={0}
+                                    textAnchor="middle"
+                                    height={36}
+                                />
+                                <YAxis tick={{ fontSize: 11 }} domain={[0, max * 1.12]} />
+                                <Tooltip
+                                    content={({ active, payload, label }) => {
+                                        if (!active || !payload?.length) {
+                                            return null;
+                                        }
+                                        const v = Number(payload[0]?.value ?? 0);
+
+                                        return (
+                                            <div className="rounded-lg border bg-popover px-3 py-2 text-xs shadow-md">
+                                                <div className="font-semibold">{String(label ?? '')}</div>
+                                                <div className="mt-1 tabular-nums font-semibold">
+                                                    {executiveChartFormatBarTooltipValue(v, unit)}
+                                                </div>
+                                            </div>
+                                        );
+                                    }}
+                                />
+                                <Bar dataKey="value" radius={[2, 2, 0, 0]} maxBarSize={48}>
+                                    {coloredRows.map((row, i) => (
+                                        <Cell key={`${row.name}-${i}`} fill={row.fill} />
+                                    ))}
+                                </Bar>
+                            </RechartsBarChart>
+                        </ResponsiveContainer>
+                        <div className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-2 border-t border-[#d5dbe4] pt-3">
+                            {coloredRows.map((row, i) => (
+                                <span
+                                    key={`${row.name}-${i}`}
+                                    className="inline-flex max-w-[min(100%,12rem)] items-center gap-1.5 text-[11px] text-gray-700"
+                                    title={row.name}
+                                >
+                                    <span
+                                        className="size-2.5 shrink-0 rounded-sm"
+                                        style={{ backgroundColor: row.fill }}
+                                        aria-hidden
+                                    />
+                                    <span className="truncate">{row.name}</span>
+                                </span>
+                            ))}
+                        </div>
+                    </>
+                )}
+            </div>
+        </div>
+    );
+}
+
+function ExecutiveProductionDonutCard(props: {
+    period: ExecutiveChartPeriodKey;
+    onPeriodChange: (p: ExecutiveChartPeriodKey) => void;
+    valueKind: 'trips' | 'qty';
+    onValueKindChange: (k: 'trips' | 'qty') => void;
+    obValue: number;
+    coalValue: number;
+}) {
+    const data = [
+        { name: 'OB', value: props.obValue, fill: DASHBOARD_PALETTE.successGreen },
+        { name: 'Coal', value: props.coalValue, fill: DASHBOARD_PALETTE.steelBlue },
+    ];
+    const total = props.obValue + props.coalValue;
+    const isEmpty = total <= 0;
+    /** Muted 50/50 donut so the chart frame is visible when there is no production data. */
+    const chartData = isEmpty
+        ? [
+              { name: 'OB', value: 1, fill: '#e2e8f0' },
+              { name: 'Coal', value: 1, fill: '#cbd5e1' },
+          ]
+        : data;
+
+    return (
+        <div className="dashboard-card overflow-hidden rounded-xl border border-[#d5dbe4] bg-white p-0">
+            <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                    <p className="text-sm font-semibold text-gray-900">Production</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Select
+                            value={props.period}
+                            onValueChange={(v) => props.onPeriodChange(v as ExecutiveChartPeriodKey)}
+                        >
+                            <SelectTrigger className="h-9 w-[160px] text-xs">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {EXEC_CHART_PERIOD_OPTIONS.map((o) => (
+                                    <SelectItem key={o.value} value={o.value} className="text-xs">
+                                        {o.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <div className="flex rounded-lg border border-gray-200 p-0.5">
+                            <Button
+                                type="button"
+                                variant={props.valueKind === 'trips' ? 'default' : 'ghost'}
+                                size="sm"
+                                className="h-8 px-3 text-xs"
+                                onClick={() => props.onValueKindChange('trips')}
+                            >
+                                Trips
+                            </Button>
+                            <Button
+                                type="button"
+                                variant={props.valueKind === 'qty' ? 'default' : 'ghost'}
+                                size="sm"
+                                className="h-8 px-3 text-xs"
+                                onClick={() => props.onValueKindChange('qty')}
+                            >
+                                Qty
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div className="relative bg-[#fbfbfc] p-4">
+                <div className="relative min-h-[280px]">
+                    <ResponsiveContainer width="100%" height={280}>
+                        <RechartsPieChart margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                            <Pie
+                                data={chartData}
+                                dataKey="value"
+                                nameKey="name"
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={72}
+                                outerRadius={104}
+                                paddingAngle={isEmpty ? 1 : 2}
+                                isAnimationActive={!isEmpty}
+                                stroke={isEmpty ? '#f8fafc' : undefined}
+                                strokeWidth={isEmpty ? 1 : 0}
+                            >
+                                {chartData.map((entry) => (
+                                    <Cell key={`cell-${entry.name}`} fill={entry.fill} />
+                                ))}
+                            </Pie>
+                            <Tooltip
+                                formatter={(value, name) => {
+                                    if (isEmpty) {
+                                        return ['No production data for this period', String(name)];
+                                    }
+                                    const v = Number(value ?? 0);
+
+                                    return [
+                                        props.valueKind === 'qty'
+                                            ? `${v.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} MT`
+                                            : v.toLocaleString(undefined, { maximumFractionDigits: 0 }),
+                                        String(name),
+                                    ];
+                                }}
+                            />
+                            <Legend wrapperStyle={{ fontSize: 12, opacity: isEmpty ? 0.45 : 1 }} />
+                        </RechartsPieChart>
+                    </ResponsiveContainer>
+                    {isEmpty ? (
+                        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center pb-6 text-center">
+                            <p className="text-xs font-medium text-muted-foreground">No production data</p>
+                            <p className="mt-0.5 text-[11px] text-muted-foreground/80">for this period</p>
+                        </div>
+                    ) : null}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+const PENALTY_BY_SIDING_CHART_COLORS = [
+    '#DC2626',
+    '#EA580C',
+    '#CA8A04',
+    '#65A30D',
+    '#059669',
+    '#0D9488',
+    '#2563EB',
+    '#7C3AED',
+    '#C026D3',
+    '#DB2777',
+];
+
+function DashboardPenaltyBySidingChart({
+    data,
+    period,
+    onPeriodChange,
+}: {
+    data: PenaltyBySidingPoint[];
+    period?: ExecutiveChartPeriodKey;
+    onPeriodChange?: (p: ExecutiveChartPeriodKey) => void;
+}) {
+    const sorted = useMemo(() => [...data].sort((a, b) => b.total - a.total), [data]);
+    const showPeriod = onPeriodChange != null && period != null;
+
+    return (
+        <div className="dashboard-card overflow-hidden rounded-xl border border-[#d5dbe4] bg-white p-0">
+            <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
+                {showPeriod ? (
+                    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                        <SectionHeader icon={BarChart3} title="Penalty by siding" subtitle="Which siding causes most penalties" />
+                        <Select value={period} onValueChange={(v) => onPeriodChange(v as ExecutiveChartPeriodKey)}>
+                            <SelectTrigger className="h-9 w-[160px] text-xs">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {EXEC_CHART_PERIOD_OPTIONS.map((o) => (
+                                    <SelectItem key={o.value} value={o.value} className="text-xs">
+                                        {o.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                ) : (
+                    <SectionHeader icon={BarChart3} title="Penalty by siding" subtitle="Which siding causes most penalties" />
+                )}
+            </div>
+            <div className="bg-[#fbfbfc] p-4">
+                {sorted.length === 0 ? (
+                    <p className="py-8 text-center text-sm text-muted-foreground">No sidings available for selected filters.</p>
+                ) : (
+                    <ResponsiveContainer width="100%" height={320}>
+                        <RechartsBarChart data={sorted} margin={{ top: 8, right: 24, bottom: 24, left: 16 }}>
+                            <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
+                            <XAxis dataKey="name" type="category" tick={{ fontSize: 11 }} interval={0} height={48} />
+                            <YAxis type="number" tickFormatter={(v: number) => formatCurrency(v)} width={72} tick={{ fontSize: 11 }} />
+                            <Tooltip formatter={(v: number | string | undefined) => formatCurrency(Number(v ?? 0))} />
+                            <Bar dataKey="total" radius={[4, 4, 0, 0]} barSize={28} isAnimationActive>
+                                <LabelList dataKey="total" position="top" formatter={(v: unknown) => formatCurrency(Number(v ?? 0))} />
+                                {sorted.map((row, i) => (
+                                    <Cell key={row.name} fill={PENALTY_BY_SIDING_CHART_COLORS[i % PENALTY_BY_SIDING_CHART_COLORS.length]} />
+                                ))}
+                            </Bar>
+                        </RechartsBarChart>
+                    </ResponsiveContainer>
+                )}
+            </div>
+        </div>
+    );
+}
+
 function ExecutiveYesterdayTable({
     title,
     values,
@@ -583,9 +944,13 @@ function ExecutiveYesterdayTable({
 function ExecutiveYesterdaySection({
     data,
     viewMode,
+    penaltyBySiding = [],
+    powerPlantDispatch = [],
 }: {
     data: ExecutiveYesterdayData;
     viewMode: 'table' | 'charts';
+    penaltyBySiding?: PenaltyBySidingPoint[];
+    powerPlantDispatch?: PowerPlantDispatchItem[];
 }) {
     const [executiveData, setExecutiveData] = useState<ExecutiveYesterdayData>(data);
 
@@ -598,8 +963,29 @@ function ExecutiveYesterdaySection({
     const [coalFrom, setCoalFrom] = useState<string>(data.customRanges.coalProduction.from);
     const [coalTo, setCoalTo] = useState<string>(data.customRanges.coalProduction.to);
 
-    const [isCustomLoading, setIsCustomLoading] = useState(false);
+    /** Single range for the Custom (by siding) table — applied to both road and rail. */
+    const [customFrom, setCustomFrom] = useState<string>(data.customRanges.roadDispatch.from);
+    const [customTo, setCustomTo] = useState<string>(data.customRanges.roadDispatch.to);
+
+    /** Which custom-range Apply is in flight (only that toolbar shows Applying… / is disabled). */
+    const [customApplyLoading, setCustomApplyLoading] = useState<
+        'road' | 'rail' | 'ob' | 'coal' | 'customTable' | null
+    >(null);
     const [customError, setCustomError] = useState<string | null>(null);
+
+    const [roadChartPeriod, setRoadChartPeriod] = useState<ExecutiveChartPeriodKey>('yesterday');
+    const [roadChartValueKind, setRoadChartValueKind] = useState<'count' | 'qty'>('count');
+    const [railChartPeriod, setRailChartPeriod] = useState<ExecutiveChartPeriodKey>('yesterday');
+    const [railChartValueKind, setRailChartValueKind] = useState<'count' | 'qty'>('count');
+    const [productionChartPeriod, setProductionChartPeriod] = useState<ExecutiveChartPeriodKey>('yesterday');
+    const [productionChartMetric, setProductionChartMetric] = useState<'trips' | 'qty'>('trips');
+    const [penaltyChartPeriod, setPenaltyChartPeriod] = useState<ExecutiveChartPeriodKey>('yesterday');
+    const [powerPlantChartPeriod, setPowerPlantChartPeriod] = useState<ExecutiveChartPeriodKey>('yesterday');
+    const [powerPlantMetric, setPowerPlantMetric] = useState<'rakes' | 'qty'>('rakes');
+
+    /** Table view: road/rail totals visible; siding rows hidden until expanded. */
+    const [roadTableSidingExpanded, setRoadTableSidingExpanded] = useState(false);
+    const [railTableSidingExpanded, setRailTableSidingExpanded] = useState(false);
 
     useEffect(() => {
         setExecutiveData(data);
@@ -611,13 +997,15 @@ function ExecutiveYesterdaySection({
         setObTo(data.customRanges.obProduction.to);
         setCoalFrom(data.customRanges.coalProduction.from);
         setCoalTo(data.customRanges.coalProduction.to);
+        setCustomFrom(data.customRanges.roadDispatch.from);
+        setCustomTo(data.customRanges.roadDispatch.to);
     }, [data]);
 
     const fmtNumber = (n: number, fractionDigits = 0): string =>
         n.toLocaleString(undefined, { minimumFractionDigits: fractionDigits, maximumFractionDigits: fractionDigits });
 
-    const periodKeys: Array<'yesterday' | 'today' | 'week' | 'month' | 'fy'> = ['yesterday', 'today', 'week', 'month', 'fy'];
-    const periodLabels: Record<(typeof periodKeys)[number], string> = {
+    const execPeriodOrder = ['yesterday', 'today', 'week', 'month', 'fy'] as const;
+    const execPeriodColumnLabel: Record<(typeof execPeriodOrder)[number], string> = {
         yesterday: 'Yesterday',
         today: 'Today',
         week: 'Week',
@@ -629,20 +1017,87 @@ function ExecutiveYesterdaySection({
 
     const isValidRange = (from: string, to: string): boolean => Boolean(from) && Boolean(to) && from <= to;
 
-    const applyCustomRanges = useCallback(async (): Promise<void> => {
-        setIsCustomLoading(true);
+    const applyCustomRanges = useCallback(
+        async (scope: 'road' | 'rail' | 'ob' | 'coal'): Promise<void> => {
+            setCustomApplyLoading(scope);
+            setCustomError(null);
+            try {
+                const url = new URL(`${dashboardPath.replace(/\/$/, '')}/executive-yesterday-data`, window.location.origin);
+                url.searchParams.set('executive_yesterday_date', executiveData.anchorDate);
+                url.searchParams.set('executive_road_from', roadFrom);
+                url.searchParams.set('executive_road_to', roadTo);
+                url.searchParams.set('executive_rail_from', railFrom);
+                url.searchParams.set('executive_rail_to', railTo);
+                url.searchParams.set('executive_ob_from', obFrom);
+                url.searchParams.set('executive_ob_to', obTo);
+                url.searchParams.set('executive_coal_from', coalFrom);
+                url.searchParams.set('executive_coal_to', coalTo);
+                url.searchParams.set('executive_apply_scope', scope);
+
+                const res = await fetch(url.toString(), {
+                    credentials: 'same-origin',
+                    headers: {
+                        Accept: 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+                if (!res.ok) {
+                    throw new Error(`Request failed (${res.status})`);
+                }
+
+                const body: unknown = await res.json();
+                if (
+                    typeof body === 'object' &&
+                    body !== null &&
+                    'anchorDate' in body &&
+                    'roadDispatch' in body &&
+                    'customRanges' in body
+                ) {
+                    setExecutiveData(body as ExecutiveYesterdayData);
+                    return;
+                }
+                if (
+                    typeof body === 'object' &&
+                    body !== null &&
+                    'customRanges' in body &&
+                    typeof (body as { customRanges?: unknown }).customRanges === 'object' &&
+                    (body as { customRanges?: unknown }).customRanges !== null
+                ) {
+                    const partial = (body as { customRanges: Partial<ExecutiveYesterdayData['customRanges']> }).customRanges;
+                    setExecutiveData((prev) => ({
+                        ...prev,
+                        customRanges: {
+                            ...prev.customRanges,
+                            ...partial,
+                        },
+                    }));
+                    return;
+                }
+                throw new Error('Unexpected response shape.');
+            } catch (e) {
+                setCustomError(e instanceof Error ? e.message : 'Failed to load custom range data.');
+            } finally {
+                setCustomApplyLoading(null);
+            }
+        },
+        [dashboardPath, executiveData.anchorDate, roadFrom, roadTo, railFrom, railTo, obFrom, obTo, coalFrom, coalTo],
+    );
+
+    const applyCustomTableRoadRail = useCallback(async (): Promise<void> => {
+        setCustomApplyLoading('customTable');
         setCustomError(null);
         try {
             const url = new URL(`${dashboardPath.replace(/\/$/, '')}/executive-yesterday-data`, window.location.origin);
             url.searchParams.set('executive_yesterday_date', executiveData.anchorDate);
-            url.searchParams.set('executive_road_from', roadFrom);
-            url.searchParams.set('executive_road_to', roadTo);
-            url.searchParams.set('executive_rail_from', railFrom);
-            url.searchParams.set('executive_rail_to', railTo);
+            url.searchParams.set('executive_road_from', customFrom);
+            url.searchParams.set('executive_road_to', customTo);
+            url.searchParams.set('executive_rail_from', customFrom);
+            url.searchParams.set('executive_rail_to', customTo);
             url.searchParams.set('executive_ob_from', obFrom);
             url.searchParams.set('executive_ob_to', obTo);
             url.searchParams.set('executive_coal_from', coalFrom);
             url.searchParams.set('executive_coal_to', coalTo);
+            url.searchParams.set('executive_apply_scope', 'road,rail');
 
             const res = await fetch(url.toString(), {
                 credentials: 'same-origin',
@@ -655,183 +1110,366 @@ function ExecutiveYesterdaySection({
                 throw new Error(`Request failed (${res.status})`);
             }
 
-            const next = (await res.json()) as ExecutiveYesterdayData;
-            setExecutiveData(next);
+            const body: unknown = await res.json();
+            if (
+                typeof body === 'object' &&
+                body !== null &&
+                'customRanges' in body &&
+                typeof (body as { customRanges?: unknown }).customRanges === 'object' &&
+                (body as { customRanges?: unknown }).customRanges !== null
+            ) {
+                const partial = (body as { customRanges: Partial<ExecutiveYesterdayData['customRanges']> }).customRanges;
+                setExecutiveData((prev) => ({
+                    ...prev,
+                    customRanges: {
+                        ...prev.customRanges,
+                        ...partial,
+                    },
+                }));
+                setRoadFrom(customFrom);
+                setRoadTo(customTo);
+                setRailFrom(customFrom);
+                setRailTo(customTo);
+                return;
+            }
+            throw new Error('Unexpected response shape.');
         } catch (e) {
             setCustomError(e instanceof Error ? e.message : 'Failed to load custom range data.');
         } finally {
-            setIsCustomLoading(false);
+            setCustomApplyLoading(null);
         }
-    }, [dashboardPath, executiveData.anchorDate, roadFrom, roadTo, railFrom, railTo, obFrom, obTo, coalFrom, coalTo]);
+    }, [
+        dashboardPath,
+        executiveData.anchorDate,
+        customFrom,
+        customTo,
+        obFrom,
+        obTo,
+        coalFrom,
+        coalTo,
+    ]);
 
-    const SummaryHeader = ({ label, columns }: { label: string; columns: string[] }) => (
-        <thead className="bg-[#eef2f7] text-black">
-            <tr>
-                <th className="border border-[#d5dbe4] px-3 py-2 text-left font-medium" colSpan={2}>{label}</th>
-                {columns.map((c) => (
-                    <th key={c} className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">
-                        {c === 'MonthToDate' ? 'Month to date' : c}
-                    </th>
-                ))}
-            </tr>
-        </thead>
+    const railCustomBySidingId = useMemo(
+        () => new Map(executiveData.customRanges.railDispatch.bySiding.map((r) => [r.sidingId, r])),
+        [executiveData.customRanges.railDispatch.bySiding],
     );
 
-    const DispatchBlock = (props: {
-        title: string;
-        metricCountLabel: string;
-        countKey: 'trips' | 'rakes';
-        summary: { columns: string[]; data: Record<string, { qty: number } & Partial<Record<'trips' | 'rakes', number>> > };
-        toolbar?: React.ReactNode;
-    }) => (
-        <div className="overflow-hidden rounded-xl border border-[#d5dbe4] bg-white">
-            <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                    <p className="text-sm font-semibold text-gray-900">{props.title}</p>
-                    {props.toolbar ? <div className="flex flex-wrap items-center gap-2">{props.toolbar}</div> : null}
-                </div>
-            </div>
-            <div className="overflow-x-auto">
-                <table className="w-full border-separate text-xs" style={{ borderSpacing: 0 }}>
-                    <SummaryHeader label={props.title} columns={props.summary.columns} />
-                    <tbody>
-                        <tr className="bg-white">
-                            <td className="border border-[#d5dbe4] px-3 py-2 font-semibold" rowSpan={2}>{props.title}</td>
-                            <td className="border border-[#d5dbe4] px-3 py-2 font-medium">{props.metricCountLabel}</td>
-                            {props.summary.columns.map((c) => (
-                                <td key={c} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
-                                    {fmtNumber(Number(props.summary.data?.[c]?.[props.countKey] ?? 0), 0)}
-                                </td>
-                            ))}
-                        </tr>
-                        <tr className="bg-white">
-                            <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Qty</td>
-                            {props.summary.columns.map((c) => (
-                                <td key={c} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
-                                    {fmtNumber(Number(props.summary.data?.[c]?.qty ?? 0), 2)}
-                                </td>
-                            ))}
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+    const roadDispatchBarRows = useMemo(
+        () =>
+            executiveData.roadDispatch.bySiding.map((s) => ({
+                name: s.sidingName,
+                value:
+                    roadChartValueKind === 'count'
+                        ? s.totals[roadChartPeriod].trips
+                        : s.totals[roadChartPeriod].qty,
+            })),
+        [executiveData.roadDispatch.bySiding, roadChartPeriod, roadChartValueKind],
     );
 
-    const ProductionBlock = (props: {
-        title: string;
-        summary: { columns: string[]; data: Record<string, { trips: number; qty: number }> };
-        toolbar?: React.ReactNode;
-    }) => (
-        <div className="overflow-hidden rounded-xl border border-[#d5dbe4] bg-white">
-            <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                    <p className="text-sm font-semibold text-gray-900">{props.title}</p>
-                    {props.toolbar ? <div className="flex flex-wrap items-center gap-2">{props.toolbar}</div> : null}
-                </div>
-            </div>
-            <div className="overflow-x-auto">
-                <table className="w-full border-separate text-xs" style={{ borderSpacing: 0 }}>
-                    <SummaryHeader label={props.title} columns={props.summary.columns} />
-                    <tbody>
-                        <tr className="bg-white">
-                            <td className="border border-[#d5dbe4] px-3 py-2 font-semibold" rowSpan={2}>{props.title}</td>
-                            <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Trips</td>
-                            {props.summary.columns.map((c) => (
-                                <td key={c} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
-                                    {fmtNumber(props.summary.data?.[c]?.trips ?? 0, 0)}
-                                </td>
-                            ))}
-                        </tr>
-                        <tr className="bg-white">
-                            <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Qty</td>
-                            {props.summary.columns.map((c) => (
-                                <td key={c} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
-                                    {fmtNumber(props.summary.data?.[c]?.qty ?? 0, 2)}
-                                </td>
-                            ))}
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+    const railDispatchBarRows = useMemo(
+        () =>
+            executiveData.railDispatch.bySiding.map((s) => ({
+                name: s.sidingName,
+                value:
+                    railChartValueKind === 'count'
+                        ? s.totals[railChartPeriod].rakes
+                        : s.totals[railChartPeriod].qty,
+            })),
+        [executiveData.railDispatch.bySiding, railChartPeriod, railChartValueKind],
+    );
+
+    const productionObValue = useMemo(() => {
+        const row = executiveData.obProduction[productionChartPeriod];
+
+        return productionChartMetric === 'trips' ? row.trips : row.qty;
+    }, [executiveData.obProduction, productionChartPeriod, productionChartMetric]);
+
+    const productionCoalValue = useMemo(() => {
+        const row = executiveData.coalProduction[productionChartPeriod];
+
+        return productionChartMetric === 'trips' ? row.trips : row.qty;
+    }, [executiveData.coalProduction, productionChartPeriod, productionChartMetric]);
+
+    const hasPenaltyPeriodSlices = executiveData.penaltyBySidingByPeriod != null;
+    const hasPowerPlantPeriodSlices = executiveData.powerPlantDispatchByPeriod != null;
+
+    const penaltyChartData = useMemo(() => {
+        if (hasPenaltyPeriodSlices && executiveData.penaltyBySidingByPeriod) {
+            return executiveData.penaltyBySidingByPeriod[penaltyChartPeriod] ?? [];
+        }
+
+        return penaltyBySiding;
+    }, [executiveData.penaltyBySidingByPeriod, hasPenaltyPeriodSlices, penaltyBySiding, penaltyChartPeriod]);
+
+    const powerPlantChartData = useMemo(() => {
+        if (hasPowerPlantPeriodSlices && executiveData.powerPlantDispatchByPeriod) {
+            return executiveData.powerPlantDispatchByPeriod[powerPlantChartPeriod] ?? [];
+        }
+
+        return powerPlantDispatch;
+    }, [executiveData.powerPlantDispatchByPeriod, hasPowerPlantPeriodSlices, powerPlantChartPeriod, powerPlantDispatch]);
+
+    const roadCustomToolbar = (
+        <>
+            <label className="text-xs font-medium text-gray-600">From</label>
+            <input
+                type="date"
+                value={roadFrom}
+                onChange={(e) => setRoadFrom(e.target.value)}
+                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
+            />
+            <label className="text-xs font-medium text-gray-600">To</label>
+            <input
+                type="date"
+                value={roadTo}
+                onChange={(e) => setRoadTo(e.target.value)}
+                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
+            />
+            <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={customApplyLoading === 'road' || !isValidRange(roadFrom, roadTo)}
+                onClick={() => void applyCustomRanges('road')}
+            >
+                {customApplyLoading === 'road' ? 'Applying…' : 'Apply'}
+            </Button>
+        </>
+    );
+
+    const railCustomToolbar = (
+        <>
+            <label className="text-xs font-medium text-gray-600">From</label>
+            <input
+                type="date"
+                value={railFrom}
+                onChange={(e) => setRailFrom(e.target.value)}
+                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
+            />
+            <label className="text-xs font-medium text-gray-600">To</label>
+            <input
+                type="date"
+                value={railTo}
+                onChange={(e) => setRailTo(e.target.value)}
+                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
+            />
+            <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={customApplyLoading === 'rail' || !isValidRange(railFrom, railTo)}
+                onClick={() => void applyCustomRanges('rail')}
+            >
+                {customApplyLoading === 'rail' ? 'Applying…' : 'Apply'}
+            </Button>
+        </>
+    );
+
+    const customTableToolbar = (
+        <>
+            <label className="text-xs font-medium text-gray-600">From</label>
+            <input
+                type="date"
+                value={customFrom}
+                onChange={(e) => setCustomFrom(e.target.value)}
+                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
+            />
+            <label className="text-xs font-medium text-gray-600">To</label>
+            <input
+                type="date"
+                value={customTo}
+                onChange={(e) => setCustomTo(e.target.value)}
+                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
+            />
+            <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={customApplyLoading === 'customTable' || !isValidRange(customFrom, customTo)}
+                onClick={() => void applyCustomTableRoadRail()}
+            >
+                {customApplyLoading === 'customTable' ? 'Applying…' : 'Apply'}
+            </Button>
+        </>
     );
 
     const TableView = (
         <div className="space-y-6">
-            <DispatchBlock
-                title="Road Dispatch"
-                metricCountLabel="Trips"
-                countKey="trips"
-                summary={executiveData.customRanges.roadDispatch.summary}
-                toolbar={
-                    <>
-                        <span className="hidden text-[11px] text-muted-foreground sm:inline">
-                            Custom: {fmtNumber(executiveData.customRanges.roadDispatch.totals.trips, 0)} trips, {fmtNumber(executiveData.customRanges.roadDispatch.totals.qty, 2)} MT
-                        </span>
-                        <label className="text-xs font-medium text-gray-600">From</label>
-                        <input
-                            type="date"
-                            value={roadFrom}
-                            onChange={(e) => setRoadFrom(e.target.value)}
-                            className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
-                        />
-                        <label className="text-xs font-medium text-gray-600">To</label>
-                        <input
-                            type="date"
-                            value={roadTo}
-                            onChange={(e) => setRoadTo(e.target.value)}
-                            className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
-                        />
-                        <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            disabled={isCustomLoading || !isValidRange(roadFrom, roadTo)}
-                            onClick={applyCustomRanges}
-                        >
-                            {isCustomLoading ? 'Applying…' : 'Apply'}
-                        </Button>
-                    </>
-                }
-            />
+            <div className="overflow-hidden rounded-xl border border-[#d5dbe4] bg-white">
+                <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        <p className="text-sm font-semibold text-gray-900">Road Dispatch</p>
+                        <div className="flex flex-wrap items-center gap-2">{roadCustomToolbar}</div>
+                    </div>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full border-separate text-xs" style={{ borderSpacing: 0 }}>
+                        <thead className="bg-[#eef2f7] text-black">
+                            <tr>
+                                <th className="border border-[#d5dbe4] px-3 py-2 text-left font-medium" colSpan={2}>
+                                    {executiveData.fyLabel}
+                                </th>
+                                {execPeriodOrder.map((k) => (
+                                    <th key={k} className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">
+                                        {execPeriodColumnLabel[k]}
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr className="bg-white">
+                                <td className="border border-[#d5dbe4] px-3 py-2 font-semibold" rowSpan={2}>
+                                    Road Dispatch
+                                </td>
+                                <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Trips</td>
+                                {execPeriodOrder.map((k) => (
+                                    <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                        {fmtNumber(executiveData.roadDispatch.totals[k].trips, 0)}
+                                    </td>
+                                ))}
+                            </tr>
+                            <tr className="bg-white">
+                                <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Qty</td>
+                                {execPeriodOrder.map((k) => (
+                                    <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                        {fmtNumber(executiveData.roadDispatch.totals[k].qty, 2)}
+                                    </td>
+                                ))}
+                            </tr>
+                            {roadTableSidingExpanded
+                                ? executiveData.roadDispatch.bySiding.map((s) => (
+                                      <Fragment key={s.sidingId}>
+                                          <tr className="bg-white">
+                                              <td className="border border-[#d5dbe4] px-3 py-2 font-medium" rowSpan={2}>
+                                                  {s.sidingName}
+                                              </td>
+                                              <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Trips</td>
+                                              {execPeriodOrder.map((k) => (
+                                                  <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                                      {fmtNumber(s.totals[k].trips, 0)}
+                                                  </td>
+                                              ))}
+                                          </tr>
+                                          <tr className="bg-white">
+                                              <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Qty</td>
+                                              {execPeriodOrder.map((k) => (
+                                                  <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                                      {fmtNumber(s.totals[k].qty, 2)}
+                                                  </td>
+                                              ))}
+                                          </tr>
+                                      </Fragment>
+                                  ))
+                                : null}
+                            {executiveData.roadDispatch.bySiding.length > 0 ? (
+                                <tr className="bg-[#f8fafc]">
+                                    <td colSpan={2 + execPeriodOrder.length} className="border border-[#d5dbe4] p-0">
+                                        <button
+                                            type="button"
+                                            className="flex w-full items-center justify-center gap-2 py-2.5 text-xs font-medium text-gray-700 transition hover:bg-gray-100"
+                                            onClick={() => setRoadTableSidingExpanded((v) => !v)}
+                                            aria-expanded={roadTableSidingExpanded}
+                                        >
+                                            <ChevronDown
+                                                className={`size-4 shrink-0 text-gray-500 transition-transform ${roadTableSidingExpanded ? 'rotate-180' : ''}`}
+                                            />
+                                            {roadTableSidingExpanded ? 'Hide siding breakdown' : 'Show siding breakdown'}
+                                        </button>
+                                    </td>
+                                </tr>
+                            ) : null}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
-            <DispatchBlock
-                title="Rail Dispatch"
-                metricCountLabel="Rakes"
-                countKey="rakes"
-                summary={executiveData.customRanges.railDispatch.summary}
-                toolbar={
-                    <>
-                        <span className="hidden text-[11px] text-muted-foreground sm:inline">
-                            Custom: {fmtNumber(executiveData.customRanges.railDispatch.totals.rakes, 0)} rakes, {fmtNumber(executiveData.customRanges.railDispatch.totals.qty, 2)} MT
-                        </span>
-                        <label className="text-xs font-medium text-gray-600">From</label>
-                        <input
-                            type="date"
-                            value={railFrom}
-                            onChange={(e) => setRailFrom(e.target.value)}
-                            className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
-                        />
-                        <label className="text-xs font-medium text-gray-600">To</label>
-                        <input
-                            type="date"
-                            value={railTo}
-                            onChange={(e) => setRailTo(e.target.value)}
-                            className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
-                        />
-                        <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            disabled={isCustomLoading || !isValidRange(railFrom, railTo)}
-                            onClick={applyCustomRanges}
-                        >
-                            {isCustomLoading ? 'Applying…' : 'Apply'}
-                        </Button>
-                    </>
-                }
-            />
+            <div className="overflow-hidden rounded-xl border border-[#d5dbe4] bg-white">
+                <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        <p className="text-sm font-semibold text-gray-900">Rail Dispatch</p>
+                        <div className="flex flex-wrap items-center gap-2">{railCustomToolbar}</div>
+                    </div>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full border-separate text-xs" style={{ borderSpacing: 0 }}>
+                        <thead className="bg-[#eef2f7] text-black">
+                            <tr>
+                                <th className="border border-[#d5dbe4] px-3 py-2 text-left font-medium" colSpan={2}>
+                                    {executiveData.fyLabel}
+                                </th>
+                                {execPeriodOrder.map((k) => (
+                                    <th key={k} className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">
+                                        {execPeriodColumnLabel[k]}
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr className="bg-white">
+                                <td className="border border-[#d5dbe4] px-3 py-2 font-semibold" rowSpan={2}>
+                                    Rail Dispatch
+                                </td>
+                                <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Rakes</td>
+                                {execPeriodOrder.map((k) => (
+                                    <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                        {fmtNumber(executiveData.railDispatch.totals[k].rakes, 0)}
+                                    </td>
+                                ))}
+                            </tr>
+                            <tr className="bg-white">
+                                <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Qty</td>
+                                {execPeriodOrder.map((k) => (
+                                    <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                        {fmtNumber(executiveData.railDispatch.totals[k].qty, 2)}
+                                    </td>
+                                ))}
+                            </tr>
+                            {railTableSidingExpanded
+                                ? executiveData.railDispatch.bySiding.map((s) => (
+                                      <Fragment key={s.sidingId}>
+                                          <tr className="bg-white">
+                                              <td className="border border-[#d5dbe4] px-3 py-2 font-medium" rowSpan={2}>
+                                                  {s.sidingName}
+                                              </td>
+                                              <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Rakes</td>
+                                              {execPeriodOrder.map((k) => (
+                                                  <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                                      {fmtNumber(s.totals[k].rakes, 0)}
+                                                  </td>
+                                              ))}
+                                          </tr>
+                                          <tr className="bg-white">
+                                              <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Qty</td>
+                                              {execPeriodOrder.map((k) => (
+                                                  <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                                      {fmtNumber(s.totals[k].qty, 2)}
+                                                  </td>
+                                              ))}
+                                          </tr>
+                                      </Fragment>
+                                  ))
+                                : null}
+                            {executiveData.railDispatch.bySiding.length > 0 ? (
+                                <tr className="bg-[#f8fafc]">
+                                    <td colSpan={2 + execPeriodOrder.length} className="border border-[#d5dbe4] p-0">
+                                        <button
+                                            type="button"
+                                            className="flex w-full items-center justify-center gap-2 py-2.5 text-xs font-medium text-gray-700 transition hover:bg-gray-100"
+                                            onClick={() => setRailTableSidingExpanded((v) => !v)}
+                                            aria-expanded={railTableSidingExpanded}
+                                        >
+                                            <ChevronDown
+                                                className={`size-4 shrink-0 text-gray-500 transition-transform ${railTableSidingExpanded ? 'rotate-180' : ''}`}
+                                            />
+                                            {railTableSidingExpanded ? 'Hide siding breakdown' : 'Show siding breakdown'}
+                                        </button>
+                                    </td>
+                                </tr>
+                            ) : null}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
             {customError ? (
                 <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
@@ -839,75 +1477,207 @@ function ExecutiveYesterdaySection({
                 </div>
             ) : null}
 
-            <ProductionBlock
-                title="OB Production"
-                summary={executiveData.customRanges.obProduction.summary}
-                toolbar={
-                    <>
-                        <span className="hidden text-[11px] text-muted-foreground sm:inline">
-                            Custom: {fmtNumber(executiveData.customRanges.obProduction.totals.trips, 0)} trips, {fmtNumber(executiveData.customRanges.obProduction.totals.qty, 2)} MT
-                        </span>
-                        <label className="text-xs font-medium text-gray-600">From</label>
-                        <input
-                            type="date"
-                            value={obFrom}
-                            onChange={(e) => setObFrom(e.target.value)}
-                            className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
-                        />
-                        <label className="text-xs font-medium text-gray-600">To</label>
-                        <input
-                            type="date"
-                            value={obTo}
-                            onChange={(e) => setObTo(e.target.value)}
-                            className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
-                        />
-                        <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            disabled={isCustomLoading || !isValidRange(obFrom, obTo)}
-                            onClick={applyCustomRanges}
-                        >
-                            {isCustomLoading ? 'Applying…' : 'Apply'}
-                        </Button>
-                    </>
-                }
-            />
+            <div className="overflow-hidden rounded-xl border border-[#d5dbe4] bg-white">
+                <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        <p className="text-sm font-semibold text-gray-900">OB Production</p>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <label className="text-xs font-medium text-gray-600">From</label>
+                            <input
+                                type="date"
+                                value={obFrom}
+                                onChange={(e) => setObFrom(e.target.value)}
+                                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
+                            />
+                            <label className="text-xs font-medium text-gray-600">To</label>
+                            <input
+                                type="date"
+                                value={obTo}
+                                onChange={(e) => setObTo(e.target.value)}
+                                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
+                            />
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                disabled={customApplyLoading === 'ob' || !isValidRange(obFrom, obTo)}
+                                onClick={() => void applyCustomRanges('ob')}
+                            >
+                                {customApplyLoading === 'ob' ? 'Applying…' : 'Apply'}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full border-separate text-xs" style={{ borderSpacing: 0 }}>
+                        <thead className="bg-[#eef2f7] text-black">
+                            <tr>
+                                <th className="border border-[#d5dbe4] px-3 py-2 text-left font-medium" colSpan={2}>
+                                    {executiveData.fyLabel}
+                                </th>
+                                {execPeriodOrder.map((k) => (
+                                    <th key={k} className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">
+                                        {execPeriodColumnLabel[k]}
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr className="bg-white">
+                                <td className="border border-[#d5dbe4] px-3 py-2 font-semibold" rowSpan={2}>
+                                    OB Production
+                                </td>
+                                <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Trips</td>
+                                {execPeriodOrder.map((k) => (
+                                    <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                        {fmtNumber(executiveData.obProduction[k].trips, 0)}
+                                    </td>
+                                ))}
+                            </tr>
+                            <tr className="bg-white">
+                                <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Qty</td>
+                                {execPeriodOrder.map((k) => (
+                                    <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                        {fmtNumber(executiveData.obProduction[k].qty, 2)}
+                                    </td>
+                                ))}
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
-            <ProductionBlock
-                title="Coal Production"
-                summary={executiveData.customRanges.coalProduction.summary}
-                toolbar={
-                    <>
-                        <span className="hidden text-[11px] text-muted-foreground sm:inline">
-                            Custom: {fmtNumber(executiveData.customRanges.coalProduction.totals.trips, 0)} trips, {fmtNumber(executiveData.customRanges.coalProduction.totals.qty, 2)} MT
-                        </span>
-                        <label className="text-xs font-medium text-gray-600">From</label>
-                        <input
-                            type="date"
-                            value={coalFrom}
-                            onChange={(e) => setCoalFrom(e.target.value)}
-                            className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
-                        />
-                        <label className="text-xs font-medium text-gray-600">To</label>
-                        <input
-                            type="date"
-                            value={coalTo}
-                            onChange={(e) => setCoalTo(e.target.value)}
-                            className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
-                        />
-                        <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            disabled={isCustomLoading || !isValidRange(coalFrom, coalTo)}
-                            onClick={applyCustomRanges}
-                        >
-                            {isCustomLoading ? 'Applying…' : 'Apply'}
-                        </Button>
-                    </>
-                }
-            />
+            <div className="overflow-hidden rounded-xl border border-[#d5dbe4] bg-white">
+                <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        <p className="text-sm font-semibold text-gray-900">Coal Production</p>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <label className="text-xs font-medium text-gray-600">From</label>
+                            <input
+                                type="date"
+                                value={coalFrom}
+                                onChange={(e) => setCoalFrom(e.target.value)}
+                                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
+                            />
+                            <label className="text-xs font-medium text-gray-600">To</label>
+                            <input
+                                type="date"
+                                value={coalTo}
+                                onChange={(e) => setCoalTo(e.target.value)}
+                                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
+                            />
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                disabled={customApplyLoading === 'coal' || !isValidRange(coalFrom, coalTo)}
+                                onClick={() => void applyCustomRanges('coal')}
+                            >
+                                {customApplyLoading === 'coal' ? 'Applying…' : 'Apply'}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full border-separate text-xs" style={{ borderSpacing: 0 }}>
+                        <thead className="bg-[#eef2f7] text-black">
+                            <tr>
+                                <th className="border border-[#d5dbe4] px-3 py-2 text-left font-medium" colSpan={2}>
+                                    {executiveData.fyLabel}
+                                </th>
+                                {execPeriodOrder.map((k) => (
+                                    <th key={k} className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">
+                                        {execPeriodColumnLabel[k]}
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr className="bg-white">
+                                <td className="border border-[#d5dbe4] px-3 py-2 font-semibold" rowSpan={2}>
+                                    Coal Production
+                                </td>
+                                <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Trips</td>
+                                {execPeriodOrder.map((k) => (
+                                    <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                        {fmtNumber(executiveData.coalProduction[k].trips, 0)}
+                                    </td>
+                                ))}
+                            </tr>
+                            <tr className="bg-white">
+                                <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Qty</td>
+                                {execPeriodOrder.map((k) => (
+                                    <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                        {fmtNumber(executiveData.coalProduction[k].qty, 2)}
+                                    </td>
+                                ))}
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div className="overflow-hidden rounded-xl border border-[#d5dbe4] bg-white">
+                <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        <p className="text-sm font-semibold text-gray-900">Custom</p>
+                        <div className="flex flex-wrap items-center gap-2">{customTableToolbar}</div>
+                    </div>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full border-separate text-xs" style={{ borderSpacing: 0 }}>
+                        <thead className="bg-[#eef2f7] text-black">
+                            <tr>
+                                <th className="border border-[#d5dbe4] px-3 py-2 text-left font-medium" rowSpan={2}>
+                                    Siding
+                                </th>
+                                <th className="border border-[#d5dbe4] px-3 py-2 text-center font-medium" colSpan={2}>
+                                    Road dispatch
+                                </th>
+                                <th className="border border-[#d5dbe4] px-3 py-2 text-center font-medium" colSpan={2}>
+                                    Rail dispatch
+                                </th>
+                            </tr>
+                            <tr>
+                                <th className="border border-[#d5dbe4] px-3 py-2 text-right font-medium">Trips</th>
+                                <th className="border border-[#d5dbe4] px-3 py-2 text-right font-medium">Qty (MT)</th>
+                                <th className="border border-[#d5dbe4] px-3 py-2 text-right font-medium">Rakes</th>
+                                <th className="border border-[#d5dbe4] px-3 py-2 text-right font-medium">Qty (MT)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr className="bg-[#f1f5f9]">
+                                <td className="border border-[#d5dbe4] px-3 py-2 font-semibold">Total</td>
+                                <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums font-semibold">
+                                    {fmtNumber(executiveData.customRanges.roadDispatch.totals.trips, 0)}
+                                </td>
+                                <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums font-semibold">
+                                    {fmtNumber(executiveData.customRanges.roadDispatch.totals.qty, 2)}
+                                </td>
+                                <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums font-semibold">
+                                    {fmtNumber(executiveData.customRanges.railDispatch.totals.rakes, 0)}
+                                </td>
+                                <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums font-semibold">
+                                    {fmtNumber(executiveData.customRanges.railDispatch.totals.qty, 2)}
+                                </td>
+                            </tr>
+                            {executiveData.customRanges.roadDispatch.bySiding.map((row) => {
+                                const rail = railCustomBySidingId.get(row.sidingId);
+
+                                return (
+                                    <tr key={row.sidingId} className="bg-white">
+                                        <td className="border border-[#d5dbe4] px-3 py-2 font-medium">{row.sidingName}</td>
+                                        <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{fmtNumber(row.trips, 0)}</td>
+                                        <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{fmtNumber(row.qty, 2)}</td>
+                                        <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{fmtNumber(rail?.rakes ?? 0, 0)}</td>
+                                        <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{fmtNumber(rail?.qty ?? 0, 2)}</td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
             <div className="overflow-hidden rounded-xl border border-[#d5dbe4] bg-white">
                 <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
@@ -953,8 +1723,6 @@ function ExecutiveYesterdaySection({
 
     const compactQty = (n: number): string => fmtNumber(n, n % 1 === 0 ? 0 : 2);
 
-    const [isCombinedChartVisible, setIsCombinedChartVisible] = useState(false);
-
     const fyProductionRows = executiveData.fyCharts.rows.map((r) => ({
         fy: r.fy,
         OB: r.production.obQty,
@@ -964,15 +1732,6 @@ function ExecutiveYesterdaySection({
 
     const fyDispatchRows = executiveData.fyCharts.rows.map((r) => ({
         fy: r.fy,
-        ROAD: r.dispatch.roadQty,
-        RAIL: r.dispatch.railQty,
-        unit: 'MT',
-    }));
-
-    const fyCombinedRows = executiveData.fyCharts.rows.map((r) => ({
-        fy: r.fy,
-        OB: r.production.obQty,
-        COAL: r.production.coalQty,
         ROAD: r.dispatch.roadQty,
         RAIL: r.dispatch.railQty,
         unit: 'MT',
@@ -1060,59 +1819,74 @@ function ExecutiveYesterdaySection({
 
     const ChartsView = (
         <div className="space-y-6">
-            <FyChartCard
-                title="Production"
-                rows={fyProductionRows}
-                series={[
-                    { key: 'OB', label: 'OB', color: DASHBOARD_PALETTE.successGreen },
-                    { key: 'COAL', label: 'COAL', color: DASHBOARD_PALETTE.steelBlue },
-                ]}
-            />
-
-            <FyChartCard
-                title="Dispatch"
-                rows={fyDispatchRows}
-                series={[
-                    { key: 'ROAD', label: 'ROAD', color: DASHBOARD_PALETTE.steelBlue },
-                    { key: 'RAIL', label: 'RAIL', color: DASHBOARD_PALETTE.darkGrey },
-                ]}
-            />
-
-            <div className="flex items-center justify-end">
-                <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsCombinedChartVisible((v) => !v)}
-                    className="gap-2"
-                >
-                    {isCombinedChartVisible ? (
-                        <>
-                            <ChevronUp className="size-4" />
-                            Hide Production & Dispatch
-                        </>
-                    ) : (
-                        <>
-                            <ChevronDown className="size-4" />
-                            Show Production & Dispatch
-                        </>
-                    )}
-                </Button>
+            <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+                <ExecutiveSidingBarChartCard
+                    title="Road Dispatch"
+                    rows={roadDispatchBarRows}
+                    period={roadChartPeriod}
+                    onPeriodChange={setRoadChartPeriod}
+                    valueKind={roadChartValueKind}
+                    onValueKindChange={setRoadChartValueKind}
+                    countLabel="Trips"
+                />
+                <ExecutiveSidingBarChartCard
+                    title="Rail Dispatch"
+                    rows={railDispatchBarRows}
+                    period={railChartPeriod}
+                    onPeriodChange={setRailChartPeriod}
+                    valueKind={railChartValueKind}
+                    onValueKindChange={setRailChartValueKind}
+                    countLabel="Rakes"
+                />
             </div>
 
-            {isCombinedChartVisible ? (
+            <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+                <ExecutiveProductionDonutCard
+                    period={productionChartPeriod}
+                    onPeriodChange={setProductionChartPeriod}
+                    valueKind={productionChartMetric}
+                    onValueKindChange={setProductionChartMetric}
+                    obValue={productionObValue}
+                    coalValue={productionCoalValue}
+                />
+                <DashboardPenaltyBySidingChart
+                    data={penaltyChartData}
+                    {...(hasPenaltyPeriodSlices
+                        ? { period: penaltyChartPeriod, onPeriodChange: setPenaltyChartPeriod }
+                        : {})}
+                />
+            </div>
+
+            <RakesPerPowerPlantExecutiveChart
+                data={powerPlantChartData}
+                {...(hasPowerPlantPeriodSlices
+                    ? {
+                          period: powerPlantChartPeriod,
+                          onPeriodChange: setPowerPlantChartPeriod,
+                          metric: powerPlantMetric,
+                          onMetricChange: setPowerPlantMetric,
+                      }
+                    : {})}
+            />
+
+            <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
                 <FyChartCard
-                    title="Production & Dispatch"
-                    rows={fyCombinedRows}
+                    title="Production"
+                    rows={fyProductionRows}
                     series={[
                         { key: 'OB', label: 'OB', color: DASHBOARD_PALETTE.successGreen },
-                        { key: 'COAL', label: 'Coal', color: DASHBOARD_PALETTE.steelBlue },
-                        { key: 'ROAD', label: 'Road', color: DASHBOARD_PALETTE.safetyYellow },
-                        { key: 'RAIL', label: 'Rail', color: DASHBOARD_PALETTE.darkGrey },
+                        { key: 'COAL', label: 'COAL', color: DASHBOARD_PALETTE.steelBlue },
                     ]}
-                    height={340}
                 />
-            ) : null}
+                <FyChartCard
+                    title="Dispatch"
+                    rows={fyDispatchRows}
+                    series={[
+                        { key: 'ROAD', label: 'ROAD', color: DASHBOARD_PALETTE.steelBlue },
+                        { key: 'RAIL', label: 'RAIL', color: DASHBOARD_PALETTE.darkGrey },
+                    ]}
+                />
+            </div>
         </div>
     );
 
@@ -1442,9 +2216,6 @@ function RakePerformanceSection({ rakes }: { rakes: RakePerformanceItem[] }) {
                                     ))}
                                 </SelectContent>
                             </Select>
-                            <Button variant="outline" size="sm" className="rounded-lg" asChild>
-                                <Link href={rakesIndex().url} data-pan="dashboard-view-all-rakes">View all rakes</Link>
-                            </Button>
                         </div>
                     }
                 />
@@ -1479,22 +2250,35 @@ function RakePerformanceSection({ rakes }: { rakes: RakePerformanceItem[] }) {
                 </div>
             </div>
 
-            <div className="mt-5 grid gap-5 lg:grid-cols-2">
+            <div className="mt-5 space-y-8">
                 <div>
                     <p className="mb-2 text-xs font-medium text-gray-600">Weight breakdown (MT)</p>
                     {weightChartData.length > 0 ? (
-                        <ResponsiveContainer width="100%" height={220}>
-                            <RechartsBarChart data={weightChartData} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
-                                <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
-                                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                                <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${v} MT`} />
-                                <Tooltip formatter={(v: number | undefined) => `${Number(v ?? 0).toLocaleString()} MT`} />
-                                <Bar dataKey="value" radius={[4, 4, 0, 0]} barSize={32} isAnimationActive>
+                        <ResponsiveContainer width="100%" height={260}>
+                            <RechartsPieChart margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                                <Pie
+                                    data={weightChartData}
+                                    dataKey="value"
+                                    nameKey="name"
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={56}
+                                    outerRadius={92}
+                                    paddingAngle={2}
+                                    isAnimationActive
+                                >
                                     {weightChartData.map((entry, i) => (
-                                        <Cell key={i} fill={entry.fill ?? '#4B72BE'} />
+                                        <Cell key={`${entry.name}-${i}`} fill={entry.fill ?? '#4B72BE'} />
                                     ))}
-                                </Bar>
-                            </RechartsBarChart>
+                                </Pie>
+                                <Tooltip
+                                    formatter={(value, name) => [
+                                        `${Number(value ?? 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} MT`,
+                                        String(name ?? ''),
+                                    ]}
+                                />
+                                <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
+                            </RechartsPieChart>
                         </ResponsiveContainer>
                     ) : (
                         <div className="flex h-[220px] items-center justify-center rounded-lg border border-gray-100 bg-gray-50/50 text-sm text-gray-600">
@@ -1658,25 +2442,15 @@ function LoaderOverloadSection({ loaders, monthly }: { loaders: LoaderInfo[]; mo
                         <div>
                             <p className="mb-2 text-xs font-medium text-gray-600">Total wagons vs overloaded (monthly)</p>
                             <ResponsiveContainer width="100%" height={240}>
-                                <RechartsAreaChart data={trendData} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
-                                    <defs>
-                                        <linearGradient id="loader-total-gradient" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="0%" stopColor="#93C5FD" stopOpacity={0.4} />
-                                            <stop offset="100%" stopColor="#93C5FD" stopOpacity={0} />
-                                        </linearGradient>
-                                        <linearGradient id="loader-overload-gradient" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="0%" stopColor="#DC2626" stopOpacity={0.4} />
-                                            <stop offset="100%" stopColor="#DC2626" stopOpacity={0} />
-                                        </linearGradient>
-                                    </defs>
+                                <RechartsBarChart data={trendData} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
                                     <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                                    <YAxis tick={{ fontSize: 11 }} />
-                                    <Tooltip formatter={(v: number | undefined, name?: string) => [v ?? 0, name === 'total' ? 'Total wagons' : 'Overloaded']} />
+                                    <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                                    <Tooltip formatter={(v: number | undefined, name?: string) => [`${v ?? 0} wagons`, name ?? '']} />
                                     <Legend />
-                                    <Area type="monotone" dataKey="total" name="Total wagons" stroke="#3B82F6" fill="url(#loader-total-gradient)" strokeWidth={2} dot={false} />
-                                    <Area type="monotone" dataKey="overloaded" name="Overloaded" stroke="#DC2626" fill="url(#loader-overload-gradient)" strokeWidth={2} dot={false} />
-                                </RechartsAreaChart>
+                                    <Bar dataKey="total" name="Total wagons" fill="#3B82F6" radius={[2, 2, 0, 0]} maxBarSize={28} />
+                                    <Bar dataKey="overloaded" name="Overloaded" fill="#DC2626" radius={[2, 2, 0, 0]} maxBarSize={28} />
+                                </RechartsBarChart>
                             </ResponsiveContainer>
                         </div>
                         <div>
@@ -1707,6 +2481,161 @@ function LoaderOverloadSection({ loaders, monthly }: { loaders: LoaderInfo[]; mo
 const SIDING_COLORS = [DASHBOARD_PALETTE.steelBlue, DASHBOARD_PALETTE.successGreen, DASHBOARD_PALETTE.safetyYellow, DASHBOARD_PALETTE.steelBlueLight, DASHBOARD_PALETTE.successGreenLight];
 
 const PLANT_COLORS: Record<string, string> = { PSPM: '#3B82F6', STPS: '#10B981', BTPC: '#F59E0B', KPPS: '#8B5CF6' };
+
+/** Muted bars so the chart frame is visible when there is no dispatch data. */
+const POWER_PLANT_CHART_EMPTY_ROWS: PowerPlantDispatchItem[] = [
+    { name: '—', rakes: 1, weight_mt: 100, sidings: {} },
+    { name: '—', rakes: 1, weight_mt: 100, sidings: {} },
+    { name: '—', rakes: 1, weight_mt: 100, sidings: {} },
+];
+
+/** Rakes-by-plant bar only (subset of Power plant wise dispatch). */
+function RakesPerPowerPlantExecutiveChart({
+    data,
+    period,
+    onPeriodChange,
+    metric,
+    onMetricChange,
+}: {
+    data: PowerPlantDispatchItem[];
+    period?: ExecutiveChartPeriodKey;
+    onPeriodChange?: (p: ExecutiveChartPeriodKey) => void;
+    metric?: 'rakes' | 'qty';
+    onMetricChange?: (k: 'rakes' | 'qty') => void;
+}) {
+    const valueKind = metric ?? 'rakes';
+    const sorted = useMemo(() => {
+        const copy = [...data];
+        copy.sort((a, b) => (valueKind === 'qty' ? b.weight_mt - a.weight_mt : b.rakes - a.rakes));
+
+        return copy;
+    }, [data, valueKind]);
+
+    const isEmpty = data.length === 0;
+    const chartRows = isEmpty ? POWER_PLANT_CHART_EMPTY_ROWS : sorted;
+    const dataKey = valueKind === 'qty' ? 'weight_mt' : 'rakes';
+    const showControls = onPeriodChange != null && period != null && onMetricChange != null && metric != null;
+    const chartHeight = Math.max(260, chartRows.length * 40);
+
+    return (
+        <div className="dashboard-card overflow-hidden rounded-xl border border-[#d5dbe4] bg-white p-0">
+            <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
+                {showControls ? (
+                    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                        <SectionHeader
+                            icon={Factory}
+                            title="Powerplant Dispatch"
+                            subtitle="Rake load dispatched to each station (anchor period)"
+                        />
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Select value={period} onValueChange={(v) => onPeriodChange(v as ExecutiveChartPeriodKey)}>
+                                <SelectTrigger className="h-9 w-[160px] text-xs">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {EXEC_CHART_PERIOD_OPTIONS.map((o) => (
+                                        <SelectItem key={o.value} value={o.value} className="text-xs">
+                                            {o.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <div className="flex rounded-lg border border-gray-200 p-0.5">
+                                <Button
+                                    type="button"
+                                    variant={metric === 'rakes' ? 'default' : 'ghost'}
+                                    size="sm"
+                                    className="h-8 px-3 text-xs"
+                                    onClick={() => onMetricChange('rakes')}
+                                >
+                                    Rakes
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant={metric === 'qty' ? 'default' : 'ghost'}
+                                    size="sm"
+                                    className="h-8 px-3 text-xs"
+                                    onClick={() => onMetricChange('qty')}
+                                >
+                                    Qty
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <SectionHeader
+                        icon={Factory}
+                        title="Powerplant Dispatch"
+                        subtitle="From weighment destinations for current filters"
+                    />
+                )}
+            </div>
+            <div className="relative bg-[#fbfbfc] p-4">
+                <div className="relative min-h-[260px]">
+                    <ResponsiveContainer width="100%" height={chartHeight}>
+                        <RechartsBarChart data={chartRows} margin={{ top: 8, right: 16, bottom: 0, left: 8 }}>
+                            <CartesianGrid strokeDasharray="3 3" strokeOpacity={isEmpty ? 0.2 : 0.3} />
+                            <XAxis
+                                dataKey="name"
+                                tick={{ fontSize: 11, fill: isEmpty ? '#94a3b8' : undefined }}
+                            />
+                            <YAxis
+                                allowDecimals={valueKind === 'qty'}
+                                tick={{ fontSize: 11 }}
+                                tickFormatter={(v) =>
+                                    valueKind === 'qty' ? `${Number(v).toLocaleString(undefined, { maximumFractionDigits: 0 })}` : `${v}`
+                                }
+                                domain={isEmpty ? [0, 'auto'] : undefined}
+                            />
+                            <Tooltip
+                                formatter={(v: number | undefined) => {
+                                    if (isEmpty) {
+                                        return ['No dispatch data for this period', ''];
+                                    }
+
+                                    return valueKind === 'qty'
+                                        ? `${(v ?? 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} MT`
+                                        : `${v ?? 0} rakes`;
+                                }}
+                            />
+                            <Bar
+                                dataKey={dataKey}
+                                radius={[4, 4, 0, 0]}
+                                barSize={32}
+                                isAnimationActive={!isEmpty}
+                            >
+                                {chartRows.map((pp, i) => (
+                                    <Cell
+                                        key={`${pp.name}-${i}`}
+                                        fill={isEmpty ? '#e2e8f0' : PLANT_COLORS[pp.name] ?? SIDING_COLORS[i % SIDING_COLORS.length]}
+                                    />
+                                ))}
+                                {!isEmpty ? (
+                                    <LabelList
+                                        dataKey={dataKey}
+                                        position="top"
+                                        formatter={(v: unknown) =>
+                                            valueKind === 'qty'
+                                                ? `${Number(v ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+                                                : String(v ?? '')
+                                        }
+                                    />
+                                ) : null}
+                            </Bar>
+                        </RechartsBarChart>
+                    </ResponsiveContainer>
+                    {isEmpty ? (
+                        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center pb-8 text-center">
+                            <Factory className="mb-2 h-8 w-8 text-muted-foreground/35" />
+                            <p className="text-xs font-medium text-muted-foreground">No dispatch data</p>
+                            <p className="mt-0.5 text-[11px] text-muted-foreground/80">for this period</p>
+                        </div>
+                    ) : null}
+                </div>
+            </div>
+        </div>
+    );
+}
 
 function PowerPlantDispatchSection({ data }: { data: PowerPlantDispatchItem[] }) {
     const [stacked, setStacked] = useState(true);
@@ -1751,7 +2680,7 @@ function PowerPlantDispatchSection({ data }: { data: PowerPlantDispatchItem[] })
     return (
         <div className="dashboard-card rounded-xl border-0 p-6">
             <SectionHeader icon={Factory} title="Power plant wise dispatch" subtitle="How many rakes sent to each power plant" />
-            <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div className="dashboard-card flex items-center gap-3 rounded-xl border-0 p-4" style={{ borderTop: '4px solid #3B82F6' }}>
                     <MapPin className="size-5 text-blue-600" />
                     <div>
@@ -1773,13 +2702,6 @@ function PowerPlantDispatchSection({ data }: { data: PowerPlantDispatchItem[] })
                         <div className="text-xl font-bold tabular-nums text-gray-900">{formatWeight(totalWeight)}</div>
                     </div>
                 </div>
-                <div className="dashboard-card flex items-center gap-3 rounded-xl border-0 p-4" style={{ borderTop: '4px solid #3B82F6' }}>
-                    <Zap className="size-5 text-blue-600" />
-                    <div>
-                        <div className="text-xs font-medium text-gray-600">Avg per destination</div>
-                        <div className="text-xl font-bold tabular-nums text-gray-900">{data.length > 0 ? formatWeight(totalWeight / data.length) : '—'}</div>
-                    </div>
-                </div>
             </div>
 
             <div className="mt-6 grid gap-6 lg:grid-cols-2">
@@ -1794,46 +2716,76 @@ function PowerPlantDispatchSection({ data }: { data: PowerPlantDispatchItem[] })
                             {stacked ? 'Grouped' : 'Stacked'}
                         </button>
                     </div>
-                    <ResponsiveContainer width="100%" height={Math.max(260, data.length * 48)}>
-                        <RechartsBarChart data={stackedChartData} margin={{ left: 10, right: 20, top: 5, bottom: 5 }} barCategoryGap="20%">
-                            <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
-                            <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                            <YAxis allowDecimals={false} />
-                            <Tooltip />
-                            <Legend />
-                            {allSidingNames.map((sn, i) => (
-                                <Bar
-                                    key={sn}
-                                    dataKey={sn}
-                                    stackId={stacked ? 'stack' : undefined}
-                                    fill={SIDING_COLORS[i % SIDING_COLORS.length]}
-                                    name={sn}
-                                    radius={[4, 4, 0, 0]}
-                                    barSize={32}
-                                >
-                                    <LabelList dataKey={sn} position="top" />
-                                </Bar>
-                            ))}
-                        </RechartsBarChart>
-                    </ResponsiveContainer>
+                    <div className="min-h-0 w-full overflow-x-auto pt-1">
+                        <ResponsiveContainer width="100%" height={Math.max(280, data.length * 52)}>
+                            <RechartsBarChart
+                                data={stackedChartData}
+                                margin={{ left: 8, right: 12, top: stacked ? 12 : 22, bottom: 8 }}
+                                barCategoryGap="18%"
+                            >
+                                <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
+                                <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} height={52} />
+                                <YAxis allowDecimals={false} tick={{ fontSize: 10 }} width={40} domain={[0, 'auto']} />
+                                <Tooltip />
+                                <Legend wrapperStyle={{ fontSize: 11 }} />
+                                {allSidingNames.map((sn, i) => (
+                                    <Bar
+                                        key={sn}
+                                        dataKey={sn}
+                                        stackId={stacked ? 'stack' : undefined}
+                                        fill={SIDING_COLORS[i % SIDING_COLORS.length]}
+                                        name={sn}
+                                        radius={[2, 2, 0, 0]}
+                                        maxBarSize={28}
+                                    >
+                                        {!stacked ? (
+                                            <LabelList
+                                                dataKey={sn}
+                                                position="top"
+                                                fill="#4b5563"
+                                                fontSize={10}
+                                                formatter={(label) => {
+                                                    const n = Number(label ?? 0);
+
+                                                    return n > 0 && !Number.isNaN(n) ? String(n) : '';
+                                                }}
+                                            />
+                                        ) : null}
+                                    </Bar>
+                                ))}
+                            </RechartsBarChart>
+                        </ResponsiveContainer>
+                    </div>
                 </div>
 
                 <div>
                     <h4 className="mb-2 text-xs font-medium text-gray-600">Rakes dispatched per power plant</h4>
-                    <ResponsiveContainer width="100%" height={Math.max(260, data.length * 40)}>
-                        <RechartsBarChart data={sortedByRakes} margin={{ top: 8, right: 16, bottom: 0, left: 8 }}>
-                            <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
-                            <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                            <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                            <Tooltip formatter={(v: number | undefined) => `${v ?? 0} rakes`} />
-                            <Bar dataKey="rakes" radius={[4, 4, 0, 0]} barSize={32} isAnimationActive>
-                                {sortedByRakes.map((pp, i) => (
-                                    <Cell key={pp.name} fill={PLANT_COLORS[pp.name] ?? SIDING_COLORS[i % SIDING_COLORS.length]} />
-                                ))}
-                                <LabelList dataKey="rakes" position="top" />
-                            </Bar>
-                        </RechartsBarChart>
-                    </ResponsiveContainer>
+                    <div className="min-h-0 w-full overflow-x-auto pt-1">
+                        <ResponsiveContainer width="100%" height={Math.max(280, data.length * 44)}>
+                            <RechartsBarChart data={sortedByRakes} margin={{ top: 22, right: 12, bottom: 4, left: 8 }}>
+                                <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
+                                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                <YAxis allowDecimals={false} tick={{ fontSize: 10 }} width={40} domain={[0, 'auto']} />
+                                <Tooltip formatter={(v: number | undefined) => `${v ?? 0} rakes`} />
+                                <Bar dataKey="rakes" radius={[4, 4, 0, 0]} maxBarSize={32} isAnimationActive>
+                                    {sortedByRakes.map((pp, i) => (
+                                        <Cell key={pp.name} fill={PLANT_COLORS[pp.name] ?? SIDING_COLORS[i % SIDING_COLORS.length]} />
+                                    ))}
+                                    <LabelList
+                                        dataKey="rakes"
+                                        position="top"
+                                        fill="#4b5563"
+                                        fontSize={10}
+                                        formatter={(label) => {
+                                            const n = Number(label ?? 0);
+
+                                            return n > 0 && !Number.isNaN(n) ? String(n) : '';
+                                        }}
+                                    />
+                                </Bar>
+                            </RechartsBarChart>
+                        </ResponsiveContainer>
+                    </div>
                 </div>
             </div>
 
@@ -2049,13 +3001,13 @@ function DashboardFiltersBar({
     }, [allSidingIds, applyFilters]);
 
     const resetAllFilters = useCallback(() => {
-        setPeriod('today');
+        setPeriod('yesterday');
         setCustomFrom(filters.from);
         setCustomTo(filters.to);
         setPendingSidingIds(allSidingIds);
         setRakeNumberInput('');
         applyFilters({
-            period: 'today',
+            period: 'yesterday',
             siding_ids: allSidingIds,
             power_plant: null,
             rake_number: null,
@@ -2096,7 +3048,7 @@ function DashboardFiltersBar({
                         applyFilters({ period: v });
                     }}
                 >
-                    <SelectTrigger className="h-7 w-[100px] rounded-md border text-[11px]">
+                    <SelectTrigger className="h-7 min-w-[128px] rounded-md border text-[11px]">
                         <SelectValue placeholder="Period" />
                     </SelectTrigger>
                     <SelectContent>
@@ -2379,6 +3331,7 @@ export default function Dashboard() {
         return DASHBOARD_SECTIONS.some((sec) => sec.id === s) ? s : DEFAULT_DASHBOARD_SECTION;
     });
     const [executiveYesterdayViewMode, setExecutiveYesterdayViewMode] = useState<'table' | 'charts'>('charts');
+    const [sidingOverviewPenaltyPeriod, setSidingOverviewPenaltyPeriod] = useState<ExecutiveChartPeriodKey>('yesterday');
     const [alertsOpen, setAlertsOpen] = useState(false);
     const [notifications, setNotifications] = useState(props.notifications ?? []);
     const [notificationsUnreadCount, setNotificationsUnreadCount] = useState(props.notificationsUnreadCount ?? 0);
@@ -2440,7 +3393,7 @@ export default function Dashboard() {
         setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read_at: n.read_at ?? new Date().toISOString() } : n)));
     }, [csrfToken]);
     const defaultFilters: DashboardFilters = {
-        period: 'today',
+        period: 'yesterday',
         from: '',
         to: '',
         siding_ids: [],
@@ -2463,20 +3416,22 @@ export default function Dashboard() {
     };
     const periodLabel = useMemo(() => {
         switch (filters.period) {
+            case 'yesterday':
+                return 'yesterday';
             case 'today':
                 return 'today';
             case 'week':
                 return 'this week';
+            case 'last_week':
+                return 'last week';
             case 'month':
                 return 'this month';
-            case 'quarter':
-                return 'this quarter';
-            case 'year':
-                return 'this year';
+            case 'last_month':
+                return 'last month';
             case 'custom':
                 return 'selected period';
             default:
-                return 'today';
+                return 'yesterday';
         }
     }, [filters.period, filters.from, filters.to]);
 
@@ -2610,6 +3565,15 @@ export default function Dashboard() {
     const yesterdayPredictedPenalties = props.yesterdayPredictedPenalties ?? [];
     const executiveYesterday = props.executiveYesterday;
 
+    const penaltyBySidingForSidingOverview = useMemo(() => {
+        const slices = executiveYesterday?.penaltyBySidingByPeriod;
+        if (slices) {
+            return slices[sidingOverviewPenaltyPeriod] ?? [];
+        }
+
+        return penaltyBySiding;
+    }, [executiveYesterday?.penaltyBySidingByPeriod, penaltyBySiding, sidingOverviewPenaltyPeriod]);
+
     const filteredSidings = useMemo(() => {
         if (filters.siding_ids.length === 0 || filters.siding_ids.length === sidings.length) {
             return sidings;
@@ -2619,7 +3583,7 @@ export default function Dashboard() {
     }, [sidings, filters.siding_ids]);
 
     const hasActiveFilters = useMemo(() => {
-        if (filters.period !== 'today') return true;
+        if (filters.period !== 'yesterday') return true;
         if (filters.power_plant) return true;
         if (filters.rake_number?.trim()) return true;
         if (filters.loader_id != null) return true;
@@ -2631,7 +3595,7 @@ export default function Dashboard() {
 
     const activeFilterCount = useMemo(() => {
         let n = 0;
-        if (filters.period !== 'today') n += 1;
+        if (filters.period !== 'yesterday') n += 1;
         if (filters.power_plant) n += 1;
         if (filters.rake_number?.trim()) n += 1;
         if (filters.loader_id != null) n += 1;
@@ -2799,7 +3763,12 @@ export default function Dashboard() {
                         {activeSection === 'executive-overview' && (
                             <div className="space-y-6">
                                 {executiveYesterday ? (
-                                    <ExecutiveYesterdaySection data={executiveYesterday} viewMode={executiveYesterdayViewMode} />
+                                    <ExecutiveYesterdaySection
+                                        data={executiveYesterday}
+                                        viewMode={executiveYesterdayViewMode}
+                                        penaltyBySiding={penaltyBySiding}
+                                        powerPlantDispatch={powerPlantDispatch}
+                                    />
                                 ) : (
                                     <div className="dashboard-card rounded-xl border-0 p-6 text-sm text-gray-600">Yesterday data is not available.</div>
                                 )}
@@ -2931,54 +3900,75 @@ export default function Dashboard() {
                                                 <p className="mt-1 text-xs text-gray-600">
                                                     {new Date(coalTransportReport.date + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                                                 </p>
-                                                <div className="dashboard-table-scroll mt-3 max-h-[420px] overflow-y-auto overflow-x-auto">
-                                                    <table className="w-full border-separate text-sm" style={{ borderSpacing: 0 }}>
-                                                        <thead className="sticky top-0 z-10 bg-[#369c7a] text-black">
-                                                            <tr>
-                                                                <th className="border border-[#1a3d2e] px-2 py-2 text-center font-medium" style={{ borderWidth: '1px' }}>Sl No</th>
-                                                                <th className="border border-[#1a3d2e] px-2 py-2 text-center font-medium" style={{ borderWidth: '1px' }}>Shift</th>
-                                                                {coalTransportReport.sidings.map((s) => (
-                                                                    <th key={s.id} colSpan={2} className="border border-[#1a3d2e] px-2 py-2 text-center font-medium" style={{ borderWidth: '1px' }}>{s.name}</th>
+                                                <div className="mt-3 overflow-hidden rounded-xl border border-[#d5dbe4] bg-white">
+                                                    <div className="dashboard-table-scroll max-h-[420px] overflow-y-auto overflow-x-auto">
+                                                        <table className="w-full border-separate text-xs" style={{ borderSpacing: 0 }}>
+                                                            <thead className="sticky top-0 z-10 bg-[#eef2f7] text-black">
+                                                                <tr>
+                                                                    <th className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">Sl No</th>
+                                                                    <th className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">Shift</th>
+                                                                    {coalTransportReport.sidings.map((s) => (
+                                                                        <th key={s.id} colSpan={2} className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">
+                                                                            {s.name}
+                                                                        </th>
+                                                                    ))}
+                                                                    <th colSpan={2} className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">
+                                                                        Total
+                                                                    </th>
+                                                                </tr>
+                                                                <tr>
+                                                                    <th className="border border-[#d5dbe4] px-3 py-2" />
+                                                                    <th className="border border-[#d5dbe4] px-3 py-2" />
+                                                                    {coalTransportReport.sidings.flatMap((s) => [
+                                                                        <th key={`${s.id}-t`} className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">
+                                                                            Trips
+                                                                        </th>,
+                                                                        <th key={`${s.id}-q`} className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">
+                                                                            Qty
+                                                                        </th>,
+                                                                    ])}
+                                                                    <th className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">Trips</th>
+                                                                    <th className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">Qty</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {coalTransportReport.rows.map((row) => (
+                                                                    <tr key={row.shift_label} className="bg-white">
+                                                                        <td className="border border-[#d5dbe4] px-3 py-2 tabular-nums">{row.sl_no}</td>
+                                                                        <td className="border border-[#d5dbe4] px-3 py-2 font-medium">{row.shift_label}</td>
+                                                                        {row.siding_metrics.map((m) => (
+                                                                            <Fragment key={m.siding_name}>
+                                                                                <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{m.trips}</td>
+                                                                                <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                                                                    {m.qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                                </td>
+                                                                            </Fragment>
+                                                                        ))}
+                                                                        <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{row.total_trips}</td>
+                                                                        <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                                                            {row.total_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                        </td>
+                                                                    </tr>
                                                                 ))}
-                                                                <th colSpan={2} className="border border-[#1a3d2e] px-2 py-2 text-center font-medium" style={{ borderWidth: '1px' }}>Total</th>
-                                                            </tr>
-                                                            <tr>
-                                                                <th className="border border-[#1a3d2e] px-2 py-1" style={{ borderWidth: '1px' }} />
-                                                                <th className="border border-[#1a3d2e] px-2 py-1" style={{ borderWidth: '1px' }} />
-                                                                {coalTransportReport.sidings.flatMap((s) => [<th key={`${s.id}-t`} className="border border-[#1a3d2e] px-2 py-1 text-center font-medium" style={{ borderWidth: '1px' }}>Trips</th>, <th key={`${s.id}-q`} className="border border-[#1a3d2e] px-2 py-1 text-center font-medium" style={{ borderWidth: '1px' }}>Qty</th>])}
-                                                                <th className="border border-[#1a3d2e] px-2 py-1 text-center font-medium" style={{ borderWidth: '1px' }}>Trips</th>
-                                                                <th className="border border-[#1a3d2e] px-2 py-1 text-center font-medium" style={{ borderWidth: '1px' }}>Qty</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            {coalTransportReport.rows.map((row) => (
-                                                                <tr key={row.shift_label} className="bg-white text-[0.875rem]">
-                                                                    <td className="border border-[#1a3d2e] px-2 py-2 tabular-nums" style={{ borderWidth: '1px' }}>{row.sl_no}</td>
-                                                                    <td className="border border-[#1a3d2e] px-2 py-2 font-medium" style={{ borderWidth: '1px' }}>{row.shift_label}</td>
-                                                                    {row.siding_metrics.map((m) => (
+                                                                <tr className="bg-[#f1f5f9] font-semibold text-black">
+                                                                    <td className="border border-[#d5dbe4] px-3 py-2" />
+                                                                    <td className="border border-[#d5dbe4] px-3 py-2">TOTAL</td>
+                                                                    {coalTransportReport.totals.siding_metrics.map((m) => (
                                                                         <Fragment key={m.siding_name}>
-                                                                            <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{m.trips}</td>
-                                                                            <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{m.qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                                                            <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{m.trips}</td>
+                                                                            <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                                                                {m.qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                            </td>
                                                                         </Fragment>
                                                                     ))}
-                                                                    <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{row.total_trips}</td>
-                                                                    <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{row.total_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                                                    <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{coalTransportReport.totals.total_trips}</td>
+                                                                    <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                                                        {coalTransportReport.totals.total_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                    </td>
                                                                 </tr>
-                                                            ))}
-                                                            <tr className="bg-[#369c7a] font-bold text-black">
-                                                                <td className="border border-[#1a3d2e] px-2 py-2" style={{ borderWidth: '1px' }} />
-                                                                <td className="border border-[#1a3d2e] px-2 py-2" style={{ borderWidth: '1px' }}>TOTAL</td>
-                                                                {coalTransportReport.totals.siding_metrics.map((m) => (
-                                                                    <Fragment key={m.siding_name}>
-                                                                        <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{m.trips}</td>
-                                                                        <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{m.qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                                                                    </Fragment>
-                                                                ))}
-                                                                <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{coalTransportReport.totals.total_trips}</td>
-                                                                <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{coalTransportReport.totals.total_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                                                            </tr>
-                                                        </tbody>
-                                                    </table>
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
                                                 </div>
                                             </>
                                         ) : (
@@ -3010,53 +4000,67 @@ export default function Dashboard() {
                                                         <span className="ml-2 text-amber-600">— No rake dispatches for this date</span>
                                                     )}
                                                 </p>
-                                                <div className="dashboard-table-scroll mt-3 max-h-[420px] overflow-y-auto overflow-x-auto">
-                                                    <table className="w-full border-separate text-sm" style={{ borderSpacing: 0 }}>
-                                                        <thead className="sticky top-0 z-10 bg-[#369c7a] text-black">
-                                                            <tr>
-                                                                <th className="border border-[#1a3d2e] px-2 py-2 text-center font-medium" style={{ borderWidth: '1px' }}>SL NO</th>
-                                                                <th className="border border-[#1a3d2e] px-2 py-2 text-center font-medium" style={{ borderWidth: '1px' }}>SIDING</th>
-                                                                <th colSpan={2} className="border border-[#1a3d2e] px-2 py-2 text-center font-medium" style={{ borderWidth: '1px' }}>DAY</th>
-                                                                <th colSpan={2} className="border border-[#1a3d2e] px-2 py-2 text-center font-medium" style={{ borderWidth: '1px' }}>MONTH</th>
-                                                                <th className="border border-[#1a3d2e] px-2 py-2 text-center font-medium" style={{ borderWidth: '1px' }}>FOR RAKE DAY/AVG</th>
-                                                                <th className="border border-[#1a3d2e] px-2 py-2 text-center font-medium" style={{ borderWidth: '1px' }}>REMARKS</th>
-                                                            </tr>
-                                                            <tr>
-                                                                <th className="border border-[#1a3d2e] px-2 py-1" style={{ borderWidth: '1px' }} />
-                                                                <th className="border border-[#1a3d2e] px-2 py-1" style={{ borderWidth: '1px' }} />
-                                                                <th className="border border-[#1a3d2e] px-2 py-1 text-center font-medium" style={{ borderWidth: '1px' }}>RAKES</th>
-                                                                <th className="border border-[#1a3d2e] px-2 py-1 text-center font-medium" style={{ borderWidth: '1px' }}>QTY</th>
-                                                                <th className="border border-[#1a3d2e] px-2 py-1 text-center font-medium" style={{ borderWidth: '1px' }}>RAKES</th>
-                                                                <th className="border border-[#1a3d2e] px-2 py-1 text-center font-medium" style={{ borderWidth: '1px' }}>QTY</th>
-                                                                <th className="border border-[#1a3d2e] px-2 py-1" style={{ borderWidth: '1px' }} />
-                                                                <th className="border border-[#1a3d2e] px-2 py-1" style={{ borderWidth: '1px' }} />
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            {dailyRakeDetails.rows.map((r) => (
-                                                                <tr key={r.siding_name} className="bg-white text-[0.875rem]">
-                                                                    <td className="border border-[#1a3d2e] px-2 py-2 tabular-nums" style={{ borderWidth: '1px' }}>{r.sl_no}</td>
-                                                                    <td className="border border-[#1a3d2e] px-2 py-2 font-medium" style={{ borderWidth: '1px' }}>{r.siding_name}</td>
-                                                                    <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{r.day_rakes}</td>
-                                                                    <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{r.day_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                                                                    <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{r.month_rakes}</td>
-                                                                    <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{r.month_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                                                                    <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{r.rake_day_avg.toFixed(2)}</td>
-                                                                    <td className="border border-[#1a3d2e] px-2 py-2 text-gray-600" style={{ borderWidth: '1px' }}>{r.remarks || '—'}</td>
+                                                <div className="mt-3 overflow-hidden rounded-xl border border-[#d5dbe4] bg-white">
+                                                    <div className="dashboard-table-scroll max-h-[420px] overflow-y-auto overflow-x-auto">
+                                                        <table className="w-full border-separate text-xs" style={{ borderSpacing: 0 }}>
+                                                            <thead className="sticky top-0 z-10 bg-[#eef2f7] text-black">
+                                                                <tr>
+                                                                    <th className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">SL NO</th>
+                                                                    <th className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">SIDING</th>
+                                                                    <th colSpan={2} className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">
+                                                                        DAY
+                                                                    </th>
+                                                                    <th colSpan={2} className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">
+                                                                        MONTH
+                                                                    </th>
+                                                                    <th className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">FOR RAKE DAY/AVG</th>
+                                                                    <th className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">REMARKS</th>
                                                                 </tr>
-                                                            ))}
-                                                            <tr className="bg-[#369c7a] font-bold text-black">
-                                                                <td className="border border-[#1a3d2e] px-2 py-2" style={{ borderWidth: '1px' }} />
-                                                                <td className="border border-[#1a3d2e] px-2 py-2" style={{ borderWidth: '1px' }}>TOTAL</td>
-                                                                <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{dailyRakeDetails.totals.day_rakes}</td>
-                                                                <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{dailyRakeDetails.totals.day_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                                                                <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{dailyRakeDetails.totals.month_rakes}</td>
-                                                                <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{dailyRakeDetails.totals.month_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                                                                <td className="border border-[#1a3d2e] px-2 py-2 text-right tabular-nums" style={{ borderWidth: '1px' }}>{dailyRakeDetails.totals.rake_day_avg.toFixed(2)}</td>
-                                                                <td className="border border-[#1a3d2e] px-2 py-2" style={{ borderWidth: '1px' }} />
-                                                            </tr>
-                                                        </tbody>
-                                                    </table>
+                                                                <tr>
+                                                                    <th className="border border-[#d5dbe4] px-3 py-2" />
+                                                                    <th className="border border-[#d5dbe4] px-3 py-2" />
+                                                                    <th className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">RAKES</th>
+                                                                    <th className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">QTY</th>
+                                                                    <th className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">RAKES</th>
+                                                                    <th className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">QTY</th>
+                                                                    <th className="border border-[#d5dbe4] px-3 py-2" />
+                                                                    <th className="border border-[#d5dbe4] px-3 py-2" />
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {dailyRakeDetails.rows.map((r) => (
+                                                                    <tr key={r.siding_name} className="bg-white">
+                                                                        <td className="border border-[#d5dbe4] px-3 py-2 tabular-nums">{r.sl_no}</td>
+                                                                        <td className="border border-[#d5dbe4] px-3 py-2 font-medium">{r.siding_name}</td>
+                                                                        <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{r.day_rakes}</td>
+                                                                        <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                                                            {r.day_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                        </td>
+                                                                        <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{r.month_rakes}</td>
+                                                                        <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                                                            {r.month_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                        </td>
+                                                                        <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{r.rake_day_avg.toFixed(2)}</td>
+                                                                        <td className="border border-[#d5dbe4] px-3 py-2 text-gray-600">{r.remarks || '—'}</td>
+                                                                    </tr>
+                                                                ))}
+                                                                <tr className="bg-[#f1f5f9] font-semibold text-black">
+                                                                    <td className="border border-[#d5dbe4] px-3 py-2" />
+                                                                    <td className="border border-[#d5dbe4] px-3 py-2">TOTAL</td>
+                                                                    <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{dailyRakeDetails.totals.day_rakes}</td>
+                                                                    <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                                                        {dailyRakeDetails.totals.day_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                    </td>
+                                                                    <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{dailyRakeDetails.totals.month_rakes}</td>
+                                                                    <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                                                        {dailyRakeDetails.totals.month_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                    </td>
+                                                                    <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{dailyRakeDetails.totals.rake_day_avg.toFixed(2)}</td>
+                                                                    <td className="border border-[#d5dbe4] px-3 py-2" />
+                                                                </tr>
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
                                                 </div>
                                             </>
                                         ) : (
@@ -3133,11 +4137,6 @@ export default function Dashboard() {
                                  <div className="dashboard-card rounded-xl border-0 p-5">
                                         <div className="flex flex-wrap items-center justify-between gap-3">
                                             <SectionHeader icon={Train} title="Live rake status" subtitle="Pending on siding — no weighment receipt yet" />
-                                            <Button variant="outline" size="sm" className="rounded-lg" asChild>
-                                                <Link href={rakesIndex().url} data-pan="dashboard-live-rakes-view-all">
-                                                    View all
-                                                </Link>
-                                            </Button>
                                         </div>
                                         <p className="mt-1 text-xs text-gray-600">
                                             Last updated: Just now
@@ -3172,7 +4171,7 @@ export default function Dashboard() {
                                                             </th>
                                                             <th className="group cursor-pointer pb-3 px-2 pt-2 font-medium">
                                                                 <span className="inline-flex items-center gap-1">
-                                                                    Loading time
+                                                                    Loading date
                                                                     <ArrowUp className="size-3.5 opacity-0 group-hover:opacity-50" />
                                                                 </span>
                                                             </th>
@@ -3220,7 +4219,17 @@ export default function Dashboard() {
                                                                             }
                                                                         />
                                                                     </td>
-                                                                    <td className="py-3 tabular-nums px-2">{row.time_elapsed}</td>
+                                                                    <td className="py-3 tabular-nums px-2">
+                                                                        {row.loading_date != null &&
+                                                                        row.loading_date !== '' &&
+                                                                        row.loading_date !== '—'
+                                                                            ? new Date(`${row.loading_date}T12:00:00`).toLocaleDateString('en-IN', {
+                                                                                  day: '2-digit',
+                                                                                  month: '2-digit',
+                                                                                  year: 'numeric',
+                                                                              })
+                                                                            : (row.loading_date ?? '—')}
+                                                                    </td>
                                                                 </tr>
                                                             );
                                                         })}
@@ -3414,38 +4423,15 @@ export default function Dashboard() {
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                                    <div className="dashboard-card min-w-0 rounded-xl border-0 p-6">
-                                        <SectionHeader icon={BarChart3} title="Penalty by siding" subtitle="Which siding causes most penalties" />
-                                        {penaltyBySiding.length > 0 ? (
-                                        <div className="mt-4">
-                                            {(() => {
-                                                const sorted = [...penaltyBySiding].sort((a, b) => b.total - a.total);
-                                                const barColors = ['#DC2626', '#EA580C', '#CA8A04', '#65A30D', '#059669', '#0D9488', '#2563EB', '#7C3AED', '#C026D3', '#DB2777'];
-                                                return (
-                                                    <ResponsiveContainer width="100%" height={320}>
-                                                        <RechartsBarChart
-                                                            data={sorted}
-                                                            margin={{ top: 8, right: 24, bottom: 24, left: 16 }}
-                                                        >
-                                                            <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
-                                                            <XAxis dataKey="name" type="category" tick={{ fontSize: 11 }} interval={0} height={48} />
-                                                            <YAxis type="number" tickFormatter={(v: number) => formatCurrency(v)} width={72} tick={{ fontSize: 11 }} />
-                                                            <Tooltip formatter={(v: number | string | undefined) => formatCurrency(Number(v ?? 0))} />
-                                                            <Bar dataKey="total" radius={[4, 4, 0, 0]} barSize={28} isAnimationActive>
-                                                                <LabelList dataKey="total" position="top" formatter={(v: unknown) => formatCurrency(Number(v ?? 0))} />
-                                                                {sorted.map((_, i) => (
-                                                                    <Cell key={i} fill={barColors[i % barColors.length]} />
-                                                                ))}
-                                                            </Bar>
-                                                        </RechartsBarChart>
-                                                    </ResponsiveContainer>
-                                                );
-                                            })()}
-                                            </div>
-                                        ) : (
-                                        <div className="mt-4 py-8 text-center text-sm text-gray-600">No sidings available for selected filters.</div>
-                                        )}
-                                    </div>
+                                    <DashboardPenaltyBySidingChart
+                                        data={penaltyBySidingForSidingOverview}
+                                        {...(executiveYesterday?.penaltyBySidingByPeriod
+                                            ? {
+                                                  period: sidingOverviewPenaltyPeriod,
+                                                  onPeriodChange: setSidingOverviewPenaltyPeriod,
+                                              }
+                                            : {})}
+                                    />
                                     <div className="grid grid-cols-1 gap-6">
                                    
                                     <div className="dashboard-card min-w-0 rounded-xl border-0 p-6">

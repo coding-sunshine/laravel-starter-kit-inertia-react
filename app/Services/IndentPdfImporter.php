@@ -8,6 +8,7 @@ use App\Actions\ProvisionRakeForIndent;
 use App\Models\Indent;
 use App\Models\PowerPlant;
 use App\Models\Siding;
+use DateTimeInterface;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -76,7 +77,20 @@ final readonly class IndentPdfImporter
             throw new InvalidArgumentException('This does not appear to be a complete indent PDF. Rake Sq. Number could not be found.');
         }
 
-        app(ProvisionRakeForIndent::class)->assertRakeNumberFreeForSidingThisMonth($rakeSqNumber, (int) $siding->id);
+        $indentDateParsed = isset($parsed['indent_date']) && $parsed['indent_date'] instanceof DateTimeInterface
+            ? $parsed['indent_date']
+            : null;
+        $expectedLoadingParsed = isset($parsed['expected_loading_date']) && $parsed['expected_loading_date'] instanceof DateTimeInterface
+            ? $parsed['expected_loading_date']
+            : null;
+
+        $referenceMonth = ProvisionRakeForIndent::referenceDateFromParsedPdf($indentDateParsed, $expectedLoadingParsed);
+
+        app(ProvisionRakeForIndent::class)->assertRakeNumberFreeForSidingInIndentMonth(
+            $rakeSqNumber,
+            (int) $siding->id,
+            $referenceMonth
+        );
 
         Log::info('Indent PDF import: parsed and siding detected', [
             'user_id' => $userId,
