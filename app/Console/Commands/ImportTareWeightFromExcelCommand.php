@@ -83,7 +83,7 @@ final class ImportTareWeightFromExcelCommand extends Command
 
         $transportCol = $this->resolveColumnIndex($headerRow, 'Transporter Name');
 
-        /** @var array<string, array{tare_weight: int, transport_name: string|null}> $lastByTruck Last row in file wins per vehicle_no. */
+        /** @var array<string, array{tare_weight: float, transport_name: string|null}> $lastByTruck Last row in file wins per vehicle_no. */
         $lastByTruck = [];
         $rowsWithTruckButInvalidTw = 0;
         foreach ($dataRows as $row) {
@@ -167,11 +167,13 @@ final class ImportTareWeightFromExcelCommand extends Command
                     if ($latest !== null) {
                         if (! $this->output->isQuiet()) {
                             $this->comment(sprintf(
-                                '[%d/%d] Updating vehicle_no=%s (id %d)',
+                                '[%d/%d] Updating vehicle_no=%s (id %d) TW1=%s Transporter Name=%s',
                                 $current,
                                 $totalTrucks,
                                 $vehicleNo,
                                 $latest->id,
+                                $this->formatTareWeightForDisplay($tareWeight),
+                                $this->formatTransportNameForDisplay($transportName),
                             ));
                         }
 
@@ -183,11 +185,13 @@ final class ImportTareWeightFromExcelCommand extends Command
                     } else {
                         if (! $this->output->isQuiet()) {
                             $this->comment(sprintf(
-                                '[%d/%d] Creating vehicle_no=%s (new row, siding_id=%d)',
+                                '[%d/%d] Creating vehicle_no=%s (siding_id=%d) TW1=%s Transporter Name=%s',
                                 $current,
                                 $totalTrucks,
                                 $vehicleNo,
                                 $sidingId,
+                                $this->formatTareWeightForDisplay($tareWeight),
+                                $this->formatTransportNameForDisplay($transportName),
                             ));
                         }
 
@@ -245,7 +249,10 @@ final class ImportTareWeightFromExcelCommand extends Command
         return null;
     }
 
-    private function parseTareWeight(mixed $raw): ?int
+    /**
+     * Matches `vehicle_workorders.tare_weight` (decimal 10,2): preserve up to two decimal places.
+     */
+    private function parseTareWeight(mixed $raw): ?float
     {
         if ($raw === null) {
             return null;
@@ -257,9 +264,23 @@ final class ImportTareWeightFromExcelCommand extends Command
             return null;
         }
         if (is_numeric($raw)) {
-            return (int) round((float) $raw);
+            return round((float) $raw, 2);
         }
 
         return null;
+    }
+
+    private function formatTareWeightForDisplay(float $tareWeight): string
+    {
+        return $tareWeight."";
+    }
+
+    private function formatTransportNameForDisplay(?string $transportName): string
+    {
+        if ($transportName === null || $transportName === '') {
+            return '(empty)';
+        }
+
+        return $transportName;
     }
 }
