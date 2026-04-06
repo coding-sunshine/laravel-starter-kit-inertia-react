@@ -137,7 +137,7 @@ final class IndentsController extends Controller
             'fnr_number' => ['nullable', 'string', 'max:50'],
             'railway_reference_no' => ['nullable', 'string', 'max:100'],
             'destination' => [
-                'nullable',
+                'required',
                 'string',
                 'max:100',
                 Rule::exists('power_plants', 'code')->where('is_active', true),

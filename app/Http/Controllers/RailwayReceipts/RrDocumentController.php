@@ -224,9 +224,20 @@ final class RrDocumentController extends Controller
             ->orderByDesc('loading_date')
             ->orderBy('rake_number')
             ->limit(500)
-            ->get(['id', 'rake_number', 'rr_actual_date', 'loading_date', 'siding_id']);
+            ->get([
+                'id',
+                'rake_number',
+                'rr_actual_date',
+                'loading_date',
+                'siding_id',
+                'priority_number',
+                'destination',
+                'destination_code',
+            ]);
 
-        $data = $rakes->map(static function (Rake $rake): array {
+        $data = $rakes->map(function (Rake $rake): array {
+            $prefill = $this->rakeManualWeighmentPrefillFromRake($rake);
+
             return [
                 'id' => $rake->id,
                 'rake_number' => $rake->rake_number,
@@ -238,6 +249,9 @@ final class RrDocumentController extends Controller
                         'code' => $rake->siding->code,
                     ]
                     : null,
+                'from_station' => $prefill['from_station'],
+                'to_station' => $prefill['to_station'],
+                'priority_number' => $prefill['priority_number'],
             ];
         })->values();
 
@@ -427,5 +441,36 @@ final class RrDocumentController extends Controller
         }
 
         return $user->canAccessSiding((int) $sidingId);
+    }
+
+    /**
+     * @return array{from_station: string|null, to_station: string|null, priority_number: string|null}
+     */
+    private function rakeManualWeighmentPrefillFromRake(Rake $rake): array
+    {
+        $rake->loadMissing('siding');
+
+        $from = null;
+        if ($rake->siding !== null) {
+            $code = mb_trim((string) $rake->siding->code);
+            $name = mb_trim((string) $rake->siding->name);
+            if ($code !== '' && $name !== '') {
+                $from = $code.' — '.$name;
+            } elseif ($name !== '') {
+                $from = $name;
+            } elseif ($code !== '') {
+                $from = $code;
+            }
+        }
+
+        $dest = mb_trim((string) ($rake->destination ?? ''));
+        $destCode = mb_trim((string) ($rake->destination_code ?? ''));
+        $to = $dest !== '' ? $dest : ($destCode !== '' ? $destCode : null);
+
+        return [
+            'from_station' => $from,
+            'to_station' => $to,
+            'priority_number' => $rake->priority_number !== null ? (string) $rake->priority_number : null,
+        ];
     }
 }

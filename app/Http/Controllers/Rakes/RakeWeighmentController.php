@@ -4,13 +4,16 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Rakes;
 
+use App\Actions\RecordManualRakeWeighment;
 use App\Actions\UpdateStockLedger;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreManualRakeWeighmentRequest;
 use App\Models\AppliedPenalty;
 use App\Models\Rake;
 use App\Models\RakeCharge;
 use App\Models\SidingOpeningBalance;
 use App\Models\StockLedger;
+use App\Models\User;
 use App\Services\RakeWeighmentPdfImporter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -69,6 +72,30 @@ final class RakeWeighmentController extends Controller
         // the updated weighment data in the Rake workflow itself.
         return to_route('rakes.show', $rake)
             ->with('success', 'Weighment recorded.');
+    }
+
+    public function storeManual(
+        StoreManualRakeWeighmentRequest $request,
+        Rake $rake,
+        RecordManualRakeWeighment $recordManual,
+    ): RedirectResponse {
+        /** @var User $user */
+        $user = $request->user();
+
+        if (! $user->canAccessSiding((int) $rake->siding_id)) {
+            abort(403);
+        }
+
+        try {
+            $recordManual->handle($rake, $request->manualPayload(), (int) $user->id);
+        } catch (InvalidArgumentException $e) {
+            return back()
+                ->withErrors(['total_net_weight_mt' => $e->getMessage()])
+                ->withInput();
+        }
+
+        return to_route('rakes.show', $rake)
+            ->with('success', 'Manual weighment recorded. Upload the document when available.');
     }
 
     public function destroy(Rake $rake): RedirectResponse

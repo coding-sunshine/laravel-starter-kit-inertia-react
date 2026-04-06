@@ -37,14 +37,24 @@ final readonly class RakeWeighmentPdfImporter
             'user_id' => $userId,
         ]);
 
-        if ($rake->rakeWeighments()->exists()) {
-            throw new InvalidArgumentException('A weighment has already been uploaded for this rake.');
-        }
+        $existing = $this->resolveExistingWeighmentForImport($rake);
 
         $parsed = $this->importer->parsePdfForRake($rake, $pdf);
         $storedPath = $pdf->store('weighment-pdfs', 'public');
 
         try {
+            if ($existing !== null) {
+                return $this->mergeDocumentIntoManualWeighment(
+                    $rake,
+                    $existing,
+                    $parsed['header'],
+                    $parsed['totals'],
+                    $parsed['wagon_rows'],
+                    $storedPath,
+                    $userId,
+                );
+            }
+
             return $this->importForRakeFromParsed(
                 $rake,
                 $parsed['header'],
@@ -70,9 +80,7 @@ final readonly class RakeWeighmentPdfImporter
             'user_id' => $userId,
         ]);
 
-        if ($rake->rakeWeighments()->exists()) {
-            throw new InvalidArgumentException('A weighment has already been uploaded for this rake.');
-        }
+        $existing = $this->resolveExistingWeighmentForImport($rake);
 
         $realPath = $xlsx->getRealPath();
         if ($realPath === false || $realPath === '' || ! is_readable($realPath)) {
@@ -83,6 +91,18 @@ final readonly class RakeWeighmentPdfImporter
         $storedPath = $xlsx->store('weighment-excels', 'public');
 
         try {
+            if ($existing !== null) {
+                return $this->mergeDocumentIntoManualWeighment(
+                    $rake,
+                    $existing,
+                    $parsed['header'],
+                    $parsed['totals'],
+                    $parsed['wagon_rows'],
+                    $storedPath,
+                    $userId,
+                );
+            }
+
             return $this->importForRakeFromParsed(
                 $rake,
                 $parsed['header'],
@@ -167,10 +187,12 @@ final readonly class RakeWeighmentPdfImporter
         array $wagonRows,
         string $storedPath,
         int $userId,
+        ?RakeWeighment $mergeInto = null,
     ): RakeWeighment {
         $attemptNo = 1;
+        $isMerge = $mergeInto !== null;
 
-        return DB::transaction(function () use ($rake, $header, $totals, $wagonRows, $storedPath, $userId, $attemptNo): RakeWeighment {
+        return DB::transaction(function () use ($rake, $header, $totals, $wagonRows, $storedPath, $userId, $attemptNo, $mergeInto, $isMerge): RakeWeighment {
             $rake->load(['wagons' => fn ($q) => $q->orderBy('wagon_sequence')]);
             $rake->loadMissing('siding');
 
@@ -209,7 +231,7 @@ final readonly class RakeWeighmentPdfImporter
 
             $wagons = $rake->wagons;
 
-            $weighment = RakeWeighment::query()->create([
+            $weighmentAttributes = [
                 'rake_id' => $rake->id,
                 'attempt_no' => $attemptNo,
                 'gross_weighment_datetime' => $header['gross_weighment_datetime'] ?? $fallbackDate,
@@ -230,8 +252,15 @@ final readonly class RakeWeighmentPdfImporter
                 'maximum_weight_mt' => $totals['maximum_weight_mt'] ?? null,
                 'pdf_file_path' => $storedPath,
                 'status' => 'success',
-                'created_by' => $userId,
-            ]);
+            ];
+
+            if ($isMerge) {
+                $mergeInto->update($weighmentAttributes);
+                $weighment = $mergeInto->fresh();
+            } else {
+                $weighmentAttributes['created_by'] = $userId;
+                $weighment = RakeWeighment::query()->create($weighmentAttributes);
+            }
 
             $wagonsBySequence = [];
             $wagonsByNumber = [];
@@ -271,6 +300,7 @@ final readonly class RakeWeighmentPdfImporter
                 'rake_weighment_id' => $weighment->id,
                 'matched' => $matched,
                 'total_rows' => count($wagonRows),
+                'merge' => $isMerge,
             ]);
 
             $rake->update([
@@ -283,7 +313,7 @@ final readonly class RakeWeighmentPdfImporter
             $siding = $rake->siding;
             $quantity = $weighment->total_net_weight_mt !== null ? (float) $weighment->total_net_weight_mt : 0.0;
 
-            if ($siding !== null && $quantity > 0) {
+            if (! $isMerge && $siding !== null && $quantity > 0) {
                 $this->updateStockLedger->recordDispatch(
                     $siding,
                     $quantity,
@@ -297,6 +327,75 @@ final readonly class RakeWeighmentPdfImporter
 
             return $weighment->fresh(['rakeWagonWeighments.wagon']);
         });
+    }
+
+    /**
+     * When a full document import already exists, reject. When a manual placeholder exists (no wagon rows), return it for merge.
+     */
+    private function resolveExistingWeighmentForImport(Rake $rake): ?RakeWeighment
+    {
+        $existing = $rake->rakeWeighments()
+            ->withCount('rakeWagonWeighments')
+            ->first();
+
+        if ($existing === null) {
+            return null;
+        }
+
+        if ($existing->rake_wagon_weighments_count > 0) {
+            throw new InvalidArgumentException('A weighment has already been uploaded for this rake.');
+        }
+
+        return $existing;
+    }
+
+    /**
+     * @param  array<string, mixed>  $header
+     * @param  array<string, float|null>  $totals
+     * @param  array<int, array<string, mixed>>  $wagonRows
+     */
+    private function mergeDocumentIntoManualWeighment(
+        Rake $rake,
+        RakeWeighment $manualWeighment,
+        array $header,
+        array $totals,
+        array $wagonRows,
+        string $storedPath,
+        int $userId,
+    ): RakeWeighment {
+        $parsedNet = $totals['total_net_weight_mt'] ?? null;
+        $manualNet = $manualWeighment->total_net_weight_mt;
+
+        if ($parsedNet === null || $manualNet === null) {
+            throw new InvalidArgumentException(
+                'The document does not include a total net weight, or the manual weighment has no net weight to compare.',
+            );
+        }
+
+        if ($this->decimalStringsDiffer((string) $parsedNet, (string) $manualNet)) {
+            throw new InvalidArgumentException(
+                sprintf(
+                    'Total net weight from the document (%s MT) does not match the manual entry (%s MT). Update the manual weighment or use matching values.',
+                    number_format((float) $parsedNet, 2, '.', ''),
+                    number_format((float) $manualNet, 2, '.', ''),
+                ),
+            );
+        }
+
+        return $this->importForRakeFromParsed(
+            $rake,
+            $header,
+            $totals,
+            $wagonRows,
+            $storedPath,
+            $userId,
+            $manualWeighment,
+        );
+    }
+
+    private function decimalStringsDiffer(string $a, string $b): bool
+    {
+        return number_format((float) $a, 2, '.', '') !== number_format((float) $b, 2, '.', '');
     }
 
     /**

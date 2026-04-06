@@ -47,7 +47,7 @@ final class RakesController extends Controller
             'siding:id,name,code',
             'siding.loaders:id,siding_id,loader_name,code',
             'wagons',
-            'rakeWeighments' => fn ($q) => $q->whereNotNull('pdf_file_path'),
+            'rakeWeighments',
             'rakeWeighments.rakeWagonWeighments.wagon:id,wagon_number,wagon_sequence,pcc_weight_mt',
             'txr.wagonUnfitLogs.wagon:id,wagon_number,wagon_sequence,wagon_type',
             'wagonLoadings.wagon:id,wagon_number,wagon_sequence,wagon_type,pcc_weight_mt',
@@ -115,10 +115,8 @@ final class RakesController extends Controller
         $rakeArray['loading_warning_minutes'] = $loadingSection?->warning_minutes;
         $rakeArray['loading_section_free_minutes'] = $loadingSection?->free_minutes ?? 180;
 
-        // Build weighments for WeighmentWorkflow: only PDF-origin records (rake_wagon_weighments
-        // from load flow are not shown here; full wagon data is on /weighments/{id})
+        // Build weighments for WeighmentWorkflow: includes manual-only rows (no document yet) and full imports.
         $rakeArray['weighments'] = collect($rake->rakeWeighments ?? [])
-            ->filter(fn ($rw) => ! empty($rw->pdf_file_path))
             ->sortByDesc('attempt_no')
             ->map(function ($rw): array {
                 $wagonWeights = collect($rw->rakeWagonWeighments ?? [])
@@ -139,6 +137,8 @@ final class RakesController extends Controller
                     ->values()
                     ->all();
 
+                $isPendingDocument = $wagonWeights === [] && ($rw->pdf_file_path === null || $rw->pdf_file_path === '');
+
                 return [
                     'id' => $rw->id,
                     'weighment_time' => $rw->gross_weighment_datetime?->toIso8601String(),
@@ -147,6 +147,7 @@ final class RakesController extends Controller
                     'train_speed_kmph' => $rw->maximum_train_speed_kmph,
                     'attempt_no' => $rw->attempt_no,
                     'wagonWeights' => $wagonWeights,
+                    'isPendingDocument' => $isPendingDocument,
                 ];
             })
             ->values()
@@ -514,7 +515,10 @@ final class RakesController extends Controller
         if ($fitWagons->isEmpty() || ! $fitWagons->every(fn ($w) => $loadedWagonIds->has($w->id))) {
             return false;
         }
-        $weighmentSuccess = $rake->rakeWeighments->contains('status', 'success');
+        $weighmentSuccess = $rake->rakeWeighments->contains(
+            static fn ($rw): bool => $rw->status === 'success'
+                && $rw->rakeWagonWeighments->isNotEmpty(),
+        );
 
         return $weighmentSuccess;
     }

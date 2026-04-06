@@ -14,9 +14,11 @@ import {
 } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
+import { create as indentsCreate } from '@/routes/indents';
 import { type BreadcrumbItem } from '@/types';
-import { Head, router } from '@inertiajs/react';
-import { Train } from 'lucide-react';
+import { Head, Link, router } from '@inertiajs/react';
+import { Plus, Train } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface RakeRow {
     id: number;
@@ -51,10 +53,18 @@ export default function RakesIndex({ tableData }: Props) {
             <Head title="Rakes" />
 
             <div className="space-y-6">
-                <Heading
-                    title="Railway Rakes"
-                    description="Manage railway rakes and wagons for the RRMCS system"
-                />
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                    <Heading
+                        title="Railway Rakes"
+                        description="Manage railway rakes and wagons for the RRMCS system"
+                    />
+                    <Button asChild data-pan="rakes-create-rake-button">
+                        <Link href={indentsCreate.url()} className="inline-flex items-center gap-2">
+                            <Plus className="size-4" />
+                            Create rake
+                        </Link>
+                    </Button>
+                </div>
 
                 <Card>
                     <CardHeader>

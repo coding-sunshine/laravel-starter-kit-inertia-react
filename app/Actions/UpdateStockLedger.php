@@ -113,46 +113,46 @@ final readonly class UpdateStockLedger
         int $userId = 0
     ): StockLedger {
         return DB::transaction(function () use ($siding, $quantity, $rakeId, $remarks, $userId): StockLedger {
-    
+
             $sidingId = (int) $siding->id;
-    
+
             $lastLedger = StockLedger::query()
                 ->where('siding_id', $sidingId)
                 ->lockForUpdate()
                 ->latest('id')
                 ->first();
-    
+
             $opening = $lastLedger !== null
                 ? (float) $lastLedger->closing_balance_mt
                 : SidingOpeningBalance::getOpeningBalanceForSiding($sidingId);
-    
-            // 🔥 ALWAYS negative
+
+            //  ALWAYS negative
             $dispatchQty = -abs($quantity);
-    
+
             $closing = round($opening + $dispatchQty, 2);
-    
+
             throw_if(
                 $closing < 0,
                 InvalidArgumentException::class,
                 "Insufficient stock. Available: {$opening} MT, Required: {$quantity} MT"
             );
-    
+
             $ledger = StockLedger::create([
                 'siding_id' => $sidingId,
                 'transaction_type' => 'dispatch',
                 'rake_id' => $rakeId,
-                'quantity_mt' => $dispatchQty, // 🔥 negative
+                'quantity_mt' => $dispatchQty, //  negative
                 'opening_balance_mt' => $opening,
                 'closing_balance_mt' => $closing,
-                'reference_number' => 'DISP-' . ($rakeId ?? 'MAN'),
+                'reference_number' => 'DISP-'.($rakeId ?? 'MAN'),
                 'remarks' => $remarks,
                 'created_by' => $userId ?: null,
             ]);
-    
+
             DB::afterCommit(function () use ($sidingId, $closing): void {
                 event(new CoalStockUpdated($sidingId, $closing));
             });
-    
+
             return $ledger;
         });
     }

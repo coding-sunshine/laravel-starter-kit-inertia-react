@@ -273,6 +273,7 @@ return [
         'rakes.load.guard-inspection' => 'sections.rakes.update',
         'rakes.load.confirm-dispatch' => 'sections.rakes.update',
         'rakes.weighments.store' => 'sections.rakes.upload',
+        'rakes.weighments.manual' => 'sections.rakes.upload',
         'rakes.weighments.destroy' => 'sections.rakes.update',
         'rakes.comparison' => 'sections.rakes.view',
         'rakes.guard-inspection.store' => 'sections.rakes.update',
@@ -392,6 +393,7 @@ return [
         'weighments.index' => 'sections.weighments.view',
         'weighments.show' => 'sections.weighments.view',
         'weighments.import' => 'sections.weighments.upload',
+        'weighments.manual' => 'sections.weighments.upload',
         'weighments.destroy' => 'sections.weighments.delete',
 
         // Historical Mines (monthly mines data)
