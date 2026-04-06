@@ -156,6 +156,53 @@ function formatLoaderOptionLabel(loader: LoaderOption): string {
     return `${loader.loader_name}${loader.code ? ` (${loader.code})` : ''}`;
 }
 
+function toEditDigits(value: string): string {
+    return value.replace(/\D+/g, '');
+}
+
+function toDisplayDecimal(value: string): string {
+    const digits = toEditDigits(value);
+    if (digits === '') {
+        return '';
+    }
+
+    if (digits.length <= 2) {
+        return digits;
+    }
+
+    const integerPart = digits.slice(0, 2);
+    const fractionalPart = digits.slice(2);
+
+    return `${integerPart}.${fractionalPart}`;
+}
+
+function parseLoadedQuantityForSave(value: string): number | null {
+    const trimmed = value.trim();
+    if (trimmed === '') {
+        return null;
+    }
+
+    if (/[.,]/.test(trimmed)) {
+        const decimalValue = parseFloat(trimmed.replace(',', '.'));
+        return Number.isFinite(decimalValue) ? decimalValue : null;
+    }
+
+    const digits = toEditDigits(trimmed);
+    if (digits === '') {
+        return null;
+    }
+
+    if (digits.length <= 2) {
+        const whole = Number.parseInt(digits, 10);
+        return Number.isFinite(whole) ? whole : null;
+    }
+
+    const normalized = `${digits.slice(0, 2)}.${digits.slice(2)}`;
+    const parsed = Number.parseFloat(normalized);
+
+    return Number.isFinite(parsed) ? parsed : null;
+}
+
 interface LoaderListOption {
     id: string;
     label: string;
@@ -404,6 +451,7 @@ export function WagonLoadingWorkflow({
     const [error, setError] = useState<string | null>(null);
     /** Row keys currently being saved in background (spreadsheet mode). */
     const [bgSavingKeys, setBgSavingKeys] = useState<Set<string>>(() => new Set());
+    const [focusedQtyRowKey, setFocusedQtyRowKey] = useState<string | null>(null);
 
     const onWagonLoadingsSavedRef = useRef(onWagonLoadingsSaved);
     onWagonLoadingsSavedRef.current = onWagonLoadingsSaved;
@@ -752,10 +800,9 @@ export function WagonLoadingWorkflow({
 
                 const loaderId =
                     row.loader_id && row.loader_id !== '__none__' ? Number(row.loader_id) : null;
-                const qtyStr = row.loaded_quantity_mt.trim().replace(',', '.');
-                const qty = parseFloat(qtyStr);
+                const qty = parseLoadedQuantityForSave(row.loaded_quantity_mt);
 
-                if (!Number.isFinite(qty) || qty < 0) {
+                if (qty === null || qty < 0) {
                     return;
                 }
 
@@ -817,6 +864,16 @@ export function WagonLoadingWorkflow({
         const loaderIdStr = value === '__none__' ? '' : value;
         updateRow(row.key, 'loader_id', loaderIdStr);
         scheduleSpreadsheetSave(row.key);
+    };
+
+    const handleSpreadsheetQtyFocus = (row: LoadingRow): void => {
+        setFocusedQtyRowKey(row.key);
+        updateRow(row.key, 'loaded_quantity_mt', toEditDigits(row.loaded_quantity_mt));
+    };
+
+    const handleSpreadsheetQtyBlur = (row: LoadingRow): void => {
+        setFocusedQtyRowKey((current) => (current === row.key ? null : current));
+        updateRow(row.key, 'loaded_quantity_mt', toDisplayDecimal(row.loaded_quantity_mt));
     };
 
     const saveRow = async (row: LoadingRow): Promise<void> => {
@@ -1025,13 +1082,23 @@ export function WagonLoadingWorkflow({
                                                                 type="text"
                                                                 inputMode="decimal"
                                                                 pattern="[0-9]*[.,]?[0-9]*"
-                                                                value={row.loaded_quantity_mt}
+                                                                value={
+                                                                    focusedQtyRowKey === row.key
+                                                                        ? toEditDigits(row.loaded_quantity_mt)
+                                                                        : row.loaded_quantity_mt
+                                                                }
+                                                                onFocus={() =>
+                                                                    handleSpreadsheetQtyFocus(row)
+                                                                }
+                                                                onBlur={() =>
+                                                                    handleSpreadsheetQtyBlur(row)
+                                                                }
                                                                 onChange={(e) => {
                                                                     spreadsheetDirtyRef.current.add(row.key);
                                                                     updateRow(
                                                                         row.key,
                                                                         'loaded_quantity_mt',
-                                                                        e.target.value,
+                                                                        toEditDigits(e.target.value),
                                                                     );
                                                                     scheduleSpreadsheetSave(row.key);
                                                                 }}
