@@ -32,6 +32,7 @@ final class HomeRedirectService
             ['route' => 'reports.index'],
             ['route' => 'historical.mines.index'],
             ['route' => 'historical.railway-siding.index'],
+            ['route' => 'rake-loader.index'],
             ['route' => 'dashboard'],
         ];
 

@@ -35,7 +35,7 @@ import {
     GripVertical,
     Hash,
     List,
-    SlidersHorizontal,
+    Eye,
     ToggleLeft,
     Type,
     X,
@@ -274,7 +274,7 @@ function ColumnsDropdown<TData>({ table, tableColumns, columnOrder, onReorder, s
         <DropdownMenu onOpenChange={(open) => { if (!open) { setReordering(false); setDragging(null); setDragOverId(null); } }}>
             <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="h-8">
-                    <SlidersHorizontal className="h-4 w-4" />
+                    <Eye className="h-4 w-4" />
                     Columns
                 </Button>
             </DropdownMenuTrigger>
@@ -352,6 +352,8 @@ export function DataTable<TData extends object>({
     rowClassName,
     groupClassName,
     options: optionsOverride,
+    preserveSearchParams,
+    toolbarPosition = "right",
 }: DataTableProps<TData>) {
     const resolvedOptions = useMemo<DataTableOptions>(() => ({
         quickViews: true,
@@ -476,6 +478,7 @@ export function DataTable<TData extends object>({
         tableData,
         tableName,
         columnDefs,
+        preserveSearchParams,
     });
 
     const filterColumns = useMemo(
@@ -489,53 +492,63 @@ export function DataTable<TData extends object>({
         [rowSelection, tableData.data],
     );
 
+    const desktopToolbar = (
+        <DataTableToolbar
+            tableData={tableData}
+            table={table}
+            tableName={tableName}
+            columnVisibility={columnVisibility}
+            columnOrder={columnOrder}
+            applyColumns={applyColumns}
+            onReorderColumns={setColumnOrder}
+            handleApplyQuickView={handleApplyQuickView}
+            handleApplyCustomSearch={handleApplyCustomSearch}
+            resolvedOptions={resolvedOptions}
+        />
+    );
+
+    const mobileToolbar = (
+        <Popover>
+            <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 md:hidden">
+                    <EllipsisVertical className="h-4 w-4" />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="flex w-auto flex-col gap-2 p-2">
+                {desktopToolbar}
+            </PopoverContent>
+        </Popover>
+    );
+
     return (
         <div className="space-y-2">
-            <div className="flex items-center justify-between gap-2 py-1">
-                <div className="flex-1 pl-6">
+            {toolbarPosition === "left" ? (
+                <div className="flex items-center gap-2 py-1">
+                    {mobileToolbar}
+                    <div className="hidden items-center gap-2 md:flex">{desktopToolbar}</div>
                     {resolvedOptions.filters && (
-                        <Filters
-                            columns={filterColumns}
-                            serverFilters={meta.filters as Record<string, unknown>}
-                        />
+                        <div className="ml-auto flex-1">
+                            <Filters
+                                columns={filterColumns}
+                                serverFilters={meta.filters as Record<string, unknown>}
+                            />
+                        </div>
                     )}
                 </div>
-                <Popover>
-                    <PopoverTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 md:hidden">
-                            <EllipsisVertical className="h-4 w-4" />
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent align="end" className="flex w-auto flex-col gap-2 p-2">
-                        <DataTableToolbar
-                            tableData={tableData}
-                            table={table}
-                            tableName={tableName}
-                            columnVisibility={columnVisibility}
-                            columnOrder={columnOrder}
-                            applyColumns={applyColumns}
-                            onReorderColumns={setColumnOrder}
-                            handleApplyQuickView={handleApplyQuickView}
-                            handleApplyCustomSearch={handleApplyCustomSearch}
-                            resolvedOptions={resolvedOptions}
-                        />
-                    </PopoverContent>
-                </Popover>
-                <div className="hidden items-center gap-2 md:flex">
-                    <DataTableToolbar
-                        tableData={tableData}
-                        table={table}
-                        tableName={tableName}
-                        columnVisibility={columnVisibility}
-                        columnOrder={columnOrder}
-                        applyColumns={applyColumns}
-                        onReorderColumns={setColumnOrder}
-                        handleApplyQuickView={handleApplyQuickView}
-                        handleApplyCustomSearch={handleApplyCustomSearch}
-                        resolvedOptions={resolvedOptions}
-                    />
+            ) : (
+                <div className="flex items-center justify-between gap-2 py-1">
+                    <div className="flex-1 pl-6">
+                        {resolvedOptions.filters && (
+                            <Filters
+                                columns={filterColumns}
+                                serverFilters={meta.filters as Record<string, unknown>}
+                            />
+                        )}
+                    </div>
+                    {mobileToolbar}
+                    <div className="hidden items-center gap-2 md:flex">{desktopToolbar}</div>
                 </div>
-            </div>
+            )}
             {hasBulkActions && selectedRows.length > 0 && (
                 <div className="flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2">
                     <span className="text-sm font-medium tabular-nums">

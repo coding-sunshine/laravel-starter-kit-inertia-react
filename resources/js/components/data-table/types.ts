@@ -83,4 +83,8 @@ export interface DataTableProps<TData extends object> {
     rowClassName?: (row: TData) => string;
     groupClassName?: Record<string, string>;
     options?: Partial<DataTableOptions>;
+    /** Query param keys to copy from the current URL when applying a quick view (e.g. siding_id). */
+    preserveSearchParams?: string[];
+    /** Position table toolbar controls on desktop. */
+    toolbarPosition?: 'left' | 'right';
 }

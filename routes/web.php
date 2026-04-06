@@ -213,8 +213,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 
     // RRMCS Routes (Railway Rake Management Control System)
     Route::get('rake-loader', [RakeLoaderController::class, 'index'])->name('rake-loader.index');
-    Route::get('rake-loader/rakes', [RakeLoaderController::class, 'rakes'])->name('rake-loader.rakes');
-    Route::get('rake-loader/rakes/{rake}', [RakeLoaderController::class, 'show'])->name('rake-loader.rakes.show');
+    Route::get('rake-loader/rakes/{rake}/loading', [RakeLoaderController::class, 'loading'])->name('rake-loader.rakes.loading');
 
     Route::get('rakes', [RakesController::class, 'index'])->name('rakes.index');
     Route::get('rakes/{rake}', [RakesController::class, 'show'])->name('rakes.show');
