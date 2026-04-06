@@ -252,6 +252,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::post('rakes/{rake}/load/confirm-dispatch', [RakeLoadController::class, 'confirmDispatch'])->name('rakes.load.confirm-dispatch');
     Route::post('rakes/{rake}/weighments', [RakeWeighmentController::class, 'store'])->name('rakes.weighments.store');
     Route::post('rakes/{rake}/weighments/manual', [RakeWeighmentController::class, 'storeManual'])->name('rakes.weighments.manual');
+    Route::patch('rakes/{rake}/weighments/{rakeWeighment}', [RakeWeighmentController::class, 'updateManual'])->name('rakes.weighments.update-manual');
     Route::delete('rakes/{rake}/weighments', [RakeWeighmentController::class, 'destroy'])->name('rakes.weighments.destroy');
     Route::post('rakes/{rake}/power-plant-receipts', [RakePowerPlantReceiptController::class, 'store'])->name('rakes.power-plant-receipts.store');
     Route::delete('rakes/{rake}/power-plant-receipts/{receipt}', [RakePowerPlantReceiptController::class, 'destroy'])->name('rakes.power-plant-receipts.destroy')->scopeBindings();

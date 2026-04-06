@@ -278,10 +278,7 @@ export function RakeWorkflow({
         fitWagons.length > 0 &&
         fitWagons.every(w => positivelyLoadedWagonIds.has(w.id));
     const isGuardApproved = rakeData.guardInspections?.[0]?.is_approved;
-    const latestWeighmentForStep = rakeData.weighments?.[0];
-    const isWeighmentCompleted =
-        latestWeighmentForStep?.status === 'success' &&
-        !latestWeighmentForStep?.isPendingDocument;
+    const isWeighmentCompleted = (rakeData.weighments?.length ?? 0) > 0;
     const isComparisonStepCompleted =
         isWeighmentCompleted && isWagonLoadingCompleted;
     const hasPowerPlantReceipt = (rakeData.powerPlantReceipts ?? []).length > 0;
@@ -322,7 +319,7 @@ export function RakeWorkflow({
         {
             id: 'weighment',
             label: 'Inmotion weighment',
-            description: 'At least one successful rake weighment exists.',
+            description: 'A rake weighment record exists (manual net or imported slip).',
             status: isWeighmentCompleted ? 'completed' : 'pending',
         },
         {

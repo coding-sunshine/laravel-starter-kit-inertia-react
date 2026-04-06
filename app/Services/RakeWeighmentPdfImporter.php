@@ -196,6 +196,13 @@ final readonly class RakeWeighmentPdfImporter
             $rake->load(['wagons' => fn ($q) => $q->orderBy('wagon_sequence')]);
             $rake->loadMissing('siding');
 
+            $mergeOldNetMt = 0.0;
+            if ($isMerge && $mergeInto !== null) {
+                $mergeOldNetMt = $mergeInto->total_net_weight_mt !== null
+                    ? round((float) $mergeInto->total_net_weight_mt, 2)
+                    : 0.0;
+            }
+
             $fallbackDate = null;
             $dateString = $header['loading_date'] ?? null;
             if (is_string($dateString) && mb_trim($dateString) !== '') {
@@ -320,7 +327,26 @@ final readonly class RakeWeighmentPdfImporter
                     $rake->id,
                     'Rake weighment imported',
                     $userId,
+                    $weighment->id,
                 );
+            }
+
+            if ($isMerge && $siding !== null) {
+                $newNetMt = $weighment->total_net_weight_mt !== null
+                    ? round((float) $weighment->total_net_weight_mt, 2)
+                    : 0.0;
+                $deltaMt = round($newNetMt - $mergeOldNetMt, 2);
+
+                if (abs($deltaMt) >= 0.005) {
+                    $this->updateStockLedger->applyRakeWeighmentNetDelta(
+                        $siding,
+                        (int) $rake->id,
+                        (int) $weighment->id,
+                        $deltaMt,
+                        $userId,
+                        'Rake weighment document merged',
+                    );
+                }
             }
 
             $this->applyWeighmentPenalties->handle($rake, $weighment);
@@ -372,16 +398,6 @@ final readonly class RakeWeighmentPdfImporter
             );
         }
 
-        if ($this->decimalStringsDiffer((string) $parsedNet, (string) $manualNet)) {
-            throw new InvalidArgumentException(
-                sprintf(
-                    'Total net weight from the document (%s MT) does not match the manual entry (%s MT). Update the manual weighment or use matching values.',
-                    number_format((float) $parsedNet, 2, '.', ''),
-                    number_format((float) $manualNet, 2, '.', ''),
-                ),
-            );
-        }
-
         return $this->importForRakeFromParsed(
             $rake,
             $header,
@@ -391,11 +407,6 @@ final readonly class RakeWeighmentPdfImporter
             $userId,
             $manualWeighment,
         );
-    }
-
-    private function decimalStringsDiffer(string $a, string $b): bool
-    {
-        return number_format((float) $a, 2, '.', '') !== number_format((float) $b, 2, '.', '');
     }
 
     /**

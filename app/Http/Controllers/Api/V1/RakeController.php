@@ -113,7 +113,7 @@ final class RakeController extends Controller
             'siding:id,name,code',
             'siding.loaders:id,siding_id,loader_name,code',
             'wagons',
-            'rakeWeighments' => fn ($q) => $q->whereNotNull('pdf_file_path'),
+            'rakeWeighments',
             'txr.wagonUnfitLogs.wagon:id,wagon_number,wagon_sequence,wagon_type',
             'wagonLoadings.wagon:id,wagon_number,wagon_sequence,wagon_type,pcc_weight_mt',
             'wagonLoadings.loader:id,loader_name,code',
@@ -300,8 +300,6 @@ final class RakeController extends Controller
             return false;
         }
 
-        $weighmentSuccess = $rake->rakeWeighments->contains('status', 'success');
-
-        return $weighmentSuccess;
+        return $rake->rakeWeighments->isNotEmpty();
     }
 }

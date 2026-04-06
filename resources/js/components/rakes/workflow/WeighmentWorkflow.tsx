@@ -16,6 +16,9 @@ interface WeighmentRecord {
     status: string | null;
     train_speed_kmph: number | string | null;
     attempt_no: number;
+    from_station?: string | null;
+    to_station?: string | null;
+    priority_number?: string | number | null;
     isPendingDocument?: boolean;
     wagonWeights?: Array<{
         wagon_id: number;
@@ -59,12 +62,49 @@ export function WeighmentWorkflow({ rake, disabled }: WeighmentWorkflowProps) {
         priority_number: '',
     });
 
+    const editManualForm = useForm({
+        total_net_weight_mt: '',
+        from_station: '',
+        to_station: '',
+        priority_number: '',
+    });
+
+    const latestWeighment = useMemo(() => {
+        if (!rake.weighments || rake.weighments.length === 0) {
+            return undefined;
+        }
+
+        return [...rake.weighments].sort((a, b) => a.attempt_no - b.attempt_no)[rake.weighments.length - 1];
+    }, [rake.weighments]);
+
+    const hasWeighment = !!latestWeighment;
+    const isPendingDocument = latestWeighment?.isPendingDocument === true;
+
     useEffect(() => {
         const f = manualWeighmentFieldsFromRake(rake);
         manualForm.setData('from_station', f.from_station);
         manualForm.setData('to_station', f.to_station);
         manualForm.setData('priority_number', f.priority_number);
     }, [rake.id]); // eslint-disable-line react-hooks/exhaustive-deps -- prefill when rake id changes only
+
+    useEffect(() => {
+        if (!latestWeighment || !isPendingDocument) {
+            return;
+        }
+        editManualForm.setData({
+            total_net_weight_mt:
+                latestWeighment.total_weight_mt != null && latestWeighment.total_weight_mt !== ''
+                    ? String(latestWeighment.total_weight_mt)
+                    : '',
+            from_station: latestWeighment.from_station ?? '',
+            to_station: latestWeighment.to_station ?? '',
+            priority_number:
+                latestWeighment.priority_number != null && latestWeighment.priority_number !== ''
+                    ? String(latestWeighment.priority_number)
+                    : '',
+        });
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- sync when server sends updated weighment
+    }, [latestWeighment?.id, isPendingDocument, latestWeighment?.total_weight_mt]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -97,16 +137,16 @@ export function WeighmentWorkflow({ rake, disabled }: WeighmentWorkflowProps) {
         });
     };
 
-    const latestWeighment = useMemo(() => {
-        if (!rake.weighments || rake.weighments.length === 0) {
-            return undefined;
+    const handleEditManualSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        if (!latestWeighment) {
+            return;
         }
+        editManualForm.patch(`/rakes/${rake.id}/weighments/${latestWeighment.id}`, {
+            preserveScroll: true,
+        });
+    };
 
-        return [...rake.weighments].sort((a, b) => a.attempt_no - b.attempt_no)[rake.weighments.length - 1];
-    }, [rake.weighments]);
-
-    const hasWeighment = !!latestWeighment;
-    const isPendingDocument = latestWeighment?.isPendingDocument === true;
     const isFullyDocumented = hasWeighment && !isPendingDocument;
     const isCompleted = isFullyDocumented && latestWeighment?.status === 'success';
 
@@ -155,7 +195,7 @@ export function WeighmentWorkflow({ rake, disabled }: WeighmentWorkflowProps) {
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">
                     {context === 'pending'
-                        ? 'Total net weight must match your manual entry exactly, or the upload will be rejected.'
+                        ? 'The slip may show a different total net than your approximate manual entry; stock will be adjusted automatically when the document is processed.'
                         : 'Upload weighment slip as PDF. If unsupported, upload the filled Excel template (XLSX).'}
                 </p>
                 <InputError message={errors?.weighment_pdf} />
@@ -297,9 +337,9 @@ export function WeighmentWorkflow({ rake, disabled }: WeighmentWorkflowProps) {
                 ) : isPendingDocument ? (
                     <div className="space-y-6">
                         <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100">
-                            Manual net weight is saved and stock has been updated. Upload the weighment PDF or XLSX
-                            when you have it — the document total net must match{' '}
-                            <strong>{String(latestWeighment?.total_weight_mt ?? '')} MT</strong>.
+                            Approximate manual net (<strong>{String(latestWeighment?.total_weight_mt ?? '')} MT</strong>)
+                            is saved and stock has been updated. When you upload the official PDF or XLSX, totals from
+                            the document will replace this entry and coal stock will be adjusted by the difference.
                         </div>
                         <div className="grid gap-4 md:grid-cols-3">
                             <div>
@@ -319,6 +359,74 @@ export function WeighmentWorkflow({ rake, disabled }: WeighmentWorkflowProps) {
                                 <p className="text-sm">{latestWeighment?.train_speed_kmph ?? '—'} km/h</p>
                             </div>
                         </div>
+                        <form onSubmit={handleEditManualSubmit} className="space-y-4 rounded-md border p-4">
+                            <div className="text-sm font-medium">Edit manual totals</div>
+                            <p className="text-xs text-muted-foreground">
+                                Adjust net weight or header fields before the document is uploaded. Stock will be
+                                updated by the difference from the previous saved net.
+                            </p>
+                            <div className="grid gap-4 md:grid-cols-2">
+                                <div className="md:col-span-2">
+                                    <Label htmlFor="edit_total_net_weight_mt">Total net weight (MT)</Label>
+                                    <Input
+                                        id="edit_total_net_weight_mt"
+                                        name="total_net_weight_mt"
+                                        type="number"
+                                        step="0.01"
+                                        min="0.01"
+                                        value={editManualForm.data.total_net_weight_mt}
+                                        onChange={(e) => editManualForm.setData('total_net_weight_mt', e.target.value)}
+                                        required
+                                        disabled={disabled}
+                                        data-pan="rake-weighment-edit-net-mt"
+                                    />
+                                    <InputError message={editManualForm.errors.total_net_weight_mt} />
+                                </div>
+                                <div>
+                                    <Label htmlFor="edit_from_station">From station</Label>
+                                    <Input
+                                        id="edit_from_station"
+                                        name="from_station"
+                                        value={editManualForm.data.from_station}
+                                        onChange={(e) => editManualForm.setData('from_station', e.target.value)}
+                                        disabled={disabled}
+                                    />
+                                    <InputError message={editManualForm.errors.from_station} />
+                                </div>
+                                <div>
+                                    <Label htmlFor="edit_to_station">To station</Label>
+                                    <Input
+                                        id="edit_to_station"
+                                        name="to_station"
+                                        value={editManualForm.data.to_station}
+                                        onChange={(e) => editManualForm.setData('to_station', e.target.value)}
+                                        disabled={disabled}
+                                    />
+                                    <InputError message={editManualForm.errors.to_station} />
+                                </div>
+                                <div className="md:col-span-2">
+                                    <Label htmlFor="edit_priority_number">Priority number</Label>
+                                    <Input
+                                        id="edit_priority_number"
+                                        name="priority_number"
+                                        value={editManualForm.data.priority_number}
+                                        onChange={(e) => editManualForm.setData('priority_number', e.target.value)}
+                                        disabled={disabled}
+                                    />
+                                    <InputError message={editManualForm.errors.priority_number} />
+                                </div>
+                            </div>
+                            <div className="flex justify-end">
+                                <Button
+                                    type="submit"
+                                    variant="secondary"
+                                    disabled={disabled || editManualForm.processing}
+                                    data-pan="rake-weighment-edit-manual-submit"
+                                >
+                                    Save changes
+                                </Button>
+                            </div>
+                        </form>
                         {renderUploadForm('pending')}
                     </div>
                 ) : (

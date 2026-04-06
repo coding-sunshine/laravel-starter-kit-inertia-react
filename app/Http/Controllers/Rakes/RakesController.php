@@ -148,6 +148,9 @@ final class RakesController extends Controller
                     'attempt_no' => $rw->attempt_no,
                     'wagonWeights' => $wagonWeights,
                     'isPendingDocument' => $isPendingDocument,
+                    'from_station' => $rw->from_station,
+                    'to_station' => $rw->to_station,
+                    'priority_number' => $rw->priority_number,
                 ];
             })
             ->values()
@@ -515,12 +518,8 @@ final class RakesController extends Controller
         if ($fitWagons->isEmpty() || ! $fitWagons->every(fn ($w) => $loadedWagonIds->has($w->id))) {
             return false;
         }
-        $weighmentSuccess = $rake->rakeWeighments->contains(
-            static fn ($rw): bool => $rw->status === 'success'
-                && $rw->rakeWagonWeighments->isNotEmpty(),
-        );
 
-        return $weighmentSuccess;
+        return $rake->rakeWeighments->isNotEmpty();
     }
 
     /**

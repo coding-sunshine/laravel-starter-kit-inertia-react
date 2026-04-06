@@ -37,9 +37,7 @@ final class IndentDataTable extends AbstractDataTable
             if ($rake->relationLoaded('rakeWeighments')) {
                 $hasWeighmentPdf = $rake->rakeWeighments->isNotEmpty();
             } else {
-                $hasWeighmentPdf = $rake->rakeWeighments()
-                    ->whereNotNull('pdf_file_path')
-                    ->exists();
+                $hasWeighmentPdf = $rake->rakeWeighments()->exists();
             }
         }
 
@@ -95,7 +93,7 @@ final class IndentDataTable extends AbstractDataTable
             ->with([
                 'siding:id,name,code',
                 'rake:id,indent_id,rake_number',
-                'rake.rakeWeighments' => fn ($q) => $q->whereNotNull('pdf_file_path')->select(['id', 'rake_id', 'pdf_file_path']),
+                'rake.rakeWeighments' => fn ($q) => $q->select(['id', 'rake_id']),
             ])
             ->whereIn('siding_id', $sidingIds);
 

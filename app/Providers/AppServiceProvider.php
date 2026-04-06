@@ -239,6 +239,8 @@ final class AppServiceProvider extends ServiceProvider
             'weighments-dialog-manual-net-mt',
             'rake-weighment-manual-net-mt',
             'rake-weighment-manual-submit',
+            'rake-weighment-edit-net-mt',
+            'rake-weighment-edit-manual-submit',
             'rake-weighment-upload-document-submit',
             'rake-rr-upload-pdf-button',
             'rake-rr-upload-primary-pdf-button',

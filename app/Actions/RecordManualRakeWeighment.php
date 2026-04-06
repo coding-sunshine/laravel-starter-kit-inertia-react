@@ -82,6 +82,7 @@ final readonly class RecordManualRakeWeighment
                     $rake->id,
                     'Manual rake weighment',
                     $userId,
+                    $weighment->id,
                 );
             }
 

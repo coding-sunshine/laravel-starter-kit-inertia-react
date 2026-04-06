@@ -274,6 +274,7 @@ return [
         'rakes.load.confirm-dispatch' => 'sections.rakes.update',
         'rakes.weighments.store' => 'sections.rakes.upload',
         'rakes.weighments.manual' => 'sections.rakes.upload',
+        'rakes.weighments.update-manual' => 'sections.rakes.upload',
         'rakes.weighments.destroy' => 'sections.rakes.update',
         'rakes.comparison' => 'sections.rakes.view',
         'rakes.guard-inspection.store' => 'sections.rakes.update',

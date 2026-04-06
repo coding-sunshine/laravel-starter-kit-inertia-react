@@ -253,10 +253,10 @@ final class RakeDataTable extends AbstractDataTable
             && $fitWagons->every(fn ($w) => $positivelyLoadedWagonIds->has($w->id));
         $guardInspections = $model->relationLoaded('guardInspections') ? $model->guardInspections : $model->guardInspections()->get();
         $isGuardApproved = $guardInspections->isNotEmpty() && $guardInspections->first()?->is_approved === true;
-        $rakeWeighmentsWithPdf = $model->relationLoaded('rakeWeighments')
-            ? $model->rakeWeighments->whereNotNull('pdf_file_path')
-            : $model->rakeWeighments()->whereNotNull('pdf_file_path')->get();
-        $isWeighmentCompleted = $rakeWeighmentsWithPdf->contains('status', 'success');
+        $rakeWeighments = $model->relationLoaded('rakeWeighments')
+            ? $model->rakeWeighments
+            : $model->rakeWeighments()->get();
+        $isWeighmentCompleted = $rakeWeighments->isNotEmpty();
         $hasRrDocument = $model->relationLoaded('rrDocument')
             ? $model->rrDocument !== null
             : $model->rrDocument()->exists();
