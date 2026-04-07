@@ -256,10 +256,10 @@ export function Filters({ columns, serverFilters, layout = 'popover' }: FiltersP
                                 variant="inline"
                                 hideOperator
                                 fixedOperator={
-                                    col.id === 'indent_date' || col.id === 'expected_loading_date'
+                                    col.type === 'date'
                                         ? 'between'
-                                        : col.id === 'fnr_number'
-                                          ? 'contains'
+                                        : col.type === 'text'
+                                          ? (col.textFixedOperator ?? 'contains')
                                           : undefined
                                 }
                             />
@@ -317,6 +317,11 @@ export function Filters({ columns, serverFilters, layout = 'popover' }: FiltersP
                                 value={activeFilters[selectedColumn.id]}
                                 onSubmit={(op, vals) =>
                                     handleFilterSubmit(selectedColumn.id, op, vals)
+                                }
+                                fixedOperator={
+                                    selectedColumn.type === 'text'
+                                        ? selectedColumn.textFixedOperator
+                                        : undefined
                                 }
                             />
                         </div>

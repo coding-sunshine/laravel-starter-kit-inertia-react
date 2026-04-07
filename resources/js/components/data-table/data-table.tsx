@@ -336,6 +336,7 @@ function buildFilterColumns(columns: DataTableColumnDef[]): FilterColumn[] {
                 icon: TYPE_ICON_MAP[col.type],
                 ...(col.options ? { options: col.options } : {}),
                 ...(col.searchThreshold != null ? { searchThreshold: col.searchThreshold } : {}),
+                ...(col.filterTextOperator != null ? { textFixedOperator: col.filterTextOperator } : {}),
             };
         });
 }

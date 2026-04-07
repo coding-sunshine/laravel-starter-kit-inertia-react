@@ -11,6 +11,8 @@ export interface DataTableColumnDef {
     icon?: string | null;
     searchThreshold?: number | null;
     group?: string | null;
+    /** Passed through to filter UI for text columns (inline: exact vs contains). */
+    filterTextOperator?: "contains" | "eq";
 }
 
 export interface DataTableQuickView {

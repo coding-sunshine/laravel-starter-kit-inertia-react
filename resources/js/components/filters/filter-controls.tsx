@@ -455,9 +455,12 @@ export function TextFilter({
     variant = 'default',
     fixedOperator,
 }: FilterControlProps) {
-    const containsOnly = fixedOperator === 'contains';
+    const fixedTextOp =
+        fixedOperator === 'contains' || fixedOperator === 'eq' ? fixedOperator : null;
+    const containsOnly = fixedTextOp === 'contains';
+    const equalsOnly = fixedTextOp === 'eq';
     const [operator, setOperator] = useState(
-        containsOnly ? 'contains' : value?.operator || DEFAULT_OPERATOR.text,
+        fixedTextOp ? fixedTextOp : value?.operator || DEFAULT_OPERATOR.text,
     );
     const [text, setText] = useState(value?.values[0] ?? '');
 
@@ -468,13 +471,13 @@ export function TextFilter({
     const skipInitialContainsDebounceRef = useRef(true);
 
     useEffect(() => {
-        if (containsOnly) {
-            setOperator('contains');
+        if (fixedTextOp) {
+            setOperator(fixedTextOp);
         } else {
             setOperator(value?.operator || DEFAULT_OPERATOR.text);
         }
         setText(value?.values[0] ?? '');
-    }, [value, containsOnly]);
+    }, [value, fixedTextOp]);
 
     const isInline = variant === 'inline';
 
@@ -511,7 +514,7 @@ export function TextFilter({
     }, [text, containsOnly, isInline]);
 
     function submit() {
-        const op = containsOnly ? 'contains' : operator;
+        const op = fixedTextOp ?? operator;
         if (text) {
             onSubmit(op, [text]);
         } else {
@@ -536,18 +539,25 @@ export function TextFilter({
         }
     }
 
+    const placeholder = equalsOnly ? 'Exact value…' : 'Search…';
+
     if (isInline) {
         return (
             <div className="flex min-w-0 flex-col gap-1">
                 <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-end">
-                    {!hideOperator && !containsOnly && (
+                    {!hideOperator && !fixedTextOp && (
                         <OperatorSelect type="text" value={operator} onChange={handleOperatorChange} />
                     )}
                     <Input
-                        placeholder="Search…"
+                        placeholder={placeholder}
                         value={text}
                         onChange={(e) => setText(e.target.value)}
                         onKeyDown={handleKeyDown}
+                        onBlur={() => {
+                            if (equalsOnly) {
+                                submit();
+                            }
+                        }}
                         autoFocus={false}
                         className="h-8 min-w-0 flex-1 text-sm"
                     />
@@ -558,17 +568,23 @@ export function TextFilter({
                         applies immediately)
                     </p>
                 )}
+                {equalsOnly && (
+                    <p className="text-xs text-muted-foreground">
+                        Type the full rake number (exact match). Press Enter or leave the field to
+                        apply.
+                    </p>
+                )}
             </div>
         );
     }
 
     return (
         <div className="flex w-[260px] flex-col gap-2 p-2">
-            {!hideOperator && !containsOnly && (
+            {!hideOperator && !fixedTextOp && (
                 <OperatorSelect type="text" value={operator} onChange={handleOperatorChange} />
             )}
             <Input
-                placeholder="Search…"
+                placeholder={placeholder}
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 onKeyDown={handleKeyDown}

@@ -73,6 +73,7 @@ final class RakeController extends Controller
                 'siding_id' => $dto->siding_id,
                 'siding_code' => $dto->siding_code,
                 'siding_name' => $dto->siding_name,
+                'destination' => $dto->destination,
                 'data_source' => $dto->data_source,
                 'rr_document_id' => $dto->rr_document_id,
                 'pdf_download_url' => $dto->pdf_download_url,

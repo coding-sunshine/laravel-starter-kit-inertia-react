@@ -1,10 +1,8 @@
-import { DataTable } from 'laravel-data-table';
+import { DataTable } from '@/components/data-table/data-table';
 import type { DataTableResponse } from 'laravel-data-table';
 import Heading from '@/components/heading';
 import type { WorkflowSteps } from '@/components/rake-workflow-progress';
 import { RakeWorkflowProgressCell } from '@/components/rake-workflow-progress';
-import { RrmcsGuidance } from '@/components/rrmcs-guidance';
-import { StatusPill } from '@/components/status-pill';
 import {
     Card,
     CardContent,
@@ -18,6 +16,7 @@ import { create as indentsCreate } from '@/routes/indents';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
 import { Plus, Train } from 'lucide-react';
+import { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 
 interface RakeRow {
@@ -31,6 +30,7 @@ interface RakeRow {
     dispatch_time: string | null;
     siding_code: string | null;
     siding_name: string | null;
+    destination: string | null;
     data_source: string | null;
     rr_document_id: number | null;
     pdf_download_url: string | null;
@@ -47,6 +47,19 @@ export default function RakesIndex({ tableData }: Props) {
         { title: 'Dashboard', href: dashboard().url },
         { title: 'Rakes', href: '/rakes' },
     ];
+
+    /** Rake #: exact match only (client expects the number they type to be the whole ID). */
+    const tableDataWithExactRakeNumber = useMemo(
+        () => ({
+            ...tableData,
+            columns: tableData.columns.map((col) =>
+                col.id === 'rake_number'
+                    ? { ...col, filterTextOperator: 'eq' as const }
+                    : col,
+            ),
+        }),
+        [tableData],
+    );
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -78,7 +91,7 @@ export default function RakesIndex({ tableData }: Props) {
                     </CardHeader>
                     <CardContent>
                         <DataTable<RakeRow>
-                            tableData={tableData}
+                            tableData={tableDataWithExactRakeNumber}
                             tableName="rakes"
                             rowClassName={(row) =>
                                 row.workflow_has_pending
@@ -120,8 +133,8 @@ export default function RakesIndex({ tableData }: Props) {
                                         ? `${row.siding_code} (${row.siding_name})`
                                         : '—';
                                 }
-                                if (columnId === 'state') {
-                                    return <StatusPill status={row.state} />;
+                                if (columnId === 'destination') {
+                                    return row.destination ? row.destination : '—';
                                 }
                                 if (columnId === 'progress') {
                                     return (
@@ -141,6 +154,12 @@ export default function RakesIndex({ tableData }: Props) {
                                         : '—';
                                 }
                                 return undefined;
+                            }}
+                            options={{
+                                exports: false,
+                                quickViews: false,
+                                customQuickViews: false,
+                                filtersLayout: 'inline',
                             }}
                         />
                     </CardContent>
