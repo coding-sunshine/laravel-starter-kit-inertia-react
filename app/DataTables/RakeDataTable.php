@@ -13,6 +13,7 @@ use Machour\DataTable\Columns\Column;
 use Machour\DataTable\Filters\OperatorFilter;
 use Machour\DataTable\QuickView;
 use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\AllowedSort;
 
 final class RakeDataTable extends AbstractDataTable
 {
@@ -73,11 +74,11 @@ final class RakeDataTable extends AbstractDataTable
                 id: 'siding_code',
                 label: 'Siding',
                 type: 'option',
-                sortable: false,
+                sortable: true,
                 filterable: true,
                 options: self::filterableSidingOptions(),
             ),
-            new Column(id: 'destination', label: 'Destination', type: 'text', sortable: false, filterable: false),
+            new Column(id: 'destination', label: 'Destination', type: 'text', sortable: true, filterable: false),
             new Column(id: 'loading_date', label: 'Loading date', type: 'date', sortable: true, filterable: true),
             new Column(id: 'progress', label: 'Progress', type: 'text', sortable: false, filterable: false),
         ];
@@ -179,7 +180,24 @@ final class RakeDataTable extends AbstractDataTable
 
     public static function tableAllowedSorts(): array
     {
-        return ['rake_number', 'loading_date'];
+        return [
+            'rake_number',
+            AllowedSort::callback('siding_code', static function (Builder $query, bool $descending, string $_property): void {
+                $direction = $descending ? 'desc' : 'asc';
+                $rakesTable = $query->getModel()->getTable();
+                $sidingsTable = (new Siding())->getTable();
+                $query->leftJoin($sidingsTable, "{$sidingsTable}.id", '=', "{$rakesTable}.siding_id")
+                    ->select("{$rakesTable}.*")
+                    ->orderBy("{$sidingsTable}.name", $direction)
+                    ->orderBy("{$sidingsTable}.code", $direction);
+            }),
+            AllowedSort::callback('destination', static function (Builder $query, bool $descending, string $_property): void {
+                $direction = $descending ? 'desc' : 'asc';
+                $query->orderBy($query->qualifyColumn('destination'), $direction)
+                    ->orderBy($query->qualifyColumn('destination_code'), $direction);
+            }),
+            'loading_date',
+        ];
     }
 
     /**
