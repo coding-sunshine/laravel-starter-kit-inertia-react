@@ -211,6 +211,7 @@ final class AppServiceProvider extends ServiceProvider
             'penalty-dispute-drill',
             'penalty-cost-savings',
             'vehicle-dispatch-tab-main-data',
+            'vehicle-dispatch-import-preview-accordion',
             'vehicle-dispatch-tab-dpr',
             'vehicle-dispatch-generate-dpr',
             'dashboard-coal-transport-export-xlsx',
