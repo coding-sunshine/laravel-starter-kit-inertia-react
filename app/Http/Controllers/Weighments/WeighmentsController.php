@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Weighments;
 
 use App\Actions\DeleteStandaloneHistoricalWeighmentAction;
 use App\Actions\RecordManualRakeWeighment;
+use App\DataTables\WeighmentsRakeDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\Rake;
 use App\Models\Siding;
@@ -29,33 +30,8 @@ final class WeighmentsController extends Controller
 {
     public function index(Request $request): Response
     {
-        /** @var User $user */
-        $user = $request->user();
-
-        $sidingIds = $user->isSuperAdmin()
-            ? Siding::query()->pluck('id')->all()
-            : $user->sidings()->get()->pluck('id')->all();
-
-        // Backward compatibility: some legacy users only have `users.siding_id`
-        // and no rows in the `user_siding` pivot table.
-        if (! $user->isSuperAdmin() && $sidingIds === [] && $user->siding_id !== null) {
-            $sidingIds = [(int) $user->siding_id];
-        }
-
-        $query = Weighment::query()
-            ->with('rake')
-            ->orderByDesc('created_at');
-
-        if ($sidingIds === []) {
-            $query->whereRaw('0 = 1');
-        } else {
-            $query->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
-        }
-
-        $weighments = $query->limit(100)->get();
-
         return Inertia::render('weighments/index', [
-            'weighments' => $weighments,
+            'tableData' => WeighmentsRakeDataTable::makeTable($request),
         ]);
     }
 

@@ -115,6 +115,14 @@ final class RakeWeighmentController extends Controller
             abort(403);
         }
 
+        $canPatchManual = $user->can('bypass-permissions')
+            || $user->hasPermissionTo('sections.rakes.upload')
+            || $user->hasPermissionTo('sections.weighments.upload');
+
+        if (! $canPatchManual) {
+            abort(403);
+        }
+
         try {
             $updateManual->handle($rake, $rakeWeighment, $request->updatePayload(), (int) $user->id);
         } catch (InvalidArgumentException $e) {
@@ -123,7 +131,7 @@ final class RakeWeighmentController extends Controller
                 ->withInput();
         }
 
-        return to_route('rakes.show', $rake)
+        return back(fallback: route('rakes.show', $rake))
             ->with('success', 'Manual weighment updated.');
     }
 
@@ -133,8 +141,10 @@ final class RakeWeighmentController extends Controller
      * Business rule: a rake has at most one weighment (second upload is blocked until this is deleted).
      * Stock reversal and file/row removal both use that single `rake_weighments` row (plus legacy
      * `stock_ledgers` rows with null `rake_weighment_id` for reversal only).
+     *
+     * Query `return_to=weighments`: redirect to the weighments index (hub); otherwise `rakes.show`.
      */
-    public function destroy(Rake $rake): RedirectResponse
+    public function destroy(Request $request, Rake $rake): RedirectResponse
     {
         $userId = (int) auth()->id();
 
@@ -204,6 +214,11 @@ final class RakeWeighmentController extends Controller
                 ->sum('amount');
 
             $penaltyCharge->update(['amount' => round((float) $total, 2)]);
+        }
+
+        if ($request->query('return_to') === 'weighments') {
+            return to_route('weighments.index')
+                ->with('success', 'Rake weighment data deleted.');
         }
 
         return to_route('rakes.show', $rake)

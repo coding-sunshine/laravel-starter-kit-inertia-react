@@ -355,6 +355,7 @@ export function DataTable<TData extends object>({
     options: optionsOverride,
     preserveSearchParams,
     toolbarPosition = "right",
+    onRowClick,
 }: DataTableProps<TData>) {
     const resolvedOptions = useMemo<DataTableOptions>(() => ({
         quickViews: true,
@@ -677,10 +678,21 @@ export function DataTable<TData extends object>({
                                 <TableRow
                                     key={row.id}
                                     data-state={row.getIsSelected() ? "selected" : undefined}
+                                    onClick={(e) => {
+                                        if (!onRowClick) {
+                                            return;
+                                        }
+                                        const t = e.target as HTMLElement;
+                                        if (t.closest("button, a, [role=\"checkbox\"], [data-row-click-ignore]")) {
+                                            return;
+                                        }
+                                        onRowClick(row.original);
+                                    }}
                                     className={cn(
                                         index % 2 === 1 && "bg-muted/40",
                                         row.getIsSelected() && "bg-primary/5",
                                         rowClassName?.(row.original),
+                                        onRowClick && "cursor-pointer",
                                     )}
                                 >
                                     {row.getVisibleCells().map((cell) => {

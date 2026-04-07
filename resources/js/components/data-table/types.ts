@@ -91,4 +91,6 @@ export interface DataTableProps<TData extends object> {
     preserveSearchParams?: string[];
     /** Position table toolbar controls on desktop. */
     toolbarPosition?: 'left' | 'right';
+    /** When set, row click opens details (ignored when the click target is a button, link, or row checkbox). */
+    onRowClick?: (row: TData) => void;
 }
