@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\DataTables;
 
 use App\Models\Indent;
+use App\Models\Rake;
 use App\Models\Siding;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
@@ -12,6 +13,7 @@ use Machour\DataTable\AbstractDataTable;
 use Machour\DataTable\Columns\Column;
 use Machour\DataTable\Filters\OperatorFilter;
 use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\AllowedSort;
 
 final class IndentDataTable extends AbstractDataTable
 {
@@ -64,12 +66,40 @@ final class IndentDataTable extends AbstractDataTable
 
     public static function tableColumns(): array
     {
+        $user = request()->user();
+        $sidingIds = $user && $user->isSuperAdmin()
+            ? Siding::query()->orderBy('name')->pluck('id')->all()
+            : ($user ? $user->sidings()->orderBy('name')->get()->pluck('id')->all() : []);
+
+        if ($user && ! $user->isSuperAdmin() && $sidingIds === [] && $user->siding_id !== null) {
+            $sidingIds = [(int) $user->siding_id];
+        }
+
+        /** @var list<array{label: string, value: string}> $sidingFilterOptions */
+        $sidingFilterOptions = [];
+        if ($sidingIds !== []) {
+            $sidings = Siding::query()
+                ->whereIn('id', $sidingIds)
+                ->orderBy('name')
+                ->get(['id', 'name', 'code']);
+            foreach ($sidings as $siding) {
+                $label = $siding->name;
+                if ($siding->code) {
+                    $label .= ' ('.$siding->code.')';
+                }
+                $sidingFilterOptions[] = [
+                    'label' => $label,
+                    'value' => (string) $siding->id,
+                ];
+            }
+        }
+
         return [
-            new Column(id: 'rake_number', label: 'Rake #', type: 'text', sortable: false, filterable: false),
+            new Column(id: 'rake_number', label: 'Rake #', type: 'text', sortable: true, filterable: false),
             new Column(id: 'indent_number', label: 'E-Demand number', type: 'text', sortable: true, filterable: false),
             new Column(id: 'indent_date', label: 'Indent date', type: 'date', sortable: true, filterable: true),
             new Column(id: 'fnr_number', label: 'FNR', type: 'text', sortable: true, filterable: true),
-            new Column(id: 'siding', label: 'Siding', type: 'text', sortable: false, filterable: true),
+            new Column(id: 'siding', label: 'Siding', type: 'option', sortable: false, filterable: true, options: $sidingFilterOptions),
             new Column(id: 'expected_loading_date', label: 'Expected loading', type: 'date', sortable: true, filterable: true),
             new Column(id: 'state', label: 'State', type: 'text', sortable: true, filterable: false),
             new Column(id: 'e_demand_reference_id', label: 'e-Demand ref', type: 'text', sortable: false, filterable: false),
@@ -175,6 +205,22 @@ final class IndentDataTable extends AbstractDataTable
 
     public static function tableAllowedSorts(): array
     {
-        return ['indent_number', 'indent_date', 'expected_loading_date', 'fnr_number', 'state'];
+        return [
+            AllowedSort::callback('rake_number', static function (Builder $query, bool $descending, string $_property): void {
+                $direction = $descending ? 'desc' : 'asc';
+                $query->orderBy(
+                    Rake::query()
+                        ->select('rake_number')
+                        ->whereColumn('rakes.indent_id', 'indents.id')
+                        ->limit(1),
+                    $direction,
+                );
+            }),
+            'indent_number',
+            'indent_date',
+            'expected_loading_date',
+            'fnr_number',
+            'state',
+        ];
     }
 }

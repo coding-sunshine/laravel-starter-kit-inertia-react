@@ -486,6 +486,8 @@ export function DataTable<TData extends object>({
         [tableData.columns],
     );
 
+    const filtersLayout = resolvedOptions.filtersLayout ?? "popover";
+
     const selectedRows = useMemo(
         () => table.getFilteredSelectedRowModel().rows.map((r) => r.original),
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -526,11 +528,12 @@ export function DataTable<TData extends object>({
                 <div className="flex items-center gap-2 py-1">
                     {mobileToolbar}
                     <div className="hidden items-center gap-2 md:flex">{desktopToolbar}</div>
-                    {resolvedOptions.filters && (
+                    {resolvedOptions.filters && filtersLayout === "popover" && (
                         <div className="ml-auto flex-1">
                             <Filters
                                 columns={filterColumns}
                                 serverFilters={meta.filters as Record<string, unknown>}
+                                layout="popover"
                             />
                         </div>
                     )}
@@ -538,16 +541,24 @@ export function DataTable<TData extends object>({
             ) : (
                 <div className="flex items-center justify-between gap-2 py-1">
                     <div className="flex-1 pl-6">
-                        {resolvedOptions.filters && (
+                        {resolvedOptions.filters && filtersLayout === "popover" && (
                             <Filters
                                 columns={filterColumns}
                                 serverFilters={meta.filters as Record<string, unknown>}
+                                layout="popover"
                             />
                         )}
                     </div>
                     {mobileToolbar}
                     <div className="hidden items-center gap-2 md:flex">{desktopToolbar}</div>
                 </div>
+            )}
+            {resolvedOptions.filters && filtersLayout === "inline" && (
+                <Filters
+                    columns={filterColumns}
+                    serverFilters={meta.filters as Record<string, unknown>}
+                    layout="inline"
+                />
             )}
             {hasBulkActions && selectedRows.length > 0 && (
                 <div className="flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2">

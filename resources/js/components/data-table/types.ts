@@ -41,6 +41,8 @@ export interface DataTableOptions {
     customQuickViews: boolean;
     exports: boolean;
     filters: boolean;
+    /** `inline` shows all filter fields outside the Filtrer popover (toolbar only). */
+    filtersLayout?: 'popover' | 'inline';
     columnVisibility: boolean;
     columnOrdering: boolean;
 }
