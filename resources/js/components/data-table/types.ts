@@ -11,6 +11,8 @@ export interface DataTableColumnDef {
     icon?: string | null;
     searchThreshold?: number | null;
     group?: string | null;
+    /** Passed through to filter UI for text columns (inline: exact vs contains). */
+    filterTextOperator?: "contains" | "eq";
 }
 
 export interface DataTableQuickView {
@@ -41,6 +43,8 @@ export interface DataTableOptions {
     customQuickViews: boolean;
     exports: boolean;
     filters: boolean;
+    /** `inline` shows all filter fields outside the Filtrer popover (toolbar only). */
+    filtersLayout?: 'popover' | 'inline';
     columnVisibility: boolean;
     columnOrdering: boolean;
 }
@@ -83,4 +87,10 @@ export interface DataTableProps<TData extends object> {
     rowClassName?: (row: TData) => string;
     groupClassName?: Record<string, string>;
     options?: Partial<DataTableOptions>;
+    /** Query param keys to copy from the current URL when applying a quick view (e.g. siding_id). */
+    preserveSearchParams?: string[];
+    /** Position table toolbar controls on desktop. */
+    toolbarPosition?: 'left' | 'right';
+    /** When set, row click opens details (ignored when the click target is a button, link, or row checkbox). */
+    onRowClick?: (row: TData) => void;
 }

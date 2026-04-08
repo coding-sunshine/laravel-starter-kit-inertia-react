@@ -4,17 +4,20 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Rakes;
 
+use App\Actions\RecordManualRakeWeighment;
+use App\Actions\UpdateManualRakeWeighment;
 use App\Actions\UpdateStockLedger;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreManualRakeWeighmentRequest;
+use App\Http\Requests\UpdateManualRakeWeighmentRequest;
 use App\Models\AppliedPenalty;
 use App\Models\Rake;
 use App\Models\RakeCharge;
-use App\Models\SidingOpeningBalance;
-use App\Models\StockLedger;
+use App\Models\RakeWeighment;
+use App\Models\User;
 use App\Services\RakeWeighmentPdfImporter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
@@ -71,71 +74,106 @@ final class RakeWeighmentController extends Controller
             ->with('success', 'Weighment recorded.');
     }
 
-    public function destroy(Rake $rake): RedirectResponse
+    public function storeManual(
+        StoreManualRakeWeighmentRequest $request,
+        Rake $rake,
+        RecordManualRakeWeighment $recordManual,
+    ): RedirectResponse {
+        /** @var User $user */
+        $user = $request->user();
+
+        if (! $user->canAccessSiding((int) $rake->siding_id)) {
+            abort(403);
+        }
+
+        try {
+            $recordManual->handle($rake, $request->manualPayload(), (int) $user->id);
+        } catch (InvalidArgumentException $e) {
+            return back()
+                ->withErrors(['total_net_weight_mt' => $e->getMessage()])
+                ->withInput();
+        }
+
+        return to_route('rakes.show', $rake)
+            ->with('success', 'Manual weighment recorded. Upload the document when available.');
+    }
+
+    public function updateManual(
+        UpdateManualRakeWeighmentRequest $request,
+        Rake $rake,
+        RakeWeighment $rakeWeighment,
+        UpdateManualRakeWeighment $updateManual,
+    ): RedirectResponse {
+        /** @var User $user */
+        $user = $request->user();
+
+        if ($rakeWeighment->rake_id !== $rake->id) {
+            abort(404);
+        }
+
+        if (! $user->canAccessSiding((int) $rake->siding_id)) {
+            abort(403);
+        }
+
+        $canPatchManual = $user->can('bypass-permissions')
+            || $user->hasPermissionTo('sections.rakes.upload')
+            || $user->hasPermissionTo('sections.weighments.upload');
+
+        if (! $canPatchManual) {
+            abort(403);
+        }
+
+        try {
+            $updateManual->handle($rake, $rakeWeighment, $request->updatePayload(), (int) $user->id);
+        } catch (InvalidArgumentException $e) {
+            return back()
+                ->withErrors(['total_net_weight_mt' => $e->getMessage()])
+                ->withInput();
+        }
+
+        return back(fallback: route('rakes.show', $rake))
+            ->with('success', 'Manual weighment updated.');
+    }
+
+    /**
+     * Removes all weighment data for this rake and restores siding stock.
+     *
+     * Business rule: a rake has at most one weighment (second upload is blocked until this is deleted).
+     * Stock reversal and file/row removal both use that single `rake_weighments` row (plus legacy
+     * `stock_ledgers` rows with null `rake_weighment_id` for reversal only).
+     *
+     * Query `return_to=weighments`: redirect to the weighments index (hub); otherwise `rakes.show`.
+     */
+    public function destroy(Request $request, Rake $rake): RedirectResponse
     {
         $userId = (int) auth()->id();
 
-        // Get the single dispatch entry for this rake
-        $dispatch = StockLedger::query()
-            ->where('rake_id', $rake->id)
-            ->where('transaction_type', 'dispatch')
-            ->latest('id')
-            ->first();
+        $rake->loadMissing('siding');
+        $siding = $rake->siding;
 
-        if ($dispatch) {
-            DB::transaction(function () use ($dispatch, $rake, $userId) {
-                $sidingId = $dispatch->siding_id;
+        $weighment = $rake->rakeWeighments()->orderBy('id')->first();
 
-                if (! $sidingId) {
-                    return;
-                }
-                $alreadyReversed = StockLedger::query()
-                    ->where('reference_number', 'REV-DISP-'.$dispatch->id)
-                    ->lockForUpdate()
-                    ->exists();
+        if ($siding !== null) {
+            $this->updateStockLedger->reverseStockLedgerNetForRakeWeighment(
+                $siding,
+                (int) $rake->id,
+                null,
+                $userId,
+                'Reversal for deleted rake #'.$rake->id.' (legacy ledger rows)',
+            );
 
-                if ($alreadyReversed) {
-                    return;
-                }
-
-                // reverse dispatch (negative → positive)
-                $reverseQty = abs((float) $dispatch->quantity_mt);
-
-                //  lock latest ledger row
-                $lastLedger = StockLedger::query()
-                    ->where('siding_id', $sidingId)
-                    ->lockForUpdate()
-                    ->latest('id')
-                    ->first();
-
-                $opening = $lastLedger
-                    ? (float) $lastLedger->closing_balance_mt
-                    : SidingOpeningBalance::getOpeningBalanceForSiding($sidingId);
-
-                $closing = round($opening + $reverseQty, 2);
-
-                StockLedger::create([
-                    'siding_id' => $sidingId,
-                    'transaction_type' => 'correction',
-                    'rake_id' => $rake->id,
-                    'quantity_mt' => $reverseQty, //  positive
-                    'opening_balance_mt' => $opening,
-                    'closing_balance_mt' => $closing,
-                    'reference_number' => 'REV-DISP-'.$dispatch->id,
-                    'remarks' => 'Reversal for deleted rake #'.$rake->id,
-                    'created_by' => $userId ?: null,
-                ]);
-
-                DB::afterCommit(function () use ($sidingId, $closing) {
-                    event(new \App\Events\CoalStockUpdated($sidingId, $closing));
-                });
-            });
+            if ($weighment !== null) {
+                $this->updateStockLedger->reverseStockLedgerNetForRakeWeighment(
+                    $siding,
+                    (int) $rake->id,
+                    (int) $weighment->id,
+                    $userId,
+                    'Reversal for deleted rake weighment #'.$weighment->id,
+                );
+            }
         }
 
-        // 🔹 Delete weighment files + records
-        $weighments = $rake->rakeWeighments()->get();
-
-        foreach ($weighments as $weighment) {
+        if ($weighment !== null) {
             if ($weighment->pdf_file_path) {
                 Storage::disk('public')->delete($weighment->pdf_file_path);
             }
@@ -176,6 +214,11 @@ final class RakeWeighmentController extends Controller
                 ->sum('amount');
 
             $penaltyCharge->update(['amount' => round((float) $total, 2)]);
+        }
+
+        if ($request->query('return_to') === 'weighments') {
+            return to_route('weighments.index')
+                ->with('success', 'Rake weighment data deleted.');
         }
 
         return to_route('rakes.show', $rake)

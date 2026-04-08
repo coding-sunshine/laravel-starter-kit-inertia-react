@@ -55,9 +55,15 @@ interface UseDataTableOptions<TData> {
     tableData: DataTableResponse<TData>;
     tableName: string;
     columnDefs: ColumnDef<TData>[];
+    preserveSearchParams?: string[];
 }
 
-export function useDataTable<TData>({ tableData, tableName, columnDefs }: UseDataTableOptions<TData>) {
+export function useDataTable<TData>({
+    tableData,
+    tableName,
+    columnDefs,
+    preserveSearchParams = [],
+}: UseDataTableOptions<TData>) {
     const { meta } = tableData;
 
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(() =>
@@ -161,13 +167,20 @@ export function useDataTable<TData>({ tableData, tableName, columnDefs }: UseDat
                 searchParams.set("per_page", perPage);
             }
 
+            for (const key of preserveSearchParams) {
+                const v = currentUrl.searchParams.get(key);
+                if (v !== null && v !== "") {
+                    searchParams.set(key, v);
+                }
+            }
+
             router.get(
                 currentUrl.pathname + "?" + searchParams.toString(),
                 {},
                 { preserveScroll: true },
             );
         },
-        [],
+        [preserveSearchParams],
     );
 
     const applyColumns = useCallback(

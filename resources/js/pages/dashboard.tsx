@@ -954,23 +954,12 @@ function ExecutiveYesterdaySection({
 }) {
     const [executiveData, setExecutiveData] = useState<ExecutiveYesterdayData>(data);
 
-    const [roadFrom, setRoadFrom] = useState<string>(data.customRanges.roadDispatch.from);
-    const [roadTo, setRoadTo] = useState<string>(data.customRanges.roadDispatch.to);
-    const [railFrom, setRailFrom] = useState<string>(data.customRanges.railDispatch.from);
-    const [railTo, setRailTo] = useState<string>(data.customRanges.railDispatch.to);
-    const [obFrom, setObFrom] = useState<string>(data.customRanges.obProduction.from);
-    const [obTo, setObTo] = useState<string>(data.customRanges.obProduction.to);
-    const [coalFrom, setCoalFrom] = useState<string>(data.customRanges.coalProduction.from);
-    const [coalTo, setCoalTo] = useState<string>(data.customRanges.coalProduction.to);
-
     /** Single range for the Custom (by siding) table — applied to both road and rail. */
     const [customFrom, setCustomFrom] = useState<string>(data.customRanges.roadDispatch.from);
     const [customTo, setCustomTo] = useState<string>(data.customRanges.roadDispatch.to);
 
-    /** Which custom-range Apply is in flight (only that toolbar shows Applying… / is disabled). */
-    const [customApplyLoading, setCustomApplyLoading] = useState<
-        'road' | 'rail' | 'ob' | 'coal' | 'customTable' | null
-    >(null);
+    /** Custom (by siding) table Apply in flight. */
+    const [customApplyLoading, setCustomApplyLoading] = useState<'customTable' | null>(null);
     const [customError, setCustomError] = useState<string | null>(null);
 
     const [roadChartPeriod, setRoadChartPeriod] = useState<ExecutiveChartPeriodKey>('yesterday');
@@ -989,14 +978,6 @@ function ExecutiveYesterdaySection({
 
     useEffect(() => {
         setExecutiveData(data);
-        setRoadFrom(data.customRanges.roadDispatch.from);
-        setRoadTo(data.customRanges.roadDispatch.to);
-        setRailFrom(data.customRanges.railDispatch.from);
-        setRailTo(data.customRanges.railDispatch.to);
-        setObFrom(data.customRanges.obProduction.from);
-        setObTo(data.customRanges.obProduction.to);
-        setCoalFrom(data.customRanges.coalProduction.from);
-        setCoalTo(data.customRanges.coalProduction.to);
         setCustomFrom(data.customRanges.roadDispatch.from);
         setCustomTo(data.customRanges.roadDispatch.to);
     }, [data]);
@@ -1017,72 +998,6 @@ function ExecutiveYesterdaySection({
 
     const isValidRange = (from: string, to: string): boolean => Boolean(from) && Boolean(to) && from <= to;
 
-    const applyCustomRanges = useCallback(
-        async (scope: 'road' | 'rail' | 'ob' | 'coal'): Promise<void> => {
-            setCustomApplyLoading(scope);
-            setCustomError(null);
-            try {
-                const url = new URL(`${dashboardPath.replace(/\/$/, '')}/executive-yesterday-data`, window.location.origin);
-                url.searchParams.set('executive_yesterday_date', executiveData.anchorDate);
-                url.searchParams.set('executive_road_from', roadFrom);
-                url.searchParams.set('executive_road_to', roadTo);
-                url.searchParams.set('executive_rail_from', railFrom);
-                url.searchParams.set('executive_rail_to', railTo);
-                url.searchParams.set('executive_ob_from', obFrom);
-                url.searchParams.set('executive_ob_to', obTo);
-                url.searchParams.set('executive_coal_from', coalFrom);
-                url.searchParams.set('executive_coal_to', coalTo);
-                url.searchParams.set('executive_apply_scope', scope);
-
-                const res = await fetch(url.toString(), {
-                    credentials: 'same-origin',
-                    headers: {
-                        Accept: 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest',
-                    },
-                });
-                if (!res.ok) {
-                    throw new Error(`Request failed (${res.status})`);
-                }
-
-                const body: unknown = await res.json();
-                if (
-                    typeof body === 'object' &&
-                    body !== null &&
-                    'anchorDate' in body &&
-                    'roadDispatch' in body &&
-                    'customRanges' in body
-                ) {
-                    setExecutiveData(body as ExecutiveYesterdayData);
-                    return;
-                }
-                if (
-                    typeof body === 'object' &&
-                    body !== null &&
-                    'customRanges' in body &&
-                    typeof (body as { customRanges?: unknown }).customRanges === 'object' &&
-                    (body as { customRanges?: unknown }).customRanges !== null
-                ) {
-                    const partial = (body as { customRanges: Partial<ExecutiveYesterdayData['customRanges']> }).customRanges;
-                    setExecutiveData((prev) => ({
-                        ...prev,
-                        customRanges: {
-                            ...prev.customRanges,
-                            ...partial,
-                        },
-                    }));
-                    return;
-                }
-                throw new Error('Unexpected response shape.');
-            } catch (e) {
-                setCustomError(e instanceof Error ? e.message : 'Failed to load custom range data.');
-            } finally {
-                setCustomApplyLoading(null);
-            }
-        },
-        [dashboardPath, executiveData.anchorDate, roadFrom, roadTo, railFrom, railTo, obFrom, obTo, coalFrom, coalTo],
-    );
-
     const applyCustomTableRoadRail = useCallback(async (): Promise<void> => {
         setCustomApplyLoading('customTable');
         setCustomError(null);
@@ -1093,10 +1008,10 @@ function ExecutiveYesterdaySection({
             url.searchParams.set('executive_road_to', customTo);
             url.searchParams.set('executive_rail_from', customFrom);
             url.searchParams.set('executive_rail_to', customTo);
-            url.searchParams.set('executive_ob_from', obFrom);
-            url.searchParams.set('executive_ob_to', obTo);
-            url.searchParams.set('executive_coal_from', coalFrom);
-            url.searchParams.set('executive_coal_to', coalTo);
+            url.searchParams.set('executive_ob_from', executiveData.customRanges.obProduction.from);
+            url.searchParams.set('executive_ob_to', executiveData.customRanges.obProduction.to);
+            url.searchParams.set('executive_coal_from', executiveData.customRanges.coalProduction.from);
+            url.searchParams.set('executive_coal_to', executiveData.customRanges.coalProduction.to);
             url.searchParams.set('executive_apply_scope', 'road,rail');
 
             const res = await fetch(url.toString(), {
@@ -1126,10 +1041,6 @@ function ExecutiveYesterdaySection({
                         ...partial,
                     },
                 }));
-                setRoadFrom(customFrom);
-                setRoadTo(customTo);
-                setRailFrom(customFrom);
-                setRailTo(customTo);
                 return;
             }
             throw new Error('Unexpected response shape.');
@@ -1138,16 +1049,7 @@ function ExecutiveYesterdaySection({
         } finally {
             setCustomApplyLoading(null);
         }
-    }, [
-        dashboardPath,
-        executiveData.anchorDate,
-        customFrom,
-        customTo,
-        obFrom,
-        obTo,
-        coalFrom,
-        coalTo,
-    ]);
+    }, [dashboardPath, executiveData.anchorDate, executiveData.customRanges, customFrom, customTo]);
 
     const railCustomBySidingId = useMemo(
         () => new Map(executiveData.customRanges.railDispatch.bySiding.map((r) => [r.sidingId, r])),
@@ -1209,62 +1111,6 @@ function ExecutiveYesterdaySection({
         return powerPlantDispatch;
     }, [executiveData.powerPlantDispatchByPeriod, hasPowerPlantPeriodSlices, powerPlantChartPeriod, powerPlantDispatch]);
 
-    const roadCustomToolbar = (
-        <>
-            <label className="text-xs font-medium text-gray-600">From</label>
-            <input
-                type="date"
-                value={roadFrom}
-                onChange={(e) => setRoadFrom(e.target.value)}
-                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
-            />
-            <label className="text-xs font-medium text-gray-600">To</label>
-            <input
-                type="date"
-                value={roadTo}
-                onChange={(e) => setRoadTo(e.target.value)}
-                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
-            />
-            <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={customApplyLoading === 'road' || !isValidRange(roadFrom, roadTo)}
-                onClick={() => void applyCustomRanges('road')}
-            >
-                {customApplyLoading === 'road' ? 'Applying…' : 'Apply'}
-            </Button>
-        </>
-    );
-
-    const railCustomToolbar = (
-        <>
-            <label className="text-xs font-medium text-gray-600">From</label>
-            <input
-                type="date"
-                value={railFrom}
-                onChange={(e) => setRailFrom(e.target.value)}
-                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
-            />
-            <label className="text-xs font-medium text-gray-600">To</label>
-            <input
-                type="date"
-                value={railTo}
-                onChange={(e) => setRailTo(e.target.value)}
-                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
-            />
-            <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={customApplyLoading === 'rail' || !isValidRange(railFrom, railTo)}
-                onClick={() => void applyCustomRanges('rail')}
-            >
-                {customApplyLoading === 'rail' ? 'Applying…' : 'Apply'}
-            </Button>
-        </>
-    );
-
     const customTableToolbar = (
         <>
             <label className="text-xs font-medium text-gray-600">From</label>
@@ -1297,10 +1143,7 @@ function ExecutiveYesterdaySection({
         <div className="space-y-6">
             <div className="overflow-hidden rounded-xl border border-[#d5dbe4] bg-white">
                 <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                        <p className="text-sm font-semibold text-gray-900">Road Dispatch</p>
-                        <div className="flex flex-wrap items-center gap-2">{roadCustomToolbar}</div>
-                    </div>
+                    <p className="text-sm font-semibold text-gray-900">Road Dispatch</p>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full border-separate text-xs" style={{ borderSpacing: 0 }}>
@@ -1323,7 +1166,10 @@ function ExecutiveYesterdaySection({
                                 </td>
                                 <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Trips</td>
                                 {execPeriodOrder.map((k) => (
-                                    <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                    <td
+                                        key={k}
+                                        className="border border-[#d5dbe4] px-3 py-2 text-right font-bold tabular-nums"
+                                    >
                                         {fmtNumber(executiveData.roadDispatch.totals[k].trips, 0)}
                                     </td>
                                 ))}
@@ -1331,7 +1177,10 @@ function ExecutiveYesterdaySection({
                             <tr className="bg-white">
                                 <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Qty</td>
                                 {execPeriodOrder.map((k) => (
-                                    <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                    <td
+                                        key={k}
+                                        className="border border-[#d5dbe4] px-3 py-2 text-right font-bold tabular-nums"
+                                    >
                                         {fmtNumber(executiveData.roadDispatch.totals[k].qty, 2)}
                                     </td>
                                 ))}
@@ -1385,10 +1234,7 @@ function ExecutiveYesterdaySection({
 
             <div className="overflow-hidden rounded-xl border border-[#d5dbe4] bg-white">
                 <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                        <p className="text-sm font-semibold text-gray-900">Rail Dispatch</p>
-                        <div className="flex flex-wrap items-center gap-2">{railCustomToolbar}</div>
-                    </div>
+                    <p className="text-sm font-semibold text-gray-900">Rail Dispatch</p>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full border-separate text-xs" style={{ borderSpacing: 0 }}>
@@ -1411,7 +1257,10 @@ function ExecutiveYesterdaySection({
                                 </td>
                                 <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Rakes</td>
                                 {execPeriodOrder.map((k) => (
-                                    <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                    <td
+                                        key={k}
+                                        className="border border-[#d5dbe4] px-3 py-2 text-right font-bold tabular-nums"
+                                    >
                                         {fmtNumber(executiveData.railDispatch.totals[k].rakes, 0)}
                                     </td>
                                 ))}
@@ -1419,7 +1268,10 @@ function ExecutiveYesterdaySection({
                             <tr className="bg-white">
                                 <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Qty</td>
                                 {execPeriodOrder.map((k) => (
-                                    <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                    <td
+                                        key={k}
+                                        className="border border-[#d5dbe4] px-3 py-2 text-right font-bold tabular-nums"
+                                    >
                                         {fmtNumber(executiveData.railDispatch.totals[k].qty, 2)}
                                     </td>
                                 ))}
@@ -1479,141 +1331,101 @@ function ExecutiveYesterdaySection({
 
             <div className="overflow-hidden rounded-xl border border-[#d5dbe4] bg-white">
                 <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                        <p className="text-sm font-semibold text-gray-900">OB Production</p>
-                        <div className="flex flex-wrap items-center gap-2">
-                            <label className="text-xs font-medium text-gray-600">From</label>
-                            <input
-                                type="date"
-                                value={obFrom}
-                                onChange={(e) => setObFrom(e.target.value)}
-                                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
-                            />
-                            <label className="text-xs font-medium text-gray-600">To</label>
-                            <input
-                                type="date"
-                                value={obTo}
-                                onChange={(e) => setObTo(e.target.value)}
-                                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
-                            />
-                            <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                disabled={customApplyLoading === 'ob' || !isValidRange(obFrom, obTo)}
-                                onClick={() => void applyCustomRanges('ob')}
-                            >
-                                {customApplyLoading === 'ob' ? 'Applying…' : 'Apply'}
-                            </Button>
-                        </div>
-                    </div>
+                    <p className="text-sm font-semibold text-gray-900">Production</p>
                 </div>
-                <div className="overflow-x-auto">
-                    <table className="w-full border-separate text-xs" style={{ borderSpacing: 0 }}>
-                        <thead className="bg-[#eef2f7] text-black">
-                            <tr>
-                                <th className="border border-[#d5dbe4] px-3 py-2 text-left font-medium" colSpan={2}>
-                                    {executiveData.fyLabel}
-                                </th>
-                                {execPeriodOrder.map((k) => (
-                                    <th key={k} className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">
-                                        {execPeriodColumnLabel[k]}
+                <div className="space-y-0">
+                    <p className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-2 text-xs font-semibold text-gray-800">
+                        OB Production
+                    </p>
+                    <div className="overflow-x-auto">
+                        <table className="w-full border-separate text-xs" style={{ borderSpacing: 0 }}>
+                            <thead className="bg-[#eef2f7] text-black">
+                                <tr>
+                                    <th className="border border-[#d5dbe4] px-3 py-2 text-left font-medium" colSpan={2}>
+                                        {executiveData.fyLabel}
                                     </th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr className="bg-white">
-                                <td className="border border-[#d5dbe4] px-3 py-2 font-semibold" rowSpan={2}>
-                                    OB Production
-                                </td>
-                                <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Trips</td>
-                                {execPeriodOrder.map((k) => (
-                                    <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
-                                        {fmtNumber(executiveData.obProduction[k].trips, 0)}
+                                    {execPeriodOrder.map((k) => (
+                                        <th key={k} className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">
+                                            {execPeriodColumnLabel[k]}
+                                        </th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr className="bg-white">
+                                    <td className="border border-[#d5dbe4] px-3 py-2 font-semibold" rowSpan={2}>
+                                        OB Production
                                     </td>
-                                ))}
-                            </tr>
-                            <tr className="bg-white">
-                                <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Qty</td>
-                                {execPeriodOrder.map((k) => (
-                                    <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
-                                        {fmtNumber(executiveData.obProduction[k].qty, 2)}
-                                    </td>
-                                ))}
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div className="overflow-hidden rounded-xl border border-[#d5dbe4] bg-white">
-                <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                        <p className="text-sm font-semibold text-gray-900">Coal Production</p>
-                        <div className="flex flex-wrap items-center gap-2">
-                            <label className="text-xs font-medium text-gray-600">From</label>
-                            <input
-                                type="date"
-                                value={coalFrom}
-                                onChange={(e) => setCoalFrom(e.target.value)}
-                                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
-                            />
-                            <label className="text-xs font-medium text-gray-600">To</label>
-                            <input
-                                type="date"
-                                value={coalTo}
-                                onChange={(e) => setCoalTo(e.target.value)}
-                                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
-                            />
-                            <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                disabled={customApplyLoading === 'coal' || !isValidRange(coalFrom, coalTo)}
-                                onClick={() => void applyCustomRanges('coal')}
-                            >
-                                {customApplyLoading === 'coal' ? 'Applying…' : 'Apply'}
-                            </Button>
-                        </div>
+                                    <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Trips</td>
+                                    {execPeriodOrder.map((k) => (
+                                        <td
+                                            key={k}
+                                            className="border border-[#d5dbe4] px-3 py-2 text-right font-bold tabular-nums"
+                                        >
+                                            {fmtNumber(executiveData.obProduction[k].trips, 0)}
+                                        </td>
+                                    ))}
+                                </tr>
+                                <tr className="bg-white">
+                                    <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Qty</td>
+                                    {execPeriodOrder.map((k) => (
+                                        <td
+                                            key={k}
+                                            className="border border-[#d5dbe4] px-3 py-2 text-right font-bold tabular-nums"
+                                        >
+                                            {fmtNumber(executiveData.obProduction[k].qty, 2)}
+                                        </td>
+                                    ))}
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
-                </div>
-                <div className="overflow-x-auto">
-                    <table className="w-full border-separate text-xs" style={{ borderSpacing: 0 }}>
-                        <thead className="bg-[#eef2f7] text-black">
-                            <tr>
-                                <th className="border border-[#d5dbe4] px-3 py-2 text-left font-medium" colSpan={2}>
-                                    {executiveData.fyLabel}
-                                </th>
-                                {execPeriodOrder.map((k) => (
-                                    <th key={k} className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">
-                                        {execPeriodColumnLabel[k]}
+                    <p className="border-b border-t border-[#d5dbe4] bg-[#f8fafc] px-4 py-2 text-xs font-semibold text-gray-800">
+                        Coal Production
+                    </p>
+                    <div className="overflow-x-auto">
+                        <table className="w-full border-separate text-xs" style={{ borderSpacing: 0 }}>
+                            <thead className="bg-[#eef2f7] text-black">
+                                <tr>
+                                    <th className="border border-[#d5dbe4] px-3 py-2 text-left font-medium" colSpan={2}>
+                                        {executiveData.fyLabel}
                                     </th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr className="bg-white">
-                                <td className="border border-[#d5dbe4] px-3 py-2 font-semibold" rowSpan={2}>
-                                    Coal Production
-                                </td>
-                                <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Trips</td>
-                                {execPeriodOrder.map((k) => (
-                                    <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
-                                        {fmtNumber(executiveData.coalProduction[k].trips, 0)}
+                                    {execPeriodOrder.map((k) => (
+                                        <th key={k} className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">
+                                            {execPeriodColumnLabel[k]}
+                                        </th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr className="bg-white">
+                                    <td className="border border-[#d5dbe4] px-3 py-2 font-semibold" rowSpan={2}>
+                                        Coal Production
                                     </td>
-                                ))}
-                            </tr>
-                            <tr className="bg-white">
-                                <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Qty</td>
-                                {execPeriodOrder.map((k) => (
-                                    <td key={k} className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
-                                        {fmtNumber(executiveData.coalProduction[k].qty, 2)}
-                                    </td>
-                                ))}
-                            </tr>
-                        </tbody>
-                    </table>
+                                    <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Trips</td>
+                                    {execPeriodOrder.map((k) => (
+                                        <td
+                                            key={k}
+                                            className="border border-[#d5dbe4] px-3 py-2 text-right font-bold tabular-nums"
+                                        >
+                                            {fmtNumber(executiveData.coalProduction[k].trips, 0)}
+                                        </td>
+                                    ))}
+                                </tr>
+                                <tr className="bg-white">
+                                    <td className="border border-[#d5dbe4] px-3 py-2 font-medium">Qty</td>
+                                    {execPeriodOrder.map((k) => (
+                                        <td
+                                            key={k}
+                                            className="border border-[#d5dbe4] px-3 py-2 text-right font-bold tabular-nums"
+                                        >
+                                            {fmtNumber(executiveData.coalProduction[k].qty, 2)}
+                                        </td>
+                                    ))}
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
@@ -1703,17 +1515,50 @@ function ExecutiveYesterdaySection({
                             </tr>
                         </thead>
                         <tbody>
-                            {executiveData.fySummary.rows.map((r) => (
-                                <tr key={r.fy} className="bg-white">
-                                    <td className="border border-[#d5dbe4] px-3 py-2 font-medium">{r.fy}</td>
-                                    <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{fmtNumber(r.production.obQty, 2)}</td>
-                                    <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{fmtNumber(r.production.coalQty, 2)}</td>
-                                    <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{fmtNumber(r.roadDispatch.trips, 0)}</td>
-                                    <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{fmtNumber(r.roadDispatch.qty, 2)}</td>
-                                    <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{fmtNumber(r.railDispatch.rakes, 0)}</td>
-                                    <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{fmtNumber(r.railDispatch.qty, 2)}</td>
-                                </tr>
-                            ))}
+                            {executiveData.fySummary.rows.map((r) => {
+                                const isTillDate = r.fy === 'Till Date';
+                                const strong = isTillDate ? 'font-bold' : '';
+
+                                return (
+                                    <tr key={r.fy} className="bg-white">
+                                        <td
+                                            className={`border border-[#d5dbe4] px-3 py-2 ${isTillDate ? 'font-bold' : 'font-medium'}`}
+                                        >
+                                            {r.fy}
+                                        </td>
+                                        <td
+                                            className={`border border-[#d5dbe4] px-3 py-2 text-right tabular-nums ${strong}`}
+                                        >
+                                            {fmtNumber(r.production.obQty, 2)}
+                                        </td>
+                                        <td
+                                            className={`border border-[#d5dbe4] px-3 py-2 text-right tabular-nums ${strong}`}
+                                        >
+                                            {fmtNumber(r.production.coalQty, 2)}
+                                        </td>
+                                        <td
+                                            className={`border border-[#d5dbe4] px-3 py-2 text-right tabular-nums ${strong}`}
+                                        >
+                                            {fmtNumber(r.roadDispatch.trips, 0)}
+                                        </td>
+                                        <td
+                                            className={`border border-[#d5dbe4] px-3 py-2 text-right tabular-nums ${strong}`}
+                                        >
+                                            {fmtNumber(r.roadDispatch.qty, 2)}
+                                        </td>
+                                        <td
+                                            className={`border border-[#d5dbe4] px-3 py-2 text-right tabular-nums ${strong}`}
+                                        >
+                                            {fmtNumber(r.railDispatch.rakes, 0)}
+                                        </td>
+                                        <td
+                                            className={`border border-[#d5dbe4] px-3 py-2 text-right tabular-nums ${strong}`}
+                                        >
+                                            {fmtNumber(r.railDispatch.qty, 2)}
+                                        </td>
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>

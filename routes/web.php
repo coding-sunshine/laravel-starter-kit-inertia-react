@@ -213,8 +213,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 
     // RRMCS Routes (Railway Rake Management Control System)
     Route::get('rake-loader', [RakeLoaderController::class, 'index'])->name('rake-loader.index');
-    Route::get('rake-loader/rakes', [RakeLoaderController::class, 'rakes'])->name('rake-loader.rakes');
-    Route::get('rake-loader/rakes/{rake}', [RakeLoaderController::class, 'show'])->name('rake-loader.rakes.show');
+    Route::get('rake-loader/rakes/{rake}/loading', [RakeLoaderController::class, 'loading'])->name('rake-loader.rakes.loading');
 
     Route::get('rakes', [RakesController::class, 'index'])->name('rakes.index');
     Route::get('rakes/{rake}', [RakesController::class, 'show'])->name('rakes.show');
@@ -251,6 +250,8 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::post('rakes/{rake}/load/guard-inspection', [RakeLoadController::class, 'recordGuardInspection'])->name('rakes.load.guard-inspection');
     Route::post('rakes/{rake}/load/confirm-dispatch', [RakeLoadController::class, 'confirmDispatch'])->name('rakes.load.confirm-dispatch');
     Route::post('rakes/{rake}/weighments', [RakeWeighmentController::class, 'store'])->name('rakes.weighments.store');
+    Route::post('rakes/{rake}/weighments/manual', [RakeWeighmentController::class, 'storeManual'])->name('rakes.weighments.manual');
+    Route::patch('rakes/{rake}/weighments/{rakeWeighment}', [RakeWeighmentController::class, 'updateManual'])->name('rakes.weighments.update-manual');
     Route::delete('rakes/{rake}/weighments', [RakeWeighmentController::class, 'destroy'])->name('rakes.weighments.destroy');
     Route::post('rakes/{rake}/power-plant-receipts', [RakePowerPlantReceiptController::class, 'store'])->name('rakes.power-plant-receipts.store');
     Route::delete('rakes/{rake}/power-plant-receipts/{receipt}', [RakePowerPlantReceiptController::class, 'destroy'])->name('rakes.power-plant-receipts.destroy')->scopeBindings();
@@ -414,6 +415,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('weighments/{weighment}', [WeighmentsController::class, 'show'])->whereNumber('weighment')->name('weighments.show');
     Route::delete('weighments/{weighment}', [WeighmentsController::class, 'destroy'])->whereNumber('weighment')->name('weighments.destroy');
     Route::post('weighments/import', [WeighmentsController::class, 'store'])->name('weighments.import');
+    Route::post('weighments/manual', [WeighmentsController::class, 'storeManual'])->name('weighments.manual');
     Route::get('weighments/template-xlsx', [WeighmentsController::class, 'downloadTemplateXlsx'])->name('weighments.template-xlsx');
 
     // AI Chatbot

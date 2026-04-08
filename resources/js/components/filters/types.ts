@@ -9,6 +9,8 @@ export interface FilterColumn {
     icon?: LucideIcon;
     options?: { label: string; value: string }[];
     searchThreshold?: number;
+    /** When type is `text` and filters are inline, lock the operator (default is contains). */
+    textFixedOperator?: 'contains' | 'eq';
 }
 
 export interface FilterValue {

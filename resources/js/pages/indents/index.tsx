@@ -1,6 +1,5 @@
 import { GlossaryTerm } from '@/components/glossary-term';
 import Heading from '@/components/heading';
-import { RrmcsGuidance } from '@/components/rrmcs-guidance';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -217,6 +216,7 @@ export default function IndentsIndex({ tableData }: Props) {
                                 exports: false,
                                 quickViews: false,
                                 customQuickViews: false,
+                                filtersLayout: 'inline',
                             }}
                         />
                     </CardContent>

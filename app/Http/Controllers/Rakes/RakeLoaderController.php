@@ -4,13 +4,15 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Rakes;
 
+use App\DataTables\RakeLoaderListDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\Rake;
 use App\Models\RakeWeighment;
 use App\Models\Siding;
+use App\Models\User;
 use App\Services\SidingContext;
 use App\Services\TenantContext;
-use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -22,69 +24,20 @@ final class RakeLoaderController extends Controller
         $user = $request->user();
         abort_unless($this->hasSectionPermission($user, 'sections.rake_loader.view'), 403);
 
-        $sidings = [];
-        if ($user->isSuperAdmin()) {
-            $sidings = Siding::query()
-                ->orderBy('name')
-                ->get(['id', 'name', 'code'])
-                ->map(static fn (Siding $s): array => [
-                    'id' => $s->id,
-                    'name' => $s->name,
-                    'code' => $s->code,
-                ])
-                ->values()
-                ->all();
-        }
+        $sidings = $this->rakeLoaderSidingOptions($user);
 
         $currentSiding = SidingContext::get();
 
         return Inertia::render('rake-loader/index', [
-            'defaultDate' => now()->toDateString(),
+            'tableData' => RakeLoaderListDataTable::makeTable($request),
             'sidings' => $sidings,
             'defaultSidingId' => $currentSiding?->id,
             'isSuperAdmin' => $user->isSuperAdmin(),
+            'loadError' => $request->session()->pull('rake_loader_error'),
         ]);
     }
 
-    public function rakes(Request $request): JsonResponse
-    {
-        $user = $request->user();
-        abort_unless($this->hasSectionPermission($user, 'sections.rake_loader.view'), 403);
-
-        $validated = $request->validate([
-            'date' => ['required', 'date'],
-            'siding_id' => ['nullable', 'integer', 'exists:sidings,id'],
-        ]);
-
-        $requestedSidingId = array_key_exists('siding_id', $validated) ? $validated['siding_id'] : null;
-        $sidingId = $requestedSidingId !== null
-            ? (int) $requestedSidingId
-            : (int) (SidingContext::get()?->id ?? 0);
-
-        if (! $user->isSuperAdmin() && ($sidingId === 0 || ! $user->canAccessSiding($sidingId))) {
-            abort(403);
-        }
-
-        $date = $validated['date'];
-
-        $rakes = Rake::query()
-            ->where('siding_id', $sidingId)
-            ->whereDate('loading_date', $date)
-            ->orderBy('rake_number')
-            ->get(['id', 'rake_number'])
-            ->map(static fn (Rake $rake): array => [
-                'id' => $rake->id,
-                'rake_number' => $rake->rake_number,
-            ])
-            ->values()
-            ->all();
-
-        return response()->json([
-            'rakes' => $rakes,
-        ]);
-    }
-
-    public function show(Request $request, Rake $rake): JsonResponse
+    public function loading(Request $request, Rake $rake): Response|RedirectResponse
     {
         $user = $request->user();
         abort_unless($this->hasSectionPermission($user, 'sections.rake_loader.view'), 403);
@@ -93,15 +46,10 @@ final class RakeLoaderController extends Controller
             abort(403);
         }
 
-        $hasWeighmentPdf = RakeWeighment::query()
-            ->where('rake_id', $rake->id)
-            ->whereNotNull('pdf_file_path')
-            ->exists();
-
-        if (! $hasWeighmentPdf) {
-            return response()->json([
-                'message' => 'Please Upload Weighment Data First.',
-            ], 422);
+        if (! RakeWeighment::query()->where('rake_id', $rake->id)->exists()) {
+            return redirect()
+                ->route('rake-loader.index')
+                ->with('rake_loader_error', 'Add a rake weighment record before entering loader data.');
         }
 
         $rake->load([
@@ -112,6 +60,16 @@ final class RakeLoaderController extends Controller
             'wagonLoadings.loader:id,loader_name,code',
         ]);
 
+        return Inertia::render('rake-loader/loading', [
+            'rake' => self::buildRakeLoaderRakePayload($rake),
+        ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function buildRakeLoaderRakePayload(Rake $rake): array
+    {
         $wagons = $rake->wagons
             ->sortBy('wagon_sequence')
             ->values()
@@ -124,59 +82,57 @@ final class RakeLoaderController extends Controller
             ->sortBy(static fn ($l): int => $l->wagon?->wagon_sequence ?? $l->id)
             ->values();
 
-        return response()->json([
-            'rake' => [
-                'id' => $rake->id,
-                'rake_number' => $rake->rake_number,
-                'loader_weighment_status' => $rake->loader_weighment_status,
-                'loading_start_time' => $rake->loading_start_time?->toIso8601String(),
-                'loading_end_time' => $rake->loading_end_time?->toIso8601String(),
-                'wagons' => $wagons
-                    ->map(static fn ($w): array => [
-                        'id' => $w->id,
-                        'wagon_number' => $w->wagon_number,
-                        'wagon_sequence' => $w->wagon_sequence,
-                        'wagon_type' => $w->wagon_type,
-                        'pcc_weight_mt' => $w->pcc_weight_mt,
-                        'is_unfit' => (bool) $w->is_unfit,
+        return [
+            'id' => $rake->id,
+            'rake_number' => $rake->rake_number,
+            'loader_weighment_status' => $rake->loader_weighment_status,
+            'loading_start_time' => $rake->loading_start_time?->toIso8601String(),
+            'loading_end_time' => $rake->loading_end_time?->toIso8601String(),
+            'wagons' => $wagons
+                ->map(static fn ($w): array => [
+                    'id' => $w->id,
+                    'wagon_number' => $w->wagon_number,
+                    'wagon_sequence' => $w->wagon_sequence,
+                    'wagon_type' => $w->wagon_type,
+                    'pcc_weight_mt' => $w->pcc_weight_mt,
+                    'is_unfit' => (bool) $w->is_unfit,
+                ])
+                ->all(),
+            'wagonLoadings' => $wagonLoadings
+                ->map(static fn ($loading): array => [
+                    'id' => $loading->id,
+                    'wagon_id' => $loading->wagon_id,
+                    'loader_id' => $loading->loader_id,
+                    'loader_operator_name' => $loading->loader_operator_name,
+                    'loaded_quantity_mt' => $loading->loaded_quantity_mt !== null ? (string) $loading->loaded_quantity_mt : '',
+                    'loading_time' => $loading->loading_time?->toIso8601String(),
+                    'remarks' => $loading->remarks,
+                    'wagon' => $loading->wagon ? [
+                        'wagon_number' => $loading->wagon->wagon_number,
+                        'wagon_sequence' => $loading->wagon->wagon_sequence,
+                        'wagon_type' => $loading->wagon->wagon_type,
+                        'pcc_weight_mt' => $loading->wagon->pcc_weight_mt,
+                    ] : null,
+                    'loader' => $loading->loader ? [
+                        'loader_name' => $loading->loader->loader_name,
+                        'code' => $loading->loader->code,
+                    ] : null,
+                ])
+                ->all(),
+            'siding' => $rake->siding ? [
+                'id' => $rake->siding->id,
+                'name' => $rake->siding->name,
+                'code' => $rake->siding->code,
+                'loaders' => $rake->siding->loaders
+                    ->map(static fn ($loader): array => [
+                        'id' => $loader->id,
+                        'loader_name' => $loader->loader_name,
+                        'code' => $loader->code,
                     ])
+                    ->values()
                     ->all(),
-                'wagonLoadings' => $wagonLoadings
-                    ->map(static fn ($loading): array => [
-                        'id' => $loading->id,
-                        'wagon_id' => $loading->wagon_id,
-                        'loader_id' => $loading->loader_id,
-                        'loader_operator_name' => $loading->loader_operator_name,
-                        'loaded_quantity_mt' => $loading->loaded_quantity_mt !== null ? (string) $loading->loaded_quantity_mt : '',
-                        'loading_time' => $loading->loading_time?->toIso8601String(),
-                        'remarks' => $loading->remarks,
-                        'wagon' => $loading->wagon ? [
-                            'wagon_number' => $loading->wagon->wagon_number,
-                            'wagon_sequence' => $loading->wagon->wagon_sequence,
-                            'wagon_type' => $loading->wagon->wagon_type,
-                            'pcc_weight_mt' => $loading->wagon->pcc_weight_mt,
-                        ] : null,
-                        'loader' => $loading->loader ? [
-                            'loader_name' => $loading->loader->loader_name,
-                            'code' => $loading->loader->code,
-                        ] : null,
-                    ])
-                    ->all(),
-                'siding' => $rake->siding ? [
-                    'id' => $rake->siding->id,
-                    'name' => $rake->siding->name,
-                    'code' => $rake->siding->code,
-                    'loaders' => $rake->siding->loaders
-                        ->map(static fn ($loader): array => [
-                            'id' => $loader->id,
-                            'loader_name' => $loader->loader_name,
-                            'code' => $loader->code,
-                        ])
-                        ->values()
-                        ->all(),
-                ] : null,
-            ],
-        ]);
+            ] : null,
+        ];
     }
 
     private static function shouldSkipLoaderWeighmentWagonNumber(?string $wagonNumber): bool
@@ -186,7 +142,47 @@ final class RakeLoaderController extends Controller
         return $trimmed !== '' && preg_match('/^W\d+$/', $trimmed) === 1;
     }
 
-    private function hasSectionPermission(\App\Models\User $user, string $permission): bool
+    /**
+     * @return list<array{id: int, name: string, code: string}>
+     */
+    private function rakeLoaderSidingOptions(User $user): array
+    {
+        if ($user->isSuperAdmin()) {
+            return Siding::query()
+                ->orderBy('name')
+                ->get(['id', 'name', 'code'])
+                ->map(static fn (Siding $s): array => [
+                    'id' => $s->id,
+                    'name' => $s->name,
+                    'code' => $s->code,
+                ])
+                ->values()
+                ->all();
+        }
+
+        $ids = $user->sidings()->pluck('sidings.id')->all();
+        if ($ids === [] && $user->siding_id !== null) {
+            $ids = [(int) $user->siding_id];
+        }
+
+        if ($ids === []) {
+            return [];
+        }
+
+        return Siding::query()
+            ->whereIn('id', $ids)
+            ->orderBy('name')
+            ->get(['id', 'name', 'code'])
+            ->map(static fn (Siding $s): array => [
+                'id' => $s->id,
+                'name' => $s->name,
+                'code' => $s->code,
+            ])
+            ->values()
+            ->all();
+    }
+
+    private function hasSectionPermission(User $user, string $permission): bool
     {
         if ($user->can('bypass-permissions')) {
             return true;

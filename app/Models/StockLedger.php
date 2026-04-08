@@ -20,6 +20,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
  * @property int|null $vehicle_arrival_id
  * @property int|null $rake_id
  * @property int|null $daily_vehicle_entry_id
+ * @property int|null $rake_weighment_id
  * @property decimal $quantity_mt
  * @property decimal $opening_balance_mt
  * @property decimal $closing_balance_mt
@@ -109,6 +110,16 @@ final class StockLedger extends Model
     public function dailyVehicleEntry(): BelongsTo
     {
         return $this->belongsTo(DailyVehicleEntry::class);
+    }
+
+    /**
+     * Rake weighment relationship (dispatch / correction lines tied to a weighment)
+     *
+     * @return BelongsTo<RakeWeighment, $this>
+     */
+    public function rakeWeighment(): BelongsTo
+    {
+        return $this->belongsTo(RakeWeighment::class);
     }
 
     /**

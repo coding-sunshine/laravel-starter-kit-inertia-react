@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Weighments;
 
 use App\Actions\DeleteStandaloneHistoricalWeighmentAction;
+use App\Actions\RecordManualRakeWeighment;
+use App\DataTables\WeighmentsRakeDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\Rake;
 use App\Models\Siding;
@@ -28,33 +30,10 @@ final class WeighmentsController extends Controller
 {
     public function index(Request $request): Response
     {
-        /** @var User $user */
-        $user = $request->user();
-
-        $sidingIds = $user->isSuperAdmin()
-            ? Siding::query()->pluck('id')->all()
-            : $user->sidings()->get()->pluck('id')->all();
-
-        // Backward compatibility: some legacy users only have `users.siding_id`
-        // and no rows in the `user_siding` pivot table.
-        if (! $user->isSuperAdmin() && $sidingIds === [] && $user->siding_id !== null) {
-            $sidingIds = [(int) $user->siding_id];
-        }
-
-        $query = Weighment::query()
-            ->with('rake')
-            ->orderByDesc('created_at');
-
-        if ($sidingIds === []) {
-            $query->whereRaw('0 = 1');
-        } else {
-            $query->whereHas('rake', fn ($q) => $q->whereIn('siding_id', $sidingIds));
-        }
-
-        $weighments = $query->limit(100)->get();
+        $this->applyWeighmentsHubDefaultLoadingDateFilter($request);
 
         return Inertia::render('weighments/index', [
-            'weighments' => $weighments,
+            'tableData' => WeighmentsRakeDataTable::makeTable($request),
         ]);
     }
 
@@ -217,6 +196,62 @@ final class WeighmentsController extends Controller
             ->with('success', 'Weighment PDF imported successfully.');
     }
 
+    public function storeManual(Request $request, RecordManualRakeWeighment $recordManual): RedirectResponse
+    {
+        $validated = $request->validate([
+            'rake_id' => ['required', 'integer', 'exists:rakes,id'],
+            'total_net_weight_mt' => ['required', 'numeric', 'min:0.01', 'max:99999999.99'],
+            'from_station' => ['nullable', 'string', 'max:255'],
+            'to_station' => ['nullable', 'string', 'max:255'],
+            'priority_number' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        /** @var User $user */
+        $user = $request->user();
+        $rake = Rake::query()->findOrFail((int) $validated['rake_id']);
+
+        $sidingIds = $user->isSuperAdmin()
+            ? Siding::query()->pluck('id')->all()
+            : $user->sidings()->get()->pluck('id')->all();
+
+        if (! $user->isSuperAdmin() && $sidingIds === [] && $user->siding_id !== null) {
+            $sidingIds = [(int) $user->siding_id];
+        }
+
+        if (! in_array($rake->siding_id, $sidingIds, true)) {
+            return back()
+                ->withErrors(['rake_id' => 'You are not allowed to record weighments for the selected rake.'])
+                ->withInput();
+        }
+
+        $emptyToNull = static function (mixed $v): ?string {
+            if ($v === null || $v === '') {
+                return null;
+            }
+            $t = mb_trim((string) $v);
+
+            return $t === '' ? null : $t;
+        };
+
+        $payload = [
+            'total_net_weight_mt' => (float) $validated['total_net_weight_mt'],
+            'from_station' => $emptyToNull($validated['from_station'] ?? null),
+            'to_station' => $emptyToNull($validated['to_station'] ?? null),
+            'priority_number' => $emptyToNull($validated['priority_number'] ?? null),
+        ];
+
+        try {
+            $weighment = $recordManual->handle($rake, $payload, (int) $user->id);
+        } catch (InvalidArgumentException $e) {
+            return back()
+                ->withErrors(['total_net_weight_mt' => $e->getMessage()])
+                ->withInput();
+        }
+
+        return to_route('weighments.show', $weighment->getKey())
+            ->with('success', 'Manual weighment recorded. Upload the document when available.');
+    }
+
     public function downloadTemplateXlsx(Request $request, RakeWeighmentXlsxTemplate $template): BinaryFileResponse
     {
         /** @var User $user */
@@ -263,6 +298,23 @@ final class WeighmentsController extends Controller
 
         return to_route('weighments.index')
             ->with('success', 'Historical weighment and related rake data removed.');
+    }
+
+    /**
+     * When the client omits `filter[loading_date]`, restrict the hub to {@see Rake::$loading_date} equal to today.
+     * If `filter[loading_date]` is present (even empty), do not inject a default.
+     */
+    private function applyWeighmentsHubDefaultLoadingDateFilter(Request $request): void
+    {
+        $filter = $request->input('filter', []);
+        if (! is_array($filter)) {
+            $filter = [];
+        }
+        if (array_key_exists('loading_date', $filter)) {
+            return;
+        }
+        $filter['loading_date'] = 'eq:'.now()->toDateString();
+        $request->merge(['filter' => $filter]);
     }
 
     private function assertUserCanAccessWeighmentRakeSiding(User $user, Weighment $weighment): void

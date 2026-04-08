@@ -14,6 +14,7 @@ import { useFilters } from "./use-filters";
 interface FiltersProps {
     columns: FilterColumn[];
     serverFilters: Record<string, unknown>;
+    layout?: 'popover' | 'inline';
 }
 
 function formatNumericValue(v: string): string {
@@ -167,7 +168,7 @@ function FilterPill({
     );
 }
 
-export function Filters({ columns, serverFilters }: FiltersProps) {
+export function Filters({ columns, serverFilters, layout = 'popover' }: FiltersProps) {
     const { activeFilters, setFilter, clearFilter, clearAllFilters } = useFilters(serverFilters);
 
     const [selectorOpen, setSelectorOpen] = useState(false);
@@ -236,6 +237,51 @@ export function Filters({ columns, serverFilters }: FiltersProps) {
         ? columns.find((c) => c.id === selectorColumn)
         : null;
 
+    if (layout === 'inline') {
+        const hasActive = Object.keys(activeFilters).length > 0;
+
+        return (
+            <div className="flex w-full flex-col gap-3">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    {columns.map((col) => (
+                        <div key={col.id} className="min-w-0 space-y-1.5">
+                            <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                                {col.icon && <col.icon className="size-3.5 shrink-0 stroke-[2.25px]" />}
+                                <span>{col.label}</span>
+                            </div>
+                            <FilterControl
+                                column={col}
+                                value={activeFilters[col.id]}
+                                onSubmit={(op, vals) => handleFilterSubmit(col.id, op, vals)}
+                                variant="inline"
+                                hideOperator
+                                fixedOperator={
+                                    col.type === 'date'
+                                        ? 'between'
+                                        : col.type === 'text'
+                                          ? (col.textFixedOperator ?? 'contains')
+                                          : undefined
+                                }
+                            />
+                        </div>
+                    ))}
+                </div>
+                {hasActive && (
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-fit text-destructive hover:text-destructive"
+                        onClick={() => clearAllFilters()}
+                    >
+                        <Trash2 className="mr-1 size-4" />
+                        Clear all filters
+                    </Button>
+                )}
+            </div>
+        );
+    }
+
     return (
         <div className="flex flex-wrap items-center gap-1.5">
             <Popover open={selectorOpen} onOpenChange={handleSelectorOpenChange}>
@@ -271,6 +317,11 @@ export function Filters({ columns, serverFilters }: FiltersProps) {
                                 value={activeFilters[selectedColumn.id]}
                                 onSubmit={(op, vals) =>
                                     handleFilterSubmit(selectedColumn.id, op, vals)
+                                }
+                                fixedOperator={
+                                    selectedColumn.type === 'text'
+                                        ? selectedColumn.textFixedOperator
+                                        : undefined
                                 }
                             />
                         </div>

@@ -24,7 +24,9 @@ interface RakeData {
     loading_start_time?: string | null;
     loading_end_time?: string | null;
     loading_free_minutes?: number | null;
+    destination?: string | null;
     destination_code?: string | null;
+    priority_number?: number | null;
     wagons: Array<{
         id: number;
         wagon_number: string;
@@ -89,6 +91,7 @@ interface RakeData {
         status: string | null;
         train_speed_kmph: number;
         attempt_no: number;
+        isPendingDocument?: boolean;
         wagonWeights?: Array<{
             wagon_id: number;
             gross_weight_mt: number;
@@ -142,6 +145,8 @@ interface RakeData {
         wagon?: { id: number; wagon_number: string; overload_weight_mt?: string | number | null };
     }>;
     siding?: {
+        name?: string;
+        code?: string;
         loaders?: Array<{
             id: number;
             loader_name: string;
@@ -273,7 +278,7 @@ export function RakeWorkflow({
         fitWagons.length > 0 &&
         fitWagons.every(w => positivelyLoadedWagonIds.has(w.id));
     const isGuardApproved = rakeData.guardInspections?.[0]?.is_approved;
-    const isWeighmentCompleted = rakeData.weighments?.[0]?.status === 'success';
+    const isWeighmentCompleted = (rakeData.weighments?.length ?? 0) > 0;
     const isComparisonStepCompleted =
         isWeighmentCompleted && isWagonLoadingCompleted;
     const hasPowerPlantReceipt = (rakeData.powerPlantReceipts ?? []).length > 0;
@@ -314,7 +319,7 @@ export function RakeWorkflow({
         {
             id: 'weighment',
             label: 'Inmotion weighment',
-            description: 'At least one successful rake weighment exists.',
+            description: 'A rake weighment record exists (manual net or imported slip).',
             status: isWeighmentCompleted ? 'completed' : 'pending',
         },
         {

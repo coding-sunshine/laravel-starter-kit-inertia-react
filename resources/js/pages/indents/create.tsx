@@ -253,15 +253,18 @@ export default function IndentsCreate({ sidings, power_plants }: Props) {
                             </div>
                             <div className="grid gap-2 sm:col-span-2">
                                 <Label htmlFor="destination">
-                                    Destination (power plant)
+                                    Destination (power plant) *
                                 </Label>
                                 <select
                                     id="destination"
                                     name="destination"
+                                    required
                                     defaultValue=""
                                     className={selectClassName}
                                 >
-                                    <option value="">Select power plant</option>
+                                    <option value="" disabled>
+                                        Select power plant
+                                    </option>
                                     {power_plants.map((p) => (
                                         <option key={p.code} value={p.code}>
                                             {p.name} ({p.code})

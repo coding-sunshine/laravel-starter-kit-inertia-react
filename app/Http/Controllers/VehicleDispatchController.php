@@ -144,6 +144,7 @@ final class VehicleDispatchController extends Controller
         }
 
         $data = $request->input('data');
+
         $targetDate = $request->input('target_date', now()->format('Y-m-d'));
 
         // Parse Excel-style paste data
@@ -524,15 +525,20 @@ final class VehicleDispatchController extends Controller
 
     private function isHeaderRow(array $columns): bool
     {
+        $firstColumn = mb_strtolower(mb_trim((string) ($columns[0] ?? '')));
+
+        // Sl.No. column is numeric for data rows ("651"); headers use labels ("Sl. No."). Stops
+        // false positives where data values like "Direct to Destination" match keyword "destination".
+        if ($firstColumn !== '' && is_numeric($firstColumn)) {
+            return false;
+        }
+
         // Check if first row contains common header keywords
         $headerKeywords = [
             'serial', 'sl.', 'permit', 'pass', 'truck', 'mineral', 'weight', 'source',
             'destination', 'consignee', 'gate', 'distance', 'shift', 'issued', 'stack',
             'ref', 'do', 'regd', 'type', 'check', 'km',
         ];
-
-        $firstColumn = mb_strtolower(mb_trim($columns[0] ?? ''));
-        $lastColumn = mb_strtolower(mb_trim($columns[count($columns) - 1] ?? ''));
 
         // Check if any column contains header keywords
         foreach ($columns as $column) {
@@ -709,6 +715,7 @@ final class VehicleDispatchController extends Controller
     /** Format D: 14 columns, no Ref - Sl.No|Permit|Pass|StackDO|IssuedOn|Truck|Mineral|MinType|Weight|Source|Dest|Consignee|CheckGate|Distance */
     private function mapFormatD(array $row): array
     {
+
         $distance = $this->parseNullableInt($row[13] ?? null);
         $sidingId = $this->findSidingByDistance($distance);
         $sidingInfo = $this->getSidingInfo($sidingId);

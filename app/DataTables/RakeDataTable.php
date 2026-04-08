@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\DataTables;
 
 use App\Models\Rake;
+use App\Models\Siding;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Machour\DataTable\AbstractDataTable;
@@ -12,6 +13,7 @@ use Machour\DataTable\Columns\Column;
 use Machour\DataTable\Filters\OperatorFilter;
 use Machour\DataTable\QuickView;
 use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\AllowedSort;
 
 final class RakeDataTable extends AbstractDataTable
 {
@@ -30,6 +32,7 @@ final class RakeDataTable extends AbstractDataTable
         public ?int $siding_id,
         public ?string $siding_code,
         public ?string $siding_name,
+        public ?string $destination,
         public ?string $data_source,
         public ?int $rr_document_id,
         public ?string $pdf_download_url,
@@ -54,6 +57,7 @@ final class RakeDataTable extends AbstractDataTable
             siding_id: $model->siding_id,
             siding_code: $model->siding?->code,
             siding_name: $model->siding?->name,
+            destination: self::destinationLabel($model),
             data_source: $model->data_source,
             rr_document_id: $model->rrDocument?->id,
             pdf_download_url: $model->pdf_download_url,
@@ -66,16 +70,15 @@ final class RakeDataTable extends AbstractDataTable
     {
         return [
             new Column(id: 'rake_number', label: 'Rake #', type: 'text', sortable: true, filterable: true),
-            new Column(id: 'siding_code', label: 'Siding', type: 'text', sortable: false, filterable: false),
-            new Column(id: 'rake_type', label: 'Type', type: 'text', sortable: true, filterable: true),
-            new Column(id: 'wagon_count', label: 'Wagons', type: 'number', sortable: true, filterable: false),
-            new Column(id: 'state', label: 'State', type: 'option', sortable: true, filterable: true, options: [
-                ['label' => 'Loading', 'value' => 'loading'],
-                ['label' => 'Loaded', 'value' => 'loaded'],
-                ['label' => 'Dispatched', 'value' => 'dispatched'],
-                ['label' => 'Arrived', 'value' => 'arrived'],
-                ['label' => 'Completed', 'value' => 'completed'],
-            ]),
+            new Column(
+                id: 'siding_code',
+                label: 'Siding',
+                type: 'option',
+                sortable: true,
+                filterable: true,
+                options: self::filterableSidingOptions(),
+            ),
+            new Column(id: 'destination', label: 'Destination', type: 'text', sortable: true, filterable: false),
             new Column(id: 'loading_date', label: 'Loading date', type: 'date', sortable: true, filterable: true),
             new Column(id: 'progress', label: 'Progress', type: 'text', sortable: false, filterable: false),
         ];
@@ -159,16 +162,42 @@ final class RakeDataTable extends AbstractDataTable
     public static function tableAllowedFilters(): array
     {
         return [
-            'rake_number',
-            'state',
-            'rake_type',
+            AllowedFilter::custom('rake_number', new OperatorFilter('text')),
             AllowedFilter::custom('loading_date', new OperatorFilter('date')),
+            // Legacy bookmarked URLs may still send filter[state]; column/filter UI removed.
+            AllowedFilter::callback('state', function (Builder $_query, mixed $_value): void {
+                // Intentionally no query change.
+            }),
+            AllowedFilter::callback('siding_code', function (Builder $query, mixed $value): void {
+                self::applySidingIdFilter($query, $value);
+            }),
+            // Legacy query params used `filter[siding]` before siding was merged into `siding_code`.
+            AllowedFilter::callback('siding', function (Builder $query, mixed $value): void {
+                self::applySidingIdFilter($query, $value);
+            }),
         ];
     }
 
     public static function tableAllowedSorts(): array
     {
-        return ['rake_number', 'rake_type', 'wagon_count', 'state', 'loading_date'];
+        return [
+            'rake_number',
+            AllowedSort::callback('siding_code', static function (Builder $query, bool $descending, string $_property): void {
+                $direction = $descending ? 'desc' : 'asc';
+                $rakesTable = $query->getModel()->getTable();
+                $sidingsTable = (new Siding())->getTable();
+                $query->leftJoin($sidingsTable, "{$sidingsTable}.id", '=', "{$rakesTable}.siding_id")
+                    ->select("{$rakesTable}.*")
+                    ->orderBy("{$sidingsTable}.name", $direction)
+                    ->orderBy("{$sidingsTable}.code", $direction);
+            }),
+            AllowedSort::callback('destination', static function (Builder $query, bool $descending, string $_property): void {
+                $direction = $descending ? 'desc' : 'asc';
+                $query->orderBy($query->qualifyColumn('destination'), $direction)
+                    ->orderBy($query->qualifyColumn('destination_code'), $direction);
+            }),
+            'loading_date',
+        ];
     }
 
     /**
@@ -219,6 +248,106 @@ final class RakeDataTable extends AbstractDataTable
         return $covered->count() === $destIds->count();
     }
 
+    private static function applySidingIdFilter(Builder $query, mixed $value): void
+    {
+        $raw = is_array($value) ? implode(',', $value) : (string) $value;
+        $operator = 'contains';
+        $rawValue = $raw;
+
+        if (preg_match('/^([a-z_]+):(.+)$/i', $raw, $matches)) {
+            $known = ['eq', 'contains', 'in', 'not_in'];
+            if (in_array($matches[1], $known, true)) {
+                $operator = $matches[1];
+                $rawValue = $matches[2];
+            }
+        }
+
+        $values = array_values(array_filter(explode(',', $rawValue), static fn (string $v): bool => $v !== ''));
+        if ($values === []) {
+            return;
+        }
+
+        if ($operator === 'in') {
+            $ids = array_map(static fn (string $v): int => (int) $v, $values);
+            $query->whereIn('siding_id', $ids);
+
+            return;
+        }
+
+        if ($operator === 'not_in') {
+            $ids = array_map(static fn (string $v): int => (int) $v, $values);
+            $query->whereNotIn('siding_id', $ids);
+
+            return;
+        }
+
+        if ($operator === 'eq') {
+            $query->where('siding_id', (int) $values[0]);
+
+            return;
+        }
+
+        $needle = $values[0];
+        $query->whereHas('siding', static function (Builder $sidingQuery) use ($needle): void {
+            $sidingQuery->where('code', 'LIKE', '%'.$needle.'%')
+                ->orWhere('name', 'LIKE', '%'.$needle.'%');
+        });
+    }
+
+    private static function destinationLabel(Rake $model): ?string
+    {
+        $code = $model->destination_code !== null && $model->destination_code !== ''
+            ? mb_trim((string) $model->destination_code)
+            : null;
+        $name = $model->destination !== null && $model->destination !== ''
+            ? mb_trim((string) $model->destination)
+            : null;
+
+        if ($code !== null && $name !== null) {
+            return $code === $name ? $name : $code.' — '.$name;
+        }
+
+        return $code ?? $name;
+    }
+
+    /**
+     * @return list<array{label: string, value: string}>
+     */
+    private static function filterableSidingOptions(): array
+    {
+        $user = request()->user();
+        $sidingIds = $user && $user->isSuperAdmin()
+            ? Siding::query()->orderBy('name')->pluck('id')->all()
+            : ($user ? $user->sidings()->orderBy('name')->get()->pluck('id')->all() : []);
+
+        if ($user && ! $user->isSuperAdmin() && $sidingIds === [] && $user->siding_id !== null) {
+            $sidingIds = [(int) $user->siding_id];
+        }
+
+        if ($sidingIds === []) {
+            return [];
+        }
+
+        $sidings = Siding::query()
+            ->whereIn('id', $sidingIds)
+            ->orderBy('name')
+            ->get(['id', 'name', 'code']);
+
+        $options = [];
+        foreach ($sidings as $siding) {
+            $label = $siding->name;
+            if ($siding->code) {
+                $label .= ' ('.$siding->code.')';
+            }
+            $options[] = [
+                'label' => $label,
+                'value' => (string) $siding->id,
+            ];
+        }
+
+        return $options;
+    }
+
     private static function computeWorkflowSteps(Rake $model): array
     {
         $txr = $model->txr;
@@ -253,10 +382,10 @@ final class RakeDataTable extends AbstractDataTable
             && $fitWagons->every(fn ($w) => $positivelyLoadedWagonIds->has($w->id));
         $guardInspections = $model->relationLoaded('guardInspections') ? $model->guardInspections : $model->guardInspections()->get();
         $isGuardApproved = $guardInspections->isNotEmpty() && $guardInspections->first()?->is_approved === true;
-        $rakeWeighmentsWithPdf = $model->relationLoaded('rakeWeighments')
-            ? $model->rakeWeighments->whereNotNull('pdf_file_path')
-            : $model->rakeWeighments()->whereNotNull('pdf_file_path')->get();
-        $isWeighmentCompleted = $rakeWeighmentsWithPdf->contains('status', 'success');
+        $rakeWeighments = $model->relationLoaded('rakeWeighments')
+            ? $model->rakeWeighments
+            : $model->rakeWeighments()->get();
+        $isWeighmentCompleted = $rakeWeighments->isNotEmpty();
         $hasRrDocument = $model->relationLoaded('rrDocument')
             ? $model->rrDocument !== null
             : $model->rrDocument()->exists();

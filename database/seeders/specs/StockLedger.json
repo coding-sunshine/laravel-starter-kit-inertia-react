@@ -76,6 +76,11 @@
             "type": "bigint",
             "nullable": true,
             "default": null
+        },
+        "rake_weighment_id": {
+            "type": "bigint",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {
@@ -94,6 +99,10 @@
         "dailyVehicleEntry": {
             "type": "belongsTo",
             "model": "DailyVehicleEntry"
+        },
+        "rakeWeighment": {
+            "type": "belongsTo",
+            "model": "RakeWeighment"
         },
         "creator": {
             "type": "belongsTo",

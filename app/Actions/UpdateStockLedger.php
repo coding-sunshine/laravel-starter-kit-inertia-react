@@ -110,50 +110,214 @@ final readonly class UpdateStockLedger
         float $quantity,
         ?int $rakeId = null,
         ?string $remarks = null,
-        int $userId = 0
+        int $userId = 0,
+        ?int $rakeWeighmentId = null,
     ): StockLedger {
-        return DB::transaction(function () use ($siding, $quantity, $rakeId, $remarks, $userId): StockLedger {
-    
+        return DB::transaction(function () use ($siding, $quantity, $rakeId, $remarks, $userId, $rakeWeighmentId): StockLedger {
+
             $sidingId = (int) $siding->id;
-    
+
             $lastLedger = StockLedger::query()
                 ->where('siding_id', $sidingId)
                 ->lockForUpdate()
                 ->latest('id')
                 ->first();
-    
+
             $opening = $lastLedger !== null
                 ? (float) $lastLedger->closing_balance_mt
                 : SidingOpeningBalance::getOpeningBalanceForSiding($sidingId);
-    
-            // 🔥 ALWAYS negative
+
+            //  ALWAYS negative
             $dispatchQty = -abs($quantity);
-    
+
             $closing = round($opening + $dispatchQty, 2);
-    
+
             throw_if(
                 $closing < 0,
                 InvalidArgumentException::class,
                 "Insufficient stock. Available: {$opening} MT, Required: {$quantity} MT"
             );
-    
+
             $ledger = StockLedger::create([
                 'siding_id' => $sidingId,
                 'transaction_type' => 'dispatch',
                 'rake_id' => $rakeId,
-                'quantity_mt' => $dispatchQty, // 🔥 negative
+                'rake_weighment_id' => $rakeWeighmentId,
+                'quantity_mt' => $dispatchQty, //  negative
                 'opening_balance_mt' => $opening,
                 'closing_balance_mt' => $closing,
-                'reference_number' => 'DISP-' . ($rakeId ?? 'MAN'),
+                'reference_number' => 'DISP-'.($rakeId ?? 'MAN'),
                 'remarks' => $remarks,
                 'created_by' => $userId ?: null,
             ]);
-    
+
             DB::afterCommit(function () use ($sidingId, $closing): void {
                 event(new CoalStockUpdated($sidingId, $closing));
             });
-    
+
             return $ledger;
+        });
+    }
+
+    /**
+     * Apply a signed net-weight delta for a rake weighment: positive = more coal dispatched out;
+     * negative = net returning to siding (correction row, same pattern as weighment delete reversal).
+     */
+    public function applyRakeWeighmentNetDelta(
+        Siding $siding,
+        int $rakeId,
+        int $rakeWeighmentId,
+        float $deltaMt,
+        int $userId,
+        ?string $remarks = null,
+    ): ?StockLedger {
+        $deltaMt = round($deltaMt, 2);
+
+        if (abs($deltaMt) < 0.005) {
+            return null;
+        }
+
+        if ($deltaMt > 0) {
+            return $this->recordDispatch(
+                $siding,
+                $deltaMt,
+                $rakeId,
+                $remarks ?? 'Rake weighment net weight increased',
+                $userId,
+                $rakeWeighmentId,
+            );
+        }
+
+        return $this->recordRakeWeighmentReturnCorrection(
+            $siding,
+            $rakeId,
+            $rakeWeighmentId,
+            abs($deltaMt),
+            $userId,
+            $remarks ?? 'Rake weighment net weight decreased',
+        );
+    }
+
+    /**
+     * Adds stock back when net weight is reduced (positive quantity_mt, correction), mirroring weighment delete reversal.
+     */
+    public function recordRakeWeighmentReturnCorrection(
+        Siding $siding,
+        int $rakeId,
+        int $rakeWeighmentId,
+        float $quantityMt,
+        int $userId,
+        ?string $remarks = null,
+    ): StockLedger {
+        return DB::transaction(function () use ($siding, $rakeId, $rakeWeighmentId, $quantityMt, $userId, $remarks): StockLedger {
+            $sidingId = (int) $siding->id;
+            $qty = round(abs($quantityMt), 2);
+
+            $lastLedger = StockLedger::query()
+                ->where('siding_id', $sidingId)
+                ->lockForUpdate()
+                ->latest('id')
+                ->first();
+
+            $opening = $lastLedger !== null
+                ? (float) $lastLedger->closing_balance_mt
+                : SidingOpeningBalance::getOpeningBalanceForSiding($sidingId);
+
+            $closing = round($opening + $qty, 2);
+
+            $ledger = StockLedger::query()->create([
+                'siding_id' => $sidingId,
+                'transaction_type' => 'correction',
+                'rake_id' => $rakeId,
+                'rake_weighment_id' => $rakeWeighmentId,
+                'quantity_mt' => $qty,
+                'opening_balance_mt' => $opening,
+                'closing_balance_mt' => $closing,
+                'reference_number' => 'CORR-RW-'.$rakeWeighmentId.'-'.now()->timestamp,
+                'remarks' => $remarks,
+                'created_by' => $userId ?: null,
+            ]);
+
+            DB::afterCommit(function () use ($sidingId, $closing): void {
+                event(new CoalStockUpdated($sidingId, $closing));
+            });
+
+            return $ledger;
+        });
+    }
+
+    /**
+     * Reverse the net stock effect when ledger rows show net dispatch out (negative sum of quantity_mt).
+     * Targets rows for a rake_weighment_id, or legacy rows with rake_id set and rake_weighment_id null.
+     * Idempotent when a reversal row with the computed reference_number already exists.
+     */
+    public function reverseStockLedgerNetForRakeWeighment(
+        Siding $siding,
+        int $rakeId,
+        ?int $rakeWeighmentId,
+        int $userId,
+        string $remarks,
+    ): void {
+        DB::transaction(function () use ($siding, $rakeId, $rakeWeighmentId, $userId, $remarks): void {
+            $sidingId = (int) $siding->id;
+
+            $query = StockLedger::query()->where('siding_id', $sidingId)->where('rake_id', $rakeId);
+
+            if ($rakeWeighmentId !== null) {
+                $query->where('rake_weighment_id', $rakeWeighmentId);
+            } else {
+                $query->whereNull('rake_weighment_id');
+            }
+
+            $netSum = (float) $query->sum('quantity_mt');
+
+            if ($netSum >= -0.005) {
+                return;
+            }
+
+            $referenceNumber = $rakeWeighmentId !== null
+                ? 'REV-RW-'.$rakeWeighmentId
+                : 'REV-RW-LEGACY-R'.$rakeId;
+
+            $alreadyReversed = StockLedger::query()
+                ->where('reference_number', $referenceNumber)
+                ->lockForUpdate()
+                ->exists();
+
+            if ($alreadyReversed) {
+                return;
+            }
+
+            $reverseQty = abs($netSum);
+
+            $lastLedger = StockLedger::query()
+                ->where('siding_id', $sidingId)
+                ->lockForUpdate()
+                ->latest('id')
+                ->first();
+
+            $opening = $lastLedger !== null
+                ? (float) $lastLedger->closing_balance_mt
+                : SidingOpeningBalance::getOpeningBalanceForSiding($sidingId);
+
+            $closing = round($opening + $reverseQty, 2);
+
+            StockLedger::query()->create([
+                'siding_id' => $sidingId,
+                'transaction_type' => 'correction',
+                'rake_id' => $rakeId,
+                'rake_weighment_id' => $rakeWeighmentId,
+                'quantity_mt' => $reverseQty,
+                'opening_balance_mt' => $opening,
+                'closing_balance_mt' => $closing,
+                'reference_number' => $referenceNumber,
+                'remarks' => $remarks,
+                'created_by' => $userId ?: null,
+            ]);
+
+            DB::afterCommit(function () use ($sidingId, $closing): void {
+                event(new CoalStockUpdated($sidingId, $closing));
+            });
         });
     }
 
