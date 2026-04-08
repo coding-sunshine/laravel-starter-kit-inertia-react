@@ -45,6 +45,10 @@ export interface DataTableOptions {
     filters: boolean;
     /** `inline` shows all filter fields outside the Filtrer popover (toolbar only). */
     filtersLayout?: 'popover' | 'inline';
+    /** With `filtersLayout: 'inline'`, lay out filters in one horizontal scroll row. */
+    filtersInlineSingleRow?: boolean;
+    /** Per-column wrapper classes for inline filter width (see FilterColumn.inlineWrapClassName). */
+    filtersColumnWrapClassNames?: Record<string, string>;
     columnVisibility: boolean;
     columnOrdering: boolean;
 }

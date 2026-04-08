@@ -11,6 +11,8 @@ export interface FilterColumn {
     searchThreshold?: number;
     /** When type is `text` and filters are inline, lock the operator (default is contains). */
     textFixedOperator?: 'contains' | 'eq';
+    /** Tailwind classes for the inline filter field wrapper (width, shrink). */
+    inlineWrapClassName?: string;
 }
 
 export interface FilterValue {

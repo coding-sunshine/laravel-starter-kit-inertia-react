@@ -25,6 +25,8 @@ export interface FilterControlProps {
     variant?: 'default' | 'inline';
     /** When set, the operator dropdown is omitted and this operator is always used (e.g. `between`, `contains`). */
     fixedOperator?: string;
+    /** Omit helper text under inline text filters (e.g. single-row toolbar). */
+    suppressFooterHints?: boolean;
 }
 
 function OperatorSelect({
@@ -454,6 +456,7 @@ export function TextFilter({
     hideOperator,
     variant = 'default',
     fixedOperator,
+    suppressFooterHints = false,
 }: FilterControlProps) {
     const fixedTextOp =
         fixedOperator === 'contains' || fixedOperator === 'eq' ? fixedOperator : null;
@@ -562,13 +565,13 @@ export function TextFilter({
                         className="h-8 min-w-0 flex-1 text-sm"
                     />
                 </div>
-                {containsOnly && (
+                {!suppressFooterHints && containsOnly && (
                     <p className="text-xs text-muted-foreground">
                         Applies {INLINE_CONTAINS_DEBOUNCE_MS / 1000}s after you stop typing (Enter
                         applies immediately)
                     </p>
                 )}
-                {equalsOnly && (
+                {!suppressFooterHints && equalsOnly && (
                     <p className="text-xs text-muted-foreground">
                         Type the full rake number (exact match). Press Enter or leave the field to
                         apply.
@@ -608,6 +611,7 @@ export function FilterControl({
     hideOperator,
     variant = 'default',
     fixedOperator,
+    suppressFooterHints = false,
 }: FilterControlProps) {
     switch (column.type) {
         case 'boolean':
@@ -660,6 +664,7 @@ export function FilterControl({
                     hideOperator={hideOperator}
                     variant={variant}
                     fixedOperator={fixedOperator}
+                    suppressFooterHints={suppressFooterHints}
                 />
             );
         default:

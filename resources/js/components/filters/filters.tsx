@@ -15,6 +15,8 @@ interface FiltersProps {
     columns: FilterColumn[];
     serverFilters: Record<string, unknown>;
     layout?: 'popover' | 'inline';
+    /** Inline layout: one horizontal row with horizontal scroll (vs responsive grid). */
+    inlineSingleRow?: boolean;
 }
 
 function formatNumericValue(v: string): string {
@@ -168,7 +170,7 @@ function FilterPill({
     );
 }
 
-export function Filters({ columns, serverFilters, layout = 'popover' }: FiltersProps) {
+export function Filters({ columns, serverFilters, layout = 'popover', inlineSingleRow = false }: FiltersProps) {
     const { activeFilters, setFilter, clearFilter, clearAllFilters } = useFilters(serverFilters);
 
     const [selectorOpen, setSelectorOpen] = useState(false);
@@ -240,11 +242,24 @@ export function Filters({ columns, serverFilters, layout = 'popover' }: FiltersP
     if (layout === 'inline') {
         const hasActive = Object.keys(activeFilters).length > 0;
 
+        const inlineFieldsContainerClass = inlineSingleRow
+            ? 'flex flex-nowrap items-end gap-3 overflow-x-auto pb-1'
+            : 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4';
+
         return (
             <div className="flex w-full flex-col gap-3">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className={inlineFieldsContainerClass}>
                     {columns.map((col) => (
-                        <div key={col.id} className="min-w-0 space-y-1.5">
+                        <div
+                            key={col.id}
+                            className={cn(
+                                'space-y-1.5',
+                                inlineSingleRow ? 'shrink-0' : 'min-w-0',
+                                col.inlineWrapClassName,
+                                !col.inlineWrapClassName && !inlineSingleRow && 'min-w-0',
+                                !col.inlineWrapClassName && inlineSingleRow && 'min-w-[8rem]',
+                            )}
+                        >
                             <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                                 {col.icon && <col.icon className="size-3.5 shrink-0 stroke-[2.25px]" />}
                                 <span>{col.label}</span>
@@ -255,6 +270,7 @@ export function Filters({ columns, serverFilters, layout = 'popover' }: FiltersP
                                 onSubmit={(op, vals) => handleFilterSubmit(col.id, op, vals)}
                                 variant="inline"
                                 hideOperator
+                                suppressFooterHints={inlineSingleRow}
                                 fixedOperator={
                                     col.type === 'date'
                                         ? 'between'
