@@ -1,5 +1,7 @@
 export interface OverviewData {
     rrNumber: string;
+    /** Linked system rake number, or "—" when standalone / unknown */
+    rakeNumber: string;
     fnr: string;
     fromStation: string;
     toStation: string;

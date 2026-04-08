@@ -287,13 +287,9 @@ export function RakeWorkflow({
         if (!rakeData.is_diverted) {
             return docs.length > 0;
         }
-        const primary = docs.some((d) => d.diverrt_destination_id == null);
-        if (!primary) {
-            return false;
-        }
         const legs = rakeData.diverrtDestinations ?? [];
         if (legs.length === 0) {
-            return true;
+            return docs.some((d) => d.diverrt_destination_id == null);
         }
         return legs.every((leg) => docs.some((d) => d.diverrt_destination_id === leg.id));
     })();

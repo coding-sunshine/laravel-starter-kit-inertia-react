@@ -58,18 +58,25 @@ return [
     |--------------------------------------------------------------------------
     | When a rake's siding uses one of these station_code values (uppercase in
     | DB, compared case-insensitively), the parsed PDF must include Station From
-    | and it must match that siding's station_code or code after alias mapping.
-    | Other sidings (e.g. Kurwa, Pakur) skip "from" validation — PDF headers are
-    | not reliable enough there yet.
+    | and it must match that siding's station_code or siding code after alias
+    | mapping (see SidingSeeder: Dumka DMK, Kurwa KRW, Pakur PKR).
+    |
+    | PDF IR tokens sometimes differ from sidings.station_code — map them in
+    | rr_from_station_pdf_code_aliases below (keys and values are normalized to
+    | uppercase when matching).
     */
-    'rr_strict_from_station_station_codes' => ['DMK'],
+    'rr_strict_from_station_station_codes' => ['DMK', 'KRW', 'PKR'],
 
     /*
     |--------------------------------------------------------------------------
     | Map PDF/header station tokens to canonical codes (uppercase keys)
     |--------------------------------------------------------------------------
+    | Values must match sidings.station_code (or siding code) for the rake.
+    | BMGK / WBPC are common “Station From” codes on RRs for Kurwa / Pakur.
     */
     'rr_from_station_pdf_code_aliases' => [
         'DUMK' => 'DMK',
+        'BMGK' => 'KRW',
+        'WBPC' => 'PKR',
     ],
 ];

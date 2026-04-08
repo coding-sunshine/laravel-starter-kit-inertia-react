@@ -51,6 +51,7 @@ final class RrDocumentController extends Controller
             'activeTab' => $tab,
             'can_upload_rr' => $this->hasSectionPermission($user, 'sections.railway_receipts.upload'),
             'showStandaloneTab' => $user->isSuperAdmin(),
+            'can_manage_rake_diversion' => $this->hasSectionPermission($user, 'sections.rakes.update'),
         ]);
     }
 
@@ -145,9 +146,6 @@ final class RrDocumentController extends Controller
         $rrDocument->load([
             'rake.siding:id,name,code',
             'rake.wagons',
-            'rake.rakeCharges:id,rake_id,diverrt_destination_id,charge_type,amount,is_actual_charges,data_source,remarks',
-            'rake.appliedPenalties.penaltyType:id,code,name,calculation_type',
-            'rake.appliedPenalties.wagon:id,wagon_number,overload_weight_mt',
             'rrCharges',
             'wagonSnapshots',
             'penaltySnapshots',
@@ -165,19 +163,6 @@ final class RrDocumentController extends Controller
 
         $hasPdf = $rrDocument->getFirstMedia('rr_pdf') !== null;
         $rrDocument->setAttribute('rr_pdf_download_url', $hasPdf ? route('railway-receipts.pdf', $rrDocument) : null);
-        $ledgerCharges = $rrDocument->rake?->rakeCharges
-            ?->filter(fn ($charge): bool => $charge->is_actual_charges
-                && (int) $charge->diverrt_destination_id === (int) $rrDocument->diverrt_destination_id)
-            ->map(fn ($charge): array => [
-                'id' => $charge->id,
-                'charge_type' => $charge->charge_type,
-                'amount' => $charge->amount,
-                'data_source' => $charge->data_source,
-                'remarks' => $charge->remarks,
-            ])
-            ->values()
-            ->all() ?? [];
-        $rrDocument->setAttribute('rake_charges_ledger', $ledgerCharges);
 
         return Inertia::render('railway-receipts/show', [
             'rrDocument' => $rrDocument,

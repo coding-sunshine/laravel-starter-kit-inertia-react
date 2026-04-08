@@ -56,6 +56,7 @@ use App\Http\Controllers\Rakes\RakeGuardInspectionController;
 use App\Http\Controllers\Rakes\RakeLoadController;
 use App\Http\Controllers\Rakes\RakeLoaderController;
 use App\Http\Controllers\Rakes\RakePowerPlantReceiptController;
+use App\Http\Controllers\Rakes\RakeRrHubStateController;
 use App\Http\Controllers\Rakes\RakesController;
 use App\Http\Controllers\Rakes\RakeTxrController;
 use App\Http\Controllers\Rakes\RakeWagonController;
@@ -217,6 +218,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 
     Route::get('rakes', [RakesController::class, 'index'])->name('rakes.index');
     Route::get('rakes/{rake}', [RakesController::class, 'show'])->name('rakes.show');
+    Route::get('rakes/{rake}/rr-hub-state', RakeRrHubStateController::class)->name('rakes.rr-hub-state');
     Route::get('rakes/{rake}/pre-rr', [PreRrController::class, 'show'])->name('rakes.pre-rr.show');
     Route::patch('rakes/{rake}/diversion-mode', RakeDiversionModeController::class)->name('rakes.diversion-mode.update');
     Route::post('rakes/{rake}/diverrt-destinations', [RakeDiverrtDestinationController::class, 'store'])->name('rakes.diverrt-destinations.store');
