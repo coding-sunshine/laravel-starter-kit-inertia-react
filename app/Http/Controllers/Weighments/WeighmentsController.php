@@ -30,6 +30,8 @@ final class WeighmentsController extends Controller
 {
     public function index(Request $request): Response
     {
+        $this->applyWeighmentsHubDefaultLoadingDateFilter($request);
+
         return Inertia::render('weighments/index', [
             'tableData' => WeighmentsRakeDataTable::makeTable($request),
         ]);
@@ -296,6 +298,23 @@ final class WeighmentsController extends Controller
 
         return to_route('weighments.index')
             ->with('success', 'Historical weighment and related rake data removed.');
+    }
+
+    /**
+     * When the client omits `filter[loading_date]`, restrict the hub to {@see Rake::$loading_date} equal to today.
+     * If `filter[loading_date]` is present (even empty), do not inject a default.
+     */
+    private function applyWeighmentsHubDefaultLoadingDateFilter(Request $request): void
+    {
+        $filter = $request->input('filter', []);
+        if (! is_array($filter)) {
+            $filter = [];
+        }
+        if (array_key_exists('loading_date', $filter)) {
+            return;
+        }
+        $filter['loading_date'] = 'eq:'.now()->toDateString();
+        $request->merge(['filter' => $filter]);
     }
 
     private function assertUserCanAccessWeighmentRakeSiding(User $user, Weighment $weighment): void
