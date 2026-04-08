@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Plus, Edit, Trash2 } from 'lucide-react';
+import { Download, Search, Plus, Edit, Trash2 } from 'lucide-react';
 import { useCan } from '@/hooks/use-can';
 import AppLayout from '@/layouts/app-layout';
 
@@ -39,6 +39,24 @@ interface PaginationLink {
 /** Radix Select does not allow SelectItem with an empty string value. */
 const ALL_SIDINGS_VALUE = '__all__';
 
+type DatePreset = 'today' | 'yesterday' | 'custom';
+
+function inferDatePreset(dateFrom: string, dateTo: string, today: string, yesterday: string): DatePreset {
+  if (dateFrom === '' && dateTo === '') {
+    return 'custom';
+  }
+  if (dateFrom === dateTo) {
+    if (dateFrom === today) {
+      return 'today';
+    }
+    if (dateFrom === yesterday) {
+      return 'yesterday';
+    }
+  }
+
+  return 'custom';
+}
+
 interface Props {
   coalStockDetails: {
     data: CoalStockDetail[];
@@ -54,32 +72,55 @@ interface Props {
     date_from?: string;
     date_to?: string;
   };
+  calendar: {
+    today: string;
+    yesterday: string;
+  };
 }
 
-export default function Index({ coalStockDetails, sidings, filters }: Props) {
+export default function Index({ coalStockDetails, sidings, filters, calendar }: Props) {
+  const canView = useCan('sections.daily_stock_details.view');
   const canCreate = useCan('sections.daily_stock_details.create');
   const canUpdate = useCan('sections.daily_stock_details.update');
   const canDelete = useCan('sections.daily_stock_details.delete');
+
   const { data, setData, processing } = useForm({
     siding_id: filters.siding_id ? String(filters.siding_id) : ALL_SIDINGS_VALUE,
     date_from: filters.date_from || '',
     date_to: filters.date_to || '',
   });
 
+  const [datePreset, setDatePreset] = useState<DatePreset>(() =>
+    inferDatePreset(filters.date_from || '', filters.date_to || '', calendar.today, calendar.yesterday),
+  );
+
+  useEffect(() => {
+    setData('siding_id', filters.siding_id ? String(filters.siding_id) : ALL_SIDINGS_VALUE);
+    setData('date_from', filters.date_from || '');
+    setData('date_to', filters.date_to || '');
+    setDatePreset(inferDatePreset(filters.date_from || '', filters.date_to || '', calendar.today, calendar.yesterday));
+  }, [filters.siding_id, filters.date_from, filters.date_to, calendar.today, calendar.yesterday]);
+
   function filterQueryParams(): Record<string, string> {
-    const q: Record<string, string> = {};
+    const q: Record<string, string> = {
+      date_from: data.date_from,
+      date_to: data.date_to,
+    };
     if (data.siding_id && data.siding_id !== ALL_SIDINGS_VALUE) {
       q.siding_id = data.siding_id;
-    }
-    if (data.date_from) {
-      q.date_from = data.date_from;
-    }
-    if (data.date_to) {
-      q.date_to = data.date_to;
+    } else {
+      q.siding_id = '';
     }
 
     return q;
   }
+
+  const exportHref = useMemo(() => {
+    const params = new URLSearchParams(filterQueryParams());
+    const qs = params.toString();
+
+    return `/master-data/daily-stock-details/export${qs ? `?${qs}` : ''}`;
+  }, [data.siding_id, data.date_from, data.date_to]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -89,12 +130,26 @@ export default function Index({ coalStockDetails, sidings, filters }: Props) {
   }
 
   function clearFilters() {
-    setData({
-      siding_id: ALL_SIDINGS_VALUE,
-      date_from: '',
-      date_to: '',
-    });
-    router.get('/master-data/daily-stock-details', {}, { preserveState: true });
+    setDatePreset('custom');
+    setData('siding_id', ALL_SIDINGS_VALUE);
+    setData('date_from', '');
+    setData('date_to', '');
+    router.get(
+      '/master-data/daily-stock-details',
+      { siding_id: '', date_from: '', date_to: '' },
+      { preserveState: true },
+    );
+  }
+
+  function onDatePresetChange(value: DatePreset) {
+    setDatePreset(value);
+    if (value === 'today') {
+      setData('date_from', calendar.today);
+      setData('date_to', calendar.today);
+    } else if (value === 'yesterday') {
+      setData('date_from', calendar.yesterday);
+      setData('date_to', calendar.yesterday);
+    }
   }
 
   return (
@@ -117,59 +172,95 @@ export default function Index({ coalStockDetails, sidings, filters }: Props) {
           )}
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Filters</CardTitle>
+        <Card className="py-0 gap-0">
+          <CardHeader className="space-y-0 px-4 py-2">
+            <CardTitle className="text-base font-semibold">Filters</CardTitle>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div>
-                  <Label htmlFor="siding_id">Siding</Label>
-                  <Select
-                    value={data.siding_id}
-                    onValueChange={(value) => setData('siding_id', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="All Sidings" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={ALL_SIDINGS_VALUE}>All Sidings</SelectItem>
-                      {sidings.map((siding) => (
-                        <SelectItem key={siding.id} value={siding.id.toString()}>
-                          {siding.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="date_from">Date From</Label>
-                  <Input
-                    id="date_from"
-                    type="date"
-                    value={data.date_from}
-                    onChange={(e) => setData('date_from', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="date_to">Date To</Label>
-                  <Input
-                    id="date_to"
-                    type="date"
-                    value={data.date_to}
-                    onChange={(e) => setData('date_to', e.target.value)}
-                  />
-                </div>
-                <div className="flex items-end space-x-2">
-                  <Button type="submit" disabled={processing}>
-                    <Search className="h-4 w-4 mr-2" />
-                    Search
+          <CardContent className="px-4 pb-2.5 pt-0">
+            <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-x-2 gap-y-1.5">
+              <div className="flex w-[11rem] shrink-0 flex-col gap-0.5">
+                <Label htmlFor="siding_id" className="text-xs text-muted-foreground">
+                  Siding
+                </Label>
+                <Select
+                  value={data.siding_id}
+                  onValueChange={(value) => setData('siding_id', value)}
+                >
+                  <SelectTrigger id="siding_id" className="h-9 w-full" data-pan="daily-stock-details-filter-siding">
+                    <SelectValue placeholder="All Sidings" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL_SIDINGS_VALUE}>All Sidings</SelectItem>
+                    {sidings.map((siding) => (
+                      <SelectItem key={siding.id} value={siding.id.toString()}>
+                        {siding.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex w-[8.75rem] shrink-0 flex-col gap-0.5">
+                <Label htmlFor="date_preset" className="text-xs text-muted-foreground">
+                  Date
+                </Label>
+                <Select value={datePreset} onValueChange={(v) => onDatePresetChange(v as DatePreset)}>
+                  <SelectTrigger id="date_preset" className="h-9 w-full" data-pan="daily-stock-details-date-preset">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="today">Today</SelectItem>
+                    <SelectItem value="yesterday">Yesterday</SelectItem>
+                    <SelectItem value="custom">Custom</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {datePreset === 'custom' && (
+                <>
+                  <div className="flex w-[9.25rem] shrink-0 flex-col gap-0.5">
+                    <Label htmlFor="date_from" className="text-xs text-muted-foreground">
+                      From
+                    </Label>
+                    <Input
+                      id="date_from"
+                      type="date"
+                      className="h-9 w-full px-2"
+                      value={data.date_from}
+                      onChange={(e) => setData('date_from', e.target.value)}
+                    />
+                  </div>
+                  <div className="flex w-[9.25rem] shrink-0 flex-col gap-0.5">
+                    <Label htmlFor="date_to" className="text-xs text-muted-foreground">
+                      To
+                    </Label>
+                    <Input
+                      id="date_to"
+                      type="date"
+                      className="h-9 w-full px-2"
+                      value={data.date_to}
+                      onChange={(e) => setData('date_to', e.target.value)}
+                    />
+                  </div>
+                </>
+              )}
+
+              <div className="flex shrink-0 items-center gap-1.5">
+                <Button type="submit" size="sm" className="h-9" disabled={processing} data-pan="daily-stock-details-search">
+                  <Search className="h-4 w-4 sm:mr-1.5" />
+                  <span className="hidden sm:inline">Search</span>
+                </Button>
+                <Button type="button" size="sm" variant="outline" className="h-9" onClick={clearFilters}>
+                  Clear
+                </Button>
+                {canView && (
+                  <Button type="button" size="sm" variant="outline" className="h-9" asChild>
+                    <a href={exportHref} data-pan="daily-stock-details-export-xlsx">
+                      <Download className="h-4 w-4 sm:mr-1.5" />
+                      <span className="hidden sm:inline">Export</span>
+                    </a>
                   </Button>
-                  <Button type="button" variant="outline" onClick={clearFilters}>
-                    Clear
-                  </Button>
-                </div>
+                )}
               </div>
             </form>
           </CardContent>
@@ -200,7 +291,7 @@ export default function Index({ coalStockDetails, sidings, filters }: Props) {
                     <TableCell>{detail.date || '-'}</TableCell>
                     <TableCell className="font-medium">{detail.siding?.name || '-'}</TableCell>
                     <TableCell>
-                      {detail.railway_siding_opening_coal_stock 
+                      {detail.railway_siding_opening_coal_stock
                         ? Number(detail.railway_siding_opening_coal_stock).toLocaleString('en-IN', { minimumFractionDigits: 2 })
                         : '-'}
                     </TableCell>
@@ -221,13 +312,15 @@ export default function Index({ coalStockDetails, sidings, filters }: Props) {
                         : '-'}
                     </TableCell>
                     <TableCell>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        detail.source === 'manual' 
-                          ? 'bg-blue-100 text-blue-800' 
-                          : detail.source === 'system'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          detail.source === 'manual'
+                            ? 'bg-blue-100 text-blue-800'
+                            : detail.source === 'system'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-gray-100 text-gray-800'
+                        }`}
+                      >
                         {detail.source || '-'}
                       </span>
                     </TableCell>
@@ -269,7 +362,6 @@ export default function Index({ coalStockDetails, sidings, filters }: Props) {
               </div>
             )}
 
-            {/* Pagination */}
             {coalStockDetails.last_page > 1 && (
               <div className="flex justify-center mt-6 space-x-2">
                 {coalStockDetails.links.map((link, index) => (
@@ -280,8 +372,8 @@ export default function Index({ coalStockDetails, sidings, filters }: Props) {
                       link.active
                         ? 'bg-primary text-primary-foreground'
                         : link.url
-                        ? 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-                        : 'bg-muted text-muted-foreground cursor-not-allowed'
+                          ? 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                          : 'bg-muted text-muted-foreground cursor-not-allowed'
                     }`}
                     dangerouslySetInnerHTML={{ __html: link.label }}
                   />

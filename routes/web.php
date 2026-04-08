@@ -286,6 +286,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         Route::put('opening-coal-stock/{siding}', [OpeningCoalStockController::class, 'update'])->name('opening-coal-stock.update');
         Route::post('opening-coal-stock/{siding}/fix', [OpeningCoalStockController::class, 'fixWrongOpening'])->name('opening-coal-stock.fix');
         Route::get('daily-stock-details', [CoalStockApproxDetailController::class, 'index'])->name('daily-stock-details.index');
+        Route::get('daily-stock-details/export', [CoalStockApproxDetailController::class, 'export'])->name('daily-stock-details.export');
         Route::get('daily-stock-details/create', [CoalStockApproxDetailController::class, 'create'])->name('daily-stock-details.create');
         Route::post('daily-stock-details', [CoalStockApproxDetailController::class, 'store'])->name('daily-stock-details.store');
         Route::get('daily-stock-details/{coalStockApproxDetail}/edit', [CoalStockApproxDetailController::class, 'edit'])->name('daily-stock-details.edit');
