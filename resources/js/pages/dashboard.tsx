@@ -131,6 +131,74 @@ const SECTION_FILTER_KEYS = {
 
 const DEFAULT_DASHBOARD_SECTION = 'executive-overview';
 
+/** Mirrors `DashboardWidgetPermissions::executiveWidgetNames()` — used for section + executive empty states. */
+const EXECUTIVE_DASHBOARD_WIDGET_NAMES = [
+    'dashboard.widgets.executive_tables_road_dispatch',
+    'dashboard.widgets.executive_tables_rail_dispatch',
+    'dashboard.widgets.executive_tables_production',
+    'dashboard.widgets.executive_tables_custom',
+    'dashboard.widgets.executive_tables_fy_summary',
+    'dashboard.widgets.executive_chart_road_dispatch',
+    'dashboard.widgets.executive_chart_rail_dispatch',
+    'dashboard.widgets.executive_chart_production',
+    'dashboard.widgets.executive_chart_penalty_by_siding',
+    'dashboard.widgets.executive_chart_powerplant_dispatch',
+    'dashboard.widgets.executive_chart_fy',
+] as const;
+
+const EXEC_TABLE_WIDGETS: readonly string[] = [
+    'dashboard.widgets.executive_tables_road_dispatch',
+    'dashboard.widgets.executive_tables_rail_dispatch',
+    'dashboard.widgets.executive_tables_production',
+    'dashboard.widgets.executive_tables_custom',
+    'dashboard.widgets.executive_tables_fy_summary',
+];
+
+const EXEC_CHART_WIDGETS: readonly string[] = [
+    'dashboard.widgets.executive_chart_road_dispatch',
+    'dashboard.widgets.executive_chart_rail_dispatch',
+    'dashboard.widgets.executive_chart_production',
+    'dashboard.widgets.executive_chart_penalty_by_siding',
+    'dashboard.widgets.executive_chart_powerplant_dispatch',
+    'dashboard.widgets.executive_chart_fy',
+];
+
+function dashboardSectionVisible(sectionId: (typeof DASHBOARD_SECTIONS)[number]['id'], canWidget: (name: string) => boolean): boolean {
+    switch (sectionId) {
+        case 'executive-overview':
+            return EXECUTIVE_DASHBOARD_WIDGET_NAMES.some((n) => canWidget(n));
+        case 'siding-overview':
+            return (
+                canWidget('dashboard.widgets.siding_overview_performance') ||
+                canWidget('dashboard.widgets.siding_overview_penalty_trend') ||
+                canWidget('dashboard.widgets.siding_overview_power_plant_distribution')
+            );
+        case 'operations':
+            return (
+                canWidget('dashboard.widgets.operations_coal_transport') ||
+                canWidget('dashboard.widgets.operations_daily_rake_details') ||
+                canWidget('dashboard.widgets.operations_truck_receipt_trend') ||
+                canWidget('dashboard.widgets.operations_shift_vehicle_receipt') ||
+                canWidget('dashboard.widgets.operations_live_rake_status')
+            );
+        case 'penalty-control':
+            return (
+                canWidget('dashboard.widgets.penalty_control_type_distribution') ||
+                canWidget('dashboard.widgets.penalty_control_yesterday_predicted') ||
+                canWidget('dashboard.widgets.penalty_control_penalty_by_siding') ||
+                canWidget('dashboard.widgets.penalty_control_applied_vs_rr')
+            );
+        case 'rake-performance':
+            return canWidget('dashboard.widgets.rake_performance');
+        case 'loader-overload':
+            return canWidget('dashboard.widgets.loader_overload_trends');
+        case 'power-plant':
+            return canWidget('dashboard.widgets.power_plant_dispatch_section');
+        default:
+            return false;
+    }
+}
+
 /** MT of coal required to load one rake; used for "rakes we can load" KPI. */
 const MT_PER_RAKE_LOAD = 3500;
 
@@ -488,6 +556,8 @@ type DashboardProps = SharedData & {
     powerPlantDispatch?: PowerPlantDispatchItem[];
     yesterdayPredictedPenalties?: YesterdayPredictedPenaltyItem[];
     executiveYesterday?: ExecutiveYesterdayData;
+    /** Spatie permission names; omit or empty = no widgets (after deploy, always set for authenticated users). */
+    allowedDashboardWidgets?: string[];
 };
 
 function formatCurrency(n: number): string {
@@ -946,11 +1016,13 @@ function ExecutiveYesterdaySection({
     viewMode,
     penaltyBySiding = [],
     powerPlantDispatch = [],
+    canWidget,
 }: {
     data: ExecutiveYesterdayData;
     viewMode: 'table' | 'charts';
     penaltyBySiding?: PenaltyBySidingPoint[];
     powerPlantDispatch?: PowerPlantDispatchItem[];
+    canWidget: (permissionName: string) => boolean;
 }) {
     const [executiveData, setExecutiveData] = useState<ExecutiveYesterdayData>(data);
 
@@ -1141,6 +1213,7 @@ function ExecutiveYesterdaySection({
 
     const TableView = (
         <div className="space-y-6">
+            {canWidget('dashboard.widgets.executive_tables_road_dispatch') ? (
             <div className="overflow-hidden rounded-xl border border-[#d5dbe4] bg-white">
                 <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
                     <p className="text-sm font-semibold text-gray-900">Road Dispatch</p>
@@ -1231,7 +1304,8 @@ function ExecutiveYesterdaySection({
                     </table>
                 </div>
             </div>
-
+            ) : null}
+            {canWidget('dashboard.widgets.executive_tables_rail_dispatch') ? (
             <div className="overflow-hidden rounded-xl border border-[#d5dbe4] bg-white">
                 <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
                     <p className="text-sm font-semibold text-gray-900">Rail Dispatch</p>
@@ -1322,13 +1396,15 @@ function ExecutiveYesterdaySection({
                     </table>
                 </div>
             </div>
+            ) : null}
 
-            {customError ? (
+            {canWidget('dashboard.widgets.executive_tables_custom') && customError ? (
                 <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
                     {customError}
                 </div>
             ) : null}
 
+            {canWidget('dashboard.widgets.executive_tables_production') ? (
             <div className="overflow-hidden rounded-xl border border-[#d5dbe4] bg-white">
                 <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
                     <p className="text-sm font-semibold text-gray-900">Production</p>
@@ -1428,7 +1504,9 @@ function ExecutiveYesterdaySection({
                     </div>
                 </div>
             </div>
+            ) : null}
 
+            {canWidget('dashboard.widgets.executive_tables_custom') ? (
             <div className="overflow-hidden rounded-xl border border-[#d5dbe4] bg-white">
                 <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
                     <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1490,7 +1568,9 @@ function ExecutiveYesterdaySection({
                     </table>
                 </div>
             </div>
+            ) : null}
 
+            {canWidget('dashboard.widgets.executive_tables_fy_summary') ? (
             <div className="overflow-hidden rounded-xl border border-[#d5dbe4] bg-white">
                 <div className="border-b border-[#d5dbe4] bg-[#f8fafc] px-4 py-3">
                     <p className="text-sm font-semibold text-gray-900">FY Summary</p>
@@ -1563,6 +1643,7 @@ function ExecutiveYesterdaySection({
                     </table>
                 </div>
             </div>
+            ) : null}
         </div>
     );
 
@@ -1664,7 +1745,9 @@ function ExecutiveYesterdaySection({
 
     const ChartsView = (
         <div className="space-y-6">
+            {canWidget('dashboard.widgets.executive_chart_road_dispatch') || canWidget('dashboard.widgets.executive_chart_rail_dispatch') ? (
             <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+                {canWidget('dashboard.widgets.executive_chart_road_dispatch') ? (
                 <ExecutiveSidingBarChartCard
                     title="Road Dispatch"
                     rows={roadDispatchBarRows}
@@ -1674,6 +1757,8 @@ function ExecutiveYesterdaySection({
                     onValueKindChange={setRoadChartValueKind}
                     countLabel="Trips"
                 />
+                ) : null}
+                {canWidget('dashboard.widgets.executive_chart_rail_dispatch') ? (
                 <ExecutiveSidingBarChartCard
                     title="Rail Dispatch"
                     rows={railDispatchBarRows}
@@ -1683,9 +1768,13 @@ function ExecutiveYesterdaySection({
                     onValueKindChange={setRailChartValueKind}
                     countLabel="Rakes"
                 />
+                ) : null}
             </div>
+            ) : null}
 
+            {canWidget('dashboard.widgets.executive_chart_production') || canWidget('dashboard.widgets.executive_chart_penalty_by_siding') ? (
             <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+                {canWidget('dashboard.widgets.executive_chart_production') ? (
                 <ExecutiveProductionDonutCard
                     period={productionChartPeriod}
                     onPeriodChange={setProductionChartPeriod}
@@ -1694,14 +1783,19 @@ function ExecutiveYesterdaySection({
                     obValue={productionObValue}
                     coalValue={productionCoalValue}
                 />
+                ) : null}
+                {canWidget('dashboard.widgets.executive_chart_penalty_by_siding') ? (
                 <DashboardPenaltyBySidingChart
                     data={penaltyChartData}
                     {...(hasPenaltyPeriodSlices
                         ? { period: penaltyChartPeriod, onPeriodChange: setPenaltyChartPeriod }
                         : {})}
                 />
+                ) : null}
             </div>
+            ) : null}
 
+            {canWidget('dashboard.widgets.executive_chart_powerplant_dispatch') ? (
             <RakesPerPowerPlantExecutiveChart
                 data={powerPlantChartData}
                 {...(hasPowerPlantPeriodSlices
@@ -1713,7 +1807,9 @@ function ExecutiveYesterdaySection({
                       }
                     : {})}
             />
+            ) : null}
 
+            {canWidget('dashboard.widgets.executive_chart_fy') ? (
             <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
                 <FyChartCard
                     title="Production"
@@ -1732,8 +1828,26 @@ function ExecutiveYesterdaySection({
                     ]}
                 />
             </div>
+            ) : null}
         </div>
     );
+
+    const tableAllowed = EXEC_TABLE_WIDGETS.some((n) => canWidget(n));
+    const chartsAllowed = EXEC_CHART_WIDGETS.some((n) => canWidget(n));
+    if (viewMode === 'table' && !tableAllowed) {
+        return (
+            <div className="dashboard-card rounded-xl border-0 p-6 text-sm text-gray-600">
+                No executive table widgets are enabled for your account.
+            </div>
+        );
+    }
+    if (viewMode === 'charts' && !chartsAllowed) {
+        return (
+            <div className="dashboard-card rounded-xl border-0 p-6 text-sm text-gray-600">
+                No executive chart widgets are enabled for your account.
+            </div>
+        );
+    }
 
     return viewMode === 'table' ? TableView : ChartsView;
 }
@@ -3171,11 +3285,71 @@ function DashboardFiltersBar({
 export default function Dashboard() {
     const props = usePage<DashboardProps>().props;
     const userId = props.auth?.user?.id as number | undefined;
+
+    const canWidget = useCallback(
+        (name: string) => {
+            if (props.auth?.can_bypass) {
+                return true;
+            }
+            const allowed = props.allowedDashboardWidgets;
+            if (allowed === undefined) {
+                return true;
+            }
+
+            return new Set(allowed).has(name);
+        },
+        [props.auth?.can_bypass, props.allowedDashboardWidgets],
+    );
+
+    const visibleSections = useMemo(
+        () => DASHBOARD_SECTIONS.filter((s) => dashboardSectionVisible(s.id, canWidget)),
+        [canWidget],
+    );
+
+    const executiveYesterdayTableAllowed = useMemo(
+        () => EXEC_TABLE_WIDGETS.some((n) => canWidget(n)),
+        [canWidget],
+    );
+    const executiveYesterdayChartsAllowed = useMemo(
+        () => EXEC_CHART_WIDGETS.some((n) => canWidget(n)),
+        [canWidget],
+    );
+    const showExecutiveYesterdayViewToggle = executiveYesterdayTableAllowed && executiveYesterdayChartsAllowed;
+
     const [activeSection, setActiveSection] = useState<string>(() => {
-        const s = props.section ?? DEFAULT_DASHBOARD_SECTION;
-        return DASHBOARD_SECTIONS.some((sec) => sec.id === s) ? s : DEFAULT_DASHBOARD_SECTION;
+        const allowedList = props.allowedDashboardWidgets;
+        const can = (name: string) =>
+            props.auth?.can_bypass === true ||
+            allowedList === undefined ||
+            new Set(allowedList).has(name);
+        const fromUrl = props.section ?? DEFAULT_DASHBOARD_SECTION;
+        const firstPermitted = DASHBOARD_SECTIONS.find((s) => dashboardSectionVisible(s.id, can))?.id;
+        const fromUrlOk =
+            DASHBOARD_SECTIONS.some((sec) => sec.id === fromUrl) &&
+            dashboardSectionVisible(fromUrl as (typeof DASHBOARD_SECTIONS)[number]['id'], can);
+        if (fromUrlOk) {
+            return fromUrl;
+        }
+
+        return firstPermitted ?? DEFAULT_DASHBOARD_SECTION;
     });
-    const [executiveYesterdayViewMode, setExecutiveYesterdayViewMode] = useState<'table' | 'charts'>('charts');
+    const [executiveYesterdayViewMode, setExecutiveYesterdayViewMode] = useState<'table' | 'charts'>(() => {
+        const allowedList = props.allowedDashboardWidgets;
+        const can = (name: string) =>
+            props.auth?.can_bypass === true ||
+            allowedList === undefined ||
+            new Set(allowedList).has(name);
+        const table = EXEC_TABLE_WIDGETS.some((n) => can(n));
+        const charts = EXEC_CHART_WIDGETS.some((n) => can(n));
+        if (table && !charts) {
+            return 'table';
+        }
+        if (!table && charts) {
+            return 'charts';
+        }
+
+        return 'charts';
+    });
     const [sidingOverviewPenaltyPeriod, setSidingOverviewPenaltyPeriod] = useState<ExecutiveChartPeriodKey>('yesterday');
     const [alertsOpen, setAlertsOpen] = useState(false);
     const [notifications, setNotifications] = useState(props.notifications ?? []);
@@ -3202,6 +3376,23 @@ export default function Dashboard() {
             window.Echo?.leaveChannel(channelName);
         };
     }, [userId]);
+
+    useEffect(() => {
+        if (visibleSections.length === 0) {
+            return;
+        }
+        if (!visibleSections.some((s) => s.id === activeSection)) {
+            setActiveSection(visibleSections[0].id);
+        }
+    }, [visibleSections, activeSection]);
+
+    useEffect(() => {
+        if (executiveYesterdayTableAllowed && !executiveYesterdayChartsAllowed) {
+            setExecutiveYesterdayViewMode('table');
+        } else if (!executiveYesterdayTableAllowed && executiveYesterdayChartsAllowed) {
+            setExecutiveYesterdayViewMode('charts');
+        }
+    }, [executiveYesterdayTableAllowed, executiveYesterdayChartsAllowed]);
 
     const csrfToken = useMemo(() => {
         if (typeof document === 'undefined') return null;
@@ -3452,15 +3643,29 @@ export default function Dashboard() {
 
     const sidingStackKeys = useMemo(() => filteredSidings.map((s) => s.name), [filteredSidings]);
 
-    const kpiCards = sidings.length > 0 && kpis ? [
-        { label: `Rakes dispatched ${periodLabel}`, value: String(kpis.rakesDispatchedToday), borderColor: '#3B82F6', Icon: Train },
-        { label: `Coal dispatched ${periodLabel}`, value: formatWeight(kpis.coalDispatchedToday), borderColor: '#10B981', Icon: Flame },
-        { label: `Penalty ${periodLabel}`, value: formatCurrency(kpis.totalPenaltyThisMonth), borderColor: '#EF4444', Icon: AlertTriangle },
-        // Temporarily hidden per client request:
-        // { label: 'Predicted penalty risk', value: formatCurrency(kpis.predictedPenaltyRisk), borderColor: '#F59E0B', Icon: TrendingUp },
-        // { label: `Avg loading time (${periodLabel})`, value: kpis.avgLoadingTimeMinutes != null ? `${Math.floor(kpis.avgLoadingTimeMinutes / 60)}h ${kpis.avgLoadingTimeMinutes % 60}m` : '—', borderColor: '#8B5CF6', Icon: Clock },
-        // { label: `Trucks received ${periodLabel}`, value: String(kpis.trucksReceivedToday), borderColor: '#14B8A6', Icon: Truck },
-    ] : [];
+    const kpiCards =
+        sidings.length > 0 && kpis && canWidget('dashboard.widgets.global_kpi_sidebar')
+            ? [
+                  { label: `Rakes dispatched ${periodLabel}`, value: String(kpis.rakesDispatchedToday), borderColor: '#3B82F6', Icon: Train },
+                  { label: `Coal dispatched ${periodLabel}`, value: formatWeight(kpis.coalDispatchedToday), borderColor: '#10B981', Icon: Flame },
+                  { label: `Penalty ${periodLabel}`, value: formatCurrency(kpis.totalPenaltyThisMonth), borderColor: '#EF4444', Icon: AlertTriangle },
+                  // Temporarily hidden per client request:
+                  // { label: 'Predicted penalty risk', value: formatCurrency(kpis.predictedPenaltyRisk), borderColor: '#F59E0B', Icon: TrendingUp },
+                  // { label: `Avg loading time (${periodLabel})`, value: kpis.avgLoadingTimeMinutes != null ? `${Math.floor(kpis.avgLoadingTimeMinutes / 60)}h ${kpis.avgLoadingTimeMinutes % 60}m` : '—', borderColor: '#8B5CF6', Icon: Clock },
+                  // { label: `Trucks received ${periodLabel}`, value: String(kpis.trucksReceivedToday), borderColor: '#14B8A6', Icon: Truck },
+              ]
+            : [];
+
+    const canExportCoalTransport = useMemo(() => {
+        if (props.auth?.can_bypass) {
+            return true;
+        }
+        if (props.auth?.permissions?.includes('sections.mines_dispatch_data.view')) {
+            return true;
+        }
+
+        return canWidget('dashboard.widgets.operations_coal_transport');
+    }, [props.auth?.can_bypass, props.auth?.permissions, canWidget]);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -3516,7 +3721,7 @@ export default function Dashboard() {
                                 </Button>
                             </>
                         )}
-                        {activeSection === 'executive-overview' && !!props.executiveYesterday && (
+                        {activeSection === 'executive-overview' && !!props.executiveYesterday && showExecutiveYesterdayViewToggle ? (
                             <div className="flex items-center gap-2">
                                 <select
                                     value={executiveYesterdayViewMode}
@@ -3527,19 +3732,23 @@ export default function Dashboard() {
                                     <option value="table">Table View</option>
                                 </select>
                             </div>
-                        )}
+                        ) : null}
+                        {visibleSections.length === 0 ? (
+                            <span className="text-xs text-muted-foreground">No dashboard sections enabled for your role.</span>
+                        ) : (
                         <Select value={activeSection} onValueChange={setActiveSection}>
                             <SelectTrigger className="min-w-[200px] rounded-[10px] border border-gray-200 bg-white shadow-sm w-full sm:w-auto">
                                 <SelectValue placeholder="Select section" />
                             </SelectTrigger>
                             <SelectContent>
-                                {DASHBOARD_SECTIONS.map((s) => (
+                                {visibleSections.map((s) => (
                                     <SelectItem key={s.id} value={s.id}>
                                         {s.label}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
+                        )}
                         {filtersExpanded && sidings.length > 0 && (
                             <DashboardFiltersBar
                                 sidings={sidings}
@@ -3555,7 +3764,7 @@ export default function Dashboard() {
 
                 <div className="flex min-w-0 gap-3">
                     <div className="min-w-0 flex-1 space-y-6">
-                {filteredSidings.length > 0 && (
+                {canWidget('dashboard.widgets.global_coal_stock_strip') && filteredSidings.length > 0 && (
                     <div className="space-y-1">
                         <div className="flex items-center justify-between">
                             <p className="text-[10px] text-gray-500">Coal stock updates live from the ledger (and real-time events when connected).</p>
@@ -3613,6 +3822,7 @@ export default function Dashboard() {
                                         viewMode={executiveYesterdayViewMode}
                                         penaltyBySiding={penaltyBySiding}
                                         powerPlantDispatch={powerPlantDispatch}
+                                        canWidget={canWidget}
                                     />
                                 ) : (
                                     <div className="dashboard-card rounded-xl border-0 p-6 text-sm text-gray-600">Yesterday data is not available.</div>
@@ -3622,14 +3832,17 @@ export default function Dashboard() {
 
                         {activeSection === 'siding-overview' && (
                             <div className="space-y-6">
-                                {sidingPerformance.length > 0 ? (
-                                    <SidingPerformanceSection data={sidingPerformance} />
-                                ) : (
-                                    <div className="dashboard-card rounded-xl border-0 p-6">
-                                        <SectionHeader icon={BarChart3} title="Siding performance" subtitle="Rakes, coal & penalty by siding" />
-                                        <div className="mt-4 py-8 text-center text-sm text-gray-600">No performance data for selected filters.</div>
-                                    </div>
-                                )}
+                                {canWidget('dashboard.widgets.siding_overview_performance') ? (
+                                    sidingPerformance.length > 0 ? (
+                                        <SidingPerformanceSection data={sidingPerformance} />
+                                    ) : (
+                                        <div className="dashboard-card rounded-xl border-0 p-6">
+                                            <SectionHeader icon={BarChart3} title="Siding performance" subtitle="Rakes, coal & penalty by siding" />
+                                            <div className="mt-4 py-8 text-center text-sm text-gray-600">No performance data for selected filters.</div>
+                                        </div>
+                                    )
+                                ) : null}
+                                {canWidget('dashboard.widgets.siding_overview_penalty_trend') ? (
                                 <div className="dashboard-card rounded-xl border-0 p-6">
                                     <SectionHeader icon={Calendar} title="Penalty trend" subtitle="Date / month vs penalty amount" />
                                     {penaltyTrendDaily.length > 0 ? (
@@ -3652,6 +3865,8 @@ export default function Dashboard() {
                                         <div className="mt-4 py-8 text-center text-sm text-gray-600">No penalty data for selected period.</div>
                                     )}
                                 </div>
+                                ) : null}
+                                {canWidget('dashboard.widgets.siding_overview_power_plant_distribution') ? (
                                 <div className="dashboard-card rounded-xl border-0 p-6">
                                     <SectionHeader icon={Factory} title="Power plant dispatch distribution" subtitle="Coal supply by destination" />
                                     {powerPlantDispatch.length > 0 ? (() => {
@@ -3694,12 +3909,14 @@ export default function Dashboard() {
                                         <div className="mt-4 py-8 text-center text-sm text-gray-600">No power plant dispatch data.</div>
                                     )}
                                 </div>
+                                ) : null}
                             </div>
                         )}
 
                         {activeSection === 'operations' && (
                             <div className="space-y-6">
                                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                                    {canWidget('dashboard.widgets.operations_coal_transport') ? (
                                     <div className="dashboard-card min-w-0 rounded-xl border-0 p-5">
                                         <div className="flex flex-wrap items-center justify-between gap-3">
                                             <SectionHeader icon={Truck} title="Coal Transport Report" subtitle="Trips and quantity by shift and siding" titleClassName="font-bold text-black" />
@@ -3718,7 +3935,7 @@ export default function Dashboard() {
                                                 {(() => {
                                                     const coalDate =
                                                         filters.coal_transport_date ?? coalTransportReport?.date ?? '';
-                                                    if (coalDate) {
+                                                    if (coalDate && canExportCoalTransport) {
                                                         return (
                                                             <Button variant="outline" size="sm" asChild>
                                                                 <a
@@ -3732,7 +3949,16 @@ export default function Dashboard() {
                                                         );
                                                     }
                                                     return (
-                                                        <Button variant="outline" size="sm" disabled title="Select a date">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            disabled
+                                                            title={
+                                                                !coalDate
+                                                                    ? 'Select a date'
+                                                                    : 'You do not have permission to export this report'
+                                                            }
+                                                        >
                                                             <FileSpreadsheet className="mr-1.5 h-4 w-4" />
                                                             Export XLSX
                                                         </Button>
@@ -3820,6 +4046,8 @@ export default function Dashboard() {
                                             <div className="mt-4 py-8 text-center text-sm text-gray-600">No coal transport data.</div>
                                         )}
                                     </div>
+                                    ) : null}
+                                    {canWidget('dashboard.widgets.operations_daily_rake_details') ? (
                                     <div className="dashboard-card rounded-xl border-0 p-5">
                                         <div className="flex flex-wrap items-center justify-between gap-3">
                                             <SectionHeader icon={Calendar} title="Daily rake details" subtitle="One day — filtered by selected sidings" titleClassName="font-bold text-black" />
@@ -3912,6 +4140,7 @@ export default function Dashboard() {
                                             <div className="mt-4 py-8 text-center text-sm text-gray-600">No siding selected or no data for this date.</div>
                                         )}
                                     </div>
+                                    ) : null}
                                 </div>
                             </div>
                         )}
@@ -3919,6 +4148,7 @@ export default function Dashboard() {
                         {activeSection === 'operations' && (
                             <div className="space-y-6">
                                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                                    {canWidget('dashboard.widgets.operations_truck_receipt_trend') ? (
                                     <div className="dashboard-card rounded-xl border-0 p-5">
                                         <SectionHeader icon={BarChart3} title="Truck receipt trend" subtitle="Vehicles arrived per hour (today)" />
                                         {truckReceiptTrend.length > 0 ? (
@@ -3935,6 +4165,8 @@ export default function Dashboard() {
                                             <div className="mt-4 py-8 text-center text-sm text-gray-600">No vehicle arrivals for today.</div>
                                         )}
                                     </div>
+                                    ) : null}
+                                    {canWidget('dashboard.widgets.operations_shift_vehicle_receipt') ? (
                                     <div className="dashboard-card rounded-xl border-0 p-5">
                                         <SectionHeader icon={BarChart3} title="Shift-wise vehicle receipt" subtitle="Vehicles received by shift and siding (today)" />
                                         {shiftWiseVehicleReceipt.length > 0 ? (() => {
@@ -3965,6 +4197,7 @@ export default function Dashboard() {
                                             <div className="mt-4 py-8 text-center text-sm text-gray-600">No shift-wise vehicle data for today.</div>
                                         )}
                                     </div>
+                                    ) : null}
                                 </div>
                                 {/* Stock vs requirement — hidden for now
                                 <SpeedometerGauge
@@ -3979,6 +4212,7 @@ export default function Dashboard() {
                                     subtitle="Minimum 3,800 MT per rake — side-wise"
                                 />
                                 */}
+                                {canWidget('dashboard.widgets.operations_live_rake_status') ? (
                                  <div className="dashboard-card rounded-xl border-0 p-5">
                                         <div className="flex flex-wrap items-center justify-between gap-3">
                                             <SectionHeader icon={Train} title="Live rake status" subtitle="Pending on siding — no weighment receipt yet" />
@@ -4085,6 +4319,7 @@ export default function Dashboard() {
                                             <div className="mt-4 py-8 text-center text-sm text-gray-600">No active rakes.</div>
                                         )}
                                     </div>
+                                ) : null}
                             </div>
                         )}
 
@@ -4092,6 +4327,7 @@ export default function Dashboard() {
                             <div className="space-y-6">
                                 {/* Penalty type distribution (left) + Yesterday predicted penalties by siding (right) */}
                                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                                    {canWidget('dashboard.widgets.penalty_control_type_distribution') ? (
                                     <div className="dashboard-card min-w-0 rounded-xl border-0 p-6">
                                         <SectionHeader icon={AlertTriangle} title="Penalty type distribution" subtitle="Overloading, demurrage, wharfage, etc." />
                                         {penaltyByType.length > 0 ? (() => {
@@ -4155,6 +4391,8 @@ export default function Dashboard() {
                                             <div className="mt-4 py-8 text-center text-sm text-gray-600">No penalty type data.</div>
                                         )}
                                     </div>
+                                    ) : null}
+                                    {canWidget('dashboard.widgets.penalty_control_yesterday_predicted') ? (
                                     <div className="dashboard-card min-w-0 rounded-xl border-0 p-5" style={{ padding: '1rem' }}>
                                         <div className="flex flex-wrap items-center justify-between gap-3">
                                             <SectionHeader icon={Calendar} title="Yesterday predicted penalties" subtitle="Siding-wise total (all sidings listed; ₹0 when no data)" />
@@ -4266,8 +4504,10 @@ export default function Dashboard() {
                                             );
                                         })()}
                                     </div>
+                                    ) : null}
                                 </div>
                                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                                    {canWidget('dashboard.widgets.penalty_control_penalty_by_siding') ? (
                                     <DashboardPenaltyBySidingChart
                                         data={penaltyBySidingForSidingOverview}
                                         {...(executiveYesterday?.penaltyBySidingByPeriod
@@ -4277,8 +4517,10 @@ export default function Dashboard() {
                                               }
                                             : {})}
                                     />
+                                    ) : null}
                                     <div className="grid grid-cols-1 gap-6">
                                    
+                                    {canWidget('dashboard.widgets.penalty_control_applied_vs_rr') ? (
                                     <div className="dashboard-card min-w-0 rounded-xl border-0 p-6">
                                         <SectionHeader icon={BarChart3} title="Applied vs RR penalty" subtitle="Applied penalties vs railway receipt snapshot, by siding" />
                                     <div className="mt-3 flex flex-wrap items-center justify-center gap-4 rounded-lg border border-gray-200 bg-gray-50/80 px-4 py-2 text-sm">
@@ -4325,6 +4567,7 @@ export default function Dashboard() {
                                         );
                                     })()}
                                     </div>
+                                    ) : null}
                                 </div>
                                 </div>
 
@@ -4347,7 +4590,7 @@ export default function Dashboard() {
                                 )
                         )}
 
-                        {activeSection === 'rake-performance' && (
+                        {activeSection === 'rake-performance' && canWidget('dashboard.widgets.rake_performance') && (
                             rakePerformance.length > 0
                                 ? <RakePerformanceSection rakes={rakePerformance} />
                                 : (
@@ -4362,7 +4605,7 @@ export default function Dashboard() {
                                 )
                         )}
 
-                        {activeSection === 'loader-overload' && (
+                        {activeSection === 'loader-overload' && canWidget('dashboard.widgets.loader_overload_trends') && (
                             loaderOverloadTrends.loaders.length > 0
                                 ? (
                                     <LoaderOverloadSection
@@ -4382,7 +4625,7 @@ export default function Dashboard() {
                                 )
                         )}
 
-                        {activeSection === 'power-plant' && (
+                        {activeSection === 'power-plant' && canWidget('dashboard.widgets.power_plant_dispatch_section') && (
                             <PowerPlantDispatchSection data={powerPlantDispatch} />
                         )}
                         </div>

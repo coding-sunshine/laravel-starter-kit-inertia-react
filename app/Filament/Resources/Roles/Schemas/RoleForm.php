@@ -6,9 +6,11 @@ namespace App\Filament\Resources\Roles\Schemas;
 
 use App\Services\PermissionCategoryResolver;
 use App\Services\SectionPermissionsFormOptions;
+use App\Support\Dashboard\DashboardWidgetPermissions;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Arr;
@@ -36,21 +38,46 @@ final class RoleForm
         ];
 
         if ($sections !== []) {
+            $hasDashboardSection = false;
+
             foreach ($sections as $section) {
                 $label = $section['label'];
                 $slug = $section['slug'];
                 $opts = $section['options'];
                 $fieldName = 'permissions_section_'.$slug;
 
-                $components[] = Section::make($label)
-                    ->schema([
-                        CheckboxList::make($fieldName)
-                            ->options($opts)
-                            ->bulkToggleable()
-                            ->columns(4)
-                            ->gridDirection('row'),
-                    ])
+                if ($slug === 'dashboard') {
+                    $hasDashboardSection = true;
+                }
+
+                $sectionSchema = [
+                    CheckboxList::make($fieldName)
+                        ->options($opts)
+                        ->bulkToggleable()
+                        ->columns(4)
+                        ->gridDirection('row'),
+                ];
+
+                if ($slug === 'dashboard') {
+                    $widgetGroups = self::makeDashboardWidgetGroupComponents();
+                    if ($widgetGroups !== null) {
+                        $sectionSchema = array_merge($sectionSchema, $widgetGroups);
+                    }
+                }
+
+                $section = Section::make($label)
+                    ->schema($sectionSchema)
                     ->collapsible();
+
+                if ($slug === 'dashboard') {
+                    $section->columnSpanFull();
+                }
+
+                $components[] = $section;
+            }
+
+            if (! $hasDashboardSection) {
+                self::appendDashboardWidgetsSection($components);
             }
 
             $other = $optionsService->getOtherPermissions();
@@ -88,6 +115,8 @@ final class RoleForm
                     ])
                     ->collapsible();
             }
+
+            self::appendDashboardWidgetsSection($components);
         }
 
         return $schema->components($components);
@@ -146,6 +175,60 @@ final class RoleForm
             }
         }
 
+        foreach (DashboardWidgetPermissions::filamentWidgetGroups() as $groupKey => $_groupMeta) {
+            $options = DashboardWidgetPermissions::filamentCheckboxOptionsForGroup($groupKey);
+            if ($options === []) {
+                continue;
+            }
+            $fieldName = DashboardWidgetPermissions::formFieldNameForWidgetGroup($groupKey);
+            $idsInGroup = array_keys($options);
+            $state[$fieldName] = array_values(array_intersect($rolePermissionIds, $idsInGroup));
+        }
+
         return $state;
+    }
+
+    /**
+     * @param  array<mixed>  $components
+     */
+    private static function appendDashboardWidgetsSection(array &$components): void
+    {
+        $widgetGroups = self::makeDashboardWidgetGroupComponents();
+        if ($widgetGroups === null) {
+            return;
+        }
+
+        $components[] = Section::make(__('Dashboard widgets'))
+            ->description(__('Granular blocks on the management dashboard. The role still needs Dashboard → View to open the dashboard.'))
+            ->schema($widgetGroups)
+            ->columnSpanFull()
+            ->collapsible();
+    }
+
+    /**
+     * @return list<Fieldset>|null
+     */
+    private static function makeDashboardWidgetGroupComponents(): ?array
+    {
+        $components = [];
+        foreach (DashboardWidgetPermissions::filamentWidgetGroups() as $groupKey => $groupMeta) {
+            $options = DashboardWidgetPermissions::filamentCheckboxOptionsForGroup($groupKey);
+            if ($options === []) {
+                continue;
+            }
+
+            $components[] = Fieldset::make($groupMeta['label'])
+                ->columns(1)
+                ->schema([
+                    CheckboxList::make(DashboardWidgetPermissions::formFieldNameForWidgetGroup($groupKey))
+                        ->hiddenLabel()
+                        ->options($options)
+                        ->bulkToggleable()
+                        ->columns(2)
+                        ->gridDirection('column'),
+                ]);
+        }
+
+        return $components === [] ? null : $components;
     }
 }
