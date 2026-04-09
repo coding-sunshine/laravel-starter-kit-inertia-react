@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Users\Schemas;
 
+use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Utilities\Get;
@@ -41,6 +42,13 @@ final class UserForm
                             ->pluck('name', 'id')
                             ->all();
                     }),
+                Checkbox::make('access_to_siding_shift_data')
+                    ->label('Access to all siding shift data')
+                    ->helperText(
+                        'When enabled, this user sees every operator\'s entries on road dispatch daily vehicle '.
+                        'entries and railway siding empty weighment (not only rows they created). Siding and shift access still apply.'
+                    )
+                    ->default(false),
                 Select::make('siding_ids')
                     ->label('Sidings')
                     ->multiple()
