@@ -1,5 +1,4 @@
 import { Head, Link, useForm } from '@inertiajs/react';
-import { dashboard } from '@/routes';
 import AppLayout from '@/layouts/app-layout';
 import Heading from '@/components/heading';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -104,7 +103,6 @@ export default function VehicleWorkordersEdit({ vehicleWorkorder }: Props) {
     };
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: dashboard().url },
         { title: 'Vehicle Work Orders', href: '/vehicle-workorders' },
         {
             title: `Edit ${vehicleWorkorder.vehicle_no ?? vehicleWorkorder.wo_no ?? vehicleWorkorder.id}`,

@@ -65,7 +65,6 @@ interface Props {
 
 export default function HistoricalMinesIndex({ mines, sidings, filters }: Props) {
   const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Dashboard', href: '/dashboard' },
     { title: 'Historical', href: '/historical/mines' },
     { title: 'Mines', href: '' },
   ];

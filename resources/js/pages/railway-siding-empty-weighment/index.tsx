@@ -365,7 +365,6 @@ export default function RailwaySidingEmptyWeighmentIndex({
     ]);
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: '/dashboard' },
         { title: 'Railway Siding Empty Weighment', href: '' },
     ];
 

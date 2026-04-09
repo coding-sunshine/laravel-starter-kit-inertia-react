@@ -1,5 +1,4 @@
 import AppLayout from '@/layouts/app-layout';
-import { dashboard } from '@/routes';
 import { index as changelogIndex } from '@/routes/changelog';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
@@ -42,7 +41,6 @@ const typeColors: Record<string, string> = {
 
 export default function ChangelogIndex({ entries }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: dashboard().url },
         { title: 'Changelog', href: changelogIndex().url },
     ];
 

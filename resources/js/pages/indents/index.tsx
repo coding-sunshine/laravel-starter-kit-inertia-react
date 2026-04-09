@@ -45,7 +45,6 @@ export default function IndentsIndex({ tableData }: Props) {
     const [uploading, setUploading] = useState(false);
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: '/dashboard' },
         { title: 'E-Demand', href: '/indents' },
     ];
 

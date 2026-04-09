@@ -1,6 +1,5 @@
 import TextLink from '@/components/text-link';
 import AppLayout from '@/layouts/app-layout';
-import { dashboard } from '@/routes';
 import {
     index as helpIndex,
     rate as helpRate,
@@ -33,7 +32,6 @@ export default function HelpShow({ article, related }: Props) {
     const { flash } = usePage<{ flash?: { status?: string } }>().props;
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: dashboard().url },
         { title: 'Help', href: helpIndex().url },
         {
             title: article.title,

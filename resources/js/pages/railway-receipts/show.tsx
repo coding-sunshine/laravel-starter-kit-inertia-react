@@ -387,7 +387,6 @@ export default function RailwayReceiptShow({
           };
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: '/dashboard' },
         { title: 'Railway Receipts', href: '/railway-receipts' },
         {
             title: headerData.rrNumber,

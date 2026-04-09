@@ -424,7 +424,6 @@ export default function DailyVehicleEntriesIndex({
     ]);
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: '/dashboard' },
         {
             title: 'Road Dispatch',
             href: '/road-dispatch/daily-vehicle-entries',

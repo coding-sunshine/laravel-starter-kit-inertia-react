@@ -798,7 +798,6 @@ export default function RakesShow({
     }, [selectedWagon]);
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: '/dashboard' },
         { title: 'Rakes', href: '/rakes' },
         { title: rake.rake_number, href: `/rakes/${rake.id}` },
     ];

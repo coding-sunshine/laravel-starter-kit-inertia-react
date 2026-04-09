@@ -42,7 +42,6 @@ interface Props {
 
 export default function AlertsIndex({ tableData }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: '/dashboard' },
         { title: 'Alerts', href: '/alerts' },
     ];
 

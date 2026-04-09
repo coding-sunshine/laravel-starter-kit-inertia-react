@@ -85,7 +85,6 @@ export default function HistoricalRailwaySidingIndex({
   filters,
 }: Props) {
   const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Dashboard', href: '/dashboard' },
     { title: 'Historical', href: '/historical/railway-siding' },
     { title: 'Railway Siding', href: '' },
   ];

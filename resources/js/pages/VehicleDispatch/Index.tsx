@@ -1,6 +1,5 @@
 import { Head, router, usePage } from '@inertiajs/react';
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { dashboard } from '@/routes';
 import AppLayout from '@/layouts/app-layout';
 import Heading from '@/components/heading';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -430,7 +429,6 @@ export default function VehicleDispatchIndex({
     };
 
     const breadcrumbs = [
-        { title: 'Dashboard', href: dashboard().url },
         { title: 'Vehicle Dispatch Register', href: '/vehicle-dispatch' },
     ];
 

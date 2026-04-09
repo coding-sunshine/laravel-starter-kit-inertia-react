@@ -50,7 +50,6 @@ export default function RoadDispatchUnloadsCreate({
 }: Props) {
     const { errors } = usePage<{ errors?: Record<string, string> }>().props;
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: '/dashboard' },
         { title: 'Road Dispatch', href: '/road-dispatch/unloads' },
         { title: 'Vehicle Unloads', href: '/road-dispatch/unloads' },
         { title: 'Record unload', href: '/road-dispatch/unloads/create' },

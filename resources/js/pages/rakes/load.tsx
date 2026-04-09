@@ -824,7 +824,6 @@ export default function RakesLoad({ rake, loadState, demurrage_rate_per_mt_hour 
     };
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: '/dashboard' },
         { title: 'Rakes', href: '/rakes' },
         { title: rake.rake_number, href: `/rakes/${rake.id}` },
         { title: 'Loading', href: `/rakes/${rake.id}/load` },

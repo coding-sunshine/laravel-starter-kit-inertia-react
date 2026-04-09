@@ -275,7 +275,6 @@ export default function PenaltyAnalytics({
     responsiblePartyDetail,
 }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: '/dashboard' },
         { title: 'Penalties', href: '/penalties' },
         { title: 'Analytics', href: '/penalties/analytics' },
     ];

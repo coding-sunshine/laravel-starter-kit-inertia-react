@@ -170,7 +170,6 @@ export default function PenaltiesIndex({
     demurrage_rate_per_mt_hour,
 }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: '/dashboard' },
         { title: 'Penalties', href: '/penalties' },
     ];
 

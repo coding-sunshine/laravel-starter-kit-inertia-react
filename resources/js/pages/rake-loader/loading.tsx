@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import rakeLoader from '@/routes/rake-loader';
-import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
@@ -58,7 +57,6 @@ export default function RakeLoaderLoading({ rake: initialRake }: Props) {
 
     const breadcrumbs: BreadcrumbItem[] = useMemo(
         () => [
-            { title: 'Dashboard', href: dashboard().url },
             { title: 'Rake Loader', href: '/rake-loader' },
             {
                 title: rake.rake_number ? `Load ${rake.rake_number}` : 'Wagon loading',

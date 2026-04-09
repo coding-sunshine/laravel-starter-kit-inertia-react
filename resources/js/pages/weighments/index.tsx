@@ -15,7 +15,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import InputError from '@/components/input-error';
 import AppLayout from '@/layouts/app-layout';
-import { dashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { useCan } from '@/hooks/use-can';
 import { manualWeighmentFieldsFromRake } from '@/lib/manual-weighment-from-rake';
@@ -113,7 +112,6 @@ export default function WeighmentsIndex({ tableData }: Props) {
     });
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: dashboard().url },
         { title: 'Weighments', href: '/weighments' },
     ];
 

@@ -1,5 +1,4 @@
 import AppLayout from '@/layouts/app-layout';
-import { dashboard } from '@/routes';
 import { index as blogIndex, show as blogShow } from '@/routes/blog';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
@@ -37,7 +36,6 @@ interface Props {
 
 export default function BlogIndex({ posts }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: dashboard().url },
         { title: 'Blog', href: blogIndex().url },
     ];
 

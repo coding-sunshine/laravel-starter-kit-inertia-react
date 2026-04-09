@@ -17,7 +17,6 @@ import {
 import { rakeLoaderLoadingDateFilterValue } from '@/lib/rake-loader-date-periods';
 import AppLayout from '@/layouts/app-layout';
 import rakeLoader from '@/routes/rake-loader';
-import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { Head, router, usePage } from '@inertiajs/react';
 import { Train } from 'lucide-react';
@@ -114,7 +113,6 @@ export default function RakeLoaderIndex({
     const nonSuperMultiSidings = !isSuperAdmin && sidings.length > 1;
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: dashboard().url },
         { title: 'Rake Loader', href: '/rake-loader' },
     ];
 

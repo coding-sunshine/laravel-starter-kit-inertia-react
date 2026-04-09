@@ -46,7 +46,6 @@ export default function ReconciliationIndex({
     ).length;
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: '/dashboard' },
         { title: 'Reconciliation', href: '/reconciliation' },
     ];
 

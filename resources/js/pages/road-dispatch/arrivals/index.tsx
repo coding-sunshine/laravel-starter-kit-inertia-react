@@ -46,7 +46,6 @@ export default function RoadDispatchArrivalsIndex({
     sidings,
 }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: '/dashboard' },
         { title: 'Road Dispatch', href: '/road-dispatch/arrivals' },
         { title: 'Vehicle Arrivals', href: '/road-dispatch/arrivals' },
     ];
