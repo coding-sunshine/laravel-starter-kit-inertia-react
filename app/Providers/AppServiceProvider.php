@@ -299,6 +299,9 @@ final class AppServiceProvider extends ServiceProvider
             'railway-empty-weighment-hourly-record',
             'historical-mines-filter-apply',
             'historical-mines-filter-clear',
+            'historical-railway-siding-filter-search',
+            'historical-railway-siding-filter-clear',
+            'historical-railway-siding-export-xlsx',
         ]);
     }
 

@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import { type NavGroup, type NavItem, type SharedData } from '@/types';
-import { Link, usePage } from '@inertiajs/react';
+import { usePage } from '@inertiajs/react';
 import {
     AlertTriangle,
     BarChart3,
@@ -400,12 +400,11 @@ export function AppSidebar() {
                     <SidebarMenuItem>
                         <SidebarMenuButton
                             size="lg"
-                            asChild
+                            type="button"
                             tooltip="SHAReReport"
+                            className="cursor-default"
                         >
-                            <Link href={dashboard().url} prefetch>
-                                <AppLogo />
-                            </Link>
+                            <AppLogo />
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                     {/* Hidden for now (keep code, hide UI) */}

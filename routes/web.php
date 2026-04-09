@@ -341,6 +341,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 
     // Historical Railway Siding (historical rake data)
     Route::get('historical/railway-siding', [HistoricalRakeController::class, 'index'])->name('historical.railway-siding.index');
+    Route::get('historical/railway-siding/export', [HistoricalRakeController::class, 'export'])->name('historical.railway-siding.export');
     Route::post('historical/railway-siding', [HistoricalRakeController::class, 'store'])->name('historical.railway-siding.store');
     Route::patch('historical/railway-siding/{rake}', [HistoricalRakeController::class, 'update'])->name('historical.railway-siding.update');
     Route::delete('historical/railway-siding/{rake}', [HistoricalRakeController::class, 'destroy'])->name('historical.railway-siding.destroy');

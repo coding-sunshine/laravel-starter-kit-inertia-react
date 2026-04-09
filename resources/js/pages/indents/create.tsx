@@ -86,62 +86,13 @@ export default function IndentsCreate({ sidings, power_plants }: Props) {
                         <CardHeader>
                             <CardTitle className="text-base">Rake details</CardTitle>
                             <CardDescription>
-                                A linked rake is created right after saving this e-demand.
+                                Siding, rake identifiers, stock and quantities, destination, and
+                                e-demand date. All fields in this section are required. A linked rake
+                                is created right after saving.
                             </CardDescription>
                         </CardHeader>
-                        <CardContent className="grid gap-4 sm:grid-cols-2">
-                            <div className="grid gap-2">
-                                <Label htmlFor="rake_number">Rake number</Label>
-                                <Input
-                                    id="rake_number"
-                                    name="rake_number"
-                                    placeholder="Optional (e.g. Rake Sq. Number)"
-                                />
-                                <InputError message={errors?.rake_number} />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="rake_priority_number">
-                                    Priority number
-                                </Label>
-                                <Input
-                                    id="rake_priority_number"
-                                    name="rake_priority_number"
-                                    type="number"
-                                    min={0}
-                                    step={1}
-                                    placeholder="Optional (default is new e-demand id)"
-                                />
-                                <InputError
-                                    message={errors?.rake_priority_number}
-                                />
-                            </div>
-                            <div className="grid gap-2 sm:col-span-2">
-                                <Label htmlFor="expected_loading_date">
-                                    Loading date (rake)
-                                </Label>
-                                <Input
-                                    id="expected_loading_date"
-                                    name="expected_loading_date"
-                                    type="date"
-                                />
-                                <InputError
-                                    message={errors?.expected_loading_date}
-                                />
-                            </div>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-base">
-                                <FileText className="size-4" />
-                                Location & status
-                            </CardTitle>
-                            <CardDescription>
-                                Siding and official e-demand / forwarding note number
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="grid gap-4 sm:grid-cols-2">
-                            <div className="grid gap-2 sm:col-span-2">
+                        <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                            <div className="grid gap-2 md:col-span-3">
                                 <Label htmlFor="siding_id">Siding *</Label>
                                 <select
                                     id="siding_id"
@@ -161,48 +112,67 @@ export default function IndentsCreate({ sidings, power_plants }: Props) {
                                 </select>
                                 <InputError message={errors?.siding_id} />
                             </div>
-                            <div className="grid gap-2 sm:col-span-2">
-                                <Label htmlFor="indent_number">
-                                    E-Demand / forwarding note number
+                            <div className="grid gap-2">
+                                <Label htmlFor="rake_number">Rake number *</Label>
+                                <Input
+                                    id="rake_number"
+                                    name="rake_number"
+                                    required
+                                    placeholder="e.g. Rake Sq. Number"
+                                />
+                                <InputError message={errors?.rake_number} />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="rake_priority_number">
+                                    Priority number *
                                 </Label>
                                 <Input
-                                    id="indent_number"
-                                    name="indent_number"
-                                    placeholder="e.g. 302.001"
+                                    id="rake_priority_number"
+                                    name="rake_priority_number"
+                                    type="number"
+                                    required
+                                    min={0}
+                                    step={1}
+                                    placeholder="Priority"
                                 />
-                                <InputError message={errors?.indent_number} />
+                                <InputError
+                                    message={errors?.rake_priority_number}
+                                />
                             </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-base">
-                                Demand & quantities
-                            </CardTitle>
-                            <CardDescription>
-                                Stock type, units, and metric tonnes (as on e-Demand slip)
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                            <div className="grid gap-2 sm:col-span-2 lg:col-span-1">
+                            <div className="grid gap-2">
+                                <Label htmlFor="expected_loading_date">
+                                    Loading date (rake) *
+                                </Label>
+                                <Input
+                                    id="expected_loading_date"
+                                    name="expected_loading_date"
+                                    type="date"
+                                    required
+                                />
+                                <InputError
+                                    message={errors?.expected_loading_date}
+                                />
+                            </div>
+                            <div className="grid gap-2">
                                 <Label htmlFor="demanded_stock">
-                                    Demanded stock (wagon / stock type)
+                                    Demanded stock (wagon type) *
                                 </Label>
                                 <Input
                                     id="demanded_stock"
                                     name="demanded_stock"
+                                    required
                                     placeholder="e.g. BOBRN"
                                 />
                                 <InputError message={errors?.demanded_stock} />
                             </div>
                             <div className="grid gap-2">
-                                <Label htmlFor="total_units">Total units</Label>
+                                <Label htmlFor="total_units">Total units *</Label>
                                 <Input
                                     id="total_units"
                                     name="total_units"
                                     type="number"
-                                    min={0}
+                                    required
+                                    min={1}
                                     step={1}
                                     placeholder="Wagons"
                                 />
@@ -210,48 +180,21 @@ export default function IndentsCreate({ sidings, power_plants }: Props) {
                             </div>
                             <div className="grid gap-2">
                                 <Label htmlFor="target_quantity_mt">
-                                    Target quantity (MT)
+                                    Target quantity (MT) *
                                 </Label>
                                 <Input
                                     id="target_quantity_mt"
                                     name="target_quantity_mt"
                                     type="number"
+                                    required
                                     min={0}
                                     step="0.01"
                                 />
-                                <InputError message={errors?.target_quantity_mt} />
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-base">
-                                Railway references
-                            </CardTitle>
-                            <CardDescription>
-                                e-Demand reference ID, FNR, and destination power plant
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="grid gap-4 sm:grid-cols-2">
-                            <div className="grid gap-2">
-                                <Label htmlFor="e_demand_reference_id">
-                                    e-Demand reference ID
-                                </Label>
-                                <Input
-                                    id="e_demand_reference_id"
-                                    name="e_demand_reference_id"
-                                />
                                 <InputError
-                                    message={errors?.e_demand_reference_id}
+                                    message={errors?.target_quantity_mt}
                                 />
                             </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="fnr_number">FNR number</Label>
-                                <Input id="fnr_number" name="fnr_number" />
-                                <InputError message={errors?.fnr_number} />
-                            </div>
-                            <div className="grid gap-2 sm:col-span-2">
+                            <div className="grid gap-2 md:col-span-2">
                                 <Label htmlFor="destination">
                                     Destination (power plant) *
                                 </Label>
@@ -273,18 +216,7 @@ export default function IndentsCreate({ sidings, power_plants }: Props) {
                                 </select>
                                 <InputError message={errors?.destination} />
                             </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-base">Dates</CardTitle>
-                            <CardDescription>
-                                Loading date and optional demand timestamp
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="grid gap-4 sm:grid-cols-2">
-                            <div className="grid gap-2">
+                            <div className="grid gap-2 md:col-span-1">
                                 <Label htmlFor="indent_at">
                                     E-Demand date &amp; time *
                                 </Label>
@@ -295,6 +227,60 @@ export default function IndentsCreate({ sidings, power_plants }: Props) {
                                     required
                                 />
                                 <InputError message={errors?.indent_at} />
+                            </div>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-base">
+                                <FileText className="size-4" />
+                                Location & status
+                            </CardTitle>
+                            <CardDescription>
+                                Official e-demand / forwarding note number
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="grid gap-4 sm:grid-cols-2">
+                            <div className="grid gap-2 sm:col-span-2">
+                                <Label htmlFor="indent_number">
+                                    E-Demand / forwarding note number
+                                </Label>
+                                <Input
+                                    id="indent_number"
+                                    name="indent_number"
+                                    placeholder="e.g. 302.001"
+                                />
+                                <InputError message={errors?.indent_number} />
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-base">
+                                Railway references
+                            </CardTitle>
+                            <CardDescription>
+                                e-Demand reference ID and FNR
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="grid gap-4 sm:grid-cols-2">
+                            <div className="grid gap-2">
+                                <Label htmlFor="e_demand_reference_id">
+                                    e-Demand reference ID
+                                </Label>
+                                <Input
+                                    id="e_demand_reference_id"
+                                    name="e_demand_reference_id"
+                                />
+                                <InputError
+                                    message={errors?.e_demand_reference_id}
+                                />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="fnr_number">FNR number</Label>
+                                <Input id="fnr_number" name="fnr_number" />
+                                <InputError message={errors?.fnr_number} />
                             </div>
                         </CardContent>
                     </Card>

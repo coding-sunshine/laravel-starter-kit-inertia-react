@@ -1,5 +1,5 @@
 import React from 'react';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import HistoricalRakeRow from '@/components/historical/historical-rake-row';
 import { useCan } from '@/hooks/use-can';
@@ -46,14 +46,13 @@ export default function HistoricalRakeTable({
   isAddingRow = false,
 }: HistoricalRakeTableProps) {
   const canCreate = useCan('sections.historical_railway_siding.create');
-  const totalEntries = rakes.length;
-  const totalRows = Math.max(totalEntries, 100);
+  const rowCount = rakes.length;
 
   return (
     <div className="overflow-x-auto">
       <div className="border border-gray-300 border-b-0 px-2 py-1 flex flex-wrap items-center justify-between gap-4 text-[11px] bg-white">
         <span>
-          Rows: <span className="font-semibold">{totalEntries}</span>
+          Rows on this page: <span className="font-semibold">{rowCount}</span>
         </span>
         {onAddRow && canCreate && (
           <Button
@@ -91,56 +90,18 @@ export default function HistoricalRakeTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {Array.from({ length: totalRows }).map((_, index) => {
-            if (index < totalEntries) {
-              const rake = rakes[index];
-              return (
-                <HistoricalRakeRow
-                  key={rake.id}
-                  rake={rake}
-                  index={index}
-                  isEditing={editingId === rake.id}
-                  onEditClick={() => onEditingChange(rake.id)}
-                  onSaveSuccess={() => onEditingChange(null)}
-                  onRakeUpdated={onRakeUpdated}
-                  onRakeDeleted={onRakeDeleted}
-                />
-              );
-            }
-
-            const emptyCellClass = 'min-h-[4rem] px-2 py-3 border-t border-r border-gray-300';
-            const emptyCellClassLast = 'min-h-[4rem] px-2 py-3 border-t border-r border-gray-300';
-
-            return (
-              <TableRow
-                key={`empty-${index}`}
-                className={isAddingRow ? 'opacity-60' : 'cursor-pointer hover:bg-gray-50'}
-                onClick={() => {
-                  if (onAddRow && canCreate && !isAddingRow) {
-                    onAddRow();
-                  }
-                }}
-              >
-                <TableCell className={`${emptyCellClass} text-center`} />
-                <TableCell className={emptyCellClass} />
-                <TableCell className={emptyCellClass} />
-                <TableCell className={emptyCellClass} />
-                <TableCell className={emptyCellClass} />
-                <TableCell className={emptyCellClass} />
-                <TableCell className={emptyCellClass} />
-                <TableCell className={emptyCellClass} />
-                <TableCell className={emptyCellClass} />
-                <TableCell className={emptyCellClass} />
-                <TableCell className={emptyCellClass} />
-                <TableCell className={emptyCellClass} />
-                <TableCell className={emptyCellClass} />
-                <TableCell className={emptyCellClass} />
-                <TableCell className={emptyCellClass} />
-                <TableCell className={emptyCellClass} />
-                <TableCell className={emptyCellClassLast} />
-              </TableRow>
-            );
-          })}
+          {rakes.map((rake, index) => (
+            <HistoricalRakeRow
+              key={rake.id}
+              rake={rake}
+              index={index}
+              isEditing={editingId === rake.id}
+              onEditClick={() => onEditingChange(rake.id)}
+              onSaveSuccess={() => onEditingChange(null)}
+              onRakeUpdated={onRakeUpdated}
+              onRakeDeleted={onRakeDeleted}
+            />
+          ))}
         </TableBody>
       </Table>
 

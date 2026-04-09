@@ -142,16 +142,16 @@ final class IndentsController extends Controller
                 'max:100',
                 Rule::exists('power_plants', 'code')->where('is_active', true),
             ],
-            'expected_loading_date' => ['nullable', 'date'],
+            'expected_loading_date' => ['required', 'date'],
             'required_by_date' => ['nullable', 'date'],
             'indent_at' => ['required', 'date'],
-            'demanded_stock' => ['nullable', 'string', 'max:100'],
-            'total_units' => ['nullable', 'integer', 'min:0', 'max:999999'],
-            'target_quantity_mt' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99'],
+            'demanded_stock' => ['required', 'string', 'max:100'],
+            'total_units' => ['required', 'integer', 'min:1', 'max:999999'],
+            'target_quantity_mt' => ['required', 'numeric', 'min:0', 'max:999999999999.99'],
             'allocated_quantity_mt' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99'],
             'available_stock_mt' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99'],
             'rake_number' => [
-                'nullable',
+                'required',
                 'string',
                 'max:100',
                 function (string $attribute, mixed $value, Closure $fail) use ($request): void {
@@ -185,7 +185,7 @@ final class IndentsController extends Controller
                 },
             ],
             'rake_priority_number' => [
-                'nullable',
+                'required',
                 'integer',
                 'min:0',
                 function (string $attribute, mixed $value, Closure $fail) use ($request): void {
