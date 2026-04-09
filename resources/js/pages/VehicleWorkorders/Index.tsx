@@ -1,5 +1,4 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { dashboard } from '@/routes';
 import AppLayout from '@/layouts/app-layout';
 import Heading from '@/components/heading';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -113,7 +112,6 @@ export default function VehicleWorkordersIndex({
     };
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: dashboard().url },
         { title: 'Vehicle Work Orders', href: '/vehicle-workorders' },
     ];
 

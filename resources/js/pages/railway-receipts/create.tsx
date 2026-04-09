@@ -30,7 +30,6 @@ export default function RailwayReceiptsCreate({
 }: Props) {
     const { errors } = usePage<{ errors?: Record<string, string> }>().props;
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: '/dashboard' },
         { title: 'Railway Receipts', href: '/railway-receipts' },
         { title: 'Add RR document', href: '/railway-receipts/create' },
     ];

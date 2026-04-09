@@ -317,7 +317,6 @@ export default function RailwayReceiptsIndex({
     const canManageDiversion = canManageRakeDiversionProp ?? canUpdateRakes;
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: '/dashboard' },
         { title: 'Railway Receipts', href: '/railway-receipts' },
     ];
 

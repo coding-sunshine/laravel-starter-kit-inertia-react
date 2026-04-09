@@ -53,7 +53,6 @@ interface Props {
 
 export default function PowerPlantReceiptsIndex({ receipts }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: '/dashboard' },
         { title: 'Reconciliation', href: '/reconciliation' },
         {
             title: 'Power plant receipts',

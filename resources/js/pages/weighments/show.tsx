@@ -79,7 +79,6 @@ export default function WeighmentShow({
     const { flash } = usePage<{ flash?: { success?: string } }>().props;
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: '/dashboard' },
         { title: 'Weighments', href: '/weighments' },
         { title: `Weighment #${weighment.id}`, href: `/weighments/${weighment.id}` },
     ];

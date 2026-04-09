@@ -42,7 +42,6 @@ export default function ProductionEdit({ entry, type }: Props) {
     const title = productionTitle(type);
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: '/dashboard' },
         { title, href: basePath },
         { title: 'Edit', href: `${basePath}/${entry.id}/edit` },
     ];

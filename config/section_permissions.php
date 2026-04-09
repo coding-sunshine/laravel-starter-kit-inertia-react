@@ -225,6 +225,14 @@ return [
         'master-data.opening-coal-stock.edit' => 'sections.opening_coal_stock.update',
         'master-data.opening-coal-stock.update' => 'sections.opening_coal_stock.update',
 
+        'master-data.daily-stock-details.index' => 'sections.daily_stock_details.view',
+        'master-data.daily-stock-details.export' => 'sections.daily_stock_details.view',
+        'master-data.daily-stock-details.create' => 'sections.daily_stock_details.create',
+        'master-data.daily-stock-details.store' => 'sections.daily_stock_details.create',
+        'master-data.daily-stock-details.edit' => 'sections.daily_stock_details.update',
+        'master-data.daily-stock-details.update' => 'sections.daily_stock_details.update',
+        'master-data.daily-stock-details.destroy' => 'sections.daily_stock_details.delete',
+
         'master-data.master-data.distance-matrix.index' => 'sections.distance_matrix.view',
         'master-data.master-data.distance-matrix.show' => 'sections.distance_matrix.view',
         'master-data.master-data.distance-matrix.create' => 'sections.distance_matrix.create',
@@ -244,6 +252,7 @@ return [
         // Rakes
         'rakes.index' => 'sections.rakes.view',
         'rakes.show' => 'sections.rakes.view',
+        'rakes.rr-hub-state' => 'sections.railway_receipts.view',
         'rakes.diversion-mode.update' => 'sections.rakes.update',
         'rakes.diverrt-destinations.store' => 'sections.rakes.update',
         'rakes.diverrt-destinations.destroy' => 'sections.rakes.update',
@@ -284,6 +293,7 @@ return [
         'rake-loader.index' => 'sections.rake_loader.view',
         'rake-loader.rakes' => 'sections.rake_loader.view',
         'rake-loader.rakes.show' => 'sections.rake_loader.view',
+        'rake-loader.rakes.loading' => 'sections.rake_loader.view',
 
         // Indents
         'indents.index' => 'sections.indents.view',
@@ -405,6 +415,7 @@ return [
 
         // Historical Railway Siding (historical rake data)
         'historical.railway-siding.index' => 'sections.historical_railway_siding.view',
+        'historical.railway-siding.export' => 'sections.historical_railway_siding.view',
         'historical.railway-siding.store' => 'sections.historical_railway_siding.create',
         'historical.railway-siding.update' => 'sections.historical_railway_siding.update',
         'historical.railway-siding.destroy' => 'sections.historical_railway_siding.delete',

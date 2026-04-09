@@ -29,7 +29,6 @@ export default function RoadDispatchArrivalsCreate({
 }: Props) {
     const { errors } = usePage<{ errors?: Record<string, string> }>().props;
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: '/dashboard' },
         { title: 'Road Dispatch', href: '/road-dispatch/arrivals' },
         { title: 'Vehicle Arrivals', href: '/road-dispatch/arrivals' },
         { title: 'Record arrival', href: '/road-dispatch/arrivals/create' },

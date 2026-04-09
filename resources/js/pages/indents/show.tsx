@@ -67,7 +67,6 @@ export default function IndentsShow({
     const canUpdateIndent = useCan('sections.indents.update');
     const canViewIndent = useCan('sections.indents.view');
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: '/dashboard' },
         { title: 'E-Demand', href: '/indents' },
         { title: indent.indent_number || 'N/A', href: `/indents/${indent.id}` },
     ];

@@ -99,7 +99,6 @@ export default function IndentsEdit({ indent, sidings, currentStockMt }: Props) 
     const { errors } = usePage<{ errors?: Record<string, string> }>().props;
     const stateOptions = INDENT_STATES;
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: '/dashboard' },
         { title: 'E-Demand', href: '/indents' },
         { title: indent.indent_number || 'E-Demand', href: `/indents/${indent.id}` },
         { title: 'Edit', href: `/indents/${indent.id}/edit` },

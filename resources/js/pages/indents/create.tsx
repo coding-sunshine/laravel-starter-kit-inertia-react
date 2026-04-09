@@ -40,7 +40,6 @@ const selectClassName = cn(
 export default function IndentsCreate({ sidings, power_plants }: Props) {
     const { errors } = usePage<{ errors?: Record<string, string> }>().props;
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: '/dashboard' },
         { title: 'E-Demand', href: '/indents' },
         { title: 'Create e-demand', href: '/indents/create' },
     ];

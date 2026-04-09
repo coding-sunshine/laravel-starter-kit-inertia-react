@@ -11,7 +11,6 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
-import { dashboard } from '@/routes';
 import { create as indentsCreate } from '@/routes/indents';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
@@ -44,7 +43,6 @@ interface Props {
 
 export default function RakesIndex({ tableData }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: dashboard().url },
         { title: 'Rakes', href: '/rakes' },
     ];
 

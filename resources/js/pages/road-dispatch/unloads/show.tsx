@@ -79,7 +79,6 @@ export default function RoadDispatchUnloadsShow({ unload, lastGrossWeight }: Pro
     }, [unload.id]);
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: '/dashboard' },
         { title: 'Road Dispatch', href: '/road-dispatch/unloads' },
         { title: 'Unload', href: `/road-dispatch/unloads/${unload.id}` },
     ];

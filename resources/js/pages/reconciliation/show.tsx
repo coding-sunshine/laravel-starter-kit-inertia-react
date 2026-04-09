@@ -39,7 +39,6 @@ interface Props {
 
 export default function ReconciliationShow({ rake, points }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: '/dashboard' },
         { title: 'Reconciliation', href: '/reconciliation' },
         {
             title: `Rake ${rake.rake_number}`,

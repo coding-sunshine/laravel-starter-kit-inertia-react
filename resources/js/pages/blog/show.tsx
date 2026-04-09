@@ -1,6 +1,5 @@
 import TextLink from '@/components/text-link';
 import AppLayout from '@/layouts/app-layout';
-import { dashboard } from '@/routes';
 import { index as blogIndex, show as blogShow } from '@/routes/blog';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
@@ -26,7 +25,6 @@ interface Props {
 
 export default function BlogShow({ post }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: dashboard().url },
         { title: 'Blog', href: blogIndex().url },
         { title: post.title, href: blogShow({ post: post.slug }).url },
     ];

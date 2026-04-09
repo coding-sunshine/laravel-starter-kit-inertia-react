@@ -61,7 +61,6 @@ interface Props {
 
 export default function RoadDispatchUnloadsIndex({ unloads, sidings }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: '/dashboard' },
         { title: 'Road Dispatch', href: '/road-dispatch/unloads' },
         { title: 'Vehicle Unloads', href: '/road-dispatch/unloads' },
     ];

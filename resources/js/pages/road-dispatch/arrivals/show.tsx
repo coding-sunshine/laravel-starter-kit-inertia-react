@@ -57,7 +57,6 @@ interface Props {
 
 export default function RoadDispatchArrivalsShow({ arrival }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: '/dashboard' },
         { title: 'Road Dispatch', href: '/road-dispatch/arrivals' },
         { title: 'Vehicle Arrivals', href: '/road-dispatch/arrivals' },
         { title: `Arrival #${arrival.id}`, href: `/road-dispatch/arrivals/${arrival.id}` },

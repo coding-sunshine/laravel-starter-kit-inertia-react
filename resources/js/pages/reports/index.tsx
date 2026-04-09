@@ -303,7 +303,6 @@ export default function ReportsIndex({ reports, sidings }: Props) {
     const [columnSourcesOpen, setColumnSourcesOpen] = useState(false);
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: '/dashboard' },
         { title: 'Reports', href: '/reports' },
     ];
 
