@@ -124,6 +124,14 @@ export function RRTabs({
                         </Card>
                         <Card>
                             <CardHeader className="pb-2">
+                                <CardDescription>Rake Number</CardDescription>
+                                <CardTitle className="text-base">
+                                    {overviewData.rakeNumber}
+                                </CardTitle>
+                            </CardHeader>
+                        </Card>
+                        <Card>
+                            <CardHeader className="pb-2">
                                 <CardDescription>FNR</CardDescription>
                                 <CardTitle className="text-base">
                                     {overviewData.fnr}

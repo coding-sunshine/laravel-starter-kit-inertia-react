@@ -56,6 +56,7 @@ use App\Http\Controllers\Rakes\RakeGuardInspectionController;
 use App\Http\Controllers\Rakes\RakeLoadController;
 use App\Http\Controllers\Rakes\RakeLoaderController;
 use App\Http\Controllers\Rakes\RakePowerPlantReceiptController;
+use App\Http\Controllers\Rakes\RakeRrHubStateController;
 use App\Http\Controllers\Rakes\RakesController;
 use App\Http\Controllers\Rakes\RakeTxrController;
 use App\Http\Controllers\Rakes\RakeWagonController;
@@ -217,6 +218,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 
     Route::get('rakes', [RakesController::class, 'index'])->name('rakes.index');
     Route::get('rakes/{rake}', [RakesController::class, 'show'])->name('rakes.show');
+    Route::get('rakes/{rake}/rr-hub-state', RakeRrHubStateController::class)->name('rakes.rr-hub-state');
     Route::get('rakes/{rake}/pre-rr', [PreRrController::class, 'show'])->name('rakes.pre-rr.show');
     Route::patch('rakes/{rake}/diversion-mode', RakeDiversionModeController::class)->name('rakes.diversion-mode.update');
     Route::post('rakes/{rake}/diverrt-destinations', [RakeDiverrtDestinationController::class, 'store'])->name('rakes.diverrt-destinations.store');
@@ -284,6 +286,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         Route::put('opening-coal-stock/{siding}', [OpeningCoalStockController::class, 'update'])->name('opening-coal-stock.update');
         Route::post('opening-coal-stock/{siding}/fix', [OpeningCoalStockController::class, 'fixWrongOpening'])->name('opening-coal-stock.fix');
         Route::get('daily-stock-details', [CoalStockApproxDetailController::class, 'index'])->name('daily-stock-details.index');
+        Route::get('daily-stock-details/export', [CoalStockApproxDetailController::class, 'export'])->name('daily-stock-details.export');
         Route::get('daily-stock-details/create', [CoalStockApproxDetailController::class, 'create'])->name('daily-stock-details.create');
         Route::post('daily-stock-details', [CoalStockApproxDetailController::class, 'store'])->name('daily-stock-details.store');
         Route::get('daily-stock-details/{coalStockApproxDetail}/edit', [CoalStockApproxDetailController::class, 'edit'])->name('daily-stock-details.edit');
@@ -338,6 +341,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 
     // Historical Railway Siding (historical rake data)
     Route::get('historical/railway-siding', [HistoricalRakeController::class, 'index'])->name('historical.railway-siding.index');
+    Route::get('historical/railway-siding/export', [HistoricalRakeController::class, 'export'])->name('historical.railway-siding.export');
     Route::post('historical/railway-siding', [HistoricalRakeController::class, 'store'])->name('historical.railway-siding.store');
     Route::patch('historical/railway-siding/{rake}', [HistoricalRakeController::class, 'update'])->name('historical.railway-siding.update');
     Route::delete('historical/railway-siding/{rake}', [HistoricalRakeController::class, 'destroy'])->name('historical.railway-siding.destroy');

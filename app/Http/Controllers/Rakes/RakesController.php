@@ -337,10 +337,24 @@ final class RakesController extends Controller
             'status' => ['nullable', 'string', 'in:pending,txr_in_progress,txr_completed,loading,loading_completed,guard_approved,guard_rejected,weighment_completed,rr_generated,closed'],
             'rr_expected_date' => ['nullable', 'date'],
             'placement_time' => ['nullable', 'date'],
+            'loading_date' => ['nullable', 'date'],
+            'destination_code' => [
+                'nullable',
+                'string',
+                'max:20',
+                function (string $attribute, mixed $value, Closure $fail): void {
+                    if ($value === null || $value === '') {
+                        return;
+                    }
+                    if (! PowerPlant::query()->where('code', (string) $value)->where('is_active', true)->exists()) {
+                        $fail('The selected destination is not a valid active power plant.');
+                    }
+                },
+            ],
             'remarks' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $rake->update([
+        $payload = [
             'rake_number' => array_key_exists('rake_number', $validated) && mb_trim((string) $validated['rake_number']) !== ''
                 ? mb_trim((string) $validated['rake_number'])
                 : $rake->rake_number,
@@ -349,8 +363,30 @@ final class RakesController extends Controller
             'state' => $validated['status'] ?? $rake->state,
             'rr_expected_date' => $validated['rr_expected_date'] ?? $rake->rr_expected_date,
             'placement_time' => $validated['placement_time'] ? new DateTimeImmutable($validated['placement_time']) : $rake->placement_time,
+            'remarks' => array_key_exists('remarks', $validated) ? $validated['remarks'] : $rake->remarks,
             'updated_by' => $request->user()->id,
-        ]);
+        ];
+
+        if (array_key_exists('loading_date', $validated)) {
+            $payload['loading_date'] = $validated['loading_date'] ?: null;
+        }
+
+        if (array_key_exists('destination_code', $validated)) {
+            $code = $validated['destination_code'];
+            if ($code === null || $code === '') {
+                $payload['destination'] = null;
+                $payload['destination_code'] = null;
+            } else {
+                $powerPlant = PowerPlant::query()
+                    ->where('code', $code)
+                    ->where('is_active', true)
+                    ->firstOrFail();
+                $payload['destination'] = $powerPlant->name;
+                $payload['destination_code'] = $powerPlant->code;
+            }
+        }
+
+        $rake->update($payload);
 
         return to_route('rakes.show', $rake)
             ->with('success', 'Rake updated successfully.');

@@ -36,4 +36,17 @@ final class CoalStockApproxDetail extends Model
     {
         return $this->belongsTo(Siding::class);
     }
+
+    /**
+     * Prevent date-only values from JSON-serializing as UTC datetimes (off-by-one calendar day in non-UTC zones).
+     *
+     * @return array<string, mixed>
+     */
+    public function toArray(): array
+    {
+        $array = parent::toArray();
+        $array['date'] = $this->date?->toDateString();
+
+        return $array;
+    }
 }

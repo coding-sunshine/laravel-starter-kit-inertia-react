@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 
 export interface RRHeaderProps {
     rrNumber: string;
+    rakeNumber: string;
     siding: string;
     powerPlant: string;
     rrDate: string;
@@ -20,6 +21,7 @@ const statusStyles: Record<string, string> = {
 
 export function RRHeader({
     rrNumber,
+    rakeNumber,
     siding,
     powerPlant,
     rrDate,
@@ -32,12 +34,18 @@ export function RRHeader({
 
     return (
         <div className="rounded-xl border bg-card p-6 shadow-sm">
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7">
                 <div>
                     <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                         RR Number
                     </p>
                     <p className="mt-1 font-medium">{rrNumber}</p>
+                </div>
+                <div>
+                    <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                        Rake Number
+                    </p>
+                    <p className="mt-1 font-medium">{rakeNumber}</p>
                 </div>
                 <div>
                     <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">

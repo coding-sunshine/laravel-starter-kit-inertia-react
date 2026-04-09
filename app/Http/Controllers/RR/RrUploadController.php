@@ -10,6 +10,7 @@ use App\Models\DiverrtDestination;
 use App\Models\Rake;
 use App\Services\Railway\RrImportService;
 use App\Services\Railway\RrParserService;
+use App\Support\RakeRrHubPayload;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Log;
@@ -43,6 +44,24 @@ final class RrUploadController extends Controller
             }
 
             $rrDocument = $this->rrImportService->importSnapshotOnly($parsed, $request, $validated, $rake, $diverrtDestination);
+
+            if ($request->wantsJson()) {
+                $rakeForHub = $rake;
+                if ($rakeForHub === null && $rrDocument->rake_id !== null) {
+                    $rakeForHub = Rake::query()->with(['rrDocuments', 'diverrtDestinations'])->find($rrDocument->rake_id);
+                } elseif ($rakeForHub !== null) {
+                    $rakeForHub->refresh()->load(['rrDocuments', 'diverrtDestinations']);
+                }
+
+                return response()->json([
+                    'rr_document' => [
+                        'id' => $rrDocument->id,
+                        'rr_number' => $rrDocument->rr_number,
+                        'diverrt_destination_id' => $rrDocument->diverrt_destination_id,
+                    ],
+                    'rr_hub' => $rakeForHub !== null ? RakeRrHubPayload::fromRake($rakeForHub) : null,
+                ]);
+            }
 
             if ($rake !== null) {
                 return redirect()->route('rakes.show', $rake)

@@ -30,23 +30,6 @@ interface RrCharge {
     amount: string | number;
 }
 
-interface RakeChargeLedger {
-    id: number;
-    charge_type: 'FREIGHT' | 'OTHER_CHARGE' | 'PENALTY' | 'GST' | 'REBATE';
-    amount: string | number;
-    data_source?: string | null;
-    remarks?: string | null;
-}
-
-interface AppliedPenalty {
-    id: number;
-    amount: string | number;
-    quantity?: string | number | null;
-    wagon_id?: number | null;
-    penalty_type?: { id: number; code: string; name: string; calculation_type: string };
-    wagon?: { id: number; wagon_number: string; overload_weight_mt?: string | number | null };
-}
-
 interface Rake {
     id: number;
     rake_number: string;
@@ -54,7 +37,6 @@ interface Rake {
     loaded_weight_mt?: string | number | null;
     siding?: { id: number; name: string; code: string };
     wagons?: Wagon[];
-    applied_penalties?: AppliedPenalty[];
 }
 
 interface RrDocument {
@@ -75,7 +57,6 @@ interface RrDocument {
     rr_details: Record<string, unknown> | null;
     rake?: Rake;
     rr_charges?: RrCharge[];
-    rake_charges_ledger?: RakeChargeLedger[];
     rr_pdf_download_url?: string | null;
     // Snapshot relations from backend (snake_case when serialized)
     wagon_snapshots?: Array<{
@@ -141,6 +122,7 @@ function buildHeaderData(
 
     return {
         rrNumber: doc.rr_number,
+        rakeNumber: doc.rake?.rake_number ?? '—',
         siding:
             fromSiding?.name ??
             doc.rake?.siding?.name ??
@@ -178,6 +160,7 @@ function buildOverviewData(
 
     return {
         rrNumber: doc.rr_number,
+        rakeNumber: doc.rake?.rake_number ?? '—',
         fnr: doc.fnr ?? '-',
         fromStation:
             fromSiding?.name ?? doc.from_station_code ?? '-',
@@ -253,28 +236,8 @@ function buildWagonsData(doc: RrDocument): WagonRow[] {
     }));
 }
 
+/** Charges stored on this RR document only (`rr_charges` + parsed PDF legacy), not rake ledger rows. */
 function buildChargesData(doc: RrDocument): ChargeRow[] {
-    const rakeChargesLedger =
-        (doc as Record<string, unknown>).rake_charges_ledger as
-            | RakeChargeLedger[]
-            | undefined;
-
-    if (Array.isArray(rakeChargesLedger) && rakeChargesLedger.length > 0) {
-        const labelByType: Record<RakeChargeLedger['charge_type'], string> = {
-            FREIGHT: 'Freight',
-            OTHER_CHARGE: 'Other Charges',
-            PENALTY: 'Penalty',
-            GST: 'GST',
-            REBATE: 'Rebate',
-        };
-
-        return rakeChargesLedger.map((c) => ({
-            chargeCode: c.charge_type,
-            chargeName: labelByType[c.charge_type] ?? c.charge_type,
-            amount: `₹${Number(c.amount ?? 0).toLocaleString('en-IN')}`,
-        }));
-    }
-
     const rrCharges =
         (doc as Record<string, unknown>).rr_charges ??
         (doc as Record<string, unknown>).rrCharges;
@@ -308,8 +271,8 @@ function buildChargesData(doc: RrDocument): ChargeRow[] {
     }));
 }
 
+/** Penalties stored as snapshots on this RR only (`rr_penalty_snapshots`), not operational `applied_penalties`. */
 function buildPenaltiesData(doc: RrDocument): PenaltyRow[] {
-    // 1) Prefer RR penalty snapshots
     const penaltySnapshots =
         (doc as Record<string, unknown>).penalty_snapshots as
             | {
@@ -319,61 +282,23 @@ function buildPenaltiesData(doc: RrDocument): PenaltyRow[] {
                   wagon_sequence?: number | null;
               }[]
             | undefined;
-    if (penaltySnapshots && penaltySnapshots.length > 0) {
-        return penaltySnapshots.map((p) => ({
-            penaltyCode: p.penalty_code,
-            penaltyName: p.penalty_code,
-            calculationType: '-',
-            amount: `₹${Number(p.amount ?? 0).toLocaleString('en-IN')}`,
-            wagonReference: p.wagon_number ?? undefined,
-            overloadWeight: undefined,
-        }));
-    }
-
-    // 2) Fallback: applied penalties from operational rake
-    const appliedPenalties = doc.rake?.applied_penalties ?? [];
-    if (appliedPenalties.length > 0) {
-        const wagons = doc.rake?.wagons ?? [];
-        return appliedPenalties.map((ap) => {
-            const pt = ap.penalty_type;
-            const wagonRef =
-                ap.wagon?.wagon_number ??
-                (ap.wagon_id != null
-                    ? wagons.find((w) => w.id === ap.wagon_id)?.wagon_number
-                    : undefined);
-            const overloadWt =
-                ap.wagon?.overload_weight_mt ?? ap.quantity ?? undefined;
-            return {
-                penaltyCode: pt?.code ?? '-',
-                penaltyName: pt?.name ?? '-',
-                calculationType: pt?.calculation_type ?? '-',
-                amount: `₹${Number(ap.amount ?? 0).toLocaleString('en-IN')}`,
-                wagonReference: wagonRef,
-                overloadWeight:
-                    overloadWt != null ? `${overloadWt} MT` : undefined,
-            };
-        });
-    }
-
-    // 3) Legacy: penalties embedded in rr_details
-    const rrDetails = doc.rr_details as Record<string, unknown> | null;
-    const penalties = rrDetails?.penalties as Record<string, unknown>[] | null;
-    if (!penalties || !Array.isArray(penalties)) {
+    if (!penaltySnapshots || penaltySnapshots.length === 0) {
         return [];
     }
 
-    return penalties.map((p) => ({
-        penaltyCode: (p.penalty_code ?? p.code ?? '-') as string,
-        penaltyName: (p.penalty_name ?? p.name ?? '-') as string,
-        calculationType: (p.calculation_type ?? '-') as string,
+    return penaltySnapshots.map((p) => ({
+        penaltyCode: p.penalty_code,
+        penaltyName: p.penalty_code,
+        calculationType: '-',
         amount: `₹${Number(p.amount ?? 0).toLocaleString('en-IN')}`,
-        wagonReference: p.wagon_reference as string | undefined,
-        overloadWeight: (p.overload_weight as string | undefined) ?? undefined,
+        wagonReference: p.wagon_number ?? undefined,
+        overloadWeight: undefined,
     }));
 }
 
 const MOCK_HEADER = {
     rrNumber: '461003908',
+    rakeNumber: 'RK-1001',
     siding: 'Dumka',
     powerPlant: 'BTPC',
     rrDate: '03 Nov 2025',
@@ -383,6 +308,7 @@ const MOCK_HEADER = {
 
 const MOCK_OVERVIEW: OverviewData = {
     rrNumber: '461003908',
+    rakeNumber: 'RK-1001',
     fnr: 'FNR-2025-001',
     fromStation: 'BMGK',
     toStation: 'PSPM',

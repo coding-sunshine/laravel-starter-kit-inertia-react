@@ -152,6 +152,7 @@ interface RakeData {
     rr_expected_date?: string | null;
     remarks?: string | null;
     destination?: string | null;
+    loading_date?: string | null;
     loading_free_minutes: number | null;
     is_diverted?: boolean;
     destination_code?: string | null;
@@ -740,8 +741,45 @@ export default function RakesShow({
         status: rake.state ?? 'pending',
         rr_expected_date: rake.rr_expected_date ? new Date(rake.rr_expected_date).toISOString().slice(0, 10) : '',
         placement_time: rake.placement_time ? new Date(rake.placement_time).toISOString().slice(0, 10) : '',
+        loading_date:
+            rake.loading_date != null && String(rake.loading_date).length > 0
+                ? String(rake.loading_date).slice(0, 10)
+                : '',
+        destination_code: rake.destination_code ?? '',
         remarks: rake.remarks ?? '',
     });
+
+    useEffect(() => {
+        setEditData({
+            rake_number: rake.rake_number ?? '',
+            rake_type: rake.rake_type ?? '',
+            dispatch_time: rake.dispatch_time ? new Date(rake.dispatch_time).toISOString().slice(0, 16) : '',
+            status: rake.state ?? 'pending',
+            rr_expected_date: rake.rr_expected_date
+                ? new Date(rake.rr_expected_date).toISOString().slice(0, 10)
+                : '',
+            placement_time: rake.placement_time
+                ? new Date(rake.placement_time).toISOString().slice(0, 10)
+                : '',
+            loading_date:
+                rake.loading_date != null && String(rake.loading_date).length > 0
+                    ? String(rake.loading_date).slice(0, 10)
+                    : '',
+            destination_code: rake.destination_code ?? '',
+            remarks: rake.remarks ?? '',
+        });
+    }, [
+        rake.id,
+        rake.rake_number,
+        rake.rake_type,
+        rake.dispatch_time,
+        rake.state,
+        rake.rr_expected_date,
+        rake.placement_time,
+        rake.loading_date,
+        rake.destination_code,
+        rake.remarks,
+    ]);
 
     useEffect(() => {
         if (rake.wagons.length === 0 && (rake.wagon_count ?? 0) > 0) {
@@ -926,6 +964,39 @@ export default function RakesShow({
                                         />
                                         <InputError message={editErrors.placement_time} />
                                     </div>
+                                    <div>
+                                        <Label htmlFor="loading_date">Loading date</Label>
+                                        <Input
+                                            id="loading_date"
+                                            name="loading_date"
+                                            type="date"
+                                            value={editData.loading_date}
+                                            onChange={(e) => setEditData('loading_date', e.target.value)}
+                                        />
+                                        <InputError message={editErrors.loading_date} />
+                                    </div>
+                                    <div className="sm:col-span-2">
+                                        <Label htmlFor="destination_code">
+                                            Destination (power plant)
+                                        </Label>
+                                        <select
+                                            id="destination_code"
+                                            name="destination_code"
+                                            value={editData.destination_code}
+                                            onChange={(e) =>
+                                                setEditData('destination_code', e.target.value)
+                                            }
+                                            className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                        >
+                                            <option value="">— None —</option>
+                                            {powerPlants.map((p) => (
+                                                <option key={p.code} value={p.code}>
+                                                    {p.name} ({p.code})
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <InputError message={editErrors.destination_code} />
+                                    </div>
                                     <div className="sm:col-span-2">
                                         <Label htmlFor="remarks">Remarks</Label>
                                         <textarea
@@ -954,10 +1025,10 @@ export default function RakesShow({
                             </DialogContent>
                         </Dialog>
                         <Link
-                            href="/rakes"
+                            href="/indents"
                             className="text-sm font-medium text-muted-foreground underline underline-offset-4"
                         >
-                            ← Back to list
+                            ← Back to e-demands
                         </Link>
                     </div>
                 </div>

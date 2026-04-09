@@ -324,7 +324,10 @@ const TYPE_ICON_MAP: Record<string, FilterColumn["icon"]> = {
     boolean: ToggleLeft,
 };
 
-function buildFilterColumns(columns: DataTableColumnDef[]): FilterColumn[] {
+function buildFilterColumns(
+    columns: DataTableColumnDef[],
+    wrapClassNames?: Record<string, string>,
+): FilterColumn[] {
     return columns
         .filter((col) => col.filterable)
         .map((col) => {
@@ -337,6 +340,7 @@ function buildFilterColumns(columns: DataTableColumnDef[]): FilterColumn[] {
                 ...(col.options ? { options: col.options } : {}),
                 ...(col.searchThreshold != null ? { searchThreshold: col.searchThreshold } : {}),
                 ...(col.filterTextOperator != null ? { textFixedOperator: col.filterTextOperator } : {}),
+                ...(wrapClassNames?.[col.id] ? { inlineWrapClassName: wrapClassNames[col.id] } : {}),
             };
         });
 }
@@ -484,8 +488,8 @@ export function DataTable<TData extends object>({
     });
 
     const filterColumns = useMemo(
-        () => buildFilterColumns(tableData.columns),
-        [tableData.columns],
+        () => buildFilterColumns(tableData.columns, resolvedOptions.filtersColumnWrapClassNames),
+        [tableData.columns, resolvedOptions.filtersColumnWrapClassNames],
     );
 
     const filtersLayout = resolvedOptions.filtersLayout ?? "popover";
@@ -560,6 +564,7 @@ export function DataTable<TData extends object>({
                     columns={filterColumns}
                     serverFilters={meta.filters as Record<string, unknown>}
                     layout="inline"
+                    inlineSingleRow={resolvedOptions.filtersInlineSingleRow ?? false}
                 />
             )}
             {hasBulkActions && selectedRows.length > 0 && (

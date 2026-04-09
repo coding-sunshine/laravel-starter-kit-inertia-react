@@ -281,30 +281,6 @@ export default function PenaltiesIndex({
                                     onClick: (row) =>
                                         router.visit(`/rakes/${row.rake_id}`),
                                 },
-                                {
-                                    label: 'Ask AI',
-                                    onClick: (row) => {
-                                        const b = row.calculation_breakdown;
-                                        const details = [
-                                            `penalty #${row.id}`,
-                                            `type: ${row.penalty_type}`,
-                                            `amount: ₹${Number(row.penalty_amount).toLocaleString()}`,
-                                            row.rake_number ? `rake: ${row.rake_number}` : null,
-                                            row.siding_name ? `siding: ${row.siding_name}` : null,
-                                            b?.formula ? `formula: ${b.formula}` : null,
-                                        ]
-                                            .filter(Boolean)
-                                            .join(', ');
-                                        window.dispatchEvent(
-                                            new CustomEvent('chat:ask', {
-                                                detail: {
-                                                    message: `Explain ${details} and suggest how to avoid this in the future.`,
-                                                },
-                                            }),
-                                        );
-                                    },
-                                    visible: () => true,
-                                },
                             ]}
                             renderCell={(columnId, _value, row) => {
                                 if (columnId === 'penalty_type') {

@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Http\Controllers\RailwayReceipts;
 
 use App\Actions\DeleteRrDocumentAction;
-use App\DataTables\RrDocumentDataTable;
+use App\Actions\ProcessRrDocument;
+use App\DataTables\RailwayReceiptsRakeDataTable;
+use App\DataTables\RailwayReceiptsStandaloneRrDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\PowerPlant;
 use App\Models\Rake;
@@ -23,30 +25,33 @@ use Throwable;
 
 final class RrDocumentController extends Controller
 {
-    public function index(Request $request): \Inertia\Response
+    public function index(Request $request): \Inertia\Response|RedirectResponse
     {
         $user = $request->user();
         abort_unless($this->hasSectionPermission($user, 'sections.railway_receipts.view'), 403);
 
-        $sidingIds = $user->isSuperAdmin()
-            ? Siding::query()->pluck('id')->all()
-            : $user->sidings()->get()->pluck('id')->all();
-
-        // Backward compatibility: some legacy users only have `users.siding_id`
-        // and no rows in the `user_siding` pivot table.
-        if (! $user->isSuperAdmin() && $sidingIds === [] && $user->siding_id !== null) {
-            $sidingIds = [(int) $user->siding_id];
+        $tab = $request->query('tab', 'rakes');
+        if (! is_string($tab) || ! in_array($tab, ['rakes', 'standalone'], true)) {
+            $tab = 'rakes';
         }
 
-        $sidings = Siding::query()
-            ->whereIn('id', $sidingIds)
-            ->orderBy('name')
-            ->get(['id', 'name', 'code']);
+        if ($tab === 'standalone' && ! $user->isSuperAdmin()) {
+            return redirect()->route('railway-receipts.index');
+        }
+
+        if ($tab === 'standalone') {
+            $tableData = RailwayReceiptsStandaloneRrDataTable::makeTable($request);
+        } else {
+            $this->applyRailwayReceiptsRakesHubDefaultLoadingDateFilter($request);
+            $tableData = RailwayReceiptsRakeDataTable::makeTable($request);
+        }
 
         return Inertia::render('railway-receipts/index', [
-            'tableData' => RrDocumentDataTable::makeTable($request),
-            'sidings' => $sidings,
+            'tableData' => $tableData,
+            'activeTab' => $tab,
             'can_upload_rr' => $this->hasSectionPermission($user, 'sections.railway_receipts.upload'),
+            'showStandaloneTab' => $user->isSuperAdmin(),
+            'can_manage_rake_diversion' => $this->hasSectionPermission($user, 'sections.rakes.update'),
         ]);
     }
 
@@ -141,9 +146,6 @@ final class RrDocumentController extends Controller
         $rrDocument->load([
             'rake.siding:id,name,code',
             'rake.wagons',
-            'rake.rakeCharges:id,rake_id,diverrt_destination_id,charge_type,amount,is_actual_charges,data_source,remarks',
-            'rake.appliedPenalties.penaltyType:id,code,name,calculation_type',
-            'rake.appliedPenalties.wagon:id,wagon_number,overload_weight_mt',
             'rrCharges',
             'wagonSnapshots',
             'penaltySnapshots',
@@ -161,19 +163,6 @@ final class RrDocumentController extends Controller
 
         $hasPdf = $rrDocument->getFirstMedia('rr_pdf') !== null;
         $rrDocument->setAttribute('rr_pdf_download_url', $hasPdf ? route('railway-receipts.pdf', $rrDocument) : null);
-        $ledgerCharges = $rrDocument->rake?->rakeCharges
-            ?->filter(fn ($charge): bool => $charge->is_actual_charges
-                && (int) $charge->diverrt_destination_id === (int) $rrDocument->diverrt_destination_id)
-            ->map(fn ($charge): array => [
-                'id' => $charge->id,
-                'charge_type' => $charge->charge_type,
-                'amount' => $charge->amount,
-                'data_source' => $charge->data_source,
-                'remarks' => $charge->remarks,
-            ])
-            ->values()
-            ->all() ?? [];
-        $rrDocument->setAttribute('rake_charges_ledger', $ledgerCharges);
 
         return Inertia::render('railway-receipts/show', [
             'rrDocument' => $rrDocument,
@@ -404,6 +393,23 @@ final class RrDocumentController extends Controller
 
         return to_route('railway-receipts.index')
             ->with('success', 'Railway receipt deleted.');
+    }
+
+    /**
+     * When the client omits `filter[loading_date]` on the rakes tab, restrict rows to {@see Rake::$loading_date} equal to today.
+     * If `filter[loading_date]` is present (even empty), do not inject a default.
+     */
+    private function applyRailwayReceiptsRakesHubDefaultLoadingDateFilter(Request $request): void
+    {
+        $filter = $request->input('filter', []);
+        if (! is_array($filter)) {
+            $filter = [];
+        }
+        if (array_key_exists('loading_date', $filter)) {
+            return;
+        }
+        $filter['loading_date'] = 'eq:'.now()->toDateString();
+        $request->merge(['filter' => $filter]);
     }
 
     private function hasSectionPermission(\App\Models\User $user, string $permission): bool
