@@ -183,6 +183,13 @@ const platformNavItems: NavItem[] = [
         ],
     },
     {
+        title: 'Indent',
+        href: '/siding-pre-indent-reports',
+        icon: ClipboardList,
+        permission: 'sections.siding_pre_indent_reports.view',
+        dataPan: 'nav-siding-pre-indent-reports',
+    },
+    {
         title: 'E-Demand',
         href: '/indents',
         icon: FileText,
@@ -190,14 +197,7 @@ const platformNavItems: NavItem[] = [
         dataPan: 'nav-indents',
     },
     {
-        title: 'Rakes',
-        href: '/rakes',
-        icon: Train,
-        permission: 'sections.rakes.view',
-        dataPan: 'nav-rakes',
-    },
-    {
-        title: 'Rake Weighment',
+        title: 'Rake Weighments',
         href: '/weighments',
         icon: Scale,
         permission: 'sections.weighments.view',
@@ -209,6 +209,13 @@ const platformNavItems: NavItem[] = [
         icon: Package,
         permission: 'sections.rake_loader.view',
         dataPan: 'nav-rake-loader',
+    },
+    {
+        title: 'Rake Progress',
+        href: '/rakes',
+        icon: Train,
+        permission: 'sections.rakes.view',
+        dataPan: 'nav-rakes',
     },
     {
         title: 'RR Upload',
@@ -230,13 +237,6 @@ const platformNavItems: NavItem[] = [
         icon: Scale,
         permission: 'sections.railway_siding_empty_weighment.view',
         dataPan: 'nav-railway-siding-empty-weighment',
-    },
-    {
-        title: 'Siding Pre-Indent Report',
-        href: '/siding-pre-indent-reports',
-        icon: ClipboardList,
-        permission: 'sections.siding_pre_indent_reports.view',
-        dataPan: 'nav-siding-pre-indent-reports',
     },
     {
         title: 'Mines Dispatch Data',

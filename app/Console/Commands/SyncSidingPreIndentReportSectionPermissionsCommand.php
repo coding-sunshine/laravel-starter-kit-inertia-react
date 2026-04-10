@@ -11,14 +11,17 @@ use Spatie\Permission\PermissionRegistrar;
 use Symfony\Component\Console\Attribute\AsCommand;
 
 /**
- * Creates section permissions for Siding Pre-Indent Report from a dedicated list.
- * Also declared in config/section_permissions.php — keep both in sync.
+ * Optional: creates the four section permission rows from the in-command list.
+ * The canonical source for which permissions exist is config/section_permissions.php
+ * (slug siding_pre_indent_reports); SectionPermissionsSeeder and
+ * `php artisan permission:sync-sections` create them from that config.
+ * Use this command only if you want to sync these names without running a full section sync.
  */
 #[AsCommand(name: 'permission:sync-siding-pre-indent-reports')]
 final class SyncSidingPreIndentReportSectionPermissionsCommand extends Command
 {
     /**
-     * Permission names for this feature (must match config/section_permissions.php slug siding_pre_indent_reports).
+     * Must match sections.siding_pre_indent_reports.* implied by config/section_permissions.php.
      *
      * @var list<string>
      */

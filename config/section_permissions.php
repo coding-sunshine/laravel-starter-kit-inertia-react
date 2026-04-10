@@ -426,6 +426,15 @@ return [
         'historical.railway-siding.update' => 'sections.historical_railway_siding.update',
         'historical.railway-siding.destroy' => 'sections.historical_railway_siding.delete',
 
+        // Siding Pre-Indent Report
+        'siding-pre-indent-reports.index' => 'sections.siding_pre_indent_reports.view',
+        'siding-pre-indent-reports.create' => 'sections.siding_pre_indent_reports.create',
+        'siding-pre-indent-reports.store' => 'sections.siding_pre_indent_reports.create',
+        'siding-pre-indent-reports.show' => 'sections.siding_pre_indent_reports.view',
+        'siding-pre-indent-reports.edit' => 'sections.siding_pre_indent_reports.update',
+        'siding-pre-indent-reports.update' => 'sections.siding_pre_indent_reports.update',
+        'siding-pre-indent-reports.destroy' => 'sections.siding_pre_indent_reports.delete',
+
         // Changelog / Help / Contact (public or feature-gated)
         'changelog.index' => 'sections.changelog.view',
         'help.index' => 'sections.help.view',
