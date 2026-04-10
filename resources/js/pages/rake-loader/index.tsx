@@ -233,6 +233,10 @@ export default function RakeLoaderIndex({
         router.get(u.pathname + u.search, {}, { preserveScroll: true });
     }, []);
 
+    const openRakeLoading = useCallback((row: RakeRow) => {
+        router.visit(rakeLoader.rakes.loading.url(row.id));
+    }, []);
+
     const applyDateFilterOption = useCallback(
         (option: DateFilterOption) => {
             setDateFilterOption(option);
@@ -424,6 +428,7 @@ export default function RakeLoaderIndex({
                                 tableData={tableData}
                                 tableName="rake-loader-list"
                                 preserveSearchParams={['siding_id']}
+                                onRowClick={openRakeLoading}
                                 options={{
                                     quickViews: false,
                                     customQuickViews: false,
@@ -437,7 +442,7 @@ export default function RakeLoaderIndex({
                                     {
                                         label: 'View',
                                         onClick: (row) => {
-                                            router.visit(rakeLoader.rakes.loading.url(row.id));
+                                            openRakeLoading(row);
                                         },
                                     },
                                 ]}

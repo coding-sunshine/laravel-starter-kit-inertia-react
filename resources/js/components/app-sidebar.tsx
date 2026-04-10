@@ -18,6 +18,7 @@ import { usePage } from '@inertiajs/react';
 import {
     AlertTriangle,
     BarChart3,
+    ClipboardList,
     CreditCard,
     Factory,
     FileText,
@@ -182,6 +183,13 @@ const platformNavItems: NavItem[] = [
         ],
     },
     {
+        title: 'Indent',
+        href: '/siding-pre-indent-reports',
+        icon: ClipboardList,
+        permission: 'sections.siding_pre_indent_reports.view',
+        dataPan: 'nav-siding-pre-indent-reports',
+    },
+    {
         title: 'E-Demand',
         href: '/indents',
         icon: FileText,
@@ -189,14 +197,7 @@ const platformNavItems: NavItem[] = [
         dataPan: 'nav-indents',
     },
     {
-        title: 'Rakes',
-        href: '/rakes',
-        icon: Train,
-        permission: 'sections.rakes.view',
-        dataPan: 'nav-rakes',
-    },
-    {
-        title: 'Rake Weighment',
+        title: 'Rake Weighments',
         href: '/weighments',
         icon: Scale,
         permission: 'sections.weighments.view',
@@ -210,7 +211,14 @@ const platformNavItems: NavItem[] = [
         dataPan: 'nav-rake-loader',
     },
     {
-        title: 'RR Upload',
+        title: 'Rake Progress',
+        href: '/rakes',
+        icon: Train,
+        permission: 'sections.rakes.view',
+        dataPan: 'nav-rakes',
+    },
+    {
+        title: 'Railway Receipts',
         href: '/railway-receipts',
         icon: FileText,
         permission: 'sections.railway_receipts.view',

@@ -96,6 +96,7 @@ final class RolesAndPermissionsSeeder extends Seeder
             'sections.indents.view',
             'sections.railway_receipts.view',
             'sections.weighments.view',
+            'sections.siding_pre_indent_reports.view',
         ];
         if (config('permission.permission_categories_enabled', false)) {
             $resolver = resolve(PermissionCategoryResolver::class);

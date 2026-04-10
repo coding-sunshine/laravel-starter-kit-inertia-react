@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import AppLayout from '@/layouts/app-layout';
+import { withReturnTo } from '@/lib/safe-return-url';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Download, FileText, Pencil } from 'lucide-react';
@@ -178,7 +179,12 @@ export default function IndentsEdit({ indent, sidings, currentStockMt }: Props) 
                                 </div>
                             </dl>
                             <Button variant="outline" size="sm" asChild>
-                                <Link href={`/rakes/${indent.rake.id}`}>
+                                <Link
+                                    href={withReturnTo(
+                                        `/rakes/${indent.rake.id}`,
+                                        `/indents/${indent.id}/edit`,
+                                    )}
+                                >
                                     Open rake
                                 </Link>
                             </Button>

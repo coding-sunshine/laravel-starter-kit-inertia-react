@@ -22,16 +22,25 @@ export function Breadcrumbs({
                     <BreadcrumbList>
                         {breadcrumbs.map((item, index) => {
                             const isLast = index === breadcrumbs.length - 1;
+                            const isPlain = item.interactive === false;
+                            const keyHref =
+                                typeof item.href === 'string'
+                                    ? item.href
+                                    : item.href.url;
                             return (
-                                <Fragment
-                                    key={
-                                        typeof item.href === 'string'
-                                            ? item.href
-                                            : item.href.url
-                                    }
-                                >
+                                <Fragment key={`${index}-${keyHref}`}>
                                     <BreadcrumbItem>
-                                        {isLast ? (
+                                        {isPlain ? (
+                                            isLast ? (
+                                                <BreadcrumbPage>
+                                                    {item.title}
+                                                </BreadcrumbPage>
+                                            ) : (
+                                                <span className="text-muted-foreground">
+                                                    {item.title}
+                                                </span>
+                                            )
+                                        ) : isLast ? (
                                             <BreadcrumbPage>
                                                 {item.title}
                                             </BreadcrumbPage>

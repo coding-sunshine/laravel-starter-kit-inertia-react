@@ -11,11 +11,12 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
+import { withReturnTo } from '@/lib/safe-return-url';
 import { create as indentsCreate } from '@/routes/indents';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
 import { Plus, Train } from 'lucide-react';
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 
 interface RakeRow {
@@ -59,6 +60,20 @@ export default function RakesIndex({ tableData }: Props) {
         [tableData],
     );
 
+    const openRakeRow = useCallback((row: RakeRow) => {
+        const isFromRr =
+            row.data_source === 'historical_rr' && row.rr_document_id != null;
+        if (isFromRr) {
+            router.visit(`/railway-receipts/${row.rr_document_id}`);
+            return;
+        }
+        const returnPath =
+            typeof window !== 'undefined'
+                ? `${window.location.pathname}${window.location.search}`
+                : '/rakes';
+        router.visit(withReturnTo(`/rakes/${row.id}`, returnPath));
+    }, []);
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Rakes" />
@@ -91,6 +106,7 @@ export default function RakesIndex({ tableData }: Props) {
                         <DataTable<RakeRow>
                             tableData={tableDataWithExactRakeNumber}
                             tableName="rakes"
+                            onRowClick={openRakeRow}
                             rowClassName={(row) =>
                                 row.workflow_has_pending
                                     ? 'bg-red-100/80 dark:bg-red-950/50'
@@ -100,14 +116,7 @@ export default function RakesIndex({ tableData }: Props) {
                                 {
                                     label: 'View',
                                     onClick: (row) => {
-                                        const isFromRr =
-                                            row.data_source === 'historical_rr' &&
-                                            row.rr_document_id != null;
-                                        router.visit(
-                                            isFromRr
-                                                ? `/railway-receipts/${row.rr_document_id}`
-                                                : `/rakes/${row.id}`,
-                                        );
+                                        openRakeRow(row);
                                     },
                                 },
                                 {
