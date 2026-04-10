@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import AppLayout from '@/layouts/app-layout';
+import { parseSafeReturnTo } from '@/lib/safe-return-url';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router, usePage, useForm } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
@@ -724,6 +725,35 @@ export default function RakesShow({
     demurrageRemainingMinutes,
     demurrage_rate_per_mt_hour,
 }: Props) {
+    const page = usePage();
+    const returnToQuerySuffix = useMemo((): string => {
+        const u = page.url;
+        const idx = u.indexOf('?');
+        return idx >= 0 ? u.slice(idx) : '';
+    }, [page.url]);
+
+    const eDemandBackHref = useMemo((): string => {
+        const idx = page.url.indexOf('?');
+        if (idx < 0) {
+            return '/indents';
+        }
+        const params = new URLSearchParams(page.url.slice(idx + 1));
+        return parseSafeReturnTo(params.get('return_to')) ?? '/indents';
+    }, [page.url]);
+
+    const backLinkLabel = useMemo((): string => {
+        const idx = page.url.indexOf('?');
+        if (idx < 0) {
+            return '← Back to e-demands';
+        }
+        const params = new URLSearchParams(page.url.slice(idx + 1));
+        const path = parseSafeReturnTo(params.get('return_to'));
+        if (path != null) {
+            return '← Back';
+        }
+        return '← Back to e-demands';
+    }, [page.url]);
+
     const [selectedWagon, setSelectedWagon] = useState<Wagon | null>(null);
     const [wagonDialogOpen, setWagonDialogOpen] = useState(false);
     const [wagons, setWagons] = useState(rake.wagons);
@@ -783,9 +813,9 @@ export default function RakesShow({
 
     useEffect(() => {
         if (rake.wagons.length === 0 && (rake.wagon_count ?? 0) > 0) {
-            router.visit(`/rakes/${rake.id}/edit`);
+            router.visit(`/rakes/${rake.id}/edit${returnToQuerySuffix}`);
         }
-    }, [rake.id, rake.wagons.length, rake.wagon_count]);
+    }, [rake.id, rake.wagons.length, rake.wagon_count, returnToQuerySuffix]);
 
     useEffect(() => {
         setWagons(rake.wagons);
@@ -799,7 +829,7 @@ export default function RakesShow({
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Rakes', href: '/rakes' },
-        { title: rake.rake_number, href: `/rakes/${rake.id}` },
+        { title: rake.rake_number, href: `/rakes/${rake.id}${returnToQuerySuffix}` },
     ];
     const isLow =
         demurrageRemainingMinutes !== null && demurrageRemainingMinutes <= 30;
@@ -1024,10 +1054,10 @@ export default function RakesShow({
                             </DialogContent>
                         </Dialog>
                         <Link
-                            href="/indents"
+                            href={eDemandBackHref}
                             className="text-sm font-medium text-muted-foreground underline underline-offset-4"
                         >
-                            ← Back to e-demands
+                            {backLinkLabel}
                         </Link>
                     </div>
                 </div>

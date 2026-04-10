@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/card';
 import { useCan } from '@/hooks/use-can';
 import AppLayout from '@/layouts/app-layout';
+import { withReturnTo } from '@/lib/safe-return-url';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
 import { Download, FileText, Train, Trash2 } from 'lucide-react';
@@ -81,7 +82,12 @@ export default function IndentsShow({
                     </h2>
                     <div className="flex gap-2">
                         {rake ? (
-                            <Link href={`/rakes/${rake.id}`}>
+                            <Link
+                                href={withReturnTo(
+                                    `/rakes/${rake.id}`,
+                                    `/indents/${indent.id}`,
+                                )}
+                            >
                                 <Button variant="outline" size="sm">
                                     <Train className="mr-2 h-4 w-4" />
                                     View Rake
@@ -365,7 +371,12 @@ export default function IndentsShow({
                                 </div>
                             </dl>
                             <div className="mt-4">
-                                <Link href={`/rakes/${rake.id}`}>
+                                <Link
+                                    href={withReturnTo(
+                                        `/rakes/${rake.id}`,
+                                        `/indents/${indent.id}`,
+                                    )}
+                                >
                                     <Button variant="outline" size="sm">
                                         <Train className="mr-2 h-4 w-4" />
                                         View Rake Details
