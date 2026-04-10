@@ -71,6 +71,7 @@ use App\Http\Controllers\SectionTimersController;
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\Settings\AchievementsController;
 use App\Http\Controllers\ShiftTimingsController;
+use App\Http\Controllers\SidingPreIndentReportController;
 use App\Http\Controllers\SidingsController;
 use App\Http\Controllers\SidingSwitchController;
 use App\Http\Controllers\TermsAcceptController;
@@ -367,6 +368,8 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         Route::patch('{production_entry}', [ProductionEntryController::class, 'update'])->name('update');
         Route::delete('{production_entry}', [ProductionEntryController::class, 'destroy'])->name('destroy');
     });
+
+    Route::resource('siding-pre-indent-reports', SidingPreIndentReportController::class);
 
     // Vehicle Dispatch Register
     Route::get('vehicle-dispatch', [VehicleDispatchController::class, 'index'])->name('vehicle-dispatch.index');

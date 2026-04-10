@@ -91,6 +91,11 @@ return [
             'actions' => ['view', 'create', 'update', 'delete'],
         ],
         [
+            'slug' => 'siding_pre_indent_reports',
+            'label' => 'Siding Pre-Indent Report',
+            'actions' => ['view', 'create', 'update', 'delete'],
+        ],
+        [
             'slug' => 'production_coal',
             'label' => 'Production - Coal',
             'actions' => ['view', 'create', 'update', 'delete'],
@@ -465,5 +470,6 @@ return [
         'contact' => 'sections.contact.create',
         'historical_mines' => 'sections.historical_mines.view',
         'historical_railway_siding' => 'sections.historical_railway_siding.view',
+        'siding_pre_indent_reports' => 'sections.siding_pre_indent_reports.view',
     ],
 ];

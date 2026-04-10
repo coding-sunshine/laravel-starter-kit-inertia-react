@@ -38,6 +38,8 @@ export interface Auth {
 export interface BreadcrumbItem {
     title: string;
     href: string;
+    /** When false, crumb is plain text (not a link). Defaults to true. */
+    interactive?: boolean;
 }
 
 export interface NavGroup {

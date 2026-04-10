@@ -828,8 +828,12 @@ export default function RakesShow({
     }, [selectedWagon]);
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Rakes', href: '/rakes' },
-        { title: rake.rake_number, href: `/rakes/${rake.id}${returnToQuerySuffix}` },
+        { title: 'Rakes', href: '/rakes', interactive: false },
+        {
+            title: rake.rake_number,
+            href: `/rakes/${rake.id}`,
+            interactive: false,
+        },
     ];
     const isLow =
         demurrageRemainingMinutes !== null && demurrageRemainingMinutes <= 30;

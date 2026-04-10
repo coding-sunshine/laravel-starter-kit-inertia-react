@@ -18,6 +18,7 @@ import { usePage } from '@inertiajs/react';
 import {
     AlertTriangle,
     BarChart3,
+    ClipboardList,
     CreditCard,
     Factory,
     FileText,
@@ -229,6 +230,13 @@ const platformNavItems: NavItem[] = [
         icon: Scale,
         permission: 'sections.railway_siding_empty_weighment.view',
         dataPan: 'nav-railway-siding-empty-weighment',
+    },
+    {
+        title: 'Siding Pre-Indent Report',
+        href: '/siding-pre-indent-reports',
+        icon: ClipboardList,
+        permission: 'sections.siding_pre_indent_reports.view',
+        dataPan: 'nav-siding-pre-indent-reports',
     },
     {
         title: 'Mines Dispatch Data',
