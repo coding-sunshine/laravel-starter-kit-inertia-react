@@ -6,7 +6,6 @@ namespace Modules\Announcements\Models;
 
 use App\Models\Organization;
 use App\Models\User;
-use GeneaLabs\LaravelGovernor\Traits\Governable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -30,7 +29,6 @@ use Spatie\ModelFlags\Models\Concerns\HasFlags;
  * @property bool $is_active
  * @property int|null $position
  * @property int|null $created_by
- * @property int|null $governor_owned_by
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
  * @property-read Organization|null $organization
@@ -39,7 +37,6 @@ use Spatie\ModelFlags\Models\Concerns\HasFlags;
  */
 final class Announcement extends Model implements Sortable
 {
-    use Governable;
     use HasFactory;
     use HasFlags;
     use SortableTrait;
@@ -62,7 +59,6 @@ final class Announcement extends Model implements Sortable
         'is_active',
         'position',
         'created_by',
-        'governor_owned_by',
     ];
 
     /**

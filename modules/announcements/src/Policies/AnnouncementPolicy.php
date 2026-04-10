@@ -41,7 +41,7 @@ final class AnnouncementPolicy
             return true;
         }
 
-        if ($announcement->governor_owned_by !== null && $announcement->governor_owned_by === $user->getKey()) {
+        if ($announcement->created_by !== null && $announcement->created_by === $user->getKey()) {
             return true;
         }
 

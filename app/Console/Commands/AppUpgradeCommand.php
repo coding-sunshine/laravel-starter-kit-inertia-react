@@ -106,7 +106,6 @@ final class AppUpgradeCommand extends Command
         $seeders = [
             \Database\Seeders\Essential\RolesAndPermissionsSeeder::class => 'Seeding roles and permissions…',
             \Database\Seeders\Essential\MailTemplatesSeeder::class => 'Seeding mail templates…',
-            \GeneaLabs\LaravelGovernor\Database\Seeders\LaravelGovernorDatabaseSeeder::class => 'Seeding Governor (entities, roles)…',
         ];
 
         foreach ($seeders as $class => $label) {

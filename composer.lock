@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "9d8f967e60c68a534c60c6e9748d14e1",
+    "content-hash": "a413b995c96061ed2f150b1d0ce7fbcd",
     "packages": [
         {
             "name": "a909m/filament-statefusion",
@@ -3635,78 +3635,6 @@
                 }
             ],
             "time": "2025-12-03T09:33:47+00:00"
-        },
-        {
-            "name": "genealabs/laravel-governor",
-            "version": "0.22.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/mike-bronner/laravel-governor.git",
-                "reference": "437754f3993301018ddf1014f72d6dc353aa09e2"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/mike-bronner/laravel-governor/zipball/437754f3993301018ddf1014f72d6dc353aa09e2",
-                "reference": "437754f3993301018ddf1014f72d6dc353aa09e2",
-                "shasum": ""
-            },
-            "require": {
-                "illuminate/database": "^11.0|^12.0|^13.0",
-                "illuminate/support": "^11.0|^12.0|^13.0",
-                "php": "^8.2",
-                "ramsey/uuid": "^4.0"
-            },
-            "require-dev": {
-                "doctrine/dbal": "^3.0|^4.0",
-                "fakerphp/faker": "^1.23",
-                "orchestra/testbench": "^9.0|^10.0|^11.0",
-                "phpunit/phpunit": "^10.0|^11.0|^12.0",
-                "symfony/thanks": "^1.2"
-            },
-            "type": "library",
-            "extra": {
-                "laravel": {
-                    "providers": [
-                        "GeneaLabs\\LaravelGovernor\\Providers\\Auth",
-                        "GeneaLabs\\LaravelGovernor\\Providers\\Nova",
-                        "GeneaLabs\\LaravelGovernor\\Providers\\Route",
-                        "GeneaLabs\\LaravelGovernor\\Providers\\Service"
-                    ]
-                }
-            },
-            "autoload": {
-                "psr-4": {
-                    "GeneaLabs\\LaravelGovernor\\": "src/",
-                    "GeneaLabs\\LaravelGovernor\\Database\\Seeders\\": "database/seeders/",
-                    "GeneaLabs\\LaravelGovernor\\Database\\Factories\\": "database/factories/"
-                },
-                "classmap": [
-                    "database/migrations"
-                ]
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "GeneaLabs, LLC",
-                    "email": "hello@genealabs.com"
-                }
-            ],
-            "description": "Managing policy and control in Laravel.",
-            "support": {
-                "issues": "https://github.com/mike-bronner/laravel-governor/issues",
-                "source": "https://github.com/mike-bronner/laravel-governor/tree/0.22.0"
-            },
-            "funding": [
-                {
-                    "url": "https://github.com/mikebronner",
-                    "type": "github"
-                }
-            ],
-            "abandoned": "mike-bronner/laravel-governor",
-            "time": "2026-03-01T18:37:49+00:00"
         },
         {
             "name": "giggsey/libphonenumber-for-php-lite",

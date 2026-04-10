@@ -26,7 +26,6 @@ use App\Settings\SeoSettings;
 use App\Support\ModuleLoader;
 use App\Support\ModuleToolRegistry;
 use Carbon\CarbonImmutable;
-use Closure;
 use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Events\MigrationsEnded;
@@ -81,20 +80,6 @@ final class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->bootStrictDefaults();
-
-        // Disable Governor's ParseCustomPolicyActions middleware — incompatible
-        // with Laravel 13 (__PHP_Incomplete_Class from cache deserialization).
-        $this->app->bind(
-            \GeneaLabs\LaravelGovernor\Http\Middleware\ParseCustomPolicyActions::class,
-            fn (): object => new class
-            {
-                /** @param  Closure  $next */
-                public function handle(mixed $request, mixed $next): mixed
-                {
-                    return $next($request);
-                }
-            }
-        );
 
         $this->ensureSqliteDatabaseExists();
         $this->runMigrationsIfNeededForInstaller();

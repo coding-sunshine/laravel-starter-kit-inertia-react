@@ -337,16 +337,6 @@ final class AppInstallCommand extends Command
                 fn () => Artisan::call('db:seed', ['--class' => \Database\Seeders\Essential\MailTemplatesSeeder::class, '--force' => true]),
                 'Seeding mail templates…'
             );
-            spin(
-                function (): void {
-                    try {
-                        Artisan::call('db:seed', ['--class' => \GeneaLabs\LaravelGovernor\Database\Seeders\LaravelGovernorDatabaseSeeder::class, '--force' => true]);
-                    } catch (Throwable) {
-                        // Non-fatal — Governor may not be used
-                    }
-                },
-                'Seeding Governor (entities, roles)…'
-            );
             info('  Essential data seeded');
             $this->completePhase(self::PHASE_SEEDERS);
         }

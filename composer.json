@@ -416,7 +416,6 @@
         "eznix86/laravel-ai-memory": "dev-main",
         "filament/filament": "^5.5.0",
         "filament/spatie-laravel-settings-plugin": "^5.5.0",
-        "genealabs/laravel-governor": ">=0.22",
         "harris21/laravel-fuse": ">=0.4",
         "inertiajs/inertia-laravel": "^3.0.6",
         "jijunair/laravel-referral": "^1.0.4",
