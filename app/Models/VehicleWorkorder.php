@@ -16,4 +16,20 @@ final class VehicleWorkorder extends Model
     {
         return $this->belongsTo(Siding::class);
     }
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'work_order_date' => 'date',
+            'issued_date' => 'date',
+            'regd_date' => 'date',
+            'permit_validity_date' => 'date',
+            'tax_validity_date' => 'date',
+            'fitness_validity_date' => 'date',
+            'insurance_validity_date' => 'date',
+        ];
+    }
 }

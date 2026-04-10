@@ -27,6 +27,7 @@ use App\Models\StockLedger;
 use App\Models\VehicleUnload;
 use App\Services\CoalTransportReport\CoalTransportReportDataBuilder;
 use App\Support\Dashboard\DashboardFilterResolver;
+use App\Support\Dashboard\DashboardWidgetPermissions;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use DateTimeInterface;
@@ -69,6 +70,11 @@ final class ExecutiveDashboardController extends Controller
 
         $filterOptions = $this->buildFilterOptions($resolved['filteredSidingIds']);
 
+        $user = $request->user();
+        $executiveYesterdayPayload = DashboardWidgetPermissions::userHasAnyExecutiveWidget($user)
+            ? $this->buildExecutiveYesterdayData($resolved['allSidingIds'], $executiveYesterdayDate, $executiveCustomRanges)
+            : null;
+
         // dd($this->buildSidingPerformance($filteredSidingIds, $from, $to, $filterContext));
         return Inertia::render('dashboard', [
             'sidings' => $allSidings,
@@ -109,13 +115,19 @@ final class ExecutiveDashboardController extends Controller
             'rakePerformance' => $this->buildRakePerformance($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
             'loaderOverloadTrends' => $this->buildLoaderOverloadTrends($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
             'powerPlantDispatch' => $this->buildPowerPlantDispatch($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
+            'allowedDashboardWidgets' => DashboardWidgetPermissions::allowedNamesForUser($user),
             // Executive Yesterday tab uses its own date picker and ignores main dashboard filters.
-            'executiveYesterday' => $this->buildExecutiveYesterdayData($resolved['allSidingIds'], $executiveYesterdayDate, $executiveCustomRanges),
+            'executiveYesterday' => $executiveYesterdayPayload,
         ]);
     }
 
     public function executiveYesterdayData(Request $request): JsonResponse
     {
+        $user = $request->user();
+        abort_unless($user !== null, 403);
+        abort_unless($user->can('bypass-permissions') || $user->hasPermissionTo('sections.dashboard.view'), 403);
+        abort_unless(DashboardWidgetPermissions::userHasAnyExecutiveWidget($user), 403);
+
         $resolved = $this->filters->resolve($request);
         $executiveYesterdayDate = $this->parseExecutiveYesterdayDate($request);
         $executiveCustomRanges = $this->parseExecutiveCustomRanges($request, $executiveYesterdayDate);

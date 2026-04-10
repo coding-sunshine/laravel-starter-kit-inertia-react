@@ -59,9 +59,18 @@ final class DashboardFilterResolver
         $dailyRakeDate = $this->parseSingleDate($request, 'daily_rake_date', now()->subDay()->startOfDay());
         $coalTransportDate = $this->parseSingleDate($request, 'coal_transport_date', now()->subDay()->startOfDay());
 
-        $allowedSections = ['executive-overview', 'operations', 'penalty-control', 'siding-performance', 'rake-performance', 'loader-overload', 'power-plant'];
-        $section = (string) $request->input('section', 'executive-overview');
-        $section = in_array($section, $allowedSections, true) ? $section : 'executive-overview';
+        $allowedSections = DashboardWidgetPermissions::orderedDashboardSectionIds();
+        $permittedSections = DashboardWidgetPermissions::permittedDashboardSectionIdsForUser($user);
+        $fallbackSection = $permittedSections[0] ?? 'executive-overview';
+
+        $querySection = $request->query('section');
+        if (is_string($querySection)
+            && in_array($querySection, $allowedSections, true)
+            && in_array($querySection, $permittedSections, true)) {
+            $section = $querySection;
+        } else {
+            $section = $fallbackSection;
+        }
 
         $filterContext = [
             'period' => $period,

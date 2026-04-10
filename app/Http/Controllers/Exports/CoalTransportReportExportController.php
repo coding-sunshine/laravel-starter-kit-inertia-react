@@ -29,11 +29,13 @@ final class CoalTransportReportExportController extends Controller
         $user = Auth::user();
         abort_unless($user !== null, 403);
 
-        if (! $user->can('bypass-permissions')
-            && ! $user->hasPermissionTo('sections.dashboard.view')
-            && ! $user->hasPermissionTo('sections.mines_dispatch_data.view')) {
-            abort(403);
-        }
+        $canExport = $user->can('bypass-permissions')
+            || $user->hasPermissionTo('sections.mines_dispatch_data.view')
+            || (
+                $user->hasPermissionTo('sections.dashboard.view')
+                && $user->hasPermissionTo('dashboard.widgets.operations_coal_transport')
+            );
+        abort_unless($canExport, 403);
 
         $sidingIds = $user->isSuperAdmin()
             ? Siding::query()->pluck('id')->all()

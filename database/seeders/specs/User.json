@@ -76,6 +76,11 @@
             "type": "bigint",
             "nullable": true,
             "default": null
+        },
+        "access_to_siding_shift_data": {
+            "type": "boolean",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {
@@ -186,6 +191,10 @@
             "example": "user@example.com"
         },
         "onboarding_completed": {
+            "type": "boolean",
+            "example": true
+        },
+        "access_to_siding_shift_data": {
             "type": "boolean",
             "example": true
         }

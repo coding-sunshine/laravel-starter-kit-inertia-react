@@ -57,6 +57,7 @@ final class SectionPermissionsFormOptions
             function (): array {
                 return Permission::query()
                     ->where('name', 'not like', 'sections.%')
+                    ->where('name', 'not like', 'dashboard.widgets.%')
                     ->orderBy('name')
                     ->get()
                     ->mapWithKeys(fn (Permission $p): array => [$p->id => $p->name])
