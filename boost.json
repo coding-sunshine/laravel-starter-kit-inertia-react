@@ -13,13 +13,14 @@
     "mcp": true,
     "packages": [
         "filament/filament",
-        "laravel/fortify",
         "prism-php/prism",
-        "filament/blueprint",
-        "laravel/ai"
+        "filament/blueprint"
     ],
     "sail": false,
     "skills": [
+        "ai-sdk-development",
+        "fortify-development",
+        "laravel-best-practices",
         "configuring-horizon",
         "mcp-development",
         "pennant-development",
@@ -31,8 +32,6 @@
         "inertia-react-development",
         "echo-development",
         "tailwindcss-development",
-        "ai-sdk-development",
-        "fortify-development",
         "developing-with-prism",
         "database-mail",
         "developing-with-ai-sdk",

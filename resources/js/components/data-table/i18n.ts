@@ -57,16 +57,7 @@ export interface DataTableTranslations {
     manageViews: string;
     viewName: string;
     viewNamePlaceholder: string;
-    viewWillBeSaved: string;
-    viewSaveError: string;
-    viewDeleteError: string;
-    viewLoadError: string;
-    myViews: string;
-    teamViews: string;
-    systemViews: string;
-    shareWithTeam: string;
-    sharedBadge: string;
-    systemBadge: string;
+    filtersWillBeSavedLocally: string;
     filtersLabel: string;
     none: string;
     sortLabel: string;
@@ -459,16 +450,7 @@ export const defaultTranslations: DataTableTranslations = {
     manageViews: "Manage views",
     viewName: "View name",
     viewNamePlaceholder: "e.g. Recent items without photos",
-    viewWillBeSaved: "Save the current view configuration for quick access.",
-    viewSaveError: "Failed to save view. Please try again.",
-    viewDeleteError: "Failed to delete view. Please try again.",
-    viewLoadError: "Failed to load saved views.",
-    myViews: "My Views",
-    teamViews: "Team Views",
-    systemViews: "System Views",
-    shareWithTeam: "Share with team",
-    sharedBadge: "Shared",
-    systemBadge: "System",
+    filtersWillBeSavedLocally: "Active filters will be saved locally.",
     filtersLabel: "Filters:",
     none: "None",
     sortLabel: "Sort:",
@@ -843,16 +825,7 @@ export const frTranslations: DataTableTranslations = {
     manageViews: "Gérer les vues",
     viewName: "Nom de la vue",
     viewNamePlaceholder: "Ex: Occasions récentes sans photo",
-    viewWillBeSaved: "Sauvegarder la configuration de la vue pour un accès rapide.",
-    viewSaveError: "Impossible de sauvegarder la vue. Veuillez réessayer.",
-    viewDeleteError: "Impossible de supprimer la vue. Veuillez réessayer.",
-    viewLoadError: "Impossible de charger les vues sauvegardées.",
-    myViews: "Mes vues",
-    teamViews: "Vues d'équipe",
-    systemViews: "Vues système",
-    shareWithTeam: "Partager avec l'équipe",
-    sharedBadge: "Partagé",
-    systemBadge: "Système",
+    filtersWillBeSavedLocally: "Les filtres actifs seront sauvegardés localement.",
     filtersLabel: "Filtres :",
     none: "Aucun",
     sortLabel: "Tri :",
@@ -1023,6 +996,7 @@ export const frTranslations: DataTableTranslations = {
 
     // Header filters
     headerFilterPlaceholder: "Filtrer...",
+    headerFilterToggle: "Filtres de colonnes",
     clearHeaderFilter: "Effacer le filtre",
 
     // Tree data
@@ -1044,6 +1018,9 @@ export const frTranslations: DataTableTranslations = {
 
     // Sparklines
     sparklineLabel: "Tendance",
+
+    // Overflow menu
+    more: "Plus",
 
     // AI assistant
     aiAssistant: "Assistant IA",

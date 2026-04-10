@@ -51,7 +51,6 @@ import {
     Workflow,
     Zap,
     ShieldCheck,
-    Slack,
     Stamp,
     type LucideIcon,
 } from 'lucide-react';
@@ -165,7 +164,7 @@ export const featureGroups: FeatureGroup[] = [
             { icon: UserCheck, title: 'User Onboarding', description: 'Multi-step onboarding flow with spatie/laravel-onboard. Verify email, complete profile, get started.', dataPan: 'welcome-feature-onboarding' },
             { icon: Zap, title: 'Response Caching', description: 'Spatie response cache for blazing-fast page loads on public routes.', dataPan: 'welcome-feature-response-cache' },
             { icon: ShieldCheck, title: 'Rate-limited Jobs', description: 'Spatie rate-limited job middleware prevents API flooding on webhooks and notifications.', dataPan: 'welcome-feature-rate-limited-jobs' },
-            { icon: Slack, title: 'Slack Alerts', description: 'Automatic Slack notifications on failed jobs and critical errors.', dataPan: 'welcome-feature-slack' },
+            { icon: Bell, title: 'Slack Alerts', description: 'Automatic Slack notifications on failed jobs and critical errors.', dataPan: 'welcome-feature-slack' },
             { icon: Stamp, title: 'Userstamps', description: 'Automatic created_by and updated_by tracking on all stamped models.', dataPan: 'welcome-feature-userstamps' },
         ],
     },
