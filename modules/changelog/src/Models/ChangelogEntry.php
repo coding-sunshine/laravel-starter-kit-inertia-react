@@ -16,8 +16,8 @@ use Modules\Changelog\Database\Factories\ChangelogEntryFactory;
 use Modules\Changelog\Enums\ChangelogType;
 use Pgvector\Laravel\HasNeighbors;
 use Pgvector\Laravel\Vector;
-use Spatie\Activitylog\LogOptions;
-use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\Support\LogOptions;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Tags\HasTags;
 
 /**
@@ -64,7 +64,7 @@ final class ChangelogEntry extends Model
         return LogOptions::defaults()
             ->logOnly(['title', 'version', 'type', 'is_published', 'released_at'])
             ->logOnlyDirty()
-            ->dontSubmitEmptyLogs()
+            ->dontLogEmptyChanges()
             ->useLogName('changelog_entry');
     }
 

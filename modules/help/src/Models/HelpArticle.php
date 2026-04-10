@@ -16,8 +16,8 @@ use Mattiverse\Userstamps\Traits\Userstamps;
 use Modules\Help\Database\Factories\HelpArticleFactory;
 use Pgvector\Laravel\HasNeighbors;
 use Pgvector\Laravel\Vector;
-use Spatie\Activitylog\LogOptions;
-use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\Support\LogOptions;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\EloquentSortable\Sortable;
 use Spatie\EloquentSortable\SortableTrait;
 use Spatie\MediaLibrary\HasMedia;
@@ -119,7 +119,7 @@ final class HelpArticle extends Model implements HasMedia, Sortable
         return LogOptions::defaults()
             ->logOnly(['title', 'category', 'is_published', 'order'])
             ->logOnlyDirty()
-            ->dontSubmitEmptyLogs()
+            ->dontLogEmptyChanges()
             ->useLogName('help_article');
     }
 

@@ -34,8 +34,8 @@ final class DashboardController
                 'id' => (string) $activity->id,
                 'action' => $activity->description ?? $activity->event ?? 'unknown',
                 'target' => $activity->subject_type ? class_basename($activity->subject_type) : null,
-                'description' => $activity->properties->get('attributes')
-                    ? collect($activity->properties->get('attributes'))->keys()->take(3)->join(', ')
+                'description' => isset($activity->attribute_changes['attributes'])
+                    ? collect($activity->attribute_changes['attributes'])->keys()->take(3)->join(', ')
                     : null,
                 'timestamp' => $activity->created_at?->toISOString() ?? '',
                 'type' => $activity->log_name ?? 'default',

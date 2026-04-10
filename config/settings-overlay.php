@@ -354,7 +354,7 @@ return [
     ActivityLogSettings::class => [
         'map' => [
             'enabled' => 'activitylog.enabled',
-            'delete_records_older_than_days' => 'activitylog.delete_records_older_than_days',
+            'delete_records_older_than_days' => 'activitylog.clean_after_days',
         ],
         'orgOverridable' => false,
     ],

@@ -7,7 +7,7 @@ namespace App\Services;
 use App\Enums\ActivityType;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
-use Spatie\Activitylog\CauserResolver;
+use Spatie\Activitylog\Support\CauserResolver;
 
 final readonly class ActivityLogRbac
 {

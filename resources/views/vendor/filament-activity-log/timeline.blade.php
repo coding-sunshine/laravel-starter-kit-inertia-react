@@ -102,7 +102,7 @@
                     @endif
 
                     {{-- Changes Toggle --}}
-                    @if($activity->properties->has('attributes') || $activity->properties->has('old'))
+                    @if($activity->attribute_changes && (isset($activity->attribute_changes['attributes']) || isset($activity->attribute_changes['old'])))
                         <div x-data="{ open: false }">
                             <button @click="open = !open" type="button" class="activity-log-changes-btn {{ ($slim ?? false) ? 'activity-log-changes-btn-slim' : '' }}">
                                 <span class="activity-log-changes-btn-content">
@@ -115,14 +115,14 @@
 
                             <div x-show="open" x-collapse class="activity-log-changes-grid" style="display: none;">
 
-                                @if($activity->properties->has('old'))
+                                @if(isset($activity->attribute_changes['old']))
                                     <div class="activity-log-change-card old">
                                         <div class="activity-log-change-header">
                                             {{ __('filament-activity-log::activity.infolist.tab.old') }}
                                         </div>
                                         <div class="activity-log-change-body">
-                                            @if(is_array($activity->properties['old']))
-                                                @foreach($activity->properties['old'] as $key => $value)
+                                            @if(is_array($activity->attribute_changes['old']))
+                                                @foreach($activity->attribute_changes['old'] as $key => $value)
                                                     <div class="activity-log-change-item">
                                                         <dt class="activity-log-change-key">{{ str($key)->title() }}</dt>
                                                         <dd class="activity-log-change-value">
@@ -132,21 +132,21 @@
                                                 @endforeach
                                             @else
                                                 <div class="activity-log-simple-value">
-                                                    {{ $activity->properties['old'] }}
+                                                    {{ $activity->attribute_changes['old'] }}
                                                 </div>
                                             @endif
                                         </div>
                                     </div>
                                 @endif
 
-                                @if($activity->properties->has('attributes'))
+                                @if(isset($activity->attribute_changes['attributes']))
                                     <div class="activity-log-change-card new">
                                         <div class="activity-log-change-header">
                                             {{ __('filament-activity-log::activity.infolist.tab.new') }}
                                         </div>
                                         <div class="activity-log-change-body">
-                                            @if(is_array($activity->properties['attributes']))
-                                                @foreach($activity->properties['attributes'] as $key => $value)
+                                            @if(is_array($activity->attribute_changes['attributes']))
+                                                @foreach($activity->attribute_changes['attributes'] as $key => $value)
                                                     <div class="activity-log-change-item">
                                                         <dt class="activity-log-change-key">{{ str($key)->title() }}</dt>
                                                         <dd class="activity-log-change-value">
@@ -156,7 +156,7 @@
                                                 @endforeach
                                             @else
                                                 <div class="activity-log-simple-value">
-                                                    {{ $activity->properties['attributes'] }}
+                                                    {{ $activity->attribute_changes['attributes'] }}
                                                 </div>
                                             @endif
                                         </div>

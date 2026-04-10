@@ -8,8 +8,8 @@ use App\Models\Concerns\HasEmbeddings;
 use Illuminate\Database\Eloquent\Model;
 use Pgvector\Laravel\HasNeighbors;
 use Pgvector\Laravel\Vector;
-use Spatie\Activitylog\LogOptions;
-use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\Support\LogOptions;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
 
 final class EmbeddingDemo extends Model
 {

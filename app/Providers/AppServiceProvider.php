@@ -42,7 +42,7 @@ use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Spatie\Activitylog\ActivitylogServiceProvider;
-use Spatie\Activitylog\CauserResolver as ActivitylogCauserResolver;
+use Spatie\Activitylog\Support\CauserResolver as ActivitylogCauserResolver;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Spatie\WebhookServer\Events\WebhookCallFailedEvent;
