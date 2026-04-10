@@ -1,9 +1,10 @@
 import { Head, Link, router } from '@inertiajs/react';
+import { useCallback, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import { useCan } from '@/hooks/use-can';
 import { type BreadcrumbItem } from '@/types';
-import { Pencil } from 'lucide-react';
+import { Copy, Pencil } from 'lucide-react';
 
 interface ReportPayload {
     id: number;
@@ -22,9 +23,31 @@ interface Props {
     report: ReportPayload;
 }
 
+/** Plain-text block for clipboard; matches operational template. */
+function buildPreIndentReportCopyText(report: ReportPayload): string {
+    const loading = report.loading_status_text ?? '';
+    const details = report.indent_details_text ?? '';
+    const lines = [
+        report.heading_line,
+        '',
+        `Date- ${report.report_date_formatted}`,
+        '',
+        `(1) TOTAL INDENT RAISED:- ${report.total_indent_raised}`,
+        '',
+        '(2) LOADING STATUS:-',
+        loading,
+        '',
+        `(3) INDENT AVAILABLE:- ${report.indent_available}`,
+        details,
+    ];
+
+    return lines.join('\n');
+}
+
 export default function SidingPreIndentReportShow({ report }: Props) {
     const canUpdate = useCan('sections.siding_pre_indent_reports.update');
     const canDelete = useCan('sections.siding_pre_indent_reports.delete');
+    const [copyDone, setCopyDone] = useState(false);
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Siding Pre-Indent Report', href: '/siding-pre-indent-reports' },
@@ -33,6 +56,17 @@ export default function SidingPreIndentReportShow({ report }: Props) {
             href: `/siding-pre-indent-reports/${report.id}`,
         },
     ];
+
+    const copyToClipboard = useCallback(async () => {
+        const text = buildPreIndentReportCopyText(report);
+        try {
+            await navigator.clipboard.writeText(text);
+            setCopyDone(true);
+            window.setTimeout(() => setCopyDone(false), 2000);
+        } catch {
+            setCopyDone(false);
+        }
+    }, [report]);
 
     const confirmDelete = () => {
         if (
@@ -54,6 +88,19 @@ export default function SidingPreIndentReportShow({ report }: Props) {
                 <div className="flex flex-wrap items-center justify-between gap-4">
                     <h1 className="text-2xl font-semibold">Report</h1>
                     <div className="flex flex-wrap gap-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            type="button"
+                            onClick={(e) => {
+                                e.preventDefault();
+                                void copyToClipboard();
+                            }}
+                            data-pan="siding-pre-indent-report-copy"
+                        >
+                            <Copy className="mr-2 size-4" />
+                            {copyDone ? 'Copied' : 'Copy'}
+                        </Button>
                         {canUpdate && (
                             <Button variant="outline" size="sm" asChild>
                                 <Link
@@ -83,9 +130,7 @@ export default function SidingPreIndentReportShow({ report }: Props) {
                         {report.heading_line}
                     </p>
 
-                    <p className="mb-6">
-                        Date - {report.report_date_formatted}
-                    </p>
+                    <p className="mb-6">Date- {report.report_date_formatted}</p>
 
                     <p className="mb-2">
                         (1) TOTAL INDENT RAISED:- {report.total_indent_raised}

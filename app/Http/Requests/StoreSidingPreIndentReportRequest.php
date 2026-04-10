@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
 
 final class StoreSidingPreIndentReportRequest extends FormRequest
 {
@@ -26,6 +28,21 @@ final class StoreSidingPreIndentReportRequest extends FormRequest
             'loading_status_text' => ['nullable', 'string'],
             'indent_details_text' => ['nullable', 'string'],
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $v): void {
+            $sid = $v->getData()['siding_id'] ?? null;
+            if ($sid === null) {
+                return;
+            }
+            /** @var User $user */
+            $user = $this->user();
+            if (! $user->canAccessSiding((int) $sid)) {
+                $v->errors()->add('siding_id', __('You do not have access to this siding.'));
+            }
+        });
     }
 
     protected function prepareForValidation(): void

@@ -218,7 +218,7 @@ const platformNavItems: NavItem[] = [
         dataPan: 'nav-rakes',
     },
     {
-        title: 'RR Upload',
+        title: 'Railway Receipts',
         href: '/railway-receipts',
         icon: FileText,
         permission: 'sections.railway_receipts.view',
