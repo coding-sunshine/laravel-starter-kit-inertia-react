@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Filter, Pencil } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { type BreadcrumbItem } from '@/types';
 
 interface Siding {
@@ -63,10 +63,17 @@ interface PaginatedWorkorders {
 }
 
 interface Filters {
-    siding_id?: string;
+    /** May be string or number from the server query string / PHP. */
+    siding_id?: string | number;
     vehicle_no?: string;
     wo_no?: string;
     transport_name?: string;
+    mobile?: string;
+    model?: string;
+    regd_date?: string;
+    permit_validity_date?: string;
+    tax_validity_date?: string;
+    insurance_validity_date?: string;
 }
 
 interface Props {
@@ -88,21 +95,43 @@ function formatDate(dateStr: string | null): string {
     }
 }
 
-export default function VehicleWorkordersIndex({
-    vehicleWorkorders,
-    sidings,
-    filters,
-}: Props) {
+function appendFilterParams(params: URLSearchParams, f: Filters): void {
+    if (f.siding_id !== undefined && f.siding_id !== '') {
+        params.set('siding_id', String(f.siding_id));
+    }
+    if (f.vehicle_no?.trim()) params.set('vehicle_no', f.vehicle_no.trim());
+    if (f.wo_no?.trim()) params.set('wo_no', f.wo_no.trim());
+    if (f.transport_name?.trim()) params.set('transport_name', f.transport_name.trim());
+    if (f.mobile?.trim()) params.set('mobile', f.mobile.trim());
+    if (f.model?.trim()) params.set('model', f.model.trim());
+    if (f.regd_date) params.set('regd_date', f.regd_date);
+    if (f.permit_validity_date) params.set('permit_validity_date', f.permit_validity_date);
+    if (f.tax_validity_date) params.set('tax_validity_date', f.tax_validity_date);
+    if (f.insurance_validity_date) params.set('insurance_validity_date', f.insurance_validity_date);
+}
+
+export default function VehicleWorkordersIndex({ vehicleWorkorders, sidings, filters }: Props) {
     const { flash } = usePage<Props & { flash?: { success?: string } }>().props;
     const [localFilters, setLocalFilters] = useState<Filters>(filters);
 
+    useEffect(() => {
+        setLocalFilters(filters);
+    }, [filters]);
+
+    const exportHref = useMemo(() => {
+        const params = new URLSearchParams();
+        appendFilterParams(params, filters);
+        const qs = params.toString();
+        return qs ? `/vehicle-workorders/export?${qs}` : '/vehicle-workorders/export';
+    }, [filters]);
+
     const applyFilters = () => {
         const params: Record<string, string> = {};
-        if (localFilters.siding_id) params.siding_id = localFilters.siding_id;
-        if (localFilters.vehicle_no?.trim()) params.vehicle_no = localFilters.vehicle_no.trim();
-        if (localFilters.wo_no?.trim()) params.wo_no = localFilters.wo_no.trim();
-        if (localFilters.transport_name?.trim())
-            params.transport_name = localFilters.transport_name.trim();
+        const usp = new URLSearchParams();
+        appendFilterParams(usp, localFilters);
+        usp.forEach((value, key) => {
+            params[key] = value;
+        });
         router.get('/vehicle-workorders', params, { preserveState: true });
     };
 
@@ -120,15 +149,23 @@ export default function VehicleWorkordersIndex({
             <Head title="Vehicle Work Orders" />
 
             <div className="space-y-6">
-                <Heading
-                    title="Vehicle Work Orders"
-                    description="Manage vehicle work order records from workload data"
-                />
-
-                <div className="flex justify-end">
-                    <Link href="/vehicle-workorders/create">
-                        <Button>Add Work Order</Button>
-                    </Link>
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <Heading
+                        title="Vehicle Work Orders"
+                        description="Manage vehicle work order records from workload data"
+                    />
+                    <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                        <a
+                            href={exportHref}
+                            className="inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-4 text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground"
+                            data-pan="vehicle-workorders-export-xlsx"
+                        >
+                            Export XLSX
+                        </a>
+                        <Link href="/vehicle-workorders/create">
+                            <Button>Add Work Order</Button>
+                        </Link>
+                    </div>
                 </div>
 
                 {flash?.success && (
@@ -137,28 +174,30 @@ export default function VehicleWorkordersIndex({
                     </div>
                 )}
 
-                {/* Filters */}
                 <Card data-pan="vehicle-workorders-filters">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Filter className="h-5 w-5" />
+                    <CardHeader className="space-y-1 pb-2">
+                        <CardTitle className="flex items-center gap-2 text-base">
+                            <Filter className="h-4 w-4" />
                             Filters
                         </CardTitle>
-                        <CardDescription>
-                            Filter work orders by siding, vehicle number, WO no, or transport name
-                        </CardDescription>
                     </CardHeader>
-                    <CardContent>
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5">
-                            <div>
-                                <Label htmlFor="siding_id">Siding</Label>
+                    <CardContent className="space-y-3 pt-0">
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
+                            <div className="space-y-1">
+                                <Label htmlFor="siding_id" className="text-xs">
+                                    Siding
+                                </Label>
                                 <Select
-                                    value={localFilters.siding_id ?? ''}
+                                    value={
+                                        localFilters.siding_id !== undefined && localFilters.siding_id !== ''
+                                            ? String(localFilters.siding_id)
+                                            : ''
+                                    }
                                     onValueChange={(v) =>
                                         setLocalFilters((f) => ({ ...f, siding_id: v || undefined }))
                                     }
                                 >
-                                    <SelectTrigger id="siding_id">
+                                    <SelectTrigger id="siding_id" className="h-9">
                                         <SelectValue placeholder="All sidings" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -170,10 +209,13 @@ export default function VehicleWorkordersIndex({
                                     </SelectContent>
                                 </Select>
                             </div>
-                            <div>
-                                <Label htmlFor="vehicle_no">Vehicle No</Label>
+                            <div className="space-y-1">
+                                <Label htmlFor="vehicle_no" className="text-xs">
+                                    Vehicle No
+                                </Label>
                                 <Input
                                     id="vehicle_no"
+                                    className="h-9"
                                     placeholder="e.g. JH16H9464"
                                     value={localFilters.vehicle_no ?? ''}
                                     onChange={(e) =>
@@ -184,10 +226,13 @@ export default function VehicleWorkordersIndex({
                                     }
                                 />
                             </div>
-                            <div>
-                                <Label htmlFor="wo_no">WO No</Label>
+                            <div className="space-y-1">
+                                <Label htmlFor="wo_no" className="text-xs">
+                                    WO No
+                                </Label>
                                 <Input
                                     id="wo_no"
+                                    className="h-9"
                                     placeholder="Work order no"
                                     value={localFilters.wo_no ?? ''}
                                     onChange={(e) =>
@@ -198,10 +243,13 @@ export default function VehicleWorkordersIndex({
                                     }
                                 />
                             </div>
-                            <div>
-                                <Label htmlFor="transport_name">Transport Name</Label>
+                            <div className="space-y-1">
+                                <Label htmlFor="transport_name" className="text-xs">
+                                    Transport Name
+                                </Label>
                                 <Input
                                     id="transport_name"
+                                    className="h-9"
                                     placeholder="Transport name"
                                     value={localFilters.transport_name ?? ''}
                                     onChange={(e) =>
@@ -212,19 +260,120 @@ export default function VehicleWorkordersIndex({
                                     }
                                 />
                             </div>
-                            <div className="flex items-end gap-2">
-                                <Button onClick={applyFilters} size="sm">
-                                    Apply
-                                </Button>
-                                <Button onClick={clearFilters} variant="outline" size="sm">
-                                    Clear
-                                </Button>
+                            <div className="space-y-1">
+                                <Label htmlFor="mobile" className="text-xs">
+                                    Mobile (1 or 2)
+                                </Label>
+                                <Input
+                                    id="mobile"
+                                    className="h-9"
+                                    placeholder="Search mobile"
+                                    value={localFilters.mobile ?? ''}
+                                    onChange={(e) =>
+                                        setLocalFilters((f) => ({
+                                            ...f,
+                                            mobile: e.target.value,
+                                        }))
+                                    }
+                                />
                             </div>
+                            <div className="space-y-1">
+                                <Label htmlFor="model" className="text-xs">
+                                    Model
+                                </Label>
+                                <Input
+                                    id="model"
+                                    className="h-9"
+                                    placeholder="Model"
+                                    value={localFilters.model ?? ''}
+                                    onChange={(e) =>
+                                        setLocalFilters((f) => ({
+                                            ...f,
+                                            model: e.target.value,
+                                        }))
+                                    }
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <Label htmlFor="regd_date" className="text-xs">
+                                    Regd date
+                                </Label>
+                                <Input
+                                    id="regd_date"
+                                    type="date"
+                                    className="h-9"
+                                    value={localFilters.regd_date ?? ''}
+                                    onChange={(e) =>
+                                        setLocalFilters((f) => ({
+                                            ...f,
+                                            regd_date: e.target.value || undefined,
+                                        }))
+                                    }
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <Label htmlFor="permit_validity_date" className="text-xs">
+                                    Permit validity
+                                </Label>
+                                <Input
+                                    id="permit_validity_date"
+                                    type="date"
+                                    className="h-9"
+                                    value={localFilters.permit_validity_date ?? ''}
+                                    onChange={(e) =>
+                                        setLocalFilters((f) => ({
+                                            ...f,
+                                            permit_validity_date: e.target.value || undefined,
+                                        }))
+                                    }
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <Label htmlFor="tax_validity_date" className="text-xs">
+                                    Tax validity
+                                </Label>
+                                <Input
+                                    id="tax_validity_date"
+                                    type="date"
+                                    className="h-9"
+                                    value={localFilters.tax_validity_date ?? ''}
+                                    onChange={(e) =>
+                                        setLocalFilters((f) => ({
+                                            ...f,
+                                            tax_validity_date: e.target.value || undefined,
+                                        }))
+                                    }
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <Label htmlFor="insurance_validity_date" className="text-xs">
+                                    Insurance validity
+                                </Label>
+                                <Input
+                                    id="insurance_validity_date"
+                                    type="date"
+                                    className="h-9"
+                                    value={localFilters.insurance_validity_date ?? ''}
+                                    onChange={(e) =>
+                                        setLocalFilters((f) => ({
+                                            ...f,
+                                            insurance_validity_date: e.target.value || undefined,
+                                        }))
+                                    }
+                                />
+                            </div>
+                        </div>
+                        <div className="flex flex-wrap gap-2 pt-1">
+                            <Button onClick={applyFilters} size="sm">
+                                Apply
+                            </Button>
+                            <Button onClick={clearFilters} variant="outline" size="sm">
+                                Clear
+                            </Button>
                         </div>
                     </CardContent>
                 </Card>
 
-                {/* Table */}
                 <Card data-pan="vehicle-workorders-table">
                     <CardHeader>
                         <CardTitle>Work Orders</CardTitle>

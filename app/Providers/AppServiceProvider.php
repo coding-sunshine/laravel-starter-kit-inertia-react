@@ -229,6 +229,7 @@ final class AppServiceProvider extends ServiceProvider
             'opening-coal-stock-fix',
             'nav-vehicle-workorders',
             'vehicle-workorders-filters',
+            'vehicle-workorders-export-xlsx',
             'vehicle-workorders-table',
             'vehicle-workorder-edit',
             'vehicle-workorder-update',
