@@ -168,7 +168,6 @@ const RAKE_MANAGEMENT_REPORTS: string[] = [
     'wagon_loading',
     'weighment',
     'loader_vs_weighment',
-    'rake_movement',
     'rr_summary',
     'penalty_register',
 ];
@@ -186,7 +185,7 @@ const RAKE_NUMBER_FILTER_REPORTS = new Set([
 /** Determine the best chart for a given report key. */
 function getChartType(key: string): 'area' | 'bar' | 'pie' | 'table' {
     if (['demurrage_analysis', 'siding_coal_receipt'].includes(key)) return 'area';
-    if (['penalty_register', 'rake_movement', 'wagon_loading', 'loader_vs_weighment', 'unfit_wagon', 'weighment'].includes(key)) return 'bar';
+    if (['penalty_register', 'wagon_loading', 'loader_vs_weighment', 'unfit_wagon', 'weighment'].includes(key)) return 'bar';
     if (['indent_fulfillment'].includes(key)) return 'pie';
     return 'table';
 }
@@ -226,9 +225,6 @@ function extractChartData(key: string, data: ReportData): { chartData: Record<st
         });
         const chartData = Object.entries(grouped).map(([name, total]) => ({ name, total }));
         return { chartData, xKey: 'name', yKey: 'total' };
-    }
-    if (key === 'rake_movement') {
-        return { chartData: data.slice(0, 20), xKey: 'rake_number', yKey: 'duration_minutes' };
     }
     if (key === 'indent_fulfillment' && first?.summary) {
         const s = first.summary as Record<string, number>;

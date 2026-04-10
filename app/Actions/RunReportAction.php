@@ -7,7 +7,6 @@ namespace App\Actions;
 use App\Models\AppliedPenalty;
 use App\Models\DailyVehicleEntry;
 use App\Models\Indent;
-use App\Models\Rake;
 use App\Models\RakeCharge;
 use App\Models\RakeWagonWeighment;
 use App\Models\RrDocument;
@@ -33,7 +32,6 @@ final readonly class RunReportAction
         'wagon_loading',
         'weighment',
         'loader_vs_weighment',
-        'rake_movement',
         'rr_summary',
         'penalty_register',
     ];
@@ -46,7 +44,6 @@ final readonly class RunReportAction
         'wagon_loading' => ['name' => 'Wagon Loading Data', 'description' => 'Loader-wise loading report'],
         'weighment' => ['name' => 'Inmotion Weighment', 'description' => 'Weighment data report'],
         'loader_vs_weighment' => ['name' => 'Loader Weighment Comparison', 'description' => 'Overload analysis report'],
-        'rake_movement' => ['name' => 'Rake Movement', 'description' => 'Movement delays report'],
         'rr_summary' => ['name' => 'Railway Receipt RR', 'description' => 'RR summary report'],
         'penalty_register' => ['name' => 'Penalty Register', 'description' => 'Penalty breakdown report'],
         'penalty_register_rr_snapshot' => ['name' => 'Penalty Register (RR Snapshot)', 'description' => 'Penalty register from RR penalty snapshots'],
@@ -73,7 +70,6 @@ final readonly class RunReportAction
             'wagon_loading' => $this->wagonLoading($sidingIds, $params),
             'weighment' => $this->weighmentReport($sidingIds, $params),
             'loader_vs_weighment' => $this->loaderVsWeighment($sidingIds, $params),
-            'rake_movement' => $this->rakeMovement($sidingIds, $params),
             'rr_summary' => $this->rrSummary($sidingIds, $params),
             'penalty_register' => $this->penaltyRegister($sidingIds, $params),
             'penalty_register_rr_snapshot' => $this->penaltyRegisterRrSnapshot($sidingIds, $params),
@@ -469,51 +465,6 @@ final readonly class RunReportAction
                 'Difference (MT)' => $difference,
                 'Overload/Underload Flag' => $flag,
                 'Action Taken' => '',
-            ];
-        })->values()->all();
-    }
-
-    /**
-     * @param  array<int>  $sidingIds
-     * @param  array{siding_id?: int, date_from?: string, date_to?: string, rake_number?: string, loader?: string}  $params
-     * @return array<int, array<string, mixed>>
-     */
-    private function rakeMovement(array $sidingIds, array $params): array
-    {
-        $query = Rake::query()
-            ->with('siding:id,name')
-            ->whereIn('siding_id', $sidingIds)
-            ->whereNotNull('placement_time')
-            ->whereNotNull('dispatch_time');
-        if (! empty($params['date_from'])) {
-            $query->whereDate('loading_date', '>=', $params['date_from']);
-        }
-        if (! empty($params['date_to'])) {
-            $query->whereDate('loading_date', '<=', $params['date_to']);
-        }
-        if (! empty($params['siding_id'])) {
-            $query->where('siding_id', $params['siding_id']);
-        }
-        $limit = $this->resolveLimit($params);
-        if ($limit !== null) {
-            $query->limit($limit);
-        }
-
-        $rows = $query->orderByDesc('dispatch_time')->get();
-
-        return $rows->map(function ($r): array {
-            $start = $r->placement_time;
-            $end = $r->dispatch_time;
-            $minutes = $start && $end ? $start->diffInMinutes($end) : null;
-
-            return [
-                'rake_no' => $r->rake_number,
-                'loading_completion' => $end?->toIso8601String(),
-                'permission_given_time' => null,
-                'actual_movement_time' => $end?->toIso8601String(),
-                'delay_min' => $minutes,
-                'alert_generated' => null,
-                'remarks' => null,
             ];
         })->values()->all();
     }
