@@ -418,7 +418,7 @@
         "filament/spatie-laravel-settings-plugin": "^5.5.0",
         "genealabs/laravel-governor": ">=0.22",
         "harris21/laravel-fuse": ">=0.4",
-        "inertiajs/inertia-laravel": "^2.0.24",
+        "inertiajs/inertia-laravel": "^3.0.6",
         "jijunair/laravel-referral": "^1.0.4",
         "kalnoy/nestedset": "^6.0.6",
         "laravel-workflow/laravel-workflow": "^1.0.74",
@@ -485,7 +485,7 @@
         "spatie/laravel-webhook-server": "^3.10",
         "stechstudio/filament-impersonate": "^5.2",
         "stephenjude/filament-feature-flags": "^5.0.3",
-        "stripe/stripe-php": "^19.4.1",
+        "stripe/stripe-php": "^20.0",
         "thomasjohnkane/snooze": "^2.9",
         "typesense/typesense-php": "^6.0",
         "wildside/userstamps": "^4.0"
