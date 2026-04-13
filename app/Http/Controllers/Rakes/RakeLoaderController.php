@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Rakes;
 
 use App\DataTables\RakeLoaderListDataTable;
 use App\Http\Controllers\Controller;
+use App\Models\LoaderOperator;
 use App\Models\Rake;
 use App\Models\RakeWeighment;
 use App\Models\Siding;
@@ -82,6 +83,20 @@ final class RakeLoaderController extends Controller
             ->sortBy(static fn ($l): int => $l->wagon?->wagon_sequence ?? $l->id)
             ->values();
 
+        $sidingId = $rake->siding_id;
+        $loaderOperatorOptions = LoaderOperator::query()
+            ->where('is_active', true)
+            ->where(function ($q) use ($sidingId): void {
+                $q->whereNull('siding_id');
+                if ($sidingId !== null) {
+                    $q->orWhere('siding_id', $sidingId);
+                }
+            })
+            ->orderBy('name')
+            ->pluck('name')
+            ->values()
+            ->all();
+
         return [
             'id' => $rake->id,
             'rake_number' => $rake->rake_number,
@@ -132,6 +147,7 @@ final class RakeLoaderController extends Controller
                     ->values()
                     ->all(),
             ] : null,
+            'loaderOperatorOptions' => $loaderOperatorOptions,
         ];
     }
 

@@ -32,6 +32,7 @@ type WagonLoadingRecord = {
     } | null;
     loader_id?: number | null;
     loader?: { loader_name: string; code: string } | null;
+    loader_operator_name?: string | null;
     loaded_quantity_mt: string;
     loading_time?: string | null;
     remarks?: string | null;
@@ -46,6 +47,7 @@ type RakeHydrated = {
     wagons: Wagon[];
     wagonLoadings?: WagonLoadingRecord[];
     siding?: { id: number; name: string; code: string; loaders?: LoaderOption[] } | null;
+    loaderOperatorOptions?: string[];
 };
 
 interface Props {
@@ -139,6 +141,7 @@ export default function RakeLoaderLoading({ rake: initialRake }: Props) {
                                 wagons: rake.wagons,
                                 wagonLoadings: rake.wagonLoadings ?? [],
                                 siding: rake.siding ?? null,
+                                loaderOperatorOptions: rake.loaderOperatorOptions ?? [],
                             }}
                             disabled={false}
                             compact={false}

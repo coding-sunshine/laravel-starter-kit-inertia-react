@@ -312,6 +312,10 @@ final class AppServiceProvider extends ServiceProvider
             'historical-railway-siding-filter-search',
             'historical-railway-siding-filter-clear',
             'historical-railway-siding-export-xlsx',
+            'master-data-add-loader',
+            'master-data-add-loader-operator',
+            'master-data-loaders-tab-loaders',
+            'master-data-loaders-tab-operators',
         ]);
     }
 

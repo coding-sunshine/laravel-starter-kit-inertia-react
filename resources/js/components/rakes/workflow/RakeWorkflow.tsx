@@ -62,6 +62,7 @@ interface RakeData {
         id: number;
         wagon_id: number;
         loaded_quantity_mt: string;
+        loader_operator_name?: string | null;
         loading_time?: string | null;
         remarks?: string | null;
         wagon: {
@@ -77,6 +78,7 @@ interface RakeData {
             code: string;
         };
     }>;
+    loaderOperatorOptions?: string[];
     guardInspections?: Array<{
         id: number;
         inspection_time: string;

@@ -60,6 +60,7 @@ interface WagonLoadingRecord {
     };
     loader_id?: number | null;
     loader?: { loader_name: string; code: string };
+    loader_operator_name?: string | null;
     loaded_quantity_mt: string;
     loading_time?: string | null;
     remarks?: string | null;
@@ -80,6 +81,8 @@ interface WagonLoadingWorkflowProps {
         wagonLoadings?: WagonLoadingRecord[];
         wagon_loadings?: WagonLoadingRecord[];
         siding?: { loaders?: LoaderOption[] } | null;
+        /** Active loader operator names for combobox (rake-loader spreadsheet). */
+        loaderOperatorOptions?: string[];
     };
     disabled: boolean;
     onWagonLoadingsSaved?: (loadings: WagonLoadingRecord[]) => void;
@@ -100,6 +103,8 @@ interface LoadingRow {
     wagon_id: string;
     wagon_number: string;
     loader_id: string;
+    /** Snapshot name; empty string = none */
+    loader_operator_name: string;
     loaded_quantity_mt: string;
     wagon_type?: string;
     pcc_capacity?: string;
@@ -120,6 +125,11 @@ function spreadsheetRowMatchesServerLoading(
         local.loader_id && local.loader_id !== '__none__' ? Number(local.loader_id) : null;
     const serverLoader = server.loader_id ?? null;
     if (localLoader !== serverLoader) {
+        return false;
+    }
+    const localOp = String(local.loader_operator_name ?? '').trim();
+    const serverOp = String(server.loader_operator_name ?? '').trim();
+    if (localOp !== serverOp) {
         return false;
     }
     const lq = parseFloat(String(local.loaded_quantity_mt).trim().replace(',', '.'));
@@ -426,6 +436,208 @@ function SpreadsheetLoaderTypeahead({
     );
 }
 
+interface OperatorListOption {
+    id: string;
+    label: string;
+}
+
+function buildOperatorListOptions(names: string[], query: string, fullList: boolean): OperatorListOption[] {
+    const q = query.trim().toLowerCase();
+    const out: OperatorListOption[] = [];
+
+    if (fullList) {
+        out.push({ id: '__none__', label: 'No operator' });
+        for (const name of names) {
+            out.push({ id: name, label: name });
+        }
+        return out;
+    }
+
+    if (!q) {
+        return out;
+    }
+
+    const matchesNone =
+        'no operator'.includes(q) || q === 'no' || 'clear'.includes(q) || 'none'.includes(q);
+    if (matchesNone) {
+        out.push({ id: '__none__', label: 'No operator' });
+    }
+
+    for (const name of names) {
+        if (name.toLowerCase().includes(q)) {
+            out.push({ id: name, label: name });
+        }
+    }
+
+    return out;
+}
+
+function initialOperatorInputQuery(value: string): string {
+    return String(value ?? '').trim();
+}
+
+/**
+ * Spreadsheet operator field: type-to-search over catalog names (+ legacy values).
+ */
+function SpreadsheetOperatorTypeahead({
+    names,
+    value,
+    disabled,
+    onValueChange,
+}: {
+    names: string[];
+    value: string;
+    disabled: boolean;
+    onValueChange: (value: string) => void;
+}) {
+    const skipQuerySyncRef = useRef(false);
+    const listId = useId();
+    const committedLabel = value.trim();
+
+    const [query, setQuery] = useState(() => initialOperatorInputQuery(value));
+    const [menuOpen, setMenuOpen] = useState(false);
+    const [fullList, setFullList] = useState(false);
+    const [highlightIndex, setHighlightIndex] = useState(0);
+    const [isFocused, setIsFocused] = useState(false);
+
+    useEffect(() => {
+        if (!isFocused && !skipQuerySyncRef.current) {
+            setQuery(committedLabel === '' ? '' : committedLabel);
+        }
+    }, [committedLabel, isFocused, value]);
+
+    const options = useMemo(
+        () => buildOperatorListOptions(names, query, fullList),
+        [names, query, fullList],
+    );
+
+    useEffect(() => {
+        if (highlightIndex >= options.length) {
+            setHighlightIndex(options.length > 0 ? options.length - 1 : 0);
+        }
+    }, [highlightIndex, options.length]);
+
+    const closeMenu = () => {
+        setMenuOpen(false);
+        setFullList(false);
+    };
+
+    const applySelection = (optionId: string) => {
+        skipQuerySyncRef.current = true;
+        onValueChange(optionId === '__none__' ? '' : optionId);
+        closeMenu();
+        setQuery(optionId === '__none__' ? '' : optionId);
+        window.setTimeout(() => {
+            skipQuerySyncRef.current = false;
+        }, 0);
+    };
+
+    const openFullListFromArrow = () => {
+        setFullList(true);
+        setMenuOpen(true);
+        setHighlightIndex(0);
+    };
+
+    return (
+        <div className="relative min-w-[120px]">
+            <Input
+                type="text"
+                role="combobox"
+                aria-expanded={menuOpen}
+                aria-controls={menuOpen ? listId : undefined}
+                aria-activedescendant={
+                    menuOpen && options[highlightIndex] ? `${listId}-opt-${highlightIndex}` : undefined
+                }
+                autoComplete="off"
+                disabled={disabled}
+                data-field="rake-loader-operator"
+                value={query}
+                placeholder="Type operator name…"
+                className="h-12 w-full px-2 text-xs"
+                onChange={(e) => {
+                    const next = e.target.value;
+                    setQuery(next);
+                    setFullList(false);
+                    const hasText = next.trim().length > 0;
+                    setMenuOpen(hasText);
+                    setHighlightIndex(0);
+                }}
+                onFocus={() => {
+                    setIsFocused(true);
+                    closeMenu();
+                }}
+                onBlur={() => {
+                    setIsFocused(false);
+                    closeMenu();
+                }}
+                onKeyDown={(e) => {
+                    if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        if (!menuOpen) {
+                            openFullListFromArrow();
+                            return;
+                        }
+                        if (options.length === 0) {
+                            return;
+                        }
+                        setHighlightIndex((i) => (i + 1) % options.length);
+                        return;
+                    }
+                    if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        if (!menuOpen || options.length === 0) {
+                            return;
+                        }
+                        setHighlightIndex((i) => (i - 1 + options.length) % options.length);
+                        return;
+                    }
+                    if (e.key === 'Enter') {
+                        if (menuOpen && options.length > 0 && options[highlightIndex]) {
+                            e.preventDefault();
+                            applySelection(options[highlightIndex].id);
+                        }
+                        return;
+                    }
+                    if (e.key === 'Escape') {
+                        if (menuOpen) {
+                            e.preventDefault();
+                            closeMenu();
+                            setQuery(committedLabel);
+                        }
+                    }
+                }}
+            />
+            {menuOpen && options.length > 0 ? (
+                <ul
+                    id={listId}
+                    role="listbox"
+                    className="absolute left-0 top-full z-50 mt-0.5 max-h-48 w-full min-w-[200px] overflow-auto rounded border border-gray-300 bg-popover py-0.5 text-xs shadow-md"
+                >
+                    {options.map((opt, idx) => (
+                        <li
+                            key={opt.id === '__none__' ? `${listId}-no-op` : `${listId}-op-${opt.id}`}
+                            id={`${listId}-opt-${idx}`}
+                            role="option"
+                            aria-selected={idx === highlightIndex}
+                            className={cn(
+                                'cursor-pointer px-2 py-1.5 text-left',
+                                idx === highlightIndex ? 'bg-muted text-foreground' : 'hover:bg-muted/80',
+                            )}
+                            onMouseDown={(ev) => {
+                                ev.preventDefault();
+                                applySelection(opt.id);
+                            }}
+                            onMouseEnter={() => setHighlightIndex(idx)}
+                        >
+                            {opt.label}
+                        </li>
+                    ))}
+                </ul>
+            ) : null}
+        </div>
+    );
+}
+
 export function WagonLoadingWorkflow({
     rake,
     disabled,
@@ -489,7 +701,7 @@ export function WagonLoadingWorkflow({
         return list
             .map(
                 (l) =>
-                    `${l.id ?? 'n'}:${l.wagon_id}:${String(l.loaded_quantity_mt ?? '')}:${l.loader_id ?? ''}:${l.loading_time ?? ''}`,
+                    `${l.id ?? 'n'}:${l.wagon_id}:${String(l.loaded_quantity_mt ?? '')}:${l.loader_id ?? ''}:${String(l.loader_operator_name ?? '')}:${l.loading_time ?? ''}`,
             )
             .join('|');
     }, [rake.wagonLoadings, rake.wagon_loadings]);
@@ -514,12 +726,17 @@ export function WagonLoadingWorkflow({
             list.length === 0
                 ? []
                 : list.map((l) => {
+                          const opName =
+                              l.loader_operator_name != null && String(l.loader_operator_name).trim() !== ''
+                                  ? String(l.loader_operator_name).trim()
+                                  : '';
                           const base: LoadingRow = {
                               id: l.id,
                               key: `load-${l.wagon_id}-${l.id ?? Date.now()}`,
                               wagon_id: String(l.wagon_id),
                               wagon_number: l.wagon?.wagon_number ?? '',
                               loader_id: l.loader_id ? String(l.loader_id) : '',
+                              loader_operator_name: opName,
                               loaded_quantity_mt: l.loaded_quantity_mt ?? '',
                           };
                           if (!isSpreadsheet) {
@@ -557,6 +774,7 @@ export function WagonLoadingWorkflow({
                 return {
                     ...serverRow,
                     loader_id: local.loader_id,
+                    loader_operator_name: local.loader_operator_name,
                     loaded_quantity_mt: local.loaded_quantity_mt,
                     key: local.key,
                 };
@@ -653,6 +871,18 @@ export function WagonLoadingWorkflow({
     }, [needsEnsureAll, rake.id]);
 
     const loaders = useMemo(() => rake.siding?.loaders ?? [], [rake.siding?.loaders]);
+
+    const loaderOperatorNames = useMemo(() => {
+        const opts = rake.loaderOperatorOptions ?? [];
+        const set = new Set<string>(opts);
+        for (const l of existingLoadings) {
+            const n = l.loader_operator_name?.trim();
+            if (n) {
+                set.add(n);
+            }
+        }
+        return [...set].sort((a, b) => a.localeCompare(b));
+    }, [rake.loaderOperatorOptions, existingLoadings]);
 
     const loadedAndHasLoaderWagonIds = useMemo(() => {
         const ids = new Set<number>();
@@ -806,6 +1036,9 @@ export function WagonLoadingWorkflow({
                     return;
                 }
 
+                const opTrim = String(row.loader_operator_name ?? '').trim();
+                const loaderOperatorName = opTrim === '' ? null : opTrim;
+
                 setBgSavingKeys((prev) => new Set([...prev, rowKey]));
 
                 void fetch(`/rakes/${rake.id}/load/wagon-rows/${row.id}`, {
@@ -815,7 +1048,11 @@ export function WagonLoadingWorkflow({
                         'Content-Type': 'application/json',
                         ...getCsrfHeaders(),
                     },
-                    body: JSON.stringify({ loader_id: loaderId, loaded_quantity_mt: qty }),
+                    body: JSON.stringify({
+                        loader_id: loaderId,
+                        loader_operator_name: loaderOperatorName,
+                        loaded_quantity_mt: qty,
+                    }),
                     credentials: 'same-origin',
                 })
                     .then(async (res) => {
@@ -866,6 +1103,12 @@ export function WagonLoadingWorkflow({
         scheduleSpreadsheetSave(row.key);
     };
 
+    const handleSpreadsheetOperatorChange = (row: LoadingRow, value: string) => {
+        spreadsheetDirtyRef.current.add(row.key);
+        updateRow(row.key, 'loader_operator_name', value.trim());
+        scheduleSpreadsheetSave(row.key);
+    };
+
     const handleSpreadsheetQtyFocus = (row: LoadingRow): void => {
         setFocusedQtyRowKey(row.key);
         updateRow(row.key, 'loaded_quantity_mt', toEditDigits(row.loaded_quantity_mt));
@@ -892,8 +1135,10 @@ export function WagonLoadingWorkflow({
             return;
         }
 
+        const opTrim = row.loader_operator_name.trim();
         await patchWagonRow(row, {
             loader_id: loaderId,
+            loader_operator_name: opTrim === '' ? null : opTrim,
             loaded_quantity_mt: quantityString,
         });
     };
@@ -970,6 +1215,9 @@ export function WagonLoadingWorkflow({
                                             <TableHead className="h-14 min-h-[4rem] min-w-[180px] border-r border-gray-300 px-2 py-3 text-center">
                                                 Loader
                                             </TableHead>
+                                            <TableHead className="h-14 min-h-[4rem] min-w-[160px] border-r border-gray-300 px-2 py-3 text-center">
+                                                Operator
+                                            </TableHead>
                                             <TableHead className="h-14 min-h-[4rem] border-r border-gray-300 px-2 py-3 text-center">
                                                 Loaded Qty (MT)
                                             </TableHead>
@@ -979,7 +1227,7 @@ export function WagonLoadingWorkflow({
                                         {rows.length === 0 && ensuring ? (
                                             <TableRow>
                                                 <TableCell
-                                                    colSpan={4}
+                                                    colSpan={5}
                                                     className="py-8 text-center text-sm text-muted-foreground"
                                                 >
                                                     Preparing rows…
@@ -1069,6 +1317,26 @@ export function WagonLoadingWorkflow({
                                                                     Saving…
                                                                 </span>
                                                             )}
+                                                        </TableCell>
+                                                        <TableCell
+                                                            className={cn(
+                                                                cellBase,
+                                                                'px-2 py-3',
+                                                                spreadsheetCellClass,
+                                                            )}
+                                                        >
+                                                            <SpreadsheetOperatorTypeahead
+                                                                names={loaderOperatorNames}
+                                                                value={row.loader_operator_name}
+                                                                disabled={
+                                                                    disabled ||
+                                                                    tableReadOnly ||
+                                                                    ensuring
+                                                                }
+                                                                onValueChange={(v) =>
+                                                                    handleSpreadsheetOperatorChange(row, v)
+                                                                }
+                                                            />
                                                         </TableCell>
                                                         <TableCell
                                                             className={cn(
@@ -1196,6 +1464,7 @@ export function WagonLoadingWorkflow({
                                             <TableRow>
                                                 <TableHead>Wagon</TableHead>
                                                 <TableHead>Loader</TableHead>
+                                                <TableHead>Operator</TableHead>
                                                 <TableHead>Loaded Qty (MT)</TableHead>
                                                 <TableHead>Wagon Type</TableHead>
                                                 <TableHead>PCC Capacity</TableHead>
@@ -1208,7 +1477,7 @@ export function WagonLoadingWorkflow({
                                             {rows.length === 0 && ensuring ? (
                                                 <TableRow>
                                                     <TableCell
-                                                        colSpan={8}
+                                                        colSpan={9}
                                                         className="py-8 text-center text-sm text-muted-foreground"
                                                     >
                                                         Preparing rows…
@@ -1220,6 +1489,14 @@ export function WagonLoadingWorkflow({
                                                         (w) => String(w.id) === row.wagon_id
                                                     );
                                                     const isUnfitRow = wagonForRow?.is_unfit === true;
+                                                    const operatorSelectValues = new Set(loaderOperatorNames);
+                                                    const currentOp = row.loader_operator_name.trim();
+                                                    if (currentOp && !operatorSelectValues.has(currentOp)) {
+                                                        operatorSelectValues.add(currentOp);
+                                                    }
+                                                    const operatorItems = [...operatorSelectValues].sort((a, b) =>
+                                                        a.localeCompare(b),
+                                                    );
 
                                                     return (
                                                         <TableRow
@@ -1273,6 +1550,31 @@ export function WagonLoadingWorkflow({
                                                                             >
                                                                                 {loader.loader_name}{' '}
                                                                                 {loader.code ? `(${loader.code})` : ''}
+                                                                            </SelectItem>
+                                                                        ))}
+                                                                    </SelectContent>
+                                                                </Select>
+                                                            </TableCell>
+                                                            <TableCell className="min-w-[160px]">
+                                                                <Select
+                                                                    value={currentOp === '' ? '__none__' : currentOp}
+                                                                    onValueChange={(value) => {
+                                                                        updateRow(
+                                                                            row.key,
+                                                                            'loader_operator_name',
+                                                                            value === '__none__' ? '' : value,
+                                                                        );
+                                                                    }}
+                                                                    disabled={disabled || tableReadOnly}
+                                                                >
+                                                                    <SelectTrigger className="min-w-[140px] w-full">
+                                                                        <SelectValue placeholder="No operator" />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        <SelectItem value="__none__">No operator</SelectItem>
+                                                                        {operatorItems.map((name) => (
+                                                                            <SelectItem key={name} value={name}>
+                                                                                {name}
                                                                             </SelectItem>
                                                                         ))}
                                                                     </SelectContent>
