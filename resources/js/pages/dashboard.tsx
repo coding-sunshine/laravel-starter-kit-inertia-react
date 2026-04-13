@@ -46,7 +46,7 @@ import {
     Zap,
 } from 'lucide-react';
 import { useSidingStockBroadcast } from '@/hooks/use-siding-stock-broadcast';
-import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     Area,
     AreaChart as RechartsAreaChart,
@@ -309,6 +309,8 @@ interface DashboardFilters {
     rake_number: string | null;
     loader_id: number | null;
     loader_operator: string | null;
+    /** Minimum shortfall % of CC to count as underload on loader trends (default 1; URL `underload_threshold`). */
+    underload_threshold: number;
     shift: string | null;
     penalty_type: number | null;
     daily_rake_date?: string;
@@ -371,6 +373,14 @@ function buildDashboardGetParams(args: {
         const loaderOp =
             (overrides.loader_operator !== undefined ? overrides.loader_operator : filters.loader_operator) ?? null;
         if (loaderOp != null && loaderOp !== '') params.loader_operator = loaderOp;
+    }
+
+    if (persistLoaderFilters) {
+        const utRaw = overrides.underload_threshold !== undefined ? overrides.underload_threshold : filters.underload_threshold;
+        const ut = typeof utRaw === 'number' ? utRaw : parseFloat(String(utRaw ?? '1'));
+        if (!Number.isNaN(ut) && ut !== 1) {
+            params.underload_threshold = ut;
+        }
     }
 
     if (sectionHasFilter('shift')) {
@@ -2215,7 +2225,8 @@ function RakePerformanceSection({
     onNavigateToLoader,
 }: {
     rakes: RakePerformanceItem[];
-    onNavigateToLoader: (loaderId: number) => void;
+    /** Second arg is the wagon chart’s underload threshold (% of CC) so loader trends can open with the same value. */
+    onNavigateToLoader: (loaderId: number, rakeUnderloadThresholdPercent: number) => void;
 }) {
     const rakeOptions = useMemo(() => {
         return rakes.map((r, i) => ({ idx: i, label: `${r.rake_number} — ${r.siding} (${r.dispatch_date})` }));
@@ -2520,7 +2531,7 @@ function RakePerformanceSection({
                                             | { loader_id?: number | null; wagon_number?: string }
                                             | undefined;
                                         if (row?.loader_id != null) {
-                                            onNavigateToLoader(row.loader_id);
+                                            onNavigateToLoader(row.loader_id, underloadThresholdPercent);
                                             return;
                                         }
                                         setNoLoaderWagonNumber(row?.wagon_number ?? null);
@@ -2586,6 +2597,7 @@ function LoaderOverloadSection({
     loaderIdFromUrl,
     loaderOperatorFromUrl,
     operatorNamesForSelectedLoader,
+    underloadThresholdPercent,
     onLoaderOverloadChange,
 }: {
     loaders: LoaderInfo[];
@@ -2593,7 +2605,12 @@ function LoaderOverloadSection({
     loaderIdFromUrl: number | null;
     loaderOperatorFromUrl: string | null;
     operatorNamesForSelectedLoader: string[];
-    onLoaderOverloadChange: (patch: { loader_id?: number | null; loader_operator?: string | null }) => void;
+    underloadThresholdPercent: number;
+    onLoaderOverloadChange: (patch: {
+        loader_id?: number | null;
+        loader_operator?: string | null;
+        underload_threshold?: number | null;
+    }) => void;
 }) {
     const selectedLoaderId = useMemo(() => {
         if (loaderIdFromUrl != null && loaders.some((l) => l.id === loaderIdFromUrl)) {
@@ -2609,6 +2626,43 @@ function LoaderOverloadSection({
             onLoaderOverloadChange({ loader_operator: null });
         }
     }, [operatorNamesForSelectedLoader.length, loaderOperatorFromUrl, onLoaderOverloadChange]);
+
+    const [underloadThresholdDraft, setUnderloadThresholdDraft] = useState(() => String(underloadThresholdPercent));
+    useEffect(() => {
+        setUnderloadThresholdDraft(String(underloadThresholdPercent));
+    }, [underloadThresholdPercent]);
+
+    const underloadThresholdDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    useEffect(
+        () => () => {
+            if (underloadThresholdDebounceRef.current !== null) {
+                clearTimeout(underloadThresholdDebounceRef.current);
+            }
+        },
+        [],
+    );
+
+    const scheduleUnderloadThresholdNavigate = useCallback(
+        (raw: string) => {
+            if (underloadThresholdDebounceRef.current !== null) {
+                clearTimeout(underloadThresholdDebounceRef.current);
+            }
+            underloadThresholdDebounceRef.current = setTimeout(() => {
+                underloadThresholdDebounceRef.current = null;
+                if (raw === '') {
+                    onLoaderOverloadChange({ underload_threshold: 1 });
+                    return;
+                }
+                const v = parseFloat(raw);
+                if (Number.isNaN(v)) {
+                    return;
+                }
+                const clamped = Math.max(0, Math.min(100, v));
+                onLoaderOverloadChange({ underload_threshold: clamped });
+            }, 400);
+        },
+        [onLoaderOverloadChange],
+    );
 
     const stats = useMemo(() => {
         if (!selectedLoader) {
@@ -2692,6 +2746,44 @@ function LoaderOverloadSection({
                     subtitle="All-time monthly trends (not tied to the dashboard period). Operators shown only when recorded for that loader."
                 />
                 <div className="flex flex-wrap items-center justify-end gap-2">
+                    <div className="flex flex-col gap-0.5">
+                        <label htmlFor="loader-trends-underload-threshold" className="text-[11px] text-gray-600">
+                            Underload threshold (% of CC)
+                        </label>
+                        <Input
+                            id="loader-trends-underload-threshold"
+                            type="number"
+                            inputMode="decimal"
+                            min={0}
+                            max={100}
+                            step={0.1}
+                            className="h-9 w-24 rounded-[8px] border border-gray-200 bg-white text-sm tabular-nums"
+                            value={underloadThresholdDraft}
+                            onChange={(e) => {
+                                const next = e.target.value;
+                                setUnderloadThresholdDraft(next);
+                                scheduleUnderloadThresholdNavigate(next);
+                            }}
+                            onBlur={() => {
+                                if (underloadThresholdDebounceRef.current !== null) {
+                                    clearTimeout(underloadThresholdDebounceRef.current);
+                                    underloadThresholdDebounceRef.current = null;
+                                }
+                                const raw = underloadThresholdDraft.trim();
+                                if (raw === '') {
+                                    onLoaderOverloadChange({ underload_threshold: 1 });
+                                    return;
+                                }
+                                const v = parseFloat(raw);
+                                if (Number.isNaN(v)) {
+                                    setUnderloadThresholdDraft(String(underloadThresholdPercent));
+                                    return;
+                                }
+                                const clamped = Math.max(0, Math.min(100, v));
+                                onLoaderOverloadChange({ underload_threshold: clamped });
+                            }}
+                        />
+                    </div>
                     <Select
                         value={String(selectedLoaderId)}
                         onValueChange={(v) =>
@@ -3344,6 +3436,7 @@ function DashboardFiltersBar({
             rake_number: null,
             loader_id: null,
             loader_operator: null,
+            underload_threshold: 1,
             shift: null,
             penalty_type: null,
             daily_rake_date: '',
@@ -3837,6 +3930,7 @@ export default function Dashboard() {
         rake_number: null,
         loader_id: null,
         loader_operator: null,
+        underload_threshold: 1,
         shift: null,
         penalty_type: null,
         daily_rake_date: undefined,
@@ -3849,6 +3943,10 @@ export default function Dashboard() {
         rake_number: props.filters?.rake_number ?? null,
         loader_id: props.filters?.loader_id ?? null,
         loader_operator: props.filters?.loader_operator ?? null,
+        underload_threshold:
+            props.filters?.underload_threshold != null && !Number.isNaN(Number(props.filters.underload_threshold))
+                ? Number(props.filters.underload_threshold)
+                : 1,
         shift: props.filters?.shift ?? null,
         penalty_type: props.filters?.penalty_type ?? null,
     };
@@ -4035,7 +4133,7 @@ export default function Dashboard() {
     );
 
     const onLoaderOverloadChange = useCallback(
-        (patch: { loader_id?: number | null; loader_operator?: string | null }) => {
+        (patch: { loader_id?: number | null; loader_operator?: string | null; underload_threshold?: number | null }) => {
             navigateDashboard({ ...patch });
         },
         [navigateDashboard],
@@ -4088,7 +4186,7 @@ export default function Dashboard() {
     }, [filters.period, filters.power_plant, filters.rake_number, filters.loader_id, filters.loader_operator, filters.shift, filters.penalty_type, filters.siding_ids.length, sidings.length]);
 
     const navigateToLoaderTrends = useCallback(
-        (loaderId: number) => {
+        (loaderId: number, rakeUnderloadThresholdPercent?: number) => {
             const dashboardPath = dashboard().url.split('?')[0] || dashboard().url;
             // New tab URL is built from scratch; omit loader_operator so drill-down is not scoped to a prior operator filter.
             const params: Record<string, unknown> = {
@@ -4120,6 +4218,13 @@ export default function Dashboard() {
             }
             if (filters.coal_transport_date) {
                 params.coal_transport_date = filters.coal_transport_date;
+            }
+            const effectiveUnderloadThreshold =
+                rakeUnderloadThresholdPercent !== undefined
+                    ? Math.max(0, Math.min(100, rakeUnderloadThresholdPercent))
+                    : filters.underload_threshold;
+            if (effectiveUnderloadThreshold != null && !Number.isNaN(effectiveUnderloadThreshold) && effectiveUnderloadThreshold !== 1) {
+                params.underload_threshold = effectiveUnderloadThreshold;
             }
             if (typeof window === 'undefined') {
                 return;
@@ -5109,6 +5214,7 @@ export default function Dashboard() {
                                         loaderIdFromUrl={filters.loader_id}
                                         loaderOperatorFromUrl={filters.loader_operator}
                                         operatorNamesForSelectedLoader={loaderOverloadOperatorNames}
+                                        underloadThresholdPercent={filters.underload_threshold}
                                         onLoaderOverloadChange={onLoaderOverloadChange}
                                     />
                                 )

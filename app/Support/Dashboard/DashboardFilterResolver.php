@@ -24,6 +24,7 @@ final class DashboardFilterResolver
      *   loaderOperatorName: string|null,
      *   shift: string|null,
      *   penaltyTypeId: int|null,
+     *   underloadThresholdPercent: float,
      *   dailyRakeDate: CarbonInterface,
      *   coalTransportDate: CarbonInterface,
      *   section: string,
@@ -62,6 +63,15 @@ final class DashboardFilterResolver
         $shift = $request->filled('shift') ? (string) $request->input('shift') : null;
         $penaltyTypeId = $request->integer('penalty_type') ?: null;
 
+        $underloadThresholdPercent = 1.0;
+        if ($request->filled('underload_threshold')) {
+            $raw = $request->input('underload_threshold');
+            $parsed = is_numeric($raw) ? (float) $raw : null;
+            if ($parsed !== null && ! is_nan($parsed)) {
+                $underloadThresholdPercent = max(0.0, min(100.0, $parsed));
+            }
+        }
+
         $dailyRakeDate = $this->parseSingleDate($request, 'daily_rake_date', now()->subDay()->startOfDay());
         $coalTransportDate = $this->parseSingleDate($request, 'coal_transport_date', now()->subDay()->startOfDay());
 
@@ -86,6 +96,7 @@ final class DashboardFilterResolver
             'loader_operator_name' => $loaderOperatorName,
             'shift' => $shift,
             'penalty_type_id' => $penaltyTypeId,
+            'underload_threshold_percent' => $underloadThresholdPercent,
         ];
 
         return [
@@ -100,6 +111,7 @@ final class DashboardFilterResolver
             'loaderOperatorName' => $loaderOperatorName,
             'shift' => $shift,
             'penaltyTypeId' => $penaltyTypeId,
+            'underloadThresholdPercent' => $underloadThresholdPercent,
             'dailyRakeDate' => $dailyRakeDate,
             'coalTransportDate' => $coalTransportDate,
             'section' => $section,

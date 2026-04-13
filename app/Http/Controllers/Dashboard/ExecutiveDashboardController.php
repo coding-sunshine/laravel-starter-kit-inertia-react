@@ -89,6 +89,7 @@ final class ExecutiveDashboardController extends Controller
                 'rake_number' => $resolved['rakeNumber'],
                 'loader_id' => $resolved['loaderId'],
                 'loader_operator' => $resolved['loaderOperatorName'],
+                'underload_threshold' => $resolved['underloadThresholdPercent'],
                 'shift' => $resolved['shift'],
                 'penalty_type' => $resolved['penaltyTypeId'],
                 'daily_rake_date' => $resolved['dailyRakeDate']->toDateString(),
@@ -2324,7 +2325,7 @@ final class ExecutiveDashboardController extends Controller
         $rakeQuery = Rake::query()
             ->with('siding:id,name,code')
             ->whereIn('siding_id', $sidingIds)
-            ->whereBetween('created_at', [$fromDate, $toDate])
+            ->whereBetween('loading_date', [$fromDate, $toDate])
             ->where(function ($q): void {
                 $q->whereNull('data_source')
                     ->orWhereIn('data_source', self::OPERATIONAL_RAKE_DATA_SOURCES);
@@ -2456,9 +2457,10 @@ final class ExecutiveDashboardController extends Controller
      * Month buckets use `rakes.loading_date` (business loading date), not `wagon_loading.loading_time`, so late data entry does not shift the chart month.
      * Each month row includes `loader_{id}_total`, `loader_{id}_overload`, and `loader_{id}_underload` (wagon counts from joined `rake_wagon_weighments`).
      * Optional `loader_id` / `loader_operator_name` in `$filterContext` narrow the aggregate, not the loader list returned for the UI.
+     * `underload_threshold_percent` (default 1.0): wagon counts as underloaded only when shortfall as % of CC is at least this value (aligned with rake-wise wagon chart).
      *
      * @param  array<int>  $sidingIds
-     * @param  array{power_plant: string|null, rake_number: string|null, loader_id: int|null, loader_operator_name?: string|null, shift: string|null}  $filterContext
+     * @param  array{power_plant: string|null, rake_number: string|null, loader_id: int|null, loader_operator_name?: string|null, shift: string|null, underload_threshold_percent?: float}  $filterContext
      * @return array{loaders: array<int, array{id: int, name: string, siding: string}>, monthly: array<int, array<string, mixed>>}
      */
     public function buildLoaderOverloadTrends(array $sidingIds, array $filterContext = []): array
@@ -2466,6 +2468,10 @@ final class ExecutiveDashboardController extends Controller
         if ($sidingIds === []) {
             return ['loaders' => [], 'monthly' => []];
         }
+
+        $underloadThresholdPercent = isset($filterContext['underload_threshold_percent'])
+            ? max(0.0, min(100.0, (float) $filterContext['underload_threshold_percent']))
+            : 1.0;
 
         // Always return every loader in scope for the UI dropdown; do not narrow this list by `loader_id`.
         $loaders = Loader::query()
@@ -2512,8 +2518,13 @@ final class ExecutiveDashboardController extends Controller
             $wlQuery->where('wl.loader_operator_name', (string) $filterContext['loader_operator_name']);
         }
 
+        $underloadCase = 'sum(CASE WHEN rww.under_load_mt > 0 AND rww.cc_capacity_mt IS NOT NULL AND rww.cc_capacity_mt > 0 AND (rww.under_load_mt * 100.0 / rww.cc_capacity_mt) >= ? THEN 1 ELSE 0 END) as underloaded_wagons';
+
         $rows = $wlQuery
-            ->selectRaw("{$yearMonthSql}, wl.loader_id, count(*) as wagons_loaded, sum(CASE WHEN rww.over_load_mt > 0 THEN 1 ELSE 0 END) as overloaded_wagons, sum(CASE WHEN rww.under_load_mt > 0 THEN 1 ELSE 0 END) as underloaded_wagons")
+            ->selectRaw(
+                "{$yearMonthSql}, wl.loader_id, count(*) as wagons_loaded, sum(CASE WHEN rww.over_load_mt > 0 THEN 1 ELSE 0 END) as overloaded_wagons, {$underloadCase}",
+                [$underloadThresholdPercent],
+            )
             ->groupByRaw($groupByYearMonthLoader)
             ->get();
 
