@@ -117,7 +117,7 @@ final class ExecutiveDashboardController extends Controller
             'sidingStocks' => $this->buildSidingStocks($resolved['filteredSidingIds'], $resolved['from'], $resolved['to']),
             'dateWiseDispatch' => $this->buildDateWiseDispatch($resolved['filteredSidingIds'], $resolved['from'], $resolved['to']),
             'rakePerformance' => $this->buildRakePerformance($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
-            'loaderOverloadTrends' => $this->buildLoaderOverloadTrends($resolved['filteredSidingIds'], $resolved['filterContext']),
+            'loaderOverloadTrends' => $this->buildLoaderOverloadTrends($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
             'powerPlantDispatch' => $this->buildPowerPlantDispatch($resolved['filteredSidingIds'], $resolved['from'], $resolved['to'], $resolved['filterContext']),
             'allowedDashboardWidgets' => DashboardWidgetPermissions::allowedNamesForUser($user),
             // Executive Yesterday tab uses its own date picker and ignores main dashboard filters.
@@ -2465,22 +2465,27 @@ final class ExecutiveDashboardController extends Controller
     }
 
     /**
-     * Loader-wise overloading and underloading trends (all-time monthly buckets; ignores dashboard period).
+     * Loader-wise overloading and underloading trends (monthly buckets scoped to the dashboard date range on `rakes.loading_date`).
      *
-     * Month buckets use `rakes.loading_date` (business loading date), not `wagon_loading.loading_time`, so late data entry does not shift the chart month.
+     * Rows are limited to rakes whose `loading_date` falls between `$from` and `$to` (inclusive, calendar dates). Month buckets use `rakes.loading_date`, not `wagon_loading.loading_time`.
      * Each month row includes `loader_{id}_total`, `loader_{id}_overload`, and `loader_{id}_underload` (wagon counts from `wagon_loading` loaded qty vs effective CC: `wagon_loading.cc_capacity_mt` or else `wagons.pcc_weight_mt`).
      * Optional `loader_id` / `loader_operator_name` in `$filterContext` narrow the aggregate, not the loader list returned for the UI.
-     * `underload_threshold_percent` (default 1.0): underloaded when `loaded_quantity_mt < cc_capacity_mt` on `wagon_loading` and shortfall as % of CC is at least this value.
+     * `underload_threshold_percent` (default 1.0): underloaded when loaded quantity is below effective CC and shortfall as % of CC is at least this value.
      *
      * @param  array<int>  $sidingIds
+     * @param  CarbonInterface  $from  Dashboard filter start (inclusive), applied to `rakes.loading_date`.
+     * @param  CarbonInterface  $to  Dashboard filter end (inclusive).
      * @param  array{power_plant: string|null, rake_number: string|null, loader_id: int|null, loader_operator_name?: string|null, shift: string|null, underload_threshold_percent?: float}  $filterContext
      * @return array{loaders: array<int, array{id: int, name: string, siding: string}>, monthly: array<int, array<string, mixed>>}
      */
-    public function buildLoaderOverloadTrends(array $sidingIds, array $filterContext = []): array
+    public function buildLoaderOverloadTrends(array $sidingIds, CarbonInterface $from, CarbonInterface $to, array $filterContext = []): array
     {
         if ($sidingIds === []) {
             return ['loaders' => [], 'monthly' => []];
         }
+
+        $fromDate = Carbon::parse($from)->toDateString();
+        $toDate = Carbon::parse($to)->toDateString();
 
         $underloadThresholdPercent = isset($filterContext['underload_threshold_percent'])
             ? max(0.0, min(100.0, (float) $filterContext['underload_threshold_percent']))
@@ -2506,7 +2511,6 @@ final class ExecutiveDashboardController extends Controller
 
         // Effective CC: snapshot on `wagon_loading` when present; otherwise `wagons.pcc_weight_mt` (rake load often saves loaded qty but not cc_capacity_mt).
         $ccEff = 'COALESCE(wl.cc_capacity_mt, w.pcc_weight_mt)';
-        // Section is intentionally not scoped to the main dashboard date range: aggregate all time (monthly buckets).
         $overloadCase = "sum(CASE WHEN wl.loaded_quantity_mt IS NOT NULL AND {$ccEff} IS NOT NULL AND {$ccEff} > 0 AND wl.loaded_quantity_mt > {$ccEff} THEN 1 ELSE 0 END) as overloaded_wagons";
         $underloadCase = "sum(CASE WHEN wl.loaded_quantity_mt IS NOT NULL AND {$ccEff} IS NOT NULL AND {$ccEff} > 0 AND wl.loaded_quantity_mt < {$ccEff} AND (({$ccEff} - wl.loaded_quantity_mt) * 100.0 / {$ccEff}) >= ? THEN 1 ELSE 0 END) as underloaded_wagons";
 
@@ -2515,7 +2519,8 @@ final class ExecutiveDashboardController extends Controller
             ->join('wagons as w', 'w.id', '=', 'wl.wagon_id')
             ->whereIn('r.siding_id', $sidingIds)
             ->whereIn('wl.loader_id', $loaderIds)
-            ->whereNotNull('r.loading_date');
+            ->whereNotNull('r.loading_date')
+            ->whereRaw($this->dateOnlyBetweenSql('r.loading_date', true), [$fromDate, $toDate]);
 
         if (! empty($filterContext['loader_id'])) {
             $wlQuery->where('wl.loader_id', (int) $filterContext['loader_id']);
