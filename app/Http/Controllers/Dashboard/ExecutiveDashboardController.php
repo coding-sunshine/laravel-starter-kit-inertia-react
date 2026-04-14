@@ -242,9 +242,12 @@ final class ExecutiveDashboardController extends Controller
         $coalTotals = [];
 
         foreach ($periods as $key => [$fromDate, $toDate]) {
-            $roadRow = SidingVehicleDispatch::query()
-                ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
-                ->whereRaw($this->dateOnlyBetweenSql('issued_on'), [$fromDate, $toDate])
+            $roadRow = $this->whereIssuedOnDateBetween(
+                SidingVehicleDispatch::query()
+                    ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds)),
+                $fromDate,
+                $toDate,
+            )
                 ->selectRaw('count(*) as trips, coalesce(sum(mineral_weight), 0) as qty')
                 ->first();
 
@@ -321,9 +324,12 @@ final class ExecutiveDashboardController extends Controller
         }
 
         foreach ($periods as $key => [$fromDate, $toDate]) {
-            $roadRows = SidingVehicleDispatch::query()
-                ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
-                ->whereRaw($this->dateOnlyBetweenSql('issued_on'), [$fromDate, $toDate])
+            $roadRows = $this->whereIssuedOnDateBetween(
+                SidingVehicleDispatch::query()
+                    ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds)),
+                $fromDate,
+                $toDate,
+            )
                 ->selectRaw('siding_id, count(*) as trips, coalesce(sum(mineral_weight), 0) as qty')
                 ->groupBy('siding_id')
                 ->get();
@@ -383,9 +389,12 @@ final class ExecutiveDashboardController extends Controller
             $fyRangeTo = $rowFyEnd->toDateString();
             $rowLabel = sprintf('%d-%02d', $y, (int) $rowFyStart->copy()->addYear()->format('y'));
 
-            $roadRow = SidingVehicleDispatch::query()
-                ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
-                ->whereRaw($this->dateOnlyBetweenSql('issued_on'), [$fyRangeFrom, $fyRangeTo])
+            $roadRow = $this->whereIssuedOnDateBetween(
+                SidingVehicleDispatch::query()
+                    ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds)),
+                $fyRangeFrom,
+                $fyRangeTo,
+            )
                 ->selectRaw('count(*) as trips, coalesce(sum(mineral_weight), 0) as qty')
                 ->first();
 
@@ -437,9 +446,12 @@ final class ExecutiveDashboardController extends Controller
         $tillDateFromDate = $tillDateFrom->toDateString();
         $tillDateToDate = $anchor->toDateString();
 
-        $tillRoad = SidingVehicleDispatch::query()
-            ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
-            ->whereRaw($this->dateOnlyBetweenSql('issued_on'), [$tillDateFromDate, $tillDateToDate])
+        $tillRoad = $this->whereIssuedOnDateBetween(
+            SidingVehicleDispatch::query()
+                ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds)),
+            $tillDateFromDate,
+            $tillDateToDate,
+        )
             ->selectRaw('count(*) as trips, coalesce(sum(mineral_weight), 0) as qty')
             ->first();
 
@@ -2756,9 +2768,11 @@ final class ExecutiveDashboardController extends Controller
             ->get()
             ->keyBy('siding_id');
 
-        $vehiclesBySiding = SidingVehicleDispatch::query()
-            ->whereIn('siding_id', $sidingIds)
-            ->whereRaw($this->dateOnlyBetweenSql('issued_on'), [$fromDate, $toDate])
+        $vehiclesBySiding = $this->whereIssuedOnDateBetween(
+            SidingVehicleDispatch::query()->whereIn('siding_id', $sidingIds),
+            $fromDate,
+            $toDate,
+        )
             ->selectRaw('siding_id, count(DISTINCT truck_regd_no) as cnt')
             ->groupBy('siding_id')
             ->pluck('cnt', 'siding_id')
@@ -2877,9 +2891,12 @@ final class ExecutiveDashboardController extends Controller
 
         $customRoadBySiding = collect();
         if ($wantRoad) {
-            $customRoadBySiding = SidingVehicleDispatch::query()
-                ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
-                ->whereRaw($this->dateOnlyBetweenSql('issued_on'), [$roadFrom, $roadTo])
+            $customRoadBySiding = $this->whereIssuedOnDateBetween(
+                SidingVehicleDispatch::query()
+                    ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds)),
+                $roadFrom,
+                $roadTo,
+            )
                 ->selectRaw('siding_id, count(*) as trips, coalesce(sum(mineral_weight), 0) as qty')
                 ->groupBy('siding_id')
                 ->get()
@@ -2941,9 +2958,12 @@ final class ExecutiveDashboardController extends Controller
         }
 
         if ($wantRoad) {
-            $customRoadTotalsRow = SidingVehicleDispatch::query()
-                ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
-                ->whereRaw($this->dateOnlyBetweenSql('issued_on'), [$roadFrom, $roadTo])
+            $customRoadTotalsRow = $this->whereIssuedOnDateBetween(
+                SidingVehicleDispatch::query()
+                    ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds)),
+                $roadFrom,
+                $roadTo,
+            )
                 ->selectRaw('count(*) as trips, coalesce(sum(mineral_weight), 0) as qty')
                 ->first();
         }
@@ -2993,9 +3013,12 @@ final class ExecutiveDashboardController extends Controller
                     'qty' => round((float) ($customRoadTotalsRow?->qty ?? 0), 2),
                 ],
                 resolveTotals: function (CarbonInterface $from, CarbonInterface $to) use ($sidingIds): array {
-                    $row = SidingVehicleDispatch::query()
-                        ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
-                        ->whereRaw($this->dateOnlyBetweenSql('issued_on'), [$from->toDateString(), $to->toDateString()])
+                    $row = $this->whereIssuedOnDateBetween(
+                        SidingVehicleDispatch::query()
+                            ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds)),
+                        $from->toDateString(),
+                        $to->toDateString(),
+                    )
                         ->selectRaw('count(*) as trips, coalesce(sum(mineral_weight), 0) as qty')
                         ->first();
 
@@ -3471,6 +3494,18 @@ final class ExecutiveDashboardController extends Controller
                     ->whereNotIn('data_source', self::OPERATIONAL_RAKE_DATA_SOURCES);
             });
         });
+    }
+
+    /**
+     * Calendar date range on `issued_on` for road dispatch (matches coal transport report and {@see VehicleDispatch::scopeForDate}).
+     *
+     * @param  Builder<SidingVehicleDispatch>  $query
+     * @return Builder<SidingVehicleDispatch>
+     */
+    private function whereIssuedOnDateBetween(Builder $query, string $fromDate, string $toDate): Builder
+    {
+        return $query->whereDate('issued_on', '>=', $fromDate)
+            ->whereDate('issued_on', '<=', $toDate);
     }
 
     /**

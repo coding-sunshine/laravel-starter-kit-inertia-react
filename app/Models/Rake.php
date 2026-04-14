@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Support\Rakes\RakeLoaderWagonNumber;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Mattiverse\Userstamps\Traits\Userstamps;
@@ -130,6 +132,14 @@ final class Rake extends Model
         return $this->hasMany(RakeWeighment::class);
     }
 
+    /**
+     * Per-wagon lines from weighment PDF / imports (via each {@see RakeWeighment}).
+     */
+    public function rakeWagonWeighments(): HasManyThrough
+    {
+        return $this->hasManyThrough(RakeWagonWeighment::class, RakeWeighment::class);
+    }
+
     public function txr(): HasOne
     {
         return $this->hasOne(Txr::class);
@@ -159,6 +169,60 @@ final class Rake extends Model
             ->unique();
 
         return $fitWagonIds->every(static fn (int $id): bool => $loadedFitIds->contains($id));
+    }
+
+    /**
+     * Rake-loader list progress: fit wagons minus weighment placeholders (W{n}); first eligible wagon is excluded from required count.
+     *
+     * `no_wagons` applies when there are no operational wagons, or when there is at least one rake weighment but no
+     * {@see RakeWagonWeighment} lines (e.g. manual header-only weighment without per-wagon data).
+     *
+     * @return array{status: string, loaded: int, total: int} status is complete|partial|empty|none|no_wagons
+     */
+    public function rakeLoaderProgressMetrics(): array
+    {
+        $wagonCount = $this->relationLoaded('wagons')
+            ? $this->wagons->count()
+            : $this->wagons()->count();
+
+        if ($wagonCount === 0) {
+            return ['status' => 'no_wagons', 'loaded' => 0, 'total' => 0];
+        }
+
+        if ($this->rakeHasWeighmentsButNoWeighmentWagonLines()) {
+            return ['status' => 'no_wagons', 'loaded' => 0, 'total' => 0];
+        }
+
+        $eligible = $this->eligibleRakeLoaderWagonsForProgress();
+        $ids = $eligible->pluck('id')->map(static fn ($id): int => (int) $id)->all();
+
+        if ($ids === []) {
+            return ['status' => 'none', 'loaded' => 0, 'total' => 0];
+        }
+
+        array_shift($ids);
+        $requiredIds = $ids;
+        $total = count($requiredIds);
+
+        if ($total === 0) {
+            return ['status' => 'none', 'loaded' => 0, 'total' => 0];
+        }
+
+        $loadedIdsPositive = $this->wagonIdsWithPositiveLoadingQuantity();
+        $loaded = 0;
+        foreach ($requiredIds as $wagonId) {
+            if ($loadedIdsPositive->contains($wagonId)) {
+                $loaded++;
+            }
+        }
+
+        $status = match (true) {
+            $loaded === 0 => 'empty',
+            $loaded === $total => 'complete',
+            default => 'partial',
+        };
+
+        return ['status' => $status, 'loaded' => $loaded, 'total' => $total];
     }
 
     public function rakeLoad(): HasOne
@@ -234,5 +298,62 @@ final class Rake extends Model
 
             return route('railway-receipts.pdf', $doc);
         });
+    }
+
+    private function rakeHasWeighmentsButNoWeighmentWagonLines(): bool
+    {
+        $hasWeighments = array_key_exists('rake_weighments_count', $this->attributes)
+            ? (int) $this->attributes['rake_weighments_count'] > 0
+            : $this->rakeWeighments()->exists();
+
+        if (! $hasWeighments) {
+            return false;
+        }
+
+        $lineCount = array_key_exists('rake_wagon_weighments_count', $this->attributes)
+            ? (int) $this->attributes['rake_wagon_weighments_count']
+            : (int) $this->rakeWagonWeighments()->count();
+
+        return $lineCount === 0;
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, Wagon>
+     */
+    private function eligibleRakeLoaderWagonsForProgress(): \Illuminate\Support\Collection
+    {
+        $wagons = $this->relationLoaded('wagons')
+            ? $this->wagons->sortBy('wagon_sequence')->values()
+            : $this->wagons()->orderBy('wagon_sequence')->get();
+
+        return $wagons->filter(function (Wagon $w): bool {
+            if ($w->is_unfit) {
+                return false;
+            }
+
+            return ! RakeLoaderWagonNumber::isWeighmentPlaceholder($w->wagon_number);
+        })->values();
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, int> wagon_id values
+     */
+    private function wagonIdsWithPositiveLoadingQuantity(): \Illuminate\Support\Collection
+    {
+        if ($this->relationLoaded('wagonLoadings')) {
+            return $this->wagonLoadings
+                ->where('loaded_quantity_mt', '>', 0)
+                ->pluck('wagon_id')
+                ->map(static fn ($id): int => (int) $id)
+                ->unique()
+                ->values();
+        }
+
+        return $this->wagonLoadings()
+            ->where('loaded_quantity_mt', '>', 0)
+            ->pluck('wagon_id')
+            ->map(static fn ($id): int => (int) $id)
+            ->unique()
+            ->values();
     }
 }

@@ -13,6 +13,7 @@ use App\Models\Siding;
 use App\Models\User;
 use App\Services\SidingContext;
 use App\Services\TenantContext;
+use App\Support\Rakes\RakeLoaderWagonNumber;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -74,7 +75,7 @@ final class RakeLoaderController extends Controller
         $wagons = $rake->wagons
             ->sortBy('wagon_sequence')
             ->values()
-            ->reject(static fn ($w): bool => self::shouldSkipLoaderWeighmentWagonNumber($w->wagon_number));
+            ->reject(static fn ($w): bool => RakeLoaderWagonNumber::isWeighmentPlaceholder($w->wagon_number));
 
         $allowedWagonIds = $wagons->pluck('id')->flip();
 
@@ -149,13 +150,6 @@ final class RakeLoaderController extends Controller
             ] : null,
             'loaderOperatorOptions' => $loaderOperatorOptions,
         ];
-    }
-
-    private static function shouldSkipLoaderWeighmentWagonNumber(?string $wagonNumber): bool
-    {
-        $trimmed = $wagonNumber !== null ? mb_trim($wagonNumber) : '';
-
-        return $trimmed !== '' && preg_match('/^W\d+$/', $trimmed) === 1;
     }
 
     /**
