@@ -274,6 +274,7 @@ final class AppServiceProvider extends ServiceProvider
             'weighments-dialog-update-manual',
             'weighments-hub-view-weighment',
             'weighments-hub-delete-weighment-file',
+            'weighments-show-delete-weighment',
             'rake-weighment-manual-net-mt',
             'rake-weighment-manual-submit',
             'rake-weighment-edit-net-mt',

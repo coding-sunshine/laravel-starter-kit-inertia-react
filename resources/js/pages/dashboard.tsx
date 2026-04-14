@@ -2598,6 +2598,7 @@ function LoaderOverloadSection({
     loaderOperatorFromUrl,
     operatorNamesForSelectedLoader,
     underloadThresholdPercent,
+    dateRangeDescription,
     onLoaderOverloadChange,
 }: {
     loaders: LoaderInfo[];
@@ -2606,6 +2607,8 @@ function LoaderOverloadSection({
     loaderOperatorFromUrl: string | null;
     operatorNamesForSelectedLoader: string[];
     underloadThresholdPercent: number;
+    /** Main dashboard filter range label (rake `loading_date`). */
+    dateRangeDescription: string;
     onLoaderOverloadChange: (patch: {
         loader_id?: number | null;
         loader_operator?: string | null;
@@ -2743,7 +2746,11 @@ function LoaderOverloadSection({
                 <SectionHeader
                     icon={AlertTriangle}
                     title="Loader-wise overloading trends"
-                    subtitle="All-time monthly trends (not tied to the dashboard period). Operators shown only when recorded for that loader."
+                    subtitle={
+                        dateRangeDescription
+                            ? `${dateRangeDescription} (rake loading date). Monthly buckets. Operators shown only when recorded for that loader.`
+                            : 'Monthly trends by rake loading date. Operators shown only when recorded for that loader.'
+                    }
                 />
                 <div className="flex flex-wrap items-center justify-end gap-2">
                     <div className="flex flex-col gap-0.5">
@@ -2831,7 +2838,7 @@ function LoaderOverloadSection({
             {!hasData ? (
                 <div className="mt-8 flex flex-col items-center justify-center py-12 text-center text-gray-600">
                     <AlertTriangle className="mb-3 h-12 w-12 opacity-40" />
-                    <p className="font-medium">No overload data for this selection (all-time)</p>
+                    <p className="font-medium">No overload data for this selection and date range</p>
                 </div>
             ) : (
                 <>
@@ -5215,6 +5222,7 @@ export default function Dashboard() {
                                         loaderOperatorFromUrl={filters.loader_operator}
                                         operatorNamesForSelectedLoader={loaderOverloadOperatorNames}
                                         underloadThresholdPercent={filters.underload_threshold}
+                                        dateRangeDescription={mainDateRangeLabel}
                                         onLoaderOverloadChange={onLoaderOverloadChange}
                                     />
                                 )

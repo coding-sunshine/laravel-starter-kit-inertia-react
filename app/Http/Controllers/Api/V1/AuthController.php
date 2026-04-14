@@ -10,6 +10,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\DeleteMeRequest;
 use App\Http\Requests\Api\V1\RegisterApiUserRequest;
 use App\Http\Requests\CreateSessionRequest;
+use App\Models\Siding;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -70,6 +71,7 @@ final class AuthController extends Controller
                         'name' => $primarySiding->name,
                         'code' => $primarySiding->code,
                     ] : null,
+                    'sidings' => $this->sidingsArrayForResponse($user),
                     'role' => $primaryRole !== null ? [
                         'id' => $primaryRole->id,
                         'name' => $primaryRole->name,
@@ -126,6 +128,7 @@ final class AuthController extends Controller
                         'name' => $primarySiding->name,
                         'code' => $primarySiding->code,
                     ] : null,
+                    'sidings' => $this->sidingsArrayForResponse($user),
                     'role' => $primaryRole !== null ? [
                         'id' => $primaryRole->id,
                         'name' => $primaryRole->name,
@@ -234,5 +237,62 @@ final class AuthController extends Controller
         return response()->json([
             'message' => 'Logged out successfully.',
         ]);
+    }
+
+    /**
+     * All sidings the user may access (matches API indent scoping: super-admin sees all; others see pivot assignments and legacy users.siding_id).
+     *
+     * @return list<array{id: int, name: string, code: string|null, station_code: string|null, is_primary: bool}>
+     */
+    private function sidingsArrayForResponse(User $user): array
+    {
+        $primaryId = $user->getPrimarySiding()?->id;
+
+        if ($user->isSuperAdmin()) {
+            return Siding::query()
+                ->orderBy('name')
+                ->get(['id', 'name', 'code', 'station_code'])
+                ->map(static fn (Siding $siding): array => [
+                    'id' => $siding->id,
+                    'name' => $siding->name,
+                    'code' => $siding->code,
+                    'station_code' => $siding->station_code,
+                    'is_primary' => $primaryId !== null && (int) $siding->id === (int) $primaryId,
+                ])
+                ->values()
+                ->all();
+        }
+
+        $sidings = $user->sidings()
+            ->orderBy('sidings.name')
+            ->get(['sidings.id', 'sidings.name', 'sidings.code', 'sidings.station_code']);
+
+        if ($sidings->isEmpty() && $user->siding_id !== null) {
+            $fallback = Siding::query()->find($user->siding_id);
+            if ($fallback !== null) {
+                return [[
+                    'id' => $fallback->id,
+                    'name' => $fallback->name,
+                    'code' => $fallback->code,
+                    'station_code' => $fallback->station_code,
+                    'is_primary' => true,
+                ]];
+            }
+        }
+
+        return $sidings
+            ->map(function (Siding $siding) use ($primaryId): array {
+                $pivotPrimary = (bool) ($siding->pivot->is_primary ?? false);
+
+                return [
+                    'id' => $siding->id,
+                    'name' => $siding->name,
+                    'code' => $siding->code,
+                    'station_code' => $siding->station_code,
+                    'is_primary' => $pivotPrimary || ($primaryId !== null && (int) $siding->id === (int) $primaryId),
+                ];
+            })
+            ->values()
+            ->all();
     }
 }

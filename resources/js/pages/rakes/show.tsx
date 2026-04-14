@@ -725,7 +725,7 @@ export default function RakesShow({
     demurrageRemainingMinutes,
     demurrage_rate_per_mt_hour,
 }: Props) {
-    const page = usePage();
+    const page = usePage<{ errors?: { template?: string } }>();
     const returnToQuerySuffix = useMemo((): string => {
         const u = page.url;
         const idx = u.indexOf('?');
@@ -875,10 +875,17 @@ export default function RakesShow({
         return (actual?.rrPenaltySnapshots ?? []).reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
     }, [rake.rakeCharges]);
 
+    const templateDownloadError = page.props.errors?.template;
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={`Rake ${rake.rake_number}`} />
             <div className="space-y-6">
+                {templateDownloadError && (
+                    <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
+                        {templateDownloadError}
+                    </div>
+                )}
                 <div className="flex flex-wrap items-center justify-between gap-2">
                     <Heading
                         title={`Rake ${rake.rake_number}`}

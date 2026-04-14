@@ -12,8 +12,8 @@ use App\Models\Rake;
 use App\Models\Siding;
 use App\Models\User;
 use App\Models\Weighment;
+use App\Services\RakeWeighmentExcelTemplateResolver;
 use App\Services\RakeWeighmentPdfImporter;
-use App\Services\RakeWeighmentXlsxTemplate;
 use App\Services\WeighmentPdfImporter;
 use App\Support\RrmcsDeletionRules;
 use Illuminate\Http\RedirectResponse;
@@ -22,7 +22,6 @@ use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
 use InvalidArgumentException;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Throwable;
 
@@ -51,10 +50,7 @@ final class WeighmentsController extends Controller
         $this->assertUserCanAccessWeighmentRakeSiding($user, $weighment);
 
         $canDeleteWeighment = RrmcsDeletionRules::isWeighmentDeletableFromStandaloneModule($weighment)
-            && (
-                $user->can('bypass-permissions')
-                || $user->hasPermissionTo('sections.weighments.delete')
-            );
+            && $this->userMatchesWeighmentsHubDeletePermissions($user);
 
         return Inertia::render('weighments/show', [
             'weighment' => $weighment,
@@ -252,13 +248,14 @@ final class WeighmentsController extends Controller
             ->with('success', 'Manual weighment recorded. Upload the document when available.');
     }
 
-    public function downloadTemplateXlsx(Request $request, RakeWeighmentXlsxTemplate $template): BinaryFileResponse
+    public function downloadTemplateXlsx(Request $request, RakeWeighmentExcelTemplateResolver $templateResolver): BinaryFileResponse|RedirectResponse
     {
         /** @var User $user */
         $user = $request->user();
 
         $validated = $request->validate([
             'rake_id' => ['required', 'integer', 'exists:rakes,id'],
+            'return_to' => ['nullable', 'string', 'max:2048'],
         ]);
 
         $rake = Rake::query()
@@ -267,19 +264,28 @@ final class WeighmentsController extends Controller
 
         abort_unless($user->canAccessSiding((int) $rake->siding_id), 403);
 
-        $spreadsheet = $template->makeForRake($rake);
-        $writer = new Xlsx($spreadsheet);
+        $resolved = $templateResolver->resolve($rake);
 
-        $tmpPath = tempnam(sys_get_temp_dir(), 'weighment-template-');
-        if ($tmpPath === false) {
-            throw new InvalidArgumentException('Unable to create a temporary file for download.');
+        if (isset($resolved['error'])) {
+            $message = match ($resolved['error']) {
+                RakeWeighmentExcelTemplateResolver::ERROR_NO_SIDING => 'Assign a siding to this rake before downloading the template.',
+                RakeWeighmentExcelTemplateResolver::ERROR_UNKNOWN_SIDING => 'Weighment Excel template is only available for Pakur, Dumka, or Kurwa sidings.',
+                RakeWeighmentExcelTemplateResolver::ERROR_FILE_MISSING => 'The weighment template file is missing on the server. Please contact support.',
+                default => 'Unable to download the weighment template.',
+            };
+
+            if ($resolved['error'] === RakeWeighmentExcelTemplateResolver::ERROR_FILE_MISSING) {
+                Log::error('Weighment XLSX template file missing on disk.', [
+                    'rake_id' => $rake->id,
+                    'siding_id' => $rake->siding_id,
+                ]);
+            }
+
+            return redirect($this->validatedInternalReturnTo($request))
+                ->withErrors(['template' => $message]);
         }
 
-        $writer->save($tmpPath);
-
-        $fileName = sprintf('weighment-template-%s.xlsx', preg_replace('/[^A-Za-z0-9_\-]+/', '-', (string) $rake->rake_number));
-
-        return response()->download($tmpPath, $fileName)->deleteFileAfterSend(true);
+        return response()->download($resolved['absolute_path'], $resolved['download_basename']);
     }
 
     public function destroy(Request $request, Weighment $weighment, DeleteStandaloneHistoricalWeighmentAction $action): RedirectResponse
@@ -298,6 +304,24 @@ final class WeighmentsController extends Controller
 
         return to_route('weighments.index')
             ->with('success', 'Historical weighment and related rake data removed.');
+    }
+
+    /**
+     * Safe same-origin path for redirects (open-redirect safe): must start with "/" and must not be "//..." or contain a scheme.
+     */
+    private function validatedInternalReturnTo(Request $request): string
+    {
+        $raw = $request->query('return_to');
+        if (! is_string($raw) || mb_trim($raw) === '') {
+            return route('weighments.index');
+        }
+
+        $decoded = rawurldecode(mb_trim($raw));
+        if (! str_starts_with($decoded, '/') || str_starts_with($decoded, '//') || str_contains($decoded, '://')) {
+            return route('weighments.index');
+        }
+
+        return $decoded;
     }
 
     /**
@@ -323,5 +347,19 @@ final class WeighmentsController extends Controller
         abort_if($rake === null, 404);
 
         abort_unless($user->canAccessSiding((int) $rake->siding_id), 403);
+    }
+
+    /**
+     * Same permission OR-list as the weighments hub delete UI (see weighments/index.tsx).
+     */
+    private function userMatchesWeighmentsHubDeletePermissions(User $user): bool
+    {
+        if ($user->can('bypass-permissions')) {
+            return true;
+        }
+
+        return $user->hasPermissionTo('sections.weighments.delete')
+            || $user->hasPermissionTo('sections.rakes.update')
+            || $user->hasPermissionTo('sections.weighments.upload');
     }
 }

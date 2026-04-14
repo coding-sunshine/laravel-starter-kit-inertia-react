@@ -93,7 +93,7 @@ export default function WeighmentsIndex({ tableData }: Props) {
 
     const { flash, errors } = usePage<{
         flash?: { success?: string };
-        errors?: { pdf?: string; rake_id?: string; total_net_weight_mt?: string };
+        errors?: { pdf?: string; rake_id?: string; total_net_weight_mt?: string; template?: string };
     }>().props;
 
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -247,7 +247,10 @@ export default function WeighmentsIndex({ tableData }: Props) {
         if (!selectedRake) {
             return;
         }
-        window.location.href = `/weighments/template-xlsx?rake_id=${encodeURIComponent(String(selectedRake.id))}`;
+        const returnTo = encodeURIComponent(
+            `${window.location.pathname}${window.location.search}`,
+        );
+        window.location.href = `/weighments/template-xlsx?rake_id=${encodeURIComponent(String(selectedRake.id))}&return_to=${returnTo}`;
     }, [selectedRake]);
 
     const deleteHubWeighmentFile = useCallback(() => {
@@ -298,6 +301,12 @@ export default function WeighmentsIndex({ tableData }: Props) {
                 {errors?.pdf && (
                     <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
                         {errors.pdf}
+                    </div>
+                )}
+
+                {errors?.template && (
+                    <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
+                        {errors.template}
                     </div>
                 )}
 

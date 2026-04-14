@@ -4,17 +4,20 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\DataTables\IndentDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\Indent;
 use App\Models\Rake;
 use App\Models\Siding;
 use App\Services\IndentPdfImporter;
 use Illuminate\Contracts\Support\Responsable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
+use Spatie\QueryBuilder\QueryBuilder;
 
 final class IndentController extends Controller
 {
@@ -26,45 +29,57 @@ final class IndentController extends Controller
             abort(401);
         }
 
-        $sidingIds = $user->isSuperAdmin()
-            ? Siding::query()->pluck('id')->all()
-            : $user->accessibleSidings()->get()->pluck('id')->all();
+        $query = IndentDataTable::listQueryForRequest($request);
 
-        $query = Indent::query()
-            ->with('siding:id,name,code')
-            ->whereIn('siding_id', $sidingIds)
-            ->latest('created_at');
+        $query->with([
+            'siding:id,name,code',
+            'rake' => static fn ($q) => $q
+                ->select(['id', 'indent_id', 'rake_number', 'state'])
+                ->withCount('rakeWeighments'),
+        ]);
 
-        if ($request->filled('from_date')) {
-            $query->whereDate('indent_date', '>=', $request->date('from_date'));
-        }
+        $query->when($request->filled('state'), function (Builder $q) use ($request): void {
+            $q->where('state', $request->string('state'));
+        });
 
-        if ($request->filled('to_date')) {
-            $query->whereDate('indent_date', '<=', $request->date('to_date'));
-        }
+        /** @var array<string, mixed> $filterQuery */
+        $filterQuery = $request->query('filter', []);
+        $filterQuery = is_array($filterQuery) ? $filterQuery : [];
+        $query->when(
+            $request->filled('siding_id') && ! array_key_exists('siding', $filterQuery),
+            function (Builder $q) use ($request): void {
+                $q->where('siding_id', $request->integer('siding_id'));
+            }
+        );
 
-        if ($request->filled('state')) {
-            $query->where('state', $request->string('state'));
-        }
-
-        if ($request->filled('siding_id')) {
-            $query->where('siding_id', $request->integer('siding_id'));
-        }
-
-        if ($request->filled('search')) {
+        $query->when($request->filled('search'), function (Builder $q) use ($request): void {
             $search = $request->string('search')->toString();
-
-            $query->where(function ($q) use ($search): void {
-                $q->where('indent_number', 'like', "%{$search}%")
+            $q->where(function ($inner) use ($search): void {
+                $inner->where('indent_number', 'like', "%{$search}%")
                     ->orWhere('e_demand_reference_id', 'like', "%{$search}%")
                     ->orWhere('fnr_number', 'like', "%{$search}%");
             });
-        }
+        });
 
         /** @var LengthAwarePaginator $indents */
-        $indents = $query
+        $indents = QueryBuilder::for($query, $request)
+            ->allowedFilters(IndentDataTable::tableAllowedFilters())
+            ->allowedSorts(IndentDataTable::tableAllowedSorts())
+            ->defaultSort('-id')
             ->paginate($request->integer('per_page', 15))
             ->withQueryString();
+
+        $indents->through(function (Indent $indent): Indent {
+            $rake = $indent->rake;
+            /** True when the rake has any {@see RakeWeighment} (PDF/XLSX import or manual entry; PDF is optional). */
+            $indent->setAttribute(
+                'weighment_available',
+                $rake !== null && (int) ($rake->rake_weighments_count ?? 0) > 0,
+            );
+            $indent->makeHidden('rake');
+
+            return $indent;
+        });
 
         return response()->json([
             'data' => $indents->items(),
