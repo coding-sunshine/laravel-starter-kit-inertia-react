@@ -33,6 +33,7 @@ use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -2467,9 +2468,9 @@ final class ExecutiveDashboardController extends Controller
      * Loader-wise overloading and underloading trends (all-time monthly buckets; ignores dashboard period).
      *
      * Month buckets use `rakes.loading_date` (business loading date), not `wagon_loading.loading_time`, so late data entry does not shift the chart month.
-     * Each month row includes `loader_{id}_total`, `loader_{id}_overload`, and `loader_{id}_underload` (wagon counts from joined `rake_wagon_weighments`).
+     * Each month row includes `loader_{id}_total`, `loader_{id}_overload`, and `loader_{id}_underload` (wagon counts from `wagon_loading` loaded qty vs effective CC: `wagon_loading.cc_capacity_mt` or else `wagons.pcc_weight_mt`).
      * Optional `loader_id` / `loader_operator_name` in `$filterContext` narrow the aggregate, not the loader list returned for the UI.
-     * `underload_threshold_percent` (default 1.0): wagon counts as underloaded only when shortfall as % of CC is at least this value (aligned with rake-wise wagon chart).
+     * `underload_threshold_percent` (default 1.0): underloaded when `loaded_quantity_mt < cc_capacity_mt` on `wagon_loading` and shortfall as % of CC is at least this value.
      *
      * @param  array<int>  $sidingIds
      * @param  array{power_plant: string|null, rake_number: string|null, loader_id: int|null, loader_operator_name?: string|null, shift: string|null, underload_threshold_percent?: float}  $filterContext
@@ -2499,26 +2500,20 @@ final class ExecutiveDashboardController extends Controller
         $loaderIds = $loaders->pluck('id')->all();
         $loaderMap = $loaders->mapWithKeys(fn (Loader $l): array => [$l->id => $l->loader_name])->all();
 
-        $driver = DB::getDriverName();
-        if ($driver === 'pgsql') {
-            $yearMonthSql = 'EXTRACT(YEAR FROM r.loading_date)::int as y, EXTRACT(MONTH FROM r.loading_date)::int as m';
-            $groupByYearMonthLoader = 'EXTRACT(YEAR FROM r.loading_date), EXTRACT(MONTH FROM r.loading_date), wl.loader_id';
-        } elseif ($driver === 'sqlite') {
-            $yearMonthSql = "cast(strftime('%Y', r.loading_date) as integer) as y, cast(strftime('%m', r.loading_date) as integer) as m";
-            $groupByYearMonthLoader = "cast(strftime('%Y', r.loading_date) as integer), cast(strftime('%m', r.loading_date) as integer), wl.loader_id";
-        } else {
-            $yearMonthSql = 'YEAR(r.loading_date) as y, MONTH(r.loading_date) as m';
-            $groupByYearMonthLoader = 'YEAR(r.loading_date), MONTH(r.loading_date), wl.loader_id';
-        }
+        // PostgreSQL only (month buckets from `rakes.loading_date`).
+        $yearMonthSql = 'EXTRACT(YEAR FROM r.loading_date)::int as y, EXTRACT(MONTH FROM r.loading_date)::int as m';
+        $groupByYearMonthLoader = 'EXTRACT(YEAR FROM r.loading_date), EXTRACT(MONTH FROM r.loading_date), wl.loader_id';
 
+        // Effective CC: snapshot on `wagon_loading` when present; otherwise `wagons.pcc_weight_mt` (rake load often saves loaded qty but not cc_capacity_mt).
+        $ccEff = 'COALESCE(wl.cc_capacity_mt, w.pcc_weight_mt)';
         // Section is intentionally not scoped to the main dashboard date range: aggregate all time (monthly buckets).
+        $overloadCase = "sum(CASE WHEN wl.loaded_quantity_mt IS NOT NULL AND {$ccEff} IS NOT NULL AND {$ccEff} > 0 AND wl.loaded_quantity_mt > {$ccEff} THEN 1 ELSE 0 END) as overloaded_wagons";
+        $underloadCase = "sum(CASE WHEN wl.loaded_quantity_mt IS NOT NULL AND {$ccEff} IS NOT NULL AND {$ccEff} > 0 AND wl.loaded_quantity_mt < {$ccEff} AND (({$ccEff} - wl.loaded_quantity_mt) * 100.0 / {$ccEff}) >= ? THEN 1 ELSE 0 END) as underloaded_wagons";
+
         $wlQuery = DB::table('wagon_loading as wl')
             ->join('rakes as r', 'r.id', '=', 'wl.rake_id')
+            ->join('wagons as w', 'w.id', '=', 'wl.wagon_id')
             ->whereIn('r.siding_id', $sidingIds)
-            ->join('rake_wagon_weighments as rww', function ($join) {
-                $join->on('wl.wagon_id', '=', 'rww.wagon_id')
-                    ->on('wl.rake_id', '=', DB::raw('(SELECT rake_id FROM rake_weighments WHERE id = rww.rake_weighment_id)'));
-            })
             ->whereIn('wl.loader_id', $loaderIds)
             ->whereNotNull('r.loading_date');
 
@@ -2527,14 +2522,12 @@ final class ExecutiveDashboardController extends Controller
         }
 
         if (! empty($filterContext['loader_operator_name'])) {
-            $wlQuery->where('wl.loader_operator_name', (string) $filterContext['loader_operator_name']);
+            $this->applyWagonLoadingLoaderOperatorFilter($wlQuery, (string) $filterContext['loader_operator_name']);
         }
-
-        $underloadCase = 'sum(CASE WHEN rww.under_load_mt > 0 AND rww.cc_capacity_mt IS NOT NULL AND rww.cc_capacity_mt > 0 AND (rww.under_load_mt * 100.0 / rww.cc_capacity_mt) >= ? THEN 1 ELSE 0 END) as underloaded_wagons';
 
         $rows = $wlQuery
             ->selectRaw(
-                "{$yearMonthSql}, wl.loader_id, count(*) as wagons_loaded, sum(CASE WHEN rww.over_load_mt > 0 THEN 1 ELSE 0 END) as overloaded_wagons, {$underloadCase}",
+                "{$yearMonthSql}, wl.loader_id, count(*) as wagons_loaded, {$overloadCase}, {$underloadCase}",
                 [$underloadThresholdPercent],
             )
             ->groupByRaw($groupByYearMonthLoader)
@@ -2849,6 +2842,19 @@ final class ExecutiveDashboardController extends Controller
                 'value' => $rate,
             ];
         })->values()->all();
+    }
+
+    /**
+     * Narrow `wagon_loading` rows by {@see WagonLoading::$loader_operator_name} (exact match; values come from dropdown).
+     */
+    private function applyWagonLoadingLoaderOperatorFilter(QueryBuilder $wlQuery, string $loaderOperatorName): void
+    {
+        $normalized = mb_trim($loaderOperatorName);
+        if ($normalized === '') {
+            return;
+        }
+
+        $wlQuery->where('wl.loader_operator_name', $normalized);
     }
 
     /**
