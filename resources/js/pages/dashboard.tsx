@@ -13,6 +13,11 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
@@ -2284,6 +2289,43 @@ function RakePerformanceSection({
         });
     }, [r.wagon_overloads, underloadThresholdPercent]);
 
+    /**
+     * Stock (MT) and wagon counts — same rules as bars: overload takes precedence; underload uses threshold % of CC.
+     */
+    const wagonWeighmentSummary = useMemo(() => {
+        const list = r.wagon_overloads ?? [];
+        const thr = underloadThresholdPercent;
+        let underloadStockMt = 0;
+        let overloadStockMt = 0;
+        let underloadWagons = 0;
+        let overloadWagons = 0;
+        for (const w of list) {
+            const over = w.over_load_mt != null && w.over_load_mt > 0 ? w.over_load_mt : 0;
+            if (over > 0) {
+                overloadStockMt += over;
+                overloadWagons++;
+                continue;
+            }
+            const underLoadMt = w.under_load_mt != null && w.under_load_mt > 0 ? w.under_load_mt : 0;
+            if (underLoadMt <= 0) {
+                continue;
+            }
+            const cc = w.cc_capacity_mt ?? null;
+            if (cc == null || cc <= 0) {
+                continue;
+            }
+            const shortfallPct = (underLoadMt / cc) * 100;
+            if (shortfallPct >= thr) {
+                underloadStockMt += underLoadMt;
+                underloadWagons++;
+            }
+        }
+        return { underloadStockMt, overloadStockMt, underloadWagons, overloadWagons };
+    }, [r.wagon_overloads, underloadThresholdPercent]);
+
+    const fmtMt = (n: number): string =>
+        n.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+
     const canPrev = selectedIdx > 0;
     const canNext = selectedIdx < rakes.length - 1 && rakes.length > 1;
 
@@ -2399,39 +2441,85 @@ function RakePerformanceSection({
                     )}
                 </div>
                 <div>
-                    <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
-                        <p className="text-xs font-medium text-gray-600">Wagon-wise overload / underload (MT)</p>
-                        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
-                            <label htmlFor="underload-threshold" className="text-[11px] text-gray-600">
-                                Underload threshold (% of CC)
-                            </label>
-                            <Input
-                                id="underload-threshold"
-                                type="number"
-                                inputMode="decimal"
-                                min={0}
-                                step={0.1}
-                                className="h-8 w-24 rounded-lg border-gray-200 text-sm tabular-nums"
-                                value={underloadThresholdPercent}
-                                onChange={(e) => {
-                                    const raw = e.target.value;
-                                    if (raw === '') {
-                                        setUnderloadThresholdPercent(0);
-                                        return;
-                                    }
-                                    const v = parseFloat(raw);
-                                    if (!Number.isNaN(v)) {
-                                        setUnderloadThresholdPercent(Math.max(0, v));
-                                    }
-                                }}
-                            />
+                    <div className="mb-3 flex flex-wrap items-end justify-between gap-x-3 gap-y-2">
+                        <div className="min-w-0 space-y-0.5">
+                            <p className="text-xs font-semibold text-gray-900">Wagon-wise overload / underload (MT)</p>
+                            <p className="text-[11px] font-semibold text-red-600">This data is based on weighment.</p>
+                        </div>
+                        <div className="flex flex-wrap items-end justify-end gap-2 sm:ml-auto">
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-8 gap-1.5 px-2.5 text-[11px] font-medium"
+                                    >
+                                        Weighment KPIs
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent align="end" sideOffset={6} className="w-[min(100vw-2rem,18rem)] p-3 text-xs shadow-lg">
+                                    <p className="mb-2 border-b border-gray-100 pb-2 text-[11px] font-semibold text-gray-900">
+                                        Weighment summary
+                                    </p>
+                                    <dl className="space-y-2 text-[11px]">
+                                        <div className="flex items-baseline justify-between gap-3">
+                                            <dt className="shrink-0 text-gray-600">Underload stock</dt>
+                                            <dd className="font-semibold tabular-nums text-amber-900">
+                                                {fmtMt(wagonWeighmentSummary.underloadStockMt)} MT
+                                            </dd>
+                                        </div>
+                                        <div className="flex items-baseline justify-between gap-3">
+                                            <dt className="shrink-0 text-gray-600">Overload stock</dt>
+                                            <dd className="font-semibold tabular-nums text-red-900">
+                                                {fmtMt(wagonWeighmentSummary.overloadStockMt)} MT
+                                            </dd>
+                                        </div>
+                                        <div className="flex items-baseline justify-between gap-3">
+                                            <dt className="shrink-0 text-gray-600">Underload wagons</dt>
+                                            <dd className="font-semibold tabular-nums text-gray-900">
+                                                {wagonWeighmentSummary.underloadWagons}
+                                            </dd>
+                                        </div>
+                                        <div className="flex items-baseline justify-between gap-3">
+                                            <dt className="shrink-0 text-gray-600">Overload wagons</dt>
+                                            <dd className="font-semibold tabular-nums text-gray-900">
+                                                {wagonWeighmentSummary.overloadWagons}
+                                            </dd>
+                                        </div>
+                                    </dl>
+                                </PopoverContent>
+                            </Popover>
+                            <div className="flex flex-col items-end gap-0.5">
+                                <label
+                                    htmlFor="underload-threshold"
+                                    className="text-[10px] font-medium leading-tight text-gray-600"
+                                >
+                                    Underload threshold (% of CC)
+                                </label>
+                                <Input
+                                    id="underload-threshold"
+                                    type="number"
+                                    inputMode="decimal"
+                                    min={0}
+                                    step={0.1}
+                                    className="h-8 w-[4.5rem] rounded-md border-gray-200 bg-white px-2 text-xs font-semibold tabular-nums"
+                                    value={underloadThresholdPercent}
+                                    onChange={(e) => {
+                                        const raw = e.target.value;
+                                        if (raw === '') {
+                                            setUnderloadThresholdPercent(0);
+                                            return;
+                                        }
+                                        const v = parseFloat(raw);
+                                        if (!Number.isNaN(v)) {
+                                            setUnderloadThresholdPercent(Math.max(0, v));
+                                        }
+                                    }}
+                                />
+                            </div>
                         </div>
                     </div>
-                    <p className="mb-2 text-[11px] text-gray-500">
-                        Bars extend upward for overload and downward when underload shortfall is at least the threshold % of carrying
-                        capacity (CC). Click a bar to open loader trends in a new tab when a loader is linked to that wagon; otherwise a
-                        message is shown.
-                    </p>
                     {wagonBarChartData.length > 0 ? (
                         <ResponsiveContainer width="100%" height={260}>
                             <RechartsBarChart
