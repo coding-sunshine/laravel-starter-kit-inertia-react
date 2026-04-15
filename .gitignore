@@ -11,9 +11,7 @@
 /storage/pail
 /vendor
 .DS_Store
-.env
 .env.backup
-.env.production
 .phpactor.json
 .phpunit.result.cache
 Homestead.json
@@ -53,3 +51,4 @@ polyscope.json
 .gstack/
 .worktrees
 .superpowers/
+config.bat
