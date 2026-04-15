@@ -6,6 +6,14 @@ import { type BreadcrumbItem } from '@/types';
 import { Head, router, usePage } from '@inertiajs/react';
 import { Trash2 } from 'lucide-react';
 
+function formatDateTime(iso: string | null | undefined): string {
+    if (!iso) {
+        return '-';
+    }
+
+    return new Date(iso).toLocaleString();
+}
+
 interface Siding {
     id: number;
     name: string;
@@ -46,6 +54,8 @@ interface RakeWagonWeighmentRow {
     under_load_mt: string | null;
     over_load_mt: string | null;
     speed_kmph: string | null;
+    created_at: string;
+    updated_at: string;
     wagon?: Wagon | null;
 }
 
@@ -210,26 +220,26 @@ export default function WeighmentShow({
                             <div>
                                 <span className="font-medium">Gross weighment: </span>
                                 <span>
-                                    {weighment.gross_weighment_datetime
-                                        ? new Date(
-                                              weighment.gross_weighment_datetime,
-                                          ).toLocaleString()
-                                        : '-'}
+                                    {formatDateTime(weighment.gross_weighment_datetime)}
                                 </span>
                             </div>
                             <div>
                                 <span className="font-medium">Tare weighment: </span>
                                 <span>
-                                    {weighment.tare_weighment_datetime
-                                        ? new Date(
-                                              weighment.tare_weighment_datetime,
-                                          ).toLocaleString()
-                                        : '-'}
+                                    {formatDateTime(weighment.tare_weighment_datetime)}
                                 </span>
                             </div>
                             <div>
                                 <span className="font-medium">Status: </span>
                                 <span>{weighment.status}</span>
+                            </div>
+                            <div>
+                                <span className="font-medium">Record created at: </span>
+                                <span>{formatDateTime(weighment.created_at)}</span>
+                            </div>
+                            <div>
+                                <span className="font-medium">Record updated at: </span>
+                                <span>{formatDateTime(weighment.updated_at)}</span>
                             </div>
                         </CardContent>
                     </Card>
@@ -261,6 +271,12 @@ export default function WeighmentShow({
                                             <th className="p-2 text-right">Under</th>
                                             <th className="p-2 text-right">Over</th>
                                             <th className="p-2 text-right">Speed (km/h)</th>
+                                            <th className="p-2 text-left whitespace-nowrap">
+                                                Wagon data added at
+                                            </th>
+                                            <th className="p-2 text-left whitespace-nowrap">
+                                                Wagon data updated at
+                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -303,6 +319,12 @@ export default function WeighmentShow({
                                                 </td>
                                                 <td className="p-2 text-right">
                                                     {row.speed_kmph ?? '-'}
+                                                </td>
+                                                <td className="p-2 whitespace-nowrap text-xs text-muted-foreground">
+                                                    {formatDateTime(row.created_at)}
+                                                </td>
+                                                <td className="p-2 whitespace-nowrap text-xs text-muted-foreground">
+                                                    {formatDateTime(row.updated_at)}
                                                 </td>
                                             </tr>
                                         ))}
