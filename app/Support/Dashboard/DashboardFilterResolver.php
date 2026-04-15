@@ -21,8 +21,10 @@ final class DashboardFilterResolver
      *   powerPlant: string|null,
      *   rakeNumber: string|null,
      *   loaderId: int|null,
+     *   loaderOperatorName: string|null,
      *   shift: string|null,
      *   penaltyTypeId: int|null,
+     *   underloadThresholdPercent: float,
      *   dailyRakeDate: CarbonInterface,
      *   coalTransportDate: CarbonInterface,
      *   section: string,
@@ -53,8 +55,22 @@ final class DashboardFilterResolver
         $powerPlant = $request->filled('power_plant') ? (string) $request->input('power_plant') : null;
         $rakeNumber = $request->filled('rake_number') ? (string) $request->input('rake_number') : null;
         $loaderId = $request->integer('loader_id') ?: null;
+        $loaderOperatorName = null;
+        if ($request->filled('loader_operator')) {
+            $t = mb_trim((string) $request->input('loader_operator'));
+            $loaderOperatorName = $t !== '' ? $t : null;
+        }
         $shift = $request->filled('shift') ? (string) $request->input('shift') : null;
         $penaltyTypeId = $request->integer('penalty_type') ?: null;
+
+        $underloadThresholdPercent = 1.0;
+        if ($request->filled('underload_threshold')) {
+            $raw = $request->input('underload_threshold');
+            $parsed = is_numeric($raw) ? (float) $raw : null;
+            if ($parsed !== null && ! is_nan($parsed)) {
+                $underloadThresholdPercent = max(0.0, min(100.0, $parsed));
+            }
+        }
 
         $dailyRakeDate = $this->parseSingleDate($request, 'daily_rake_date', now()->subDay()->startOfDay());
         $coalTransportDate = $this->parseSingleDate($request, 'coal_transport_date', now()->subDay()->startOfDay());
@@ -77,8 +93,10 @@ final class DashboardFilterResolver
             'power_plant' => $powerPlant,
             'rake_number' => $rakeNumber,
             'loader_id' => $loaderId,
+            'loader_operator_name' => $loaderOperatorName,
             'shift' => $shift,
             'penalty_type_id' => $penaltyTypeId,
+            'underload_threshold_percent' => $underloadThresholdPercent,
         ];
 
         return [
@@ -90,8 +108,10 @@ final class DashboardFilterResolver
             'powerPlant' => $powerPlant,
             'rakeNumber' => $rakeNumber,
             'loaderId' => $loaderId,
+            'loaderOperatorName' => $loaderOperatorName,
             'shift' => $shift,
             'penaltyTypeId' => $penaltyTypeId,
+            'underloadThresholdPercent' => $underloadThresholdPercent,
             'dailyRakeDate' => $dailyRakeDate,
             'coalTransportDate' => $coalTransportDate,
             'section' => $section,

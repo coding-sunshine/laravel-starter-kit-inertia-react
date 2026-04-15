@@ -24,11 +24,16 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 type SidingOption = { id: number; name: string; code: string };
 
+type LoaderProgressStatus = 'complete' | 'partial' | 'empty' | 'none' | 'no_wagons';
+
 type RakeRow = {
     id: number;
     rake_number: string;
     loading_date: string | null;
     siding_label: string | null;
+    loader_progress_status: LoaderProgressStatus;
+    loader_progress_loaded: number;
+    loader_progress_total: number;
 };
 
 interface Props {
@@ -98,6 +103,21 @@ function detectDateFilterOption(value: unknown): DateFilterOption {
 }
 
 const ALL_SIDINGS_VALUE = 'all';
+
+function rakeLoaderRowBackgroundClass(status: LoaderProgressStatus): string {
+    switch (status) {
+        case 'complete':
+            return 'bg-green-100 dark:bg-green-950/50';
+        case 'empty':
+            return 'bg-red-100 dark:bg-red-950/50';
+        case 'no_wagons':
+            return 'bg-red-300 dark:bg-red-950/80';
+        case 'partial':
+            return 'bg-amber-100 dark:bg-amber-950/50';
+        default:
+            return '';
+    }
+}
 
 export default function RakeLoaderIndex({
     tableData,
@@ -429,6 +449,9 @@ export default function RakeLoaderIndex({
                                 tableName="rake-loader-list"
                                 preserveSearchParams={['siding_id']}
                                 onRowClick={openRakeLoading}
+                                rowClassName={(row) =>
+                                    rakeLoaderRowBackgroundClass(row.loader_progress_status ?? 'none')
+                                }
                                 options={{
                                     quickViews: false,
                                     customQuickViews: false,

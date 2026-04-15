@@ -5,21 +5,31 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Models\Loader;
+use App\Models\LoaderOperator;
 use App\Models\Siding;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
-class LoadersController extends Controller
+final class LoadersController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
         $loaders = Loader::with('siding')->orderBy('loader_name')->get();
+        $loaderOperators = LoaderOperator::query()
+            ->with('siding:id,name,code')
+            ->orderBy('name')
+            ->get();
+        $sidings = Siding::query()->orderBy('name')->get(['id', 'name', 'code']);
+        $tab = $request->query('tab') === 'operators' ? 'operators' : 'loaders';
 
         return Inertia::render('MasterData/Loaders/Index', [
             'loaders' => $loaders,
+            'loaderOperators' => $loaderOperators,
+            'sidings' => $sidings,
+            'tab' => $tab,
         ]);
     }
 

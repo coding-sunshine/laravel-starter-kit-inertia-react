@@ -213,7 +213,10 @@ export function WeighmentWorkflow({ rake, disabled }: WeighmentWorkflowProps) {
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                        window.location.href = `/weighments/template-xlsx?rake_id=${encodeURIComponent(String(rake.id))}`;
+                        const returnTo = encodeURIComponent(
+                            `${window.location.pathname}${window.location.search}`,
+                        );
+                        window.location.href = `/weighments/template-xlsx?rake_id=${encodeURIComponent(String(rake.id))}&return_to=${returnTo}`;
                     }}
                     data-pan="rake-weighment-download-xlsx-template"
                 >

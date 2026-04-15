@@ -7,8 +7,10 @@ namespace App\DataTables;
 use App\Models\Indent;
 use App\Models\Rake;
 use App\Models\Siding;
+use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
 use Machour\DataTable\AbstractDataTable;
 use Machour\DataTable\Columns\Column;
 use Machour\DataTable\Filters\OperatorFilter;
@@ -67,13 +69,7 @@ final class IndentDataTable extends AbstractDataTable
     public static function tableColumns(): array
     {
         $user = request()->user();
-        $sidingIds = $user && $user->isSuperAdmin()
-            ? Siding::query()->orderBy('name')->pluck('id')->all()
-            : ($user ? $user->sidings()->orderBy('name')->get()->pluck('id')->all() : []);
-
-        if ($user && ! $user->isSuperAdmin() && $sidingIds === [] && $user->siding_id !== null) {
-            $sidingIds = [(int) $user->siding_id];
-        }
+        $sidingIds = self::resolveSidingIdsForIndentList($user);
 
         /** @var list<array{label: string, value: string}> $sidingFilterOptions */
         $sidingFilterOptions = [];
@@ -106,37 +102,73 @@ final class IndentDataTable extends AbstractDataTable
         ];
     }
 
-    public static function tableBaseQuery(): Builder
+    /**
+     * Base indent list query (siding scope + indent_date scope). Matches `/indents` DataTable and API index.
+     *
+     * When `filter[indent_date]` is absent: applies legacy `from_date`/`to_date` if present, otherwise current calendar month on `indent_date` (same as the website default).
+     */
+    public static function listQueryForRequest(Request $request): Builder
     {
-        $user = request()->user();
-        $sidingIds = $user && $user->isSuperAdmin()
-            ? Siding::query()->pluck('id')->all()
-            : ($user ? $user->sidings()->get()->pluck('id')->all() : []);
-
-        // Backward compatibility: some legacy users only have `users.siding_id`
-        // and no rows in the `user_siding` pivot table.
-        if ($user && ! $user->isSuperAdmin() && $sidingIds === [] && $user->siding_id !== null) {
-            $sidingIds = [(int) $user->siding_id];
-        }
+        $user = $request->user();
+        $sidingIds = self::resolveSidingIdsForIndentList($user);
 
         $query = Indent::query()
-            ->with([
-                'siding:id,name,code',
-                'rake:id,indent_id,rake_number',
-                'rake.rakeWeighments' => fn ($q) => $q->select(['id', 'rake_id']),
-            ])
             ->whereIn('siding_id', $sidingIds);
 
         /** @var array<string, mixed> $filters */
-        $filters = request()->query('filter', []);
+        $filters = $request->query('filter', []);
         $hasExplicitIndentDateFilter = array_key_exists('indent_date', $filters);
 
         if (! $hasExplicitIndentDateFilter) {
-            $monthStart = CarbonImmutable::now()->startOfMonth()->toDateString();
-            $monthEnd = CarbonImmutable::now()->endOfMonth()->toDateString();
+            if ($request->filled('from_date') || $request->filled('to_date')) {
+                if ($request->filled('from_date')) {
+                    $query->whereDate('indent_date', '>=', $request->date('from_date'));
+                }
+                if ($request->filled('to_date')) {
+                    $query->whereDate('indent_date', '<=', $request->date('to_date'));
+                }
+            } else {
+                $monthStart = CarbonImmutable::now()->startOfMonth()->toDateString();
+                $monthEnd = CarbonImmutable::now()->endOfMonth()->toDateString();
 
-            $query->whereBetween('indent_date', [$monthStart, $monthEnd]);
+                $query->whereBetween('indent_date', [$monthStart, $monthEnd]);
+            }
         }
+
+        return $query;
+    }
+
+    /**
+     * @return list<int>
+     */
+    public static function resolveSidingIdsForIndentList(?User $user): array
+    {
+        if ($user === null) {
+            return [];
+        }
+
+        if ($user->isSuperAdmin()) {
+            return Siding::query()->pluck('id')->all();
+        }
+
+        $sidingIds = $user->sidings()->get()->pluck('id')->all();
+
+        if ($sidingIds === [] && $user->siding_id !== null) {
+            return [(int) $user->siding_id];
+        }
+
+        return $sidingIds;
+    }
+
+    public static function tableBaseQuery(): Builder
+    {
+        $query = self::listQueryForRequest(request());
+
+        $query->with([
+            'siding:id,name,code',
+            'rake:id,indent_id,rake_number',
+            'rake.rakeWeighments' => fn ($q) => $q->select(['id', 'rake_id']),
+        ]);
 
         return $query;
     }
@@ -216,6 +248,7 @@ final class IndentDataTable extends AbstractDataTable
                     $direction,
                 );
             }),
+            'id',
             'indent_number',
             'indent_date',
             'expected_loading_date',

@@ -24,6 +24,9 @@ final class RakeLoaderListDataTable extends AbstractDataTable
         public string $rake_number,
         public ?string $loading_date,
         public ?string $siding_label,
+        public string $loader_progress_status,
+        public int $loader_progress_loaded,
+        public int $loader_progress_total,
     ) {}
 
     public static function fromModel(Rake $model): self
@@ -37,11 +40,16 @@ final class RakeLoaderListDataTable extends AbstractDataTable
             }
         }
 
+        $progress = $model->rakeLoaderProgressMetrics();
+
         return new self(
             id: $model->id,
             rake_number: (string) $model->rake_number,
             loading_date: $model->loading_date?->toDateString(),
             siding_label: $label,
+            loader_progress_status: $progress['status'],
+            loader_progress_loaded: $progress['loaded'],
+            loader_progress_total: $progress['total'],
         );
     }
 
@@ -108,7 +116,9 @@ final class RakeLoaderListDataTable extends AbstractDataTable
     {
         $query = Rake::query()->with([
             'siding:id,code,name',
-        ]);
+            'wagons:id,rake_id,wagon_sequence,wagon_number,is_unfit',
+            'wagonLoadings:id,rake_id,wagon_id,loaded_quantity_mt',
+        ])->withCount(['rakeWeighments', 'rakeWagonWeighments']);
 
         $query->where(function (Builder $q): void {
             $q->whereNull('data_source')

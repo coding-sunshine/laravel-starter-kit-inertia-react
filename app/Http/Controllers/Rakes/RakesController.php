@@ -9,6 +9,7 @@ use App\Actions\SyncTxrUnfitFlagsToWagonsAction;
 use App\DataTables\RakeDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\AppliedPenalty;
+use App\Models\LoaderOperator;
 use App\Models\PowerPlant;
 use App\Models\Rake;
 use App\Models\RakeCharge;
@@ -236,6 +237,20 @@ final class RakesController extends Controller
             ->where('is_active', true)
             ->orderBy('name')
             ->get(['id', 'name', 'code']);
+
+        $sidingIdForOperators = $rake->siding_id;
+        $rakeArray['loaderOperatorOptions'] = LoaderOperator::query()
+            ->where('is_active', true)
+            ->where(function ($q) use ($sidingIdForOperators): void {
+                $q->whereNull('siding_id');
+                if ($sidingIdForOperators !== null) {
+                    $q->orWhere('siding_id', $sidingIdForOperators);
+                }
+            })
+            ->orderBy('name')
+            ->pluck('name')
+            ->values()
+            ->all();
 
         return Inertia::render('rakes/show', [
             'rake' => $rakeArray,

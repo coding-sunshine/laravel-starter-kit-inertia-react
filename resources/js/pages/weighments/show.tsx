@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
+import { useCan } from '@/hooks/use-can';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router, usePage } from '@inertiajs/react';
 import { Trash2 } from 'lucide-react';
@@ -18,6 +19,8 @@ interface Rake {
     rake_type: string | null;
     wagon_count: number | null;
     state: string | null;
+    /** When `historical_weighment_pdf`, delete uses standalone `weighments.destroy`; otherwise hub-style rake delete. */
+    data_source?: string | null;
     siding?: Siding | null;
 }
 
@@ -78,6 +81,12 @@ export default function WeighmentShow({
 }: Props) {
     const { flash } = usePage<{ flash?: { success?: string } }>().props;
 
+    const canDeleteRakeWeighment = useCan([
+        'sections.rakes.update',
+        'sections.weighments.upload',
+        'sections.weighments.delete',
+    ]);
+
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Weighments', href: '/weighments' },
         { title: `Weighment #${weighment.id}`, href: `/weighments/${weighment.id}` },
@@ -86,6 +95,10 @@ export default function WeighmentShow({
     const rake = weighment.rake;
     const siding = rake?.siding ?? null;
     const rows = weighment.rake_wagon_weighments ?? [];
+    const isHistoricalRake = rake?.data_source === 'historical_weighment_pdf';
+    const showDeleteButton =
+        (isHistoricalRake && can_delete_weighment) ||
+        (!isHistoricalRake && canDeleteRakeWeighment && Boolean(rake));
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -99,24 +112,37 @@ export default function WeighmentShow({
 
                 <div className="flex flex-wrap items-center justify-between gap-4">
                     <h1 className="text-3xl font-bold">Weighment details</h1>
-                    {can_delete_weighment && (
+                    {showDeleteButton && (
                         <Button
                             variant="destructive"
                             size="sm"
                             type="button"
+                            data-pan="weighments-show-delete-weighment"
                             onClick={() => {
-                                if (
-                                    !window.confirm(
-                                        'Remove this historical weighment import? The associated rake and wagon data created from this PDF will be deleted. This cannot be undone.',
-                                    )
-                                ) {
+                                if (isHistoricalRake) {
+                                    if (
+                                        !window.confirm(
+                                            'Remove this historical weighment import? The associated rake and wagon data created from this PDF will be deleted. This cannot be undone.',
+                                        )
+                                    ) {
+                                        return;
+                                    }
+                                    router.delete(`/weighments/${weighment.id}`);
                                     return;
                                 }
-                                router.delete(`/weighments/${weighment.id}`);
+                                if (!rake) {
+                                    return;
+                                }
+                                if (!window.confirm('Delete all weighment data for this rake?')) {
+                                    return;
+                                }
+                                router.delete(
+                                    `/rakes/${rake.id}/weighments?return_to=weighments`,
+                                );
                             }}
                         >
                             <Trash2 className="mr-2 h-4 w-4" />
-                            Delete import
+                            {isHistoricalRake ? 'Delete import' : 'Delete weighment'}
                         </Button>
                     )}
                 </div>

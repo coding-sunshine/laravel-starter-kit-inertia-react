@@ -6,12 +6,14 @@ namespace App\Http\Controllers\Rakes;
 
 use App\DataTables\RakeLoaderListDataTable;
 use App\Http\Controllers\Controller;
+use App\Models\LoaderOperator;
 use App\Models\Rake;
 use App\Models\RakeWeighment;
 use App\Models\Siding;
 use App\Models\User;
 use App\Services\SidingContext;
 use App\Services\TenantContext;
+use App\Support\Rakes\RakeLoaderWagonNumber;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -73,7 +75,7 @@ final class RakeLoaderController extends Controller
         $wagons = $rake->wagons
             ->sortBy('wagon_sequence')
             ->values()
-            ->reject(static fn ($w): bool => self::shouldSkipLoaderWeighmentWagonNumber($w->wagon_number));
+            ->reject(static fn ($w): bool => RakeLoaderWagonNumber::isWeighmentPlaceholder($w->wagon_number));
 
         $allowedWagonIds = $wagons->pluck('id')->flip();
 
@@ -81,6 +83,20 @@ final class RakeLoaderController extends Controller
             ->filter(static fn ($l): bool => $allowedWagonIds->has($l->wagon_id))
             ->sortBy(static fn ($l): int => $l->wagon?->wagon_sequence ?? $l->id)
             ->values();
+
+        $sidingId = $rake->siding_id;
+        $loaderOperatorOptions = LoaderOperator::query()
+            ->where('is_active', true)
+            ->where(function ($q) use ($sidingId): void {
+                $q->whereNull('siding_id');
+                if ($sidingId !== null) {
+                    $q->orWhere('siding_id', $sidingId);
+                }
+            })
+            ->orderBy('name')
+            ->pluck('name')
+            ->values()
+            ->all();
 
         return [
             'id' => $rake->id,
@@ -132,14 +148,8 @@ final class RakeLoaderController extends Controller
                     ->values()
                     ->all(),
             ] : null,
+            'loaderOperatorOptions' => $loaderOperatorOptions,
         ];
-    }
-
-    private static function shouldSkipLoaderWeighmentWagonNumber(?string $wagonNumber): bool
-    {
-        $trimmed = $wagonNumber !== null ? mb_trim($wagonNumber) : '';
-
-        return $trimmed !== '' && preg_match('/^W\d+$/', $trimmed) === 1;
     }
 
     /**

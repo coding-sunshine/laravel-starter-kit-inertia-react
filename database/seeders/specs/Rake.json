@@ -274,6 +274,10 @@
             "type": "hasMany",
             "model": "Weighment"
         },
+        "rakeWagonWeighments": {
+            "type": "hasMany",
+            "model": "RakeWagonWeighment"
+        },
         "txr": {
             "type": "hasOne",
             "model": "Txr"

@@ -33,6 +33,7 @@ use App\Http\Controllers\HistoricalMineController;
 use App\Http\Controllers\HistoricalRakeController;
 use App\Http\Controllers\Indents\IndentsController;
 use App\Http\Controllers\InvitationAcceptController;
+use App\Http\Controllers\LoaderOperatorsController;
 use App\Http\Controllers\LoadersController;
 use App\Http\Controllers\Notifications\NotificationReadController;
 use App\Http\Controllers\OnboardingController;
@@ -86,6 +87,8 @@ use App\Http\Controllers\VehicleDispatchController;
 use App\Http\Controllers\VehicleWorkorderController;
 use App\Http\Controllers\WagonUnfitController;
 use App\Http\Controllers\Weighments\WeighmentsController;
+use App\Models\User;
+use App\Services\Auth\HomeRedirectService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
@@ -125,9 +128,18 @@ Route::get('up', function (): Illuminate\Http\JsonResponse {
 })->name('up');
 
 Route::get('/', function (): RedirectResponse {
-    return auth()->check()
-        ? redirect()->route('dashboard')
-        : redirect()->route('login');
+    if (! auth()->check()) {
+        return redirect()->route('login');
+    }
+
+    $user = auth()->user();
+    if (! $user instanceof User) {
+        return redirect()->route('dashboard');
+    }
+
+    $homeRoute = resolve(HomeRedirectService::class)->getHomeRouteFor($user);
+
+    return redirect()->route($homeRoute);
 })->name('home');
 
 // Invitation accept (public show, auth store)
@@ -277,6 +289,8 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         Route::resource('power-plants', PowerPlantController::class);
         Route::resource('sidings', SidingsController::class);
         Route::resource('loaders', LoadersController::class);
+        Route::post('loader-operators', [LoaderOperatorsController::class, 'store'])->name('loader-operators.store');
+        Route::put('loader-operators/{loaderOperator}', [LoaderOperatorsController::class, 'update'])->name('loader-operators.update');
         Route::resource('penalty-types', PenaltyTypesController::class);
         Route::resource('section-timers', SectionTimersController::class);
         Route::get('shift-timings', [ShiftTimingsController::class, 'index'])->name('shift-timings.index');

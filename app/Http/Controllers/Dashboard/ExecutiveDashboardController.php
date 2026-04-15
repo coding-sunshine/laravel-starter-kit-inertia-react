@@ -25,6 +25,7 @@ use App\Models\SidingOpeningBalance;
 use App\Models\SidingVehicleDispatch;
 use App\Models\StockLedger;
 use App\Models\VehicleUnload;
+use App\Models\WagonLoading;
 use App\Services\CoalTransportReport\CoalTransportReportDataBuilder;
 use App\Support\Dashboard\DashboardFilterResolver;
 use App\Support\Dashboard\DashboardWidgetPermissions;
@@ -32,6 +33,7 @@ use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -87,6 +89,8 @@ final class ExecutiveDashboardController extends Controller
                 'power_plant' => $resolved['powerPlant'],
                 'rake_number' => $resolved['rakeNumber'],
                 'loader_id' => $resolved['loaderId'],
+                'loader_operator' => $resolved['loaderOperatorName'],
+                'underload_threshold' => $resolved['underloadThresholdPercent'],
                 'shift' => $resolved['shift'],
                 'penalty_type' => $resolved['penaltyTypeId'],
                 'daily_rake_date' => $resolved['dailyRakeDate']->toDateString(),
@@ -239,9 +243,12 @@ final class ExecutiveDashboardController extends Controller
         $coalTotals = [];
 
         foreach ($periods as $key => [$fromDate, $toDate]) {
-            $roadRow = SidingVehicleDispatch::query()
-                ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
-                ->whereRaw($this->dateOnlyBetweenSql('issued_on'), [$fromDate, $toDate])
+            $roadRow = $this->whereIssuedOnDateBetween(
+                SidingVehicleDispatch::query()
+                    ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds)),
+                $fromDate,
+                $toDate,
+            )
                 ->selectRaw('count(*) as trips, coalesce(sum(mineral_weight), 0) as qty')
                 ->first();
 
@@ -318,9 +325,12 @@ final class ExecutiveDashboardController extends Controller
         }
 
         foreach ($periods as $key => [$fromDate, $toDate]) {
-            $roadRows = SidingVehicleDispatch::query()
-                ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
-                ->whereRaw($this->dateOnlyBetweenSql('issued_on'), [$fromDate, $toDate])
+            $roadRows = $this->whereIssuedOnDateBetween(
+                SidingVehicleDispatch::query()
+                    ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds)),
+                $fromDate,
+                $toDate,
+            )
                 ->selectRaw('siding_id, count(*) as trips, coalesce(sum(mineral_weight), 0) as qty')
                 ->groupBy('siding_id')
                 ->get();
@@ -380,9 +390,12 @@ final class ExecutiveDashboardController extends Controller
             $fyRangeTo = $rowFyEnd->toDateString();
             $rowLabel = sprintf('%d-%02d', $y, (int) $rowFyStart->copy()->addYear()->format('y'));
 
-            $roadRow = SidingVehicleDispatch::query()
-                ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
-                ->whereRaw($this->dateOnlyBetweenSql('issued_on'), [$fyRangeFrom, $fyRangeTo])
+            $roadRow = $this->whereIssuedOnDateBetween(
+                SidingVehicleDispatch::query()
+                    ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds)),
+                $fyRangeFrom,
+                $fyRangeTo,
+            )
                 ->selectRaw('count(*) as trips, coalesce(sum(mineral_weight), 0) as qty')
                 ->first();
 
@@ -434,9 +447,12 @@ final class ExecutiveDashboardController extends Controller
         $tillDateFromDate = $tillDateFrom->toDateString();
         $tillDateToDate = $anchor->toDateString();
 
-        $tillRoad = SidingVehicleDispatch::query()
-            ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
-            ->whereRaw($this->dateOnlyBetweenSql('issued_on'), [$tillDateFromDate, $tillDateToDate])
+        $tillRoad = $this->whereIssuedOnDateBetween(
+            SidingVehicleDispatch::query()
+                ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds)),
+            $tillDateFromDate,
+            $tillDateToDate,
+        )
             ->selectRaw('count(*) as trips, coalesce(sum(mineral_weight), 0) as qty')
             ->first();
 
@@ -665,11 +681,33 @@ final class ExecutiveDashboardController extends Controller
             ->values()
             ->all();
 
+        $loaderOperatorsByLoader = [];
+        if ($sidingIds !== []) {
+            $loaderScopeIds = Loader::query()
+                ->whereIn('siding_id', $sidingIds)
+                ->orderBy('id')
+                ->pluck('id');
+
+            foreach ($loaderScopeIds as $lid) {
+                $names = DB::table('wagon_loading')
+                    ->where('loader_id', $lid)
+                    ->whereNotNull('loader_operator_name')
+                    ->where('loader_operator_name', '!=', '')
+                    ->distinct()
+                    ->pluck('loader_operator_name')
+                    ->map(fn (mixed $n): string => (string) $n)
+                    ->all();
+                sort($names);
+                $loaderOperatorsByLoader[(string) $lid] = array_values(array_unique($names));
+            }
+        }
+
         return [
             'powerPlants' => $powerPlants,
             'loaders' => $loaders,
             'shifts' => $shifts,
             'penaltyTypes' => $penaltyTypes,
+            'loaderOperatorsByLoader' => $loaderOperatorsByLoader,
         ];
     }
 
@@ -1084,9 +1122,10 @@ final class ExecutiveDashboardController extends Controller
      * Siding stock from stock_ledger only (no date filter).
      * Receipts (daily_vehicle_entry_id) increase stock; dispatches (rake_id) decrease it.
      * Stock = latest ledger row's closing_balance_mt per siding as of the current request time (live).
+     * last_receipt_at / last_dispatch_at = MAX(created_at) for receipt vs dispatch rows (corrections excluded).
      *
      * @param  array<int>  $sidingIds
-     * @return array<int, array{siding_id: int, opening_balance_mt: float, closing_balance_mt: float, total_rakes: int, received_mt: float, dispatched_mt: float}>
+     * @return array<int, array{siding_id: int, opening_balance_mt: float, closing_balance_mt: float, total_rakes: int, received_mt: float, dispatched_mt: float, last_receipt_at: string|null, last_dispatch_at: string|null}>
      */
     public function buildSidingStocks(array $sidingIds, CarbonInterface $from, CarbonInterface $to): array
     {
@@ -1126,6 +1165,20 @@ final class ExecutiveDashboardController extends Controller
             ->groupBy('siding_id')
             ->pluck('total', 'siding_id');
 
+        $lastReceiptAtBySiding = StockLedger::query()
+            ->whereIn('siding_id', $sidingIds)
+            ->where('transaction_type', 'receipt')
+            ->selectRaw('siding_id, MAX(created_at) as last_at')
+            ->groupBy('siding_id')
+            ->pluck('last_at', 'siding_id');
+
+        $lastDispatchAtBySiding = StockLedger::query()
+            ->whereIn('siding_id', $sidingIds)
+            ->where('transaction_type', 'dispatch')
+            ->selectRaw('siding_id, MAX(created_at) as last_at')
+            ->groupBy('siding_id')
+            ->pluck('last_at', 'siding_id');
+
         // Rake count in date range
         $rakeCountsBySiding = Rake::query()
             ->whereIn('siding_id', $sidingIds)
@@ -1148,6 +1201,9 @@ final class ExecutiveDashboardController extends Controller
                 $closing = $opening;
             }
 
+            $lastReceipt = $lastReceiptAtBySiding[$sid] ?? null;
+            $lastDispatch = $lastDispatchAtBySiding[$sid] ?? null;
+
             $result[$sid] = [
                 'siding_id' => $sid,
                 'opening_balance_mt' => $opening,
@@ -1155,6 +1211,8 @@ final class ExecutiveDashboardController extends Controller
                 'total_rakes' => (int) ($rakeCountsBySiding[$sid] ?? 0),
                 'received_mt' => (float) ($receivedBySiding[$sid] ?? 0),
                 'dispatched_mt' => abs((float) ($dispatchedBySiding[$sid] ?? 0)), // important fix
+                'last_receipt_at' => $lastReceipt !== null ? Carbon::parse($lastReceipt)->toIso8601String() : null,
+                'last_dispatch_at' => $lastDispatch !== null ? Carbon::parse($lastDispatch)->toIso8601String() : null,
             ];
         }
 
@@ -2281,6 +2339,10 @@ final class ExecutiveDashboardController extends Controller
     /**
      * Rake-wise performance: recent dispatched rakes with key metrics.
      *
+     * Each rake includes `wagon_overloads`: wagon rows from the latest rake weighment, with
+     * `over_load_mt`, `under_load_mt`, `cc_capacity_mt`, `net_weight_mt`, and `loader_id` from `wagon_loading` when present.
+     * Only operational rakes are included: {@see self::OPERATIONAL_RAKE_DATA_SOURCES} or null {@see Rake::$data_source} (same rule as `/rakes`).
+     *
      * @param  array<int>  $sidingIds
      * @param  array{power_plant: string|null, rake_number: string|null, loader_id: int|null, shift: string|null}  $filterContext
      * @return array<int, array<string, mixed>>
@@ -2296,7 +2358,11 @@ final class ExecutiveDashboardController extends Controller
         $rakeQuery = Rake::query()
             ->with('siding:id,name,code')
             ->whereIn('siding_id', $sidingIds)
-            ->whereBetween('created_at', [$fromDate, $toDate]);
+            ->whereBetween('loading_date', [$fromDate, $toDate])
+            ->where(function ($q): void {
+                $q->whereNull('data_source')
+                    ->orWhereIn('data_source', self::OPERATIONAL_RAKE_DATA_SOURCES);
+            });
         if (! empty($filterContext['rake_number'])) {
             $rakeQuery->where('rake_number', 'like', '%'.$filterContext['rake_number'].'%');
         }
@@ -2335,6 +2401,27 @@ final class ExecutiveDashboardController extends Controller
                 ->whereIn('id', $latestWeighmentIds)
                 ->pluck('rake_id', 'id')
                 ->all();
+
+            $wagonLoadingByRakeAndWagon = [];
+            if ($rakeIds !== []) {
+                $wagonLoadingRows = WagonLoading::query()
+                    ->whereIn('rake_id', $rakeIds)
+                    ->with('loader:id,loader_name')
+                    ->get(['rake_id', 'wagon_id', 'loader_id', 'loader_operator_name']);
+                foreach ($wagonLoadingRows as $wl) {
+                    if ($wl->wagon_id === null) {
+                        continue;
+                    }
+                    $wagonLoadingByRakeAndWagon[$wl->rake_id.'|'.$wl->wagon_id] = [
+                        'loader_id' => $wl->loader_id,
+                        'loader_name' => $wl->loader?->loader_name,
+                        'loader_operator_name' => $wl->loader_operator_name !== null && $wl->loader_operator_name !== ''
+                            ? (string) $wl->loader_operator_name
+                            : null,
+                    ];
+                }
+            }
+
             $wagonRows = RakeWagonWeighment::query()
                 ->whereIn('rake_weighment_id', $latestWeighmentIds)
                 ->with('wagon:id,wagon_number')
@@ -2348,9 +2435,23 @@ final class ExecutiveDashboardController extends Controller
                 if (! isset($wagonOverloadsByRakeId[$rakeId])) {
                     $wagonOverloadsByRakeId[$rakeId] = [];
                 }
+                $wagonId = $row->wagon_id;
+                $loaderKey = $wagonId !== null ? $rakeId.'|'.$wagonId : null;
+                $wlMeta = $loaderKey !== null ? ($wagonLoadingByRakeAndWagon[$loaderKey] ?? null) : null;
+                $loaderId = $wlMeta['loader_id'] ?? null;
+                $loaderName = $wlMeta['loader_name'] ?? null;
+                $loaderOperatorName = $wlMeta['loader_operator_name'] ?? null;
+
+                $ccMt = $row->cc_capacity_mt !== null ? round((float) $row->cc_capacity_mt, 2) : null;
                 $wagonOverloadsByRakeId[$rakeId][] = [
                     'wagon_number' => $row->wagon?->wagon_number ?? (string) $row->wagon_id,
                     'over_load_mt' => round((float) ($row->over_load_mt ?? 0), 2),
+                    'under_load_mt' => $row->under_load_mt !== null ? round((float) $row->under_load_mt, 2) : null,
+                    'cc_capacity_mt' => $ccMt,
+                    'net_weight_mt' => $row->net_weight_mt !== null ? round((float) $row->net_weight_mt, 2) : null,
+                    'loader_id' => $loaderId,
+                    'loader_name' => $loaderName,
+                    'loader_operator_name' => $loaderOperatorName,
                 ];
             }
         }
@@ -2384,10 +2485,17 @@ final class ExecutiveDashboardController extends Controller
     }
 
     /**
-     * Loader-wise overloading trends (last 6 months, monthly).
+     * Loader-wise overloading and underloading trends (monthly buckets scoped to the dashboard date range on `rakes.loading_date`).
+     *
+     * Rows are limited to rakes whose `loading_date` falls between `$from` and `$to` (inclusive, calendar dates). Month buckets use `rakes.loading_date`, not `wagon_loading.loading_time`.
+     * Each month row includes `loader_{id}_total`, `loader_{id}_overload`, and `loader_{id}_underload` (wagon counts from `wagon_loading` loaded qty vs effective CC: `wagon_loading.cc_capacity_mt` or else `wagons.pcc_weight_mt`).
+     * Optional `loader_id` / `loader_operator_name` in `$filterContext` narrow the aggregate, not the loader list returned for the UI.
+     * `underload_threshold_percent` (default 1.0): underloaded when loaded quantity is below effective CC and shortfall as % of CC is at least this value.
      *
      * @param  array<int>  $sidingIds
-     * @param  array{power_plant: string|null, rake_number: string|null, loader_id: int|null, shift: string|null}  $filterContext
+     * @param  CarbonInterface  $from  Dashboard filter start (inclusive), applied to `rakes.loading_date`.
+     * @param  CarbonInterface  $to  Dashboard filter end (inclusive).
+     * @param  array{power_plant: string|null, rake_number: string|null, loader_id: int|null, loader_operator_name?: string|null, shift: string|null, underload_threshold_percent?: float}  $filterContext
      * @return array{loaders: array<int, array{id: int, name: string, siding: string}>, monthly: array<int, array<string, mixed>>}
      */
     public function buildLoaderOverloadTrends(array $sidingIds, CarbonInterface $from, CarbonInterface $to, array $filterContext = []): array
@@ -2396,14 +2504,19 @@ final class ExecutiveDashboardController extends Controller
             return ['loaders' => [], 'monthly' => []];
         }
 
-        $loaderQuery = Loader::query()
+        $fromDate = Carbon::parse($from)->toDateString();
+        $toDate = Carbon::parse($to)->toDateString();
+
+        $underloadThresholdPercent = isset($filterContext['underload_threshold_percent'])
+            ? max(0.0, min(100.0, (float) $filterContext['underload_threshold_percent']))
+            : 1.0;
+
+        // Always return every loader in scope for the UI dropdown; do not narrow this list by `loader_id`.
+        $loaders = Loader::query()
             ->whereIn('siding_id', $sidingIds)
             ->with('siding:id,name')
-            ->orderBy('loader_name');
-        if (! empty($filterContext['loader_id'])) {
-            $loaderQuery->where('id', $filterContext['loader_id']);
-        }
-        $loaders = $loaderQuery->get(['id', 'loader_name', 'siding_id']);
+            ->orderBy('loader_name')
+            ->get(['id', 'loader_name', 'siding_id']);
 
         if ($loaders->isEmpty()) {
             return ['loaders' => [], 'monthly' => []];
@@ -2412,33 +2525,67 @@ final class ExecutiveDashboardController extends Controller
         $loaderIds = $loaders->pluck('id')->all();
         $loaderMap = $loaders->mapWithKeys(fn (Loader $l): array => [$l->id => $l->loader_name])->all();
 
-        $driver = DB::getDriverName();
-        $yearMonthSql = $driver === 'pgsql'
-            ? 'EXTRACT(YEAR FROM wl.loading_time)::int as y, EXTRACT(MONTH FROM wl.loading_time)::int as m'
-            : 'YEAR(wl.loading_time) as y, MONTH(wl.loading_time) as m';
+        // PostgreSQL only (month buckets from `rakes.loading_date`).
+        $yearMonthSql = 'EXTRACT(YEAR FROM r.loading_date)::int as y, EXTRACT(MONTH FROM r.loading_date)::int as m';
+        $groupByYearMonthLoader = 'EXTRACT(YEAR FROM r.loading_date), EXTRACT(MONTH FROM r.loading_date), wl.loader_id';
 
-        $fromDate = $from->toDateString();
-        $toDate = $to->toDateString();
-        $rows = DB::table('wagon_loading as wl')
-            ->join('rake_wagon_weighments as rww', function ($join) {
-                $join->on('wl.wagon_id', '=', 'rww.wagon_id')
-                    ->on('wl.rake_id', '=', DB::raw('(SELECT rake_id FROM rake_weighments WHERE id = rww.rake_weighment_id)'));
-            })
+        // Effective CC: snapshot on `wagon_loading` when present; otherwise `wagons.pcc_weight_mt` (rake load often saves loaded qty but not cc_capacity_mt).
+        $ccEff = 'COALESCE(wl.cc_capacity_mt, w.pcc_weight_mt)';
+        $overloadCase = "sum(CASE WHEN wl.loaded_quantity_mt IS NOT NULL AND {$ccEff} IS NOT NULL AND {$ccEff} > 0 AND wl.loaded_quantity_mt > {$ccEff} THEN 1 ELSE 0 END) as overloaded_wagons";
+        $underloadCase = "sum(CASE WHEN wl.loaded_quantity_mt IS NOT NULL AND {$ccEff} IS NOT NULL AND {$ccEff} > 0 AND wl.loaded_quantity_mt < {$ccEff} AND (({$ccEff} - wl.loaded_quantity_mt) * 100.0 / {$ccEff}) >= ? THEN 1 ELSE 0 END) as underloaded_wagons";
+
+        $wlQuery = DB::table('wagon_loading as wl')
+            ->join('rakes as r', 'r.id', '=', 'wl.rake_id')
+            ->join('wagons as w', 'w.id', '=', 'wl.wagon_id')
+            ->whereIn('r.siding_id', $sidingIds)
             ->whereIn('wl.loader_id', $loaderIds)
-            ->whereNotNull('wl.loading_time')
-            ->whereRaw($this->dateOnlyBetweenSql('wl.loading_time'), [$fromDate, $toDate])
-            ->selectRaw("{$yearMonthSql}, wl.loader_id, count(*) as wagons_loaded, sum(CASE WHEN rww.over_load_mt > 0 THEN 1 ELSE 0 END) as overloaded_wagons")
-            ->groupBy('y', 'm', 'wl.loader_id')
+            ->whereNotNull('r.loading_date')
+            ->whereRaw($this->dateOnlyBetweenSql('r.loading_date', true), [$fromDate, $toDate]);
+
+        if (! empty($filterContext['loader_id'])) {
+            $wlQuery->where('wl.loader_id', (int) $filterContext['loader_id']);
+        }
+
+        if (! empty($filterContext['loader_operator_name'])) {
+            $this->applyWagonLoadingLoaderOperatorFilter($wlQuery, (string) $filterContext['loader_operator_name']);
+        }
+
+        $rows = $wlQuery
+            ->selectRaw(
+                "{$yearMonthSql}, wl.loader_id, count(*) as wagons_loaded, {$overloadCase}, {$underloadCase}",
+                [$underloadThresholdPercent],
+            )
+            ->groupByRaw($groupByYearMonthLoader)
             ->get();
 
+        if ($rows->isEmpty()) {
+            return [
+                'loaders' => $loaders->map(fn (Loader $l): array => [
+                    'id' => $l->id,
+                    'name' => $l->loader_name,
+                    'siding' => $l->siding?->name ?? '—',
+                ])->values()->all(),
+                'monthly' => [],
+            ];
+        }
+
+        $minYm = null;
+        $maxYm = null;
+        foreach ($rows as $r) {
+            $ym = ((int) $r->y) * 100 + (int) $r->m;
+            $minYm = $minYm === null ? $ym : min($minYm, $ym);
+            $maxYm = $maxYm === null ? $ym : max($maxYm, $ym);
+        }
+
         $months = [];
-        $cursor = Carbon::parse($from)->startOfMonth();
-        $endMonth = Carbon::parse($to)->startOfMonth();
+        $cursor = Carbon::create(intdiv((int) $minYm, 100), (int) $minYm % 100, 1)->startOfMonth();
+        $endMonth = Carbon::create(intdiv((int) $maxYm, 100), (int) $maxYm % 100, 1)->startOfMonth();
         while ($cursor->lte($endMonth)) {
             $key = $cursor->format('Y-m');
             $months[$key] = ['month' => $cursor->format('M Y')];
             foreach ($loaderMap as $id => $name) {
                 $months[$key]["loader_{$id}_overload"] = 0;
+                $months[$key]["loader_{$id}_underload"] = 0;
                 $months[$key]["loader_{$id}_total"] = 0;
             }
             $cursor->addMonth();
@@ -2448,6 +2595,7 @@ final class ExecutiveDashboardController extends Controller
             $key = sprintf('%04d-%02d', (int) $r->y, (int) $r->m);
             if (isset($months[$key])) {
                 $months[$key]["loader_{$r->loader_id}_overload"] = (int) $r->overloaded_wagons;
+                $months[$key]["loader_{$r->loader_id}_underload"] = (int) $r->underloaded_wagons;
                 $months[$key]["loader_{$r->loader_id}_total"] = (int) $r->wagons_loaded;
             }
         }
@@ -2638,9 +2786,11 @@ final class ExecutiveDashboardController extends Controller
             ->get()
             ->keyBy('siding_id');
 
-        $vehiclesBySiding = SidingVehicleDispatch::query()
-            ->whereIn('siding_id', $sidingIds)
-            ->whereRaw($this->dateOnlyBetweenSql('issued_on'), [$fromDate, $toDate])
+        $vehiclesBySiding = $this->whereIssuedOnDateBetween(
+            SidingVehicleDispatch::query()->whereIn('siding_id', $sidingIds),
+            $fromDate,
+            $toDate,
+        )
             ->selectRaw('siding_id, count(DISTINCT truck_regd_no) as cnt')
             ->groupBy('siding_id')
             ->pluck('cnt', 'siding_id')
@@ -2720,6 +2870,19 @@ final class ExecutiveDashboardController extends Controller
     }
 
     /**
+     * Narrow `wagon_loading` rows by {@see WagonLoading::$loader_operator_name} (exact match; values come from dropdown).
+     */
+    private function applyWagonLoadingLoaderOperatorFilter(QueryBuilder $wlQuery, string $loaderOperatorName): void
+    {
+        $normalized = mb_trim($loaderOperatorName);
+        if ($normalized === '') {
+            return;
+        }
+
+        $wlQuery->where('wl.loader_operator_name', $normalized);
+    }
+
+    /**
      * Custom-range blocks for Executive Yesterday (road / rail / OB / coal).
      *
      * @param  array<int>  $sidingIds
@@ -2759,9 +2922,12 @@ final class ExecutiveDashboardController extends Controller
 
         $customRoadBySiding = collect();
         if ($wantRoad) {
-            $customRoadBySiding = SidingVehicleDispatch::query()
-                ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
-                ->whereRaw($this->dateOnlyBetweenSql('issued_on'), [$roadFrom, $roadTo])
+            $customRoadBySiding = $this->whereIssuedOnDateBetween(
+                SidingVehicleDispatch::query()
+                    ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds)),
+                $roadFrom,
+                $roadTo,
+            )
                 ->selectRaw('siding_id, count(*) as trips, coalesce(sum(mineral_weight), 0) as qty')
                 ->groupBy('siding_id')
                 ->get()
@@ -2823,9 +2989,12 @@ final class ExecutiveDashboardController extends Controller
         }
 
         if ($wantRoad) {
-            $customRoadTotalsRow = SidingVehicleDispatch::query()
-                ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
-                ->whereRaw($this->dateOnlyBetweenSql('issued_on'), [$roadFrom, $roadTo])
+            $customRoadTotalsRow = $this->whereIssuedOnDateBetween(
+                SidingVehicleDispatch::query()
+                    ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds)),
+                $roadFrom,
+                $roadTo,
+            )
                 ->selectRaw('count(*) as trips, coalesce(sum(mineral_weight), 0) as qty')
                 ->first();
         }
@@ -2875,9 +3044,12 @@ final class ExecutiveDashboardController extends Controller
                     'qty' => round((float) ($customRoadTotalsRow?->qty ?? 0), 2),
                 ],
                 resolveTotals: function (CarbonInterface $from, CarbonInterface $to) use ($sidingIds): array {
-                    $row = SidingVehicleDispatch::query()
-                        ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds))
-                        ->whereRaw($this->dateOnlyBetweenSql('issued_on'), [$from->toDateString(), $to->toDateString()])
+                    $row = $this->whereIssuedOnDateBetween(
+                        SidingVehicleDispatch::query()
+                            ->when($sidingIds !== [], fn ($q) => $q->whereIn('siding_id', $sidingIds)),
+                        $from->toDateString(),
+                        $to->toDateString(),
+                    )
                         ->selectRaw('count(*) as trips, coalesce(sum(mineral_weight), 0) as qty')
                         ->first();
 
@@ -3353,6 +3525,18 @@ final class ExecutiveDashboardController extends Controller
                     ->whereNotIn('data_source', self::OPERATIONAL_RAKE_DATA_SOURCES);
             });
         });
+    }
+
+    /**
+     * Calendar date range on `issued_on` for road dispatch (matches coal transport report and {@see VehicleDispatch::scopeForDate}).
+     *
+     * @param  Builder<SidingVehicleDispatch>  $query
+     * @return Builder<SidingVehicleDispatch>
+     */
+    private function whereIssuedOnDateBetween(Builder $query, string $fromDate, string $toDate): Builder
+    {
+        return $query->whereDate('issued_on', '>=', $fromDate)
+            ->whereDate('issued_on', '<=', $toDate);
     }
 
     /**

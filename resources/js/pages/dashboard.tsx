@@ -6,10 +6,18 @@ import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
+    DialogFooter,
     DialogHeader,
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
@@ -43,7 +51,7 @@ import {
     Zap,
 } from 'lucide-react';
 import { useSidingStockBroadcast } from '@/hooks/use-siding-stock-broadcast';
-import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     Area,
     AreaChart as RechartsAreaChart,
@@ -114,7 +122,8 @@ const SECTION_FILTER_KEYS = {
     operations: ['shift', 'daily_rake_date', 'coal_transport_date'] as const,
     'penalty-control': ['penalty_type'] as const,
     'rake-performance': ['rake_number', 'power_plant'] as const,
-    'loader-overload': ['loader_id'] as const,
+    /** Loader / operator live in the Loader-wise overloading card (not the sticky Filters bar). */
+    'loader-overload': [] as const,
     'power-plant': ['power_plant'] as const,
 } satisfies Record<
     (typeof DASHBOARD_SECTIONS)[number]['id'],
@@ -122,6 +131,7 @@ const SECTION_FILTER_KEYS = {
         | 'power_plant'
         | 'rake_number'
         | 'loader_id'
+        | 'loader_operator'
         | 'shift'
         | 'penalty_type'
         | 'daily_rake_date'
@@ -215,6 +225,8 @@ interface SidingStock {
     total_rakes: number;
     received_mt: number;
     dispatched_mt: number;
+    last_receipt_at: string | null;
+    last_dispatch_at: string | null;
 }
 
 interface SidingPerformanceItem {
@@ -259,7 +271,16 @@ interface RakePerformanceItem {
     loading_minutes: number | null;
     penalty_amount: number;
     penalty_count: number;
-    wagon_overloads?: Array<{ wagon_number: string; over_load_mt: number }>;
+    wagon_overloads?: Array<{
+        wagon_number: string;
+        over_load_mt: number;
+        under_load_mt?: number | null;
+        cc_capacity_mt?: number | null;
+        net_weight_mt?: number | null;
+        loader_id?: number | null;
+        loader_name?: string | null;
+        loader_operator_name?: string | null;
+    }>;
 }
 
 interface LoaderInfo {
@@ -294,10 +315,107 @@ interface DashboardFilters {
     power_plant: string | null;
     rake_number: string | null;
     loader_id: number | null;
+    loader_operator: string | null;
+    /** Minimum shortfall % of CC to count as underload on loader trends (default 1; URL `underload_threshold`). */
+    underload_threshold: number;
     shift: string | null;
     penalty_type: number | null;
     daily_rake_date?: string;
     coal_transport_date?: string;
+}
+
+/**
+ * Builds query params for `router.get` to the dashboard. Persists `loader_id` / `loader_operator`
+ * when `section=loader-overload` even though those keys are not in the sticky Filters bar.
+ */
+function buildDashboardGetParams(args: {
+    overrides: Record<string, unknown>;
+    filters: DashboardFilters;
+    currentSection: string | undefined;
+    allSidingIds: number[];
+    resolvedPeriod: string;
+    resolvedFrom: string;
+    resolvedTo: string;
+}): Record<string, unknown> {
+    const { overrides, filters, currentSection, allSidingIds, resolvedPeriod, resolvedFrom, resolvedTo } = args;
+    const sectionId = (currentSection ?? DEFAULT_DASHBOARD_SECTION) as keyof typeof SECTION_FILTER_KEYS;
+    const sectionFilterKeys = SECTION_FILTER_KEYS[sectionId] ?? [];
+    const sectionHasFilter = (key: string): boolean => (sectionFilterKeys as readonly string[]).includes(key);
+    const persistLoaderFilters = sectionId === 'loader-overload';
+
+    const params: Record<string, unknown> = {
+        period: (overrides.period as string | undefined) ?? resolvedPeriod,
+        ...overrides,
+    };
+
+    if (params.period === 'custom') {
+        params.from = (overrides.from as string | undefined) ?? resolvedFrom;
+        params.to = (overrides.to as string | undefined) ?? resolvedTo;
+    } else {
+        delete params.from;
+        delete params.to;
+    }
+
+    const sidingIds = (overrides.siding_ids as number[] | undefined) ?? filters.siding_ids;
+    if (sidingIds.length > 0 && sidingIds.length < allSidingIds.length) {
+        params.siding_ids = sidingIds.join(',');
+    }
+
+    if (sectionHasFilter('power_plant')) {
+        const powerPlant = (overrides.power_plant !== undefined ? overrides.power_plant : filters.power_plant) ?? '';
+        if (powerPlant !== '') params.power_plant = powerPlant;
+    }
+
+    if (sectionHasFilter('rake_number')) {
+        const rakeNumber = (overrides.rake_number !== undefined ? overrides.rake_number : filters.rake_number) ?? '';
+        if (rakeNumber !== '') params.rake_number = rakeNumber;
+    }
+
+    if (sectionHasFilter('loader_id') || persistLoaderFilters) {
+        const loaderId = (overrides.loader_id !== undefined ? overrides.loader_id : filters.loader_id) ?? '';
+        if (loaderId !== '' && loaderId !== null) params.loader_id = loaderId;
+    }
+
+    if (sectionHasFilter('loader_operator') || persistLoaderFilters) {
+        const loaderOp =
+            (overrides.loader_operator !== undefined ? overrides.loader_operator : filters.loader_operator) ?? null;
+        if (loaderOp != null && loaderOp !== '') params.loader_operator = loaderOp;
+    }
+
+    if (persistLoaderFilters) {
+        const utRaw = overrides.underload_threshold !== undefined ? overrides.underload_threshold : filters.underload_threshold;
+        const ut = typeof utRaw === 'number' ? utRaw : parseFloat(String(utRaw ?? '1'));
+        if (!Number.isNaN(ut) && ut !== 1) {
+            params.underload_threshold = ut;
+        }
+    }
+
+    if (sectionHasFilter('shift')) {
+        const shift = (overrides.shift !== undefined ? overrides.shift : filters.shift) ?? '';
+        if (shift !== '') params.shift = shift;
+    }
+
+    if (sectionHasFilter('penalty_type')) {
+        const penaltyType = (overrides.penalty_type !== undefined ? overrides.penalty_type : filters.penalty_type) ?? null;
+        if (penaltyType != null) params.penalty_type = penaltyType;
+    }
+
+    if (sectionHasFilter('daily_rake_date')) {
+        const dailyRakeDate =
+            (overrides.daily_rake_date !== undefined ? overrides.daily_rake_date : filters.daily_rake_date) ?? '';
+        if (dailyRakeDate !== '') params.daily_rake_date = dailyRakeDate;
+    }
+
+    if (sectionHasFilter('coal_transport_date')) {
+        const coalTransportDate =
+            (overrides.coal_transport_date !== undefined ? overrides.coal_transport_date : filters.coal_transport_date) ??
+            '';
+        if (coalTransportDate !== '') params.coal_transport_date = coalTransportDate;
+    }
+
+    if (currentSection) params.section = currentSection;
+
+    return params;
 }
 
 interface DailyRakeDetailsRow {
@@ -343,6 +461,8 @@ interface FilterOptions {
     loaders: Array<{ id: number; name: string; siding_name: string }>;
     shifts: Array<{ value: string; label: string }>;
     penaltyTypes: Array<{ value: string; label: string }>;
+    /** loader id (string) -> operator names for dashboard filters */
+    loaderOperatorsByLoader?: Record<string, string[]>;
 }
 
 interface DashboardKpis {
@@ -2107,12 +2227,22 @@ function DateWiseDispatchSection({ data }: { data: DateWiseDispatchData }) {
     );
 }
 
-function RakePerformanceSection({ rakes }: { rakes: RakePerformanceItem[] }) {
+function RakePerformanceSection({
+    rakes,
+    onNavigateToLoader,
+}: {
+    rakes: RakePerformanceItem[];
+    /** Second arg is the wagon chart’s underload threshold (% of CC) so loader trends can open with the same value. */
+    onNavigateToLoader: (loaderId: number, rakeUnderloadThresholdPercent: number) => void;
+}) {
     const rakeOptions = useMemo(() => {
         return rakes.map((r, i) => ({ idx: i, label: `${r.rake_number} — ${r.siding} (${r.dispatch_date})` }));
     }, [rakes]);
 
     const [selectedIdx, setSelectedIdx] = useState(0);
+    const [underloadThresholdPercent, setUnderloadThresholdPercent] = useState(1);
+    const [noLoaderDialogOpen, setNoLoaderDialogOpen] = useState(false);
+    const [noLoaderWagonNumber, setNoLoaderWagonNumber] = useState<string | null>(null);
     const r = rakes[selectedIdx] ?? rakes[0];
 
     const loadingHours = r.loading_minutes != null ? Math.floor(r.loading_minutes / 60) : null;
@@ -2126,10 +2256,75 @@ function RakePerformanceSection({ rakes }: { rakes: RakePerformanceItem[] }) {
         return items;
     }, [r]);
 
-    const wagonOverloadChartData = useMemo(() => {
+    const wagonBarChartData = useMemo(() => {
         const list = r.wagon_overloads ?? [];
-        return list.map((w, i) => ({ position: i + 1, wagon_number: w.wagon_number, over_load_mt: w.over_load_mt }));
-    }, [r.wagon_overloads]);
+        const thr = underloadThresholdPercent;
+        return list.map((w, i) => {
+            const over = w.over_load_mt > 0 ? w.over_load_mt : 0;
+            const underLoadMt = w.under_load_mt != null && w.under_load_mt > 0 ? w.under_load_mt : 0;
+            const cc = w.cc_capacity_mt ?? null;
+            let shortfallPct: number | null = null;
+            if (underLoadMt > 0 && cc != null && cc > 0) {
+                shortfallPct = (underLoadMt / cc) * 100;
+            }
+            let bar_mt = 0;
+            if (over > 0) {
+                bar_mt = over;
+            } else if (underLoadMt > 0 && shortfallPct != null && shortfallPct >= thr) {
+                bar_mt = -underLoadMt;
+            }
+            return {
+                position: i + 1,
+                wagon_number: w.wagon_number,
+                over_load_mt: w.over_load_mt,
+                under_load_mt: w.under_load_mt ?? null,
+                cc_capacity_mt: cc,
+                net_weight_mt: w.net_weight_mt ?? null,
+                loader_id: w.loader_id ?? null,
+                loader_name: w.loader_name ?? null,
+                loader_operator_name: w.loader_operator_name ?? null,
+                shortfall_pct: shortfallPct,
+                bar_mt,
+            };
+        });
+    }, [r.wagon_overloads, underloadThresholdPercent]);
+
+    /**
+     * Stock (MT) and wagon counts — same rules as bars: overload takes precedence; underload uses threshold % of CC.
+     */
+    const wagonWeighmentSummary = useMemo(() => {
+        const list = r.wagon_overloads ?? [];
+        const thr = underloadThresholdPercent;
+        let underloadStockMt = 0;
+        let overloadStockMt = 0;
+        let underloadWagons = 0;
+        let overloadWagons = 0;
+        for (const w of list) {
+            const over = w.over_load_mt != null && w.over_load_mt > 0 ? w.over_load_mt : 0;
+            if (over > 0) {
+                overloadStockMt += over;
+                overloadWagons++;
+                continue;
+            }
+            const underLoadMt = w.under_load_mt != null && w.under_load_mt > 0 ? w.under_load_mt : 0;
+            if (underLoadMt <= 0) {
+                continue;
+            }
+            const cc = w.cc_capacity_mt ?? null;
+            if (cc == null || cc <= 0) {
+                continue;
+            }
+            const shortfallPct = (underLoadMt / cc) * 100;
+            if (shortfallPct >= thr) {
+                underloadStockMt += underLoadMt;
+                underloadWagons++;
+            }
+        }
+        return { underloadStockMt, overloadStockMt, underloadWagons, overloadWagons };
+    }, [r.wagon_overloads, underloadThresholdPercent]);
+
+    const fmtMt = (n: number): string =>
+        n.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 
     const canPrev = selectedIdx > 0;
     const canNext = selectedIdx < rakes.length - 1 && rakes.length > 1;
@@ -2246,34 +2441,202 @@ function RakePerformanceSection({ rakes }: { rakes: RakePerformanceItem[] }) {
                     )}
                 </div>
                 <div>
-                    <p className="mb-2 text-xs font-medium text-gray-600">Wagon-wise overload (MT)</p>
-                    {wagonOverloadChartData.length > 0 ? (
-                        <ResponsiveContainer width="100%" height={220}>
+                    <div className="mb-3 flex flex-wrap items-end justify-between gap-x-3 gap-y-2">
+                        <div className="min-w-0 space-y-0.5">
+                            <p className="text-xs font-semibold text-gray-900">Wagon-wise overload / underload (MT)</p>
+                            <p className="text-[11px] font-semibold text-red-600">This data is based on weighment.</p>
+                        </div>
+                        <div className="flex flex-wrap items-end justify-end gap-2 sm:ml-auto">
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-8 gap-1.5 px-2.5 text-[11px] font-medium"
+                                    >
+                                        Weighment KPIs
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent align="end" sideOffset={6} className="w-[min(100vw-2rem,18rem)] p-3 text-xs shadow-lg">
+                                    <p className="mb-2 border-b border-gray-100 pb-2 text-[11px] font-semibold text-gray-900">
+                                        Weighment summary
+                                    </p>
+                                    <dl className="space-y-2 text-[11px]">
+                                        <div className="flex items-baseline justify-between gap-3">
+                                            <dt className="shrink-0 text-gray-600">Underload stock</dt>
+                                            <dd className="font-semibold tabular-nums text-amber-900">
+                                                {fmtMt(wagonWeighmentSummary.underloadStockMt)} MT
+                                            </dd>
+                                        </div>
+                                        <div className="flex items-baseline justify-between gap-3">
+                                            <dt className="shrink-0 text-gray-600">Overload stock</dt>
+                                            <dd className="font-semibold tabular-nums text-red-900">
+                                                {fmtMt(wagonWeighmentSummary.overloadStockMt)} MT
+                                            </dd>
+                                        </div>
+                                        <div className="flex items-baseline justify-between gap-3">
+                                            <dt className="shrink-0 text-gray-600">Underload wagons</dt>
+                                            <dd className="font-semibold tabular-nums text-gray-900">
+                                                {wagonWeighmentSummary.underloadWagons}
+                                            </dd>
+                                        </div>
+                                        <div className="flex items-baseline justify-between gap-3">
+                                            <dt className="shrink-0 text-gray-600">Overload wagons</dt>
+                                            <dd className="font-semibold tabular-nums text-gray-900">
+                                                {wagonWeighmentSummary.overloadWagons}
+                                            </dd>
+                                        </div>
+                                    </dl>
+                                </PopoverContent>
+                            </Popover>
+                            <div className="flex flex-col items-end gap-0.5">
+                                <label
+                                    htmlFor="underload-threshold"
+                                    className="text-[10px] font-medium leading-tight text-gray-600"
+                                >
+                                    Underload threshold (% of CC)
+                                </label>
+                                <Input
+                                    id="underload-threshold"
+                                    type="number"
+                                    inputMode="decimal"
+                                    min={0}
+                                    step={0.1}
+                                    className="h-8 w-[4.5rem] rounded-md border-gray-200 bg-white px-2 text-xs font-semibold tabular-nums"
+                                    value={underloadThresholdPercent}
+                                    onChange={(e) => {
+                                        const raw = e.target.value;
+                                        if (raw === '') {
+                                            setUnderloadThresholdPercent(0);
+                                            return;
+                                        }
+                                        const v = parseFloat(raw);
+                                        if (!Number.isNaN(v)) {
+                                            setUnderloadThresholdPercent(Math.max(0, v));
+                                        }
+                                    }}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                    {wagonBarChartData.length > 0 ? (
+                        <ResponsiveContainer width="100%" height={260}>
                             <RechartsBarChart
-                                data={wagonOverloadChartData}
+                                data={wagonBarChartData}
                                 margin={{ top: 8, right: 8, left: 8, bottom: 24 }}
                             >
                                 <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
                                 <XAxis dataKey="position" tick={{ fontSize: 10 }} interval={0} height={40} />
-                                <YAxis tick={{ fontSize: 11 }} tickFormatter={(v: number) => `${v} MT`} label={{ value: 'Overload (MT)', angle: -90, position: 'insideLeft', style: { fontSize: 10 } }} />
+                                <YAxis
+                                    tick={{ fontSize: 11 }}
+                                    tickFormatter={(v: number) => `${v} MT`}
+                                    label={{
+                                        value: 'Overload + / Underload − (MT)',
+                                        angle: -90,
+                                        position: 'insideLeft',
+                                        style: { fontSize: 10 },
+                                    }}
+                                />
+                                <ReferenceLine y={0} stroke="#9CA3AF" strokeWidth={1} />
                                 <Tooltip
                                     content={({ active, payload }) => {
                                         if (!active || !payload?.length) return null;
-                                        const p = payload[0];
-                                        const wagonNum = (p.payload as { wagon_number?: string }).wagon_number ?? '—';
-                                        const value = Number(p.value ?? 0);
+                                        const pl = payload[0]?.payload as {
+                                            wagon_number?: string;
+                                            bar_mt?: number;
+                                            over_load_mt?: number;
+                                            under_load_mt?: number | null;
+                                            cc_capacity_mt?: number | null;
+                                            net_weight_mt?: number | null;
+                                            loader_name?: string | null;
+                                            loader_operator_name?: string | null;
+                                            shortfall_pct?: number | null;
+                                        };
+                                        const wagonNum = pl.wagon_number ?? '—';
+                                        const cc =
+                                            pl.cc_capacity_mt != null
+                                                ? `${Number(pl.cc_capacity_mt).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} MT`
+                                                : '—';
+                                        const net =
+                                            pl.net_weight_mt != null
+                                                ? `${Number(pl.net_weight_mt).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} MT`
+                                                : '—';
+                                        const over =
+                                            pl.over_load_mt != null && pl.over_load_mt > 0
+                                                ? `${Number(pl.over_load_mt).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} MT`
+                                                : '—';
+                                        const under =
+                                            pl.under_load_mt != null && pl.under_load_mt > 0
+                                                ? `${Number(pl.under_load_mt).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} MT`
+                                                : '—';
+                                        const sf =
+                                            pl.shortfall_pct != null
+                                                ? `${pl.shortfall_pct.toLocaleString(undefined, { maximumFractionDigits: 2 })}%`
+                                                : '—';
+                                        const loaderLabel =
+                                            pl.loader_name != null && String(pl.loader_name).trim() !== ''
+                                                ? String(pl.loader_name).trim()
+                                                : '—';
+                                        const operatorLabel =
+                                            pl.loader_operator_name != null && String(pl.loader_operator_name).trim() !== ''
+                                                ? String(pl.loader_operator_name).trim()
+                                                : '—';
                                         return (
-                                            <div className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm shadow-lg">
+                                            <div className="max-w-xs rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm shadow-lg">
                                                 <p className="font-medium text-gray-800">Wagon {wagonNum}</p>
-                                                <p className="tabular-nums text-gray-600">Overload: {value.toLocaleString()} MT</p>
+                                                <p className="mt-1 text-gray-600">
+                                                    Loader: <span className="font-medium text-gray-900">{loaderLabel}</span>
+                                                </p>
+                                                <p className="text-gray-600">
+                                                    Operator: <span className="text-gray-900">{operatorLabel}</span>
+                                                </p>
+                                                <p className="mt-1 text-gray-600">
+                                                    CC: <span className="font-medium tabular-nums text-gray-900">{cc}</span>
+                                                </p>
+                                                <p className="text-gray-600">
+                                                    Net: <span className="tabular-nums">{net}</span>
+                                                </p>
+                                                <p className="text-gray-600">
+                                                    Overload: <span className="tabular-nums text-red-700">{over}</span>
+                                                </p>
+                                                <p className="text-gray-600">
+                                                    Underload: <span className="tabular-nums text-amber-700">{under}</span>
+                                                </p>
+                                                <p className="text-gray-600">
+                                                    Shortfall % of CC: <span className="tabular-nums">{sf}</span>
+                                                </p>
                                             </div>
                                         );
                                     }}
                                 />
-                                <Bar dataKey="over_load_mt" radius={[4, 4, 0, 0]} barSize={20} isAnimationActive>
-                                    {wagonOverloadChartData.map((entry, i) => (
-                                        <Cell key={i} fill={entry.over_load_mt > 0 ? '#DC2626' : '#E5E7EB'} />
-                                    ))}
+                                <Bar
+                                    dataKey="bar_mt"
+                                    radius={[4, 4, 4, 4]}
+                                    barSize={20}
+                                    isAnimationActive
+                                    className="cursor-pointer [&_.recharts-rectangle]:cursor-pointer"
+                                    onClick={(item) => {
+                                        const row = item?.payload as
+                                            | { loader_id?: number | null; wagon_number?: string }
+                                            | undefined;
+                                        if (row?.loader_id != null) {
+                                            onNavigateToLoader(row.loader_id, underloadThresholdPercent);
+                                            return;
+                                        }
+                                        setNoLoaderWagonNumber(row?.wagon_number ?? null);
+                                        setNoLoaderDialogOpen(true);
+                                    }}
+                                >
+                                    {wagonBarChartData.map((entry, i) => {
+                                        let fill = '#E5E7EB';
+                                        if (entry.bar_mt > 0) {
+                                            fill = '#DC2626';
+                                        } else if (entry.bar_mt < 0) {
+                                            fill = '#D97706';
+                                        }
+                                        return <Cell key={i} fill={fill} />;
+                                    })}
                                 </Bar>
                             </RechartsBarChart>
                         </ResponsiveContainer>
@@ -2296,29 +2659,140 @@ function RakePerformanceSection({ rakes }: { rakes: RakePerformanceItem[] }) {
                     )}
                 </div>
             </div>
+
+            <Dialog open={noLoaderDialogOpen} onOpenChange={setNoLoaderDialogOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Loader data unavailable</DialogTitle>
+                        <DialogDescription>
+                            {noLoaderWagonNumber != null
+                                ? `Loader data is not available for wagon ${noLoaderWagonNumber}.`
+                                : 'Loader data is not available for this wagon.'}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button type="button" onClick={() => setNoLoaderDialogOpen(false)}>
+                            OK
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
 
-function LoaderOverloadSection({ loaders, monthly }: { loaders: LoaderInfo[]; monthly: Record<string, unknown>[] }) {
-    const [selectedLoaderId, setSelectedLoaderId] = useState<number>(loaders[0]?.id ?? 0);
+function LoaderOverloadSection({
+    loaders,
+    monthly,
+    loaderIdFromUrl,
+    loaderOperatorFromUrl,
+    operatorNamesForSelectedLoader,
+    underloadThresholdPercent,
+    dateRangeDescription,
+    onLoaderOverloadChange,
+}: {
+    loaders: LoaderInfo[];
+    monthly: Record<string, unknown>[];
+    loaderIdFromUrl: number | null;
+    loaderOperatorFromUrl: string | null;
+    operatorNamesForSelectedLoader: string[];
+    underloadThresholdPercent: number;
+    /** Main dashboard filter range label (rake `loading_date`). */
+    dateRangeDescription: string;
+    onLoaderOverloadChange: (patch: {
+        loader_id?: number | null;
+        loader_operator?: string | null;
+        underload_threshold?: number | null;
+    }) => void;
+}) {
+    const selectedLoaderId = useMemo(() => {
+        if (loaderIdFromUrl != null && loaders.some((l) => l.id === loaderIdFromUrl)) {
+            return loaderIdFromUrl;
+        }
+        return loaders[0]?.id ?? 0;
+    }, [loaderIdFromUrl, loaders]);
 
     const selectedLoader = loaders.find((l) => l.id === selectedLoaderId) ?? loaders[0];
 
+    useEffect(() => {
+        if (operatorNamesForSelectedLoader.length === 0 && loaderOperatorFromUrl) {
+            onLoaderOverloadChange({ loader_operator: null });
+        }
+    }, [operatorNamesForSelectedLoader.length, loaderOperatorFromUrl, onLoaderOverloadChange]);
+
+    const [underloadThresholdDraft, setUnderloadThresholdDraft] = useState(() => String(underloadThresholdPercent));
+    useEffect(() => {
+        setUnderloadThresholdDraft(String(underloadThresholdPercent));
+    }, [underloadThresholdPercent]);
+
+    const underloadThresholdDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    useEffect(
+        () => () => {
+            if (underloadThresholdDebounceRef.current !== null) {
+                clearTimeout(underloadThresholdDebounceRef.current);
+            }
+        },
+        [],
+    );
+
+    const scheduleUnderloadThresholdNavigate = useCallback(
+        (raw: string) => {
+            if (underloadThresholdDebounceRef.current !== null) {
+                clearTimeout(underloadThresholdDebounceRef.current);
+            }
+            underloadThresholdDebounceRef.current = setTimeout(() => {
+                underloadThresholdDebounceRef.current = null;
+                if (raw === '') {
+                    onLoaderOverloadChange({ underload_threshold: 1 });
+                    return;
+                }
+                const v = parseFloat(raw);
+                if (Number.isNaN(v)) {
+                    return;
+                }
+                const clamped = Math.max(0, Math.min(100, v));
+                onLoaderOverloadChange({ underload_threshold: clamped });
+            }, 400);
+        },
+        [onLoaderOverloadChange],
+    );
+
     const stats = useMemo(() => {
-        if (!selectedLoader) return { totalWagons: 0, totalOverload: 0, rate: 0, trend: 0 };
-        const totalOverload = monthly.reduce(
-            (sum, m) => sum + ((m[`loader_${selectedLoader.id}_overload`] as number) ?? 0), 0,
-        );
-        const totalWagons = monthly.reduce(
-            (sum, m) => sum + ((m[`loader_${selectedLoader.id}_total`] as number) ?? 0), 0,
-        );
-        const rate = totalWagons > 0 ? (totalOverload / totalWagons) * 100 : 0;
+        if (!selectedLoader) {
+            return {
+                totalWagons: 0,
+                totalOverload: 0,
+                totalUnderload: 0,
+                overloadRate: 0,
+                underloadRate: 0,
+                overloadTrend: 0,
+                underloadTrend: 0,
+            };
+        }
+        const k = (suffix: string) => `loader_${selectedLoader.id}_${suffix}` as const;
+        const totalOverload = monthly.reduce((sum, m) => sum + ((m[k('overload')] as number) ?? 0), 0);
+        const totalUnderload = monthly.reduce((sum, m) => sum + ((m[k('underload')] as number) ?? 0), 0);
+        const totalWagons = monthly.reduce((sum, m) => sum + ((m[k('total')] as number) ?? 0), 0);
+        const overloadRate = totalWagons > 0 ? (totalOverload / totalWagons) * 100 : 0;
+        const underloadRate = totalWagons > 0 ? (totalUnderload / totalWagons) * 100 : 0;
         const lastTwo = monthly.slice(-2);
-        const trend = lastTwo.length === 2
-            ? ((lastTwo[1][`loader_${selectedLoader.id}_overload`] as number) ?? 0) - ((lastTwo[0][`loader_${selectedLoader.id}_overload`] as number) ?? 0)
-            : 0;
-        return { totalWagons, totalOverload, rate, trend };
+        const overloadTrend =
+            lastTwo.length === 2
+                ? ((lastTwo[1][k('overload')] as number) ?? 0) - ((lastTwo[0][k('overload')] as number) ?? 0)
+                : 0;
+        const underloadTrend =
+            lastTwo.length === 2
+                ? ((lastTwo[1][k('underload')] as number) ?? 0) - ((lastTwo[0][k('underload')] as number) ?? 0)
+                : 0;
+        return {
+            totalWagons,
+            totalOverload,
+            totalUnderload,
+            overloadRate,
+            underloadRate,
+            overloadTrend,
+            underloadTrend,
+        };
     }, [selectedLoader, monthly]);
 
     const trendData = useMemo(() => {
@@ -2326,27 +2800,35 @@ function LoaderOverloadSection({ loaders, monthly }: { loaders: LoaderInfo[]; mo
         return monthly.map((m) => ({
             month: m.month as string,
             overloaded: (m[`loader_${selectedLoader.id}_overload`] as number) ?? 0,
+            underloaded: (m[`loader_${selectedLoader.id}_underload`] as number) ?? 0,
             total: (m[`loader_${selectedLoader.id}_total`] as number) ?? 0,
         }));
     }, [monthly, selectedLoader]);
 
-    const barChartData = useMemo(() => {
+    const overloadUnderloadByMonthData = useMemo(() => {
         if (!selectedLoader) return [];
         return monthly.map((m) => ({
             month: m.month as string,
-            value: (m[`loader_${selectedLoader.id}_overload`] as number) ?? 0,
+            overloaded: (m[`loader_${selectedLoader.id}_overload`] as number) ?? 0,
+            underloaded: (m[`loader_${selectedLoader.id}_underload`] as number) ?? 0,
         }));
     }, [monthly, selectedLoader]);
 
     const avgOverload = useMemo(() => {
-        if (barChartData.length === 0) return 0;
-        const sum = barChartData.reduce((s, d) => s + d.value, 0);
-        return sum / barChartData.length;
-    }, [barChartData]);
+        if (overloadUnderloadByMonthData.length === 0) return 0;
+        const sum = overloadUnderloadByMonthData.reduce((s, d) => s + d.overloaded, 0);
+        return sum / overloadUnderloadByMonthData.length;
+    }, [overloadUnderloadByMonthData]);
+
+    const avgUnderload = useMemo(() => {
+        if (overloadUnderloadByMonthData.length === 0) return 0;
+        const sum = overloadUnderloadByMonthData.reduce((s, d) => s + d.underloaded, 0);
+        return sum / overloadUnderloadByMonthData.length;
+    }, [overloadUnderloadByMonthData]);
 
     if (!selectedLoader) return null;
 
-    const hasData = trendData.some((d) => d.total > 0 || d.overloaded > 0);
+    const hasData = trendData.some((d) => d.total > 0 || d.overloaded > 0 || d.underloaded > 0);
 
     return (
         <div className="dashboard-card rounded-xl border-0 p-6">
@@ -2354,30 +2836,103 @@ function LoaderOverloadSection({ loaders, monthly }: { loaders: LoaderInfo[]; mo
                 <SectionHeader
                     icon={AlertTriangle}
                     title="Loader-wise overloading trends"
-                    subtitle="Select a loader to view its performance"
+                    subtitle={
+                        dateRangeDescription
+                            ? `${dateRangeDescription} (rake loading date). Monthly buckets. Operators shown only when recorded for that loader.`
+                            : 'Monthly trends by rake loading date. Operators shown only when recorded for that loader.'
+                    }
                 />
-                <Select value={String(selectedLoaderId)} onValueChange={(v) => setSelectedLoaderId(Number(v))}>
-                    <SelectTrigger className="min-w-[200px] rounded-[8px] border border-gray-200 bg-white text-sm">
-                        <SelectValue placeholder="Select loader" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {loaders.map((l) => (
-                            <SelectItem key={l.id} value={String(l.id)}>
-                                {l.name} — {l.siding}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                    <div className="flex flex-col gap-0.5">
+                        <label htmlFor="loader-trends-underload-threshold" className="text-[11px] text-gray-600">
+                            Underload threshold (% of CC)
+                        </label>
+                        <Input
+                            id="loader-trends-underload-threshold"
+                            type="number"
+                            inputMode="decimal"
+                            min={0}
+                            max={100}
+                            step={0.1}
+                            className="h-9 w-24 rounded-[8px] border border-gray-200 bg-white text-sm tabular-nums"
+                            value={underloadThresholdDraft}
+                            onChange={(e) => {
+                                const next = e.target.value;
+                                setUnderloadThresholdDraft(next);
+                                scheduleUnderloadThresholdNavigate(next);
+                            }}
+                            onBlur={() => {
+                                if (underloadThresholdDebounceRef.current !== null) {
+                                    clearTimeout(underloadThresholdDebounceRef.current);
+                                    underloadThresholdDebounceRef.current = null;
+                                }
+                                const raw = underloadThresholdDraft.trim();
+                                if (raw === '') {
+                                    onLoaderOverloadChange({ underload_threshold: 1 });
+                                    return;
+                                }
+                                const v = parseFloat(raw);
+                                if (Number.isNaN(v)) {
+                                    setUnderloadThresholdDraft(String(underloadThresholdPercent));
+                                    return;
+                                }
+                                const clamped = Math.max(0, Math.min(100, v));
+                                onLoaderOverloadChange({ underload_threshold: clamped });
+                            }}
+                        />
+                    </div>
+                    <Select
+                        value={String(selectedLoaderId)}
+                        onValueChange={(v) =>
+                            onLoaderOverloadChange({ loader_id: Number(v), loader_operator: null })
+                        }
+                    >
+                        <SelectTrigger className="min-w-[200px] rounded-[8px] border border-gray-200 bg-white text-sm">
+                            <SelectValue placeholder="Select loader" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {loaders.map((l) => (
+                                <SelectItem key={l.id} value={String(l.id)}>
+                                    {l.name} — {l.siding}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    {operatorNamesForSelectedLoader.length > 0 && (
+                        <Select
+                            value={loaderOperatorFromUrl ?? ALL_FILTER_VALUE}
+                            onValueChange={(v) =>
+                                onLoaderOverloadChange({
+                                    loader_operator: v === ALL_FILTER_VALUE ? null : v,
+                                })
+                            }
+                        >
+                            <SelectTrigger className="min-w-[160px] rounded-[8px] border border-gray-200 bg-white text-sm">
+                                <SelectValue placeholder="Operator" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value={ALL_FILTER_VALUE} className="text-xs">
+                                    All operators
+                                </SelectItem>
+                                {operatorNamesForSelectedLoader.map((name) => (
+                                    <SelectItem key={name} value={name} className="text-xs">
+                                        {name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    )}
+                </div>
             </div>
 
             {!hasData ? (
                 <div className="mt-8 flex flex-col items-center justify-center py-12 text-center text-gray-600">
                     <AlertTriangle className="mb-3 h-12 w-12 opacity-40" />
-                    <p className="font-medium">No data for selected loader in this period</p>
+                    <p className="font-medium">No overload data for this selection and date range</p>
                 </div>
             ) : (
                 <>
-                    <div className="mt-5 grid gap-4 sm:grid-cols-3">
+                    <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
                         <div className="rounded-xl border-0 bg-blue-50 p-4 shadow-sm" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
                             <p className="text-xs font-medium text-blue-600">Total wagons loaded</p>
                             <p className="mt-1 text-2xl font-bold tabular-nums text-blue-900">{stats.totalWagons}</p>
@@ -2386,20 +2941,61 @@ function LoaderOverloadSection({ loaders, monthly }: { loaders: LoaderInfo[]; mo
                             <p className="text-xs font-medium text-red-600">Overloaded wagons</p>
                             <p className="mt-1 text-2xl font-bold tabular-nums text-red-900">{stats.totalOverload}</p>
                         </div>
-                        <div className={`rounded-xl border-0 p-4 shadow-sm ${stats.rate > 15 ? 'bg-red-50' : stats.rate > 5 ? 'bg-amber-50' : 'bg-green-50'}`} style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-                            <p className={`text-xs font-medium ${stats.rate > 15 ? 'text-red-600' : stats.rate > 5 ? 'text-amber-600' : 'text-green-600'}`}>Overload rate</p>
+                        <div className="rounded-xl border-0 bg-amber-50 p-4 shadow-sm" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+                            <p className="text-xs font-medium text-amber-800">Underloaded wagons</p>
+                            <p className="mt-1 text-2xl font-bold tabular-nums text-amber-950">{stats.totalUnderload}</p>
+                        </div>
+                        <div
+                            className={`rounded-xl border-0 p-4 shadow-sm ${stats.overloadRate > 15 ? 'bg-red-50' : stats.overloadRate > 5 ? 'bg-amber-50' : 'bg-green-50'}`}
+                            style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}
+                        >
+                            <p
+                                className={`text-xs font-medium ${stats.overloadRate > 15 ? 'text-red-600' : stats.overloadRate > 5 ? 'text-amber-600' : 'text-green-600'}`}
+                            >
+                                Overload rate
+                            </p>
                             <div className="mt-1 flex items-center gap-2">
-                                <span className={`text-2xl font-bold tabular-nums ${stats.rate > 15 ? 'text-red-900' : stats.rate > 5 ? 'text-amber-900' : 'text-green-900'}`}>{stats.rate.toFixed(1)}%</span>
-                                {stats.trend !== 0 && (
-                                    stats.trend > 0 ? <ArrowUp className="size-5 text-red-600" /> : <ArrowDown className="size-5 text-green-600" />
-                                )}
+                                <span
+                                    className={`text-2xl font-bold tabular-nums ${stats.overloadRate > 15 ? 'text-red-900' : stats.overloadRate > 5 ? 'text-amber-900' : 'text-green-900'}`}
+                                >
+                                    {stats.overloadRate.toFixed(1)}%
+                                </span>
+                                {stats.overloadTrend !== 0 &&
+                                    (stats.overloadTrend > 0 ? (
+                                        <ArrowUp className="size-5 text-red-600" />
+                                    ) : (
+                                        <ArrowDown className="size-5 text-green-600" />
+                                    ))}
+                            </div>
+                        </div>
+                        <div
+                            className={`rounded-xl border-0 p-4 shadow-sm ${stats.underloadRate > 15 ? 'bg-amber-50' : stats.underloadRate > 5 ? 'bg-orange-50' : 'bg-green-50'}`}
+                            style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}
+                        >
+                            <p
+                                className={`text-xs font-medium ${stats.underloadRate > 15 ? 'text-amber-800' : stats.underloadRate > 5 ? 'text-orange-700' : 'text-green-600'}`}
+                            >
+                                Underload rate
+                            </p>
+                            <div className="mt-1 flex items-center gap-2">
+                                <span
+                                    className={`text-2xl font-bold tabular-nums ${stats.underloadRate > 15 ? 'text-amber-950' : stats.underloadRate > 5 ? 'text-orange-900' : 'text-green-900'}`}
+                                >
+                                    {stats.underloadRate.toFixed(1)}%
+                                </span>
+                                {stats.underloadTrend !== 0 &&
+                                    (stats.underloadTrend > 0 ? (
+                                        <ArrowUp className="size-5 text-amber-700" />
+                                    ) : (
+                                        <ArrowDown className="size-5 text-green-600" />
+                                    ))}
                             </div>
                         </div>
                     </div>
 
                     <div className="mt-6 grid gap-6 lg:grid-cols-2">
                         <div>
-                            <p className="mb-2 text-xs font-medium text-gray-600">Total wagons vs overloaded (monthly)</p>
+                            <p className="mb-2 text-xs font-medium text-gray-600">Total wagons vs overloaded / underloaded (monthly)</p>
                             <ResponsiveContainer width="100%" height={240}>
                                 <RechartsBarChart data={trendData} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
@@ -2407,29 +3003,40 @@ function LoaderOverloadSection({ loaders, monthly }: { loaders: LoaderInfo[]; mo
                                     <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
                                     <Tooltip formatter={(v: number | undefined, name?: string) => [`${v ?? 0} wagons`, name ?? '']} />
                                     <Legend />
-                                    <Bar dataKey="total" name="Total wagons" fill="#3B82F6" radius={[2, 2, 0, 0]} maxBarSize={28} />
-                                    <Bar dataKey="overloaded" name="Overloaded" fill="#DC2626" radius={[2, 2, 0, 0]} maxBarSize={28} />
+                                    <Bar dataKey="total" name="Total wagons" fill="#3B82F6" radius={[2, 2, 0, 0]} maxBarSize={22} />
+                                    <Bar dataKey="overloaded" name="Overloaded" fill="#DC2626" radius={[2, 2, 0, 0]} maxBarSize={22} />
+                                    <Bar dataKey="underloaded" name="Underloaded" fill="#D97706" radius={[2, 2, 0, 0]} maxBarSize={22} />
                                 </RechartsBarChart>
                             </ResponsiveContainer>
                         </div>
                         <div>
-                            <p className="mb-2 text-xs font-medium text-gray-600">Overloaded wagons per month</p>
+                            <p className="mb-2 text-xs font-medium text-gray-600">Overloaded vs underloaded wagons per month</p>
                             <ResponsiveContainer width="100%" height={240}>
-                                <RechartsBarChart data={barChartData} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
+                                <RechartsBarChart data={overloadUnderloadByMonthData} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
                                     <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                                    <YAxis tick={{ fontSize: 11 }} />
-                                    <Tooltip formatter={(v: number | undefined) => [`${v ?? 0} wagons`, 'Overloaded']} />
-                                    <ReferenceLine y={avgOverload} stroke="#9ca3af" strokeDasharray="5 5" />
-                                    <Bar dataKey="value" fill="#DC2626" radius={[4, 4, 0, 0]} barSize={24} isAnimationActive />
+                                    <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                                    <Tooltip formatter={(v: number | undefined, name?: string) => [`${v ?? 0} wagons`, name ?? '']} />
+                                    <Legend />
+                                    <ReferenceLine y={avgOverload} stroke="#9ca3af" strokeDasharray="5 5" label={{ value: 'Avg overload', position: 'insideTopRight', fill: '#6b7280', fontSize: 10 }} />
+                                    <ReferenceLine y={avgUnderload} stroke="#d6d3d1" strokeDasharray="3 3" label={{ value: 'Avg underload', position: 'insideBottomRight', fill: '#78716c', fontSize: 10 }} />
+                                    <Bar dataKey="overloaded" name="Overloaded" fill="#DC2626" radius={[4, 4, 0, 0]} maxBarSize={22} isAnimationActive />
+                                    <Bar dataKey="underloaded" name="Underloaded" fill="#D97706" radius={[4, 4, 0, 0]} maxBarSize={22} isAnimationActive />
                                 </RechartsBarChart>
                             </ResponsiveContainer>
                         </div>
                     </div>
 
                     <p className="mt-4 text-sm text-gray-600">
-                        {selectedLoader.name} has <span className="font-semibold">{stats.rate.toFixed(1)}%</span> overload rate
-                        {barChartData.length > 0 && avgOverload >= 0 ? `, ${stats.totalOverload > avgOverload * barChartData.length ? 'above' : 'below'} average (${avgOverload.toFixed(0)} overloaded/month).` : '.'}
+                        {selectedLoader.name}:{' '}
+                        <span className="font-semibold">{stats.overloadRate.toFixed(1)}%</span> overload rate and{' '}
+                        <span className="font-semibold">{stats.underloadRate.toFixed(1)}%</span> underload rate (share of wagons with weighment flags).
+                        {overloadUnderloadByMonthData.length > 0 && avgOverload >= 0 ? (
+                            <>
+                                {' '}
+                                Monthly averages: ~{avgOverload.toFixed(0)} overloaded, ~{avgUnderload.toFixed(0)} underloaded.
+                            </>
+                        ) : null}
                     </p>
                 </>
             )}
@@ -2867,72 +3474,26 @@ function DashboardFiltersBar({
         return false;
     }, [filters.siding_ids, pendingSidingIds, allSidingIds, isAllSidingsSelected, isAllPendingSelected]);
 
-    const applyFilters = useCallback((overrides: Record<string, unknown> = {}) => {
-        const params: Record<string, unknown> = {
-            period: overrides.period ?? period,
-            ...overrides,
-        };
+    const applyFilters = useCallback(
+        (overrides: Record<string, unknown> = {}) => {
+            const params = buildDashboardGetParams({
+                overrides,
+                filters,
+                currentSection,
+                allSidingIds,
+                resolvedPeriod: (overrides.period as string | undefined) ?? period,
+                resolvedFrom: (overrides.from as string | undefined) ?? customFrom,
+                resolvedTo: (overrides.to as string | undefined) ?? customTo,
+            });
 
-        if (params.period === 'custom') {
-            params.from = overrides.from ?? customFrom;
-            params.to = overrides.to ?? customTo;
-        } else {
-            // Never send date range when period is not custom, so backend uses its default range for the period.
-            delete params.from;
-            delete params.to;
-        }
-
-        const sidingIds = (overrides.siding_ids as number[] | undefined) ?? filters.siding_ids;
-        if (sidingIds.length > 0 && sidingIds.length < allSidingIds.length) {
-            params.siding_ids = sidingIds.join(',');
-        }
-
-        if (sectionHasFilter('power_plant')) {
-            const powerPlant = (overrides.power_plant !== undefined ? overrides.power_plant : filters.power_plant) ?? '';
-            if (powerPlant !== '') params.power_plant = powerPlant;
-        }
-
-        if (sectionHasFilter('rake_number')) {
-            const rakeNumber = (overrides.rake_number !== undefined ? overrides.rake_number : filters.rake_number) ?? '';
-            if (rakeNumber !== '') params.rake_number = rakeNumber;
-        }
-
-        if (sectionHasFilter('loader_id')) {
-            const loaderId = (overrides.loader_id !== undefined ? overrides.loader_id : filters.loader_id) ?? '';
-            if (loaderId !== '') params.loader_id = loaderId;
-        }
-
-        if (sectionHasFilter('shift')) {
-            const shift = (overrides.shift !== undefined ? overrides.shift : filters.shift) ?? '';
-            if (shift !== '') params.shift = shift;
-        }
-
-        if (sectionHasFilter('penalty_type')) {
-            const penaltyType = (overrides.penalty_type !== undefined ? overrides.penalty_type : filters.penalty_type) ?? null;
-            if (penaltyType != null) params.penalty_type = penaltyType;
-        }
-
-        if (sectionHasFilter('daily_rake_date')) {
-            const dailyRakeDate =
-                (overrides.daily_rake_date !== undefined ? overrides.daily_rake_date : filters.daily_rake_date) ?? '';
-            if (dailyRakeDate !== '') params.daily_rake_date = dailyRakeDate;
-        }
-
-        if (sectionHasFilter('coal_transport_date')) {
-            const coalTransportDate =
-                (overrides.coal_transport_date !== undefined ? overrides.coal_transport_date : filters.coal_transport_date) ?? '';
-            if (coalTransportDate !== '') params.coal_transport_date = coalTransportDate;
-        }
-
-        if (currentSection) params.section = currentSection;
-
-        // Use pathname only so query is exactly our params (no merge with current URL).
-        const dashboardPath = dashboard().url.split('?')[0] || dashboard().url;
-        router.get(dashboardPath, params as Record<string, string>, {
-            preserveState: true,
-            preserveScroll: true,
-        });
-    }, [filters, customFrom, customTo, allSidingIds, currentSection]);
+            const dashboardPath = dashboard().url.split('?')[0] || dashboard().url;
+            router.get(dashboardPath, params as Record<string, string>, {
+                preserveState: true,
+                preserveScroll: true,
+            });
+        },
+        [filters, customFrom, customTo, allSidingIds, currentSection, period],
+    );
 
     const togglePendingSiding = useCallback((sidingId: number) => {
         setPendingSidingIds((prev) => {
@@ -2971,6 +3532,8 @@ function DashboardFiltersBar({
             power_plant: null,
             rake_number: null,
             loader_id: null,
+            loader_operator: null,
+            underload_threshold: 1,
             shift: null,
             penalty_type: null,
             daily_rake_date: '',
@@ -3116,7 +3679,12 @@ function DashboardFiltersBar({
                 {sectionHasFilter('loader_id') && (
                     <Select
                         value={filters.loader_id != null ? String(filters.loader_id) : ALL_FILTER_VALUE}
-                        onValueChange={(v) => applyFilters({ loader_id: v === ALL_FILTER_VALUE ? null : Number(v) })}
+                        onValueChange={(v) =>
+                            applyFilters({
+                                loader_id: v === ALL_FILTER_VALUE ? null : Number(v),
+                                loader_operator: null,
+                            })
+                        }
                     >
                         <SelectTrigger className="h-7 w-[120px] rounded-md border text-[11px]">
                             <SelectValue placeholder="Loader" />
@@ -3128,6 +3696,28 @@ function DashboardFiltersBar({
                             {filterOptions.loaders.map((l) => (
                                 <SelectItem key={l.id} value={String(l.id)} className="text-xs">
                                     {l.name} ({l.siding_name})
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                )}
+                {sectionHasFilter('loader_operator') && filters.loader_id != null && (
+                    <Select
+                        value={filters.loader_operator ?? ALL_FILTER_VALUE}
+                        onValueChange={(v) =>
+                            applyFilters({ loader_operator: v === ALL_FILTER_VALUE ? null : v })
+                        }
+                    >
+                        <SelectTrigger className="h-7 min-w-[140px] rounded-md border text-[11px]">
+                            <SelectValue placeholder="Operator" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value={ALL_FILTER_VALUE} className="text-xs">
+                                All operators
+                            </SelectItem>
+                            {(filterOptions.loaderOperatorsByLoader?.[String(filters.loader_id)] ?? []).map((name) => (
+                                <SelectItem key={name} value={name} className="text-xs">
+                                    {name}
                                 </SelectItem>
                             ))}
                         </SelectContent>
@@ -3436,6 +4026,8 @@ export default function Dashboard() {
         power_plant: null,
         rake_number: null,
         loader_id: null,
+        loader_operator: null,
+        underload_threshold: 1,
         shift: null,
         penalty_type: null,
         daily_rake_date: undefined,
@@ -3447,6 +4039,11 @@ export default function Dashboard() {
         power_plant: props.filters?.power_plant ?? null,
         rake_number: props.filters?.rake_number ?? null,
         loader_id: props.filters?.loader_id ?? null,
+        loader_operator: props.filters?.loader_operator ?? null,
+        underload_threshold:
+            props.filters?.underload_threshold != null && !Number.isNaN(Number(props.filters.underload_threshold))
+                ? Number(props.filters.underload_threshold)
+                : 1,
         shift: props.filters?.shift ?? null,
         penalty_type: props.filters?.penalty_type ?? null,
     };
@@ -3513,10 +4110,11 @@ export default function Dashboard() {
         if (filters.power_plant) params.power_plant = filters.power_plant;
         if (filters.rake_number) params.rake_number = filters.rake_number;
         if (filters.loader_id) params.loader_id = filters.loader_id;
+        if (filters.loader_operator) params.loader_operator = filters.loader_operator;
         if (filters.shift) params.shift = filters.shift;
         if (filters.penalty_type != null) params.penalty_type = filters.penalty_type;
         router.get(dashboardPath, params as Record<string, string>, { replace: true, preserveState: false });
-    }, [dashboardPath, filters.period, filters.siding_ids, filters.power_plant, filters.rake_number, filters.loader_id, filters.shift, filters.penalty_type, sidings.length]);
+    }, [dashboardPath, filters.period, filters.siding_ids, filters.power_plant, filters.rake_number, filters.loader_id, filters.loader_operator, filters.shift, filters.penalty_type, sidings.length]);
 
     const applyDailyRakeDate = useCallback((date: string) => {
         const params: Record<string, unknown> = {
@@ -3530,6 +4128,7 @@ export default function Dashboard() {
         if (filters.power_plant) params.power_plant = filters.power_plant;
         if (filters.rake_number) params.rake_number = filters.rake_number;
         if (filters.loader_id) params.loader_id = filters.loader_id;
+        if (filters.loader_operator) params.loader_operator = filters.loader_operator;
         if (filters.shift) params.shift = filters.shift;
         if (filters.penalty_type != null) params.penalty_type = filters.penalty_type;
         router.get(dashboardPath, params as Record<string, string>, { preserveState: true, preserveScroll: true });
@@ -3547,13 +4146,14 @@ export default function Dashboard() {
         if (filters.power_plant) params.power_plant = filters.power_plant;
         if (filters.rake_number) params.rake_number = filters.rake_number;
         if (filters.loader_id) params.loader_id = filters.loader_id;
+        if (filters.loader_operator) params.loader_operator = filters.loader_operator;
         if (filters.shift) params.shift = filters.shift;
         if (filters.penalty_type != null) params.penalty_type = filters.penalty_type;
         if (filters.daily_rake_date) params.daily_rake_date = filters.daily_rake_date;
         router.get(dashboardPath, params as Record<string, string>, { preserveState: true, preserveScroll: true });
     }, [dashboardPath, filters, activeSection, allSidingIds.length]);
 
-    const filterOptions = props.filterOptions ?? { powerPlants: [], loaders: [], shifts: [], penaltyTypes: [] };
+    const filterOptions = props.filterOptions ?? { powerPlants: [], loaders: [], shifts: [], penaltyTypes: [], loaderOperatorsByLoader: {} };
     const kpis = props.kpis;
     const penaltyTrendDaily = props.penaltyTrendDaily ?? [];
     const penaltyByType = props.penaltyByType ?? [];
@@ -3586,6 +4186,8 @@ export default function Dashboard() {
                     total_rakes: 0,
                     received_mt: 0,
                     dispatched_mt: 0,
+                    last_receipt_at: null,
+                    last_dispatch_at: null,
                 };
             }
         }
@@ -3597,6 +4199,45 @@ export default function Dashboard() {
     const dateWiseDispatch = props.dateWiseDispatch ?? { sidingNames: {}, dates: [] };
     const rakePerformance = props.rakePerformance ?? [];
     const loaderOverloadTrends = props.loaderOverloadTrends ?? { loaders: [], monthly: [] };
+    const loaderOverloadOperatorNames = useMemo(() => {
+        const list = loaderOverloadTrends.loaders;
+        if (list.length === 0) {
+            return [];
+        }
+        const lid =
+            filters.loader_id != null && list.some((l) => l.id === filters.loader_id)
+                ? filters.loader_id
+                : list[0].id;
+        return filterOptions.loaderOperatorsByLoader?.[String(lid)] ?? [];
+    }, [filters.loader_id, loaderOverloadTrends.loaders, filterOptions.loaderOperatorsByLoader]);
+
+    const navigateDashboard = useCallback(
+        (overrides: Record<string, unknown> = {}) => {
+            const params = buildDashboardGetParams({
+                overrides,
+                filters,
+                currentSection: activeSection,
+                allSidingIds,
+                resolvedPeriod: (overrides.period as string | undefined) ?? filters.period,
+                resolvedFrom: (overrides.from as string | undefined) ?? filters.from,
+                resolvedTo: (overrides.to as string | undefined) ?? filters.to,
+            });
+            const dashboardPath = dashboard().url.split('?')[0] || dashboard().url;
+            router.get(dashboardPath, params as Record<string, string>, {
+                preserveState: true,
+                preserveScroll: true,
+            });
+        },
+        [filters, activeSection, allSidingIds],
+    );
+
+    const onLoaderOverloadChange = useCallback(
+        (patch: { loader_id?: number | null; loader_operator?: string | null; underload_threshold?: number | null }) => {
+            navigateDashboard({ ...patch });
+        },
+        [navigateDashboard],
+    );
+
     const powerPlantDispatch = props.powerPlantDispatch ?? [];
     const yesterdayPredictedPenalties = props.yesterdayPredictedPenalties ?? [];
     const executiveYesterday = props.executiveYesterday;
@@ -3623,11 +4264,12 @@ export default function Dashboard() {
         if (filters.power_plant) return true;
         if (filters.rake_number?.trim()) return true;
         if (filters.loader_id != null) return true;
+        if (filters.loader_operator) return true;
         if (filters.shift) return true;
         if (filters.penalty_type != null) return true;
         if (sidings.length > 0 && filters.siding_ids.length > 0 && filters.siding_ids.length < sidings.length) return true;
         return false;
-    }, [filters.period, filters.power_plant, filters.rake_number, filters.loader_id, filters.shift, filters.penalty_type, filters.siding_ids.length, sidings.length]);
+    }, [filters.period, filters.power_plant, filters.rake_number, filters.loader_id, filters.loader_operator, filters.shift, filters.penalty_type, filters.siding_ids.length, sidings.length]);
 
     const activeFilterCount = useMemo(() => {
         let n = 0;
@@ -3635,11 +4277,68 @@ export default function Dashboard() {
         if (filters.power_plant) n += 1;
         if (filters.rake_number?.trim()) n += 1;
         if (filters.loader_id != null) n += 1;
+        if (filters.loader_operator) n += 1;
         if (filters.shift) n += 1;
         if (filters.penalty_type != null) n += 1;
         if (sidings.length > 0 && filters.siding_ids.length > 0 && filters.siding_ids.length < sidings.length) n += 1;
         return n;
-    }, [filters.period, filters.power_plant, filters.rake_number, filters.loader_id, filters.shift, filters.penalty_type, filters.siding_ids.length, sidings.length]);
+    }, [filters.period, filters.power_plant, filters.rake_number, filters.loader_id, filters.loader_operator, filters.shift, filters.penalty_type, filters.siding_ids.length, sidings.length]);
+
+    const navigateToLoaderTrends = useCallback(
+        (loaderId: number, rakeUnderloadThresholdPercent?: number) => {
+            const dashboardPath = dashboard().url.split('?')[0] || dashboard().url;
+            // New tab URL is built from scratch; omit loader_operator so drill-down is not scoped to a prior operator filter.
+            const params: Record<string, unknown> = {
+                period: filters.period,
+                section: 'loader-overload',
+                loader_id: loaderId,
+            };
+            if (filters.period === 'custom') {
+                params.from = filters.from;
+                params.to = filters.to;
+            }
+            if (filters.siding_ids.length > 0 && filters.siding_ids.length < sidings.length) {
+                params.siding_ids = filters.siding_ids.join(',');
+            }
+            if (filters.power_plant) {
+                params.power_plant = filters.power_plant;
+            }
+            if (filters.rake_number) {
+                params.rake_number = filters.rake_number;
+            }
+            if (filters.shift) {
+                params.shift = filters.shift;
+            }
+            if (filters.penalty_type != null) {
+                params.penalty_type = filters.penalty_type;
+            }
+            if (filters.daily_rake_date) {
+                params.daily_rake_date = filters.daily_rake_date;
+            }
+            if (filters.coal_transport_date) {
+                params.coal_transport_date = filters.coal_transport_date;
+            }
+            const effectiveUnderloadThreshold =
+                rakeUnderloadThresholdPercent !== undefined
+                    ? Math.max(0, Math.min(100, rakeUnderloadThresholdPercent))
+                    : filters.underload_threshold;
+            if (effectiveUnderloadThreshold != null && !Number.isNaN(effectiveUnderloadThreshold) && effectiveUnderloadThreshold !== 1) {
+                params.underload_threshold = effectiveUnderloadThreshold;
+            }
+            if (typeof window === 'undefined') {
+                return;
+            }
+            const url = new URL(dashboardPath, window.location.origin);
+            for (const [key, value] of Object.entries(params)) {
+                if (value === undefined || value === null || value === '') {
+                    continue;
+                }
+                url.searchParams.set(key, String(value));
+            }
+            window.open(url.toString(), '_blank', 'noopener,noreferrer');
+        },
+        [filters, sidings.length],
+    );
 
     const sidingStackKeys = useMemo(() => filteredSidings.map((s) => s.name), [filteredSidings]);
 
@@ -3771,7 +4470,8 @@ export default function Dashboard() {
                         </div>
                         <div className="flex gap-2 overflow-x-auto pb-0.5 lg:grid lg:grid-cols-3 lg:gap-2 lg:overflow-visible">
                             {filteredSidings.map((s) => {
-                                const stockMt = sidingStocks[s.id]?.closing_balance_mt ?? 0;
+                                const stock = sidingStocks[s.id];
+                                const stockMt = stock?.closing_balance_mt ?? 0;
                                 const rakesLoadable = Math.floor(stockMt / MT_PER_RAKE_LOAD);
                                 const accent = SIDING_ACCENT[s.name] ?? '#6B7280';
                                 return (
@@ -3799,6 +4499,24 @@ export default function Dashboard() {
                                                 </p>
                                                 <p className="text-[10px] text-gray-600">Rakes</p>
                                             </div>
+                                        </div>
+                                        <div className="mt-2 space-y-0.5 border-t border-gray-100 pt-2 text-[10px]">
+                                            <p className="text-green-700">
+                                                <span className="font-bold">Last receipt: </span>
+                                                <span className="tabular-nums">
+                                                    {stock?.last_receipt_at
+                                                        ? new Date(stock.last_receipt_at).toLocaleString()
+                                                        : '—'}
+                                                </span>
+                                            </p>
+                                            <p className="text-red-700">
+                                                <span className="font-bold">Last dispatch: </span>
+                                                <span className="tabular-nums">
+                                                    {stock?.last_dispatch_at
+                                                        ? new Date(stock.last_dispatch_at).toLocaleString()
+                                                        : '—'}
+                                                </span>
+                                            </p>
                                         </div>
                                     </div>
                                 );
@@ -4592,7 +5310,7 @@ export default function Dashboard() {
 
                         {activeSection === 'rake-performance' && canWidget('dashboard.widgets.rake_performance') && (
                             rakePerformance.length > 0
-                                ? <RakePerformanceSection rakes={rakePerformance} />
+                                ? <RakePerformanceSection rakes={rakePerformance} onNavigateToLoader={navigateToLoaderTrends} />
                                 : (
                                     <div className="dashboard-card rounded-xl border-0 p-6">
                                         <SectionHeader icon={Train} title="Rake-wise performance" subtitle="Top dispatched rakes" />
@@ -4611,6 +5329,12 @@ export default function Dashboard() {
                                     <LoaderOverloadSection
                                         loaders={loaderOverloadTrends.loaders}
                                         monthly={loaderOverloadTrends.monthly}
+                                        loaderIdFromUrl={filters.loader_id}
+                                        loaderOperatorFromUrl={filters.loader_operator}
+                                        operatorNamesForSelectedLoader={loaderOverloadOperatorNames}
+                                        underloadThresholdPercent={filters.underload_threshold}
+                                        dateRangeDescription={mainDateRangeLabel}
+                                        onLoaderOverloadChange={onLoaderOverloadChange}
                                     />
                                 )
                                 : (

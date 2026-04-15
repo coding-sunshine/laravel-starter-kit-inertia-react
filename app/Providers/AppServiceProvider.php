@@ -274,6 +274,7 @@ final class AppServiceProvider extends ServiceProvider
             'weighments-dialog-update-manual',
             'weighments-hub-view-weighment',
             'weighments-hub-delete-weighment-file',
+            'weighments-show-delete-weighment',
             'rake-weighment-manual-net-mt',
             'rake-weighment-manual-submit',
             'rake-weighment-edit-net-mt',
@@ -312,6 +313,12 @@ final class AppServiceProvider extends ServiceProvider
             'historical-railway-siding-filter-search',
             'historical-railway-siding-filter-clear',
             'historical-railway-siding-export-xlsx',
+            'master-data-add-loader',
+            'master-data-add-loader-operator',
+            'master-data-loader-operator-duplicate-cancel',
+            'master-data-loader-operator-duplicate-confirm',
+            'master-data-loaders-tab-loaders',
+            'master-data-loaders-tab-operators',
         ]);
     }
 

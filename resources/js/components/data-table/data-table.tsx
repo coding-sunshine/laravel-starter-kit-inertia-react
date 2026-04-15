@@ -679,7 +679,12 @@ export function DataTable<TData extends object>({
                     </TableHeader>
                     <TableBody>
                         {table.getRowModel().rows.length > 0 ? (
-                            table.getRowModel().rows.map((row, index) => (
+                            table.getRowModel().rows.map((row, index) => {
+                                const perRowClass = rowClassName?.(row.original) ?? "";
+                                /** Zebra striping is skipped when `rowClassName` paints the row (otherwise td backgrounds hide tr color). */
+                                const zebraMuted = index % 2 === 1 && perRowClass === "";
+
+                                return (
                                 <TableRow
                                     key={row.id}
                                     data-state={row.getIsSelected() ? "selected" : undefined}
@@ -694,21 +699,22 @@ export function DataTable<TData extends object>({
                                         onRowClick(row.original);
                                     }}
                                     className={cn(
-                                        index % 2 === 1 && "bg-muted/40",
+                                        zebraMuted && "bg-muted/40",
                                         row.getIsSelected() && "bg-primary/5",
-                                        rowClassName?.(row.original),
+                                        perRowClass,
                                         onRowClick && "cursor-pointer",
                                     )}
                                 >
                                     {row.getVisibleCells().map((cell) => {
                                         const pin = getColumnPinningProps(cell.column);
-                                        const pinnedBg = getPinnedCellBg(cell.column.getIsPinned(), index % 2 === 1, row.getIsSelected());
+                                        const pinnedBg = getPinnedCellBg(cell.column.getIsPinned(), zebraMuted, row.getIsSelected());
                                         return (
                                             <TableCell
                                                 key={cell.id}
                                                 style={{ ...pin.style, ...pinnedBg }}
                                                 className={cn(
-                                                    index % 2 === 1 && "bg-muted/40",
+                                                    zebraMuted && "bg-muted/40",
+                                                    perRowClass,
                                                     "whitespace-nowrap py-2",
                                                     (cell.column.columnDef.meta as { type?: string })?.type === "number" && "text-right",
                                                     (cell.column.columnDef.meta as { group?: string | null })?.group &&
@@ -724,7 +730,8 @@ export function DataTable<TData extends object>({
                                         );
                                     })}
                                 </TableRow>
-                            ))
+                                );
+                            })
                         ) : (
                             <TableRow>
                                 <TableCell

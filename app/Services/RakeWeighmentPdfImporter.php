@@ -14,6 +14,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
 use Throwable;
 
@@ -64,6 +65,8 @@ final readonly class RakeWeighmentPdfImporter
                 $userId,
             );
         } catch (Throwable $e) {
+            $this->deleteStoredPublicUpload($storedPath);
+
             Log::error('RakeWeighmentPdfImporter: transaction failed', [
                 'rake_id' => $rake->id,
                 'exception' => get_class($e),
@@ -112,6 +115,8 @@ final readonly class RakeWeighmentPdfImporter
                 $userId,
             );
         } catch (Throwable $e) {
+            $this->deleteStoredPublicUpload($storedPath);
+
             Log::error('RakeWeighmentXlsxImporter: transaction failed', [
                 'rake_id' => $rake->id,
                 'exception' => get_class($e),
@@ -353,6 +358,26 @@ final readonly class RakeWeighmentPdfImporter
 
             return $weighment->fresh(['rakeWagonWeighments.wagon']);
         });
+    }
+
+    /**
+     * Remove a file stored on the public disk when import fails so uploads do not accumulate.
+     */
+    private function deleteStoredPublicUpload(string $storedPath): void
+    {
+        if ($storedPath === '') {
+            return;
+        }
+
+        try {
+            Storage::disk('public')->delete($storedPath);
+        } catch (Throwable $deleteFailed) {
+            Log::warning('RakeWeighmentPdfImporter: failed to delete stored upload after import failure', [
+                'path' => $storedPath,
+                'exception' => get_class($deleteFailed),
+                'message' => $deleteFailed->getMessage(),
+            ]);
+        }
     }
 
     /**
