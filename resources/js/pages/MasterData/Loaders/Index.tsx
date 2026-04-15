@@ -25,7 +25,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { UserCog, Warehouse } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface Loader {
     id: number;
@@ -61,6 +61,12 @@ interface SidingOption {
     code: string;
 }
 
+interface LoaderOperatorPayload {
+    name: string;
+    is_active: boolean;
+    siding_id: number | null;
+}
+
 type MasterTab = 'loaders' | 'operators';
 
 interface Props {
@@ -81,6 +87,8 @@ export default function Index({ loaders, loaderOperators, sidings, tab: initialT
     const [opActive, setOpActive] = useState(true);
     const [opSidingId, setOpSidingId] = useState<string>('');
     const [opSubmitting, setOpSubmitting] = useState(false);
+    const [duplicateConfirmOpen, setDuplicateConfirmOpen] = useState(false);
+    const pendingOperatorPayloadRef = useRef<LoaderOperatorPayload | null>(null);
 
     useEffect(() => {
         setActiveTab(initialTab);
@@ -108,15 +116,24 @@ export default function Index({ loaders, loaderOperators, sidings, tab: initialT
         setOperatorDialogOpen(true);
     }
 
-    function submitOperator(e: React.FormEvent): void {
-        e.preventDefault();
-        const sidingId = opSidingId === '' || opSidingId === '__none__' ? null : Number(opSidingId);
-        const payload = {
-            name: opName.trim(),
-            is_active: opActive,
-            siding_id: sidingId,
-        };
+    function normalizedOperatorName(value: string): string {
+        return value.trim().toLowerCase();
+    }
 
+    function operatorNameCollides(trimmedName: string, excludeOperatorId: number | null): boolean {
+        const key = normalizedOperatorName(trimmedName);
+        if (key === '') {
+            return false;
+        }
+        return loaderOperators.some((op) => {
+            if (excludeOperatorId !== null && op.id === excludeOperatorId) {
+                return false;
+            }
+            return normalizedOperatorName(op.name) === key;
+        });
+    }
+
+    function commitOperator(payload: LoaderOperatorPayload): void {
         setOpSubmitting(true);
         const done = (): void => setOpSubmitting(false);
 
@@ -137,6 +154,42 @@ export default function Index({ loaders, loaderOperators, sidings, tab: initialT
                     setOperatorDialogOpen(false);
                 },
             });
+        }
+    }
+
+    function submitOperator(e: React.FormEvent): void {
+        e.preventDefault();
+        const sidingId = opSidingId === '' || opSidingId === '__none__' ? null : Number(opSidingId);
+        const payload: LoaderOperatorPayload = {
+            name: opName.trim(),
+            is_active: opActive,
+            siding_id: sidingId,
+        };
+
+        const excludeId = editingOperator?.id ?? null;
+        if (
+            editingOperator &&
+            normalizedOperatorName(payload.name) === normalizedOperatorName(editingOperator.name)
+        ) {
+            commitOperator(payload);
+            return;
+        }
+
+        if (operatorNameCollides(payload.name, excludeId)) {
+            pendingOperatorPayloadRef.current = payload;
+            setDuplicateConfirmOpen(true);
+            return;
+        }
+
+        commitOperator(payload);
+    }
+
+    function confirmDuplicateOperator(): void {
+        const payload = pendingOperatorPayloadRef.current;
+        pendingOperatorPayloadRef.current = null;
+        setDuplicateConfirmOpen(false);
+        if (payload) {
+            commitOperator(payload);
         }
     }
 
@@ -357,6 +410,40 @@ export default function Index({ loaders, loaderOperators, sidings, tab: initialT
                                 </Button>
                             </DialogFooter>
                         </form>
+                    </DialogContent>
+                </Dialog>
+
+                <Dialog
+                    open={duplicateConfirmOpen}
+                    onOpenChange={(open) => {
+                        setDuplicateConfirmOpen(open);
+                        if (!open) {
+                            pendingOperatorPayloadRef.current = null;
+                        }
+                    }}
+                >
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle>Duplicate operator name</DialogTitle>
+                            <DialogDescription>
+                                {editingOperator
+                                    ? 'Another operator already has this name. Are you sure you want to save?'
+                                    : 'An operator with this name already exists. Are you sure you want to add another with the same name?'}
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter className="gap-2 sm:gap-0">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setDuplicateConfirmOpen(false)}
+                                data-pan="master-data-loader-operator-duplicate-cancel"
+                            >
+                                Cancel
+                            </Button>
+                            <Button type="button" onClick={confirmDuplicateOperator} data-pan="master-data-loader-operator-duplicate-confirm">
+                                Yes, continue
+                            </Button>
+                        </DialogFooter>
                     </DialogContent>
                 </Dialog>
             </div>

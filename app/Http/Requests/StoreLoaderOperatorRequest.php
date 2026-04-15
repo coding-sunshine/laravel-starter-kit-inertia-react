@@ -16,7 +16,7 @@ final class StoreLoaderOperatorRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255', 'unique:loader_operators,name'],
+            'name' => ['required', 'string', 'max:255'],
             'is_active' => ['sometimes', 'boolean'],
             'siding_id' => ['nullable', 'integer', 'exists:sidings,id'],
         ];

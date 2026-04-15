@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 final class UpdateLoaderOperatorRequest extends FormRequest
 {
@@ -16,16 +15,8 @@ final class UpdateLoaderOperatorRequest extends FormRequest
 
     public function rules(): array
     {
-        $loaderOperator = $this->route('loaderOperator');
-        $id = is_object($loaderOperator) ? $loaderOperator->getKey() : $loaderOperator;
-
         return [
-            'name' => [
-                'required',
-                'string',
-                'max:255',
-                Rule::unique('loader_operators', 'name')->ignore($id),
-            ],
+            'name' => ['required', 'string', 'max:255'],
             'is_active' => ['sometimes', 'boolean'],
             'siding_id' => ['nullable', 'integer', 'exists:sidings,id'],
         ];

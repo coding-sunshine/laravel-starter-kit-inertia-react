@@ -315,6 +315,8 @@ final class AppServiceProvider extends ServiceProvider
             'historical-railway-siding-export-xlsx',
             'master-data-add-loader',
             'master-data-add-loader-operator',
+            'master-data-loader-operator-duplicate-cancel',
+            'master-data-loader-operator-duplicate-confirm',
             'master-data-loaders-tab-loaders',
             'master-data-loaders-tab-operators',
         ]);
