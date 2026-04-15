@@ -1,7 +1,7 @@
 ---
 name: durable-workflow
 description: >-
-  Durable Workflow (laravel-workflow) and Waterline. Activates when defining
+  Durable Workflow (durable-workflow/workflow, durable-workflow/waterline) and Waterline. Activates when defining
   workflows or activities, using WorkflowStub, monitoring workflows at
   /waterline, or when the user mentions durable workflow, Waterline,
   long-running workflows, sagas, or workflow orchestration.
@@ -24,8 +24,8 @@ Activate when:
 
 ## Packages
 
-- **laravel-workflow/laravel-workflow** — Durable Workflow engine (workflows + activities, runs on Laravel queues).
-- **laravel-workflow/waterline** — Monitoring UI for workflow runs (similar to Horizon for jobs).
+- **durable-workflow/workflow** — Durable Workflow engine (workflows + activities, runs on Laravel queues).
+- **durable-workflow/waterline** — Monitoring UI for workflow runs (similar to Horizon for jobs).
 
 ## Key Concepts
 
