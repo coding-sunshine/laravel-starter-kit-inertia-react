@@ -75,6 +75,7 @@ use App\Http\Controllers\ShiftTimingsController;
 use App\Http\Controllers\SidingPreIndentReportController;
 use App\Http\Controllers\SidingsController;
 use App\Http\Controllers\SidingSwitchController;
+use App\Http\Controllers\StockLedgerController;
 use App\Http\Controllers\TermsAcceptController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserEmailResetNotificationController;
@@ -300,6 +301,8 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         Route::get('opening-coal-stock/{siding}/edit', [OpeningCoalStockController::class, 'edit'])->name('opening-coal-stock.edit');
         Route::put('opening-coal-stock/{siding}', [OpeningCoalStockController::class, 'update'])->name('opening-coal-stock.update');
         Route::post('opening-coal-stock/{siding}/fix', [OpeningCoalStockController::class, 'fixWrongOpening'])->name('opening-coal-stock.fix');
+        Route::get('stock-ledger', [StockLedgerController::class, 'index'])->name('stock-ledger.index');
+        Route::post('stock-ledger/adjust', [StockLedgerController::class, 'adjust'])->name('stock-ledger.adjust');
         Route::get('daily-stock-details', [CoalStockApproxDetailController::class, 'index'])->name('daily-stock-details.index');
         Route::get('daily-stock-details/export', [CoalStockApproxDetailController::class, 'export'])->name('daily-stock-details.export');
         Route::get('daily-stock-details/create', [CoalStockApproxDetailController::class, 'create'])->name('daily-stock-details.create');
