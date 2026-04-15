@@ -1,10 +1,10 @@
 ---
-description: Durable Workflow (laravel-workflow) and Waterline for long-running workflows
+description: Durable Workflow (durable-workflow/workflow, durable-workflow/waterline) and Waterline for long-running workflows
 globs: modules/workflows/**/*.php, config/waterline.php
 ---
 # Durable Workflow & Waterline
 
-- **Packages**: [laravel-workflow/laravel-workflow](https://github.com/durable-workflow/workflow) (Durable Workflow), [laravel-workflow/waterline](https://github.com/durable-workflow/waterline) (monitoring UI).
+- **Packages**: [durable-workflow/workflow](https://github.com/durable-workflow/workflow) (Durable Workflow), [durable-workflow/waterline](https://github.com/durable-workflow/waterline) (monitoring UI).
 - **Waterline**: Dashboard at `/waterline` (or `WATERLINE_PATH`). Same gate as Horizon: users who `can('access admin panel')`.
 - **Config**: `config/waterline.php` — path, domain, middleware. Gate in `Modules\Workflows\WorkflowsServiceProvider::bootModule()`.
 - **Workflows**: Extend `Workflow\Workflow`, use `yield activity(ActivityClass::class, ...)`. Start with `WorkflowStub::make(MyWorkflow::class)->start(...)`. Run on Laravel queues (Horizon).

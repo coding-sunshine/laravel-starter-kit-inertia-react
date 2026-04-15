@@ -112,16 +112,16 @@ Examples: dashboard, blog (index/show), changelog, help (index/show), billing, o
 | [bot-studio/templates](./bot-studio/templates.md) | Yes |
 | [bot-studio/marketplace/index](./bot-studio/marketplace/index.md) | Yes |
 | [bot-studio/marketplace/show](./bot-studio/marketplace/show.md) | Yes |
-| categories/create | No |
-| categories/edit | No |
-| invitations/create | No |
-| invitations/index | No |
-| users/create | No |
-| users/edit | No |
-| settings/email-templates/edit | No |
-| settings/email-templates/index | No |
-| settings/webhooks/create | No |
-| settings/webhooks/edit | No |
-| settings/webhooks/index | No |
+| [categories/create](./categories/create.md) | Yes |
+| [categories/edit](./categories/edit.md) | Yes |
+| [invitations/create](./invitations/create.md) | Yes |
+| [invitations/index](./invitations/index.md) | Yes |
+| [users/create](./users/create.md) | Yes |
+| [users/edit](./users/edit.md) | Yes |
+| [settings/email-templates/edit](./settings/email-templates/edit.md) | Yes |
+| [settings/email-templates/index](./settings/email-templates/index.md) | Yes |
+| [settings/webhooks/create](./settings/webhooks/create.md) | Yes |
+| [settings/webhooks/edit](./settings/webhooks/edit.md) | Yes |
+| [settings/webhooks/index](./settings/webhooks/index.md) | Yes |
 
 

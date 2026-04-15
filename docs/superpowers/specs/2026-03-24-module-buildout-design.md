@@ -348,12 +348,12 @@ Each module gets the same treatment: DataTable list, create form, edit form, det
 
 ### B7. Workflows Module
 
-**Models:** None (wrapper around laravel-workflow)
+**Models:** None (wrapper around durable-workflow/workflow)
 **Controllers:** None
 **Pages:** None exist
 
 **What needs building:**
-- Workflow list page (read from laravel-workflow tables)
+- Workflow list page (read from Durable Workflow package tables)
 - Workflow detail/status page (timeline of activities)
 - Manual trigger page (start a workflow with parameters)
 - Integration with Waterline UI (already at `/waterline` for super-admin)

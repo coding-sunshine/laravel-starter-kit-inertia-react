@@ -26,131 +26,10 @@
             "url": "https://github.com/coding-sunshine/laravel-data-table"
         },
         {
-            "type": "vcs",
-            "url": "https://github.com/coding-sunshine/laravel-ai-memory"
-        },
-        {
-            "type": "package",
-            "package": {
-                "name": "laravel/ai",
-                "version": "0.3.2",
-                "dist": {
-                    "url": "https://api.github.com/repos/laravel/ai/zipball/dfdf853427eb9fb8d763f8d9e2ed62cfcc03fb9c",
-                    "type": "zip"
-                },
-                "require": {
-                    "php": "^8.2",
-                    "illuminate/contracts": "^12.0|^13.0",
-                    "illuminate/support": "^12.0|^13.0",
-                    "prism-php/prism": "^0.99.0|^0.100",
-                    "prism-php/relay": "^1.8"
-                },
-                "autoload": {
-                    "psr-4": {
-                        "Laravel\\Ai\\": "src/"
-                    }
-                },
-                "extra": {
-                    "laravel": {
-                        "providers": [
-                            "Laravel\\Ai\\AiServiceProvider"
-                        ]
-                    }
-                }
-            }
-        },
-        {
-            "type": "package",
-            "package": {
-                "name": "akaunting/laravel-money",
-                "version": "6.0.2",
-                "dist": {
-                    "url": "https://api.github.com/repos/akaunting/laravel-money/zipball/5dca81f4297b99f8dbf0f4a6bb4d45c56acbd76a",
-                    "type": "zip"
-                },
-                "require": {
-                    "php": "^8.2",
-                    "illuminate/contracts": "^10.0|^11.0|^12.0|^13.0",
-                    "illuminate/support": "^10.0|^11.0|^12.0|^13.0",
-                    "illuminate/validation": "^10.0|^11.0|^12.0|^13.0",
-                    "illuminate/view": "^10.0|^11.0|^12.0|^13.0",
-                    "vlucas/phpdotenv": "^5.4.1"
-                },
-                "autoload": {
-                    "psr-4": {
-                        "Akaunting\\Money\\": "src"
-                    },
-                    "files": [
-                        "src/helpers.php"
-                    ]
-                },
-                "extra": {
-                    "laravel": {
-                        "providers": [
-                            "Akaunting\\Money\\Provider"
-                        ]
-                    }
-                }
-            }
-        },
-        {
-            "type": "package",
-            "package": {
-                "name": "askedio/laravel-soft-cascade",
-                "version": "12.0.0",
-                "dist": {
-                    "url": "https://api.github.com/repos/Askedio/laravel-soft-cascade/zipball/4a40b82c19955cb9080ebea964e769b6903bfccb",
-                    "type": "zip"
-                },
-                "require": {
-                    "php": "^8.2",
-                    "illuminate/support": "^10.0|^11.0|^12.0|^13.0",
-                    "illuminate/container": "^10.0|^11.0|^12.0|^13.0",
-                    "illuminate/database": "^10.0|^11.0|^12.0|^13.0",
-                    "illuminate/events": "^10.0|^11.0|^12.0|^13.0"
-                },
-                "autoload": {
-                    "psr-4": {
-                        "Askedio\\SoftCascade\\": "src/"
-                    }
-                },
-                "extra": {
-                    "laravel": {
-                        "providers": [
-                            "Askedio\\SoftCascade\\Providers\\GenericServiceProvider"
-                        ]
-                    }
-                }
-            }
-        },
-        {
-            "type": "package",
-            "package": {
-                "name": "backstage/laravel-mails",
-                "version": "2.1.0",
-                "dist": {
-                    "url": "https://api.github.com/repos/backstagephp/laravel-mails/zipball/b590728f2295be781ea19abd0275783d1598ca5c",
-                    "type": "zip"
-                },
-                "require": {
-                    "php": "^8.2",
-                    "illuminate/contracts": "^10.0|^11.0|^12.0|^13.0",
-                    "laravel/helpers": "^1.7.0",
-                    "spatie/laravel-package-tools": "^1.15.0"
-                },
-                "autoload": {
-                    "psr-4": {
-                        "Backstage\\Mails\\": "src",
-                        "Backstage\\Mails\\Database\\Factories\\": "database/factories"
-                    }
-                },
-                "extra": {
-                    "laravel": {
-                        "providers": [
-                            "Backstage\\Mails\\MailsServiceProvider"
-                        ]
-                    }
-                }
+            "type": "path",
+            "url": "packages/laravel-ai-memory",
+            "options": {
+                "symlink": true
             }
         },
         {
@@ -180,38 +59,6 @@
                         ],
                         "aliases": {
                             "Vouchers": "BeyondCode\\Vouchers\\Facades\\Vouchers"
-                        }
-                    }
-                }
-            }
-        },
-        {
-            "type": "package",
-            "package": {
-                "name": "cjmellor/level-up",
-                "version": "1.5.1",
-                "dist": {
-                    "url": "https://api.github.com/repos/cjmellor/level-up/zipball/26dbca6f541ff619300ba0bdd6f637416c855a9f",
-                    "type": "zip"
-                },
-                "require": {
-                    "php": "^8.1|^8.2|^8.3|^8.4",
-                    "illuminate/support": "^10.0|^11.0|^12.0|^13.0",
-                    "spatie/laravel-package-tools": "^1.15"
-                },
-                "autoload": {
-                    "psr-4": {
-                        "LevelUp\\Experience\\": "src/",
-                        "LevelUp\\Experience\\Database\\Factories\\": "database/factories/"
-                    }
-                },
-                "extra": {
-                    "laravel": {
-                        "providers": [
-                            "LevelUp\\Experience\\LevelUpServiceProvider"
-                        ],
-                        "aliases": {
-                            "Experience": "LevelUp\\Experience\\Facades\\Experience"
                         }
                     }
                 }
@@ -312,35 +159,6 @@
         {
             "type": "package",
             "package": {
-                "name": "kalnoy/nestedset",
-                "version": "6.0.6",
-                "dist": {
-                    "url": "https://api.github.com/repos/lazychaser/laravel-nestedset/zipball/3cfc56a9759fb592bc903056166bfc0867f9e679",
-                    "type": "zip"
-                },
-                "require": {
-                    "php": "^8.0",
-                    "illuminate/support": "^7.0|^8.0|^9.0|^10.0|^11.0|^12.0|^13.0",
-                    "illuminate/database": "^7.0|^8.0|^9.0|^10.0|^11.0|^12.0|^13.0",
-                    "illuminate/events": "^7.0|^8.0|^9.0|^10.0|^11.0|^12.0|^13.0"
-                },
-                "autoload": {
-                    "psr-4": {
-                        "Kalnoy\\Nestedset\\": "src/"
-                    }
-                },
-                "extra": {
-                    "laravel": {
-                        "providers": [
-                            "Kalnoy\\Nestedset\\NestedSetServiceProvider"
-                        ]
-                    }
-                }
-            }
-        },
-        {
-            "type": "package",
-            "package": {
                 "name": "laravelcm/laravel-subscriptions",
                 "version": "1.7.2",
                 "dist": {
@@ -371,62 +189,35 @@
                     }
                 }
             }
-        },
-        {
-            "type": "package",
-            "package": {
-                "name": "thomasjohnkane/snooze",
-                "version": "2.9.0",
-                "dist": {
-                    "url": "https://api.github.com/repos/thomasjohnkane/snooze/zipball/b161be62baf0a77b988601ba8e4b4e8e2811e1f4",
-                    "type": "zip"
-                },
-                "require": {
-                    "php": "^8.2",
-                    "illuminate/support": "^10.0|^11.0|^12.0|^13.0"
-                },
-                "autoload": {
-                    "psr-4": {
-                        "Thomasjohnkane\\Snooze\\": "src"
-                    }
-                },
-                "extra": {
-                    "laravel": {
-                        "providers": [
-                            "Thomasjohnkane\\Snooze\\ServiceProvider"
-                        ]
-                    }
-                }
-            }
         }
     ],
     "require": {
         "php": "^8.4",
         "a909m/filament-statefusion": "^2.3.0",
-        "akaunting/laravel-money": "^6.0.2",
+        "akaunting/laravel-money": "^6.0.3",
         "alizharb/filament-activity-log": "dev-main",
-        "askedio/laravel-soft-cascade": "^12.0",
-        "backstage/laravel-mails": "^2.1",
+        "askedio/laravel-soft-cascade": "^13.0",
+        "backstage/laravel-mails": "^3.0.14",
         "beyondcode/laravel-vouchers": "^2.3",
-        "cjmellor/level-up": "^1.5.1",
-        "dedoc/scramble": "^0.13.17",
+        "cjmellor/level-up": "^2.0",
+        "dedoc/scramble": "^0.13.18",
         "deligoez/laravel-model-hashid": "^4.0.1",
         "devrabiul/laravel-geo-genius": "^1.6",
         "essa/api-tool-kit": "^3.2.1",
         "eznix86/laravel-ai-memory": "dev-main",
-        "filament/filament": "^5.5.0",
-        "filament/spatie-laravel-settings-plugin": "^5.5.0",
-        "harris21/laravel-fuse": ">=0.4",
+        "filament/filament": "^5.5.1",
+        "filament/spatie-laravel-settings-plugin": "^5.5.1",
+        "harris21/laravel-fuse": ">=0.5",
         "inertiajs/inertia-laravel": "^3.0.6",
         "jijunair/laravel-referral": "^1.0.4",
-        "kalnoy/nestedset": "^6.0.6",
-        "laravel-workflow/laravel-workflow": "^1.0.74",
-        "laravel-workflow/waterline": "^1.0.15",
-        "laravel/ai": "0.3.2",
+        "kalnoy/nestedset": "^7.0.1",
+        "durable-workflow/workflow": "^1.0.75",
+        "durable-workflow/waterline": "^1.0.16",
+        "laravel/ai": "^0.5.1",
         "laravel/fortify": "^1.36.2",
-        "laravel/framework": "^13.4.0",
-        "laravel/horizon": "^5.45.5",
-        "laravel/mcp": "^0.6.5",
+        "laravel/framework": "^13.5.0",
+        "laravel/horizon": "^5.45.6",
+        "laravel/mcp": "^0.6.7",
         "laravel/pennant": "^1.23",
         "laravel/pulse": "^1.7.3",
         "laravel/reverb": "^1.10.0",
@@ -434,7 +225,7 @@
         "laravel/scout": "^11.1.0",
         "laravel/slack-notification-channel": "^3.8",
         "laravel/socialite": "^5.26.1",
-        "laravel/tinker": "^3.0",
+        "laravel/tinker": "^3.0.2",
         "laravel/wayfinder": "^0.1.16",
         "laravelcm/laravel-subscriptions": "^1.7.2",
         "laraveldaily/laravel-invoices": "^4.2.0",
@@ -444,9 +235,9 @@
         "machour/laravel-data-table": "dev-main",
         "martinpetricko/laravel-database-mail": "^2.0.3",
         "nunomaduro/essentials": "^1.2.0",
-        "panphp/pan": "^0.1.9",
+        "panphp/pan": "^0.1.10",
         "pgvector/pgvector": "^0.2.2",
-        "prism-php/prism": "^0.99.0|^0.100.1",
+        "prism-php/prism": "^0.100.1",
         "prism-php/relay": "^1.8",
         "propaganistas/laravel-phone": "^6.0.3",
         "pxlrbt/filament-excel": "^3.6.1",
@@ -469,12 +260,12 @@
         "spatie/laravel-model-flags": "^1.4.2",
         "spatie/laravel-model-states": "^2.13.1",
         "spatie/laravel-onboard": "^2.6.3",
-        "spatie/laravel-pdf": "^2.5.0",
+        "spatie/laravel-pdf": "^2.6.0",
         "spatie/laravel-permission": "^7.3.0",
         "spatie/laravel-personal-data-export": "^4.3.2",
         "spatie/laravel-query-builder": "^7.2.0",
         "spatie/laravel-rate-limited-job-middleware": "^2.9",
-        "spatie/laravel-responsecache": "^8.3",
+        "spatie/laravel-responsecache": "^8.3.1",
         "spatie/laravel-schemaless-attributes": "^2.6.0",
         "spatie/laravel-settings": "^3.7.2",
         "spatie/laravel-sitemap": "^8.1.0",
@@ -482,10 +273,10 @@
         "spatie/laravel-tags": "^4.11.0",
         "spatie/laravel-webhook-client": "^3.5",
         "spatie/laravel-webhook-server": "^3.10",
-        "stechstudio/filament-impersonate": "^5.2",
+        "stechstudio/filament-impersonate": "^5.3",
         "stephenjude/filament-feature-flags": "^5.0.3",
         "stripe/stripe-php": "^20.0",
-        "thomasjohnkane/snooze": "^2.9",
+        "thomasjohnkane/snooze": "^2.9.1",
         "typesense/typesense-php": "^6.0",
         "wildside/userstamps": "^4.0"
     },
@@ -494,13 +285,13 @@
         "fakerphp/faker": "^1.24.1",
         "filament/blueprint": "^2.1.2",
         "fruitcake/laravel-debugbar": "^4.2.6",
-        "larastan/larastan": "^3.9.3",
-        "laravel/boost": "^2.4.2",
+        "larastan/larastan": "^3.9.5",
+        "laravel/boost": "^2.4.3",
         "laravel/pail": "^1.2.6",
         "laravel/pint": "^1.29.0",
         "mockery/mockery": "^1.6.12",
         "nunomaduro/collision": "^8.9.3",
-        "pestphp/pest": "^4.4.6",
+        "pestphp/pest": "^4.6.0",
         "pestphp/pest-plugin-browser": "^4.3.1",
         "pestphp/pest-plugin-laravel": "^4.1.0",
         "pestphp/pest-plugin-type-coverage": "^4.0.4",

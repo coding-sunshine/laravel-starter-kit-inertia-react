@@ -1,6 +1,6 @@
 # Durable Workflow & Waterline
 
-The starter kit includes **[laravel-workflow/laravel-workflow](https://github.com/durable-workflow/workflow)** (Durable Workflow) and **[laravel-workflow/waterline](https://github.com/durable-workflow/waterline)** for defining long-running, persistent workflows and monitoring them in a dashboard.
+The starter kit includes **[durable-workflow/workflow](https://github.com/durable-workflow/workflow)** (Durable Workflow) and **[durable-workflow/waterline](https://github.com/durable-workflow/waterline)** for defining long-running, persistent workflows and monitoring them in a dashboard.
 
 ## What It Is
 
