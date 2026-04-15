@@ -220,6 +220,8 @@ interface SidingStock {
     total_rakes: number;
     received_mt: number;
     dispatched_mt: number;
+    last_receipt_at: string | null;
+    last_dispatch_at: string | null;
 }
 
 interface SidingPerformanceItem {
@@ -4096,6 +4098,8 @@ export default function Dashboard() {
                     total_rakes: 0,
                     received_mt: 0,
                     dispatched_mt: 0,
+                    last_receipt_at: null,
+                    last_dispatch_at: null,
                 };
             }
         }
@@ -4378,7 +4382,8 @@ export default function Dashboard() {
                         </div>
                         <div className="flex gap-2 overflow-x-auto pb-0.5 lg:grid lg:grid-cols-3 lg:gap-2 lg:overflow-visible">
                             {filteredSidings.map((s) => {
-                                const stockMt = sidingStocks[s.id]?.closing_balance_mt ?? 0;
+                                const stock = sidingStocks[s.id];
+                                const stockMt = stock?.closing_balance_mt ?? 0;
                                 const rakesLoadable = Math.floor(stockMt / MT_PER_RAKE_LOAD);
                                 const accent = SIDING_ACCENT[s.name] ?? '#6B7280';
                                 return (
@@ -4406,6 +4411,24 @@ export default function Dashboard() {
                                                 </p>
                                                 <p className="text-[10px] text-gray-600">Rakes</p>
                                             </div>
+                                        </div>
+                                        <div className="mt-2 space-y-0.5 border-t border-gray-100 pt-2 text-[10px]">
+                                            <p className="text-green-700">
+                                                <span className="font-bold">Last receipt: </span>
+                                                <span className="tabular-nums">
+                                                    {stock?.last_receipt_at
+                                                        ? new Date(stock.last_receipt_at).toLocaleString()
+                                                        : '—'}
+                                                </span>
+                                            </p>
+                                            <p className="text-red-700">
+                                                <span className="font-bold">Last dispatch: </span>
+                                                <span className="tabular-nums">
+                                                    {stock?.last_dispatch_at
+                                                        ? new Date(stock.last_dispatch_at).toLocaleString()
+                                                        : '—'}
+                                                </span>
+                                            </p>
                                         </div>
                                     </div>
                                 );

@@ -1122,9 +1122,10 @@ final class ExecutiveDashboardController extends Controller
      * Siding stock from stock_ledger only (no date filter).
      * Receipts (daily_vehicle_entry_id) increase stock; dispatches (rake_id) decrease it.
      * Stock = latest ledger row's closing_balance_mt per siding as of the current request time (live).
+     * last_receipt_at / last_dispatch_at = MAX(created_at) for receipt vs dispatch rows (corrections excluded).
      *
      * @param  array<int>  $sidingIds
-     * @return array<int, array{siding_id: int, opening_balance_mt: float, closing_balance_mt: float, total_rakes: int, received_mt: float, dispatched_mt: float}>
+     * @return array<int, array{siding_id: int, opening_balance_mt: float, closing_balance_mt: float, total_rakes: int, received_mt: float, dispatched_mt: float, last_receipt_at: string|null, last_dispatch_at: string|null}>
      */
     public function buildSidingStocks(array $sidingIds, CarbonInterface $from, CarbonInterface $to): array
     {
@@ -1164,6 +1165,20 @@ final class ExecutiveDashboardController extends Controller
             ->groupBy('siding_id')
             ->pluck('total', 'siding_id');
 
+        $lastReceiptAtBySiding = StockLedger::query()
+            ->whereIn('siding_id', $sidingIds)
+            ->where('transaction_type', 'receipt')
+            ->selectRaw('siding_id, MAX(created_at) as last_at')
+            ->groupBy('siding_id')
+            ->pluck('last_at', 'siding_id');
+
+        $lastDispatchAtBySiding = StockLedger::query()
+            ->whereIn('siding_id', $sidingIds)
+            ->where('transaction_type', 'dispatch')
+            ->selectRaw('siding_id, MAX(created_at) as last_at')
+            ->groupBy('siding_id')
+            ->pluck('last_at', 'siding_id');
+
         // Rake count in date range
         $rakeCountsBySiding = Rake::query()
             ->whereIn('siding_id', $sidingIds)
@@ -1186,6 +1201,9 @@ final class ExecutiveDashboardController extends Controller
                 $closing = $opening;
             }
 
+            $lastReceipt = $lastReceiptAtBySiding[$sid] ?? null;
+            $lastDispatch = $lastDispatchAtBySiding[$sid] ?? null;
+
             $result[$sid] = [
                 'siding_id' => $sid,
                 'opening_balance_mt' => $opening,
@@ -1193,6 +1211,8 @@ final class ExecutiveDashboardController extends Controller
                 'total_rakes' => (int) ($rakeCountsBySiding[$sid] ?? 0),
                 'received_mt' => (float) ($receivedBySiding[$sid] ?? 0),
                 'dispatched_mt' => abs((float) ($dispatchedBySiding[$sid] ?? 0)), // important fix
+                'last_receipt_at' => $lastReceipt !== null ? Carbon::parse($lastReceipt)->toIso8601String() : null,
+                'last_dispatch_at' => $lastDispatch !== null ? Carbon::parse($lastDispatch)->toIso8601String() : null,
             ];
         }
 
