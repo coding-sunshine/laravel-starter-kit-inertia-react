@@ -1,3 +1,11 @@
+import { IndentCreateForm, type IndentCreatePrefill } from '@/components/indents/indent-create-form';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { GlossaryTerm } from '@/components/glossary-term';
 import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
@@ -17,6 +25,17 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import { FileText, Plus, Upload } from 'lucide-react';
 import { useRef, useState } from 'react';
 
+interface SidingOption {
+    id: number;
+    name: string;
+    code: string;
+}
+
+interface PowerPlantOption {
+    name: string;
+    code: string;
+}
+
 interface IndentRow {
     id: number;
     rake_number: string | null;
@@ -32,17 +51,47 @@ interface IndentRow {
 
 interface Props {
     tableData: DataTableResponse<IndentRow>;
+    sidings: SidingOption[];
+    power_plants: PowerPlantOption[];
 }
 
-export default function IndentsIndex({ tableData }: Props) {
+function getCsrfHeaders(): HeadersInit {
+    const cookieMatch = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
+    if (cookieMatch?.[1]) {
+        return {
+            'X-XSRF-TOKEN': decodeURIComponent(cookieMatch[1].trim()),
+            Accept: 'application/json',
+        };
+    }
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    const t = meta?.getAttribute('content');
+    if (t) {
+        return { 'X-CSRF-TOKEN': t, Accept: 'application/json' };
+    }
+
+    return { Accept: 'application/json' };
+}
+
+export default function IndentsIndex({
+    tableData,
+    sidings,
+    power_plants,
+}: Props) {
     const canCreateIndent = useCan('sections.indents.create');
-    const { flash, errors } = usePage<{
+    const { flash } = usePage<{
         flash?: { success?: string };
-        errors?: { pdf?: string };
     }>().props;
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [uploading, setUploading] = useState(false);
+    const [previewOpen, setPreviewOpen] = useState(false);
+    const [previewPrefill, setPreviewPrefill] =
+        useState<IndentCreatePrefill | null>(null);
+    const [stagedPdfFile, setStagedPdfFile] = useState<File | null>(null);
+    const [previewSessionId, setPreviewSessionId] = useState(0);
+    const [previewPdfError, setPreviewPdfError] = useState<string | null>(
+        null,
+    );
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'E-Demand', href: '/indents' },
@@ -55,22 +104,64 @@ export default function IndentsIndex({ tableData }: Props) {
         fileInputRef.current?.click();
     };
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!canCreateIndent) {
             return;
         }
         const file = e.target.files?.[0];
-        if (!file) return;
+        if (!file) {
+            return;
+        }
         setUploading(true);
+        setPreviewPdfError(null);
         const formData = new FormData();
         formData.append('pdf', file);
-        router.post('/indents/import', formData, {
-            forceFormData: true,
-            onFinish: () => {
-                setUploading(false);
-                e.target.value = '';
-            },
-        });
+
+        try {
+            const res = await fetch('/indents/import-preview', {
+                method: 'POST',
+                body: formData,
+                credentials: 'same-origin',
+                headers: getCsrfHeaders(),
+            });
+
+            const json = (await res.json()) as {
+                data?: { prefill: IndentCreatePrefill };
+                message?: string;
+                errors?: { pdf?: string[] };
+            };
+
+            if (!res.ok) {
+                const msg =
+                    json.errors?.pdf?.[0] ??
+                    json.message ??
+                    'Could not parse this PDF.';
+                setPreviewPdfError(msg);
+                return;
+            }
+
+            if (!json.data?.prefill) {
+                setPreviewPdfError('Unexpected response from server.');
+                return;
+            }
+
+            setStagedPdfFile(file);
+            setPreviewPrefill(json.data.prefill);
+            setPreviewSessionId((k) => k + 1);
+            setPreviewOpen(true);
+        } catch {
+            setPreviewPdfError('Upload failed. Check your connection and try again.');
+        } finally {
+            setUploading(false);
+            e.target.value = '';
+        }
+    };
+
+    const closePreview = () => {
+        setPreviewOpen(false);
+        setPreviewPrefill(null);
+        setStagedPdfFile(null);
+        setPreviewSessionId(0);
     };
 
     return (
@@ -84,9 +175,9 @@ export default function IndentsIndex({ tableData }: Props) {
                     </div>
                 )}
 
-                {errors?.pdf && (
+                {previewPdfError && (
                     <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
-                        {errors.pdf}
+                        {previewPdfError}
                     </div>
                 )}
 
@@ -221,6 +312,44 @@ export default function IndentsIndex({ tableData }: Props) {
                     </CardContent>
                 </Card>
             </div>
+
+            <Dialog
+                open={previewOpen}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        closePreview();
+                    }
+                }}
+            >
+                <DialogContent
+                    showCloseButton
+                    className="top-[5%] flex max-h-[min(92vh,920px)] translate-y-0 flex-col gap-0 overflow-hidden sm:max-w-4xl"
+                >
+                    <DialogHeader className="shrink-0 border-b pb-4">
+                        <DialogTitle>Confirm e-demand from PDF</DialogTitle>
+                        <DialogDescription>
+                            Review or edit the parsed fields, then create the e-demand. A linked
+                            rake is created after you save.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+                        {previewPrefill !== null && (
+                            <IndentCreateForm
+                                key={previewSessionId}
+                                sidings={sidings}
+                                power_plants={power_plants}
+                                prefill={previewPrefill}
+                                stagedPdfFile={stagedPdfFile}
+                                variant="modal"
+                                preserveStateOnSubmit
+                                prefillSyncKey={previewSessionId}
+                                onCancel={closePreview}
+                                onSubmitSuccess={closePreview}
+                            />
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
         </AppLayout>
     );
 }

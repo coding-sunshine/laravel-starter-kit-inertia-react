@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Indents;
 
+use App\Actions\CreateIndentAndProvisionRakeAction;
 use App\Actions\DeleteIndentAction;
 use App\Actions\ProvisionRakeForIndent;
 use App\Actions\UpdateStockLedger;
 use App\DataTables\IndentDataTable;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreIndentRequest;
 use App\Models\Indent;
 use App\Models\PowerPlant;
 use App\Models\Rake;
@@ -17,15 +19,14 @@ use App\Models\Wagon;
 use App\Services\IndentPdfImporter;
 use Closure;
 use DateTimeImmutable;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use InvalidArgumentException;
-use RuntimeException;
 use Throwable;
 
 final class IndentsController extends Controller
@@ -44,52 +45,67 @@ final class IndentsController extends Controller
         'closed',
     ];
 
-    public function import(Request $request): RedirectResponse
+    public function importPreview(Request $request): JsonResponse
     {
         $validated = $request->validate([
             'pdf' => ['required', 'file', 'mimes:pdf', 'max:10240'],
         ]);
 
         $user = $request->user();
+        abort_unless($user !== null, 401);
+
         $sidingIds = $user->isSuperAdmin()
             ? Siding::query()->pluck('id')->all()
             : $user->sidings()->get()->pluck('id')->all();
 
-        // Backward compatibility: some legacy users only have `users.siding_id`
-        // and no rows in the `user_siding` pivot table.
         if (! $user->isSuperAdmin() && $sidingIds === [] && $user->siding_id !== null) {
             $sidingIds = [(int) $user->siding_id];
         }
 
         try {
-            $indent = app(IndentPdfImporter::class)->import(
+            $prefill = app(IndentPdfImporter::class)->previewImport(
                 $validated['pdf'],
                 $user->id,
                 $sidingIds
             );
 
-            $rake = $indent->rake;
-            if ($rake === null) {
-                throw new RuntimeException('Rake was not provisioned after PDF import.');
-            }
-
-            return to_route('rakes.show', $rake)
-                ->with('success', 'Indent and rake created from e-Demand PDF. Review the rake below.');
+            return response()->json([
+                'data' => [
+                    'prefill' => $prefill,
+                ],
+            ]);
         } catch (InvalidArgumentException $e) {
-            return back()->withErrors(['pdf' => $e->getMessage()]);
+            return response()->json([
+                'message' => $e->getMessage(),
+                'errors' => [
+                    'pdf' => [$e->getMessage()],
+                ],
+            ], 422);
         } catch (Throwable $e) {
             report($e);
 
-            return back()->withErrors([
-                'pdf' => 'Import failed: '.$e->getMessage(),
-            ]);
+            $message = 'Import failed: '.$e->getMessage();
+
+            return response()->json([
+                'message' => $message,
+                'errors' => [
+                    'pdf' => [$message],
+                ],
+            ], 422);
         }
     }
 
     public function index(Request $request): Response
     {
+        $user = $request->user();
+        $catalog = $user !== null && $this->hasSectionPermission($user, 'sections.indents.create')
+            ? $this->indentsFormCatalog($user)
+            : ['sidings' => [], 'power_plants' => []];
+
         return Inertia::render('indents/index', [
             'tableData' => IndentDataTable::makeTable($request),
+            'sidings' => $catalog['sidings'],
+            'power_plants' => $catalog['power_plants'],
         ]);
     }
 
@@ -98,175 +114,39 @@ final class IndentsController extends Controller
         // $this->authorize('create', Indent::class);
 
         $user = $request->user();
-        $sidingIds = $user->isSuperAdmin()
-            ? Siding::query()->pluck('id')->all()
-            : $user->sidings()->get()->pluck('id')->all();
-
-        // Backward compatibility: some legacy users only have `users.siding_id`
-        // and no rows in the `user_siding` pivot table.
-        if (! $user->isSuperAdmin() && $sidingIds === [] && $user->siding_id !== null) {
-            $sidingIds = [(int) $user->siding_id];
-        }
-
-        $sidings = Siding::query()
-            ->whereIn('id', $sidingIds)
-            ->orderBy('name')
-            ->get(['id', 'name', 'code']);
-
-        $powerPlants = PowerPlant::query()
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get(['name', 'code']);
+        $catalog = $this->indentsFormCatalog($user);
 
         return Inertia::render('indents/create', [
-            'sidings' => $sidings,
-            'power_plants' => $powerPlants,
+            'sidings' => $catalog['sidings'],
+            'power_plants' => $catalog['power_plants'],
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(StoreIndentRequest $request): JsonResponse|RedirectResponse
     {
         // $this->authorize('create', Indent::class);
 
-        $validated = $request->validate([
-            'siding_id' => ['required', 'integer', 'exists:sidings,id'],
-            'indent_number' => ['nullable', 'string', 'max:20', 'unique:indents,indent_number'],
-            'state' => ['nullable', 'string', Rule::in(self::INDENT_STATE_VALUES)],
-            'remarks' => ['nullable', 'string', 'max:65535'],
-            'e_demand_reference_id' => ['nullable', 'string', 'max:100'],
-            'fnr_number' => ['nullable', 'string', 'max:50'],
-            'railway_reference_no' => ['nullable', 'string', 'max:100'],
-            'destination' => [
-                'required',
-                'string',
-                'max:100',
-                Rule::exists('power_plants', 'code')->where('is_active', true),
-            ],
-            'expected_loading_date' => ['required', 'date'],
-            'required_by_date' => ['nullable', 'date'],
-            'indent_at' => ['required', 'date'],
-            'demanded_stock' => ['required', 'string', 'max:100'],
-            'total_units' => ['required', 'integer', 'min:1', 'max:999999'],
-            'target_quantity_mt' => ['required', 'numeric', 'min:0', 'max:999999999999.99'],
-            'allocated_quantity_mt' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99'],
-            'available_stock_mt' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99'],
-            'rake_number' => [
-                'required',
-                'string',
-                'max:100',
-                function (string $attribute, mixed $value, Closure $fail) use ($request): void {
-                    $trimmed = $value !== null && mb_trim((string) $value) !== '' ? mb_trim((string) $value) : null;
-                    if ($trimmed === null) {
-                        return;
-                    }
+        $user = $request->user();
+        abort_unless($user !== null, 401);
 
-                    $sidingId = (int) $request->input('siding_id');
-                    if ($sidingId <= 0) {
-                        return;
-                    }
+        $rake = app(CreateIndentAndProvisionRakeAction::class)->handle(
+            $request,
+            $user,
+            $request->validated(),
+        );
 
-                    $indentAt = $request->input('indent_at');
-                    if ($indentAt === null || $indentAt === '') {
-                        return;
-                    }
+        $successMessage = 'Indent created. Open the rake to continue.';
 
-                    $reference = Date::parse($indentAt);
+        if ($request->wantsJson()) {
+            session()->flash('success', $successMessage);
 
-                    $existsInMonth = Rake::query()
-                        ->where('rake_number', $trimmed)
-                        ->where('siding_id', $sidingId)
-                        ->whereYear('loading_date', $reference->year)
-                        ->whereMonth('loading_date', $reference->month)
-                        ->exists();
+            return response()->json([
+                'redirect' => route('rakes.show', $rake),
+            ]);
+        }
 
-                    if ($existsInMonth) {
-                        $fail('This rake number is already in use for this siding in the indent month.');
-                    }
-                },
-            ],
-            'rake_priority_number' => [
-                'required',
-                'integer',
-                'min:0',
-                function (string $attribute, mixed $value, Closure $fail) use ($request): void {
-                    if ($value === null || $value === '') {
-                        return;
-                    }
-                    if (! is_numeric($value)) {
-                        return;
-                    }
-
-                    $num = (int) $value;
-                    $sidingId = (int) $request->input('siding_id');
-                    if ($sidingId <= 0) {
-                        return;
-                    }
-
-                    $indentAt = $request->input('indent_at');
-                    if ($indentAt === null || $indentAt === '') {
-                        return;
-                    }
-
-                    $reference = Date::parse($indentAt);
-
-                    $existsInMonth = Rake::query()
-                        ->where('priority_number', $num)
-                        ->where('siding_id', $sidingId)
-                        ->whereYear('loading_date', $reference->year)
-                        ->whereMonth('loading_date', $reference->month)
-                        ->exists();
-
-                    if ($existsInMonth) {
-                        $fail('This rake priority number is already in use for this siding in the indent month.');
-                    }
-                },
-            ],
-            'pdf' => ['nullable', 'file', 'mimes:pdf', 'max:10240'],
-        ]);
-
-        return DB::transaction(function () use ($request, $validated): RedirectResponse {
-            $indent = new Indent;
-            $indent->siding_id = $validated['siding_id'];
-            $indent->indent_number = $validated['indent_number'] ?? null;
-            $indent->state = $validated['state'] ?? 'pending';
-            $indent->remarks = $validated['remarks'] ?? null;
-            $indent->e_demand_reference_id = $validated['e_demand_reference_id'] ?? null;
-            $indent->fnr_number = $validated['fnr_number'] ?? null;
-            $indent->railway_reference_no = $validated['railway_reference_no'] ?? null;
-            $indent->destination = $validated['destination'] ?? null;
-            $indent->expected_loading_date = $validated['expected_loading_date'] ?? null;
-            $indent->required_by_date = $validated['required_by_date'] ?? null;
-            $indent->demanded_stock = $validated['demanded_stock'] ?? null;
-            $indent->total_units = $validated['total_units'] ?? null;
-            $indent->target_quantity_mt = $validated['target_quantity_mt'] ?? null;
-            $indent->allocated_quantity_mt = $validated['allocated_quantity_mt'] ?? null;
-            $indent->available_stock_mt = $validated['available_stock_mt'] ?? null;
-            $this->applyIndentAt($indent, $validated['indent_at'] ?? null);
-            $indent->created_by = $request->user()->id;
-            $indent->updated_by = $request->user()->id;
-            $indent->save();
-
-            if ($request->hasFile('pdf')) {
-                $indent->addMediaFromRequest('pdf')->toMediaCollection('indent_confirmation_pdf');
-            }
-
-            $rakeNumber = isset($validated['rake_number']) && mb_trim((string) $validated['rake_number']) !== ''
-                ? mb_trim((string) $validated['rake_number'])
-                : null;
-            $priorityNumber = array_key_exists('rake_priority_number', $validated)
-                ? (($validated['rake_priority_number'] ?? null) !== null ? (int) $validated['rake_priority_number'] : null)
-                : null;
-
-            $rake = app(ProvisionRakeForIndent::class)->handle(
-                $indent,
-                $rakeNumber,
-                (int) $request->user()->id,
-                $priorityNumber,
-            );
-
-            return to_route('rakes.show', $rake)
-                ->with('success', 'Indent created. Open the rake to continue.');
-        });
+        return to_route('rakes.show', $rake)
+            ->with('success', $successMessage);
     }
 
     public function downloadPdf(Indent $indent): \Illuminate\Contracts\Support\Responsable
@@ -612,6 +492,35 @@ final class IndentsController extends Controller
 
         return to_route('indents.index')
             ->with('success', 'Indent deleted.');
+    }
+
+    /**
+     * @return array{sidings: \Illuminate\Database\Eloquent\Collection<int, Siding>, power_plants: \Illuminate\Database\Eloquent\Collection<int, PowerPlant>}
+     */
+    private function indentsFormCatalog(\App\Models\User $user): array
+    {
+        $sidingIds = $user->isSuperAdmin()
+            ? Siding::query()->pluck('id')->all()
+            : $user->sidings()->get()->pluck('id')->all();
+
+        if (! $user->isSuperAdmin() && $sidingIds === [] && $user->siding_id !== null) {
+            $sidingIds = [(int) $user->siding_id];
+        }
+
+        $sidings = Siding::query()
+            ->whereIn('id', $sidingIds)
+            ->orderBy('name')
+            ->get(['id', 'name', 'code']);
+
+        $powerPlants = PowerPlant::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['name', 'code']);
+
+        return [
+            'sidings' => $sidings,
+            'power_plants' => $powerPlants,
+        ];
     }
 
     private function applyIndentAt(Indent $indent, mixed $value): void

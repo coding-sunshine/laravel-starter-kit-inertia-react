@@ -274,7 +274,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('rakes/{rake}/comparison', [RakesController::class, 'comparison'])->name('rakes.comparison');
     Route::post('rakes/{rake}/guard-inspection', [RakeGuardInspectionController::class, 'store'])->name('rakes.guard-inspection.store');
     Route::get('indents', [IndentsController::class, 'index'])->name('indents.index');
-    Route::post('indents/import', [IndentsController::class, 'import'])->name('indents.import');
+    Route::post('indents/import-preview', [IndentsController::class, 'importPreview'])->name('indents.import-preview');
     Route::get('indents/create', [IndentsController::class, 'create'])->name('indents.create');
     Route::post('indents', [IndentsController::class, 'store'])->name('indents.store');
     Route::get('indents/{indent}/pdf', [IndentsController::class, 'downloadPdf'])->name('indents.pdf');
