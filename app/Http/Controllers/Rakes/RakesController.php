@@ -339,8 +339,9 @@ final class RakesController extends Controller
 
                         $existsInMonth = Rake::query()
                             ->where('rake_number', $trimmed)
-                            ->whereYear('created_at', now()->year)
-                            ->whereMonth('created_at', now()->month)
+                            ->where('siding_id', $rake->siding_id)
+                            ->whereYear('loading_date', now()->year)
+                            ->whereMonth('loading_date', now()->month)
                             ->whereKeyNot($rake->getKey())
                             ->exists();
 
