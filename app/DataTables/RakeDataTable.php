@@ -8,6 +8,7 @@ use App\Models\Rake;
 use App\Models\Siding;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
 use Machour\DataTable\AbstractDataTable;
 use Machour\DataTable\Columns\Column;
 use Machour\DataTable\Filters\OperatorFilter;
@@ -107,27 +108,24 @@ final class RakeDataTable extends AbstractDataTable
         ];
     }
 
-    public static function tableBaseQuery(): Builder
+    /**
+     * Base rake list query (data_source scope, siding scope, loading_date window).
+     * Matches `/rakes` DataTable and API index when combined with {@see self::rakeListEagerLoads()}.
+     *
+     * When `filter[loading_date]` and `filter[placement_time]` are both absent: applies legacy
+     * `from_date` / `to_date` on `loading_date` if present, otherwise the current calendar month
+     * on `loading_date` (same as the website default).
+     */
+    public static function listQueryForRequest(Request $request): Builder
     {
-        $query = Rake::query()->with([
-            'siding:id,code,name',
-            'rrDocument:id,rake_id,diverrt_destination_id',
-            'rrDocument.media',
-            'rrDocuments:id,rake_id,diverrt_destination_id',
-            'diverrtDestinations:id,rake_id',
-            'txr:id,rake_id,status,inspection_time,inspection_end_time',
-            'wagons:id,rake_id,is_unfit',
-            'wagonLoadings:id,rake_id,wagon_id,loaded_quantity_mt',
-            'guardInspections:id,rake_id,is_approved',
-            'rakeWeighments:id,rake_id,pdf_file_path,status',
-        ]);
+        $query = Rake::query();
 
         $query->where(function (Builder $q): void {
             $q->whereNull('data_source')
                 ->orWhereIn('data_source', self::ALLOWED_DATA_SOURCES);
         });
 
-        $user = request()->user();
+        $user = $request->user();
         if ($user && ! $user->isSuperAdmin()) {
             $sidingIds = $user->sidings()->get()->pluck('id')->all();
 
@@ -140,18 +138,55 @@ final class RakeDataTable extends AbstractDataTable
         }
 
         /** @var array<string, mixed> $filters */
-        $filters = request()->query('filter', []);
+        $filters = $request->query('filter', []);
+        $filters = is_array($filters) ? $filters : [];
+
         $hasExplicitDateFilter = array_key_exists('loading_date', $filters)
             || array_key_exists('placement_time', $filters);
 
         if (! $hasExplicitDateFilter) {
-            $monthStart = CarbonImmutable::now()->startOfMonth()->toDateString();
-            $monthEnd = CarbonImmutable::now()->endOfMonth()->toDateString();
+            if ($request->filled('from_date') || $request->filled('to_date')) {
+                if ($request->filled('from_date')) {
+                    $query->whereDate('loading_date', '>=', $request->date('from_date'));
+                }
+                if ($request->filled('to_date')) {
+                    $query->whereDate('loading_date', '<=', $request->date('to_date'));
+                }
+            } else {
+                $monthStart = CarbonImmutable::now()->startOfMonth()->toDateString();
+                $monthEnd = CarbonImmutable::now()->endOfMonth()->toDateString();
 
-            $query->whereBetween('loading_date', [$monthStart, $monthEnd]);
+                $query->whereBetween('loading_date', [$monthStart, $monthEnd]);
+            }
         }
 
         return $query;
+    }
+
+    /**
+     * Eager loads required for {@see self::fromModel()} and the rakes list.
+     *
+     * @return array<string, mixed>
+     */
+    public static function rakeListEagerLoads(): array
+    {
+        return [
+            'siding:id,code,name',
+            'rrDocument:id,rake_id,diverrt_destination_id',
+            'rrDocument.media',
+            'rrDocuments:id,rake_id,diverrt_destination_id',
+            'diverrtDestinations:id,rake_id',
+            'txr:id,rake_id,status,inspection_time,inspection_end_time',
+            'wagons:id,rake_id,is_unfit',
+            'wagonLoadings:id,rake_id,wagon_id,loaded_quantity_mt',
+            'guardInspections:id,rake_id,is_approved',
+            'rakeWeighments:id,rake_id,pdf_file_path,status',
+        ];
+    }
+
+    public static function tableBaseQuery(): Builder
+    {
+        return self::listQueryForRequest(request())->with(self::rakeListEagerLoads());
     }
 
     public static function tableDefaultSort(): string
@@ -181,6 +216,7 @@ final class RakeDataTable extends AbstractDataTable
     public static function tableAllowedSorts(): array
     {
         return [
+            'id',
             'rake_number',
             AllowedSort::callback('siding_code', static function (Builder $query, bool $descending, string $_property): void {
                 $direction = $descending ? 'desc' : 'asc';

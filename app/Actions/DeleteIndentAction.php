@@ -6,6 +6,7 @@ namespace App\Actions;
 
 use App\Models\Indent;
 use App\Models\Rake;
+use App\Models\StockLedger;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -18,7 +19,11 @@ final readonly class DeleteIndentAction
             return true;
         }
 
-        return ! $rake->rakeWeighments()->exists() && ! $rake->wagonLoadings()->exists();
+        if ($rake->rakeWeighments()->exists() || $rake->wagonLoadings()->exists()) {
+            return false;
+        }
+
+        return ! $this->rakeHasStockLedgerReferences($rake);
     }
 
     public function handle(Indent $indent): void
@@ -26,9 +31,13 @@ final readonly class DeleteIndentAction
         $rake = Rake::query()->where('indent_id', $indent->id)->first();
 
         if ($rake !== null) {
-            if ($rake->rakeWeighments()->exists() || $rake->wagonLoadings()->exists()) {
+            if (
+                $rake->rakeWeighments()->exists()
+                || $rake->wagonLoadings()->exists()
+                || $this->rakeHasStockLedgerReferences($rake)
+            ) {
                 throw new InvalidArgumentException(
-                    'Cannot delete this indent because the linked rake has weighments or wagon loading data.'
+                    'Cannot delete this indent because the linked rake has weighments, wagon loading data, or stock ledger entries.'
                 );
             }
 
@@ -36,7 +45,7 @@ final readonly class DeleteIndentAction
                 $rake->forceDelete();
                 $indent->clearMediaCollection('indent_confirmation_pdf');
                 $indent->clearMediaCollection('indent_pdf');
-                $indent->delete();
+                $indent->forceDelete();
             });
 
             return;
@@ -45,7 +54,12 @@ final readonly class DeleteIndentAction
         DB::transaction(function () use ($indent): void {
             $indent->clearMediaCollection('indent_confirmation_pdf');
             $indent->clearMediaCollection('indent_pdf');
-            $indent->delete();
+            $indent->forceDelete();
         });
+    }
+
+    private function rakeHasStockLedgerReferences(Rake $rake): bool
+    {
+        return StockLedger::query()->where('rake_id', $rake->id)->exists();
     }
 }

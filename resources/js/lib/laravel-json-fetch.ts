@@ -57,6 +57,34 @@ export class JsonFetchError extends Error {
     }
 }
 
+/** Multipart POST expecting JSON (200 with body, or 4xx/5xx with JSON errors). */
+export async function postFormDataExpectJson<T>(
+    url: string,
+    formData: FormData,
+): Promise<
+    | { ok: true; data: T }
+    | { ok: false; status: number; body: unknown }
+> {
+    const response = await fetch(url, {
+        method: 'POST',
+        body: formData,
+        credentials: 'same-origin',
+        headers: {
+            Accept: 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-XSRF-TOKEN': getXsrfToken(),
+        },
+    });
+
+    const body: unknown = await response.json().catch(() => ({}));
+
+    if (response.ok) {
+        return { ok: true, data: body as T };
+    }
+
+    return { ok: false, status: response.status, body };
+}
+
 /** Multipart POST to `railway-receipts/import` with JSON response (hub / rake page parity). */
 export async function postRailwayReceiptImport(
     rakeId: number,

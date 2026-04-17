@@ -12,7 +12,7 @@ import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { ArrowLeft, Train, AlertCircle, CheckCircle } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 
 interface Siding {
     id: number;
@@ -38,7 +38,6 @@ interface Indent {
 
 interface Props {
     indent: Indent;
-    sidings: Siding[];
     next_priority_number: number;
     power_plants: PowerPlantOption[];
     prefill_destination_code?: string | null;
@@ -58,7 +57,6 @@ type InertiaPageProps = {
 
 export default function CreateRakeFromIndent({
     indent,
-    sidings,
     next_priority_number,
     power_plants,
     prefill_destination_code,
@@ -74,8 +72,11 @@ export default function CreateRakeFromIndent({
 
     const totalUnits = indent.total_units;
 
+    const rakeSerialTouchedRef = useRef(false);
+
     const { data, setData, post, processing, errors: formErrors } = useForm({
         rake_number: '',
+        rake_serial_number: '',
         rake_priority_number: String(next_priority_number),
         loading_date: indent.expected_loading_date
             ? new Date(indent.expected_loading_date).toISOString().slice(0, 10)
@@ -216,18 +217,29 @@ export default function CreateRakeFromIndent({
                                     />
                                 </div>
 
-                                {/* Rake Number */}
+                                {/* Rake sequence */}
                                 <div>
                                     <Label htmlFor="rake_number" className="flex items-center gap-1">
-                                        Rake Number
+                                        Rake sequence *
                                         {hasError('rake_number') && (
                                             <span className="text-destructive text-lg leading-none">*</span>
                                         )}
                                     </Label>
                                     <Input
                                         id="rake_number"
+                                        required
                                         value={data.rake_number}
-                                        onChange={(e) => setData('rake_number', e.target.value)}
+                                        onChange={(e) => {
+                                            const v = e.target.value;
+                                            setData({
+                                                ...data,
+                                                rake_number: v,
+                                                rake_serial_number:
+                                                    rakeSerialTouchedRef.current
+                                                        ? data.rake_serial_number
+                                                        : v,
+                                            });
+                                        }}
                                         placeholder="e.g. 1"
                                         className={`${
                                             hasError('rake_number')
@@ -239,6 +251,47 @@ export default function CreateRakeFromIndent({
                                         <p className="text-sm text-destructive mt-1.5 flex items-center gap-1.5">
                                             <span className="text-lg leading-none">⚠</span>
                                             {getErrorMessage(errors.rake_number)}
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <Label
+                                        htmlFor="rake_serial_number"
+                                        className="flex items-center gap-1"
+                                    >
+                                        Rake number *
+                                        {hasError('rake_serial_number') && (
+                                            <span className="text-destructive text-lg leading-none">
+                                                *
+                                            </span>
+                                        )}
+                                    </Label>
+                                    <Input
+                                        id="rake_serial_number"
+                                        name="rake_serial_number"
+                                        required
+                                        value={data.rake_serial_number}
+                                        onChange={(e) => {
+                                            rakeSerialTouchedRef.current = true;
+                                            setData(
+                                                'rake_serial_number',
+                                                e.target.value,
+                                            );
+                                        }}
+                                        placeholder="Same as rake sequence by default"
+                                        className={`${
+                                            hasError('rake_serial_number')
+                                                ? 'border-destructive focus-visible:ring-destructive'
+                                                : ''
+                                        }`}
+                                    />
+                                    {hasError('rake_serial_number') && (
+                                        <p className="text-sm text-destructive mt-1.5 flex items-center gap-1.5">
+                                            <span className="text-lg leading-none">⚠</span>
+                                            {getErrorMessage(
+                                                errors.rake_serial_number,
+                                            )}
                                         </p>
                                     )}
                                 </div>

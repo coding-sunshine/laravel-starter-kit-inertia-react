@@ -7,11 +7,12 @@ namespace App\Services;
 use App\Actions\ProvisionRakeForIndent;
 use App\Models\Indent;
 use App\Models\PowerPlant;
+use App\Models\Rake;
 use App\Models\Siding;
+use Carbon\CarbonInterface;
 use DateTimeInterface;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Date;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 use Spatie\PdfToText\Pdf;
@@ -20,13 +21,14 @@ use Throwable;
 final readonly class IndentPdfImporter
 {
     /**
-     * Import a historical e-Demand Confirmation Slip from an uploaded PDF.
+     * Parse an uploaded PDF and return form prefill data without creating records.
      *
-     * @param  array<int>  $allowedSidingIds  If non-empty, the detected siding must be in this list or an InvalidArgumentException is thrown (no record is created).
+     * @param  array<int>  $allowedSidingIds  If non-empty, the detected siding must be in this list.
+     * @return array<string, mixed>
      */
-    public function import(UploadedFile $pdf, int $userId, array $allowedSidingIds = []): Indent
+    public function previewImport(UploadedFile $pdf, int $userId, array $allowedSidingIds = []): array
     {
-        Log::info('Indent PDF import: starting', [
+        Log::info('Indent PDF preview: starting', [
             'user_id' => $userId,
             'original_name' => $pdf->getClientOriginalName(),
             'size' => $pdf->getSize(),
@@ -35,19 +37,19 @@ final readonly class IndentPdfImporter
         $absolutePath = $pdf->getRealPath();
         $text = Pdf::getText($absolutePath, null, ['-layout']);
 
-        return $this->importFromText($text, $pdf, $userId, $allowedSidingIds);
+        return $this->previewFromText($text, $userId, $allowedSidingIds);
     }
 
     /**
-     * Import from already-extracted PDF text (e.g. for testing).
+     * Parse extracted PDF text and return form prefill data without creating records (e.g. for tests).
      *
-     * @param  array<int>  $allowedSidingIds  If non-empty, the detected siding must be in this list or an InvalidArgumentException is thrown (no record is created).
+     * @param  array<int>  $allowedSidingIds  If non-empty, the detected siding must be in this list.
+     * @return array<string, mixed>
      */
-    public function importFromText(string $text, UploadedFile $pdf, int $userId, array $allowedSidingIds = []): Indent
+    public function previewFromText(string $text, int $userId, array $allowedSidingIds = []): array
     {
         $this->assertIndentPdfDocument($text);
 
-        // dd($text);
         $parsed = $this->parsePdfText($text);
         $eDemandRef = isset($parsed['e_demand_reference_id']) ? mb_trim((string) $parsed['e_demand_reference_id']) : '';
         if ($eDemandRef === '') {
@@ -92,7 +94,9 @@ final readonly class IndentPdfImporter
             $referenceMonth
         );
 
-        Log::info('Indent PDF import: parsed and siding detected', [
+        $rakePriorityNumber = $this->suggestedRakePriorityNumber((int) $siding->id, $indentDateParsed, $expectedLoadingParsed);
+
+        Log::info('Indent PDF preview: parsed and siding detected', [
             'user_id' => $userId,
             'indent_number' => $parsed['indent_number'] ?? null,
             'e_demand_reference_id' => $parsed['e_demand_reference_id'] ?? null,
@@ -100,50 +104,62 @@ final readonly class IndentPdfImporter
             'siding_id' => $siding->id,
         ]);
 
+        $indentAtCarbon = $this->resolveIndentAtForForm($indentDateParsed, $expectedLoadingParsed);
+
+        $expectedLoadingForForm = $expectedLoadingParsed instanceof DateTimeInterface
+            ? Date::parse($expectedLoadingParsed)->format('Y-m-d')
+            : null;
+
+        $destinationCode = isset($parsed['destination']) ? mb_trim((string) $parsed['destination']) : '';
+
+        return [
+            'siding_id' => (int) $siding->id,
+            'rake_number' => $rakeSqNumber,
+            'rake_serial_number' => $rakeSqNumber,
+            'rake_priority_number' => $rakePriorityNumber,
+            'expected_loading_date' => $expectedLoadingForForm,
+            'demanded_stock' => isset($parsed['demanded_stock']) ? (string) $parsed['demanded_stock'] : '',
+            'total_units' => isset($parsed['total_units']) ? (int) $parsed['total_units'] : 1,
+            'target_quantity_mt' => isset($parsed['target_quantity_mt']) ? (float) $parsed['target_quantity_mt'] : 0.0,
+            'destination' => $destinationCode,
+            'indent_at' => $indentAtCarbon->format('Y-m-d\TH:i'),
+            'indent_number' => isset($parsed['indent_number']) ? (string) $parsed['indent_number'] : '',
+            'e_demand_reference_id' => isset($parsed['e_demand_reference_id']) ? (string) $parsed['e_demand_reference_id'] : '',
+            'fnr_number' => isset($parsed['fnr_number']) ? (string) $parsed['fnr_number'] : '',
+            'remarks' => isset($parsed['remarks']) && $parsed['remarks'] !== null ? (string) $parsed['remarks'] : '',
+            'railway_reference_no' => isset($parsed['railway_reference_no']) ? (string) $parsed['railway_reference_no'] : '',
+            'state' => 'pending',
+        ];
+    }
+
+    private function suggestedRakePriorityNumber(int $sidingId, ?DateTimeInterface $indentDate, ?DateTimeInterface $expectedLoading): int
+    {
         try {
-            return DB::transaction(function () use ($parsed, $siding, $pdf, $userId, $rakeSqNumber) {
-                $indent = Indent::query()->create([
-                    'siding_id' => $siding->id,
-                    'indent_number' => $parsed['indent_number'] ?? null,
-                    'demanded_stock' => $parsed['demanded_stock'] ?? null,
-                    'total_units' => ($parsed['total_units'] ?? null) !== null ? (int) $parsed['total_units'] : null,
-                    'target_quantity_mt' => $parsed['target_quantity_mt'] ?? null,
-                    'allocated_quantity_mt' => null,
-                    'available_stock_mt' => null,
-                    'indent_date' => $parsed['indent_date'] ?? null,
-                    'indent_time' => $parsed['indent_time'] ?? null,
-                    'expected_loading_date' => $parsed['expected_loading_date'] ?? null,
-                    'required_by_date' => null,
-                    'railway_reference_no' => $parsed['railway_reference_no'] ?? null,
-                    'e_demand_reference_id' => $parsed['e_demand_reference_id'] ?? null,
-                    'fnr_number' => $parsed['fnr_number'] ?? null,
-                    'destination' => $parsed['destination'] ?? null,
-                    'state' => 'historical_import',
-                    'remarks' => $parsed['remarks'] ?? null,
-                    'created_by' => $userId,
-                    'updated_by' => $userId,
-                ]);
-
-                $indent->addMedia($pdf)->toMediaCollection('indent_pdf');
-
-                app(ProvisionRakeForIndent::class)->handle($indent, $rakeSqNumber, $userId);
-
-                Log::info('Indent PDF import: transaction committed', [
-                    'user_id' => $userId,
-                    'indent_id' => $indent->id,
-                ]);
-
-                return $indent->fresh(['rake']);
-            });
-        } catch (Throwable $e) {
-            Log::error('Indent PDF import: transaction rolled back', [
-                'user_id' => $userId,
-                'exception' => get_class($e),
-                'message' => $e->getMessage(),
-            ]);
-
-            throw $e;
+            $reference = ProvisionRakeForIndent::referenceDateFromParsedPdf($indentDate, $expectedLoading);
+        } catch (InvalidArgumentException) {
+            return 0;
         }
+
+        $maxPriorityThisMonthOnSiding = Rake::query()
+            ->where('siding_id', $sidingId)
+            ->whereYear('loading_date', $reference->year)
+            ->whereMonth('loading_date', $reference->month)
+            ->max('priority_number');
+
+        return (int) $maxPriorityThisMonthOnSiding + 1;
+    }
+
+    private function resolveIndentAtForForm(?DateTimeInterface $indentDate, ?DateTimeInterface $expectedLoading): CarbonInterface
+    {
+        if ($indentDate instanceof DateTimeInterface) {
+            return Date::parse($indentDate->format('Y-m-d H:i:s'));
+        }
+
+        if ($expectedLoading instanceof DateTimeInterface) {
+            return Date::parse($expectedLoading->format('Y-m-d'))->startOfDay();
+        }
+
+        return Date::now();
     }
 
     private function assertIndentPdfDocument(string $text): void
@@ -419,7 +435,7 @@ final readonly class IndentPdfImporter
         return null;
     }
 
-    private function parseDate(?string $value): ?\Carbon\CarbonInterface
+    private function parseDate(?string $value): ?CarbonInterface
     {
         if ($value === null || mb_trim($value) === '') {
             return null;
