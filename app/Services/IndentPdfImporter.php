@@ -115,6 +115,7 @@ final readonly class IndentPdfImporter
         return [
             'siding_id' => (int) $siding->id,
             'rake_number' => $rakeSqNumber,
+            'rake_serial_number' => $rakeSqNumber,
             'rake_priority_number' => $rakePriorityNumber,
             'expected_loading_date' => $expectedLoadingForForm,
             'demanded_stock' => isset($parsed['demanded_stock']) ? (string) $parsed['demanded_stock'] : '',

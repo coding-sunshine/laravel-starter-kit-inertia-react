@@ -12,6 +12,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import AppLayout from '@/layouts/app-layout';
+import { postFormDataExpectJson } from '@/lib/laravel-json-fetch';
+import { parseLaravel422ResponseBody } from '@/lib/laravel-validation-errors';
 import { parseSafeReturnTo } from '@/lib/safe-return-url';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router, usePage, useForm } from '@inertiajs/react';
@@ -145,6 +147,7 @@ interface RakeChargeRecord {
 interface RakeData {
     id: number;
     rake_number: string;
+    rake_serial_number: string | null;
     rake_type: string | null;
     wagon_count: number | null;
     state: string;
@@ -179,6 +182,69 @@ interface RakeData {
     diverrtDestinations?: Array<{ id: number; location: string }>;
     penalties?: PenaltyRecord[];
     appliedPenalties?: AppliedPenaltyRecord[];
+}
+
+interface RakeEditFormData {
+    rake_number: string;
+    rake_serial_number: string;
+    rake_type: string;
+    dispatch_time: string;
+    status: string;
+    rr_expected_date: string;
+    placement_time: string;
+    loading_date: string;
+    destination_code: string;
+    remarks: string;
+}
+
+const RAKE_EDIT_KNOWN_KEYS = new Set<string>([
+    'rake_serial_number',
+    'rake_number',
+    'rake_type',
+    'dispatch_time',
+    'status',
+    'rr_expected_date',
+    'placement_time',
+    'loading_date',
+    'destination_code',
+    'remarks',
+]);
+
+function buildRakeEditFormData(r: RakeData): RakeEditFormData {
+    return {
+        rake_number: r.rake_number ?? '',
+        rake_serial_number: r.rake_serial_number ?? r.rake_number ?? '',
+        rake_type: r.rake_type ?? '',
+        dispatch_time: r.dispatch_time
+            ? new Date(r.dispatch_time).toISOString().slice(0, 16)
+            : '',
+        status: r.state ?? 'pending',
+        rr_expected_date: r.rr_expected_date
+            ? new Date(r.rr_expected_date).toISOString().slice(0, 10)
+            : '',
+        placement_time: r.placement_time
+            ? new Date(r.placement_time).toISOString().slice(0, 10)
+            : '',
+        loading_date:
+            r.loading_date != null && String(r.loading_date).length > 0
+                ? String(r.loading_date).slice(0, 10)
+                : '',
+        destination_code: r.destination_code ?? '',
+        remarks: r.remarks ?? '',
+    };
+}
+
+function appendRakeEditFormData(data: RakeEditFormData, fd: FormData): void {
+    fd.append('rake_serial_number', data.rake_serial_number);
+    fd.append('rake_number', data.rake_number);
+    fd.append('rake_type', data.rake_type);
+    fd.append('dispatch_time', data.dispatch_time);
+    fd.append('status', data.status);
+    fd.append('rr_expected_date', data.rr_expected_date);
+    fd.append('placement_time', data.placement_time);
+    fd.append('loading_date', data.loading_date);
+    fd.append('destination_code', data.destination_code);
+    fd.append('remarks', data.remarks);
 }
 
 interface Props {
@@ -758,49 +824,26 @@ export default function RakesShow({
     const [wagonDialogOpen, setWagonDialogOpen] = useState(false);
     const [wagons, setWagons] = useState(rake.wagons);
     const [editRakeOpen, setEditRakeOpen] = useState(false);
-    const {
-        data: editData,
-        setData: setEditData,
-        put: putEdit,
-        processing: editProcessing,
-        errors: editErrors,
-    } = useForm({
-        rake_number: rake.rake_number ?? '',
-        rake_type: rake.rake_type ?? '',
-        dispatch_time: rake.dispatch_time ? new Date(rake.dispatch_time).toISOString().slice(0, 16) : '',
-        status: rake.state ?? 'pending',
-        rr_expected_date: rake.rr_expected_date ? new Date(rake.rr_expected_date).toISOString().slice(0, 10) : '',
-        placement_time: rake.placement_time ? new Date(rake.placement_time).toISOString().slice(0, 10) : '',
-        loading_date:
-            rake.loading_date != null && String(rake.loading_date).length > 0
-                ? String(rake.loading_date).slice(0, 10)
-                : '',
-        destination_code: rake.destination_code ?? '',
-        remarks: rake.remarks ?? '',
-    });
+    const [editData, setEditData] = useState<RakeEditFormData>(() =>
+        buildRakeEditFormData(rake),
+    );
+    const [editFieldErrors, setEditFieldErrors] = useState<Record<string, string>>(
+        {},
+    );
+    const [editFormBanner, setEditFormBanner] = useState<string | null>(null);
+    const [editSubmitting, setEditSubmitting] = useState(false);
+
+    const editErr = (name: string): string | undefined => editFieldErrors[name];
 
     useEffect(() => {
-        setEditData({
-            rake_number: rake.rake_number ?? '',
-            rake_type: rake.rake_type ?? '',
-            dispatch_time: rake.dispatch_time ? new Date(rake.dispatch_time).toISOString().slice(0, 16) : '',
-            status: rake.state ?? 'pending',
-            rr_expected_date: rake.rr_expected_date
-                ? new Date(rake.rr_expected_date).toISOString().slice(0, 10)
-                : '',
-            placement_time: rake.placement_time
-                ? new Date(rake.placement_time).toISOString().slice(0, 10)
-                : '',
-            loading_date:
-                rake.loading_date != null && String(rake.loading_date).length > 0
-                    ? String(rake.loading_date).slice(0, 10)
-                    : '',
-            destination_code: rake.destination_code ?? '',
-            remarks: rake.remarks ?? '',
-        });
+        if (!editRakeOpen) {
+            setEditData(buildRakeEditFormData(rake));
+        }
     }, [
+        editRakeOpen,
         rake.id,
         rake.rake_number,
+        rake.rake_serial_number,
         rake.rake_type,
         rake.dispatch_time,
         rake.state,
@@ -810,6 +853,18 @@ export default function RakesShow({
         rake.destination_code,
         rake.remarks,
     ]);
+
+    const handleEditRakeOpenChange = (open: boolean): void => {
+        setEditRakeOpen(open);
+        if (open) {
+            setEditFieldErrors({});
+            setEditFormBanner(null);
+            setEditData(buildRakeEditFormData(rake));
+        } else {
+            setEditFieldErrors({});
+            setEditFormBanner(null);
+        }
+    };
 
     useEffect(() => {
         if (rake.wagons.length === 0 && (rake.wagon_count ?? 0) > 0) {
@@ -912,7 +967,10 @@ export default function RakesShow({
                                 )
                             }
                         />
-                        <Dialog open={editRakeOpen} onOpenChange={setEditRakeOpen}>
+                        <Dialog
+                            open={editRakeOpen}
+                            onOpenChange={handleEditRakeOpenChange}
+                        >
                             <DialogTrigger asChild>
                                 <Button variant="outline" size="sm">
                                     <Edit className="mr-2 size-4" />
@@ -925,33 +983,106 @@ export default function RakesShow({
                                 </DialogHeader>
                                 <form
                                     className="grid gap-4 sm:grid-cols-2"
-                                    onSubmit={(event) => {
+                                    onSubmit={async (event) => {
                                         event.preventDefault();
-                                        putEdit(`/rakes/${rake.id}`, {
-                                            preserveScroll: true,
-                                            onSuccess: () => {
-                                                setEditRakeOpen(false);
-                                            },
-                                        });
+                                        setEditFieldErrors({});
+                                        setEditFormBanner(null);
+                                        setEditSubmitting(true);
+                                        try {
+                                            const fd = new FormData();
+                                            appendRakeEditFormData(editData, fd);
+                                            fd.append('_method', 'PUT');
+                                            const result = await postFormDataExpectJson<{
+                                                redirect?: string;
+                                            }>(`/rakes/${rake.id}`, fd);
+                                            if (!result.ok) {
+                                                if (result.status === 422) {
+                                                    const { fields, banner } =
+                                                        parseLaravel422ResponseBody(
+                                                            result.body,
+                                                            RAKE_EDIT_KNOWN_KEYS,
+                                                        );
+                                                    setEditFieldErrors(fields);
+                                                    setEditFormBanner(banner);
+                                                } else {
+                                                    const msg =
+                                                        typeof result.body ===
+                                                            'object' &&
+                                                        result.body !== null &&
+                                                        'message' in result.body
+                                                            ? String(
+                                                                  (
+                                                                      result.body as {
+                                                                          message: unknown;
+                                                                      }
+                                                                  ).message,
+                                                              )
+                                                            : 'Could not save the rake.';
+                                                    setEditFormBanner(msg);
+                                                }
+
+                                                return;
+                                            }
+
+                                            setEditRakeOpen(false);
+                                            router.reload({ preserveScroll: true });
+                                        } finally {
+                                            setEditSubmitting(false);
+                                        }
                                     }}
                                 >
+                                    {editFormBanner ? (
+                                        <div
+                                            id="rake-edit-form-server-errors"
+                                            role="alert"
+                                            className="bg-destructive/10 text-destructive sm:col-span-2 rounded-md border border-destructive/30 px-3 py-2 text-sm whitespace-pre-wrap"
+                                        >
+                                            {editFormBanner}
+                                        </div>
+                                    ) : null}
                                     <div>
-                                        <Label htmlFor="rake_number">Rake Number</Label>
+                                        <Label htmlFor="rake_number">Rake sequence</Label>
                                         <Input
                                             id="rake_number"
                                             value={editData.rake_number}
-                                            onChange={(e) => setEditData('rake_number', e.target.value)}
+                                            onChange={(e) =>
+                                                setEditData((d) => ({
+                                                    ...d,
+                                                    rake_number: e.target.value,
+                                                }))
+                                            }
                                         />
-                                        <InputError message={editErrors.rake_number} />
+                                        <InputError message={editErr('rake_number')} />
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="rake_serial_number">Rake number *</Label>
+                                        <Input
+                                            id="rake_serial_number"
+                                            name="rake_serial_number"
+                                            value={editData.rake_serial_number}
+                                            onChange={(e) =>
+                                                setEditData((d) => ({
+                                                    ...d,
+                                                    rake_serial_number:
+                                                        e.target.value,
+                                                }))
+                                            }
+                                        />
+                                        <InputError message={editErr('rake_serial_number')} />
                                     </div>
                                     <div>
                                         <Label htmlFor="rake_type">Rake Type</Label>
                                         <Input
                                             id="rake_type"
                                             value={editData.rake_type}
-                                            onChange={(e) => setEditData('rake_type', e.target.value)}
+                                            onChange={(e) =>
+                                                setEditData((d) => ({
+                                                    ...d,
+                                                    rake_type: e.target.value,
+                                                }))
+                                            }
                                         />
-                                        <InputError message={editErrors.rake_type} />
+                                        <InputError message={editErr('rake_type')} />
                                     </div>
                                     <div>
                                         <Label htmlFor="dispatch_time">Dispatch Time</Label>
@@ -959,16 +1090,26 @@ export default function RakesShow({
                                             id="dispatch_time"
                                             type="datetime-local"
                                             value={editData.dispatch_time}
-                                            onChange={(e) => setEditData('dispatch_time', e.target.value)}
+                                            onChange={(e) =>
+                                                setEditData((d) => ({
+                                                    ...d,
+                                                    dispatch_time: e.target.value,
+                                                }))
+                                            }
                                         />
-                                        <InputError message={editErrors.dispatch_time} />
+                                        <InputError message={editErr('dispatch_time')} />
                                     </div>
                                     <div>
                                         <Label htmlFor="status">Status</Label>
                                         <select
                                             id="status"
                                             value={editData.status}
-                                            onChange={(e) => setEditData('status', e.target.value)}
+                                            onChange={(e) =>
+                                                setEditData((d) => ({
+                                                    ...d,
+                                                    status: e.target.value,
+                                                }))
+                                            }
                                             className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                                         >
                                             <option value="pending">Pending</option>
@@ -982,7 +1123,7 @@ export default function RakesShow({
                                             <option value="rr_generated">RR Generated</option>
                                             <option value="closed">Closed</option>
                                         </select>
-                                        <InputError message={editErrors.status} />
+                                        <InputError message={editErr('status')} />
                                     </div>
                                     <div>
                                         <Label htmlFor="rr_expected_date">RR Expected Date</Label>
@@ -990,9 +1131,14 @@ export default function RakesShow({
                                             id="rr_expected_date"
                                             type="date"
                                             value={editData.rr_expected_date}
-                                            onChange={(e) => setEditData('rr_expected_date', e.target.value)}
+                                            onChange={(e) =>
+                                                setEditData((d) => ({
+                                                    ...d,
+                                                    rr_expected_date: e.target.value,
+                                                }))
+                                            }
                                         />
-                                        <InputError message={editErrors.rr_expected_date} />
+                                        <InputError message={editErr('rr_expected_date')} />
                                     </div>
                                     <div>
                                         <Label htmlFor="placement_time">Placement Date</Label>
@@ -1000,9 +1146,14 @@ export default function RakesShow({
                                             id="placement_time"
                                             type="date"
                                             value={editData.placement_time}
-                                            onChange={(e) => setEditData('placement_time', e.target.value)}
+                                            onChange={(e) =>
+                                                setEditData((d) => ({
+                                                    ...d,
+                                                    placement_time: e.target.value,
+                                                }))
+                                            }
                                         />
-                                        <InputError message={editErrors.placement_time} />
+                                        <InputError message={editErr('placement_time')} />
                                     </div>
                                     <div>
                                         <Label htmlFor="loading_date">Loading date</Label>
@@ -1011,9 +1162,14 @@ export default function RakesShow({
                                             name="loading_date"
                                             type="date"
                                             value={editData.loading_date}
-                                            onChange={(e) => setEditData('loading_date', e.target.value)}
+                                            onChange={(e) =>
+                                                setEditData((d) => ({
+                                                    ...d,
+                                                    loading_date: e.target.value,
+                                                }))
+                                            }
                                         />
-                                        <InputError message={editErrors.loading_date} />
+                                        <InputError message={editErr('loading_date')} />
                                     </div>
                                     <div className="sm:col-span-2">
                                         <Label htmlFor="destination_code">
@@ -1024,7 +1180,10 @@ export default function RakesShow({
                                             name="destination_code"
                                             value={editData.destination_code}
                                             onChange={(e) =>
-                                                setEditData('destination_code', e.target.value)
+                                                setEditData((d) => ({
+                                                    ...d,
+                                                    destination_code: e.target.value,
+                                                }))
                                             }
                                             className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                                         >
@@ -1035,30 +1194,35 @@ export default function RakesShow({
                                                 </option>
                                             ))}
                                         </select>
-                                        <InputError message={editErrors.destination_code} />
+                                        <InputError message={editErr('destination_code')} />
                                     </div>
                                     <div className="sm:col-span-2">
                                         <Label htmlFor="remarks">Remarks</Label>
                                         <textarea
                                             id="remarks"
                                             value={editData.remarks}
-                                            onChange={(e) => setEditData('remarks', e.target.value)}
+                                            onChange={(e) =>
+                                                setEditData((d) => ({
+                                                    ...d,
+                                                    remarks: e.target.value,
+                                                }))
+                                            }
                                             rows={3}
                                             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                                         />
-                                        <InputError message={editErrors.remarks} />
+                                        <InputError message={editErr('remarks')} />
                                     </div>
                                     <div className="sm:col-span-2 flex justify-end gap-2">
                                         <Button
                                             type="button"
                                             variant="outline"
-                                            onClick={() => setEditRakeOpen(false)}
-                                            disabled={editProcessing}
+                                            onClick={() => handleEditRakeOpenChange(false)}
+                                            disabled={editSubmitting}
                                         >
                                             Cancel
                                         </Button>
-                                        <Button type="submit" disabled={editProcessing}>
-                                            {editProcessing ? 'Saving...' : 'Save'}
+                                        <Button type="submit" disabled={editSubmitting}>
+                                            {editSubmitting ? 'Saving...' : 'Save'}
                                         </Button>
                                     </div>
                                 </form>

@@ -45,7 +45,7 @@ final readonly class DeleteIndentAction
                 $rake->forceDelete();
                 $indent->clearMediaCollection('indent_confirmation_pdf');
                 $indent->clearMediaCollection('indent_pdf');
-                $indent->delete();
+                $indent->forceDelete();
             });
 
             return;
@@ -54,7 +54,7 @@ final readonly class DeleteIndentAction
         DB::transaction(function () use ($indent): void {
             $indent->clearMediaCollection('indent_confirmation_pdf');
             $indent->clearMediaCollection('indent_pdf');
-            $indent->delete();
+            $indent->forceDelete();
         });
     }
 

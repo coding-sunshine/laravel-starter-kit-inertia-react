@@ -319,57 +319,66 @@ final class RakesController extends Controller
     /**
      * Update the specified rake
      */
-    public function update(Request $request, Rake $rake): RedirectResponse
+    public function update(Request $request, Rake $rake): JsonResponse|RedirectResponse
     {
         // $this->authorize('update', $rake);
 
-        $validated = $request->validate([
-            'rake_number' => [
-                'nullable',
-                'string',
-                'max:100',
-                function (string $attribute, mixed $value, Closure $fail) use ($rake): void {
-                    $trimmed = $value !== null && mb_trim((string) $value) !== '' ? mb_trim((string) $value) : null;
+        $validated = $request->validate(
+            [
+                'rake_serial_number' => ['required', 'string', 'max:100'],
+                'rake_number' => [
+                    'nullable',
+                    'string',
+                    'max:100',
+                    function (string $attribute, mixed $value, Closure $fail) use ($rake): void {
+                        $trimmed = $value !== null && mb_trim((string) $value) !== '' ? mb_trim((string) $value) : null;
 
-                    if ($trimmed === null || $trimmed === $rake->rake_number) {
-                        return;
-                    }
+                        if ($trimmed === null || $trimmed === $rake->rake_number) {
+                            return;
+                        }
 
-                    $existsInMonth = Rake::query()
-                        ->where('rake_number', $trimmed)
-                        ->whereYear('created_at', now()->year)
-                        ->whereMonth('created_at', now()->month)
-                        ->whereKeyNot($rake->getKey())
-                        ->exists();
+                        $existsInMonth = Rake::query()
+                            ->where('rake_number', $trimmed)
+                            ->whereYear('created_at', now()->year)
+                            ->whereMonth('created_at', now()->month)
+                            ->whereKeyNot($rake->getKey())
+                            ->exists();
 
-                    if ($existsInMonth) {
-                        $fail('This rake number is already in use this month.');
-                    }
-                },
+                        if ($existsInMonth) {
+                            $fail('This Rake sequence is already in use this month.');
+                        }
+                    },
+                ],
+                'rake_type' => ['nullable', 'string', 'max:50'],
+                'dispatch_time' => ['nullable', 'date'],
+                'status' => ['nullable', 'string', 'in:pending,txr_in_progress,txr_completed,loading,loading_completed,guard_approved,guard_rejected,weighment_completed,rr_generated,closed'],
+                'rr_expected_date' => ['nullable', 'date'],
+                'placement_time' => ['nullable', 'date'],
+                'loading_date' => ['nullable', 'date'],
+                'destination_code' => [
+                    'nullable',
+                    'string',
+                    'max:20',
+                    function (string $attribute, mixed $value, Closure $fail): void {
+                        if ($value === null || $value === '') {
+                            return;
+                        }
+                        if (! PowerPlant::query()->where('code', (string) $value)->where('is_active', true)->exists()) {
+                            $fail('The selected destination is not a valid active power plant.');
+                        }
+                    },
+                ],
+                'remarks' => ['nullable', 'string', 'max:1000'],
             ],
-            'rake_type' => ['nullable', 'string', 'max:50'],
-            'dispatch_time' => ['nullable', 'date'],
-            'status' => ['nullable', 'string', 'in:pending,txr_in_progress,txr_completed,loading,loading_completed,guard_approved,guard_rejected,weighment_completed,rr_generated,closed'],
-            'rr_expected_date' => ['nullable', 'date'],
-            'placement_time' => ['nullable', 'date'],
-            'loading_date' => ['nullable', 'date'],
-            'destination_code' => [
-                'nullable',
-                'string',
-                'max:20',
-                function (string $attribute, mixed $value, Closure $fail): void {
-                    if ($value === null || $value === '') {
-                        return;
-                    }
-                    if (! PowerPlant::query()->where('code', (string) $value)->where('is_active', true)->exists()) {
-                        $fail('The selected destination is not a valid active power plant.');
-                    }
-                },
+            [],
+            [
+                'rake_number' => 'Rake sequence',
+                'rake_serial_number' => 'Rake number',
             ],
-            'remarks' => ['nullable', 'string', 'max:1000'],
-        ]);
+        );
 
         $payload = [
+            'rake_serial_number' => mb_trim((string) $validated['rake_serial_number']),
             'rake_number' => array_key_exists('rake_number', $validated) && mb_trim((string) $validated['rake_number']) !== ''
                 ? mb_trim((string) $validated['rake_number'])
                 : $rake->rake_number,
@@ -403,8 +412,18 @@ final class RakesController extends Controller
 
         $rake->update($payload);
 
+        $successMessage = 'Rake updated successfully.';
+
+        if ($request->wantsJson()) {
+            session()->flash('success', $successMessage);
+
+            return response()->json([
+                'redirect' => route('rakes.show', $rake),
+            ]);
+        }
+
         return to_route('rakes.show', $rake)
-            ->with('success', 'Rake updated successfully.');
+            ->with('success', $successMessage);
     }
 
     public function startLoadingTimer(Request $request, Rake $rake): RedirectResponse|JsonResponse

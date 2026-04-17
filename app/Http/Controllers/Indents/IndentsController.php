@@ -227,9 +227,11 @@ final class IndentsController extends Controller
         ]);
     }
 
-    public function update(Request $request, Indent $indent): RedirectResponse
+    public function update(Request $request, Indent $indent): JsonResponse|RedirectResponse
     {
         // $this->authorize('update', $indent);
+
+        $indent->loadMissing('rake:id,indent_id');
 
         $validated = $request->validate([
             'siding_id' => ['required', 'integer', 'exists:sidings,id'],
@@ -237,6 +239,7 @@ final class IndentsController extends Controller
                 'required',
                 'string',
                 'max:20',
+                Rule::unique('indents', 'indent_number')->ignore($indent->id)->whereNull('deleted_at'),
             ],
             'state' => ['nullable', 'string', Rule::in(self::INDENT_STATE_VALUES)],
             'remarks' => ['nullable', 'string', 'max:65535'],
@@ -252,6 +255,12 @@ final class IndentsController extends Controller
             'target_quantity_mt' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99'],
             'allocated_quantity_mt' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99'],
             'available_stock_mt' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99'],
+            'rake_serial_number' => [
+                Rule::requiredIf($indent->rake !== null),
+                'nullable',
+                'string',
+                'max:100',
+            ],
         ]);
 
         $indent->siding_id = $validated['siding_id'];
@@ -273,8 +282,24 @@ final class IndentsController extends Controller
         $indent->updated_by = $request->user()->id;
         $indent->save();
 
+        if ($indent->rake !== null && array_key_exists('rake_serial_number', $validated)) {
+            $indent->rake->rake_serial_number = mb_trim((string) $validated['rake_serial_number']);
+            $indent->rake->updated_by = $request->user()->id;
+            $indent->rake->save();
+        }
+
+        $successMessage = 'Indent updated.';
+
+        if ($request->wantsJson()) {
+            session()->flash('success', $successMessage);
+
+            return response()->json([
+                'redirect' => route('indents.show', $indent),
+            ]);
+        }
+
         return to_route('indents.show', $indent)
-            ->with('success', 'Indent updated.');
+            ->with('success', $successMessage);
     }
 
     /**
@@ -294,21 +319,6 @@ final class IndentsController extends Controller
             return to_route('rakes.show', $indent->rake)
                 ->with('info', 'This indent already has a rake.');
         }
-
-        $sidingIds = $user->isSuperAdmin()
-            ? Siding::query()->pluck('id')->all()
-            : $user->sidings()->get()->pluck('id')->all();
-
-        // Backward compatibility: some legacy users only have `users.siding_id`
-        // and no rows in the `user_siding` pivot table.
-        if (! $user->isSuperAdmin() && $sidingIds === [] && $user->siding_id !== null) {
-            $sidingIds = [(int) $user->siding_id];
-        }
-
-        $sidings = Siding::query()
-            ->whereIn('id', $sidingIds)
-            ->orderBy('name')
-            ->get(['id', 'name', 'code']);
 
         try {
             $indentRef = ProvisionRakeForIndent::referenceDateFromIndent($indent);
@@ -334,7 +344,6 @@ final class IndentsController extends Controller
 
         return Inertia::render('rakes/create-from-indent', [
             'indent' => $indent->load('siding:id,name,code'),
-            'sidings' => $sidings,
             'next_priority_number' => $nextPriorityNumber,
             'power_plants' => $powerPlants,
             'prefill_destination_code' => $prefillDestinationCode,
@@ -367,6 +376,7 @@ final class IndentsController extends Controller
         }
 
         $validated = $request->validate([
+            'rake_serial_number' => ['required', 'string', 'max:100'],
             'rake_number' => [
                 'required',
                 'string',
@@ -436,6 +446,7 @@ final class IndentsController extends Controller
         $rake->indent_id = $indent->id;
         $rake->siding_id = $indent->siding_id; // Use indent's siding
         $rake->rake_number = $validated['rake_number'];
+        $rake->rake_serial_number = mb_trim((string) $validated['rake_serial_number']);
         $rake->priority_number = isset($validated['rake_priority_number']) ? (int) $validated['rake_priority_number'] : ((int) Rake::query()->max('priority_number') + 1);
         $rake->loading_date = isset($validated['loading_date']) ? $validated['loading_date'] : null;
         $rake->rake_type = $validated['rake_type'] ?? null;

@@ -13,8 +13,11 @@ import { cn } from '@/lib/utils';
 import AppLayout from '@/layouts/app-layout';
 import { withReturnTo } from '@/lib/safe-return-url';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { postFormDataExpectJson } from '@/lib/laravel-json-fetch';
+import { parseLaravel422ResponseBody } from '@/lib/laravel-validation-errors';
+import { Head, Link, router } from '@inertiajs/react';
 import { Download, FileText, Pencil } from 'lucide-react';
+import { useLayoutEffect, useState } from 'react';
 
 interface Siding {
     id: number;
@@ -48,6 +51,7 @@ interface Indent {
     rake?: {
         id: number;
         rake_number: string | null;
+        rake_serial_number: string | null;
         priority_number: number | null;
     } | null;
 }
@@ -96,8 +100,77 @@ function numOrEmpty(value: string | number | null | undefined): string {
     return String(value);
 }
 
+/** Field `name`s on the edit form — used to map JSON validation to inputs. */
+const INDENT_EDIT_KNOWN_KEYS = new Set<string>([
+    'siding_id',
+    'rake_serial_number',
+    'state',
+    'indent_number',
+    'demanded_stock',
+    'total_units',
+    'target_quantity_mt',
+    'allocated_quantity_mt',
+    'available_stock_mt',
+    'e_demand_reference_id',
+    'fnr_number',
+    'railway_reference_no',
+    'destination',
+    'indent_at',
+    'expected_loading_date',
+    'required_by_date',
+    'remarks',
+]);
+
+const INDENT_EDIT_SCROLL_ORDER: string[] = [
+    'siding_id',
+    'rake_serial_number',
+    'state',
+    'indent_number',
+    'demanded_stock',
+    'total_units',
+    'target_quantity_mt',
+    'allocated_quantity_mt',
+    'available_stock_mt',
+    'e_demand_reference_id',
+    'fnr_number',
+    'railway_reference_no',
+    'destination',
+    'indent_at',
+    'expected_loading_date',
+    'required_by_date',
+    'remarks',
+];
+
 export default function IndentsEdit({ indent, sidings, currentStockMt }: Props) {
-    const { errors } = usePage<{ errors?: Record<string, string> }>().props;
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+    const [formErrorBanner, setFormErrorBanner] = useState<string | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const err = (name: string): string | undefined => fieldErrors[name];
+
+    useLayoutEffect(() => {
+        const hasFieldErr = INDENT_EDIT_SCROLL_ORDER.some(
+            (k) => Boolean(fieldErrors[k]),
+        );
+        if (!hasFieldErr && !formErrorBanner) {
+            return;
+        }
+
+        requestAnimationFrame(() => {
+            for (const key of INDENT_EDIT_SCROLL_ORDER) {
+                if (fieldErrors[key]) {
+                    document
+                        .getElementById(key)
+                        ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+                    return;
+                }
+            }
+            document
+                .getElementById('indent-edit-form-server-errors')
+                ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        });
+    }, [fieldErrors, formErrorBanner]);
     const stateOptions = INDENT_STATES;
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'E-Demand', href: '/indents' },
@@ -108,14 +181,46 @@ export default function IndentsEdit({ indent, sidings, currentStockMt }: Props) 
     const indentAtDefault =
         toDatetimeLocal(indent.indent_date) || toDatetimeLocal(indent.indent_time);
 
-    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+        setFieldErrors({});
+        setFormErrorBanner(null);
         const form = e.currentTarget;
-        const formData = new FormData(form);
-        formData.append('_method', 'PUT');
-        router.post(`/indents/${indent.id}`, formData, {
-            forceFormData: true,
-        });
+        const fd = new FormData(form);
+        fd.append('_method', 'PUT');
+        setIsSubmitting(true);
+        try {
+            const result = await postFormDataExpectJson<{ redirect: string }>(
+                `/indents/${indent.id}`,
+                fd,
+            );
+            if (!result.ok) {
+                if (result.status === 422) {
+                    const { fields, banner } = parseLaravel422ResponseBody(
+                        result.body,
+                        INDENT_EDIT_KNOWN_KEYS,
+                    );
+                    setFieldErrors(fields);
+                    setFormErrorBanner(banner);
+                } else {
+                    const msg =
+                        typeof result.body === 'object' &&
+                        result.body !== null &&
+                        'message' in result.body
+                            ? String(
+                                  (result.body as { message: unknown }).message,
+                              )
+                            : 'Could not save changes.';
+                    setFieldErrors({ indent_number: msg });
+                }
+
+                return;
+            }
+
+            router.visit(result.data.redirect);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const indentPdfHref =
@@ -150,49 +255,81 @@ export default function IndentsEdit({ indent, sidings, currentStockMt }: Props) 
                     </Button>
                 </div>
 
-                {indent.rake != null && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-base">Linked rake</CardTitle>
-                            <CardDescription>
-                                Rake Sq. number and priority (from e-Demand / indent
-                                id). Edit the rake record to change the rake number.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="flex flex-wrap items-end justify-between gap-4">
-                            <dl className="grid gap-3 text-sm sm:grid-cols-2">
-                                <div>
-                                    <dt className="text-muted-foreground">
-                                        Rake number
-                                    </dt>
-                                    <dd className="font-medium">
-                                        {indent.rake.rake_number ?? '—'}
-                                    </dd>
+                <form
+                    id="indent-edit-form"
+                    onSubmit={handleSubmit}
+                    className="space-y-6"
+                    noValidate
+                >
+                    {indent.rake != null && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-base">Linked rake</CardTitle>
+                                <CardDescription>
+                                    Rake sequence and priority; use{' '}
+                                    <span className="font-medium">Rake number</span> as the
+                                    official identifier when needed.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
+                                <div className="grid min-w-0 flex-1 gap-4 sm:grid-cols-2">
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="rake_serial_number">
+                                            Rake number *
+                                        </Label>
+                                        <Input
+                                            id="rake_serial_number"
+                                            name="rake_serial_number"
+                                            required
+                                            defaultValue={
+                                                indent.rake.rake_serial_number ??
+                                                indent.rake.rake_number ??
+                                                ''
+                                            }
+                                        />
+                                        <InputError message={err('rake_serial_number')} />
+                                    </div>
+                                    <dl className="grid gap-1 text-sm">
+                                        <div>
+                                            <dt className="text-muted-foreground">
+                                                Rake sequence
+                                            </dt>
+                                            <dd className="font-medium">
+                                                {indent.rake.rake_number ?? '—'}
+                                            </dd>
+                                        </div>
+                                        <div>
+                                            <dt className="text-muted-foreground">
+                                                Priority number
+                                            </dt>
+                                            <dd className="font-medium">
+                                                {indent.rake.priority_number ?? '—'}
+                                            </dd>
+                                        </div>
+                                    </dl>
                                 </div>
-                                <div>
-                                    <dt className="text-muted-foreground">
-                                        Priority number
-                                    </dt>
-                                    <dd className="font-medium">
-                                        {indent.rake.priority_number ?? '—'}
-                                    </dd>
-                                </div>
-                            </dl>
-                            <Button variant="outline" size="sm" asChild>
-                                <Link
-                                    href={withReturnTo(
-                                        `/rakes/${indent.rake.id}`,
-                                        `/indents/${indent.id}/edit`,
-                                    )}
-                                >
-                                    Open rake
-                                </Link>
-                            </Button>
-                        </CardContent>
-                    </Card>
-                )}
-
-                <form onSubmit={handleSubmit} className="space-y-6">
+                                <Button variant="outline" size="sm" asChild>
+                                    <Link
+                                        href={withReturnTo(
+                                            `/rakes/${indent.rake.id}`,
+                                            `/indents/${indent.id}/edit`,
+                                        )}
+                                    >
+                                        Open rake
+                                    </Link>
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    )}
+                    {formErrorBanner ? (
+                        <div
+                            id="indent-edit-form-server-errors"
+                            role="alert"
+                            className="bg-destructive/10 text-destructive rounded-md border border-destructive/30 px-3 py-2 text-sm whitespace-pre-wrap"
+                        >
+                            {formErrorBanner}
+                        </div>
+                    ) : null}
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2 text-base">
@@ -219,7 +356,7 @@ export default function IndentsEdit({ indent, sidings, currentStockMt }: Props) 
                                         </option>
                                     ))}
                                 </select>
-                                <InputError message={errors?.siding_id} />
+                                <InputError message={err('siding_id')} />
                             </div>
                             <div className="grid gap-2">
                                 <Label htmlFor="state">State</Label>
@@ -235,7 +372,7 @@ export default function IndentsEdit({ indent, sidings, currentStockMt }: Props) 
                                         </option>
                                     ))}
                                 </select>
-                                <InputError message={errors?.state} />
+                                <InputError message={err('state')} />
                             </div>
                             <div className="grid gap-2">
                                 <Label htmlFor="indent_number">
@@ -247,7 +384,7 @@ export default function IndentsEdit({ indent, sidings, currentStockMt }: Props) 
                                     defaultValue={indent.indent_number ?? ''}
                                     placeholder="e.g. 302.001"
                                 />
-                                <InputError message={errors?.indent_number} />
+                                <InputError message={err('indent_number')} />
                             </div>
                         </CardContent>
                     </Card>
@@ -272,7 +409,7 @@ export default function IndentsEdit({ indent, sidings, currentStockMt }: Props) 
                                     defaultValue={indent.demanded_stock ?? ''}
                                     placeholder="e.g. BOBRN"
                                 />
-                                <InputError message={errors?.demanded_stock} />
+                                <InputError message={err('demanded_stock')} />
                             </div>
                             <div className="grid gap-2">
                                 <Label htmlFor="total_units">Total units</Label>
@@ -289,7 +426,7 @@ export default function IndentsEdit({ indent, sidings, currentStockMt }: Props) 
                                     }
                                     placeholder="Wagons"
                                 />
-                                <InputError message={errors?.total_units} />
+                                <InputError message={err('total_units')} />
                             </div>
                             <div className="grid gap-2">
                                 <Label htmlFor="target_quantity_mt">
@@ -305,7 +442,7 @@ export default function IndentsEdit({ indent, sidings, currentStockMt }: Props) 
                                         indent.target_quantity_mt,
                                     )}
                                 />
-                                <InputError message={errors?.target_quantity_mt} />
+                                <InputError message={err('target_quantity_mt')} />
                             </div>
                             <div className="grid gap-2">
                                 <Label htmlFor="allocated_quantity_mt">
@@ -321,7 +458,7 @@ export default function IndentsEdit({ indent, sidings, currentStockMt }: Props) 
                                         indent.allocated_quantity_mt,
                                     )}
                                 />
-                                <InputError message={errors?.allocated_quantity_mt} />
+                                <InputError message={err('allocated_quantity_mt')} />
                             </div>
                             <div className="grid gap-2">
                                 <Label htmlFor="available_stock_mt">
@@ -345,7 +482,7 @@ export default function IndentsEdit({ indent, sidings, currentStockMt }: Props) 
                                                 : null),
                                     )}
                                 />
-                                <InputError message={errors?.available_stock_mt} />
+                                <InputError message={err('available_stock_mt')} />
                             </div>
                         </CardContent>
                     </Card>
@@ -371,9 +508,7 @@ export default function IndentsEdit({ indent, sidings, currentStockMt }: Props) 
                                         indent.e_demand_reference_id ?? ''
                                     }
                                 />
-                                <InputError
-                                    message={errors?.e_demand_reference_id}
-                                />
+                                <InputError message={err('e_demand_reference_id')} />
                             </div>
                             <div className="grid gap-2">
                                 <Label htmlFor="fnr_number">FNR number</Label>
@@ -382,7 +517,7 @@ export default function IndentsEdit({ indent, sidings, currentStockMt }: Props) 
                                     name="fnr_number"
                                     defaultValue={indent.fnr_number ?? ''}
                                 />
-                                <InputError message={errors?.fnr_number} />
+                                <InputError message={err('fnr_number')} />
                             </div>
                             <div className="grid gap-2 sm:col-span-2">
                                 <Label htmlFor="railway_reference_no">
@@ -395,9 +530,7 @@ export default function IndentsEdit({ indent, sidings, currentStockMt }: Props) 
                                         indent.railway_reference_no ?? ''
                                     }
                                 />
-                                <InputError
-                                    message={errors?.railway_reference_no}
-                                />
+                                <InputError message={err('railway_reference_no')} />
                             </div>
                             <div className="grid gap-2 sm:col-span-2">
                                 <Label htmlFor="destination">Destination</Label>
@@ -407,7 +540,7 @@ export default function IndentsEdit({ indent, sidings, currentStockMt }: Props) 
                                     defaultValue={indent.destination ?? ''}
                                     placeholder="e.g. power plant siding name"
                                 />
-                                <InputError message={errors?.destination} />
+                                <InputError message={err('destination')} />
                             </div>
                         </CardContent>
                     </Card>
@@ -433,7 +566,7 @@ export default function IndentsEdit({ indent, sidings, currentStockMt }: Props) 
                                 <p className="text-xs text-muted-foreground">
                                     Stored on both indent date and indent time fields.
                                 </p>
-                                <InputError message={errors?.indent_at} />
+                                <InputError message={err('indent_at')} />
                             </div>
                             <div className="grid gap-2">
                                 <Label htmlFor="expected_loading_date">
@@ -447,9 +580,7 @@ export default function IndentsEdit({ indent, sidings, currentStockMt }: Props) 
                                         indent.expected_loading_date,
                                     )}
                                 />
-                                <InputError
-                                    message={errors?.expected_loading_date}
-                                />
+                                <InputError message={err('expected_loading_date')} />
                             </div>
                             <div className="grid gap-2">
                                 <Label htmlFor="required_by_date">
@@ -463,9 +594,7 @@ export default function IndentsEdit({ indent, sidings, currentStockMt }: Props) 
                                         indent.required_by_date,
                                     )}
                                 />
-                                <InputError
-                                    message={errors?.required_by_date}
-                                />
+                                <InputError message={err('required_by_date')} />
                             </div>
                         </CardContent>
                     </Card>
@@ -513,14 +642,18 @@ export default function IndentsEdit({ indent, sidings, currentStockMt }: Props) 
                                         'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] outline-none',
                                     )}
                                 />
-                                <InputError message={errors?.remarks} />
+                                <InputError message={err('remarks')} />
                             </div>
                         </CardContent>
                     </Card>
 
                     <div className="flex flex-wrap gap-2">
-                        <Button type="submit" data-pan="indents-edit-submit">
-                            Save changes
+                        <Button
+                            type="submit"
+                            disabled={isSubmitting}
+                            data-pan="indents-edit-submit"
+                        >
+                            {isSubmitting ? 'Saving…' : 'Save changes'}
                         </Button>
                         <Button
                             type="button"

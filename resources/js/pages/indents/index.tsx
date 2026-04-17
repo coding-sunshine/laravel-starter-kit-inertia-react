@@ -118,7 +118,7 @@ export default function IndentsIndex({
         formData.append('pdf', file);
 
         try {
-            const res = await fetch('/indents/import-preview', {
+            const res = await fetch('/indents/import', {
                 method: 'POST',
                 body: formData,
                 credentials: 'same-origin',
@@ -341,8 +341,6 @@ export default function IndentsIndex({
                                 prefill={previewPrefill}
                                 stagedPdfFile={stagedPdfFile}
                                 variant="modal"
-                                preserveStateOnSubmit
-                                prefillSyncKey={previewSessionId}
                                 onCancel={closePreview}
                                 onSubmitSuccess={closePreview}
                             />

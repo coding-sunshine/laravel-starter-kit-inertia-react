@@ -38,7 +38,12 @@ final class StoreIndentRequest extends FormRequest
     {
         return [
             'siding_id' => ['required', 'integer', 'exists:sidings,id'],
-            'indent_number' => ['nullable', 'string', 'max:20', 'unique:indents,indent_number'],
+            'indent_number' => [
+                'nullable',
+                'string',
+                'max:20',
+                Rule::unique('indents', 'indent_number')->whereNull('deleted_at'),
+            ],
             'state' => ['nullable', 'string', Rule::in(self::INDENT_STATE_VALUES)],
             'remarks' => ['nullable', 'string', 'max:65535'],
             'e_demand_reference_id' => ['nullable', 'string', 'max:100'],
@@ -58,6 +63,7 @@ final class StoreIndentRequest extends FormRequest
             'target_quantity_mt' => ['required', 'numeric', 'min:0', 'max:999999999999.99'],
             'allocated_quantity_mt' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99'],
             'available_stock_mt' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99'],
+            'rake_serial_number' => ['required', 'string', 'max:100'],
             'rake_number' => [
                 'required',
                 'string',

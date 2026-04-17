@@ -44,6 +44,9 @@ final readonly class CreateIndentAndProvisionRakeAction
             $rakeNumber = isset($validated['rake_number']) && mb_trim((string) $validated['rake_number']) !== ''
                 ? mb_trim((string) $validated['rake_number'])
                 : null;
+            $rakeSerialNumber = isset($validated['rake_serial_number']) && mb_trim((string) $validated['rake_serial_number']) !== ''
+                ? mb_trim((string) $validated['rake_serial_number'])
+                : null;
             $priorityNumber = array_key_exists('rake_priority_number', $validated)
                 ? (($validated['rake_priority_number'] ?? null) !== null ? (int) $validated['rake_priority_number'] : null)
                 : null;
@@ -53,6 +56,7 @@ final readonly class CreateIndentAndProvisionRakeAction
                 $rakeNumber,
                 $user->id,
                 $priorityNumber,
+                $rakeSerialNumber,
             );
         });
     }

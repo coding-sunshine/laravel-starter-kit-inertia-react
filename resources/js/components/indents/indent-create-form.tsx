@@ -10,11 +10,12 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { postFormDataExpectJson } from '@/lib/laravel-json-fetch';
+import { parseLaravel422ResponseBody } from '@/lib/laravel-validation-errors';
 import { cn } from '@/lib/utils';
 import type { InertiaFormProps } from '@inertiajs/react';
 import { router, useForm } from '@inertiajs/react';
 import { FileText, Plus } from 'lucide-react';
-import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 export interface SidingOption {
     id: number;
@@ -30,6 +31,7 @@ export interface PowerPlantOption {
 export interface IndentCreatePrefill {
     siding_id?: number;
     rake_number?: string;
+    rake_serial_number?: string;
     rake_priority_number?: number;
     expected_loading_date?: string | null;
     demanded_stock?: string;
@@ -46,6 +48,7 @@ export interface IndentCreatePrefill {
 interface FormFields {
     siding_id: string;
     rake_number: string;
+    rake_serial_number: string;
     rake_priority_number: string;
     expected_loading_date: string;
     demanded_stock: string;
@@ -64,6 +67,7 @@ function emptyFields(): FormFields {
     return {
         siding_id: '',
         rake_number: '',
+        rake_serial_number: '',
         rake_priority_number: '',
         expected_loading_date: '',
         demanded_stock: '',
@@ -83,6 +87,7 @@ function emptyFields(): FormFields {
 const INDENT_FORM_SCROLL_ORDER: (keyof FormFields)[] = [
     'siding_id',
     'rake_number',
+    'rake_serial_number',
     'rake_priority_number',
     'expected_loading_date',
     'demanded_stock',
@@ -97,13 +102,14 @@ const INDENT_FORM_SCROLL_ORDER: (keyof FormFields)[] = [
     'remarks',
 ];
 
-const KNOWN_FORM_FIELD_KEYS = new Set(
-    Object.keys(emptyFields()) as (keyof FormFields)[],
+const KNOWN_FORM_FIELD_KEYS = new Set<string>(
+    Object.keys(emptyFields()) as string[],
 );
 
 function appendIndentStoreFormData(data: FormFields, fd: FormData): void {
     fd.append('siding_id', data.siding_id);
     fd.append('rake_number', data.rake_number);
+    fd.append('rake_serial_number', data.rake_serial_number);
     fd.append('rake_priority_number', data.rake_priority_number);
     fd.append('expected_loading_date', data.expected_loading_date);
     fd.append('demanded_stock', data.demanded_stock);
@@ -120,197 +126,19 @@ function appendIndentStoreFormData(data: FormFields, fd: FormData): void {
     }
 }
 
-function firstValidationMessage(raw: unknown): string | undefined {
-    if (typeof raw === 'string') {
-        const t = raw.trim();
-        return t === '' ? undefined : t;
-    }
-    if (Array.isArray(raw) && raw.length > 0) {
-        const s = String(raw[0]).trim();
-
-        return s === '' ? undefined : s;
-    }
-    if (
-        raw !== null &&
-        typeof raw === 'object' &&
-        !Array.isArray(raw) &&
-        'message' in raw
-    ) {
-        return firstValidationMessage(
-            (raw as { message: unknown }).message,
-        );
-    }
-
-    return undefined;
-}
-
-function normalizeLaravelTopMessage(body: Record<string, unknown>): string | null {
-    const m = body.message;
-    if (typeof m === 'string' && m.trim() !== '') {
-        return m.trim();
-    }
-    if (Array.isArray(m) && m[0] !== undefined) {
-        const s = String(m[0]).trim();
-
-        return s === '' ? null : s;
-    }
-
-    return null;
-}
-
-/** Pull Laravel-style `errors` object from common JSON shapes. */
-function getLaravelErrorsBag(body: unknown): Record<string, unknown> | null {
-    if (body === null || typeof body !== 'object') {
-        return null;
-    }
-    const o = body as Record<string, unknown>;
-    const direct = o.errors;
-    if (
-        direct !== null &&
-        typeof direct === 'object' &&
-        !Array.isArray(direct)
-    ) {
-        return direct as Record<string, unknown>;
-    }
-    const data = o.data;
-    if (data !== null && typeof data === 'object' && !Array.isArray(data)) {
-        const nested = (data as Record<string, unknown>).errors;
-        if (
-            nested !== null &&
-            typeof nested === 'object' &&
-            !Array.isArray(nested)
-        ) {
-            return nested as Record<string, unknown>;
-        }
-    }
-
-    return null;
-}
-
-/**
- * JSON:API / RFC7807 style:
- * `{ "errors": [ { "detail": "…", "source": { "pointer": "/rake_number" } } ] }`
- */
-function parseJsonApiStyleErrorsArray(body: unknown): {
-    fields: Partial<Record<keyof FormFields, string>>;
-    orphans: string[];
-} {
-    const fields: Partial<Record<keyof FormFields, string>> = {};
-    const orphans: string[] = [];
-
-    if (body === null || typeof body !== 'object') {
-        return { fields, orphans };
-    }
-    const o = body as Record<string, unknown>;
-    const errs = o.errors;
-    if (!Array.isArray(errs)) {
-        return { fields, orphans };
-    }
-
-    for (const item of errs) {
-        if (item === null || typeof item !== 'object') {
-            continue;
-        }
-        const row = item as Record<string, unknown>;
-        const detailRaw = row.detail ?? row.title;
-        const detail =
-            typeof detailRaw === 'string'
-                ? detailRaw.trim()
-                : firstValidationMessage(detailRaw);
-        if (!detail) {
-            continue;
-        }
-
-        let pointer: string | undefined;
-        const source = row.source;
-        if (
-            source !== null &&
-            typeof source === 'object' &&
-            !Array.isArray(source)
-        ) {
-            const p = (source as Record<string, unknown>).pointer;
-            if (typeof p === 'string') {
-                pointer = p;
-            }
-        }
-
-        let mappedKey: keyof FormFields | null = null;
-        if (pointer !== undefined && pointer !== '') {
-            const segments = pointer.split('/').filter(Boolean);
-            const last = segments[segments.length - 1];
-            if (
-                last !== undefined &&
-                KNOWN_FORM_FIELD_KEYS.has(last as keyof FormFields)
-            ) {
-                mappedKey = last as keyof FormFields;
-            }
-        }
-
-        if (mappedKey !== null) {
-            fields[mappedKey] = detail;
-        } else {
-            orphans.push(detail);
-        }
-    }
-
-    return { fields, orphans };
-}
-
-/**
- * Laravel 422 JSON → field errors (known inputs) + optional banner for
- * attributes not on this form or when only a top-level message exists.
- */
 function parseLaravel422Response(body: unknown): {
     fields: Partial<Record<keyof FormFields, string>>;
     banner: string | null;
 } {
-    const fields: Partial<Record<keyof FormFields, string>> = {};
-    const orphanLines: string[] = [];
+    const { fields, banner } = parseLaravel422ResponseBody(
+        body,
+        KNOWN_FORM_FIELD_KEYS,
+    );
 
-    const bag = getLaravelErrorsBag(body);
-    if (bag) {
-        for (const key of Object.keys(bag)) {
-            const baseKey = key.includes('.')
-                ? key.slice(0, key.indexOf('.'))
-                : key;
-            const msg = firstValidationMessage(bag[key]);
-            if (msg === undefined) {
-                continue;
-            }
-            if (KNOWN_FORM_FIELD_KEYS.has(baseKey as keyof FormFields)) {
-                fields[baseKey as keyof FormFields] = msg;
-            } else {
-                orphanLines.push(msg);
-            }
-        }
-    }
-
-    const jsonApi = parseJsonApiStyleErrorsArray(body);
-    for (const key of Object.keys(jsonApi.fields) as (keyof FormFields)[]) {
-        const v = jsonApi.fields[key];
-        if (v !== undefined && v !== '') {
-            fields[key] = v;
-        }
-    }
-    orphanLines.push(...jsonApi.orphans);
-
-    let banner: string | null = null;
-    if (orphanLines.length > 0) {
-        banner = [...new Set(orphanLines)].join('\n');
-    }
-
-    const hasField = Object.keys(fields).length > 0;
-    if (!hasField && body !== null && typeof body === 'object') {
-        const top = normalizeLaravelTopMessage(body as Record<string, unknown>);
-        if (top !== null) {
-            banner = banner !== null ? `${top}\n${banner}` : top;
-        }
-    }
-
-    const trimmed =
-        banner !== null && banner.trim() !== '' ? banner.trim() : null;
-
-    return { fields, banner: trimmed };
+    return {
+        fields: fields as Partial<Record<keyof FormFields, string>>,
+        banner,
+    };
 }
 
 function mergeIndentFieldMessages(
@@ -349,6 +177,8 @@ function fieldsFromPrefill(
         siding_id:
             prefill.siding_id !== undefined ? String(prefill.siding_id) : '',
         rake_number: prefill.rake_number ?? '',
+        rake_serial_number:
+            prefill.rake_serial_number ?? prefill.rake_number ?? '',
         rake_priority_number:
             prefill.rake_priority_number !== undefined
                 ? String(prefill.rake_priority_number)
@@ -405,6 +235,7 @@ function IndentCreateFormFields({
         () => mergeIndentFieldMessages(form.errors, fieldErrorOverrides),
         [form.errors, fieldErrorOverrides],
     );
+    const rakeSerialTouchedRef = useRef(false);
 
     return (
         <>
@@ -456,11 +287,35 @@ function IndentCreateFormFields({
                             required
                             placeholder="e.g. Rake Sq. Number"
                             value={form.data.rake_number}
-                            onChange={(e) =>
-                                form.setData('rake_number', e.target.value)
-                            }
+                            onChange={(e) => {
+                                const v = e.target.value;
+                                form.setData({
+                                    ...form.data,
+                                    rake_number: v,
+                                    rake_serial_number: rakeSerialTouchedRef.current
+                                        ? form.data.rake_serial_number
+                                        : v,
+                                });
+                            }}
                         />
                         <InputError message={errors.rake_number} />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="rake_serial_number">Rake number *</Label>
+                        <Input
+                            id="rake_serial_number"
+                            required
+                            placeholder="e.g. same as rake sequence"
+                            value={form.data.rake_serial_number}
+                            onChange={(e) => {
+                                rakeSerialTouchedRef.current = true;
+                                form.setData(
+                                    'rake_serial_number',
+                                    e.target.value,
+                                );
+                            }}
+                        />
+                        <InputError message={errors.rake_serial_number} />
                     </div>
                     <div className="grid gap-2">
                         <Label htmlFor="rake_priority_number">
@@ -743,26 +598,24 @@ interface IndentCreateFormProps {
     prefill?: IndentCreatePrefill | null;
     stagedPdfFile?: File | null;
     variant: 'page' | 'modal';
-    preserveStateOnSubmit?: boolean;
-    /** Bumps when a new PDF is parsed; resets remembered form state for that import. */
-    prefillSyncKey?: number;
     onCancel?: () => void;
-    /** Called after a successful create (before redirect); clear any remembered UI state. */
+    /** Called after a successful create (before redirect); e.g. close PDF modal. */
     onSubmitSuccess?: () => void;
 }
 
-function IndentCreateFormPdfImportModal({
+/**
+ * Create e-demand via JSON fetch (no Inertia visit on validation errors).
+ * Used for `/indents/create` and the PDF confirmation modal on `/indents`.
+ */
+function IndentCreateFormWithFetch({
     sidings,
     power_plants,
     prefill,
     stagedPdfFile,
-    prefillSyncKey,
+    variant,
     onCancel,
     onSubmitSuccess,
-}: Omit<
-    IndentCreateFormProps,
-    'variant' | 'preserveStateOnSubmit'
->): JSX.Element {
+}: IndentCreateFormProps): JSX.Element {
     const form = useForm<FormFields>(() =>
         fieldsFromPrefill(prefill, stagedPdfFile),
     );
@@ -771,12 +624,6 @@ function IndentCreateFormPdfImportModal({
         Partial<Record<keyof FormFields, string>>
     >({});
     const [formErrorBanner, setFormErrorBanner] = useState<string | null>(null);
-
-    useEffect(() => {
-        form.setData(fieldsFromPrefill(prefill, stagedPdfFile));
-        setFetchFieldErrors({});
-        setFormErrorBanner(null);
-    }, [prefillSyncKey]);
 
     useLayoutEffect(() => {
         const hasFieldErr = INDENT_FORM_SCROLL_ORDER.some(
@@ -847,42 +694,6 @@ function IndentCreateFormPdfImportModal({
         }
     };
 
-    return (
-        <form onSubmit={submit} className="space-y-6" noValidate>
-            <IndentCreateFormFields
-                form={form}
-                sidings={sidings}
-                power_plants={power_plants}
-                variant="modal"
-                onCancel={onCancel}
-                isSubmitting={isSubmitting}
-                fieldErrorOverrides={fetchFieldErrors}
-                serverErrorBanner={formErrorBanner}
-            />
-        </form>
-    );
-}
-
-function IndentCreateFormDefault({
-    sidings,
-    power_plants,
-    prefill,
-    stagedPdfFile,
-    variant,
-    preserveStateOnSubmit = false,
-    onCancel,
-}: IndentCreateFormProps): JSX.Element {
-    const form = useForm<FormFields>(fieldsFromPrefill(prefill, stagedPdfFile));
-
-    const submit = (e: React.FormEvent) => {
-        e.preventDefault();
-        form.post('/indents', {
-            forceFormData: true,
-            preserveState: preserveStateOnSubmit,
-            preserveScroll: preserveStateOnSubmit,
-        });
-    };
-
     const formInner = (
         <form onSubmit={submit} className="space-y-6" noValidate>
             <IndentCreateFormFields
@@ -891,6 +702,9 @@ function IndentCreateFormDefault({
                 power_plants={power_plants}
                 variant={variant}
                 onCancel={onCancel}
+                isSubmitting={isSubmitting}
+                fieldErrorOverrides={fetchFieldErrors}
+                serverErrorBanner={formErrorBanner}
             />
         </form>
     );
@@ -927,19 +741,5 @@ function IndentCreateFormDefault({
 }
 
 export function IndentCreateForm(props: IndentCreateFormProps) {
-    if (props.variant === 'modal' && props.preserveStateOnSubmit) {
-        return (
-            <IndentCreateFormPdfImportModal
-                sidings={props.sidings}
-                power_plants={props.power_plants}
-                prefill={props.prefill}
-                stagedPdfFile={props.stagedPdfFile}
-                prefillSyncKey={props.prefillSyncKey ?? 0}
-                onCancel={props.onCancel}
-                onSubmitSuccess={props.onSubmitSuccess}
-            />
-        );
-    }
-
-    return <IndentCreateFormDefault {...props} />;
+    return <IndentCreateFormWithFetch {...props} />;
 }
