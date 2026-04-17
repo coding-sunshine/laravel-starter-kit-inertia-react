@@ -30,6 +30,8 @@ interface SearchableSelectProps {
     value: string;
     onValueChange: (value: string) => void;
     placeholder?: string;
+    /** Placeholder for the search input inside the dropdown */
+    searchPlaceholder?: string;
     disabled?: boolean;
     emptyMessage?: string;
     className?: string;
@@ -42,6 +44,7 @@ export function SearchableSelect({
     value,
     onValueChange,
     placeholder = 'Select...',
+    searchPlaceholder = 'Search...',
     disabled = false,
     emptyMessage = 'No results found.',
     className,
@@ -78,8 +81,17 @@ export function SearchableSelect({
                 </Button>
             </PopoverTrigger>
             <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-                <Command>
-                    <CommandInput placeholder="Search..." />
+                <Command
+                    filter={(value, search) => {
+                        if (!search.trim()) {
+                            return 1;
+                        }
+                        const v = value.toLowerCase();
+                        const s = search.trim().toLowerCase();
+                        return v.includes(s) ? 1 : 0;
+                    }}
+                >
+                    <CommandInput placeholder={searchPlaceholder} />
                     <CommandList>
                         <CommandEmpty>{emptyMessage}</CommandEmpty>
                         <CommandGroup>
