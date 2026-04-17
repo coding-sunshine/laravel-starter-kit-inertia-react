@@ -368,6 +368,7 @@ return [
         // Transport (Vehicle Workorders)
         'vehicle-workorders.index' => 'sections.transport.view',
         'vehicle-workorders.export' => 'sections.transport.view',
+        'vehicle-workorders.export-transporters' => 'sections.transport.view',
         'vehicle-workorders.create' => 'sections.transport.create',
         'vehicle-workorders.store' => 'sections.transport.create',
         'vehicle-workorders.edit' => 'sections.transport.update',

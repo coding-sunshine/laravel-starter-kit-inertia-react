@@ -251,6 +251,11 @@
             "type": "string",
             "nullable": true,
             "default": null
+        },
+        "rake_serial_number": {
+            "type": "string",
+            "nullable": true,
+            "default": null
         }
     },
     "relationships": {
