@@ -36,15 +36,31 @@ function saveVisibility(tableName: string, visibility: VisibilityState) {
 }
 
 function loadColumnOrder(tableName: string, columns: DataTableColumnDef[]): ColumnOrderState {
+    const serverOrder = columns.map((col) => col.id);
     const stored = localStorage.getItem(ORDER_STORAGE_PREFIX + tableName);
-    if (stored) {
-        try {
-            return JSON.parse(stored) as ColumnOrderState;
-        } catch {
-            // fall through
-        }
+    if (!stored) {
+        return serverOrder;
     }
-    return columns.map((col) => col.id);
+    try {
+        const parsed = JSON.parse(stored) as ColumnOrderState;
+        const serverSet = new Set(serverOrder);
+        const storedFiltered = parsed.filter((id) => serverSet.has(id));
+        if (storedFiltered.length !== serverOrder.length) {
+            return serverOrder;
+        }
+        if (new Set(storedFiltered).size !== serverOrder.length) {
+            return serverOrder;
+        }
+        for (const id of serverOrder) {
+            if (!storedFiltered.includes(id)) {
+                return serverOrder;
+            }
+        }
+
+        return storedFiltered;
+    } catch {
+        return serverOrder;
+    }
 }
 
 function saveColumnOrder(tableName: string, order: ColumnOrderState) {

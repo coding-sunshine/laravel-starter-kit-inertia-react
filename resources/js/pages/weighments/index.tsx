@@ -26,6 +26,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 export interface WeighmentsRakeRow {
     id: number;
     rake_number: string;
+    /** E-Demand / forwarding note number from linked indent (shown as Priority number). */
+    indent_number: string | null;
     loading_date: string | null;
     siding_id: number | null;
     siding_code: string | null;
@@ -382,6 +384,11 @@ export default function WeighmentsIndex({ tableData }: Props) {
                                     },
                                 ]}
                                 renderCell={(columnId, _value, row) => {
+                                    if (columnId === 'indent_number') {
+                                        return row.indent_number != null && row.indent_number !== ''
+                                            ? row.indent_number
+                                            : '—';
+                                    }
                                     if (columnId === 'siding_code') {
                                         return row.siding_code && row.siding_name
                                             ? `${row.siding_code} (${row.siding_name})`

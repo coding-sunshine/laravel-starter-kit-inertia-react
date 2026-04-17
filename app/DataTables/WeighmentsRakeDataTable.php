@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\DataTables;
 
+use App\Models\Indent;
 use App\Models\Rake;
 use App\Models\RakeWeighment;
 use App\Models\Siding;
@@ -23,6 +24,8 @@ final class WeighmentsRakeDataTable extends AbstractDataTable
     public function __construct(
         public int $id,
         public string $rake_number,
+        /** `indents.indent_number` when rake is linked to an indent (Priority number column). */
+        public ?string $indent_number,
         public ?string $loading_date,
         public ?int $siding_id,
         public ?string $siding_code,
@@ -53,6 +56,7 @@ final class WeighmentsRakeDataTable extends AbstractDataTable
         return new self(
             id: $model->id,
             rake_number: $model->rake_number,
+            indent_number: self::nullableTrimmedString($model->indent?->indent_number),
             loading_date: $model->loading_date?->toDateString(),
             siding_id: $model->siding_id,
             siding_code: $model->siding?->code,
@@ -80,6 +84,13 @@ final class WeighmentsRakeDataTable extends AbstractDataTable
     {
         return [
             new Column(id: 'rake_number', label: 'Rake #', type: 'text', sortable: true, filterable: true),
+            new Column(
+                id: 'indent_number',
+                label: 'Priority number',
+                type: 'text',
+                sortable: true,
+                filterable: false,
+            ),
             new Column(
                 id: 'siding_code',
                 label: 'Siding',
@@ -111,6 +122,7 @@ final class WeighmentsRakeDataTable extends AbstractDataTable
     {
         $query = Rake::query()->with([
             'siding:id,code,name',
+            'indent:id,indent_number',
             'rakeWeighments' => static function ($relation): void {
                 $relation
                     ->select([
@@ -180,6 +192,14 @@ final class WeighmentsRakeDataTable extends AbstractDataTable
     {
         return [
             'rake_number',
+            AllowedSort::callback('indent_number', static function (Builder $query, bool $descending, string $_property): void {
+                $direction = $descending ? 'desc' : 'asc';
+                $rakesTable = $query->getModel()->getTable();
+                $indentsTable = (new Indent)->getTable();
+                $query->leftJoin($indentsTable, "{$indentsTable}.id", '=', "{$rakesTable}.indent_id")
+                    ->select("{$rakesTable}.*")
+                    ->orderBy("{$indentsTable}.indent_number", $direction);
+            }),
             AllowedSort::callback('siding_code', static function (Builder $query, bool $descending, string $_property): void {
                 $direction = $descending ? 'desc' : 'asc';
                 $rakesTable = $query->getModel()->getTable();
