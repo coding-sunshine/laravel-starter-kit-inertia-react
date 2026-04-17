@@ -440,6 +440,17 @@ export default function WeighmentsIndex({ tableData }: Props) {
                                 <DialogTitle className="font-mono text-3xl font-bold tracking-tight sm:text-4xl">
                                     {selectedRake?.rake_number ?? '—'}
                                 </DialogTitle>
+                                <div className="space-y-1">
+                                    <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                                        Priority number
+                                    </p>
+                                    <p className="font-mono text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+                                        {selectedRake?.indent_number != null &&
+                                        selectedRake.indent_number !== ''
+                                            ? selectedRake.indent_number
+                                            : '—'}
+                                    </p>
+                                </div>
                                 <DialogDescription className="text-base">{rakeMetaLine || '—'}</DialogDescription>
                             </DialogHeader>
                         </div>
