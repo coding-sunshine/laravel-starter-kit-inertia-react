@@ -436,18 +436,26 @@ function buildDashboardGetParams(args: {
 interface DailyRakeDetailsRow {
     sl_no: number;
     siding_name: string;
+    year: string;
     day_rakes: number;
     day_qty: number;
     month_rakes: number;
     month_qty: number;
-    rake_day_avg: number;
-    remarks: string;
+    year_rakes: number;
+    year_qty: number;
 }
 
 interface DailyRakeDetailsData {
     date: string;
     rows: DailyRakeDetailsRow[];
-    totals: { day_rakes: number; day_qty: number; month_rakes: number; month_qty: number; rake_day_avg: number };
+    totals: {
+        day_rakes: number;
+        day_qty: number;
+        month_rakes: number;
+        month_qty: number;
+        year_rakes: number;
+        year_qty: number;
+    };
 }
 
 interface CoalTransportSidingMetric {
@@ -626,6 +634,7 @@ const DEFAULT_LIVE_RAKE_WORKFLOW_STEPS: WorkflowSteps = {
 
 interface LiveRakeStatusRow {
     rake_number: string;
+    rake_serial_number?: string | null;
     siding_name: string;
     state: string;
     workflow_steps?: WorkflowSteps;
@@ -633,6 +642,29 @@ interface LiveRakeStatusRow {
     /** YYYY-MM-DD or em dash when unset */
     loading_date?: string;
     risk: string;
+}
+
+function formatRakeSequenceBySiding(rakeNumber: string, sidingName: string): string {
+    const normalized = rakeNumber.trim();
+    if (normalized === '') {
+        return normalized;
+    }
+
+    const siding = sidingName.toLowerCase();
+    let prefix = '';
+    if (siding.includes('pakur')) {
+        prefix = 'P';
+    } else if (siding.includes('kurwa')) {
+        prefix = 'K';
+    } else if (siding.includes('dumka')) {
+        prefix = 'D';
+    }
+
+    if (prefix === '') {
+        return normalized;
+    }
+
+    return normalized.startsWith(`${prefix}-`) ? normalized : `${prefix}-${normalized}`;
 }
 
 interface TruckReceiptHour {
@@ -4909,6 +4941,11 @@ export default function Dashboard() {
                                             <>
                                                 <p className="mt-1 text-xs text-gray-600">
                                                     {new Date(dailyRakeDetails.date + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                                    {dailyRakeDetails.rows.length > 0 && (
+                                                        <span className="ml-2 text-gray-500">
+                                                            ({dailyRakeDetails.rows[0].year})
+                                                        </span>
+                                                    )}
                                                     {dailyRakeDetails.totals.day_rakes === 0 && dailyRakeDetails.rows.length > 0 && (
                                                         <span className="ml-2 text-amber-600">— No rake dispatches for this date</span>
                                                     )}
@@ -4926,8 +4963,9 @@ export default function Dashboard() {
                                                                     <th colSpan={2} className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">
                                                                         MONTH
                                                                     </th>
-                                                                    <th className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">FOR RAKE DAY/AVG</th>
-                                                                    <th className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">REMARKS</th>
+                                                                    <th colSpan={2} className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">
+                                                                        YEAR
+                                                                    </th>
                                                                 </tr>
                                                                 <tr>
                                                                     <th className="border border-[#d5dbe4] px-3 py-2" />
@@ -4936,8 +4974,8 @@ export default function Dashboard() {
                                                                     <th className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">QTY</th>
                                                                     <th className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">RAKES</th>
                                                                     <th className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">QTY</th>
-                                                                    <th className="border border-[#d5dbe4] px-3 py-2" />
-                                                                    <th className="border border-[#d5dbe4] px-3 py-2" />
+                                                                    <th className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">RAKES</th>
+                                                                    <th className="border border-[#d5dbe4] px-3 py-2 text-center font-medium">QTY</th>
                                                                 </tr>
                                                             </thead>
                                                             <tbody>
@@ -4953,8 +4991,10 @@ export default function Dashboard() {
                                                                         <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
                                                                             {r.month_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                                         </td>
-                                                                        <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{r.rake_day_avg.toFixed(2)}</td>
-                                                                        <td className="border border-[#d5dbe4] px-3 py-2 text-gray-600">{r.remarks || '—'}</td>
+                                                                        <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{r.year_rakes}</td>
+                                                                        <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                                                            {r.year_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                        </td>
                                                                     </tr>
                                                                 ))}
                                                                 <tr className="bg-[#f1f5f9] font-semibold text-black">
@@ -4968,8 +5008,10 @@ export default function Dashboard() {
                                                                     <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
                                                                         {dailyRakeDetails.totals.month_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                                     </td>
-                                                                    <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{dailyRakeDetails.totals.rake_day_avg.toFixed(2)}</td>
-                                                                    <td className="border border-[#d5dbe4] px-3 py-2" />
+                                                                    <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">{dailyRakeDetails.totals.year_rakes}</td>
+                                                                    <td className="border border-[#d5dbe4] px-3 py-2 text-right tabular-nums">
+                                                                        {dailyRakeDetails.totals.year_qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                    </td>
                                                                 </tr>
                                                             </tbody>
                                                         </table>
@@ -5072,7 +5114,13 @@ export default function Dashboard() {
                                                         <tr className="border-b text-left text-gray-600">
                                                             <th className="group cursor-pointer pb-3 pl-4 pr-2 pt-2 font-medium">
                                                                 <span className="inline-flex items-center gap-1">
-                                                                    Rake
+                                                                    Rake Seq
+                                                                    <ArrowUp className="size-3.5 opacity-0 group-hover:opacity-50" />
+                                                                </span>
+                                                            </th>
+                                                            <th className="group cursor-pointer pb-3 px-2 pt-2 font-medium">
+                                                                <span className="inline-flex items-center gap-1">
+                                                                    Rake number
                                                                     <ArrowUp className="size-3.5 opacity-0 group-hover:opacity-50" />
                                                                 </span>
                                                             </th>
@@ -5121,12 +5169,28 @@ export default function Dashboard() {
                                                                     }}
                                                                 >
                                                                     <td className="py-3 pl-4 font-medium">
+                                                                        <span>
+                                                                            {formatRakeSequenceBySiding(
+                                                                                row.rake_number,
+                                                                                row.siding_name,
+                                                                            )}
+                                                                        </span>
+                                                                    </td>
+                                                                    <td className="py-3 px-2 font-medium">
                                                                         <span className="inline-flex items-center gap-2">
                                                                             <span
                                                                                 className="inline-block size-2.5 rounded-full"
                                                                                 style={{ backgroundColor: borderColor }}
                                                                             />
-                                                                            <span>{row.rake_number}</span>
+                                                                            <span>
+                                                                                {row.rake_serial_number ? (
+                                                                                    row.rake_serial_number
+                                                                                ) : (
+                                                                                    <span className="text-amber-600 dark:text-amber-400">
+                                                                                        {row.rake_number}
+                                                                                    </span>
+                                                                                )}
+                                                                            </span>
                                                                         </span>
                                                                     </td>
                                                                     <td className="py-3 px-2">{row.siding_name}</td>
