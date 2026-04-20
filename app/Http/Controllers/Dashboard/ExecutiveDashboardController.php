@@ -2363,6 +2363,22 @@ final class ExecutiveDashboardController extends Controller
             ->where(function ($q): void {
                 $q->whereNull('data_source')
                     ->orWhereIn('data_source', self::OPERATIONAL_RAKE_DATA_SOURCES);
+            })
+            ->whereExists(function ($subQuery): void {
+                $subQuery->selectRaw('1')
+                    ->from('rake_weighments')
+                    ->whereColumn('rake_weighments.rake_id', 'rakes.id');
+            })
+            ->whereExists(function ($subQuery): void {
+                $subQuery->selectRaw('1')
+                    ->from('rake_wagon_weighments')
+                    ->join(
+                        'rake_weighments',
+                        'rake_weighments.id',
+                        '=',
+                        'rake_wagon_weighments.rake_weighment_id',
+                    )
+                    ->whereColumn('rake_weighments.rake_id', 'rakes.id');
             });
         if (! empty($filterContext['rake_number'])) {
             $rakeQuery->where('rake_number', 'like', '%'.$filterContext['rake_number'].'%');
