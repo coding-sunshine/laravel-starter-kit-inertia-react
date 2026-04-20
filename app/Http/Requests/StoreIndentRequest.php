@@ -63,7 +63,40 @@ final class StoreIndentRequest extends FormRequest
             'target_quantity_mt' => ['required', 'numeric', 'min:0', 'max:999999999999.99'],
             'allocated_quantity_mt' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99'],
             'available_stock_mt' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99'],
-            'rake_serial_number' => ['required', 'string', 'max:100'],
+            'rake_serial_number' => [
+                'required',
+                'string',
+                'max:100',
+                function (string $attribute, mixed $value, Closure $fail): void {
+                    $trimmed = $value !== null && mb_trim((string) $value) !== '' ? mb_trim((string) $value) : null;
+                    if ($trimmed === null) {
+                        return;
+                    }
+
+                    $sidingId = (int) $this->input('siding_id');
+                    if ($sidingId <= 0) {
+                        return;
+                    }
+
+                    $indentAt = $this->input('indent_at');
+                    if ($indentAt === null || $indentAt === '') {
+                        return;
+                    }
+
+                    $reference = Date::parse($indentAt);
+
+                    $existsInMonth = Rake::query()
+                        ->where('rake_serial_number', $trimmed)
+                        ->where('siding_id', $sidingId)
+                        ->whereYear('loading_date', $reference->year)
+                        ->whereMonth('loading_date', $reference->month)
+                        ->exists();
+
+                    if ($existsInMonth) {
+                        $fail('This rake number is already in use for this siding in the indent month.');
+                    }
+                },
+            ],
             'rake_number' => [
                 'required',
                 'string',

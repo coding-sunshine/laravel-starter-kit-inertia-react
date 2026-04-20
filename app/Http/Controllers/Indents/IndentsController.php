@@ -322,7 +322,7 @@ final class IndentsController extends Controller
             ],
         );
 
-        $indent->loadMissing('rake:id,indent_id,rake_serial_number');
+        $indent->loadMissing('rake:id,indent_id,siding_id,rake_serial_number,loading_date');
         if ($indent->rake === null) {
             return response()->json([
                 'message' => 'This e-Demand does not have a linked rake yet.',
@@ -332,7 +332,35 @@ final class IndentsController extends Controller
             ], 422);
         }
 
-        $indent->rake->rake_serial_number = mb_trim((string) $validated['rake_serial_number']);
+        if ($indent->rake->loading_date === null) {
+            return response()->json([
+                'message' => 'Cannot validate rake number uniqueness because loading date is missing.',
+                'errors' => [
+                    'rake_serial_number' => ['Cannot validate rake number uniqueness because loading date is missing.'],
+                ],
+            ], 422);
+        }
+
+        $reference = Date::parse($indent->rake->loading_date);
+        $trimmedSerial = mb_trim((string) $validated['rake_serial_number']);
+        $existsInMonth = Rake::query()
+            ->where('rake_serial_number', $trimmedSerial)
+            ->where('siding_id', $indent->rake->siding_id)
+            ->whereYear('loading_date', $reference->year)
+            ->whereMonth('loading_date', $reference->month)
+            ->whereKeyNot($indent->rake->id)
+            ->exists();
+
+        if ($existsInMonth) {
+            return response()->json([
+                'message' => 'This rake number is already in use for this siding in the loading month.',
+                'errors' => [
+                    'rake_serial_number' => ['This rake number is already in use for this siding in the loading month.'],
+                ],
+            ], 422);
+        }
+
+        $indent->rake->rake_serial_number = $trimmedSerial;
         $indent->rake->updated_by = $user->id;
         $indent->rake->save();
 

@@ -323,30 +323,74 @@ final class RakesController extends Controller
     {
         // $this->authorize('update', $rake);
 
+        $loadingDateInput = $request->input('loading_date');
+        $loadingDateReferenceRaw = $loadingDateInput !== null && $loadingDateInput !== ''
+            ? (string) $loadingDateInput
+            : ($rake->loading_date !== null ? $rake->loading_date->toDateString() : null);
+
         $validated = $request->validate(
             [
-                'rake_serial_number' => ['required', 'string', 'max:100'],
                 'rake_number' => [
                     'nullable',
                     'string',
                     'max:100',
-                    function (string $attribute, mixed $value, Closure $fail) use ($rake): void {
+                    function (string $attribute, mixed $value, Closure $fail) use ($rake, $loadingDateReferenceRaw): void {
                         $trimmed = $value !== null && mb_trim((string) $value) !== '' ? mb_trim((string) $value) : null;
 
                         if ($trimmed === null || $trimmed === $rake->rake_number) {
                             return;
                         }
 
+                        if ($loadingDateReferenceRaw === null || $loadingDateReferenceRaw === '') {
+                            $fail('Cannot validate rake sequence uniqueness because loading date is missing.');
+
+                            return;
+                        }
+
+                        $reference = Carbon::parse($loadingDateReferenceRaw);
+
                         $existsInMonth = Rake::query()
                             ->where('rake_number', $trimmed)
                             ->where('siding_id', $rake->siding_id)
-                            ->whereYear('loading_date', now()->year)
-                            ->whereMonth('loading_date', now()->month)
+                            ->whereYear('loading_date', $reference->year)
+                            ->whereMonth('loading_date', $reference->month)
                             ->whereKeyNot($rake->getKey())
                             ->exists();
 
                         if ($existsInMonth) {
                             $fail('This Rake sequence is already in use this month.');
+                        }
+                    },
+                ],
+                'rake_serial_number' => [
+                    'required',
+                    'string',
+                    'max:100',
+                    function (string $attribute, mixed $value, Closure $fail) use ($rake, $loadingDateReferenceRaw): void {
+                        $trimmed = $value !== null && mb_trim((string) $value) !== '' ? mb_trim((string) $value) : null;
+
+                        if ($trimmed === null || $trimmed === $rake->rake_serial_number) {
+                            return;
+                        }
+
+                        if ($loadingDateReferenceRaw === null || $loadingDateReferenceRaw === '') {
+                            $fail('Cannot validate rake number uniqueness because loading date is missing.');
+
+                            return;
+                        }
+
+                        $reference = Carbon::parse($loadingDateReferenceRaw);
+
+                        $existsInMonth = Rake::query()
+                            ->where('rake_serial_number', $trimmed)
+                            ->where('siding_id', $rake->siding_id)
+                            ->whereYear('loading_date', $reference->year)
+                            ->whereMonth('loading_date', $reference->month)
+                            ->whereKeyNot($rake->getKey())
+                            ->exists();
+
+                        if ($existsInMonth) {
+                            $fail('This rake number is already in use for this siding in the loading month.');
                         }
                     },
                 ],
