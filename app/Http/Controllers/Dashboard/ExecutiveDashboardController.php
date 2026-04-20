@@ -93,6 +93,7 @@ final class ExecutiveDashboardController extends Controller
                 'underload_threshold' => $resolved['underloadThresholdPercent'],
                 'shift' => $resolved['shift'],
                 'penalty_type' => $resolved['penaltyTypeId'],
+                'rake_penalty_scope' => $resolved['rakePenaltyScope'],
                 'daily_rake_date' => $resolved['dailyRakeDate']->toDateString(),
                 'coal_transport_date' => $resolved['coalTransportDate']->toDateString(),
             ],
@@ -2344,7 +2345,7 @@ final class ExecutiveDashboardController extends Controller
      * Only operational rakes are included: {@see self::OPERATIONAL_RAKE_DATA_SOURCES} or null {@see Rake::$data_source} (same rule as `/rakes`).
      *
      * @param  array<int>  $sidingIds
-     * @param  array{power_plant: string|null, rake_number: string|null, loader_id: int|null, shift: string|null}  $filterContext
+     * @param  array{power_plant: string|null, rake_number: string|null, loader_id: int|null, shift: string|null, rake_penalty_scope?: string|null}  $filterContext
      * @return array<int, array<string, mixed>>
      */
     public function buildRakePerformance(array $sidingIds, CarbonInterface $from, CarbonInterface $to, array $filterContext = []): array
@@ -2369,6 +2370,19 @@ final class ExecutiveDashboardController extends Controller
         if (! empty($filterContext['power_plant'])) {
             $rakeQuery->whereIn('id', RakeWeighment::query()->where('to_station', $filterContext['power_plant'])->select('rake_id'));
         }
+        if (($filterContext['rake_penalty_scope'] ?? 'all') === 'with_penalties') {
+            $rakeQuery->where(static function ($query): void {
+                $query->whereExists(function ($subQuery): void {
+                    $subQuery->selectRaw('1')
+                        ->from('applied_penalties')
+                        ->whereColumn('applied_penalties.rake_id', 'rakes.id');
+                })->orWhereExists(function ($subQuery): void {
+                    $subQuery->selectRaw('1')
+                        ->from('rr_penalty_snapshots')
+                        ->whereColumn('rr_penalty_snapshots.rake_id', 'rakes.id');
+                });
+            });
+        }
         $rakes = $rakeQuery->orderByRaw('COALESCE(rakes.loading_date, rakes.created_at) DESC')->limit(50)->get();
 
         $rakeIds = $rakes->pluck('id')->all();
@@ -2380,7 +2394,14 @@ final class ExecutiveDashboardController extends Controller
             ->get()
             ->keyBy('rake_id');
 
-        $penaltyTotals = AppliedPenalty::query()
+        $predictedPenaltyTotals = AppliedPenalty::query()
+            ->whereIn('rake_id', $rakeIds)
+            ->selectRaw('rake_id, sum(amount) as total_penalty, count(*) as penalty_count')
+            ->groupBy('rake_id')
+            ->get()
+            ->keyBy('rake_id');
+
+        $actualPenaltyTotals = RrPenaltySnapshot::query()
             ->whereIn('rake_id', $rakeIds)
             ->selectRaw('rake_id, sum(amount) as total_penalty, count(*) as penalty_count')
             ->groupBy('rake_id')
@@ -2456,9 +2477,10 @@ final class ExecutiveDashboardController extends Controller
             }
         }
 
-        return $rakes->map(function (Rake $rake) use ($weighmentTotals, $penaltyTotals, $wagonOverloadsByRakeId): array {
+        return $rakes->map(function (Rake $rake) use ($weighmentTotals, $predictedPenaltyTotals, $actualPenaltyTotals, $wagonOverloadsByRakeId): array {
             $w = $weighmentTotals->get($rake->id);
-            $p = $penaltyTotals->get($rake->id);
+            $predictedPenalty = $predictedPenaltyTotals->get($rake->id);
+            $actualPenalty = $actualPenaltyTotals->get($rake->id);
 
             $loadingMinutes = null;
             if ($rake->loading_start_time && $rake->loading_end_time) {
@@ -2470,6 +2492,7 @@ final class ExecutiveDashboardController extends Controller
             return [
                 'id' => $rake->id,
                 'rake_number' => $rake->rake_number,
+                'rake_serial_number' => $rake->rake_serial_number,
                 'siding' => $rake->siding?->name ?? '—',
                 'dispatch_date' => $displayDate ? Carbon::parse($displayDate)->format('d M Y') : '—',
                 'wagon_count' => $rake->wagon_count,
@@ -2477,8 +2500,10 @@ final class ExecutiveDashboardController extends Controller
                 'over_load' => $w ? round((float) $w->over_load, 2) : null,
                 'under_load' => $w ? round((float) $w->under_load, 2) : null,
                 'loading_minutes' => $loadingMinutes,
-                'penalty_amount' => $p ? round((float) $p->total_penalty, 2) : 0,
-                'penalty_count' => $p ? (int) $p->penalty_count : 0,
+                'predicted_penalty_amount' => $predictedPenalty ? round((float) $predictedPenalty->total_penalty, 2) : 0,
+                'predicted_penalty_count' => $predictedPenalty ? (int) $predictedPenalty->penalty_count : 0,
+                'actual_penalty_amount' => $actualPenalty ? round((float) $actualPenalty->total_penalty, 2) : 0,
+                'actual_penalty_count' => $actualPenalty ? (int) $actualPenalty->penalty_count : 0,
                 'wagon_overloads' => $wagonOverloadsByRakeId[$rake->id] ?? [],
             ];
         })->values()->all();
