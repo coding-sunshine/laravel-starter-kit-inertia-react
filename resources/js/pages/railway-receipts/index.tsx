@@ -31,6 +31,7 @@ import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react
 export interface RailwayReceiptsRakeRow {
     id: number;
     rake_number: string;
+    rake_serial_number: string | null;
     loading_date: string | null;
     siding_id: number | null;
     siding_code: string | null;
@@ -574,6 +575,28 @@ export default function RailwayReceiptsIndex({
                                         },
                                     ]}
                                     renderCell={(columnId, _value, row) => {
+                                        if (columnId === 'rake_serial_number') {
+                                            const sidingCode = row.siding_code?.trim() ?? '';
+                                            const formatRakeLabel = (raw: string): string =>
+                                                sidingCode !== '' &&
+                                                !raw.startsWith(`${sidingCode}-`)
+                                                    ? `${sidingCode}-${raw}`
+                                                    : raw;
+
+                                            if (row.rake_serial_number != null && row.rake_serial_number !== '') {
+                                                return formatRakeLabel(row.rake_serial_number);
+                                            }
+
+                                            if (row.rake_number !== '') {
+                                                return (
+                                                    <span className="text-amber-600 dark:text-amber-400">
+                                                        {formatRakeLabel(row.rake_number)}
+                                                    </span>
+                                                );
+                                            }
+
+                                            return '—';
+                                        }
                                         if (columnId === 'siding_code') {
                                             return row.siding_code && row.siding_name
                                                 ? `${row.siding_code} (${row.siding_name})`

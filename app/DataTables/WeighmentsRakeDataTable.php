@@ -24,6 +24,7 @@ final class WeighmentsRakeDataTable extends AbstractDataTable
     public function __construct(
         public int $id,
         public string $rake_number,
+        public ?string $rake_serial_number,
         /** `indents.indent_number` when rake is linked to an indent (Priority number column). */
         public ?string $indent_number,
         public ?string $loading_date,
@@ -56,6 +57,7 @@ final class WeighmentsRakeDataTable extends AbstractDataTable
         return new self(
             id: $model->id,
             rake_number: $model->rake_number,
+            rake_serial_number: self::nullableTrimmedString($model->rake_serial_number),
             indent_number: self::nullableTrimmedString($model->indent?->indent_number),
             loading_date: $model->loading_date?->toDateString(),
             siding_id: $model->siding_id,
@@ -84,6 +86,7 @@ final class WeighmentsRakeDataTable extends AbstractDataTable
     {
         return [
             new Column(id: 'rake_number', label: 'Rake #', type: 'text', sortable: true, filterable: true),
+            new Column(id: 'rake_serial_number', label: 'Rake Number', type: 'text', sortable: false, filterable: false),
             new Column(
                 id: 'indent_number',
                 label: 'Priority number',

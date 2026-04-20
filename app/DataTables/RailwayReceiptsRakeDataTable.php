@@ -23,6 +23,7 @@ final class RailwayReceiptsRakeDataTable extends AbstractDataTable
     public function __construct(
         public int $id,
         public string $rake_number,
+        public ?string $rake_serial_number,
         public ?string $loading_date,
         public ?int $siding_id,
         public ?string $siding_code,
@@ -57,6 +58,7 @@ final class RailwayReceiptsRakeDataTable extends AbstractDataTable
         return new self(
             id: $model->id,
             rake_number: $model->rake_number,
+            rake_serial_number: $model->rake_serial_number,
             loading_date: $model->loading_date?->toDateString(),
             siding_id: $model->siding_id,
             siding_code: $model->siding?->code,
@@ -88,6 +90,7 @@ final class RailwayReceiptsRakeDataTable extends AbstractDataTable
     {
         return [
             new Column(id: 'rake_number', label: 'Rake #', type: 'text', sortable: true, filterable: true),
+            new Column(id: 'rake_serial_number', label: 'Rake Number', type: 'text', sortable: false, filterable: false),
             new Column(
                 id: 'siding_code',
                 label: 'Siding',

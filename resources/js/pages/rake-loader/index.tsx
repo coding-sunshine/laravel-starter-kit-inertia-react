@@ -29,6 +29,8 @@ type LoaderProgressStatus = 'complete' | 'partial' | 'empty' | 'none' | 'no_wago
 type RakeRow = {
     id: number;
     rake_number: string;
+    rake_serial_number: string | null;
+    siding_code: string | null;
     loading_date: string | null;
     siding_label: string | null;
     loader_progress_status: LoaderProgressStatus;
@@ -472,6 +474,27 @@ export default function RakeLoaderIndex({
                                 renderCell={(columnId, value, row) => {
                                     if (columnId === 'rake_number') {
                                         return <span className="font-medium">{String(value ?? row.rake_number)}</span>;
+                                    }
+                                    if (columnId === 'rake_serial_number') {
+                                        const sidingCode = row.siding_code?.trim() ?? '';
+                                        const formatRakeLabel = (raw: string): string =>
+                                            sidingCode !== '' && !raw.startsWith(`${sidingCode}-`)
+                                                ? `${sidingCode}-${raw}`
+                                                : raw;
+
+                                        if (row.rake_serial_number != null && row.rake_serial_number !== '') {
+                                            return formatRakeLabel(row.rake_serial_number);
+                                        }
+
+                                        if (row.rake_number !== '') {
+                                            return (
+                                                <span className="text-amber-600 dark:text-amber-400">
+                                                    {formatRakeLabel(row.rake_number)}
+                                                </span>
+                                            );
+                                        }
+
+                                        return '—';
                                     }
                                     if (columnId === 'siding_label') {
                                         return row.siding_label ?? '—';

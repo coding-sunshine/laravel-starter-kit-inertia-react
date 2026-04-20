@@ -26,6 +26,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 export interface WeighmentsRakeRow {
     id: number;
     rake_number: string;
+    rake_serial_number: string | null;
     /** E-Demand / forwarding note number from linked indent (shown as Priority number). */
     indent_number: string | null;
     loading_date: string | null;
@@ -384,6 +385,28 @@ export default function WeighmentsIndex({ tableData }: Props) {
                                     },
                                 ]}
                                 renderCell={(columnId, _value, row) => {
+                                    if (columnId === 'rake_serial_number') {
+                                        const sidingCode = row.siding_code?.trim() ?? '';
+                                        const formatRakeLabel = (value: string): string =>
+                                            sidingCode !== '' && !value.startsWith(`${sidingCode}-`)
+                                                ? `${sidingCode}-${value}`
+                                                : value;
+
+                                        if (row.rake_serial_number != null && row.rake_serial_number !== '') {
+                                            return formatRakeLabel(row.rake_serial_number);
+                                        }
+
+                                        if (row.rake_number !== '') {
+                                            return (
+                                                <span className="text-amber-600 dark:text-amber-400">
+                                                    {formatRakeLabel(row.rake_number)}
+                                                </span>
+                                            );
+                                        }
+
+                                        return '—';
+                                    }
+
                                     if (columnId === 'indent_number') {
                                         return row.indent_number != null && row.indent_number !== ''
                                             ? row.indent_number

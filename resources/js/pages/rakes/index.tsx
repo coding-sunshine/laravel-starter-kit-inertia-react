@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/button';
 interface RakeRow {
     id: number;
     rake_number: string;
+    rake_serial_number: string | null;
     rake_type: string | null;
     wagon_count: number | null;
     state: string | null;
@@ -135,6 +136,27 @@ export default function RakesIndex({ tableData }: Props) {
                                 },
                             ]}
                             renderCell={(columnId, value, row) => {
+                                if (columnId === 'rake_serial_number') {
+                                    const sidingCode = row.siding_code?.trim() ?? '';
+                                    const formatRakeLabel = (raw: string): string =>
+                                        sidingCode !== '' && !raw.startsWith(`${sidingCode}-`)
+                                            ? `${sidingCode}-${raw}`
+                                            : raw;
+
+                                    if (row.rake_serial_number != null && row.rake_serial_number !== '') {
+                                        return formatRakeLabel(row.rake_serial_number);
+                                    }
+
+                                    if (row.rake_number !== '') {
+                                        return (
+                                            <span className="text-amber-600 dark:text-amber-400">
+                                                {formatRakeLabel(row.rake_number)}
+                                            </span>
+                                        );
+                                    }
+
+                                    return '—';
+                                }
                                 if (columnId === 'siding_code') {
                                     return row.siding_code && row.siding_name
                                         ? `${row.siding_code} (${row.siding_name})`
