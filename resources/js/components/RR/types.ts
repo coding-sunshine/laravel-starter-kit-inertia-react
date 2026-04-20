@@ -1,7 +1,9 @@
+import type { ReactNode } from 'react';
+
 export interface OverviewData {
     rrNumber: string;
     /** Linked system rake number, or "—" when standalone / unknown */
-    rakeNumber: string;
+    rakeNumber: ReactNode;
     fnr: string;
     fromStation: string;
     toStation: string;

@@ -1,9 +1,10 @@
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import type { ReactNode } from 'react';
 
 export interface RRHeaderProps {
     rrNumber: string;
-    rakeNumber: string;
+    rakeNumber: ReactNode;
     siding: string;
     powerPlant: string;
     rrDate: string;

@@ -24,6 +24,7 @@ interface Siding {
 interface Rake {
     id: number;
     rake_number: string;
+    rake_serial_number: string | null;
     rake_type: string | null;
     wagon_count: number | null;
     state: string | null;
@@ -83,6 +84,38 @@ interface Weighment {
 interface Props {
     weighment: Weighment;
     can_delete_weighment?: boolean;
+}
+
+function formatRakeSequence(
+    rakeNumber: string | null | undefined,
+    siding: Siding | null,
+): string {
+    if (!rakeNumber) {
+        return '-';
+    }
+
+    const normalized = rakeNumber.trim();
+    if (normalized === '') {
+        return '-';
+    }
+
+    const sidingValue = `${siding?.code ?? ''} ${siding?.name ?? ''}`.toLowerCase();
+    let prefix = '';
+    if (sidingValue.includes('pakur')) {
+        prefix = 'P';
+    } else if (sidingValue.includes('kurwa')) {
+        prefix = 'K';
+    } else if (sidingValue.includes('dumka')) {
+        prefix = 'D';
+    }
+
+    if (prefix === '') {
+        return normalized;
+    }
+
+    return normalized.startsWith(`${prefix}-`)
+        ? normalized
+        : `${prefix}-${normalized}`;
 }
 
 export default function WeighmentShow({
@@ -164,8 +197,22 @@ export default function WeighmentShow({
                         </CardHeader>
                         <CardContent className="space-y-2 text-sm">
                             <div>
+                                <span className="font-medium">Rake Sequence: </span>
+                                <span>{formatRakeSequence(rake?.rake_number, siding)}</span>
+                            </div>
+                            <div>
                                 <span className="font-medium">Rake number: </span>
-                                <span>{rake?.rake_number ?? '-'}</span>
+                                <span>
+                                    {rake?.rake_serial_number ? (
+                                        rake.rake_serial_number
+                                    ) : rake?.rake_number ? (
+                                        <span className="text-amber-600 dark:text-amber-400">
+                                            {rake.rake_number}
+                                        </span>
+                                    ) : (
+                                        '-'
+                                    )}
+                                </span>
                             </div>
                             <div>
                                 <span className="font-medium">Rake type: </span>

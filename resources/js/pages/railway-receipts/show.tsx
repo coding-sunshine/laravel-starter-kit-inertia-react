@@ -11,6 +11,7 @@ import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/react';
 import { Download, Trash2 } from 'lucide-react';
+import type { ReactNode } from 'react';
 
 interface Wagon {
     id: number;
@@ -33,6 +34,7 @@ interface RrCharge {
 interface Rake {
     id: number;
     rake_number: string;
+    rake_serial_number: string | null;
     wagon_count?: number;
     loaded_weight_mt?: string | number | null;
     siding?: { id: number; name: string; code: string };
@@ -120,9 +122,19 @@ function buildHeaderData(
           })
         : '-';
 
+    const rakeNumberDisplay: ReactNode = doc.rake?.rake_serial_number ? (
+        doc.rake.rake_serial_number
+    ) : doc.rake?.rake_number ? (
+        <span className="text-amber-600 dark:text-amber-400">
+            {doc.rake.rake_number}
+        </span>
+    ) : (
+        '—'
+    );
+
     return {
         rrNumber: doc.rr_number,
-        rakeNumber: doc.rake?.rake_number ?? '—',
+        rakeNumber: rakeNumberDisplay,
         siding:
             fromSiding?.name ??
             doc.rake?.siding?.name ??
@@ -158,9 +170,19 @@ function buildOverviewData(
         ? `₹${Number(doc.freight_total).toLocaleString('en-IN')}`
         : '-';
 
+    const rakeNumberDisplay: ReactNode = doc.rake?.rake_serial_number ? (
+        doc.rake.rake_serial_number
+    ) : doc.rake?.rake_number ? (
+        <span className="text-amber-600 dark:text-amber-400">
+            {doc.rake.rake_number}
+        </span>
+    ) : (
+        '—'
+    );
+
     return {
         rrNumber: doc.rr_number,
-        rakeNumber: doc.rake?.rake_number ?? '—',
+        rakeNumber: rakeNumberDisplay,
         fnr: doc.fnr ?? '-',
         fromStation:
             fromSiding?.name ?? doc.from_station_code ?? '-',

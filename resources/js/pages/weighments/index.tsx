@@ -485,7 +485,15 @@ export default function WeighmentsIndex({ tableData }: Props) {
                                     Rake number
                                 </p>
                                 <DialogTitle className="font-mono text-3xl font-bold tracking-tight sm:text-4xl">
-                                    {selectedRake?.rake_number ?? '—'}
+                                    {selectedRake?.rake_serial_number ? (
+                                        selectedRake.rake_serial_number
+                                    ) : selectedRake?.rake_number ? (
+                                        <span className="text-amber-600 dark:text-amber-400">
+                                            {selectedRake.rake_number}
+                                        </span>
+                                    ) : (
+                                        '—'
+                                    )}
                                 </DialogTitle>
                                 <div className="space-y-1">
                                     <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">

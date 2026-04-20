@@ -47,6 +47,7 @@ final class RakesController extends Controller
         $rake->load([
             'siding:id,name,code',
             'siding.loaders:id,siding_id,loader_name,code',
+            'indent:id,indent_number',
             'wagons',
             'rakeWeighments',
             'rakeWeighments.rakeWagonWeighments.wagon:id,wagon_number,wagon_sequence,pcc_weight_mt',

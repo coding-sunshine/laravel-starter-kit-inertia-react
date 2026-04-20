@@ -714,7 +714,18 @@ export default function RailwayReceiptsIndex({
                 >
                     <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto" data-pan="rr-rake-hub-dialog-content">
                         <DialogHeader>
-                            <DialogTitle>Rake {hubRow.rake_number}</DialogTitle>
+                            <DialogTitle>
+                                Rake{' '}
+                                {hubRow.rake_serial_number ? (
+                                    hubRow.rake_serial_number
+                                ) : hubRow.rake_number ? (
+                                    <span className="text-amber-600 dark:text-amber-400">
+                                        {hubRow.rake_number}
+                                    </span>
+                                ) : (
+                                    '—'
+                                )}
+                            </DialogTitle>
                             <DialogDescription>{hubMeta}</DialogDescription>
                         </DialogHeader>
 

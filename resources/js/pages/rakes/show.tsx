@@ -1,4 +1,3 @@
-import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import {
@@ -182,6 +181,10 @@ interface RakeData {
     diverrtDestinations?: Array<{ id: number; location: string }>;
     penalties?: PenaltyRecord[];
     appliedPenalties?: AppliedPenaltyRecord[];
+    indent?: {
+        id: number;
+        indent_number: string | null;
+    } | null;
 }
 
 interface RakeEditFormData {
@@ -931,10 +934,13 @@ export default function RakesShow({
     }, [rake.rakeCharges]);
 
     const templateDownloadError = page.props.errors?.template;
+    const displayRakeNumber = rake.rake_serial_number || rake.rake_number;
+    const showRakeNumberFallback = !rake.rake_serial_number && !!rake.rake_number;
+    const indentPriorityNumber = rake.indent?.indent_number ?? '—';
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title={`Rake ${rake.rake_number}`} />
+            <Head title={`Rake ${displayRakeNumber}`} />
             <div className="space-y-6">
                 {templateDownloadError && (
                     <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
@@ -942,14 +948,24 @@ export default function RakesShow({
                     </div>
                 )}
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                    <Heading
-                        title={`Rake ${rake.rake_number}`}
-                        description={
-                            rake.siding
+                    <div className="mb-6 space-y-0.5">
+                        <h2 className="text-xl font-semibold tracking-tight">
+                            Rake{' '}
+                            {showRakeNumberFallback ? (
+                                <span className="text-amber-600 dark:text-amber-400">
+                                    {rake.rake_number}
+                                </span>
+                            ) : (
+                                displayRakeNumber
+                            )}{' '}
+                            ({indentPriorityNumber})
+                        </h2>
+                        <p className="text-sm text-muted-foreground">
+                            {rake.siding
                                 ? `${rake.siding.name} (${rake.siding.code})`
-                                : 'Railway rake detail'
-                        }
-                    />
+                                : 'Railway rake detail'}
+                        </p>
+                    </div>
                     <div className="flex gap-2">
                         <WagonOverviewDialog
                             wagons={wagons}
