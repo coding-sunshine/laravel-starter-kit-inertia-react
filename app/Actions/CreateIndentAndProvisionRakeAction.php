@@ -18,11 +18,17 @@ final readonly class CreateIndentAndProvisionRakeAction
         return DB::transaction(function () use ($request, $user, $validated): Rake {
             $indent = new Indent;
             $indent->siding_id = $validated['siding_id'];
-            $indent->indent_number = $validated['indent_number'] ?? null;
+            $indentNumberRaw = $validated['indent_number'] ?? '';
+            $indent->indent_number = is_string($indentNumberRaw) && mb_trim($indentNumberRaw) !== ''
+                ? mb_trim($indentNumberRaw)
+                : null;
             $indent->state = $validated['state'] ?? 'pending';
             $indent->remarks = $validated['remarks'] ?? null;
             $indent->e_demand_reference_id = $validated['e_demand_reference_id'] ?? null;
-            $indent->fnr_number = $validated['fnr_number'] ?? null;
+            $fnrRaw = $validated['fnr_number'] ?? null;
+            $indent->fnr_number = is_string($fnrRaw) && mb_trim($fnrRaw) !== ''
+                ? mb_trim($fnrRaw)
+                : null;
             $indent->railway_reference_no = $validated['railway_reference_no'] ?? null;
             $indent->destination = $validated['destination'] ?? null;
             $indent->expected_loading_date = $validated['expected_loading_date'] ?? null;

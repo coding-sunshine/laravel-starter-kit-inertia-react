@@ -32,7 +32,6 @@ export interface IndentCreatePrefill {
     siding_id?: number;
     rake_number?: string;
     rake_serial_number?: string;
-    rake_priority_number?: number;
     expected_loading_date?: string | null;
     demanded_stock?: string;
     total_units?: number;
@@ -49,7 +48,6 @@ interface FormFields {
     siding_id: string;
     rake_number: string;
     rake_serial_number: string;
-    rake_priority_number: string;
     expected_loading_date: string;
     demanded_stock: string;
     total_units: string;
@@ -68,7 +66,6 @@ function emptyFields(): FormFields {
         siding_id: '',
         rake_number: '',
         rake_serial_number: '',
-        rake_priority_number: '',
         expected_loading_date: '',
         demanded_stock: '',
         total_units: '',
@@ -88,7 +85,6 @@ const INDENT_FORM_SCROLL_ORDER: (keyof FormFields)[] = [
     'siding_id',
     'rake_number',
     'rake_serial_number',
-    'rake_priority_number',
     'expected_loading_date',
     'demanded_stock',
     'total_units',
@@ -98,8 +94,6 @@ const INDENT_FORM_SCROLL_ORDER: (keyof FormFields)[] = [
     'indent_number',
     'e_demand_reference_id',
     'fnr_number',
-    'pdf',
-    'remarks',
 ];
 
 const KNOWN_FORM_FIELD_KEYS = new Set<string>(
@@ -110,7 +104,6 @@ function appendIndentStoreFormData(data: FormFields, fd: FormData): void {
     fd.append('siding_id', data.siding_id);
     fd.append('rake_number', data.rake_number);
     fd.append('rake_serial_number', data.rake_serial_number);
-    fd.append('rake_priority_number', data.rake_priority_number);
     fd.append('expected_loading_date', data.expected_loading_date);
     fd.append('demanded_stock', data.demanded_stock);
     fd.append('total_units', data.total_units);
@@ -179,10 +172,6 @@ function fieldsFromPrefill(
         rake_number: prefill.rake_number ?? '',
         rake_serial_number:
             prefill.rake_serial_number ?? prefill.rake_number ?? '',
-        rake_priority_number:
-            prefill.rake_priority_number !== undefined
-                ? String(prefill.rake_priority_number)
-                : '',
         expected_loading_date: prefill.expected_loading_date ?? '',
         demanded_stock: prefill.demanded_stock ?? '',
         total_units:
@@ -316,27 +305,6 @@ function IndentCreateFormFields({
                             }}
                         />
                         <InputError message={errors.rake_serial_number} />
-                    </div>
-                    <div className="grid gap-2">
-                        <Label htmlFor="rake_priority_number">
-                            Priority number *
-                        </Label>
-                        <Input
-                            id="rake_priority_number"
-                            type="number"
-                            required
-                            min={0}
-                            step={1}
-                            placeholder="Priority"
-                            value={form.data.rake_priority_number}
-                            onChange={(e) =>
-                                form.setData(
-                                    'rake_priority_number',
-                                    e.target.value,
-                                )
-                            }
-                        />
-                        <InputError message={errors.rake_priority_number} />
                     </div>
                     <div className="grid gap-2">
                         <Label htmlFor="expected_loading_date">
@@ -508,51 +476,6 @@ function IndentCreateFormFields({
                             }
                         />
                         <InputError message={errors.fnr_number} />
-                    </div>
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-base">E-Demand PDF & notes</CardTitle>
-                    <CardDescription>
-                        Attach a confirmation PDF (optional)
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="grid gap-2">
-                        <Label htmlFor="pdf">e-Demand confirmation (PDF)</Label>
-                        {form.data.pdf ? (
-                            <p className="text-sm text-muted-foreground">
-                                Selected: {form.data.pdf.name}
-                            </p>
-                        ) : null}
-                        <Input
-                            id="pdf"
-                            type="file"
-                            accept=".pdf,application/pdf"
-                            onChange={(e) => {
-                                const f = e.target.files?.[0];
-                                form.setData('pdf', f ?? null);
-                            }}
-                        />
-                        <InputError message={errors.pdf} />
-                    </div>
-                    <div className="grid gap-2">
-                        <Label htmlFor="remarks">Remarks</Label>
-                        <textarea
-                            id="remarks"
-                            rows={4}
-                            value={form.data.remarks}
-                            onChange={(e) =>
-                                form.setData('remarks', e.target.value)
-                            }
-                            className={cn(
-                                'border-input bg-background placeholder:text-muted-foreground min-h-[100px] w-full rounded-md border px-3 py-2 text-sm shadow-xs',
-                                'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] outline-none',
-                            )}
-                        />
-                        <InputError message={errors.remarks} />
                     </div>
                 </CardContent>
             </Card>
