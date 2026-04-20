@@ -233,18 +233,25 @@ final class IndentsController extends Controller
 
         $indent->loadMissing('rake:id,indent_id');
 
+        if ($request->has('fnr_number')) {
+            $rawFnr = $request->input('fnr_number');
+            $request->merge([
+                'fnr_number' => is_string($rawFnr) && mb_trim($rawFnr) !== '' ? mb_trim($rawFnr) : null,
+            ]);
+        }
+
         $validated = $request->validate([
             'siding_id' => ['required', 'integer', 'exists:sidings,id'],
-            'indent_number' => [
-                'required',
-                'string',
-                'max:20',
-                Rule::unique('indents', 'indent_number')->ignore($indent->id)->whereNull('deleted_at'),
-            ],
+            'indent_number' => ['required'],
             'state' => ['nullable', 'string', Rule::in(self::INDENT_STATE_VALUES)],
             'remarks' => ['nullable', 'string', 'max:65535'],
             'e_demand_reference_id' => ['nullable', 'string', 'max:100'],
-            'fnr_number' => ['nullable', 'string', 'max:50'],
+            'fnr_number' => [
+                'nullable',
+                'string',
+                'max:50',
+                Rule::unique('indents', 'fnr_number')->ignore($indent->id)->whereNull('deleted_at'),
+            ],
             'railway_reference_no' => ['nullable', 'string', 'max:100'],
             'destination' => ['nullable', 'string', 'max:100'],
             'expected_loading_date' => ['nullable', 'date'],
@@ -255,12 +262,6 @@ final class IndentsController extends Controller
             'target_quantity_mt' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99'],
             'allocated_quantity_mt' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99'],
             'available_stock_mt' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99'],
-            'rake_serial_number' => [
-                Rule::requiredIf($indent->rake !== null),
-                'nullable',
-                'string',
-                'max:100',
-            ],
         ]);
 
         $indent->siding_id = $validated['siding_id'];

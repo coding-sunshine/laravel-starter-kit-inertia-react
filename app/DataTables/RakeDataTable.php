@@ -24,6 +24,7 @@ final class RakeDataTable extends AbstractDataTable
     public function __construct(
         public int $id,
         public string $rake_number,
+        public ?string $rake_serial_number,
         public ?string $rake_type,
         public ?int $wagon_count,
         public ?string $state,
@@ -49,6 +50,7 @@ final class RakeDataTable extends AbstractDataTable
         return new self(
             id: $model->id,
             rake_number: $model->rake_number,
+            rake_serial_number: $model->rake_serial_number,
             rake_type: $model->rake_type,
             wagon_count: $model->wagon_count,
             state: $model->state,
@@ -71,6 +73,7 @@ final class RakeDataTable extends AbstractDataTable
     {
         return [
             new Column(id: 'rake_number', label: 'Rake #', type: 'text', sortable: true, filterable: true),
+            new Column(id: 'rake_serial_number', label: 'Rake Number', type: 'text', sortable: false, filterable: false),
             new Column(
                 id: 'siding_code',
                 label: 'Siding',

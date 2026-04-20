@@ -39,6 +39,8 @@ interface PowerPlantOption {
 interface IndentRow {
     id: number;
     rake_number: string | null;
+    rake_serial_number: string | null;
+    siding_code: string | null;
     indent_number: string | null;
     siding: string | null;
     indent_date: string | null;
@@ -274,6 +276,29 @@ export default function IndentsIndex({
                                               row.indent_date,
                                           ).toLocaleDateString()
                                         : '—';
+                                }
+
+                                if (columnId === 'rake_serial_number') {
+                                    const sidingCode = row.siding_code?.trim() ?? '';
+                                    const formatRakeLabel = (value: string): string =>
+                                        sidingCode !== '' &&
+                                        !value.startsWith(`${sidingCode}-`)
+                                            ? `${sidingCode}-${value}`
+                                            : value;
+
+                                    if (row.rake_serial_number) {
+                                        return formatRakeLabel(row.rake_serial_number);
+                                    }
+
+                                    if (row.rake_number) {
+                                        return (
+                                            <span className="text-amber-600 dark:text-amber-400">
+                                                {formatRakeLabel(row.rake_number)}
+                                            </span>
+                                        );
+                                    }
+
+                                    return '—';
                                 }
 
                                 if (columnId === 'fnr_number') {

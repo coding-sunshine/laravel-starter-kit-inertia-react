@@ -38,16 +38,16 @@ final class StoreIndentRequest extends FormRequest
     {
         return [
             'siding_id' => ['required', 'integer', 'exists:sidings,id'],
-            'indent_number' => [
-                'nullable',
-                'string',
-                'max:20',
-                Rule::unique('indents', 'indent_number')->whereNull('deleted_at'),
-            ],
+            'indent_number' => ['required'],
             'state' => ['nullable', 'string', Rule::in(self::INDENT_STATE_VALUES)],
             'remarks' => ['nullable', 'string', 'max:65535'],
             'e_demand_reference_id' => ['nullable', 'string', 'max:100'],
-            'fnr_number' => ['nullable', 'string', 'max:50'],
+            'fnr_number' => [
+                'nullable',
+                'string',
+                'max:50',
+                Rule::unique('indents', 'fnr_number')->whereNull('deleted_at'),
+            ],
             'railway_reference_no' => ['nullable', 'string', 'max:100'],
             'destination' => [
                 'required',
@@ -98,44 +98,25 @@ final class StoreIndentRequest extends FormRequest
                     }
                 },
             ],
-            'rake_priority_number' => [
-                'required',
-                'integer',
-                'min:0',
-                function (string $attribute, mixed $value, Closure $fail): void {
-                    if ($value === null || $value === '') {
-                        return;
-                    }
-                    if (! is_numeric($value)) {
-                        return;
-                    }
-
-                    $num = (int) $value;
-                    $sidingId = (int) $this->input('siding_id');
-                    if ($sidingId <= 0) {
-                        return;
-                    }
-
-                    $indentAt = $this->input('indent_at');
-                    if ($indentAt === null || $indentAt === '') {
-                        return;
-                    }
-
-                    $reference = Date::parse($indentAt);
-
-                    $existsInMonth = Rake::query()
-                        ->where('priority_number', $num)
-                        ->where('siding_id', $sidingId)
-                        ->whereYear('loading_date', $reference->year)
-                        ->whereMonth('loading_date', $reference->month)
-                        ->exists();
-
-                    if ($existsInMonth) {
-                        $fail('This rake priority number is already in use for this siding in the indent month.');
-                    }
-                },
-            ],
             'pdf' => ['nullable', 'file', 'mimes:pdf', 'max:10240'],
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $merged = [];
+
+        if ($this->has('indent_number') && is_string($this->input('indent_number'))) {
+            $merged['indent_number'] = mb_trim($this->input('indent_number'));
+        }
+
+        if ($this->has('fnr_number')) {
+            $raw = $this->input('fnr_number');
+            $merged['fnr_number'] = is_string($raw) && mb_trim($raw) !== '' ? mb_trim($raw) : null;
+        }
+
+        if ($merged !== []) {
+            $this->merge($merged);
+        }
     }
 }

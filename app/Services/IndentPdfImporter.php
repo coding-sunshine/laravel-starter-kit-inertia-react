@@ -388,18 +388,38 @@ final readonly class IndentPdfImporter
     private function detectSiding(string $text, array $parsed): ?Siding
     {
         $stationFrom = $parsed['station_from'] ?? null;
-        if ($stationFrom !== null && $stationFrom !== '') {
-            $siding = Siding::query()
-                ->where('station_code', $stationFrom)
-                ->orWhere('code', $stationFrom)
-                ->first();
-            if ($siding !== null) {
-                return $siding;
+        if ($stationFrom !== null && mb_trim((string) $stationFrom) !== '') {
+            $tokenUpper = mb_strtoupper(mb_trim((string) $stationFrom));
+            $candidates = array_values(array_unique(array_filter(
+                [$this->applyPdfStationCodeAliases($tokenUpper), $tokenUpper],
+                static fn (string $c): bool => $c !== ''
+            )));
+            foreach ($candidates as $candidate) {
+                $siding = Siding::query()
+                    ->where('station_code', $candidate)
+                    ->orWhere('code', $candidate)
+                    ->first();
+                if ($siding !== null) {
+                    return $siding;
+                }
             }
         }
 
         $upper = mb_strtoupper($text);
         $keywords = ['DMK' => 'DMK', 'DUMK' => 'DMK', 'KRW' => 'KRW', 'KURWA' => 'KRW', 'PKR' => 'PKR', 'PKUR' => 'PKUR', 'WBPC' => 'WBPC'];
+        $aliases = config('rrmcs.rr_from_station_pdf_code_aliases', []);
+        if (is_array($aliases)) {
+            foreach ($aliases as $from => $to) {
+                if (! is_string($from) || ! is_string($to)) {
+                    continue;
+                }
+                $fromUpper = mb_strtoupper(mb_trim($from));
+                if ($fromUpper === '' || isset($keywords[$fromUpper])) {
+                    continue;
+                }
+                $keywords[$fromUpper] = mb_strtoupper(mb_trim($to));
+            }
+        }
         foreach ($keywords as $needle => $stationCode) {
             if (str_contains($upper, $needle)) {
                 $siding = Siding::query()
@@ -413,6 +433,22 @@ final readonly class IndentPdfImporter
         }
 
         return $this->detectSidingByName($upper);
+    }
+
+    /**
+     * Map e-Demand / IR tokens to sidings.station_code (or siding code), same as Railway Receipt uploads.
+     */
+    private function applyPdfStationCodeAliases(string $stationCodeUpper): string
+    {
+        $aliases = config('rrmcs.rr_from_station_pdf_code_aliases', []);
+        if (! is_array($aliases)) {
+            return $stationCodeUpper;
+        }
+        if (isset($aliases[$stationCodeUpper]) && is_string($aliases[$stationCodeUpper])) {
+            return mb_strtoupper(mb_trim($aliases[$stationCodeUpper]));
+        }
+
+        return $stationCodeUpper;
     }
 
     private function detectSidingByName(string $textUpper): ?Siding

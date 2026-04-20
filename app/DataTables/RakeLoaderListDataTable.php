@@ -22,6 +22,8 @@ final class RakeLoaderListDataTable extends AbstractDataTable
     public function __construct(
         public int $id,
         public string $rake_number,
+        public ?string $rake_serial_number,
+        public ?string $siding_code,
         public ?string $loading_date,
         public ?string $siding_label,
         public string $loader_progress_status,
@@ -45,6 +47,10 @@ final class RakeLoaderListDataTable extends AbstractDataTable
         return new self(
             id: $model->id,
             rake_number: (string) $model->rake_number,
+            rake_serial_number: $model->rake_serial_number !== null && $model->rake_serial_number !== ''
+                ? (string) $model->rake_serial_number
+                : null,
+            siding_code: $siding?->code,
             loading_date: $model->loading_date?->toDateString(),
             siding_label: $label,
             loader_progress_status: $progress['status'],
@@ -57,6 +63,7 @@ final class RakeLoaderListDataTable extends AbstractDataTable
     {
         return [
             new Column(id: 'rake_number', label: 'Rake #', type: 'text', sortable: true, filterable: false),
+            new Column(id: 'rake_serial_number', label: 'Rake Number', type: 'text', sortable: false, filterable: false),
             new Column(id: 'siding_label', label: 'Siding', type: 'text', sortable: false, filterable: false),
             new Column(id: 'loading_date', label: 'Loading date', type: 'date', sortable: true, filterable: false),
         ];
