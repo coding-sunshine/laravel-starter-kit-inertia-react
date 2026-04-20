@@ -655,6 +655,18 @@ export default function WeighmentsIndex({ tableData }: Props) {
                                         <div className="flex flex-wrap items-center gap-2">
                                             {selectedRake.latest_weighment_id != null ? (
                                                 <Button variant="outline" size="sm" asChild>
+                                                    <a
+                                                        href={`/weighments/${selectedRake.latest_weighment_id}/download`}
+                                                        className="inline-flex items-center gap-2"
+                                                        data-pan="weighments-hub-download-weighment-file"
+                                                    >
+                                                        <Download className="h-4 w-4" />
+                                                        Download file
+                                                    </a>
+                                                </Button>
+                                            ) : null}
+                                            {selectedRake.latest_weighment_id != null ? (
+                                                <Button variant="outline" size="sm" asChild>
                                                     <Link
                                                         href={`/weighments/${selectedRake.latest_weighment_id}`}
                                                         className="inline-flex items-center gap-2"

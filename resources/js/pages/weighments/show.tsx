@@ -4,7 +4,7 @@ import AppLayout from '@/layouts/app-layout';
 import { useCan } from '@/hooks/use-can';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router, usePage } from '@inertiajs/react';
-import { Trash2 } from 'lucide-react';
+import { Download, Trash2 } from 'lucide-react';
 
 function formatDateTime(iso: string | null | undefined): string {
     if (!iso) {
@@ -155,39 +155,53 @@ export default function WeighmentShow({
 
                 <div className="flex flex-wrap items-center justify-between gap-4">
                     <h1 className="text-3xl font-bold">Weighment details</h1>
-                    {showDeleteButton && (
-                        <Button
-                            variant="destructive"
-                            size="sm"
-                            type="button"
-                            data-pan="weighments-show-delete-weighment"
-                            onClick={() => {
-                                if (isHistoricalRake) {
-                                    if (
-                                        !window.confirm(
-                                            'Remove this historical weighment import? The associated rake and wagon data created from this PDF will be deleted. This cannot be undone.',
-                                        )
-                                    ) {
+                    <div className="flex flex-wrap items-center gap-2">
+                        {weighment.pdf_file_path ? (
+                            <Button variant="outline" size="sm" asChild>
+                                <a
+                                    href={`/weighments/${weighment.id}/download`}
+                                    className="inline-flex items-center gap-2"
+                                    data-pan="weighments-show-download-weighment-file"
+                                >
+                                    <Download className="h-4 w-4" />
+                                    Download file
+                                </a>
+                            </Button>
+                        ) : null}
+                        {showDeleteButton && (
+                            <Button
+                                variant="destructive"
+                                size="sm"
+                                type="button"
+                                data-pan="weighments-show-delete-weighment"
+                                onClick={() => {
+                                    if (isHistoricalRake) {
+                                        if (
+                                            !window.confirm(
+                                                'Remove this historical weighment import? The associated rake and wagon data created from this PDF will be deleted. This cannot be undone.',
+                                            )
+                                        ) {
+                                            return;
+                                        }
+                                        router.delete(`/weighments/${weighment.id}`);
                                         return;
                                     }
-                                    router.delete(`/weighments/${weighment.id}`);
-                                    return;
-                                }
-                                if (!rake) {
-                                    return;
-                                }
-                                if (!window.confirm('Delete all weighment data for this rake?')) {
-                                    return;
-                                }
-                                router.delete(
-                                    `/rakes/${rake.id}/weighments?return_to=weighments`,
-                                );
-                            }}
-                        >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            {isHistoricalRake ? 'Delete import' : 'Delete weighment'}
-                        </Button>
-                    )}
+                                    if (!rake) {
+                                        return;
+                                    }
+                                    if (!window.confirm('Delete all weighment data for this rake?')) {
+                                        return;
+                                    }
+                                    router.delete(
+                                        `/rakes/${rake.id}/weighments?return_to=weighments`,
+                                    );
+                                }}
+                            >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                {isHistoricalRake ? 'Delete import' : 'Delete weighment'}
+                            </Button>
+                        )}
+                    </div>
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">

@@ -19,10 +19,12 @@ use App\Support\RrmcsDeletionRules;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 use InvalidArgumentException;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
 
 final class WeighmentsController extends Controller
@@ -286,6 +288,21 @@ final class WeighmentsController extends Controller
         }
 
         return response()->download($resolved['absolute_path'], $resolved['download_basename']);
+    }
+
+    public function download(Request $request, Weighment $weighment): StreamedResponse|BinaryFileResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $weighment->loadMissing('rake');
+        $this->assertUserCanAccessWeighmentRakeSiding($user, $weighment);
+
+        $path = $weighment->pdf_file_path;
+        abort_if(! is_string($path) || mb_trim($path) === '', 404);
+        abort_if(! Storage::disk('public')->exists($path), 404);
+
+        return Storage::disk('public')->download($path);
     }
 
     public function destroy(Request $request, Weighment $weighment, DeleteStandaloneHistoricalWeighmentAction $action): RedirectResponse
