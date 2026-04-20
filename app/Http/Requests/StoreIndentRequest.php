@@ -38,12 +38,7 @@ final class StoreIndentRequest extends FormRequest
     {
         return [
             'siding_id' => ['required', 'integer', 'exists:sidings,id'],
-            'indent_number' => [
-                'required',
-                'string',
-                'max:20',
-                Rule::unique('indents', 'indent_number')->whereNull('deleted_at'),
-            ],
+            'indent_number' => ['required'],
             'state' => ['nullable', 'string', Rule::in(self::INDENT_STATE_VALUES)],
             'remarks' => ['nullable', 'string', 'max:65535'],
             'e_demand_reference_id' => ['nullable', 'string', 'max:100'],

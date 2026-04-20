@@ -242,12 +242,7 @@ final class IndentsController extends Controller
 
         $validated = $request->validate([
             'siding_id' => ['required', 'integer', 'exists:sidings,id'],
-            'indent_number' => [
-                'required',
-                'string',
-                'max:20',
-                Rule::unique('indents', 'indent_number')->ignore($indent->id)->whereNull('deleted_at'),
-            ],
+            'indent_number' => ['required'],
             'state' => ['nullable', 'string', Rule::in(self::INDENT_STATE_VALUES)],
             'remarks' => ['nullable', 'string', 'max:65535'],
             'e_demand_reference_id' => ['nullable', 'string', 'max:100'],
@@ -267,12 +262,6 @@ final class IndentsController extends Controller
             'target_quantity_mt' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99'],
             'allocated_quantity_mt' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99'],
             'available_stock_mt' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99'],
-            'rake_serial_number' => [
-                Rule::requiredIf($indent->rake !== null),
-                'nullable',
-                'string',
-                'max:100',
-            ],
         ]);
 
         $indent->siding_id = $validated['siding_id'];

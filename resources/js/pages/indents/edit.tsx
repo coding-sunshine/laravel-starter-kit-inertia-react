@@ -261,66 +261,6 @@ export default function IndentsEdit({ indent, sidings, currentStockMt }: Props) 
                     className="space-y-6"
                     noValidate
                 >
-                    {indent.rake != null && (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="text-base">Linked rake</CardTitle>
-                                <CardDescription>
-                                    Rake sequence and priority; use{' '}
-                                    <span className="font-medium">Rake number</span> as the
-                                    official identifier when needed.
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
-                                <div className="grid min-w-0 flex-1 gap-4 sm:grid-cols-2">
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="rake_serial_number">
-                                            Rake number *
-                                        </Label>
-                                        <Input
-                                            id="rake_serial_number"
-                                            name="rake_serial_number"
-                                            required
-                                            defaultValue={
-                                                indent.rake.rake_serial_number ??
-                                                indent.rake.rake_number ??
-                                                ''
-                                            }
-                                        />
-                                        <InputError message={err('rake_serial_number')} />
-                                    </div>
-                                    <dl className="grid gap-1 text-sm">
-                                        <div>
-                                            <dt className="text-muted-foreground">
-                                                Rake sequence
-                                            </dt>
-                                            <dd className="font-medium">
-                                                {indent.rake.rake_number ?? '—'}
-                                            </dd>
-                                        </div>
-                                        <div>
-                                            <dt className="text-muted-foreground">
-                                                Priority number
-                                            </dt>
-                                            <dd className="font-medium">
-                                                {indent.rake.priority_number ?? '—'}
-                                            </dd>
-                                        </div>
-                                    </dl>
-                                </div>
-                                <Button variant="outline" size="sm" asChild>
-                                    <Link
-                                        href={withReturnTo(
-                                            `/rakes/${indent.rake.id}`,
-                                            `/indents/${indent.id}/edit`,
-                                        )}
-                                    >
-                                        Open rake
-                                    </Link>
-                                </Button>
-                            </CardContent>
-                        </Card>
-                    )}
                     {formErrorBanner ? (
                         <div
                             id="indent-edit-form-server-errors"
