@@ -15,6 +15,7 @@ use App\Models\Loader;
 use App\Models\Penalty;
 use App\Models\PenaltyPrediction;
 use App\Models\PenaltyType;
+use App\Models\PowerPlant;
 use App\Models\ProductionEntry;
 use App\Models\Rake;
 use App\Models\RakeWagonWeighment;
@@ -70,7 +71,11 @@ final class ExecutiveDashboardController extends Controller
             ->get(['id', 'name', 'code'])
             ->map(fn (Siding $s): array => ['id' => $s->id, 'name' => $s->name, 'code' => $s->code]);
 
-        $filterOptions = $this->buildFilterOptions($resolved['filteredSidingIds']);
+        $filterOptions = $this->buildFilterOptions(
+            $resolved['filteredSidingIds'],
+            $resolved['from'],
+            $resolved['to'],
+        );
 
         $user = $request->user();
         $executiveYesterdayPayload = DashboardWidgetPermissions::userHasAnyExecutiveWidget($user)
@@ -637,23 +642,9 @@ final class ExecutiveDashboardController extends Controller
      * @param  array<int>  $sidingIds
      * @return array{powerPlants: array<int, array{value: string, label: string}>, loaders: array<int, array{id: int, name: string, siding_name: string}>, shifts: array<int, array{value: string, label: string}>}
      */
-    public function buildFilterOptions(array $sidingIds): array
+    public function buildFilterOptions(array $sidingIds, ?CarbonInterface $from = null, ?CarbonInterface $to = null): array
     {
-        $powerPlants = [];
-        if ($sidingIds !== []) {
-            $stations = RakeWeighment::query()
-                ->join('rakes', 'rake_weighments.rake_id', '=', 'rakes.id')
-                ->whereIn('rakes.siding_id', $sidingIds)
-                ->whereNotNull('rake_weighments.to_station')
-                ->where('rake_weighments.to_station', '!=', '')
-                ->distinct()
-                ->pluck('rake_weighments.to_station')
-                ->sort()
-                ->values();
-            foreach ($stations as $s) {
-                $powerPlants[] = ['value' => $s, 'label' => $s];
-            }
-        }
+        $powerPlants = $this->buildResolvedPowerPlantOptions($sidingIds, $from, $to);
 
         $loaders = Loader::query()
             ->whereIn('siding_id', $sidingIds)
@@ -2701,37 +2692,62 @@ final class ExecutiveDashboardController extends Controller
             ->whereNotNull('loading_date')
             ->whereRaw($this->dateOnlyBetweenSql('loading_date', true), [$fromDate, $toDate])
             ->tap(fn ($q) => $this->applyRakeDispatchWeighmentOnlyFilter($q))
-            ->selectRaw(
-                "COALESCE(destination, destination_code, 'Unknown') as power_plant_name, ".
-                'siding_id, count(*) as rakes, coalesce(sum(loaded_weight_mt), 0) as weight_mt'
-            )
-            ->when(
-                ! empty($filterContext['power_plant'] ?? null),
-                static function ($q) use ($filterContext): void {
-                    $plant = (string) $filterContext['power_plant'];
-                    $q->where(function ($inner) use ($plant): void {
-                        $inner->where('destination', $plant)
-                            ->orWhere('destination_code', $plant);
-                    });
-                }
-            )
-            ->groupBy('power_plant_name', 'siding_id')
-            ->get();
+            ->get([
+                'siding_id',
+                'destination',
+                'destination_code',
+                'loaded_weight_mt',
+            ]);
 
+        $resolvedPowerPlants = $this->activePowerPlantLookupMaps();
+        $selectedPowerPlant = ! empty($filterContext['power_plant'] ?? null)
+            ? mb_strtolower(mb_trim((string) $filterContext['power_plant']))
+            : null;
         $grouped = [];
         foreach ($rows as $row) {
-            $name = (string) $row->power_plant_name;
-            if (! isset($grouped[$name])) {
-                $grouped[$name] = ['name' => $name, 'rakes' => 0, 'weight_mt' => 0.0, 'sidings' => []];
+            $resolved = $this->resolvePowerPlantFromRakeDestination(
+                $row->destination_code,
+                $row->destination,
+                $resolvedPowerPlants,
+            );
+
+            if (
+                $selectedPowerPlant !== null
+                && $selectedPowerPlant !== $resolved['code_normalized']
+                && $selectedPowerPlant !== $resolved['name_normalized']
+            ) {
+                continue;
+            }
+
+            $groupKey = $resolved['code_normalized'];
+            if (! isset($grouped[$groupKey])) {
+                $grouped[$groupKey] = [
+                    'name' => $resolved['name'],
+                    'rakes' => 0,
+                    'weight_mt' => 0.0,
+                    'sidings' => [],
+                ];
             }
 
             $sidingName = $sidingNames[$row->siding_id] ?? "Siding {$row->siding_id}";
-            $grouped[$name]['rakes'] += (int) $row->rakes;
-            $grouped[$name]['weight_mt'] += round((float) $row->weight_mt, 2);
-            $grouped[$name]['sidings'][$sidingName] = [
-                'rakes' => (int) $row->rakes,
-                'weight_mt' => round((float) $row->weight_mt, 2),
-            ];
+            $grouped[$groupKey]['rakes'] += 1;
+            $grouped[$groupKey]['weight_mt'] += (float) $row->loaded_weight_mt;
+
+            if (! isset($grouped[$groupKey]['sidings'][$sidingName])) {
+                $grouped[$groupKey]['sidings'][$sidingName] = [
+                    'rakes' => 0,
+                    'weight_mt' => 0.0,
+                ];
+            }
+            $grouped[$groupKey]['sidings'][$sidingName]['rakes'] += 1;
+            $grouped[$groupKey]['sidings'][$sidingName]['weight_mt'] += (float) $row->loaded_weight_mt;
+        }
+
+        foreach ($grouped as $groupKey => $group) {
+            foreach ($group['sidings'] as $sidingName => $sidingStats) {
+                $grouped[$groupKey]['sidings'][$sidingName]['weight_mt'] = round((float) $sidingStats['weight_mt'], 2);
+            }
+            $grouped[$groupKey]['weight_mt'] = round((float) $group['weight_mt'], 2);
         }
 
         $result = array_values($grouped);
@@ -2928,6 +2944,186 @@ final class ExecutiveDashboardController extends Controller
                 'value' => $rate,
             ];
         })->values()->all();
+    }
+
+    /**
+     * @param  array<int>  $sidingIds
+     * @return array<int, array{value: string, label: string}>
+     */
+    private function buildResolvedPowerPlantOptions(array $sidingIds, ?CarbonInterface $from = null, ?CarbonInterface $to = null): array
+    {
+        if ($sidingIds === []) {
+            return [];
+        }
+
+        $query = Rake::query()
+            ->whereIn('siding_id', $sidingIds)
+            ->where(function ($inner): void {
+                $inner->whereNotNull('destination')
+                    ->orWhereNotNull('destination_code');
+            })
+            ->tap(fn ($q) => $this->applyRakeDispatchWeighmentOnlyFilter($q));
+
+        if ($from !== null && $to !== null) {
+            $query->whereNotNull('loading_date')
+                ->whereRaw(
+                    $this->dateOnlyBetweenSql('loading_date', true),
+                    [$from->toDateString(), $to->toDateString()],
+                );
+        }
+
+        $rows = $query->get(['destination', 'destination_code']);
+        $resolvedPowerPlants = $this->activePowerPlantLookupMaps();
+        $resolvedByCode = [];
+        foreach ($rows as $row) {
+            $resolved = $this->resolvePowerPlantFromRakeDestination(
+                $row->destination_code,
+                $row->destination,
+                $resolvedPowerPlants,
+            );
+
+            if (str_starts_with($resolved['code_normalized'], '__unmapped__')) {
+                continue;
+            }
+
+            $resolvedByCode[$resolved['code_normalized']] = [
+                'value' => $resolved['name'],
+                'label' => $resolved['name'],
+            ];
+        }
+
+        $options = array_values($resolvedByCode);
+        usort(
+            $options,
+            fn (array $a, array $b): int => strcasecmp((string) $a['label'], (string) $b['label']),
+        );
+
+        return $options;
+    }
+
+    /**
+     * @return array{
+     *  byCode: array<string, array{code: string, name: string}>,
+     *  byName: array<string, array{code: string, name: string}>
+     * }
+     */
+    private function activePowerPlantLookupMaps(): array
+    {
+        $plants = PowerPlant::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['code', 'name']);
+
+        $byCode = [];
+        $byName = [];
+        foreach ($plants as $plant) {
+            $codeNormalized = mb_strtolower(mb_trim((string) $plant->code));
+            $nameNormalized = $this->normalizePowerPlantLookupText($plant->name);
+            if ($codeNormalized !== '') {
+                $byCode[$codeNormalized] = [
+                    'code' => (string) $plant->code,
+                    'name' => (string) $plant->name,
+                ];
+            }
+            if ($nameNormalized !== '') {
+                $byName[$nameNormalized] = [
+                    'code' => (string) $plant->code,
+                    'name' => (string) $plant->name,
+                ];
+            }
+        }
+
+        return [
+            'byCode' => $byCode,
+            'byName' => $byName,
+        ];
+    }
+
+    /**
+     * @param  array{
+     *  byCode: array<string, array{code: string, name: string}>,
+     *  byName: array<string, array{code: string, name: string}>
+     * }  $lookup
+     * @return array{code: string, name: string, code_normalized: string, name_normalized: string}
+     */
+    private function resolvePowerPlantFromRakeDestination(?string $destinationCode, ?string $destination, array $lookup): array
+    {
+        $normalizedCode = mb_strtolower(mb_trim((string) $destinationCode));
+        if ($normalizedCode !== '' && isset($lookup['byCode'][$normalizedCode])) {
+            $match = $lookup['byCode'][$normalizedCode];
+
+            return [
+                'code' => $match['code'],
+                'name' => $match['name'],
+                'code_normalized' => mb_strtolower($match['code']),
+                'name_normalized' => $this->normalizePowerPlantLookupText($match['name']),
+            ];
+        }
+
+        $normalizedDestination = $this->normalizePowerPlantLookupText($destination);
+        if ($normalizedDestination !== '') {
+            if (isset($lookup['byCode'][$normalizedDestination])) {
+                $match = $lookup['byCode'][$normalizedDestination];
+
+                return [
+                    'code' => $match['code'],
+                    'name' => $match['name'],
+                    'code_normalized' => mb_strtolower($match['code']),
+                    'name_normalized' => $this->normalizePowerPlantLookupText($match['name']),
+                ];
+            }
+
+            if (isset($lookup['byName'][$normalizedDestination])) {
+                $match = $lookup['byName'][$normalizedDestination];
+
+                return [
+                    'code' => $match['code'],
+                    'name' => $match['name'],
+                    'code_normalized' => mb_strtolower($match['code']),
+                    'name_normalized' => $this->normalizePowerPlantLookupText($match['name']),
+                ];
+            }
+
+            $partialMatches = [];
+            foreach ($lookup['byCode'] as $codeNorm => $plant) {
+                if (
+                    str_contains($normalizedDestination, $codeNorm)
+                    || str_contains($this->normalizePowerPlantLookupText($plant['name']), $normalizedDestination)
+                    || str_contains($normalizedDestination, $this->normalizePowerPlantLookupText($plant['name']))
+                ) {
+                    $partialMatches[$codeNorm] = $plant;
+                }
+            }
+
+            if (count($partialMatches) === 1) {
+                $match = array_values($partialMatches)[0];
+
+                return [
+                    'code' => $match['code'],
+                    'name' => $match['name'],
+                    'code_normalized' => mb_strtolower($match['code']),
+                    'name_normalized' => $this->normalizePowerPlantLookupText($match['name']),
+                ];
+            }
+        }
+
+        return [
+            'code' => '__UNMAPPED__',
+            'name' => 'Unknown/Unmapped',
+            'code_normalized' => '__unmapped__',
+            'name_normalized' => 'unknown unmapped',
+        ];
+    }
+
+    private function normalizePowerPlantLookupText(?string $value): string
+    {
+        if ($value === null) {
+            return '';
+        }
+
+        $collapsed = preg_replace('/\s+/', ' ', mb_strtolower(mb_trim($value))) ?? '';
+
+        return mb_trim($collapsed);
     }
 
     /**
